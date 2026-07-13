@@ -154,12 +154,16 @@ syntax was projected into the current canonical identity contract. They do not
 assert bond-topology completeness, preparation, chemistry support,
 parameterability, simulation readiness, or claim safety.
 
-PDB `CONECT` syntax, serial references, and multiplicity are validated, but no
-such record is projected into canonical `Bond` state. Every otherwise valid
-`CONECT` fails with `unsupported_contextual_conect_semantics` because record
-type and residue spelling are not sufficient proof of a standard covalent
-bond. The current schema cannot distinguish covalent, coordination, cofactor,
-LINK, disulfide, or modified-residue context. Projection remains blocked until
+In the unchanged base `parse_pdb` contract, `CONECT` fixed-column syntax and
+serial references are validated, but no such record is projected into
+canonical `Bond` state. Every otherwise valid base-parser `CONECT` input fails
+with `unsupported_contextual_conect_semantics` because source declaration
+occurrences are not bond-order evidence and record type plus residue spelling
+are not sufficient proof of a standard covalent bond. The current schema
+cannot distinguish covalent, coordination, cofactor, LINK, disulfide, or
+modified-residue context. A separate opt-in source-declaration envelope is
+described below; it preserves only ordered rows and ordered target slots while
+keeping the carrier bondless. Canonical bond projection remains blocked until
 versioned residue/atom templates and explicit bond-kind/source-context
 contracts exist.
 
@@ -320,9 +324,10 @@ cell are both present, its lengths and angles are exactly representable as
 PDB F9.3 and F7.2 fields, and the live CPU `float64` cell vectors exactly match
 the parser's trigonometric reconstruction in every binary64 value. The cell
 must retain `(False, False, False)` periodic flags. An arbitrary `UnitCell`
-cannot be inferred into `CRYST1`. `CONECT`, selected altloc state, missingness
-outside the exact single-model profile, and nonrepresentable or inconsistent
-`CRYST1` state are typed failures rather than silently narrowed source state.
+cannot be inferred into `CRYST1`. Direct use of this unchanged base writer on
+`CONECT` source state, selected altloc state, missingness outside the exact
+single-model profile, and nonrepresentable or inconsistent `CRYST1` state are
+typed failures rather than silently narrowed source state.
 
 Within that boundary the writer preserves source atom order, `ATOM` versus
 `HETATM`, exact atom-name alignment, residue and chain identity, insertion code,
@@ -379,13 +384,56 @@ exactly representable parser-owned `CRYST1` and the narrow single-model-ID1
 source-reported missingness profile. The profile preserves only what the source
 reported; it does not assess actual completeness, SEQRES/reference membership,
 model or complete missing residues/atoms, or support altloc/assembly/multimodel
-missingness. General PDB round-trip including `CONECT`, altloc, general
+missingness. General PDB round-trip, including `CONECT` forms outside the exact
+declaration-only envelope below and every covalent, coordination, bond-kind,
+bond-order, or chemistry interpretation of `CONECT`, altloc, general
 missingness, nonrepresentable `CRYST1`,
 symmetry expansion, and periodic simulation semantics, plus general mmCIF and
 general SMILES round-trip, remain blocked. PDB syntax support and round-trip
 evidence do not establish bond-topology completeness, preparation, chemistry
 support, parameterability, simulation readiness, scientific validity, runtime
 eligibility, or claim authority.
+
+#### Opt-in PDB `CONECT` source-declaration envelope
+
+`betelgeuze_engine_v2.molecular.pdb_conect_declaration` is an additive opt-in
+envelope around the unchanged PDB parser 1.8.0 and writer 1.2.0. It accepts
+exactly one coordinate model normalized to model ID 1, implicit or explicit
+`MODEL 1`, blank altloc state, no `CRYST1`, no source-reported missingness, and
+at least one contiguous uppercase fixed-column `CONECT` suffix outside the
+model and immediately before `END`. Each row retains one live source atom
+serial and one through four contiguous live target-serial slots. Self
+references, unknown or nonpositive serials, reserved-column content,
+declarations inside a model, noncontiguous placement, multiple models, and
+other model IDs fail closed. Explicit `MODEL 1` input normalizes to the base
+writer's implicit single-model form; the base parser and writer entry points
+and their direct behavior remain unchanged.
+
+The declaration projection preserves directed row order, source serials,
+target-slot order, duplicate target slots, row grouping, and directional
+asymmetry. It neither collapses reciprocal rows nor interprets repeated target
+occurrences as multiplicity or bond order. The carrier `AllAtomSystem` always
+has `bonds == ()`, and coverage reports `bond_count == 0`. No canonical bond,
+bond kind or order, covalence, coordination, disulfide, modified-residue,
+chemistry, preparation, parameterability, physics, runtime, execution,
+simulation, or claim authority is inferred. The declaration exists in the
+envelope evidence rather than `AllAtomSystem`; extracting or serializing only
+the bare `.system` intentionally loses it and the unchanged base writer emits
+no `CONECT` rows.
+
+Factory-only ingest, row, receipt, write-result, and round-trip artifacts bind
+the normalized full source, declaration projection, source identifier, base
+carrier source and canonical emission, detached canonical snapshot, topology,
+base representable state, record state, output, reparse, and second emission.
+Canonical output places printable 80-column declaration records immediately
+before the 80-column `END` record and must be byte-stable on re-emission. Fixed
+input/output byte and line, declaration-row, target-occurrence, projection,
+and source-ID limits fail closed. A fixed five-round-trip/ten-failure corpus
+binds manifest payload SHA-256
+`c6346f7b046d157a70fb1629dfe3e7f3c13a4b9b079474961a613ec436c38a75`.
+These SHA-256 bindings are tamper and crosswire evidence, not source
+authentication. This envelope narrows one
+source-layout loss only and does not make general PDB round-trip ready.
 
 ### V2-1 strict mmCIF selected-profile canonical-writer boundary
 

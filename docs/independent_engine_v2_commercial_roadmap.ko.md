@@ -8,7 +8,8 @@
 정확히 표현 가능한 parser-owned SDF V2000과 별도 opt-in simple named
 opaque data-field envelope 1.0 및 bondless·no-altloc·
 optional-exact-`CRYST1`·single-model-ID1 source-reported `REMARK 465/470`
-semantic-profile PDB, single-model-ID1·exact-core11·
+semantic-profile PDB와 별도 opt-in ordered `CONECT` source-declaration
+envelope 1.0, single-model-ID1·exact-core11·
 independently-appended formal-charge/insertion-code/uncertainty-free occupancy
 core12·formal-charge-then-insertion-code 또는 uncertainty-free
 occupancy-then-B-factor core13 `_atom_site`-only 여섯 profile과 exact
@@ -95,7 +96,8 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 
 | 구분 | 현재 확보한 기반 | 현재 차단된 주장 또는 기능 |
 | --- | --- | --- |
-| 계약 | 버전형 all-atom 상태, 결합, isotope, R/S·E/Z, provenance, legacy adapter, strict PDB/mmCIF/SDF/SMILES canonical projection과 고정 ingest/failure corpus, 정확히 표현 가능한 parser-owned 단일-record SDF V2000과 별도 opt-in simple named opaque data-field envelope 1.0, bondless·no-altloc·optional-exact-`CRYST1` PDB와 single-model-ID1 source-reported `REMARK 465/470` semantic round-trip profile, single-model-ID1 여섯 `_atom_site`-only profile과 exact `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity mmCIF 및 별도 opt-in explicit biological assembly envelope 1.0.0, source-reported nonpoly identity envelope 1.0, polymer sequence membership envelope 1.0, source-reported unobserved-residue envelope 1.0, source-reported unobserved-atom envelope 1.0, 그리고 1–256개 ordered organic-subset component에서 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member ring 또는 fully-aromatic 5/6-member `B C N O P S` ring·선택 unit-charge/bracket-H token·bounded parser-typed E/Z·tetrahedral R/S를 직렬화하는 SMILES writer 1.8 및 각 선언 projection round-trip evidence | `CONECT`·altloc·general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB, exact common-core21·선택 assembly·nonpoly identity·polymer sequence membership·residue/atom-level source-reported unobserved envelope 밖 categories·auth/entity·optional fields·altloc·assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·zero-occupancy semantics·cell·multimodel을 포함한 general mmCIF, fragment role·salt·mixture chemistry·선택 ring 밖의 general rings·fused/polycyclic aromaticity·두 번째 ring double·ring triple·multiple-bond closure를 포함한 일반 multiple-bond chemistry·일반 charge/charge assignment·isotope·nonpositive/duplicate map·bounded tetrahedral R/S 밖 atom stereo·unknown bond stereo·bounded profile 밖 E/Z·source H·선택 aromatic/tetrahedral 상태 밖 bracket H를 포함한 general SMILES, simple named envelope 밖의 arbitrary `M` property record·rich data header·multi-record·V3000·stereo를 포함한 general SDF와 완전한 parser·preparation·지원 chemistry coverage |
+| 계약 | 버전형 all-atom 상태, 결합, isotope, R/S·E/Z, provenance, legacy adapter, strict PDB/mmCIF/SDF/SMILES canonical projection과 고정 ingest/failure corpus, 정확히 표현 가능한 parser-owned 단일-record SDF V2000과 별도 opt-in simple named opaque data-field envelope 1.0, bondless·no-altloc·optional-exact-`CRYST1` PDB와 single-model-ID1 source-reported `REMARK 465/470` semantic round-trip profile 및 별도 opt-in ordered `CONECT` source-declaration envelope 1.0, single-model-ID1 여섯 `_atom_site`-only profile과 exact `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity mmCIF 및 별도 opt-in explicit biological assembly envelope 1.0.0, source-reported nonpoly identity envelope 1.0, polymer sequence membership envelope 1.0, source-reported unobserved-residue envelope 1.0, source-reported unobserved-atom envelope 1.0, 그리고 1–256개 ordered organic-subset component에서 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member ring 또는 fully-aromatic 5/6-member `B C N O P S` ring·선택 unit-charge/bracket-H token·bounded parser-typed E/Z·tetrahedral R/S를 직렬화하는 SMILES writer 1.8 및 각 선언 projection round-trip evidence | 선택 envelope 밖 `CONECT`와 모든 bond-kind/order·covalence·coordination·chemistry 의미론, altloc·general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB, exact common-core21·선택 assembly·nonpoly identity·polymer sequence membership·residue/atom-level source-reported unobserved envelope 밖 categories·auth/entity·optional fields·altloc·assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·zero-occupancy semantics·cell·multimodel을 포함한 general mmCIF, fragment role·salt·mixture chemistry·선택 ring 밖의 general rings·fused/polycyclic aromaticity·두 번째 ring double·ring triple·multiple-bond closure를 포함한 일반 multiple-bond chemistry·일반 charge/charge assignment·isotope·nonpositive/duplicate map·bounded tetrahedral R/S 밖 atom stereo·unknown bond stereo·bounded profile 밖 E/Z·source H·선택 aromatic/tetrahedral 상태 밖 bracket H를 포함한 general SMILES, simple named envelope 밖의 arbitrary `M` property record·rich data header·multi-record·V3000·stereo를 포함한 general SDF와 완전한 parser·preparation·지원 chemistry coverage |
+| V2-1 PDB ordered `CONECT` source-declaration envelope | single-model-ID1의 trailing contiguous fixed-column `CONECT` row와 directed source serial·ordered target slot·duplicate slot·directional asymmetry projection, canonical 80-column re-emission 및 고정 positive/failure corpus | canonical `Bond`·bond kind/order·covalence·coordination·chemistry 해석, bare `.system` 보존, altloc·multimodel·일반 `CONECT`, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general PDB round-trip |
 | V2-1 mmCIF explicit biological assembly envelope | exact common-core21 ASU와 단일 assembly definition, official-order generator/operator loop, explicit `assembly_id`, right-to-left rigid transform, ASU 재출력과 bitwise expanded coordinate·topology·atom/chain instance order projection, stable re-emission 및 고정 positive/failure corpus | source authentication·biological correctness, 다른 assembly category/header/operator form, numeric uncertainty, altloc·multimodel·cell/symmetry/PBC, bond·chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF nonpoly identity envelope | exact `_entity`·`_struct_asym`·common-core21 `_atom_site`와 선택 `_pdbx_entity_nonpoly`·official-order `_pdbx_nonpoly_scheme`의 source identity·instance nomenclature alias projection 및 canonical five-category re-emission | role·chemistry·topology·bond/order·coordination·charge·protonation·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF polymer sequence membership envelope | exact common-core21 또는 기존 nonpoly identity carrier와 official-order `_entity_poly_seq`의 source-reported polymer entity·sequence number·opaque monomer-code membership, atom-site label tuple presence join 및 canonical four/six-category re-emission | reference sequence 동일성·완전성, coordinate observation completeness, missing-residue fact, auth alignment, modified-residue identity, general microheterogeneity·chemistry, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
@@ -390,6 +392,37 @@ round-trip report는 source/reparse raw report SHA를 따로 기록하지만 sem
 동일성만 주장한다. 이 profile은 source가 보고한 claim만 보존하며 실제
 완전성, SEQRES/reference membership, completion/modeling, altloc·assembly·multimodel
 missingness, chemistry·preparation·parameterability·simulation·claim 권한을 입증하지 않는다.
+
+별도 opt-in PDB `CONECT` source-declaration envelope 1.0은 변경하지
+않은 base parser 1.8.0과 writer 1.2.0 위에서 동작한다. implicit model 1
+또는 explicit `MODEL 1`의 단일 coordinate model과 `END` 바로 앞의
+연속된 uppercase fixed-column `CONECT` suffix만 받는다. 각 row의
+source serial과 1–4개 target slot은 모두 실제 `ATOM/HETATM` serial을
+참조해야 하며 self-reference, reserved column, 빈 target gap, model 내부
+선언, noncontiguous placement, 다른 model ID와 multimodel은 실패로 닫는다.
+explicit `MODEL 1`은 base writer의 implicit single-model 형식으로 정규화된다.
+
+선언 projection은 directed row 순서, source serial, target-slot 순서, 중복
+slot, row grouping과 directional asymmetry를 그대로 보존한다. reciprocal row를
+합치거나 반복 occurrence를 multiplicity·bond order로 해석하지 않는다.
+carrier `AllAtomSystem` 및 coverage의 bond count는 항상 0이고 canonical
+`Bond`, bond kind/order, covalence, coordination, chemistry·preparation·
+parameterability·physics·runtime·simulation·execution·claim 권한은 전혀
+얻지 않는다. declaration은 `AllAtomSystem`이 아니라 envelope evidence에만
+존재하므로 bare `.system` 추출·base writer 직렬화는 의도적으로
+`CONECT`를 잃는다.
+
+factory-only artifact chain은 full/carrier/canonical source, detached snapshot,
+topology, base representable state, ordered declaration projection, source binding,
+record state, output·reparse·second emission을 결속한다. canonical 출력은
+80-column `CONECT` row를 80-column `END` 직전에 배치하고 두 번째
+출력의 byte 안정성을 요구한다. 고정 input/output byte·line, row,
+target occurrence, projection, source-ID 상한을 넘으면 절단 없이
+실패한다. 5개 round-trip·10개 failure를 고정한 corpus manifest payload
+SHA-256은
+`c6346f7b046d157a70fb1629dfe3e7f3c13a4b9b079474961a613ec436c38a75`이다.
+SHA-256은 tamper/crosswire evidence일 뿐 source authentication이 아니며,
+이 envelope은 general PDB round-trip을 준비 상태로 올리지 않는다.
 
 strict mmCIF writer 1.5는 현재 parser가 만든 상태 중 model ID 1인 단일
 coordinate model과 reviewed core 11 field를 기반으로 한 기존 여섯 개의 정확한
@@ -967,8 +1000,10 @@ execution, energy·force, minimization, simulation과 claim은 모두 false 또�
 unassessed다. 따라서 이 profile과 corpus는 V2-1 완료나 V2-4
 solvent/PBC 적용 범위 확대를 의미하지 않는다.
 
-`CONECT`·altloc·선택 single-model source-reported profile 밖의 general
-missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB,
+선택 declaration envelope 밖 `CONECT`·모든 bond-kind/order·covalence·
+coordination·chemistry 의미론·altloc·선택 single-model source-reported
+profile 밖의 general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을
+포함한 general PDB,
 exact common-core21·선택 explicit assembly·nonpoly identity·polymer sequence membership·
 source-reported unobserved-residue·unobserved-atom envelope 밖 categories·auth/entity와
 optional fields·altloc·선택 envelope 밖 assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·

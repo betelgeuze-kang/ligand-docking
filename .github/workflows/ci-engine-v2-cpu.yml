@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "betelgeuze_engine_v2/**"
+      - "betelgeuze_engine_v2/molecular/pdb_conect_declaration.py"
       - "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
@@ -37,6 +38,7 @@ on:
       - "tests/fixtures/v2_1_terminal_monoalkene_c2_c8/**"
       - "tests/fixtures/v2_1_exact_h2o_graph/**"
       - "tests/fixtures/v2_1_sdf_data_fields/**"
+      - "tests/fixtures/v2_1_pdb_conect_declaration/**"
       - "tests/fixtures/v2_1_mmcif_assembly/**"
       - "tests/fixtures/v2_1_mmcif_nonpoly_identity/**"
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
@@ -59,6 +61,7 @@ on:
       - "config/independent_engine_v2_v2_1_terminal_monoalkene_c2_c8_corpus.json"
       - "config/independent_engine_v2_v2_1_exact_h2o_graph_corpus.json"
       - "config/independent_engine_v2_v2_1_sdf_data_field_corpus.json"
+      - "config/independent_engine_v2_v2_1_pdb_conect_declaration_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_assembly_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
@@ -72,6 +75,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/**"
+      - "betelgeuze_engine_v2/molecular/pdb_conect_declaration.py"
       - "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
@@ -105,6 +109,7 @@ on:
       - "tests/fixtures/v2_1_terminal_monoalkene_c2_c8/**"
       - "tests/fixtures/v2_1_exact_h2o_graph/**"
       - "tests/fixtures/v2_1_sdf_data_fields/**"
+      - "tests/fixtures/v2_1_pdb_conect_declaration/**"
       - "tests/fixtures/v2_1_mmcif_assembly/**"
       - "tests/fixtures/v2_1_mmcif_nonpoly_identity/**"
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
@@ -127,6 +132,7 @@ on:
       - "config/independent_engine_v2_v2_1_terminal_monoalkene_c2_c8_corpus.json"
       - "config/independent_engine_v2_v2_1_exact_h2o_graph_corpus.json"
       - "config/independent_engine_v2_v2_1_sdf_data_field_corpus.json"
+      - "config/independent_engine_v2_v2_1_pdb_conect_declaration_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_assembly_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
@@ -221,6 +227,55 @@ jobs:
           assert molecular_identity["strict_pdb_representable_subset_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_pdb_parser_owned_exact_cryst1_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_pdb_single_model_id1_source_reported_missingness_semantic_round_trip_evidence_ready"] is True
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_envelope_contract_implemented"] is True
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_round_trip_evidence_ready"] is True
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_corpus_evidence_ready"] is True
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_envelope_version"] == "1.0.0"
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_parser_version"] == "1.0.0"
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_writer_version"] == "1.0.0"
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_base_parser_version"] == "1.8.0"
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_base_writer_version"] == "1.2.0"
+          for field in (
+              "strict_pdb_ordered_conect_source_declaration_base_pedigree_bound",
+              "strict_pdb_ordered_conect_source_declaration_exact_artifact_chain_bound",
+              "strict_pdb_ordered_conect_source_declaration_nested_evidence_immutable",
+              "strict_pdb_ordered_conect_source_declaration_single_model_id1_bound",
+              "strict_pdb_ordered_conect_source_declaration_live_serial_reference_bound",
+              "strict_pdb_ordered_conect_source_declaration_carrier_bondless",
+          ):
+              assert molecular_identity[field] is True
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_projection_scope"] == "ordered_source_directed_conect_rows_and_target_slot_occurrences_only"
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_corpus_manifest_payload_sha256"] == "c6346f7b046d157a70fb1629dfe3e7f3c13a4b9b079474961a613ec436c38a75"
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_input_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_output_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_input_lines"] == 250000
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_output_lines"] == 250000
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_records"] == 20000
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_target_occurrences"] == 80000
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_projection_bytes"] == 16 * 1024 * 1024
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_max_source_id_utf8_bytes"] == 4096
+          assert molecular_identity["strict_pdb_ordered_conect_source_declaration_output_line_characters"] == 80
+          for field in (
+              "strict_pdb_ordered_conect_source_declaration_source_authenticated",
+              "strict_pdb_ordered_conect_source_declaration_declaration_authoritative",
+              "strict_pdb_ordered_conect_source_declaration_bond_topology_interpreted",
+              "strict_pdb_ordered_conect_source_declaration_bond_kind_interpreted",
+              "strict_pdb_ordered_conect_source_declaration_bond_order_interpreted",
+              "strict_pdb_ordered_conect_source_declaration_covalence_assessed",
+              "strict_pdb_ordered_conect_source_declaration_coordination_assessed",
+              "strict_pdb_ordered_conect_source_declaration_chemistry_interpreted",
+              "strict_pdb_ordered_conect_source_declaration_preparation_ready",
+              "strict_pdb_ordered_conect_source_declaration_parameterability_assessed",
+              "strict_pdb_ordered_conect_source_declaration_physics_supported",
+              "strict_pdb_ordered_conect_source_declaration_runtime_eligible",
+              "strict_pdb_ordered_conect_source_declaration_simulation_ready",
+              "strict_pdb_ordered_conect_source_declaration_execution_authorized",
+              "strict_pdb_ordered_conect_source_declaration_claim_safe",
+              "strict_pdb_ordered_conect_source_declaration_bare_system_preserves_declaration",
+              "strict_pdb_ordered_conect_source_declaration_general_pdb_round_trip_evidence_ready",
+              "strict_pdb_ordered_conect_source_declaration_all_format_round_trip_evidence_ready",
+          ):
+              assert molecular_identity[field] is False
           assert molecular_identity["strict_mmcif_parser_owned_writer_contract_implemented"] is True
           assert molecular_identity["strict_mmcif_atom_site_core_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_mmcif_atom_site_core_and_formal_charge_round_trip_evidence_ready"] is True
@@ -569,6 +624,11 @@ jobs:
           assert "source_and_reparsed_raw_missingness_report_sha_binding_with_source_independent_ordered_claim_semantic_sha_equality_only" in molecular_evidence
           assert "typed_fail_closed_rejection_of_conect_altloc_nmr_range_non_id1_multimodel_general_missingness_nonrepresentable_cryst1_and_other_nonrepresentable_canonical_state" in molecular_evidence
           assert "factory_generated_pdb_writer_receipt_with_hidden_input_snapshot_cell_cryst1_raw_missingness_semantic_projection_line_and_claim_count_binding_and_cross_artifact_round_trip_aggregate_without_authentication_preparation_or_claim_promotion" in molecular_evidence
+          assert "strict_opt_in_pdb_ordered_conect_source_declaration_envelope_for_single_model_id1_base_writer_representable_carrier" in molecular_evidence
+          assert "ordered_directed_conect_row_and_target_slot_projection_with_duplicate_slots_directional_asymmetry_live_serial_binding_and_canonical_fixed_column_stable_reemission" in molecular_evidence
+          assert "factory_only_source_bound_pdb_conect_declaration_receipt_report_and_aggregate_with_unchanged_base_parser_writer_and_bare_system_declaration_loss" in molecular_evidence
+          assert "conect_declaration_preservation_without_canonical_bond_kind_order_covalence_coordination_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
+          assert "versioned_pdb_conect_five_round_trip_ten_failure_corpus_with_manifest_payload_sha256_c6346f7b046d157a70fb1629dfe3e7f3c13a4b9b079474961a613ec436c38a75" in molecular_evidence
           assert "strict_mmcif_parser_owned_single_model_id1_exact_core11_independently_appended_formal_charge_or_insertion_code_core12_and_formal_charge_then_insertion_code_core13_atom_site_only_representable_subset_writer" in molecular_evidence
           assert "source_to_canonical_to_mmcif_to_canonical_declared_projection_equivalence_with_exact_coordinate_binary64_bare_noncoordinate_source_token_formal_charge_source_notation_and_pdbx_pdb_ins_code_raw_marker_identity" in molecular_evidence
           assert "exact_absent_dot_question_and_explicit_insertion_code_projection_with_canonical_residue_identity_and_same_header_count_profile_crosswire_rejection" in molecular_evidence
@@ -644,7 +704,7 @@ jobs:
           assert "complete_all_atom_parser_and_round_trip_evidence_missing" in molecular_identity["blockers"]
           assert "parameter_and_chemistry_coverage_evidence_missing" in molecular_identity["blockers"]
           assert "general_sdf_stereochemistry_arbitrary_property_records_rich_data_headers_multiple_records_v3000_and_context_round_trip_missing" in molecular_identity["blockers"]
-          assert "general_pdb_conect_altloc_general_missingness_and_nonrepresentable_cryst1_round_trip_missing" in molecular_identity["blockers"]
+          assert "general_pdb_conect_outside_the_selected_ordered_source_declaration_envelope_and_all_conect_bond_kind_order_covalence_coordination_chemistry_semantics_altloc_general_missingness_nonrepresentable_cryst1_symmetry_and_pbc_round_trip_missing" in molecular_identity["blockers"]
           assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_biological_assembly_nonpoly_identity_polymer_sequence_membership_and_source_reported_unobserved_residue_and_unobserved_atom_envelope_profiles_optional_fields_altloc_assembly_declarations_or_operator_forms_outside_the_selected_envelope_atom_missingness_outside_the_selected_envelope_zero_occupancy_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
           assert "general_smiles_fragment_roles_salts_mixtures_general_rings_outside_one_selected_simple_nonaromatic_three_through_eight_member_or_fully_aromatic_five_or_six_member_ring_arbitrary_multiple_bond_chemistry_aromaticity_outside_the_selected_profile_general_charge_and_charge_assignment_isotopes_nonpositive_or_duplicate_maps_atom_stereo_outside_bounded_tetrahedral_r_s_unknown_bond_stereo_e_z_outside_the_normalized_spelling_admitted_lowest_index_carrier_profile_source_hydrogens_and_bracket_hydrogens_outside_selected_aromatic_or_tetrahedral_state_round_trip_missing" in molecular_identity["blockers"]
           assert "parser_typed_tetrahedral_source_graphs_over_514_source_atoms_unsupported" in molecular_identity["blockers"]
@@ -775,6 +835,7 @@ jobs:
           assert "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py" in names
           assert "betelgeuze_engine_v2/molecular/pdb_writer.py" in names
+          assert "betelgeuze_engine_v2/molecular/pdb_conect_declaration.py" in names
           assert "betelgeuze_engine_v2/molecular/sdf_v2000_writer.py" in names
           assert "betelgeuze_engine_v2/molecular/sdf_v2000_data_fields.py" in names
           assert "betelgeuze_engine_v2/molecular/smiles_writer.py" in names
@@ -794,6 +855,7 @@ jobs:
           assert not any("independent_engine_v2_v2_1_terminal_monoalkene_c2_c8_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_exact_h2o_graph_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_sdf_data_field_corpus.json" in name for name in names)
+          assert not any("independent_engine_v2_v2_1_pdb_conect_declaration_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_assembly_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json" in name for name in names)
@@ -808,6 +870,67 @@ jobs:
           /tmp/engine-v2-wheel-venv/bin/python -m pip install --no-deps --force-reinstall "$wheel_path"
           /tmp/engine-v2-wheel-venv/bin/python -c "import importlib.metadata as m; import betelgeuze_engine_v2 as v2; assert v2.__version__ == '2.0.0'; assert any(r.lower().startswith('torch') for r in (m.requires('betelgeuze-md-product') or []))"
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.forcefield import ExactMethaneHarmonicMinimizationCheckpoint, run_exact_methane_harmonic_minimization_diagnostic; assert ExactMethaneHarmonicMinimizationCheckpoint.__module__.endswith('harmonic_minimization'); assert callable(run_exact_methane_harmonic_minimization_diagnostic)"
+          /tmp/engine-v2-wheel-venv/bin/python - <<'PY'
+          from betelgeuze_engine_v2.molecular import (
+              PDB_CONECT_DECLARATION_ENVELOPE_VERSION,
+              StructureParseError,
+              parse_pdb,
+              round_trip_pdb_conect_declaration_source,
+              serialize_pdb,
+          )
+
+          source = (
+              b"HETATM    1 C1   LIG A   1       0.000   0.000   0.000  1.00 20.00           C\n"
+              b"HETATM    2 C2   LIG A   1       1.400   0.000   0.000  1.00 20.00           C\n"
+              b"HETATM    3 O1   LIG A   1       2.800   0.000   0.000  1.00 20.00           O\n"
+              b"CONECT    1    2    2    3\n"
+              b"CONECT    3    1\n"
+              b"CONECT    2    1    1\n"
+              b"END\n"
+          )
+          try:
+              parse_pdb(source, source_id="wheel-base")
+          except StructureParseError as exc:
+              assert exc.code == "unsupported_contextual_conect_semantics"
+          else:
+              raise AssertionError("unchanged base PDB parser accepted CONECT")
+          result = round_trip_pdb_conect_declaration_source(
+              source, source_id="wheel-envelope"
+          )
+          assert PDB_CONECT_DECLARATION_ENVELOPE_VERSION == "1.0.0"
+          assert [
+              (row.source_serial, row.target_serials)
+              for row in result.source_ingest.conect_rows
+          ] == [(1, (2, 2, 3)), (3, (1,)), (2, (1, 1))]
+          assert result.source_ingest.system.bonds == ()
+          assert result.source_ingest.coverage.bond_count == 0
+          assert b"CONECT" not in serialize_pdb(result.source_ingest.system)
+          report = result.report.to_dict()
+          for field in (
+              "bare_system_preserves_declaration",
+              "bond_topology_interpreted",
+              "bond_order_interpreted",
+              "covalent_bond_interpreted",
+              "coordination_bond_interpreted",
+              "chemistry_interpreted",
+              "preparation_ready",
+              "parameterability_assessed",
+              "runtime_eligible",
+              "simulation_ready",
+              "claim_safe",
+              "general_pdb_round_trip_evidence_ready",
+          ):
+              assert report[field] is False
+          lines = result.write_result.payload.splitlines()
+          assert all(len(line) == 80 for line in lines)
+          assert [line[:6] for line in lines[-4:-1]] == [
+              b"CONECT",
+              b"CONECT",
+              b"CONECT",
+          ]
+          assert lines[-1] == b"END" + (b" " * 77)
+          assert result.write_result.payload == result.reemitted_write_result.payload
+          PY
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MAX_MMCIF_ASSEMBLY_ENVELOPE_OUTPUT_LINE_CHARS, MAX_MMCIF_ASSEMBLY_ENVELOPE_TOKEN_CHARS, MMCIF_ASSEMBLY_ENVELOPE_VERSION, MMCIF_ASSEMBLY_PARSER_VERSION, MMCIF_ASSEMBLY_WRITER_VERSION, parse_mmcif_assembly, round_trip_mmcif_assembly_source; assert MMCIF_ASSEMBLY_ENVELOPE_VERSION == '1.0.0'; assert MMCIF_ASSEMBLY_PARSER_VERSION == '1.0.0'; assert MMCIF_ASSEMBLY_WRITER_VERSION == '1.0.0'; assert MAX_MMCIF_ASSEMBLY_ENVELOPE_TOKEN_CHARS == 2048; assert MAX_MMCIF_ASSEMBLY_ENVELOPE_OUTPUT_LINE_CHARS == 2048; assert callable(parse_mmcif_assembly); assert callable(round_trip_mmcif_assembly_source)"
           /tmp/engine-v2-wheel-venv/bin/python - <<'PY'
           from betelgeuze_engine_v2.molecular import round_trip_mmcif_assembly_source
