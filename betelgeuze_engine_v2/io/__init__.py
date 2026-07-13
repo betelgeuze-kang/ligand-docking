@@ -1,4 +1,4 @@
-"""Bounded, fail-closed molecular file ingest for Engine v2."""
+"""Bounded, fail-closed molecular file ingest and export for Engine v2."""
 
 from .pdb import (
     PDB_PARSER_NAME,
@@ -14,8 +14,15 @@ from .sdf import (
     SDFParserLimits,
     parse_sdf_v2000,
 )
+from .writers import (
+    MolecularWriteError,
+    WriterReceipt,
+    pdb_string,
+    sdf_v2000_string,
+)
 
 __all__ = [
+    "MolecularWriteError",
     "PDB_PARSER_NAME",
     "PDB_PARSER_VERSION",
     "PDBParseError",
@@ -24,6 +31,9 @@ __all__ = [
     "SDF_PARSER_VERSION",
     "SDFParseError",
     "SDFParserLimits",
+    "WriterReceipt",
     "parse_pdb",
     "parse_sdf_v2000",
+    "pdb_string",
+    "sdf_v2000_string",
 ]
