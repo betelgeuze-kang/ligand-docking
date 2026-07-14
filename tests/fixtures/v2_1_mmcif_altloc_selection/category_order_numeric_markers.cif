@@ -1,0 +1,39 @@
+data_category_order_numeric_markers
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+ATOM 001 N N . GLY A 1 1 ? +0 -0 .25 01.000 -0 +0 AUTH-1 GLY AUTH-A N 1
+ATOM 002 C C ? GLY A 1 1 ? 1e0 0.0 0.0 1. 2.5 -0 AUTH-1 GLY AUTH-A C 1
+ATOM 003 C CA alpha GLY A 1 1 ? 01.000 +0 -0 0.60 1e1 +0 AUTH-1 GLY AUTH-A CA 1
+ATOM 004 C CA beta GLY A 1 1 ? 2. 0.0 0.0 .40 11.0 -0 AUTH-1 GLY AUTH-A CA 1
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#

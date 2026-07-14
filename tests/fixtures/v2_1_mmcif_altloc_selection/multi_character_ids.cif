@@ -1,0 +1,40 @@
+data_multi_character_ids
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+ATOM source-N N N . ALA A 1 1 ? 0.0 0.0 0.0 1.0 9.0 ? AUTH-1 ALA AUTH-A N 1
+ATOM source-CA-a C CA conf-A ALA A 1 1 ? 1.0 0.0 0.0 0.55 11.0 ? AUTH-1 ALA AUTH-A CA 1
+ATOM source-CA-b C CA conf-B ALA A 1 1 ? 2.0 0.0 0.0 0.45 12.0 ? AUTH-1 ALA AUTH-A CA 1
+ATOM source-CB-a C CB conf-A ALA A 1 1 ? 1.0 1.0 0.0 0.55 13.0 ? AUTH-1 ALA AUTH-A CB 1
+ATOM source-CB-b C CB conf-B ALA A 1 1 ? 2.0 1.0 0.0 0.45 14.0 ? AUTH-1 ALA AUTH-A CB 1
+#

@@ -5,6 +5,7 @@ on:
     paths:
       - "betelgeuze_engine_v2/**"
       - "betelgeuze_engine_v2/molecular/pdb_conect_declaration.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_altloc_selection.py"
       - "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
@@ -21,6 +22,8 @@ on:
       - "benchmark/performance_bench.py"
       - "tools/export_ai_router_onnx.py"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_engine_v2_mmcif_altloc_selection.py"
+      - "tests/unit/test_engine_v2_mmcif_altloc_selection_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_assembly_envelope.py"
       - "tests/unit/test_engine_v2_mmcif_assembly_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
@@ -44,6 +47,7 @@ on:
       - "tests/fixtures/v2_1_exact_h2o_graph/**"
       - "tests/fixtures/v2_1_sdf_data_fields/**"
       - "tests/fixtures/v2_1_pdb_conect_declaration/**"
+      - "tests/fixtures/v2_1_mmcif_altloc_selection/**"
       - "tests/fixtures/v2_1_mmcif_assembly/**"
       - "tests/fixtures/v2_1_mmcif_nonpoly_identity/**"
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
@@ -68,6 +72,7 @@ on:
       - "config/independent_engine_v2_v2_1_exact_h2o_graph_corpus.json"
       - "config/independent_engine_v2_v2_1_sdf_data_field_corpus.json"
       - "config/independent_engine_v2_v2_1_pdb_conect_declaration_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_altloc_selection_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_assembly_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
@@ -83,6 +88,7 @@ on:
     paths:
       - "betelgeuze_engine_v2/**"
       - "betelgeuze_engine_v2/molecular/pdb_conect_declaration.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_altloc_selection.py"
       - "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
@@ -99,6 +105,8 @@ on:
       - "benchmark/performance_bench.py"
       - "tools/export_ai_router_onnx.py"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_engine_v2_mmcif_altloc_selection.py"
+      - "tests/unit/test_engine_v2_mmcif_altloc_selection_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_assembly_envelope.py"
       - "tests/unit/test_engine_v2_mmcif_assembly_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
@@ -122,6 +130,7 @@ on:
       - "tests/fixtures/v2_1_exact_h2o_graph/**"
       - "tests/fixtures/v2_1_sdf_data_fields/**"
       - "tests/fixtures/v2_1_pdb_conect_declaration/**"
+      - "tests/fixtures/v2_1_mmcif_altloc_selection/**"
       - "tests/fixtures/v2_1_mmcif_assembly/**"
       - "tests/fixtures/v2_1_mmcif_nonpoly_identity/**"
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
@@ -146,6 +155,7 @@ on:
       - "config/independent_engine_v2_v2_1_exact_h2o_graph_corpus.json"
       - "config/independent_engine_v2_v2_1_sdf_data_field_corpus.json"
       - "config/independent_engine_v2_v2_1_pdb_conect_declaration_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_altloc_selection_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_assembly_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
@@ -297,6 +307,63 @@ jobs:
           assert molecular_identity["strict_mmcif_atom_site_bare_uncertainty_free_occupancy_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_mmcif_atom_site_uncertainty_free_occupancy_b_factor_pair_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_mmcif_common_core21_label_auth_entity_identity_round_trip_evidence_ready"] is True
+          for field in (
+              "strict_mmcif_explicit_altloc_selection_envelope_contract_implemented",
+              "strict_mmcif_explicit_altloc_selection_round_trip_evidence_ready",
+              "strict_mmcif_explicit_altloc_selection_corpus_evidence_ready",
+              "strict_mmcif_explicit_altloc_selection_base_pedigree_bound",
+              "strict_mmcif_explicit_altloc_selection_exact_artifact_chain_bound",
+              "strict_mmcif_explicit_altloc_selection_nested_evidence_immutable",
+              "strict_mmcif_explicit_altloc_selection_single_model_id1_bound",
+              "strict_mmcif_explicit_altloc_selection_explicit_selection_required",
+              "strict_mmcif_explicit_altloc_selection_all_source_atom_rows_preserved",
+              "strict_mmcif_explicit_altloc_selection_selected_coordinate_projection_only",
+              "strict_mmcif_explicit_altloc_selection_base_writer_selected_state_remains_unrepresentable",
+          ):
+              assert molecular_identity[field] is True
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_envelope_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_parser_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_writer_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_base_parser_version"] == "1.9.0"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_base_writer_version"] == "1.5.0"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_projection_scope"] == "source_reported_label_alt_id_rows_and_explicit_selected_coordinate_projection_only"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_corpus_manifest_payload_sha256"] == "652ff9e1c1f849e8f9978fbf57e50ef8b2f1bd80349dde06cf2c1a34ee411625"
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_input_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_output_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_projection_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_entity_rows"] == 4096
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_struct_asym_rows"] == 16384
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_atom_rows"] == 80000
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_source_id_utf8_bytes"] == 4096
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_token_characters"] == 2048
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_altloc_id_characters"] == 256
+          assert molecular_identity["strict_mmcif_explicit_altloc_selection_max_output_line_characters"] == 2048
+          for suffix in (
+              "source_authenticated",
+              "auth_label_equivalence_inferred",
+              "coordinate_observation_completeness_assessed",
+              "altloc_population_interpreted",
+              "occupancy_population_interpreted",
+              "occupancy_weighting_applied",
+              "refinement_validity_assessed",
+              "chemistry_interpreted",
+              "role_assignment_interpreted",
+              "bond_topology_interpreted",
+              "bond_order_interpreted",
+              "coordination_interpreted",
+              "charge_interpreted",
+              "protonation_interpreted",
+              "preparation_ready",
+              "parameterability_assessed",
+              "physics_supported",
+              "runtime_eligible",
+              "simulation_ready",
+              "execution_authorized",
+              "claim_safe",
+              "general_mmcif_round_trip_evidence_ready",
+              "all_format_round_trip_evidence_ready",
+          ):
+              assert molecular_identity[f"strict_mmcif_explicit_altloc_selection_{suffix}"] is False
           assert molecular_identity["strict_mmcif_explicit_biological_assembly_envelope_contract_implemented"] is True
           assert molecular_identity["strict_mmcif_explicit_biological_assembly_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_mmcif_explicit_biological_assembly_corpus_evidence_ready"] is True
@@ -746,6 +813,11 @@ jobs:
           assert "strict_mmcif_parser_owned_single_model_id1_exact_three_loop_entity_struct_asym_official_order_common_core21_complete_label_auth_entity_identity_writer" in molecular_evidence
           assert "source_to_canonical_to_mmcif_to_canonical_label_auth_entity_identity_projection_with_exact_category_joins_raw_bare_row_tokens_nonpolymer_synthetic_numbering_and_stable_reemission" in molecular_evidence
           assert "source_auth_alias_and_entity_type_preservation_without_auth_label_equivalence_polymer_sequence_completeness_modified_residue_chemistry_water_ion_ligand_cofactor_role_assembly_missingness_preparation_parameterability_simulation_or_claim_promotion" in molecular_evidence
+          assert "strict_opt_in_mmcif_explicit_altloc_selection_envelope_for_exact_entity_struct_asym_and_official_order_common_core21_profile" in molecular_evidence
+          assert "all_source_altloc_rows_and_raw_bare_tokens_preserved_with_explicit_selected_coordinate_projection_and_stable_reemission" in molecular_evidence
+          assert "factory_only_source_bound_altloc_source_projection_selected_state_receipt_report_and_aggregate_without_auth_label_equivalence_altloc_or_occupancy_population_refinement_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
+          assert "base_mmcif_1_9_0_parser_explicit_selection_and_1_5_0_writer_selected_state_nonrepresentability_boundary_preserved" in molecular_evidence
+          assert "versioned_mmcif_altloc_selection_six_round_trip_fifteen_failure_corpus_with_manifest_payload_sha256_652ff9e1c1f849e8f9978fbf57e50ef8b2f1bd80349dde06cf2c1a34ee411625" in molecular_evidence
           assert "opt_in_exact_common_core21_mmcif_assembly_envelope_with_deposited_asymmetric_unit_and_operator_reemission_explicit_id_reparse_bitwise_expanded_coordinate_topology_atom_chain_instance_order_projection_and_stable_second_emission" in molecular_evidence
           assert "factory_only_source_bound_mmcif_assembly_declaration_expanded_state_receipt_report_and_aggregate_without_authentication_biological_correctness_symmetry_pbc_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
           assert "base_mmcif_1_9_0_parser_operation_and_negative_authority_pedigree_plus_base_writer_1_5_0_representable_state_schema_binding" in molecular_evidence
@@ -814,7 +886,7 @@ jobs:
           assert "parameter_and_chemistry_coverage_evidence_missing" in molecular_identity["blockers"]
           assert "general_sdf_stereochemistry_arbitrary_property_records_rich_data_headers_multiple_records_v3000_and_context_round_trip_missing" in molecular_identity["blockers"]
           assert "general_pdb_conect_outside_the_selected_ordered_source_declaration_envelope_and_all_conect_bond_kind_order_covalence_coordination_chemistry_semantics_altloc_general_missingness_nonrepresentable_cryst1_symmetry_and_pbc_round_trip_missing" in molecular_identity["blockers"]
-          assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_biological_assembly_nonpoly_identity_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_assembly_declarations_or_operator_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
+          assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_altloc_selection_explicit_biological_assembly_nonpoly_identity_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_or_assembly_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
           assert "zero_occupancy_residue_declarations_do_not_establish_missingness_completeness_refinement_validity_or_preparation" in molecular_identity["blockers"]
           assert "zero_occupancy_atom_declarations_do_not_establish_missingness_occupancy_population_refinement_validity_or_preparation" in molecular_identity["blockers"]
           assert "general_smiles_fragment_roles_salts_mixtures_general_rings_outside_one_selected_simple_nonaromatic_three_through_eight_member_or_fully_aromatic_five_or_six_member_ring_arbitrary_multiple_bond_chemistry_aromaticity_outside_the_selected_profile_general_charge_and_charge_assignment_isotopes_nonpositive_or_duplicate_maps_atom_stereo_outside_bounded_tetrahedral_r_s_unknown_bond_stereo_e_z_outside_the_normalized_spelling_admitted_lowest_index_carrier_profile_source_hydrogens_and_bracket_hydrogens_outside_selected_aromatic_or_tetrahedral_state_round_trip_missing" in molecular_identity["blockers"]

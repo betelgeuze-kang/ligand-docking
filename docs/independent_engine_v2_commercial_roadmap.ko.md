@@ -14,7 +14,8 @@ independently-appended formal-charge/insertion-code/uncertainty-free occupancy
 core12·formal-charge-then-insertion-code 또는 uncertainty-free
 occupancy-then-B-factor core13 `_atom_site`-only 여섯 profile과 exact
 `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity
-profile의 single-model-ID1 mmCIF 1.5, 그리고 base 버전을 바꾸지 않는 별도
+profile의 single-model-ID1 mmCIF 1.5와 base 버전을 바꾸지 않는 별도
+opt-in exact common-core21 explicit-altloc-selection envelope 1.0, 그리고 별도
 opt-in `_pdbx_entity_nonpoly`·`_pdbx_nonpoly_scheme` source identity envelope
 1.0과 exact `_entity_poly_seq(entity_id,num,mon_id,hetero)`를 보존하는 별도
 opt-in polymer sequence membership envelope 1.0, 그 carrier에 exact official-order
@@ -506,6 +507,48 @@ writer cap은 각각 4,096, 16,384, 80,000 row, 2,000,000 token, 250,000 line,
 2,048 character/line, 64 MiB output이다.
 
 base parser 1.9.0과 writer 1.5.0의 동작·버전을 넓히지 않고, 별도 opt-in
+`betelgeuze_engine_v2.molecular.mmcif_altloc_selection` envelope 1.0은 exact
+`_entity(id,type)`, `_struct_asym(id,entity_id)`와 official-order common-core21
+`_atom_site`만 받는다. single model ID 1·bare ASCII token이어야 하고,
+빈 문자열이 아닌 `label_alt_id`를 명시적으로 선택해 적어도 하나의
+residue가 그 선택의 영향을 받아야 한다. residue별 blank row와 요청한
+alternate row만 selected `AllAtomSystem`에 남기고 다른 alternate row는 제외한다.
+envelope는 kept/discarded source ordinal·atom-site ID를 독립적으로 다시 계산해
+base parser ledger와 교차 검증하며, 요청 ID 부재·residue별 누락·alternate
+atom identity 불일치·blank collision·duplicate identity/atom-site ID는 typed failure다.
+
+source projection은 선택으로 버려지는 row를 포함한 모든 source atom row의
+순서·bare token spelling을 보존한다. selected-state projection은 요청 altloc ID,
+kept/discarded ordinal·ID, topology·atom/residue/chain order와 coordinate·occupancy·
+B-factor의 exact binary64를 별도로 결속한다. 따라서 동일 source에서 A와 B를
+각각 선택하면 source projection과 출력 byte는 같지만 selected state와 record
+state는 다르다. canonical 출력은 `_entity`, `_struct_asym`, `_atom_site` 순서로
+모든 alternate row를 다시 방출하고, 같은 explicit ID로 재파싱한 source/
+selected-state·topology 동일성과 두 번째 emission의 byte 안정성을 요구한다.
+
+base writer 1.5.0은 selected-altloc state를 계속 비표현 상태로 거부하고,
+envelope는 그 상태에 base representable-state SHA를 잘못 적용하지 않는다. v1은
+assembly·nonpoly/polymer·missingness·zero-occupancy envelope, cell·multimodel과
+조합하지 않는다. extra category/header, scalar category, quote·multiline token,
+numeric uncertainty와 지원 밖 entity type도 삭제하지 않고 typed failure로 닫는다.
+
+factory-only source projection·selected state·record state·source binding·receipt·report·
+aggregate chain은 detached snapshot, topology, source ID, output, reparse와 second emission을
+서로 결속한다. input·output·projection은 각각 64 MiB, entity는 4,096 row,
+struct-asym은 16,384 row, atom-site는 80,000 row, `source_id`는 UTF-8 4,096
+byte, source token과 output line은 2,048 character, explicit altloc ID는 256
+character로 제한한다. 6개 round-trip·15개
+deterministic failure case를 고정한 manifest payload SHA-256은
+`652ff9e1c1f849e8f9978fbf57e50ef8b2f1bd80349dde06cf2c1a34ee411625`다.
+
+이 성공은 exact source row 보존과 explicit coordinate selection의 재현성만 증명한다.
+source authentication, auth-label equivalence, coordinate completeness, altloc·occupancy
+population, occupancy weighting, refinement validity, chemistry·role·bond/order·coordination·
+charge·protonation, preparation, parameterability, physics, runtime, simulation, execution,
+claim과 general mmCIF/all-format readiness는 모두 false다. 이 additive evidence로 V2-1이나
+상용 단계를 완료 처리하지 않는다.
+
+base parser 1.9.0과 writer 1.5.0의 동작·버전을 넓히지 않고, 별도 opt-in
 mmCIF explicit biological assembly envelope 1.0.0은 exact common-core21 ASU와
 세 assembly loop만 조합한다. `_pdbx_struct_assembly`는 `id` 하나,
 `_pdbx_struct_assembly_gen`은 official-order
@@ -749,7 +792,7 @@ unchanged base parser/writer에서 common-core21의 exact `_entity`·`_struct_as
 밖 non-`_atom_site` category,
 기존 여섯 profile 또는 common-core21 외 field 집합, partial auth, 지원 밖 entity type과
 다른 optional field,
-canonical bond, altloc·assembly selection, selected unobserved/zero-occupancy
+canonical bond, exact explicit-altloc/assembly envelope 밖 selection, selected unobserved/zero-occupancy
 residue/atom-level envelope 밖 source declaration, cell,
 multimodel은 삭제하지 않고 typed failure로 닫는다. 선택된 두 nonpoly category는
 별도 opt-in envelope에서만 받고, `_entity_poly_seq`와 selected residue/atom-level
@@ -771,7 +814,7 @@ chemistry·preparation·parameterability·simulation 또는 claim 근거가 아�
 auth alias 보존은 label-auth 동일성 또는 numbering 정합성 근거가 아니고, source
 entity type 보존은 polymer sequence completeness, modified-residue chemistry,
 water·ion·ligand·cofactor role 근거가 아니다. general mmCIF category와 선택
-common-core21·nonpoly identity·polymer sequence membership·source-reported
+common-core21·explicit-altloc selection·nonpoly identity·polymer sequence membership·source-reported
 unobserved-residue·unobserved-atom·zero-occupancy-residue·zero-occupancy-atom
 envelope 밖 auth/entity
 surface는 계속
