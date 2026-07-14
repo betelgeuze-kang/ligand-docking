@@ -787,6 +787,68 @@ runtime, simulation, execution, or claim authority. Zero-occupancy rows,
 nonpoly atom claims, nonblank altlocs, other models, general atom missingness,
 and raw-layout round-trip remain blocked.
 
+A fifth opt-in module,
+`betelgeuze_engine_v2.molecular.mmcif_zero_occupancy_residues`, defines an
+additive envelope 1.0 for the `occupancy_flag=0` branch of the exact official
+11-field `_pdbx_unobs_or_zero_occ_residues` loop. It composes only the unchanged
+polymer-sequence carrier, optionally already composed with the unchanged
+nonpoly-identity carrier. The base mmCIF parser 1.9.0, base writer 1.5.0,
+polymer-sequence envelope 1.0, nonpoly-identity envelope 1.0, and both existing
+`occupancy_flag=1` unobserved envelopes keep their behavior and versions.
+Version 1 accepts only bare ASCII `polymer_flag=Y`, `occupancy_flag=0`, model-1
+polymer declarations whose label tuple joins `_struct_asym` and the exact
+`_entity_poly_seq` member. Source row IDs and normalized-insertion-qualified
+semantic residue identities are unique; the atom-level zero-occupancy category,
+or residue and atom zero-occupancy categories together, fail closed.
+
+Each selected residue declaration must have at least one matching model-1
+common-core21 `_atom_site` row under label asym, positive label sequence,
+component, and normalized insertion code. Every matching row, including every
+matching atom or alternate row, must carry a bare, uncertainty-free, finite
+numeric occupancy whose exact numeric value is zero; absence, a missing or
+non-numeric value, or any nonzero match fails closed. This is a selected-source
+consistency crosscheck, not an inference that zero occupancy means a missing
+residue. The unchanged base parser must independently preserve exactly `N`
+residue evidence rows and `N` zero-occupancy-residue rows, zero atom rows and
+zero zero-occupancy-atom rows, zero extension items, and zero missing-residue
+and missing-atom claims. That preserve-only metadata receives its own digest in
+the record state, source binding, receipts, and round-trip report.
+
+A sixth opt-in module,
+`betelgeuze_engine_v2.molecular.mmcif_zero_occupancy_atoms`, applies the same
+additive rule to the exact official 14-field
+`_pdbx_unobs_or_zero_occ_atoms` loop. It accepts only bare
+`polymer_flag=Y`, `occupancy_flag=0`, model-1 polymer declarations with raw
+`.` or `?` `label_alt_id`. The parent residue must exist under the exact label
+identity and normalized insertion marker, the exact label atom under the
+normalized blank altloc must itself be present, and every matching atom-site
+occupancy must be an exact finite numeric zero. Missing parent or atom rows,
+unavailable occupancy, any nonzero match, nonblank altloc, duplicate semantic
+identity, or a simultaneous residue zero-occupancy loop fails closed. The base
+preserve-only metadata must contain exactly `N` atom and zero-occupancy-atom
+rows, zero residue rows, zero extension items, and zero missing claims.
+
+Both envelopes emit the declaration category immediately before `_atom_site`
+in canonical five- or seven-category carrier order, bind ordered declaration,
+polymer and optional nonpoly state, topology, detached snapshot, source and
+source ID, base preserve-only metadata, receipts, exact output reparse, and a
+byte-stable second emission. Input is capped at 64 MiB, selected identity
+tokens at 256 characters, and `source_id` at 4,096 UTF-8 bytes. The unchanged
+base parser's 40,000 preserved-value limit gives residue and atom row caps of
+`floor(40000/11)=3,636` and `floor(40000/14)=2,857`. The shared six-round-trip,
+nineteen-failure corpus is pinned by canonical manifest payload SHA-256
+`96564c7b9d4d70eed7ac65188783a6de0acf33a01ac18b7e0559afb28f61ae40`.
+
+These envelopes preserve only ordered source-reported zero-occupancy
+declarations plus the exact selected-coordinate numeric-zero crosscheck. They
+do not authenticate the source or establish actual missing-atom or
+missing-residue facts, occupancy populations or weighting, alternate-location
+populations, coordinate or sequence completeness, refinement validity,
+reference/auth equivalence, chemistry, preparation, parameterability, physics,
+runtime, simulation, execution, or claim authority. They do not make the base
+parser/writer a general mmCIF implementation and do not satisfy the V2-1 or
+commercial exit conditions.
+
 Raw whitespace, comments, and the exact single- versus double-quote delimiter
 are layout and are not projected. The optional name's quoted-versus-bare token
 class is projection-bound because it distinguishes a quoted literal from a
@@ -799,13 +861,15 @@ Within the unchanged base parser/writer contract, non-`_atom_site` categories
 outside the exact common-core21 `_entity` and `_struct_asym` loops, any
 `_atom_site` field set other than the six legacy profiles or common-core21,
 partial auth state, unsupported entity types, canonical bonds,
-alternate-location or assembly selection, source-reported missingness outside
-the selected residue- and atom-level envelopes, cell state, and multiple models fail with
+alternate-location or assembly selection, source-reported unobserved or
+zero-occupancy declarations outside the four selected residue- and atom-level
+envelopes, cell state, and multiple models fail with
 typed writer errors rather than being
 omitted. The two nonpoly categories are admitted only by the separate opt-in
 envelope, and `_entity_poly_seq` is admitted only by its separate opt-in
-envelope. The selected residue-level missingness loop is admitted only by the
-third opt-in envelope, and the selected atom-level loop only by the fourth.
+envelope. The selected residue-level unobserved loop is admitted only by the
+third opt-in envelope, the selected atom-level unobserved loop only by the
+fourth, and the two `occupancy_flag=0` branches only by the fifth and sixth.
 Factory-only receipt, report, and snapshot-backed aggregate objects
 bind the input snapshot,
 topology, projection, emitted source, reparse, and stable re-emission while
@@ -815,8 +879,8 @@ scientific-validity, and claim authority false.
 This is evidence only for the single-model-ID1 six legacy `_atom_site` profiles
 and the exact three-category common-core21 profile, plus the separate exact
 five-category nonpoly identity envelope and four- or six-category polymer
-sequence membership envelope, plus the selected source-reported residue- and
-atom-level missingness envelopes when explicitly selected.
+sequence membership envelope, plus the selected source-reported unobserved and
+zero-occupancy residue- and atom-level envelopes when explicitly selected.
 Formal-charge source notation is not charge assignment,
 protonation, oxidation state, electronic-state assessment, or evidence of an
 ion, metal, or cofactor role. Insertion-code preservation is not auth numbering,
@@ -829,11 +893,12 @@ population or occupancy-weighting interpretation, zero-occupancy missingness
 or completeness evidence, refinement validity, mobility, temperature,
 disorder, experimental-uncertainty assessment or propagation, or preparation
 evidence. General mmCIF categories and auth/entity semantics outside
-common-core21 or the selected nonpoly identity, polymer-sequence, and
-source-reported unobserved-residue and unobserved-atom envelopes,
+common-core21 or the selected nonpoly identity, polymer-sequence,
+source-reported unobserved-residue and unobserved-atom, and source-reported
+zero-occupancy-residue and zero-occupancy-atom envelopes,
 other optional fields, altloc,
-biological assemblies, atom-level missingness outside the selected envelope,
-zero-occupancy semantics, cells,
+biological assemblies, missingness or zero-occupancy declarations outside the
+selected envelopes, cells,
 and multimodel round-trip remain
 unfinished, as do general PDB and general SMILES round-trip and the all-format
 V2-1 exit condition. Preparation, parameterability, simulation, scientific

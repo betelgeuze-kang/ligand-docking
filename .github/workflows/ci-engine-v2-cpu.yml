@@ -10,6 +10,8 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy_atoms.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy_residues.py"
       - "core/ai_correction.py"
       - "train/runtime_inputs.py"
       - "train/checkpoint_contracts.py"
@@ -29,6 +31,9 @@ on:
       - "tests/unit/test_engine_v2_mmcif_unobserved_atom_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_unobserved_residues.py"
       - "tests/unit/test_engine_v2_mmcif_unobserved_residues_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_zero_occupancy_atoms.py"
+      - "tests/unit/test_engine_v2_mmcif_zero_occupancy_residues.py"
+      - "tests/unit/test_engine_v2_mmcif_zero_occupancy_corpus.py"
       - "tests/fixtures/tier_beta/benzene.smi"
       - "tests/fixtures/tier_beta/ethanol.sdf"
       - "tests/fixtures/tier_beta/mini_protein.cif"
@@ -44,6 +49,7 @@ on:
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_atoms/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_residues/**"
+      - "tests/fixtures/v2_1_mmcif_zero_occupancy/**"
       - "tests/fixtures/v2_2_linear_alkane/**"
       - "tests/fixtures/v2_2_parameter_pipeline/**"
       - "tests/unit/test_runtime_inputs.py"
@@ -67,6 +73,7 @@ on:
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_atom_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_residue_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_zero_occupancy_corpus.json"
       - "config/independent_engine_v2_v2_2_linear_alkane_corpus.json"
       - "config/settings.yaml"
       - "pyproject.toml"
@@ -81,6 +88,8 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy_atoms.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy_residues.py"
       - "core/ai_correction.py"
       - "train/runtime_inputs.py"
       - "train/checkpoint_contracts.py"
@@ -100,6 +109,9 @@ on:
       - "tests/unit/test_engine_v2_mmcif_unobserved_atom_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_unobserved_residues.py"
       - "tests/unit/test_engine_v2_mmcif_unobserved_residues_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_zero_occupancy_atoms.py"
+      - "tests/unit/test_engine_v2_mmcif_zero_occupancy_residues.py"
+      - "tests/unit/test_engine_v2_mmcif_zero_occupancy_corpus.py"
       - "tests/fixtures/tier_beta/benzene.smi"
       - "tests/fixtures/tier_beta/ethanol.sdf"
       - "tests/fixtures/tier_beta/mini_protein.cif"
@@ -115,6 +127,7 @@ on:
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_atoms/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_residues/**"
+      - "tests/fixtures/v2_1_mmcif_zero_occupancy/**"
       - "tests/fixtures/v2_2_linear_alkane/**"
       - "tests/fixtures/v2_2_parameter_pipeline/**"
       - "tests/unit/test_runtime_inputs.py"
@@ -138,6 +151,7 @@ on:
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_atom_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_residue_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_zero_occupancy_corpus.json"
       - "config/independent_engine_v2_v2_2_linear_alkane_corpus.json"
       - "config/settings.yaml"
       - "pyproject.toml"
@@ -446,6 +460,93 @@ jobs:
               "strict_mmcif_unobserved_atom_claim_safe",
           ):
               assert molecular_identity[field] is False
+          zero_occupancy_profiles = {
+              "residue": {
+                  "scope": "source_reported_zero_occupancy_polymer_residue_declarations_and_exact_selected_coordinate_zero_crosscheck_only",
+                  "max_rows": 3636,
+                  "false_fields": (
+                      "missing_residue_fact_claimed",
+                      "zero_occupancy_missingness_inferred",
+                      "modeled_residue_presence_assessed",
+                  ),
+              },
+              "atom": {
+                  "scope": "source_reported_zero_occupancy_polymer_atom_declarations_and_exact_selected_coordinate_zero_crosscheck_only",
+                  "max_rows": 2857,
+                  "false_fields": (
+                      "missing_atom_fact_claimed",
+                      "zero_occupancy_atom_fact_claimed",
+                      "modeled_atom_presence_assessed",
+                      "residue_template_consulted",
+                      "atom_name_dictionary_validated",
+                      "completion_attempted",
+                      "completion_applied",
+                  ),
+              },
+          }
+          zero_occupancy_common_false_fields = (
+              "source_authenticated",
+              "auth_label_equivalence_inferred",
+              "reference_sequence_equivalence_assessed",
+              "coordinate_observation_completeness_assessed",
+              "occupancy_population_interpreted",
+              "occupancy_weighting_applied",
+              "refinement_validity_assessed",
+              "altloc_population_interpreted",
+              "sequence_completeness_claimed",
+              "modified_residue_identity_assessed",
+              "polymer_chemistry_interpreted",
+              "microheterogeneity_interpreted",
+              "chemistry_interpreted",
+              "role_assignment_interpreted",
+              "bond_topology_interpreted",
+              "bond_order_interpreted",
+              "coordination_interpreted",
+              "charge_interpreted",
+              "protonation_interpreted",
+              "preparation_ready",
+              "parameterability_assessed",
+              "physics_supported",
+              "runtime_eligible",
+              "simulation_ready",
+              "execution_authorized",
+              "claim_safe",
+              "general_mmcif_round_trip_evidence_ready",
+              "all_format_round_trip_evidence_ready",
+          )
+          for profile_kind, profile in zero_occupancy_profiles.items():
+              prefix = f"strict_mmcif_zero_occupancy_{profile_kind}_"
+              for suffix in (
+                  "envelope_contract_implemented",
+                  "round_trip_evidence_ready",
+                  "corpus_evidence_ready",
+                  "source_binding_bound",
+                  "carrier_topology_bound",
+                  "polymer_sequence_carrier_bound",
+                  "optional_nonpoly_identity_carrier_bound",
+                  "base_missingness_metadata_bound",
+                  "base_missing_claim_counts_required_zero",
+                  "exact_selected_coordinate_zero_crosscheck_bound",
+              ):
+                  assert molecular_identity[prefix + suffix] is True
+              for suffix in (
+                  "envelope_version",
+                  "parser_version",
+                  "writer_version",
+                  "polymer_sequence_envelope_version",
+                  "nonpoly_identity_envelope_version",
+              ):
+                  assert molecular_identity[prefix + suffix] == "1.0.0"
+              assert molecular_identity[prefix + "base_mmcif_parser_version"] == "1.9.0"
+              assert molecular_identity[prefix + "base_mmcif_writer_version"] == "1.5.0"
+              assert molecular_identity[prefix + "projection_scope"] == profile["scope"]
+              assert molecular_identity[prefix + "max_input_bytes"] == 64 * 1024 * 1024
+              assert molecular_identity[prefix + "max_rows"] == profile["max_rows"]
+              assert molecular_identity[prefix + "max_source_id_utf8_bytes"] == 4096
+              assert molecular_identity[prefix + "max_token_characters"] == 256
+              assert molecular_identity[prefix + "corpus_manifest_payload_sha256"] == "96564c7b9d4d70eed7ac65188783a6de0acf33a01ac18b7e0559afb28f61ae40"
+              for suffix in (*zero_occupancy_common_false_fields, *profile["false_fields"]):
+                  assert molecular_identity[prefix + suffix] is False
           assert molecular_identity["strict_smiles_parser_owned_writer_contract_implemented"] is True
           assert molecular_identity["strict_smiles_organic_tree_round_trip_evidence_ready"] is True
           assert molecular_identity["strict_smiles_single_double_triple_tree_round_trip_evidence_ready"] is True
@@ -668,6 +769,14 @@ jobs:
           assert "source_reported_unobserved_polymer_atom_claim_projection_with_exact_label_sequence_join_parent_coordinate_residue_presence_exact_atom_absence_raw_insertion_altloc_marker_binding_canonical_category_order_and_stable_reemission" in molecular_evidence
           assert "factory_only_source_bound_unobserved_atom_projection_receipt_report_and_aggregate_without_missing_atom_fact_reference_sequence_or_coordinate_completeness_auth_label_equivalence_residue_template_atom_dictionary_completion_modified_residue_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
           assert "versioned_mmcif_unobserved_atom_six_round_trip_ten_failure_corpus_with_manifest_payload_sha256_82081b2061386e90e2bf5e7ec94e5e6ab43d03c534d709dfbb76ffe7dbe33f7f" in molecular_evidence
+          assert "strict_opt_in_mmcif_source_reported_zero_occupancy_residue_declaration_envelope_for_exact_polymer_sequence_carrier_optional_nonpoly_identity_carrier_and_official_order_residue_loop" in molecular_evidence
+          assert "source_reported_zero_occupancy_polymer_residue_declaration_projection_with_exact_label_sequence_join_selected_coordinate_presence_all_selected_atom_occupancies_exact_numeric_zero_base_missing_claim_counts_zero_and_stable_reemission" in molecular_evidence
+          assert "factory_only_source_bound_zero_occupancy_residue_projection_receipt_report_and_aggregate_without_missing_residue_fact_zero_occupancy_missingness_reference_sequence_coordinate_completeness_refinement_occupancy_population_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
+          assert "strict_opt_in_mmcif_source_reported_zero_occupancy_atom_declaration_envelope_for_exact_polymer_sequence_carrier_optional_nonpoly_identity_carrier_and_official_order_atom_loop" in molecular_evidence
+          assert "source_reported_zero_occupancy_polymer_atom_declaration_projection_with_exact_label_sequence_parent_residue_and_atom_join_selected_coordinate_occupancy_exact_numeric_zero_raw_insertion_altloc_marker_binding_base_missing_claim_counts_zero_and_stable_reemission" in molecular_evidence
+          assert "factory_only_source_bound_zero_occupancy_atom_projection_receipt_report_and_aggregate_without_missing_atom_fact_occupancy_population_refinement_coordinate_completeness_residue_template_atom_dictionary_completion_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
+          assert "base_mmcif_1_9_0_parser_and_1_5_0_writer_polymer_sequence_1_0_0_and_optional_nonpoly_identity_1_0_0_carrier_binding_with_base_missingness_metadata_digest_and_zero_missing_claim_counts" in molecular_evidence
+          assert "versioned_mmcif_zero_occupancy_combined_six_round_trip_nineteen_failure_corpus_with_manifest_payload_sha256_96564c7b9d4d70eed7ac65188783a6de0acf33a01ac18b7e0559afb28f61ae40" in molecular_evidence
           assert "strict_smiles_parser_owned_connected_acyclic_single_double_triple_bond_implicit_hydrogen_tree_representable_subset_writer" in molecular_evidence
           assert "strict_smiles_parser_owned_one_to_256_ordered_acyclic_single_double_triple_bond_implicit_hydrogen_neutral_organic_subset_forest_representable_subset_writer" in molecular_evidence
           assert "strict_smiles_parser_owned_one_to_256_ordered_acyclic_single_double_triple_bond_organic_subset_forest_with_known_minus_one_zero_or_plus_one_source_formal_charge_and_no_generated_hydrogen_on_charged_atoms" in molecular_evidence
@@ -705,7 +814,9 @@ jobs:
           assert "parameter_and_chemistry_coverage_evidence_missing" in molecular_identity["blockers"]
           assert "general_sdf_stereochemistry_arbitrary_property_records_rich_data_headers_multiple_records_v3000_and_context_round_trip_missing" in molecular_identity["blockers"]
           assert "general_pdb_conect_outside_the_selected_ordered_source_declaration_envelope_and_all_conect_bond_kind_order_covalence_coordination_chemistry_semantics_altloc_general_missingness_nonrepresentable_cryst1_symmetry_and_pbc_round_trip_missing" in molecular_identity["blockers"]
-          assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_biological_assembly_nonpoly_identity_polymer_sequence_membership_and_source_reported_unobserved_residue_and_unobserved_atom_envelope_profiles_optional_fields_altloc_assembly_declarations_or_operator_forms_outside_the_selected_envelope_atom_missingness_outside_the_selected_envelope_zero_occupancy_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
+          assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_biological_assembly_nonpoly_identity_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_assembly_declarations_or_operator_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
+          assert "zero_occupancy_residue_declarations_do_not_establish_missingness_completeness_refinement_validity_or_preparation" in molecular_identity["blockers"]
+          assert "zero_occupancy_atom_declarations_do_not_establish_missingness_occupancy_population_refinement_validity_or_preparation" in molecular_identity["blockers"]
           assert "general_smiles_fragment_roles_salts_mixtures_general_rings_outside_one_selected_simple_nonaromatic_three_through_eight_member_or_fully_aromatic_five_or_six_member_ring_arbitrary_multiple_bond_chemistry_aromaticity_outside_the_selected_profile_general_charge_and_charge_assignment_isotopes_nonpositive_or_duplicate_maps_atom_stereo_outside_bounded_tetrahedral_r_s_unknown_bond_stereo_e_z_outside_the_normalized_spelling_admitted_lowest_index_carrier_profile_source_hydrogens_and_bracket_hydrogens_outside_selected_aromatic_or_tetrahedral_state_round_trip_missing" in molecular_identity["blockers"]
           assert "parser_typed_tetrahedral_source_graphs_over_514_source_atoms_unsupported" in molecular_identity["blockers"]
           force_field = capabilities["v2_independent_force_field"]
@@ -834,6 +945,8 @@ jobs:
           assert "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py" in names
+          assert "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy_residues.py" in names
+          assert "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy_atoms.py" in names
           assert "betelgeuze_engine_v2/molecular/pdb_writer.py" in names
           assert "betelgeuze_engine_v2/molecular/pdb_conect_declaration.py" in names
           assert "betelgeuze_engine_v2/molecular/sdf_v2000_writer.py" in names
@@ -861,6 +974,7 @@ jobs:
           assert not any("independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_unobserved_residue_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_unobserved_atom_corpus.json" in name for name in names)
+          assert not any("independent_engine_v2_v2_1_mmcif_zero_occupancy_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_smiles_e_z_writer_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_smiles_r_s_writer_corpus.json" in name for name in names)
           PY
@@ -1018,16 +1132,22 @@ jobs:
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_POLYMER_SEQUENCE_ENVELOPE_VERSION, parse_mmcif_polymer_sequence, round_trip_mmcif_polymer_sequence_source; assert MMCIF_POLYMER_SEQUENCE_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_polymer_sequence); assert callable(round_trip_mmcif_polymer_sequence_source)"
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_UNOBSERVED_RESIDUE_ENVELOPE_VERSION, parse_mmcif_unobserved_residues, round_trip_mmcif_unobserved_residues_source; assert MMCIF_UNOBSERVED_RESIDUE_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_unobserved_residues); assert callable(round_trip_mmcif_unobserved_residues_source)"
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_UNOBSERVED_ATOM_ENVELOPE_VERSION, parse_mmcif_unobserved_atoms, round_trip_mmcif_unobserved_atoms_source; assert MMCIF_UNOBSERVED_ATOM_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_unobserved_atoms); assert callable(round_trip_mmcif_unobserved_atoms_source)"
+          /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_ZERO_OCCUPANCY_RESIDUE_ENVELOPE_VERSION, parse_mmcif_zero_occupancy_residues, round_trip_mmcif_zero_occupancy_residues_source; assert MMCIF_ZERO_OCCUPANCY_RESIDUE_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_zero_occupancy_residues); assert callable(round_trip_mmcif_zero_occupancy_residues_source)"
+          /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_ZERO_OCCUPANCY_ATOM_ENVELOPE_VERSION, parse_mmcif_zero_occupancy_atoms, round_trip_mmcif_zero_occupancy_atoms_source; assert MMCIF_ZERO_OCCUPANCY_ATOM_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_zero_occupancy_atoms); assert callable(round_trip_mmcif_zero_occupancy_atoms_source)"
           /tmp/engine-v2-wheel-venv/bin/python - <<'PY'
           from betelgeuze_engine_v2.molecular import (
               MMCIF_ENTITY_POLY_SEQ_HEADERS,
               MMCIF_UNOBSERVED_ATOM_HEADERS,
               MMCIF_UNOBSERVED_RESIDUE_HEADERS,
+              MMCIF_ZERO_OCCUPANCY_ATOM_HEADERS,
+              MMCIF_ZERO_OCCUPANCY_RESIDUE_HEADERS,
               StructureParseError,
               parse_mmcif,
               round_trip_mmcif_polymer_sequence_source,
               round_trip_mmcif_unobserved_atoms_source,
               round_trip_mmcif_unobserved_residues_source,
+              round_trip_mmcif_zero_occupancy_atoms_source,
+              round_trip_mmcif_zero_occupancy_residues_source,
           )
 
           atom_headers = (
@@ -1116,6 +1236,63 @@ jobs:
           assert unobserved_atom_report["completion_applied"] is False
           assert unobserved_atom_report["preparation_ready"] is False
           assert unobserved_atom_report["claim_safe"] is False
+          zero_source = source.replace(b" 1.0 20.0 ", b" 0.0 20.0 ", 1)
+          zero_residue_loop = (
+              "loop_\n"
+              + "\n".join(MMCIF_ZERO_OCCUPANCY_RESIDUE_HEADERS)
+              + "\n1 Y 0 1 X GLY 101 ? A GLY 1\n#\n"
+          ).encode("ascii")
+          zero_residue_source = zero_source.replace(
+              b"loop_\n_atom_site.group_PDB",
+              zero_residue_loop + b"loop_\n_atom_site.group_PDB",
+              1,
+          )
+          zero_residue = round_trip_mmcif_zero_occupancy_residues_source(
+              zero_residue_source,
+              source_id="isolated-wheel-zero-occupancy-residue",
+          )
+          zero_residue_report = zero_residue.report.to_dict()
+          assert zero_residue.write_result.payload == zero_residue.reemitted_write_result.payload
+          assert zero_residue_report["source_reported_zero_occupancy_residue_declarations_preserved"] is True
+          assert zero_residue_report["missing_residue_fact_claimed"] is False
+          assert zero_residue_report["zero_occupancy_missingness_inferred"] is False
+          assert zero_residue_report["occupancy_population_interpreted"] is False
+          assert zero_residue_report["refinement_validity_assessed"] is False
+          assert zero_residue_report["general_mmcif_round_trip_evidence_ready"] is False
+          assert zero_residue_report["preparation_ready"] is False
+          assert zero_residue_report["claim_safe"] is False
+          zero_residue_missingness = zero_residue.source_ingest.base_ingest.missingness_evidence
+          assert zero_residue_missingness.source_reported_missing_residue_count == 0
+          assert zero_residue_missingness.source_reported_missing_atom_count == 0
+          zero_atom_loop = (
+              "loop_\n"
+              + "\n".join(MMCIF_ZERO_OCCUPANCY_ATOM_HEADERS)
+              + "\n1 Y 0 1 X GLY 101 ? N . A GLY 1 N\n#\n"
+          ).encode("ascii")
+          zero_atom_source = zero_source.replace(
+              b"loop_\n_atom_site.group_PDB",
+              zero_atom_loop + b"loop_\n_atom_site.group_PDB",
+              1,
+          )
+          zero_atom = round_trip_mmcif_zero_occupancy_atoms_source(
+              zero_atom_source,
+              source_id="isolated-wheel-zero-occupancy-atom",
+          )
+          zero_atom_report = zero_atom.report.to_dict()
+          assert zero_atom.write_result.payload == zero_atom.reemitted_write_result.payload
+          assert zero_atom_report["source_reported_zero_occupancy_atom_declarations_preserved"] is True
+          assert zero_atom_report["missing_atom_fact_claimed"] is False
+          assert zero_atom_report["zero_occupancy_atom_fact_claimed"] is False
+          assert zero_atom_report["occupancy_population_interpreted"] is False
+          assert zero_atom_report["refinement_validity_assessed"] is False
+          assert zero_atom_report["general_mmcif_round_trip_evidence_ready"] is False
+          assert zero_atom_report["residue_template_consulted"] is False
+          assert zero_atom_report["completion_applied"] is False
+          assert zero_atom_report["preparation_ready"] is False
+          assert zero_atom_report["claim_safe"] is False
+          zero_atom_missingness = zero_atom.source_ingest.base_ingest.missingness_evidence
+          assert zero_atom_missingness.source_reported_missing_residue_count == 0
+          assert zero_atom_missingness.source_reported_missing_atom_count == 0
           try:
               parse_mmcif(source)
           except StructureParseError as exc:

@@ -22,6 +22,9 @@ opt-in polymer sequence membership envelope 1.0, 그 carrier에 exact official-o
 unobserved-residue envelope 1.0과, 같은 carrier의 좌표에 부모 residue가
 존재하고 선택 atom만 없는 경우를 보존하는 exact official-order
 `_pdbx_unobs_or_zero_occ_atoms` source-reported unobserved-atom envelope 1.0, 그리고
+같은 exact carrier에 `occupancy_flag=0` declaration과 selected model-1
+`_atom_site`의 모든 matching occupancy가 정확한 numeric zero임을 함께 결속하는
+별도 additive zero-occupancy-residue·zero-occupancy-atom envelope 1.0, 그리고
 1–256개 ordered component·
 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member 또는
 fully-aromatic 5/6-member `B C N O P S` ring·selected unit-charge/bracket-H·
@@ -103,6 +106,8 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 | V2-1 mmCIF polymer sequence membership envelope | exact common-core21 또는 기존 nonpoly identity carrier와 official-order `_entity_poly_seq`의 source-reported polymer entity·sequence number·opaque monomer-code membership, atom-site label tuple presence join 및 canonical four/six-category re-emission | reference sequence 동일성·완전성, coordinate observation completeness, missing-residue fact, auth alignment, modified-residue identity, general microheterogeneity·chemistry, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF source-reported unobserved-residue envelope | polymer sequence carrier 또는 기존 nonpoly identity와 조합된 carrier에 exact official-order residue missingness loop를 추가하고, label sequence join·selected coordinate absence·ordered source claim projection 및 canonical five/seven-category re-emission을 검증 | 실제 missing-residue fact, reference/sequence/coordinate completeness, auth-label equivalence, modeled/modified residue identity, atom-level missingness, zero-occupancy 의미론, chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF source-reported unobserved-atom envelope | 같은 carrier에 exact official-order 14-field atom missingness loop를 추가하고, label sequence join·selected coordinate parent-residue presence·exact atom absence·raw insertion/altloc marker·ordered source claim projection 및 canonical five/seven-category re-emission을 검증 | 실제 missing-atom fact, residue-template 또는 atom-name dictionary 검증, completion, reference/sequence/coordinate completeness, auth-label equivalence, zero-occupancy 의미론, chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
+| V2-1 mmCIF source-reported zero-occupancy-residue envelope | unchanged polymer sequence carrier 또는 기존 nonpoly identity 조합 carrier에 exact official-order 11-field residue loop의 `occupancy_flag=0` branch를 추가하고, polymer sequence join·selected model-1 residue presence·모든 matching `_atom_site.occupancy`의 exact numeric-zero·base missing-claim 0 및 zero-row metadata·ordered declaration·stable re-emission을 검증 | zero occupancy에서 실제 missing-residue fact·population/weighting·completeness·refinement validity·altloc·chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한을 추론하거나 general mmCIF round-trip을 주장하는 것 |
+| V2-1 mmCIF source-reported zero-occupancy-atom envelope | 같은 unchanged carrier에 exact official-order 14-field atom loop의 `occupancy_flag=0` branch를 추가하고, parent residue와 exact blank-altloc atom presence·모든 matching occupancy의 exact numeric-zero·base missing-claim 0 및 zero-row metadata·ordered declaration·stable re-emission을 검증 | zero occupancy에서 실제 missing-atom fact·atom completion·population/weighting·completeness·refinement validity·altloc·chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한을 추론하거나 general mmCIF round-trip을 주장하는 것 |
 | V2-1 SMILES bounded parser-typed E/Z projection | writer 1.8이 유지하는 source-tree E/Z, selected simple-ring single-bond carrier, selected 8-member unique nonclosure ring E/Z, lexical orientation·reference parity·shared XOR constraint, exact reparse·stable re-emission 및 별도 고정 corpus | unknown bond stereo, bounded profile 밖 E/Z, 독립 CIP·stereo completeness·geometry·chemistry·preparation·parameterability·runtime·simulation·claim 권한과 general SMILES round-trip |
 | V2-1 SMILES bounded parser-typed tetrahedral R/S projection | writer 1.8의 source-order DFS, parser-owned R/S와 exact RDKit CW/CCW, `@` trial→center별 `@@` 보정→final parse local parity, source graph당 최대 256 center·typed center가 있으면 source atom 최대 514개·selected ring·bounded E/Z coexistence·positive unique map·center당 zero/one bracket-H, exact reparse·stable re-emission 및 별도 14-positive corpus | 독립 CIP assignment, global stereo completeness·substituent equivalence·geometry, 256개 초과 center·typed center가 있는 514개 초과 source-atom graph·bounded profile 밖 atom stereo·nonpositive/duplicate map·선택 상태 밖 bracket H, chemistry·preparation·parameterability·runtime·simulation·claim 권한과 general SMILES round-trip |
 | V2-1 graph-local profile | parser-owned SDF V2000의 source-observed explicit-H·known-zero-charge·nonaromatic single-bond unsubstituted monocyclic cycloalkane C3–C8에 대한 frozen rule, source-indexed graph projection, snapshot·topology·generic report·parser-observation digest binding, 전 positive 및 고정 failure corpus, audit-consumer allowlist | global molecular preparation, pH·protonation, ring strain·conformation·geometry, parameterability·force-field typing·charge·parameter, physics·runtime·energy·force·minimization·simulation·claim 권한 |
@@ -114,6 +119,11 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 | 힘장 위상·계약 | source-bound explicit-H 중립 선형 알케인 C1–C4 적용성, graph-only environment key, bond·angle·proper·모든 원자 쌍 분류, 비물리 full parameter protocol/artifact·snapshot-bound assignment, `N≤14` cell-free CPU float64 direct-uncut method/binding 계약과 별도의 binding-report-only schema-owned scalar-energy 진단 | 과학적으로 fitting·검증된 FF type·charge·bonded/LJ parameter, production evaluation method, 과학적으로 검증된 production runtime energy·force·virial kernel와 production 적용 범위 |
 | 실행 | fail-closed 내부 CPU orchestrator, C1–C4 비물리 scalar-energy 계약 진단, exact-methane 파라미터·합성 fit 계약과 비실행 조화 energy·force·bonded virial·bounded-descent/restart 수치 진단 | 독립 힘장 runtime, 과학적으로 검증된 최소화, docking, 장거리 물리, MD와 고객 실행 route |
 | 검증 | focused CPU tests, wheel, Python 3.10/3.11 CI, canonical hash·tamper·finite-difference·translation·proper-rotation·accepted-prefix restart 계약 검사 | 과학 benchmark, 실제 force-field reference, 실제 ROCm parity, 고객 shadow evidence |
+
+위 `계약` 행의 `zero-occupancy semantics` blocker는 두 additive envelope가
+결속하는 exact selected-coordinate numeric-zero crosscheck 밖의 일반 의미론을
+뜻한다. 선택 declaration 보존은 missingness, population, completeness 또는
+refinement 해석으로 승격되지 않는다.
 
 따라서 현재 상태에서 허용되는 표현은 “V2-0 독립 엔진 스캐폴드와 비승격
 V2-1/V2-2 계약 검증 진행”까지다. V2-1 canonical ingest 완료나 V2-2 독립 힘장
@@ -682,16 +692,69 @@ parameterability, physics, runtime, simulation, execution 또는 claim 권한은
 `occupancy_flag=0`, nonpoly atom claim, nonblank altloc, 다른 model, 선택 범위 밖 general
 atom missingness와 raw-layout round-trip도 계속 차단된다.
 
+그 다음의 별도 additive module
+`betelgeuze_engine_v2.molecular.mmcif_zero_occupancy_residues` envelope 1.0은
+같은 exact polymer-sequence carrier 또는 기존 nonpoly-identity 조합 carrier에
+official-order 11-field `_pdbx_unobs_or_zero_occ_residues` loop의
+`occupancy_flag=0` branch 하나만 더한다. base mmCIF parser 1.9.0, writer 1.5.0,
+polymer-sequence/nonpoly-identity envelope 1.0과 기존 두 `occupancy_flag=1`
+unobserved envelope의 동작·버전은 바꾸지 않는다. v1은 bare ASCII
+`polymer_flag=Y`, `occupancy_flag=0`, model `1` declaration만 받고, label tuple이
+`_struct_asym`의 exact polymer entity와 `_entity_poly_seq` member에 join하도록
+요구한다. source row ID와 normalized-insertion-qualified semantic residue identity는
+각각 유일해야 하며 atom zero-occupancy category 또는 두 zero category의 동시
+입력은 fail-closed다.
+
+선택 residue는 model-1 common-core21 `_atom_site`에 exact label asym·positive
+label sequence·component·normalized insertion identity로 실제 존재해야 한다.
+그 identity에 matching하는 모든 atom/alternate row의 occupancy는 bare,
+uncertainty-free, finite numeric token이고 그 exact numeric 값이 zero여야 한다.
+matching row 부재, `.`/`?` 또는 nonnumeric/unavailable 값, 단 하나의 nonzero
+match라도 typed failure다. 이는 selected-coordinate consistency crosscheck일 뿐
+zero occupancy에서 missing residue를 추론하는 규칙이 아니다.
+
+`betelgeuze_engine_v2.molecular.mmcif_zero_occupancy_atoms` envelope 1.0은 같은
+원칙을 official-order 14-field `_pdbx_unobs_or_zero_occ_atoms` loop에 적용한다.
+bare `polymer_flag=Y`, `occupancy_flag=0`, model `1`, raw `.`/`?`
+`label_alt_id`만 받고, exact normalized-insertion parent residue와 normalized blank
+altloc의 exact label atom이 selected model-1 coordinate에 모두 존재해야 한다.
+그 exact atom identity에 matching하는 모든 occupancy가 finite numeric zero여야
+하며, parent/atom 부재, unavailable/nonzero occupancy, nonblank altloc, duplicate
+semantic identity 또는 residue zero-occupancy loop 동시 입력은 실패한다.
+
+base parser의 preserve-only evidence는 두 envelope 모두 missing-residue/atom claim
+count가 각각 0이어야 한다. residue envelope는 `residue_row_count=N`,
+`zero_occupancy_residue_row_count=N`, atom 관련 두 count 0을 요구하고, atom
+envelope는 그 반대 count를 요구한다. 두 경우 모두 extension count는 0이며 이
+metadata의 별도 SHA를 record state·source binding·receipt·report에 결속한다.
+canonical 출력은 declaration을 `_atom_site` 바로 앞에 둔 five/seven-category
+순서이며 exact output reparse와 byte-stable second emission을 요구한다.
+
+입력 cap은 64 MiB, selected identity token은 256자, `source_id`는 UTF-8 4,096 byte다.
+unchanged base parser의 40,000 preserved-value cap에 따라 residue 11-field loop는
+`floor(40000/11)=3636` row, atom 14-field loop는
+`floor(40000/14)=2857` row까지만 받는다. 두 envelope의 6개 round-trip·19개
+failure case를 합친 manifest payload SHA-256은
+`96564c7b9d4d70eed7ac65188783a6de0acf33a01ac18b7e0559afb28f61ae40`이다.
+
+두 성공 결과가 보존하는 것은 ordered source declaration과 exact selected-
+coordinate numeric-zero crosscheck뿐이다. source authentication, 실제 missing
+atom/residue fact, occupancy population·weighting, altloc population,
+sequence/coordinate completeness, refinement validity, reference/auth equivalence,
+chemistry, preparation, parameterability, physics, runtime, simulation, execution,
+claim과 general mmCIF readiness는 모두 false다. 따라서 이 additive evidence로
+V2-1 또는 상용 로드맵 완료를 표시하지 않는다.
+
 unchanged base parser/writer에서 common-core21의 exact `_entity`·`_struct_asym`
 밖 non-`_atom_site` category,
 기존 여섯 profile 또는 common-core21 외 field 집합, partial auth, 지원 밖 entity type과
 다른 optional field,
-canonical bond, altloc·assembly selection, selected residue/atom-level envelope 밖
-source-reported missingness, cell,
+canonical bond, altloc·assembly selection, selected unobserved/zero-occupancy
+residue/atom-level envelope 밖 source declaration, cell,
 multimodel은 삭제하지 않고 typed failure로 닫는다. 선택된 두 nonpoly category는
-별도 opt-in envelope에서만 받고, `_entity_poly_seq`와 selected residue-level
-missingness loop 및 selected atom-level loop도 각각의 별도 opt-in envelope에서만
-받는다. 원본 공백·comment와 single/double quote
+별도 opt-in envelope에서만 받고, `_entity_poly_seq`와 selected residue/atom-level
+unobserved loop, 그리고 두 `occupancy_flag=0` loop도 각각의 별도 opt-in
+envelope에서만 받는다. 원본 공백·comment와 single/double quote
 delimiter 선택은 layout이라 projection 밖이지만, optional name의 quoted/bare
 token class는 bare missing marker와 quoted literal을 구분하도록 결속한다. full
 source/base bytes와 detached serialized system snapshot은 각 SHA에 결속하고,
@@ -709,7 +772,8 @@ auth alias 보존은 label-auth 동일성 또는 numbering 정합성 근거가 �
 entity type 보존은 polymer sequence completeness, modified-residue chemistry,
 water·ion·ligand·cofactor role 근거가 아니다. general mmCIF category와 선택
 common-core21·nonpoly identity·polymer sequence membership·source-reported
-unobserved-residue·unobserved-atom envelope 밖 auth/entity
+unobserved-residue·unobserved-atom·zero-occupancy-residue·zero-occupancy-atom
+envelope 밖 auth/entity
 surface는 계속
 미지원이다.
 
@@ -1005,9 +1069,10 @@ coordination·chemistry 의미론·altloc·선택 single-model source-reported
 profile 밖의 general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을
 포함한 general PDB,
 exact common-core21·선택 explicit assembly·nonpoly identity·polymer sequence membership·
-source-reported unobserved-residue·unobserved-atom envelope 밖 categories·auth/entity와
+source-reported unobserved-residue·unobserved-atom·zero-occupancy-residue·
+zero-occupancy-atom envelope 밖 categories·auth/entity와
 optional fields·altloc·선택 envelope 밖 assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·
-zero-occupancy semantics·cell·
+선택 zero-occupancy envelope 밖 declaration/occupancy semantics·cell·
 multimodel을 포함한 general mmCIF, fragment role·salt·mixture chemistry·선택된
 single simple non-aromatic 3–8-member 또는 fully-aromatic 5/6-member ring 범위 밖의 general rings·
 선택 범위 밖의 일반 multiple-bond chemistry·aromaticity·일반 charge/charge assignment·isotope·
