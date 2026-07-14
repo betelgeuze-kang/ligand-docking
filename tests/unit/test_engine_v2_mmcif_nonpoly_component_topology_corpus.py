@@ -68,7 +68,7 @@ CORPUS_SCHEMA_ID = "betelgeuze.v2_1_mmcif_nonpoly_component_topology_corpus/1.0.
 CORPUS_ID = "v2_1_strict_mmcif_nonpoly_component_topology_envelope_v1"
 PAYLOAD_HASH_POLICY_ID = "sha256_canonical_json_without_payload_sha256/1.0.0"
 EXPECTED_PAYLOAD_SHA256 = (
-    "f3f39253fbc13f69113896cb4946a776971638eba3b10b7063e8b9b4204f788c"
+    "d8e1ed2173707c74b0101cdaec1bbacb5df7e875f57ec5243905f8e66166e34d"
 )
 
 _LOWER_SHA256 = re.compile(r"^[0-9a-f]{64}$")

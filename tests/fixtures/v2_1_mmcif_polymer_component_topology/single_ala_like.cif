@@ -1,0 +1,83 @@
+data_single_ala_like
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_entity_poly_seq.entity_id
+_entity_poly_seq.num
+_entity_poly_seq.mon_id
+_entity_poly_seq.hetero
+1 1 ALA n
+#
+loop_
+_chem_comp.id
+_chem_comp.type
+_chem_comp.pdbx_formal_charge
+ALA 'L-peptide linking' 0
+#
+loop_
+_chem_comp_atom.comp_id
+_chem_comp_atom.atom_id
+_chem_comp_atom.type_symbol
+_chem_comp_atom.charge
+_chem_comp_atom.pdbx_aromatic_flag
+_chem_comp_atom.pdbx_stereo_config
+_chem_comp_atom.pdbx_ordinal
+ALA N N 0 N N 1
+ALA H H 0 N N 2
+ALA CA C 0 N S 3
+ALA C C 0 N N 4
+ALA O O 0 N N 5
+ALA CB C 0 N N 6
+#
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+_chem_comp_bond.value_order
+_chem_comp_bond.pdbx_aromatic_flag
+_chem_comp_bond.pdbx_stereo_config
+_chem_comp_bond.pdbx_ordinal
+ALA N H SING N N 1
+ALA N CA SING N N 2
+ALA CA C SING N N 3
+ALA C O DOUB N N 4
+ALA CA CB SING N N 5
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+ATOM 1 N N . ALA A 1 1 ? -1.200 0.000 0.000 1.00 10.00 ? 1 ALA A N 1
+ATOM 2 H H . ALA A 1 1 ? -1.800 0.700 0.000 1.00 10.00 ? 1 ALA A H 1
+ATOM 3 C CA . ALA A 1 1 ? 0.000 0.000 0.000 1.00 10.00 ? 1 ALA A CA 1
+ATOM 4 C C . ALA A 1 1 ? 1.300 0.000 0.000 1.00 10.00 ? 1 ALA A C 1
+ATOM 5 O O . ALA A 1 1 ? 2.000 0.900 0.000 1.00 10.00 ? 1 ALA A O 1
+ATOM 6 C CB . ALA A 1 1 ? 0.000 1.300 0.000 1.00 10.00 ? 1 ALA A CB 1
+#

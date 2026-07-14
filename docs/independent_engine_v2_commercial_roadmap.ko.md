@@ -25,7 +25,17 @@ carrier에 official-order 23-field `_struct_conn`을 추가해 identity-symmetry
 `covale` nonpoly inter-residue bond만 물질화하는 별도 opt-in
 nonpoly covalent struct-conn topology envelope 1.0, 그리고
 exact `_entity_poly_seq(entity_id,num,mon_id,hetero)`를 보존하는 별도
-opt-in polymer sequence membership envelope 1.0, 그 carrier에 exact official-order
+opt-in polymer sequence membership envelope 1.0, 그 변경 없는 child에 exact
+`_chem_comp`·`_chem_comp_atom`·`_chem_comp_bond`를 결합해 모든
+asym×sequence residue의 coordinate/template atom coverage를 요구하고
+H/C/N/O/S·atom N/R/S·bond `SING/DOUB/TRIP/AROM`만 source-reported
+intra-residue topology로 물질화하는 별도 exact 7-category fully-observed
+polymer component-topology envelope 1.0, 그리고 exact 6-category
+polymer-sequence+nonpoly-identity child와 exact 8-category nonpoly
+component-topology child를 source split 후 공통 carrier와 canonical loop로
+교차 결속하는 별도 strict 9-category polymer-sequence+nonpoly
+component-topology composition envelope 1.0, 기존 polymer-sequence carrier에
+exact official-order
 `_pdbx_unobs_or_zero_occ_residues` residue loop를 결합하는 source-reported
 unobserved-residue envelope 1.0과, 같은 carrier의 좌표에 부모 residue가
 존재하고 선택 atom만 없는 경우를 보존하는 exact official-order
@@ -107,13 +117,15 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 
 | 구분 | 현재 확보한 기반 | 현재 차단된 주장 또는 기능 |
 | --- | --- | --- |
-| 계약 | 버전형 all-atom 상태, 결합, isotope, R/S·E/Z, provenance, legacy adapter, strict PDB/mmCIF/SDF/SMILES canonical projection과 고정 ingest/failure corpus, 정확히 표현 가능한 parser-owned 단일-record SDF V2000과 별도 opt-in simple named opaque data-field envelope 1.0, bondless·no-altloc·optional-exact-`CRYST1` PDB와 single-model-ID1 source-reported `REMARK 465/470` semantic round-trip profile 및 별도 opt-in ordered `CONECT` source-declaration envelope 1.0, single-model-ID1 여섯 `_atom_site`-only profile과 exact `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity mmCIF 및 별도 opt-in explicit biological assembly envelope 1.0.0, source-reported nonpoly identity envelope 1.0, exact 8-category nonpoly component topology envelope 1.0, exact 9-category identity-symmetry `covale` nonpoly struct-conn topology envelope 1.0, polymer sequence membership envelope 1.0, source-reported unobserved-residue envelope 1.0, source-reported unobserved-atom envelope 1.0, 그리고 1–256개 ordered organic-subset component에서 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member ring 또는 fully-aromatic 5/6-member `B C N O P S` ring·선택 unit-charge/bracket-H token·bounded parser-typed E/Z·tetrahedral R/S를 직렬화하는 SMILES writer 1.8 및 각 선언 projection round-trip evidence | 선택 envelope 밖 `CONECT`와 모든 bond-kind/order·covalence·coordination·chemistry 의미론, altloc·general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB, exact common-core21·선택 assembly·nonpoly identity·nonpoly component topology·선택 nonpoly covalent struct-conn topology·polymer sequence membership·residue/atom-level source-reported unobserved envelope 밖 categories·auth/entity·optional fields·altloc·assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·zero-occupancy semantics·cell·multimodel을 포함한 general mmCIF, general `_struct_conn`의 disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, fragment role·salt·mixture chemistry·선택 ring 밖의 general rings·fused/polycyclic aromaticity·두 번째 ring double·ring triple·multiple-bond closure를 포함한 일반 multiple-bond chemistry·일반 charge/charge assignment·isotope·nonpositive/duplicate map·bounded tetrahedral R/S 밖 atom stereo·unknown bond stereo·bounded profile 밖 E/Z·source H·선택 aromatic/tetrahedral 상태 밖 bracket H를 포함한 general SMILES, simple named envelope 밖의 arbitrary `M` property record·rich data header·multi-record·V3000·stereo를 포함한 general SDF와 완전한 parser·preparation·지원 chemistry coverage |
+| 계약 | 버전형 all-atom 상태, 결합, isotope, R/S·E/Z, provenance, legacy adapter, strict PDB/mmCIF/SDF/SMILES canonical projection과 고정 ingest/failure corpus, 정확히 표현 가능한 parser-owned 단일-record SDF V2000과 별도 opt-in simple named opaque data-field envelope 1.0, bondless·no-altloc·optional-exact-`CRYST1` PDB와 single-model-ID1 source-reported `REMARK 465/470` semantic round-trip profile 및 별도 opt-in ordered `CONECT` source-declaration envelope 1.0, single-model-ID1 여섯 `_atom_site`-only profile과 exact `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity mmCIF 및 별도 opt-in explicit biological assembly envelope 1.0.0, source-reported nonpoly identity envelope 1.0, exact 8-category nonpoly component topology envelope 1.0, exact 9-category identity-symmetry `covale` nonpoly struct-conn topology envelope 1.0, polymer sequence membership envelope 1.0, exact 9-category polymer-sequence+nonpoly component-topology composition envelope 1.0, source-reported unobserved-residue envelope 1.0, source-reported unobserved-atom envelope 1.0, 그리고 1–256개 ordered organic-subset component에서 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member ring 또는 fully-aromatic 5/6-member `B C N O P S` ring·선택 unit-charge/bracket-H token·bounded parser-typed E/Z·tetrahedral R/S를 직렬화하는 SMILES writer 1.8 및 각 선언 projection round-trip evidence | 선택 envelope 밖 `CONECT`와 모든 bond-kind/order·covalence·coordination·chemistry 의미론, altloc·general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB, exact common-core21·선택 assembly·nonpoly identity·nonpoly component topology·선택 nonpoly covalent struct-conn topology·polymer sequence membership·선택 polymer-sequence+nonpoly component-topology composition·residue/atom-level source-reported unobserved envelope 밖 categories·auth/entity·optional fields·altloc·assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·zero-occupancy semantics·cell·multimodel을 포함한 general mmCIF, general `_struct_conn`의 disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, fragment role·salt·mixture chemistry·선택 ring 밖의 general rings·fused/polycyclic aromaticity·두 번째 ring double·ring triple·multiple-bond closure를 포함한 일반 multiple-bond chemistry·일반 charge/charge assignment·isotope·nonpositive/duplicate map·bounded tetrahedral R/S 밖 atom stereo·unknown bond stereo·bounded profile 밖 E/Z·source H·선택 aromatic/tetrahedral 상태 밖 bracket H를 포함한 general SMILES, simple named envelope 밖의 arbitrary `M` property record·rich data header·multi-record·V3000·stereo를 포함한 general SDF와 완전한 parser·preparation·지원 chemistry coverage |
 | V2-1 PDB ordered `CONECT` source-declaration envelope | single-model-ID1의 trailing contiguous fixed-column `CONECT` row와 directed source serial·ordered target slot·duplicate slot·directional asymmetry projection, canonical 80-column re-emission 및 고정 positive/failure corpus | canonical `Bond`·bond kind/order·covalence·coordination·chemistry 해석, bare `.system` 보존, altloc·multimodel·일반 `CONECT`, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general PDB round-trip |
 | V2-1 mmCIF explicit biological assembly envelope | exact common-core21 ASU와 단일 assembly definition, official-order generator/operator loop, explicit `assembly_id`, right-to-left rigid transform, ASU 재출력과 bitwise expanded coordinate·topology·atom/chain instance order projection, stable re-emission 및 고정 positive/failure corpus | source authentication·biological correctness, 다른 assembly category/header/operator form, numeric uncertainty, altloc·multimodel·cell/symmetry/PBC, bond·chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF nonpoly identity envelope | exact `_entity`·`_struct_asym`·common-core21 `_atom_site`와 선택 `_pdbx_entity_nonpoly`·official-order `_pdbx_nonpoly_scheme`의 source identity·instance nomenclature alias projection 및 canonical five-category re-emission | role·chemistry·topology·bond/order·coordination·charge·protonation·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF nonpoly component topology envelope | unchanged five-category nonpoly carrier에 exact `_chem_comp(id,type,pdbx_formal_charge)`·official-order 7-field `_chem_comp_atom`·7-field `_chem_comp_bond`를 결합한 8-category profile, instance별 complete template atom-set join, source charge fill/crosscheck, `SING/DOUB/TRIP/AROM`의 canonical `Bond` 물질화, exact reparse·stable emission·bounded artifact evidence, exact envelope parser pedigree·최종 augmented observation/topology digest refresh, 기존 acyclic saturated hydrocarbon canonical-ingest/profile-local gate의 single-methane positive evidence | source authentication·independent/general chemistry/valence/aromaticity/stereo, 이 8-category envelope 내 `_struct_conn`·inter-residue/cross-component link·coordination·metal, stereo `N` 이외·기타 bond order, altloc·assembly·missingness·cell·multimodel 조합, generic/global preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
-| V2-1 mmCIF nonpoly covalent struct-conn topology envelope | unchanged exact 8-category component carrier와 official-order 23-field `_struct_conn`의 9-category profile, `covale`·explicit lowercase `sing/doub/trip`·양쪽 `1_555`, exact label+auth atom identity join, 서로 다른 non-polymer/water residue endpoint, canonical inter-residue `Bond` 물질화, 최종 topology/observation digest refresh·factory artifact chain·exact reparse·stable emission, 기존 hydrocarbon canonical-ingest/profile-local gate의 exact `split_ethane_sing` positive evidence, 3개 round-trip·15개 typed-failure 고정 corpus와 payload SHA-256 `a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4` | general `_struct_conn`, disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, altloc·assembly·missingness·cell·multimodel 조합, source authentication·independent chemistry/valence/bond-order, generic/global preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
+| V2-1 mmCIF nonpoly covalent struct-conn topology envelope | unchanged exact 8-category component carrier와 official-order 23-field `_struct_conn`의 9-category profile, `covale`·explicit lowercase `sing/doub/trip`·양쪽 `1_555`, exact label+auth atom identity join, 서로 다른 non-polymer/water residue endpoint, canonical inter-residue `Bond` 물질화, 최종 topology/observation digest refresh·factory artifact chain·exact reparse·stable emission, 기존 hydrocarbon canonical-ingest/profile-local gate의 exact `split_ethane_sing` positive evidence, 3개 round-trip·15개 typed-failure 고정 corpus와 payload SHA-256 `2a8a2428ff39646f964af01773bc69b3f71cb03cfaba78b7ebb30ef2ba2d2704` | general `_struct_conn`, disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, altloc·assembly·missingness·cell·multimodel 조합, source authentication·independent chemistry/valence/bond-order, generic/global preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
 | V2-1 mmCIF polymer sequence membership envelope | exact common-core21 또는 기존 nonpoly identity carrier와 official-order `_entity_poly_seq`의 source-reported polymer entity·sequence number·opaque monomer-code membership, atom-site label tuple presence join 및 canonical four/six-category re-emission | reference sequence 동일성·완전성, coordinate observation completeness, missing-residue fact, auth alignment, modified-residue identity, general microheterogeneity·chemistry, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
+| V2-1 mmCIF fully-observed polymer component-topology envelope | unchanged exact 4-category polymer-sequence child에 exact 3/7/7-field `_chem_comp`·`_chem_comp_atom`·`_chem_comp_bond`를 결합한 exact 7-category profile, 모든 entity의 every-asym×sequence residue 인스턴스와 component template atom-set의 exact 전체 coverage, quoted `L-peptide linking`, H/C/N/O/S, atom N/R/S·bond N, source charge fill/crosscheck, `SING/DOUB/TRIP/AROM`의 canonical 1.0/2.0/3.0/1.5 intra-residue `Bond`, 신규 parser pedigree·최종 topology/observation digest refresh·exact reparse·stable second emission·bounded factory artifact evidence | CCD/reference authentication·general completeness, 독립 CIP/chemistry/valence/aromaticity/stereo 판정, peptide·inter-residue·cross-component bond, modified/terminal residue 밖 general template·D-peptide·nucleic acid·saccharide, completion·preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
+| V2-1 mmCIF polymer-sequence+nonpoly component-topology composition envelope | exact 9-category `_entity`, `_struct_asym`, `_entity_poly_seq`, `_chem_comp`, `_chem_comp_atom`, `_chem_comp_bond`, `_pdbx_entity_nonpoly`, `_pdbx_nonpoly_scheme`, `_atom_site`를 exact 8-category component child와 exact 6-category polymer child로 split해 각각 독립 수용시키고, shared nonpoly identity projection/record state·base topology/representable state·source ID·data block·공통 5개 canonical loop와 nonpoly writer payload를 교차 결속한다. component child만 detached component-carrier system pedigree를 소유하고 polymer sequence는 source evidence로만 남으며, exact reparse·stable second emission과 고정 2-positive/6-failure corpus를 갖는다. | polymer template·modified-residue chemistry, reference-sequence/coordinate completeness·missingness, `_struct_conn`, altloc·assembly·cell·multimodel 조합, generic/global preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
 | V2-1 mmCIF source-reported unobserved-residue envelope | polymer sequence carrier 또는 기존 nonpoly identity와 조합된 carrier에 exact official-order residue missingness loop를 추가하고, label sequence join·selected coordinate absence·ordered source claim projection 및 canonical five/seven-category re-emission을 검증 | 실제 missing-residue fact, reference/sequence/coordinate completeness, auth-label equivalence, modeled/modified residue identity, atom-level missingness, zero-occupancy 의미론, chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF source-reported unobserved-atom envelope | 같은 carrier에 exact official-order 14-field atom missingness loop를 추가하고, label sequence join·selected coordinate parent-residue presence·exact atom absence·raw insertion/altloc marker·ordered source claim projection 및 canonical five/seven-category re-emission을 검증 | 실제 missing-atom fact, residue-template 또는 atom-name dictionary 검증, completion, reference/sequence/coordinate completeness, auth-label equivalence, zero-occupancy 의미론, chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF source-reported zero-occupancy-residue envelope | unchanged polymer sequence carrier 또는 기존 nonpoly identity 조합 carrier에 exact official-order 11-field residue loop의 `occupancy_flag=0` branch를 추가하고, polymer sequence join·selected model-1 residue presence·모든 matching `_atom_site.occupancy`의 exact numeric-zero·base missing-claim 0 및 zero-row metadata·ordered declaration·stable re-emission을 검증 | zero occupancy에서 실제 missing-residue fact·population/weighting·completeness·refinement validity·altloc·chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한을 추론하거나 general mmCIF round-trip을 주장하는 것 |
@@ -679,13 +691,15 @@ character로 제한한다. factory-only projection·topology-state·source-bindi
 receipt·report·aggregate chain은 full/normalized source, unchanged carrier state,
 detached materialized snapshot, canonical topology, source ID, output, reparse와 second
 emission을 서로 교차 검증하며 stale·tamper·crosswire·coherent whole-artifact
-replacement을 거부한다. public augmented system의
+replacement을 거부한다. public carrier·receipt·report·aggregate child accessor는
+내부 객체가 아닌 fresh detached artifact를 반환한다. public augmented system의
 `provenance.source_sha256`는 raw eight-category input
 digest이고 canonical output digest는 provenance metadata와 source-binding에 별도
-이름으로 결속한다. source-specific snapshot digest는 source-binding·receipt가,
-normalized carrier·component projection·canonical topology 비교는 topology-state가
-담당한다. 고정 positive/failure corpus의 manifest payload
-SHA-256은 `f3f39253fbc13f69113896cb4946a776971638eba3b10b7063e8b9b4204f788c`다.
+이름으로 결속한다. source ID와 source-specific carrier/base snapshot digest는
+source-binding·receipt가, normalized carrier·component projection·canonical
+topology 비교는 source-independent topology-state가 담당한다. 고정
+positive/failure corpus의 manifest payload
+SHA-256은 `d8e1ed2173707c74b0101cdaec1bbacb5df7e875f57ec5243905f8e66166e34d`다.
 
 이 topology envelope의 최종 augmented system은
 `betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0` exact parser
@@ -782,8 +796,14 @@ projection은 각 64 MiB, `_struct_conn` row와 총 materialized bond는 각각
 `config/independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json`
 은 3개 round-trip과 15개 typed failure, strict JSON·fixture path confinement,
 live limit·artifact crosswire evidence를 묶고 payload SHA-256
-`a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4`를
+`2a8a2428ff39646f964af01773bc69b3f71cb03cfaba78b7ebb30ef2ba2d2704`를
 고정한다.
+
+이때 source-independent topology-state는 normalized component carrier state,
+ordered `_struct_conn` projection과 final canonical topology만 담고, source ID와
+carrier/final detached snapshot digest는 source-binding·receipt chain에만 둔다.
+public carrier·receipt·report·aggregate child accessor는 fresh detached artifact를
+반환하므로 caller-side mutation이 retained parent를 오염시키지 않는다.
 
 이 profile은 새 chemistry·preparation profile을 만들지 않는다. exact
 `split_ethane_sing` fixture는 두 nonpoly residue에 나뉘 그래프를 선택
@@ -834,7 +854,125 @@ execution·claim 권한을 제공하지 않는다. `_entity_poly`, `_pdbx_poly_s
 reference-sequence, missingness, modified-residue 및 chemical-component category는
 계속 차단된다.
 
-그 위의 별도 opt-in
+별도 opt-in
+`betelgeuze_engine_v2.molecular.mmcif_polymer_component_topology` envelope
+1.0은 변경 없는 exact 4-category polymer-sequence child에
+`_chem_comp`, `_chem_comp_atom`, `_chem_comp_bond`를 더한 exact 7-category
+fully-observed polymer component-topology surface다. canonical 순서는
+`_entity`, `_struct_asym`, `_entity_poly_seq`, `_chem_comp`,
+`_chem_comp_atom`, `_chem_comp_bond`, `_atom_site`이며 source category-order
+variant는 이 순서로 정규화된다. child는 독립적으로 자신의
+source를 parse·emit해야 하고 wrapper는 child grammar나 membership 의미를
+넓히지 않는다.
+
+이 profile은 source에 적힌 `polymer` entity를 sequence row가 정확히
+덮고, 각 entity의 모든 asym×sequence position 조합에 coordinate residue
+인스턴스가 정확히 하나씩 존재할 때만 받는다. 각 인스턴스는
+선택 component template의 atom을 이름·element까지 정확히 한 번씩 모두
+포함하고 extra atom이 없어야 한다. component definition은 sequence에
+나타난 unique `mon_id` 집합을 정확히 덮고 quoted case-insensitive
+`L-peptide linking`만 canonical spelling으로 수용한다. element는 H/C/N/O/S,
+atom stereo는 source-reported N/R/S, bond stereo는 N만 허용하며 atom·bond
+ordinal은 component별 positive contiguous sequence여야 한다. component formal
+charge는 atom charge 합과 일치해야 한다.
+
+알려진 `_atom_site.pdbx_formal_charge`는 template charge와 crosscheck하고
+`.`·`?`는 template에서 결정적으로 fill한다. `SING/DOUB/TRIP/AROM`은
+각각 canonical 1.0/2.0/3.0/1.5 bond로 물질화하며 aromatic flag도
+정확히 일치해야 한다. atom aromatic·N/R/S는 source template metadata와
+parser-observation marker로 보존할 뿐 독립 CIP·stereo·chemistry 판정이
+아니다. bond는 정확히 residue 내부에만 생성하며 bondless child에
+peptide·inter-residue·cross-component·`_struct_conn`·coordination bond를
+추론해 추가하지 않는다.
+
+완성된 detached system은
+`betelgeuze.mmcif_polymer_component_topology_parser/1.0.0` pedigree를 받고,
+charge·aromatic·stereo marker·bond 물질화 후 attached canonical-topology와
+parser-observation digest를 둘 다 다시 계산한다. source-independent state는
+정규화된 carrier·component projection·최종 topology만 결속하고 raw source,
+source ID, canonical output, detached snapshot digest는 source-binding과 receipt
+chain에 둔다. factory-only ingest/write/receipt/report/aggregate artifact는 exact
+emitted-source reparse와 byte-stable second emission까지 재검증한다.
+
+preparation inventory는 이 pedigree를 이름만으로 허용하지 않는다. exact
+system profile과 모든 negative-authority field, provenance marker·carrier 의미,
+exact 21-field `_atom_site` row shape와 그 label/auth·source-record·element·
+sequence·altloc·insertion·model identity의 canonical atom/residue/chain 대조,
+carrier category/resource/missingness ledger, 각 polymer atom의 component/
+template ordinal·aromatic·N/R/S·charge fill/crosscheck marker, 각 residue 내부
+bond의 component·endpoint·ordinal·order·aromatic·stereo·source를 모두 다시
+맞춘 경우에만 recognized/self-consistent로 분류한다. parser는
+`betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0`
+commitment를 붙이고 preparation은 이를 재계산한다. 그 commitment를 그대로 둔
+stale observation과 topology/observation-only coherent rehash는 `unrecognized`로
+fail closed한다. 이 commitment는 unkeyed digest-bound tamper evidence이며 source
+authentication이 아니다. commitment와 모든 enclosing digest를 함께 다시 쓸 수
+있는 행위자는 이 검사의 threat model 밖이다. 정상 inventory의 explicit source
+H와 `_chem_comp_atom` charge 출처는 preparation report에 관찰값으로 연결하지만,
+preparation·parameterability·peptide-link chemistry·physics·runtime·simulation·
+execution·claim 상태를 승격하지 않는다.
+
+input/output/projection은 각 64 MiB, sequence/component/component-atom/
+component-bond/materialized-bond row는 각 100,000/4,096/80,000/120,000/
+120,000개, source ID는 UTF-8 4,096 byte, selected token과 canonical output line은
+2,048 character로 제한한다. 고정 3-round-trip/15-failure corpus는
+`config/independent_engine_v2_v2_1_mmcif_polymer_component_topology_corpus.json`에
+선언되며 canonical-manifest payload SHA-256
+`6ae0e794e849b66f3d9f98717d3608e29e99852ed4853812692d6b54afea2808`를 결속한다.
+
+이 coverage는 선택 source/template 상대 evidence일 뿐 CCD authentication,
+reference/general completeness가 아니다. exact template 밖 modified residue·terminal
+variant, D-peptide, nucleic acid, saccharide, peptide/inter-residue bond, general
+chemistry·valence·completion, preparation·parameterability·physics·runtime·simulation·
+execution·claim 권한, general mmCIF과 V2-1 완료는 계속 false 또는
+blocked다.
+
+이 두 선택 surface를 함께 보존하는 별도 opt-in module
+`betelgeuze_engine_v2.molecular.mmcif_polymer_sequence_nonpoly_component_topology`
+은 envelope/parser/writer 1.0.0과 profile
+`strict_mmcif_polymer_sequence_nonpoly_component_topology_composition_envelope/1.0.0`
+을 사용한다. exact canonical category order는 `_entity`, `_struct_asym`,
+`_entity_poly_seq`, `_chem_comp`, `_chem_comp_atom`, `_chem_comp_bond`,
+`_pdbx_entity_nonpoly`, `_pdbx_nonpoly_scheme`, `_atom_site`다. 이 module은
+9-category source를 변경 없는 exact 8-category nonpoly component-topology
+child와 exact 6-category polymer-sequence+nonpoly-identity child로 분리하고,
+두 child가 각자 원래 envelope에서 독립적으로 수용된 경우에만 composition을
+수용한다.
+
+source-independent composition state는 shared nonpoly identity projection과 record
+state, base topology와 representable state, data block을 교차 결속한다.
+두 child writer가 출력한 공통 `_entity`, `_struct_asym`,
+`_pdbx_entity_nonpoly`, `_pdbx_nonpoly_scheme`, `_atom_site` loop와 shared
+nonpoly writer payload도 byte-exact여야 한다. child별 provenance가 다르므로
+이 계약은 child snapshot digest의 직접 동일성을 주장하지 않는다. detached
+`AllAtomSystem`은 component child가 소유하고 exact component-carrier system
+pedigree `betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0`을 유지한다.
+polymer membership은 canonical system chemistry나 polymer topology가 아니라
+ordered source evidence로만 남는다. wrapper artifact identity는 위 profile과
+`betelgeuze.mmcif_polymer_sequence_nonpoly_component_topology_state/1.0.0`
+state schema에만 부여하며 새 system parser pedigree를 만들지 않는다.
+
+factory-only state/source-binding/receipt/report artifact는 full source, source ID,
+child source binding, component snapshot, 두 child projection과 semantic state,
+shared carrier, canonical output을 결속한다. public nested artifact는 fresh detached
+reconstruction이다. canonical output의 exact reparse는 두 child와 composition
+state를 다시 회복하고 emitted payload와 reparsed raw source가 byte-exact여야 하며
+두 번째 emission도 byte-stable해야 한다. input/output은 각 64 MiB, polymer
+sequence row는 100,000개, component row는 4,096개, component atom row는
+80,000개, component bond row는 120,000개, selected token은 2,048 character,
+source ID는 UTF-8 4,096 byte로 제한한다. 고정 manifest
+`config/independent_engine_v2_v2_1_mmcif_polymer_sequence_nonpoly_component_topology_composition_corpus.json`
+은 2개 positive와 6개 deterministic failure를 묶고 canonical-manifest
+payload SHA-256 `6ac10b99e058134bdcbf1739afd7d2d719dd15667890530e9c716beb14592e69`을 고정한다.
+
+이 composition은 두 기존 child의 동시 보존 범위만 좁게 닫는다. polymer
+template·modified-residue chemistry, reference-sequence 동일성 또는 완전성,
+coordinate completeness·missingness, `_struct_conn`, altloc·assembly·cell·
+multimodel과의 composition, generic/global preparation, parameterability,
+physics, runtime, simulation, execution, claim 권한과 general mmCIF support는
+모두 false 또는 차단 상태다. 따라서 V2-1을 완료로 표시하지 않는다.
+
+별개의 downstream opt-in
 `betelgeuze_engine_v2.molecular.mmcif_unobserved_residues` envelope 1.0은 기존
 polymer sequence carrier 또는 nonpoly identity가 조합된 같은 carrier에 exact
 official-order `_pdbx_unobs_or_zero_occ_residues` residue loop 하나만 더한다. v1은
@@ -1296,6 +1434,7 @@ profile 밖의 general missingness·비표현 `CRYST1`·symmetry/PBC 의미론�
 포함한 general PDB,
 exact common-core21·선택 explicit assembly·nonpoly identity·nonpoly component
 topology·선택 nonpoly identity-symmetry covalent struct-conn topology·polymer sequence membership·
+선택 exact polymer-sequence+nonpoly component-topology composition·
 source-reported unobserved-residue·unobserved-atom·zero-occupancy-residue·
 zero-occupancy-atom envelope 밖 categories·auth/entity와
 optional fields·altloc·선택 envelope 밖 assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·
@@ -1313,6 +1452,12 @@ bracket H를 포함한 general SMILES,
 hydrogen·protonation·tautomer·
 aromaticity 준비, contextual chemistry 해석과 일반 parameterability는 계속
 차단되므로 V2-1을 완료로 표시하지 않는다.
+
+특히 위의 선택 exact composition은 polymer template·modified-residue chemistry,
+reference 또는 coordinate completeness·missingness, `_struct_conn`, altloc,
+assembly, cell, multimodel, generic/global preparation, parameterability, physics,
+runtime 또는 claim gate를 승격하지 않는다. 이 미승격 항목과 general mmCIF
+support는 composition corpus가 통과해도 계속 false다.
 
 simple named SDF data-field envelope은 field 256개, field name 128자, field당
 value line 64개, 전체 value line 2,048개, line 200자, data payload 384 KiB로

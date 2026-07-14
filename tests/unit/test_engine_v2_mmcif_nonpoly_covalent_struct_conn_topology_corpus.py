@@ -69,7 +69,7 @@ CORPUS_SCHEMA_ID = (
 CORPUS_ID = "v2_1_strict_mmcif_nonpoly_covalent_struct_conn_topology_v1"
 PAYLOAD_HASH_POLICY_ID = "sha256_canonical_json_without_payload_sha256/1.0.0"
 EXPECTED_PAYLOAD_SHA256 = (
-    "a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4"
+    "2a8a2428ff39646f964af01773bc69b3f71cb03cfaba78b7ebb30ef2ba2d2704"
 )
 
 _LOWER_SHA256 = re.compile(r"^[0-9a-f]{64}$")

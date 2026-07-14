@@ -98,6 +98,15 @@ _SOURCE_OBSERVED_FORMAL_CHARGE_ORIGINS_BY_PEDIGREE = {
             "metadata_observed_mmcif_chem_comp_atom",
         }
     ),
+    (
+        "mmcif",
+        "betelgeuze.mmcif_polymer_component_topology_parser/1.0.0",
+    ): frozenset(
+        {
+            "metadata_observed_mmcif_atom_site",
+            "metadata_observed_mmcif_chem_comp_atom",
+        }
+    ),
     ("sdf_v2000", "betelgeuze.sdf_v2000_parser/1.5.0"): frozenset(
         {"metadata_observed_sdf_v2000_atom_block"}
     ),

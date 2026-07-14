@@ -25,6 +25,45 @@ PARSER_OBSERVATION_SCHEMA_VERSION = "1.0.0"
 PARSER_OBSERVATION_SCHEMA_ID = (
     f"betelgeuze.parser_chemical_state_observation/{PARSER_OBSERVATION_SCHEMA_VERSION}"
 )
+MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID = (
+    "betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0"
+)
+MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS = (
+    "_atom_site.group_pdb",
+    "_atom_site.id",
+    "_atom_site.type_symbol",
+    "_atom_site.label_atom_id",
+    "_atom_site.label_alt_id",
+    "_atom_site.label_comp_id",
+    "_atom_site.label_asym_id",
+    "_atom_site.label_entity_id",
+    "_atom_site.label_seq_id",
+    "_atom_site.pdbx_pdb_ins_code",
+    "_atom_site.cartn_x",
+    "_atom_site.cartn_y",
+    "_atom_site.cartn_z",
+    "_atom_site.occupancy",
+    "_atom_site.b_iso_or_equiv",
+    "_atom_site.pdbx_formal_charge",
+    "_atom_site.auth_seq_id",
+    "_atom_site.auth_comp_id",
+    "_atom_site.auth_asym_id",
+    "_atom_site.auth_atom_id",
+    "_atom_site.pdbx_pdb_model_num",
+)
+
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME = (
+    "betelgeuze_engine_v2.molecular.mmcif_polymer_component_topology."
+    "parse_mmcif_polymer_component_topology"
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION = "1.0.0"
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY = "mmcif_polymer_component_topology"
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_COMMITMENT_FIELDS = frozenset(
+    {
+        "preparation_inventory_commitment_schema_id",
+        "preparation_inventory_commitment_sha256",
+    }
+)
 
 _ATOM_MARKER_KEYS = (
     "formal_charge_interpretation",
@@ -68,6 +107,14 @@ _PROVENANCE_MARKER_KEYS = (
     "ordered_topology_sha256",
     "rdkit_version",
 )
+_ATOM_TOPOLOGY_MARKER_KEYS = (
+    "mmcif_nonpoly_component_topology",
+    "mmcif_polymer_component_topology",
+)
+_BOND_TOPOLOGY_MARKER_KEYS = (
+    "mmcif_nonpoly_covalent_struct_conn_topology",
+    "mmcif_polymer_component_topology",
+)
 
 
 def _marker_value(value: Any) -> Any:
@@ -108,6 +155,172 @@ def _mmcif_formal_charge_token_observation(atom_site: Any) -> dict[str, Any]:
     }
 
 
+def _is_mmcif_polymer_component_topology_parser(system: AllAtomSystem) -> bool:
+    return bool(
+        system.provenance.source_format == "mmcif"
+        and system.provenance.parser_name
+        == _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME
+        and system.provenance.parser_version
+        == _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION
+    )
+
+
+def _normalized_inventory_value(value: Any) -> Any:
+    if value is None or type(value) in {bool, int, str}:
+        return value
+    if type(value) is float:
+        return {"float_ieee754_binary64_be": struct.pack(">d", value).hex()}
+    if isinstance(value, Mapping):
+        return {key: _normalized_inventory_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_normalized_inventory_value(item) for item in value]
+    raise TypeError(
+        "preparation inventory contains an unsupported value type: "
+        f"{type(value).__name__}"
+    )
+
+
+def mmcif_polymer_component_topology_preparation_inventory_document(
+    system: AllAtomSystem,
+) -> dict[str, Any]:
+    """Build the source-bound normalized preparation-inventory commitment.
+
+    This is digest-bound tamper evidence, not source authentication.  An attacker
+    able to rewrite this commitment and every enclosing digest is outside this
+    unkeyed integrity check's threat model.
+    """
+
+    if type(system) is not AllAtomSystem:
+        raise TypeError("system must be an AllAtomSystem")
+
+    provenance_metadata = dict(system.provenance.metadata)
+    provenance_metadata.pop("parser_observation_schema_id", None)
+    provenance_metadata.pop("parser_observation_sha256", None)
+    provenance_marker = provenance_metadata.get(
+        _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY
+    )
+    if isinstance(provenance_marker, Mapping):
+        provenance_metadata[_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY] = {
+            key: item
+            for key, item in provenance_marker.items()
+            if key not in _MMCIF_POLYMER_COMPONENT_TOPOLOGY_COMMITMENT_FIELDS
+        }
+
+    atoms = [
+        {
+            "index": atom.index,
+            "name": atom.name,
+            "element": atom.element,
+            "atomic_number": atom.atomic_number,
+            "residue_index": atom.residue_index,
+            "formal_charge": atom.formal_charge,
+            "formal_charge_known": atom.formal_charge_known,
+            "partial_charge_e": _normalized_inventory_value(atom.partial_charge_e),
+            "mass_da": _normalized_inventory_value(atom.mass_da),
+            "isotope_mass_number": atom.isotope_mass_number,
+            "serial": atom.serial,
+            "atom_map": atom.atom_map,
+            "altloc": atom.altloc,
+            "occupancy": _normalized_inventory_value(atom.occupancy),
+            "b_factor": _normalized_inventory_value(atom.b_factor),
+            "aromatic": atom.aromatic,
+            "stereo": atom.stereo,
+            "metadata": _normalized_inventory_value(atom.metadata),
+        }
+        for atom in system.atoms
+    ]
+    bonds = [
+        {
+            "index": bond.index,
+            "atom_i": bond.atom_i,
+            "atom_j": bond.atom_j,
+            "order_ieee754_binary64_be": struct.pack(">d", bond.order).hex(),
+            "aromatic": bond.aromatic,
+            "stereo": bond.stereo,
+            "source": bond.source,
+            "metadata": _normalized_inventory_value(bond.metadata),
+        }
+        for bond in system.bonds
+    ]
+    residues = [
+        {
+            "index": residue.index,
+            "name": residue.name,
+            "chain_index": residue.chain_index,
+            "sequence_number": residue.sequence_number,
+            "atom_indices": list(residue.atom_indices),
+            "insertion_code": residue.insertion_code,
+            "entity_type": residue.entity_type,
+            "hetero": residue.hetero,
+            "metadata": _normalized_inventory_value(residue.metadata),
+        }
+        for residue in system.residues
+    ]
+    chains = [
+        {
+            "index": chain.index,
+            "chain_id": chain.chain_id,
+            "residue_indices": list(chain.residue_indices),
+            "entity_id": chain.entity_id,
+            "metadata": _normalized_inventory_value(chain.metadata),
+        }
+        for chain in system.chains
+    ]
+    return {
+        "schema_id": (
+            MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID
+        ),
+        "commitment_semantics": (
+            "source_bound_digest_tamper_evidence_not_source_authentication"
+        ),
+        "canonical_topology_sha256": canonical_topology_sha256(system),
+        "system": {
+            "schema_id": system.schema_id,
+            "system_id": system.system_id,
+            "coordinate_unit": system.coordinate_unit,
+            "model_count": system.model_count,
+            "atom_count": len(system.atoms),
+            "bond_count": len(system.bonds),
+            "residue_count": len(system.residues),
+            "chain_count": len(system.chains),
+            "atoms": atoms,
+            "bonds": bonds,
+            "residues": residues,
+            "chains": chains,
+            "metadata": _normalized_inventory_value(system.metadata),
+        },
+        "provenance": {
+            "source_format": system.provenance.source_format,
+            "source_id": system.provenance.source_id,
+            "source_sha256": system.provenance.source_sha256,
+            "parser_name": system.provenance.parser_name,
+            "parser_version": system.provenance.parser_version,
+            "operations": list(system.provenance.operations),
+            "parent_sha256": list(system.provenance.parent_sha256),
+            "preparation_ready": system.provenance.preparation_ready,
+            "claim_safe": system.provenance.claim_safe,
+            "metadata_excluding_commitment_and_observation_attachment": (
+                _normalized_inventory_value(provenance_metadata)
+            ),
+        },
+    }
+
+
+def mmcif_polymer_component_topology_preparation_inventory_sha256(
+    system: AllAtomSystem,
+) -> str:
+    """Hash the normalized source-bound preparation inventory."""
+
+    payload = json.dumps(
+        mmcif_polymer_component_topology_preparation_inventory_document(system),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
     """Return the deterministic parser-marker observation document."""
 
@@ -123,10 +336,9 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
         markers = {
             key: _marker_value(atom.metadata.get(key)) for key in _ATOM_MARKER_KEYS
         }
-        if "mmcif_nonpoly_component_topology" in atom.metadata:
-            markers["mmcif_nonpoly_component_topology"] = _marker_value(
-                atom.metadata.get("mmcif_nonpoly_component_topology")
-            )
+        for key in _ATOM_TOPOLOGY_MARKER_KEYS:
+            if key in atom.metadata:
+                markers[key] = _marker_value(atom.metadata.get(key))
         atoms.append(
             {
                 "index": atom.index,
@@ -152,10 +364,9 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
         markers = {
             key: _marker_value(bond.metadata.get(key)) for key in _BOND_MARKER_KEYS
         }
-        if "mmcif_nonpoly_covalent_struct_conn_topology" in bond.metadata:
-            markers["mmcif_nonpoly_covalent_struct_conn_topology"] = _marker_value(
-                bond.metadata.get("mmcif_nonpoly_covalent_struct_conn_topology")
-            )
+        for key in _BOND_TOPOLOGY_MARKER_KEYS:
+            if key in bond.metadata:
+                markers[key] = _marker_value(bond.metadata.get(key))
         bonds.append(
             {
                 "index": bond.index,
@@ -168,6 +379,24 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
             }
         )
     coverage = system.provenance.metadata.get("coverage")
+    provenance_markers = {
+        key: _marker_value(system.provenance.metadata.get(key))
+        for key in _PROVENANCE_MARKER_KEYS
+    }
+    system_markers = {
+        key: _marker_value(system.metadata.get(key)) for key in _SYSTEM_MARKER_KEYS
+    }
+    if _is_mmcif_polymer_component_topology_parser(system):
+        provenance_markers[_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY] = (
+            _marker_value(
+                system.provenance.metadata.get(
+                    _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY
+                )
+            )
+        )
+        system_markers[_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY] = _marker_value(
+            system.metadata.get(_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY)
+        )
     return {
         "observation_schema_id": PARSER_OBSERVATION_SCHEMA_ID,
         "canonical_topology_sha256": canonical_topology_sha256(system),
@@ -178,13 +407,8 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
         "parser_version": system.provenance.parser_version,
         "operations": list(system.provenance.operations),
         "parent_sha256": list(system.provenance.parent_sha256),
-        "provenance_markers": {
-            key: _marker_value(system.provenance.metadata.get(key))
-            for key in _PROVENANCE_MARKER_KEYS
-        },
-        "system_markers": {
-            key: _marker_value(system.metadata.get(key)) for key in _SYSTEM_MARKER_KEYS
-        },
+        "provenance_markers": provenance_markers,
+        "system_markers": system_markers,
         "coverage_markers": {
             key: _marker_value(coverage.get(key))
             if isinstance(coverage, Mapping)
@@ -247,10 +471,14 @@ def attached_parser_observation_sha256_matches(system: AllAtomSystem) -> bool:
 
 
 __all__ = [
+    "MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS",
+    "MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID",
     "PARSER_OBSERVATION_SCHEMA_ID",
     "PARSER_OBSERVATION_SCHEMA_VERSION",
     "attach_parser_observation_digest",
     "attached_parser_observation_sha256_matches",
+    "mmcif_polymer_component_topology_preparation_inventory_document",
+    "mmcif_polymer_component_topology_preparation_inventory_sha256",
     "parser_observation_document",
     "parser_observation_sha256",
 ]

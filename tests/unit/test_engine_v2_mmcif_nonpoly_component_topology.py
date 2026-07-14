@@ -563,6 +563,120 @@ def test_factory_only_frozen_tamper_crosswire_and_whole_state_replacement() -> N
     assert crosswire.value.code == "crosswired_round_trip_artifacts"
 
 
+def test_component_rows_are_detached_and_internal_tampering_fails_closed() -> None:
+    source = _single_source()
+    row_cases = (
+        ("component_rows", "_component_rows", "comp_id", "detached-component"),
+        ("component_atom_rows", "_component_atom_rows", "atom_id", "detached-atom"),
+        ("component_bond_rows", "_component_bond_rows", "atom_id_1", "detached-bond"),
+    )
+
+    for public_name, private_name, field_name, forged_value in row_cases:
+        ingest = parse_mmcif_nonpoly_component_topology(source)
+        returned = getattr(ingest, public_name)[0]
+        original_value = getattr(returned, field_name)
+
+        object.__setattr__(returned, field_name, forged_value)
+        assert getattr(getattr(ingest, public_name)[0], field_name) == original_value
+        assert write_mmcif_nonpoly_component_topology(ingest).payload
+
+        internal = getattr(ingest, private_name)[0]
+        object.__setattr__(internal, field_name, forged_value)
+        with pytest.raises(MmcifNonpolyComponentTopologyError) as stale_ingest:
+            ingest.to_dict()
+        assert stale_ingest.value.code == "stale_ingest_binding"
+
+    for _, private_name, field_name, forged_value in row_cases:
+        coherent = parse_mmcif_nonpoly_component_topology(source)
+        internal = getattr(coherent, private_name)[0]
+        object.__setattr__(internal, field_name, forged_value)
+        forged_state = topology_module._state_from_ingest(coherent)
+        forged_access = topology_module._canonical_json_bytes(
+            topology_module._state_access_binding_document(forged_state)
+        )
+        object.__setattr__(coherent, "_access_binding_bytes", forged_access)
+        with pytest.raises(MmcifNonpolyComponentTopologyError) as anchored:
+            write_mmcif_nonpoly_component_topology(coherent)
+        assert anchored.value.code == "stale_ingest_binding"
+
+    alias_cases = (
+        ("chem_comp_rows", "component_rows", "comp_id", "detached-component"),
+        ("chem_comp_atom_rows", "component_atom_rows", "atom_id", "detached-atom"),
+        ("chem_comp_bond_rows", "component_bond_rows", "atom_id_1", "detached-bond"),
+    )
+    for alias_name, primary_name, field_name, forged_value in alias_cases:
+        ingest = parse_mmcif_nonpoly_component_topology(source)
+        returned = getattr(ingest, alias_name)[0]
+        original_value = getattr(returned, field_name)
+        object.__setattr__(returned, field_name, forged_value)
+        assert getattr(getattr(ingest, primary_name)[0], field_name) == original_value
+
+
+def test_semantic_state_excludes_source_identity_and_source_specific_snapshot() -> None:
+    source = _single_source()
+    first = parse_mmcif_nonpoly_component_topology(source, source_id="source-a")
+    second = parse_mmcif_nonpoly_component_topology(source, source_id="source-b")
+
+    assert first.topology_state_sha256 == second.topology_state_sha256
+    assert first.component_projection_sha256 == second.component_projection_sha256
+    assert first.augmented_topology_sha256 == second.augmented_topology_sha256
+    assert first.source_binding_sha256 != second.source_binding_sha256
+    assert first.source_id_sha256 != second.source_id_sha256
+    semantic = topology_module._topology_state_document(
+        topology_module._state_from_ingest(first)
+    )
+    assert "source_id_sha256" not in semantic
+    assert "carrier_base_system_snapshot_sha256" not in semantic
+    evidence = first.to_dict()
+    assert evidence["source_id_sha256"] == first.source_id_sha256
+    assert evidence["carrier_base_system_snapshot_sha256"] == (
+        first.carrier_ingest.base_system_snapshot_sha256
+    )
+
+
+def test_public_nested_artifacts_are_detached_from_parent_state() -> None:
+    source = _single_source()
+    ingest = parse_mmcif_nonpoly_component_topology(source, source_id="detached")
+    carrier = ingest.carrier_ingest
+    assert carrier is not ingest._carrier_ingest
+    object.__setattr__(carrier, "record_state_sha256", "0" * 64)
+    assert ingest.to_dict()["topology_state_sha256"] == ingest.topology_state_sha256
+
+    written = write_mmcif_nonpoly_component_topology(ingest)
+    receipt = written.receipt
+    assert receipt is not written._receipt
+    object.__setattr__(receipt, "_document_bytes", b"{}")
+    assert (
+        written.to_dict()["output_source_sha256"]
+        == hashlib.sha256(written.payload).hexdigest()
+    )
+
+    result = round_trip_mmcif_nonpoly_component_topology_source(
+        source, source_id="detached"
+    )
+    detached_source = result.source_ingest
+    detached_write = result.write_result
+    detached_reparsed = result.reparsed_ingest
+    detached_second = result.reemitted_write_result
+    detached_report = result.report
+    assert detached_source is not result._source_ingest
+    assert detached_write is not result._write_result
+    assert detached_reparsed is not result._reparsed_ingest
+    assert detached_second is not result._reemitted_write_result
+    assert detached_report is not result._report
+    object.__setattr__(detached_source, "_projection_bytes", b"{}")
+    object.__setattr__(detached_write, "_payload", b"")
+    object.__setattr__(detached_reparsed, "_projection_bytes", b"{}")
+    object.__setattr__(detached_second, "_payload", b"")
+    object.__setattr__(detached_report, "_document_bytes", b"{}")
+    assert (
+        result.to_dict()["report"][
+            "source_reported_component_topology_round_trip_preserved"
+        ]
+        is True
+    )
+
+
 @pytest.mark.parametrize(
     ("kind", "expected_code"),
     [

@@ -2,7 +2,7 @@
   "schema_id": "betelgeuze.v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus/1.0.0",
   "corpus_id": "v2_1_strict_mmcif_nonpoly_covalent_struct_conn_topology_v1",
   "payload_hash_policy_id": "sha256_canonical_json_without_payload_sha256/1.0.0",
-  "payload_sha256": "a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4",
+  "payload_sha256": "2a8a2428ff39646f964af01773bc69b3f71cb03cfaba78b7ebb30ef2ba2d2704",
   "contracts": {
     "all_atom_schema_id": "betelgeuze.all_atom_system/2.1.0",
     "base_mmcif_parser_version": "1.9.0",
@@ -146,7 +146,7 @@
         "canonical_ingest_supported": true,
         "carrier_component_projection_sha256": "8038f113a45e7c429c3a7d99af23a15f07c0d9c0812c1beab9d45b3e7cda5270",
         "carrier_state_equal": true,
-        "carrier_topology_state_sha256": "b378a542ed8e6d9fe65771055a6b9c5adddc039c7976f1541b53d28964c47ab7",
+        "carrier_topology_state_sha256": "d0736196aafcb6216f4c9017829b6bb44165b91064666d23974745e8b0ec0cdc",
         "emitted_source_reparsed_exact": true,
         "full_source_sha256": "d2fb306523362fc30c822a93fd303861a3084266dedb628890ddb7828adb43ce",
         "generic_preparation_ready": false,
@@ -157,9 +157,9 @@
         "output_source_sha256": "91247af2411b8359afee7121a48124961a1d766afd13c4e6cda842661989b450",
         "parser_pedigree_id": "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0",
         "profile_local_evidence_satisfied": true,
-        "round_trip_report_sha256": "2ba238de6b8302bc048ea7c85008660e23e817225eb9d8755a014a497a3d6f05",
+        "round_trip_report_sha256": "710908fb2ce37b031c2a4ff45deda46c326a3b02458269ab360dbea2751d7053",
         "second_emission_byte_stable": true,
-        "source_binding_sha256": "44625d44b12c5a477621238465a67421878bdf3e4450864e8354a5a6d1def368",
+        "source_binding_sha256": "62c1c89b84215be463558bfac003648990495c9e169f1b0d9a8a4a119d4bc628",
         "source_byte_count": 3112,
         "source_reported_covalent_struct_conn_round_trip_preserved": true,
         "struct_conn_projection_equal": true,
@@ -167,8 +167,8 @@
         "struct_conn_row_count": 1,
         "topology_equal": true,
         "topology_state_equal": true,
-        "topology_state_sha256": "cb1094653e076b07ac8f59ffeab1bbe43d4b66d0706450fbf4ba3fec684a1e9f",
-        "write_receipt_sha256": "6b78ea087cfd0738e598e2e296f5069a88b3824e0f54f48cfd32e789b6542e43"
+        "topology_state_sha256": "3b6e2fe3cdb4d66504372d3562c4d41057e23f60c0835f692190b83ec8085d49",
+        "write_receipt_sha256": "c85bb613f2756e7c649c78e8f33c53514fd951715173364646014202038e1ad1"
       }
     },
     {
@@ -184,7 +184,7 @@
         "canonical_ingest_supported": false,
         "carrier_component_projection_sha256": "341b1661efe8e00dc89521143f68253faf6514b24b3068896e4d3d0b1b699eac",
         "carrier_state_equal": true,
-        "carrier_topology_state_sha256": "b5e0d215c96f90d0001b4d6e2449ea616e6b0cf46eea9fb06b0650e301c64d2d",
+        "carrier_topology_state_sha256": "a339dba2f45891f20c369dd1f14c710c19485ddc352df7d7f86b2f7ea94cbabe",
         "emitted_source_reparsed_exact": true,
         "full_source_sha256": "cca329479f0a2695ca755e7b1eb2a0830fe48aa81c2c86ff864520f69f79698e",
         "generic_preparation_ready": false,
@@ -195,9 +195,9 @@
         "output_source_sha256": "11527da7bbd4e34414450d3ba798bbac91949f0567d1b4aa23d586d6fd88d7d7",
         "parser_pedigree_id": "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0",
         "profile_local_evidence_satisfied": false,
-        "round_trip_report_sha256": "a4b4338d03f8becef60c0ebc745301dbe7f0778f0f4891fc0be98ef50672a272",
+        "round_trip_report_sha256": "30b3aa7adc8a917f83ee4944f8d530ebe2cb66c4098d7371325d704420b97d8c",
         "second_emission_byte_stable": true,
-        "source_binding_sha256": "898d5e3ca833baa772d3cfb864bbddf817b733ebc4913546c38e331339687c6c",
+        "source_binding_sha256": "35bfc1551e70254abb10264f2282cb4da9f774cefa6700a27350802b6f0f4f90",
         "source_byte_count": 2846,
         "source_reported_covalent_struct_conn_round_trip_preserved": true,
         "struct_conn_projection_equal": true,
@@ -205,8 +205,8 @@
         "struct_conn_row_count": 1,
         "topology_equal": true,
         "topology_state_equal": true,
-        "topology_state_sha256": "e2c02a4393fb01222096da68962591e0b9e192f8bf4dfbb41e334bcfacaae262",
-        "write_receipt_sha256": "0fe042a2c93a7ae796581ffb218219b38f91f26d90b406e441d223edb51cdb68"
+        "topology_state_sha256": "47d7f5abd981a955ee5dd505e849c09c337cc5c5e0217654b62fcf0bdb172201",
+        "write_receipt_sha256": "3a5593ba12e5953c3f3d34949e0d76c84c844e5424bcd6002d3ac0917c830e0b"
       }
     },
     {
@@ -222,7 +222,7 @@
         "canonical_ingest_supported": false,
         "carrier_component_projection_sha256": "b4b1dda6e805add949c88eba6c3b5985e737063d671191ebf6a65d833a6cab68",
         "carrier_state_equal": true,
-        "carrier_topology_state_sha256": "17ea4016a7d3762a9f1256ac81e5702ae36d37cee7023195e5c92cc11605cc4f",
+        "carrier_topology_state_sha256": "3d4d591a313656eb417754c4ff9300734fd677fb45867301c094eb9bbe9e7e69",
         "emitted_source_reparsed_exact": true,
         "full_source_sha256": "64d5924754c7a9e85b0b1c5a17c615a516d3ce0d141333360821f2aa40abdf07",
         "generic_preparation_ready": false,
@@ -233,9 +233,9 @@
         "output_source_sha256": "0f83b84381ea64f88261c2c0298ed58e327bbb2b5292542105c7229804b915d3",
         "parser_pedigree_id": "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0",
         "profile_local_evidence_satisfied": false,
-        "round_trip_report_sha256": "47b5069cf1fc0eee3646994bd8a5c9f1d19d1bd8117cfaa29b686d20e213d451",
+        "round_trip_report_sha256": "8c7ec02e138a0bdd3f21c9b10ed99d2979a5d59108b2d79dfefd2221a8c72189",
         "second_emission_byte_stable": true,
-        "source_binding_sha256": "eb857a0db910ff2479a42a20e5caf2085a76a033ece1d83367533858073942e9",
+        "source_binding_sha256": "fc010d76dcff4b480da18eb79646865c0d7bf255c16ecaaea9779109ef2eb485",
         "source_byte_count": 2726,
         "source_reported_covalent_struct_conn_round_trip_preserved": true,
         "struct_conn_projection_equal": true,
@@ -243,8 +243,8 @@
         "struct_conn_row_count": 1,
         "topology_equal": true,
         "topology_state_equal": true,
-        "topology_state_sha256": "5a83af605ac591edd4184189666c693cd8525161697ac80c0e1b1897b6f11fc0",
-        "write_receipt_sha256": "28c8b32da25dfc240cd695b006057b57262f2135ebcc4eb305306c8e1feb5070"
+        "topology_state_sha256": "230dd61e0ce984dd3dfcc87eb8f296306ee252ee0c0c41ab393a1c31504be90c",
+        "write_receipt_sha256": "546d0ce2bc2842243afa1f3d8f87197f8d5df0cadef2863a829d1d34ed3c3de3"
       }
     },
     {

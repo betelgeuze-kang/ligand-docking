@@ -944,16 +944,12 @@ def _compute_topology_state_document(state: _ParsedState) -> dict[str, Any]:
         "attached_parser_observation_digest_self_consistent": (
             attached_parser_observation_sha256_matches(system)
         ),
-        "source_id_sha256": _source_id_sha256(state.source_id),
         "carrier_component_projection_sha256": (
             carrier_document["component_projection_sha256"]
         ),
         "carrier_topology_state_sha256": carrier_document["topology_state_sha256"],
         "carrier_augmented_topology_sha256": (
             carrier_document["augmented_topology_sha256"]
-        ),
-        "carrier_augmented_system_snapshot_sha256": (
-            carrier_document["augmented_system_snapshot_sha256"]
         ),
         "struct_conn_projection_sha256": _sha256_bytes(state.projection_bytes),
         "augmented_topology_sha256": canonical_topology_sha256(system),
@@ -996,6 +992,9 @@ def _compute_source_binding_document(state: _ParsedState) -> dict[str, Any]:
         "carrier_source_sha256": _sha256_bytes(state.carrier_source),
         "carrier_full_source_sha256": carrier_document["full_source_sha256"],
         "carrier_source_binding_sha256": carrier_document["source_binding_sha256"],
+        "carrier_augmented_system_snapshot_sha256": carrier_document[
+            "augmented_system_snapshot_sha256"
+        ],
         "struct_conn_projection_sha256": _sha256_bytes(state.projection_bytes),
         "augmented_system_snapshot_sha256": _sha256_bytes(state.system_snapshot),
         "augmented_system_provenance_source_sha256": system.provenance.source_sha256,
@@ -1252,7 +1251,10 @@ class MmcifNonpolyCovalentStructConnTopologyIngestResult:
 
     @property
     def carrier_ingest(self) -> MmcifNonpolyComponentTopologyIngestResult:
-        return _validate_fresh_ingest(self).carrier_ingest
+        state = _validate_fresh_ingest(self)
+        return parse_mmcif_nonpoly_component_topology(
+            state.carrier_source, source_id=state.source_id
+        )
 
     @property
     def struct_conn_rows(self) -> tuple[MmcifNonpolyCovalentStructConnRow, ...]:
@@ -1276,7 +1278,7 @@ class MmcifNonpolyCovalentStructConnTopologyIngestResult:
     @property
     def source_id_sha256(self) -> str:
         return str(
-            _topology_state_document(_validate_fresh_ingest(self))["source_id_sha256"]
+            _source_binding_document(_validate_fresh_ingest(self))["source_id_sha256"]
         )
 
     @property
@@ -1325,6 +1327,10 @@ class MmcifNonpolyCovalentStructConnTopologyIngestResult:
         return {
             **_topology_state_document(state),
             "full_source_sha256": source_binding["full_source_sha256"],
+            "source_id_sha256": source_binding["source_id_sha256"],
+            "carrier_augmented_system_snapshot_sha256": source_binding[
+                "carrier_augmented_system_snapshot_sha256"
+            ],
             "augmented_system_snapshot_sha256": source_binding[
                 "augmented_system_snapshot_sha256"
             ],
@@ -1709,7 +1715,10 @@ class MmcifNonpolyCovalentStructConnTopologyWriteResult:
     @property
     def receipt(self) -> MmcifNonpolyCovalentStructConnTopologyWriteReceipt:
         _validate_write_result(self)
-        return self._receipt
+        fresh_ingest = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+            self._ingest._full_source, source_id=self._ingest._source_id
+        )
+        return write_mmcif_nonpoly_covalent_struct_conn_topology(fresh_ingest)._receipt
 
     def to_dict(self) -> dict[str, Any]:
         _validate_write_result(self)
@@ -2156,31 +2165,48 @@ class MmcifNonpolyCovalentStructConnTopologyRoundTripResult:
     @property
     def source_ingest(self) -> MmcifNonpolyCovalentStructConnTopologyIngestResult:
         _validate_aggregate(self)
-        return self._source_ingest
+        return parse_mmcif_nonpoly_covalent_struct_conn_topology(
+            self._source_ingest._full_source,
+            source_id=self._source_ingest._source_id,
+        )
 
     @property
     def write_result(self) -> MmcifNonpolyCovalentStructConnTopologyWriteResult:
         _validate_aggregate(self)
-        return self._write_result
+        fresh_ingest = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+            self._source_ingest._full_source,
+            source_id=self._source_ingest._source_id,
+        )
+        return write_mmcif_nonpoly_covalent_struct_conn_topology(fresh_ingest)
 
     @property
     def reparsed_ingest(
         self,
     ) -> MmcifNonpolyCovalentStructConnTopologyIngestResult:
         _validate_aggregate(self)
-        return self._reparsed_ingest
+        return parse_mmcif_nonpoly_covalent_struct_conn_topology(
+            self._reparsed_ingest._full_source,
+            source_id=self._reparsed_ingest._source_id,
+        )
 
     @property
     def reemitted_write_result(
         self,
     ) -> MmcifNonpolyCovalentStructConnTopologyWriteResult:
         _validate_aggregate(self)
-        return self._reemitted_write_result
+        fresh_ingest = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+            self._reparsed_ingest._full_source,
+            source_id=self._reparsed_ingest._source_id,
+        )
+        return write_mmcif_nonpoly_covalent_struct_conn_topology(fresh_ingest)
 
     @property
     def report(self) -> MmcifNonpolyCovalentStructConnTopologyRoundTripReport:
         _validate_aggregate(self)
-        return self._report
+        return round_trip_mmcif_nonpoly_covalent_struct_conn_topology_source(
+            self._source_ingest._full_source,
+            source_id=self._source_ingest._source_id,
+        )._report
 
     def to_dict(self) -> dict[str, Any]:
         _validate_aggregate(self)

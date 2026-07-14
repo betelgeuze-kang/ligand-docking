@@ -405,6 +405,77 @@ def test_struct_conn_rows_are_detached_and_internal_tampering_fails_closed() -> 
     assert anchored.value.code == "stale_ingest_binding"
 
 
+def test_semantic_state_excludes_source_identity_and_source_specific_snapshot() -> None:
+    source = _fixture()
+    first = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+        source, source_id="source-a"
+    )
+    second = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+        source, source_id="source-b"
+    )
+
+    assert first.topology_state_sha256 == second.topology_state_sha256
+    assert first.struct_conn_projection_sha256 == second.struct_conn_projection_sha256
+    assert first.augmented_topology_sha256 == second.augmented_topology_sha256
+    assert first.source_binding_sha256 != second.source_binding_sha256
+    assert first.source_id_sha256 != second.source_id_sha256
+    semantic = topology_module._topology_state_document(
+        topology_module._state_from_ingest(first)
+    )
+    assert "source_id_sha256" not in semantic
+    assert "carrier_augmented_system_snapshot_sha256" not in semantic
+    evidence = first.to_dict()
+    assert evidence["source_id_sha256"] == first.source_id_sha256
+    assert evidence["carrier_augmented_system_snapshot_sha256"] == (
+        first.carrier_ingest.augmented_system_snapshot_sha256
+    )
+
+
+def test_public_nested_artifacts_are_detached_from_parent_state() -> None:
+    source = _fixture()
+    ingest = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+        source, source_id="detached"
+    )
+    carrier = ingest.carrier_ingest
+    assert carrier is not ingest._carrier_ingest
+    object.__setattr__(carrier, "_projection_bytes", b"{}")
+    assert ingest.to_dict()["topology_state_sha256"] == ingest.topology_state_sha256
+
+    written = write_mmcif_nonpoly_covalent_struct_conn_topology(ingest)
+    receipt = written.receipt
+    assert receipt is not written._receipt
+    object.__setattr__(receipt, "_document_bytes", b"{}")
+    assert (
+        written.to_dict()["output_source_sha256"]
+        == written.receipt.output_source_sha256
+    )
+
+    result = round_trip_mmcif_nonpoly_covalent_struct_conn_topology_source(
+        source, source_id="detached"
+    )
+    detached_source = result.source_ingest
+    detached_write = result.write_result
+    detached_reparsed = result.reparsed_ingest
+    detached_second = result.reemitted_write_result
+    detached_report = result.report
+    assert detached_source is not result._source_ingest
+    assert detached_write is not result._write_result
+    assert detached_reparsed is not result._reparsed_ingest
+    assert detached_second is not result._reemitted_write_result
+    assert detached_report is not result._report
+    object.__setattr__(detached_source, "_projection_bytes", b"{}")
+    object.__setattr__(detached_write, "_payload", b"")
+    object.__setattr__(detached_reparsed, "_projection_bytes", b"{}")
+    object.__setattr__(detached_second, "_payload", b"")
+    object.__setattr__(detached_report, "_document_bytes", b"{}")
+    assert (
+        result.to_dict()["report"][
+            "source_reported_covalent_struct_conn_round_trip_preserved"
+        ]
+        is True
+    )
+
+
 def test_forged_and_crosswired_artifacts_have_no_live_factory_anchor() -> None:
     first = parse_mmcif_nonpoly_covalent_struct_conn_topology(_fixture())
     forged = object.__new__(type(first))

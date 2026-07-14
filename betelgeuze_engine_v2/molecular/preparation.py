@@ -17,11 +17,17 @@ from collections.abc import Mapping
 from collections import Counter
 from dataclasses import dataclass
 import hashlib
+import hmac
 import json
 from typing import Any
 
 from .models import AllAtomSystem
-from .observation import attached_parser_observation_sha256_matches
+from .observation import (
+    MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS,
+    MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID,
+    attached_parser_observation_sha256_matches,
+    mmcif_polymer_component_topology_preparation_inventory_sha256,
+)
 from .topology import (
     CANONICAL_TOPOLOGY_SCHEMA_ID,
     CanonicalTopologyError,
@@ -114,6 +120,286 @@ _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_VERSION = "1.0.0"
 _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_PEDIGREE_ID = (
     "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0"
 )
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME = (
+    "betelgeuze_engine_v2.molecular.mmcif_polymer_component_topology."
+    "parse_mmcif_polymer_component_topology"
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION = "1.0.0"
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID = (
+    "betelgeuze.mmcif_polymer_component_topology_parser/1.0.0"
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY = "mmcif_polymer_component_topology"
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROFILE_ID = (
+    "strict_mmcif_polymer_component_topology_envelope/1.0.0"
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_CARRIER_EVIDENCE_SEMANTICS = (
+    "preserved_polymer_sequence_carrier_only_not_augmented_topology_evidence"
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_MARKER_KEYS = frozenset(
+    {
+        "component_id",
+        "template_atom_id",
+        "template_ordinal",
+        "source_reported_aromatic",
+        "source_reported_stereo",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_BOND_MARKER_KEYS = frozenset(
+    {
+        "component_id",
+        "template_atom_id_1",
+        "template_atom_id_2",
+        "template_ordinal",
+        "component_instance_residue_index",
+        "source_reported_value_order",
+        "source_reported_aromatic",
+        "source_reported_stereo",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_FALSE_AUTHORITY_FIELDS = frozenset(
+    {
+        "source_authenticated",
+        "auth_label_equivalence_inferred",
+        "reference_sequence_equivalence_assessed",
+        "coordinate_observation_completeness_assessed",
+        "modified_residue_identity_assessed",
+        "microheterogeneity_interpreted",
+        "polymer_sequence_inferred",
+        "polymer_sequence_completed",
+        "peptide_bonds_inferred",
+        "independent_chemistry_established",
+        "independent_valence_established",
+        "independent_aromaticity_established",
+        "independent_stereo_established",
+        "chemistry_inferred",
+        "chemistry_interpreted",
+        "generic_chemistry_supported",
+        "struct_conn_interpreted",
+        "general_struct_conn_supported",
+        "general_struct_conn_interpreted",
+        "inter_residue_bonds_interpreted",
+        "inter_residue_bonds_supported",
+        "cross_component_bonds_interpreted",
+        "cross_component_bonds_supported",
+        "general_mmcif_topology_complete",
+        "role_assignment_interpreted",
+        "coordination_interpreted",
+        "protonation_interpreted",
+        "tautomer_interpreted",
+        "missing_residue_fact_claimed",
+        "missing_residue_fact_established",
+        "sequence_completeness_claimed",
+        "sequence_completeness_assessed",
+        "preparation_ready",
+        "generic_preparation_ready",
+        "generic_molecular_preparation_ready",
+        "global_preparation_ready",
+        "global_molecular_preparation_ready",
+        "parameterability_assessed",
+        "physics_supported",
+        "simulation_ready",
+        "runtime_eligible",
+        "execution_authorized",
+        "claim_safe",
+        "general_mmcif_round_trip_evidence_ready",
+        "all_format_round_trip_evidence_ready",
+        "v2_1_complete",
+        "v2_1_promoted",
+        "v2_1_common_ingest_promotion_eligible",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROFILE_MARKER_KEYS = frozenset(
+    {
+        "profile_id",
+        "component_count",
+        "component_instance_count",
+        "bond_count",
+        *_MMCIF_POLYMER_COMPONENT_TOPOLOGY_FALSE_AUTHORITY_FIELDS,
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROVENANCE_MARKER_KEYS = frozenset(
+    {
+        "canonical_output_sha256",
+        "parser_pedigree_id",
+        "source_sha256_semantics",
+        "carrier_evidence_semantics",
+        "preparation_inventory_commitment_schema_id",
+        "preparation_inventory_commitment_sha256",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_EXPECTED_OPERATIONS = (
+    "parse_cif_1_1_block_structure",
+    "parse_pdbx_atom_site_label_identity",
+    "align_models_by_canonical_label_identity",
+    "preserve_source_atom_order_from_first_model",
+    "synthesize_canonical_atom_serials_from_first_model_order",
+    "join_explicit_chem_comp_atom_templates/v1",
+    "fill_or_cross_check_formal_charge/v1",
+    "materialize_explicit_chem_comp_bonds/v1",
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROVENANCE_METADATA_KEYS = frozenset(
+    {
+        "canonical_topology_schema_id",
+        "canonical_topology_sha256",
+        "carrier_coverage",
+        "carrier_source_missingness_evidence_schema_id",
+        "carrier_source_missingness_evidence_sha256",
+        "mmcif_polymer_component_topology",
+        "model_ids",
+        "parser_observation_schema_id",
+        "parser_observation_sha256",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_SYSTEM_METADATA_KEYS = frozenset(
+    {"mmcif", "mmcif_polymer_component_topology"}
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MMCIF_METADATA_KEYS = frozenset(
+    {
+        "altloc_selection",
+        "assembly",
+        "atom_site_headers",
+        "carrier_evidence_semantics",
+        "carrier_source_missingness",
+        "carrier_source_reported_missingness",
+        "category_inventory",
+        "cell",
+        "coordinate_scope",
+        "data_block",
+        "preserved_category_payloads",
+        "resource_limits",
+        "resource_usage",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_MMCIF_METADATA_KEYS = frozenset(
+    {
+        "atom_site",
+        "atom_site_by_model",
+        "atom_site_id_by_model",
+        "auth_identity",
+        "canonical_identity_namespace",
+        "entity_id",
+        "entity_type",
+        "residue_sequence_source",
+        "source_atom_site_id",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESIDUE_METADATA_KEYS = frozenset(
+    {
+        "canonical_sequence_source",
+        "entity_id",
+        "entity_type_basis",
+        "mmcif_auth_seq_id",
+        "mmcif_label_seq_id",
+        "source_record",
+        "source_residue_namespace",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_CHAIN_METADATA_KEYS = frozenset(
+    {"auth_asym_ids", "source_format"}
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_CATEGORY_INVENTORY_KEYS = frozenset(
+    {"category", "loop_count", "policy", "row_count", "scalar_item_count"}
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESOURCE_USAGE_KEYS = frozenset(
+    {
+        "input_bytes",
+        "token_count",
+        "atom_site_rows",
+        "missing_residue_evidence_rows",
+        "missing_atom_evidence_rows",
+        "total_missingness_evidence_rows",
+        "missingness_preserved_items",
+        "missingness_preserved_value_utf8_bytes",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_SOURCE_MISSINGNESS_KEYS = frozenset(
+    {
+        "atom_row_count",
+        "dictionary_validation_status",
+        "extension_item_count",
+        "interpretation_policy",
+        "residue_row_count",
+        "unobserved_atom_claim_count",
+        "unobserved_residue_claim_count",
+        "zero_occupancy_atom_row_count",
+        "zero_occupancy_residue_row_count",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_REPORTED_MISSINGNESS_KEYS = frozenset(
+    {
+        "altloc_status",
+        "assembly_status",
+        "blockers",
+        "canonical_topology_schema_id",
+        "canonical_topology_sha256",
+        "claim_safe",
+        "completion_applied",
+        "completion_attempted",
+        "coordinate_scope",
+        "missing_atom_claims",
+        "missing_residue_claims",
+        "policy_id",
+        "preparation_ready",
+        "report_sha256",
+        "requested_altloc_id",
+        "requested_assembly_id",
+        "schema_id",
+        "source_format",
+        "source_reported_missing_atom_count",
+        "source_reported_missing_residue_count",
+        "source_sha256",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_CARRIER_COVERAGE_KEYS = frozenset(
+    {
+        "altloc_affected_residue_count",
+        "altloc_discarded_row_count",
+        "altloc_kept_row_count",
+        "altloc_status",
+        "assembly_chain_instance_count",
+        "assembly_operation_application_count",
+        "assembly_operation_sequence_count",
+        "assembly_output_atom_count",
+        "assembly_status",
+        "atom_count",
+        "blockers",
+        "bond_count",
+        "canonical_topology_schema_id",
+        "canonical_topology_sha256",
+        "cell_present",
+        "chain_count",
+        "claim_safe",
+        "coordinate_scope",
+        "explicit_hydrogen_count",
+        "hetero_residue_count",
+        "missingness_completion_policy_id",
+        "missingness_completion_status",
+        "missingness_evidence_status",
+        "model_count",
+        "preparation_ready",
+        "requested_altloc_id",
+        "requested_assembly_id",
+        "residue_count",
+        "source_atom_row_count",
+        "source_format",
+        "source_missingness_evidence_schema_id",
+        "source_missingness_evidence_sha256",
+        "source_reported_missing_atom_claim_count",
+        "source_reported_missing_residue_claim_count",
+        "support_scope",
+        "supported",
+        "syntax_ingest_supported",
+        "uninterpreted_category_count",
+        "unknown_entity_type_count",
+        "unknown_formal_charge_count",
+    }
+)
+_MMCIF_POLYMER_COMPONENT_TOPOLOGY_BOND_ORDER_BY_VALUE = {
+    "SING": 1.0,
+    "DOUB": 2.0,
+    "TRIP": 3.0,
+    "AROM": 1.5,
+}
 _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY = (
     "mmcif_nonpoly_covalent_struct_conn_topology"
 )
@@ -220,6 +506,11 @@ _RECOGNIZED_PARSER_PEDIGREES = {
             _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_NAME,
             _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_VERSION,
             _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_PEDIGREE_ID,
+        ),
+        (
+            _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME,
+            _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION,
+            _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID,
         ),
     ),
     "sdf_v2000": (
@@ -825,6 +1116,696 @@ def _is_lowercase_sha256(value: Any) -> bool:
     )
 
 
+def _is_mmcif_polymer_component_topology_parser(system: AllAtomSystem) -> bool:
+    return bool(
+        system.provenance.source_format == "mmcif"
+        and system.provenance.parser_name
+        == _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME
+        and system.provenance.parser_version
+        == _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION
+    )
+
+
+def _strict_mmcif_integer_token(value: Any) -> int | None:
+    if type(value) is not str or not value:
+        return None
+    unsigned = value[1:] if value[0] in {"+", "-"} else value
+    if not unsigned or any(character not in "0123456789" for character in unsigned):
+        return None
+    try:
+        return int(value, 10)
+    except (ValueError, OverflowError):
+        return None
+
+
+def _mmcif_atom_site_mapping_exact(atom_site: Any) -> bool:
+    if not isinstance(atom_site, Mapping) or set(atom_site) != set(
+        MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS
+    ):
+        return False
+    return all(
+        isinstance(payload, Mapping)
+        and set(payload) == {"value", "quoted", "multiline"}
+        and type(payload.get("value")) is str
+        and type(payload.get("quoted")) is bool
+        and type(payload.get("multiline")) is bool
+        for payload in atom_site.values()
+    )
+
+
+def _mmcif_atom_site_value(atom_site: Mapping[str, Any], key: str) -> Any:
+    payload = atom_site.get(key)
+    return payload.get("value") if isinstance(payload, Mapping) else None
+
+
+def _normalized_mmcif_missing_token(value: Any) -> Any:
+    return "" if value in {".", "?"} else value
+
+
+def _mmcif_polymer_atom_site_identity_matches(
+    system: AllAtomSystem,
+    atom: Any,
+    residue: Any,
+    chain: Any,
+    atom_site: Any,
+    *,
+    model_id: int,
+) -> bool:
+    if not _mmcif_atom_site_mapping_exact(atom_site):
+        return False
+    group_pdb = _mmcif_atom_site_value(atom_site, "_atom_site.group_pdb")
+    label_seq_id = _mmcif_atom_site_value(atom_site, "_atom_site.label_seq_id")
+    model_token = _mmcif_atom_site_value(atom_site, "_atom_site.pdbx_pdb_model_num")
+    return bool(
+        group_pdb in {"ATOM", "HETATM"}
+        and group_pdb == atom.metadata.get("source_record")
+        and group_pdb == residue.metadata.get("source_record")
+        and _mmcif_atom_site_value(atom_site, "_atom_site.type_symbol") == atom.element
+        and _mmcif_atom_site_value(atom_site, "_atom_site.label_atom_id") == atom.name
+        and _mmcif_atom_site_value(atom_site, "_atom_site.label_comp_id")
+        == residue.name
+        and _mmcif_atom_site_value(atom_site, "_atom_site.label_asym_id")
+        == chain.chain_id
+        and _mmcif_atom_site_value(atom_site, "_atom_site.label_entity_id")
+        == chain.entity_id
+        and _strict_mmcif_integer_token(label_seq_id) == residue.sequence_number
+        and _normalized_mmcif_missing_token(
+            _mmcif_atom_site_value(atom_site, "_atom_site.label_alt_id")
+        )
+        == atom.altloc
+        and _normalized_mmcif_missing_token(
+            _mmcif_atom_site_value(atom_site, "_atom_site.pdbx_pdb_ins_code")
+        )
+        == residue.insertion_code
+        and _strict_mmcif_integer_token(model_token) == model_id
+    )
+
+
+def _mmcif_polymer_component_topology_raw_atom_identity_consistent(
+    system: AllAtomSystem,
+    atom: Any,
+) -> bool:
+    if not (0 <= atom.residue_index < len(system.residues)):
+        return False
+    residue = system.residues[atom.residue_index]
+    if not (0 <= residue.chain_index < len(system.chains)):
+        return False
+    chain = system.chains[residue.chain_index]
+    mmcif = atom.metadata.get("mmcif")
+    atom_site = mmcif.get("atom_site") if isinstance(mmcif, Mapping) else None
+    model_ids = system.provenance.metadata.get("model_ids")
+    atom_site_by_model = (
+        mmcif.get("atom_site_by_model") if isinstance(mmcif, Mapping) else None
+    )
+    atom_site_id_by_model = (
+        mmcif.get("atom_site_id_by_model") if isinstance(mmcif, Mapping) else None
+    )
+    auth_identity = mmcif.get("auth_identity") if isinstance(mmcif, Mapping) else None
+    if (
+        not isinstance(mmcif, Mapping)
+        or set(mmcif) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_MMCIF_METADATA_KEYS
+        or not isinstance(model_ids, tuple)
+        or len(model_ids) != system.model_count
+        or not model_ids
+        or any(type(model_id) is not int for model_id in model_ids)
+        or len(set(model_ids)) != len(model_ids)
+        or not isinstance(atom_site_by_model, tuple)
+        or len(atom_site_by_model) != len(model_ids)
+        or not isinstance(atom_site_id_by_model, tuple)
+        or len(atom_site_id_by_model) != len(model_ids)
+        or not isinstance(auth_identity, Mapping)
+        or set(auth_identity) != {"alt_id", "asym_id", "atom_id", "comp_id", "seq_id"}
+        or set(residue.metadata)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESIDUE_METADATA_KEYS
+        or set(chain.metadata) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CHAIN_METADATA_KEYS
+        or type(atom.serial) is not int
+        or atom.serial != atom.index + 1
+        or mmcif.get("canonical_identity_namespace") != "label"
+        or mmcif.get("residue_sequence_source") != "label_seq_id"
+        or mmcif.get("entity_id") != chain.entity_id
+        or mmcif.get("entity_type") != residue.entity_type
+        or residue.metadata.get("canonical_sequence_source") != "label_seq_id"
+        or residue.metadata.get("entity_id") != chain.entity_id
+        or residue.metadata.get("entity_type_basis") != "mmcif_entity_category"
+        or residue.metadata.get("source_residue_namespace") != ""
+        or chain.metadata.get("source_format") != "mmcif"
+        or not isinstance(chain.metadata.get("auth_asym_ids"), tuple)
+        or not chain.metadata.get("auth_asym_ids")
+    ):
+        return False
+
+    for ordinal, model_id in enumerate(model_ids):
+        model_entry = atom_site_by_model[ordinal]
+        source_id_entry = atom_site_id_by_model[ordinal]
+        if (
+            not isinstance(model_entry, Mapping)
+            or set(model_entry) != {"model_id", "values"}
+            or model_entry.get("model_id") != model_id
+            or not isinstance(source_id_entry, Mapping)
+            or set(source_id_entry) != {"atom_site_id", "model_id"}
+            or source_id_entry.get("model_id") != model_id
+        ):
+            return False
+        values = model_entry.get("values")
+        if not _mmcif_polymer_atom_site_identity_matches(
+            system,
+            atom,
+            residue,
+            chain,
+            values,
+            model_id=model_id,
+        ):
+            return False
+        source_atom_site_id = _mmcif_atom_site_value(values, "_atom_site.id")
+        if (
+            type(source_atom_site_id) is not str
+            or not source_atom_site_id
+            or source_id_entry.get("atom_site_id") != source_atom_site_id
+        ):
+            return False
+
+    first_atom_site = atom_site_by_model[0]["values"]
+    first_source_atom_site_id = atom_site_id_by_model[0]["atom_site_id"]
+    raw_auth_asym_id = _mmcif_atom_site_value(
+        first_atom_site, "_atom_site.auth_asym_id"
+    )
+    expected_alt_id = atom.altloc or None
+    if (
+        atom_site != first_atom_site
+        or mmcif.get("source_atom_site_id") != first_source_atom_site_id
+        or atom.metadata.get("mmcif_auth_asym_id") != raw_auth_asym_id
+        or raw_auth_asym_id not in chain.metadata["auth_asym_ids"]
+        or auth_identity.get("alt_id") != expected_alt_id
+        or auth_identity.get("asym_id") != raw_auth_asym_id
+        or auth_identity.get("atom_id")
+        != _mmcif_atom_site_value(first_atom_site, "_atom_site.auth_atom_id")
+        or auth_identity.get("comp_id")
+        != _mmcif_atom_site_value(first_atom_site, "_atom_site.auth_comp_id")
+        or auth_identity.get("seq_id")
+        != _mmcif_atom_site_value(first_atom_site, "_atom_site.auth_seq_id")
+        or residue.metadata.get("mmcif_auth_seq_id") != auth_identity.get("seq_id")
+        or residue.metadata.get("mmcif_label_seq_id")
+        != _mmcif_atom_site_value(first_atom_site, "_atom_site.label_seq_id")
+    ):
+        return False
+    return True
+
+
+def _mmcif_polymer_component_topology_atom_marker_consistent(
+    system: AllAtomSystem,
+    atom: Any,
+) -> bool:
+    if not (0 <= atom.residue_index < len(system.residues)):
+        return False
+    residue = system.residues[atom.residue_index]
+    marker = atom.metadata.get(_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY)
+    mmcif = atom.metadata.get("mmcif")
+    atom_site = mmcif.get("atom_site") if isinstance(mmcif, Mapping) else None
+    formal_charge_source = atom.metadata.get("formal_charge_source")
+    source_reported_stereo = (
+        marker.get("source_reported_stereo") if isinstance(marker, Mapping) else None
+    )
+    if (
+        residue.entity_type != "polymer"
+        or atom.metadata.get("source_record") not in {"ATOM", "HETATM"}
+        or type(atom.serial) is not int
+        or atom.serial < 1
+        or not isinstance(mmcif, Mapping)
+        or not isinstance(atom_site, Mapping)
+        or type(mmcif.get("source_atom_site_id")) is not str
+        or not mmcif.get("source_atom_site_id")
+        or not isinstance(marker, Mapping)
+        or set(marker) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_MARKER_KEYS
+        or marker.get("component_id") != residue.name
+        or marker.get("template_atom_id") != atom.name
+        or type(marker.get("template_ordinal")) is not int
+        or marker.get("template_ordinal", 0) < 1
+        or type(marker.get("source_reported_aromatic")) is not bool
+        or marker.get("source_reported_aromatic") is not atom.aromatic
+        or source_reported_stereo not in {"N", "R", "S"}
+        or atom.stereo
+        != ("none" if source_reported_stereo == "N" else source_reported_stereo)
+        or atom.metadata.get("hydrogen_origin")
+        != ("source" if atom.element == "H" else "not_hydrogen")
+        or formal_charge_source
+        not in {
+            "_chem_comp_atom.charge",
+            "cross_checked_atom_site_and_chem_comp_atom",
+        }
+        or atom.metadata.get("formal_charge_interpretation")
+        != "explicit_component_template"
+        or atom.metadata.get("formal_charge_known") is not True
+        or not atom.formal_charge_known
+        or "mmcif_nonpoly_component_topology" in atom.metadata
+        or not _mmcif_polymer_component_topology_raw_atom_identity_consistent(
+            system, atom
+        )
+    ):
+        return False
+    return _mmcif_component_template_charge_marker_consistent(
+        atom,
+        atom_site,
+        formal_charge_source=formal_charge_source,
+    )
+
+
+def _mmcif_polymer_component_topology_carrier_ledger_valid(
+    system: AllAtomSystem,
+) -> bool:
+    provenance_metadata = system.provenance.metadata
+    mmcif = system.metadata.get("mmcif")
+    if (
+        set(system.metadata) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_SYSTEM_METADATA_KEYS
+        or set(provenance_metadata)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROVENANCE_METADATA_KEYS
+        or system.provenance.operations
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_EXPECTED_OPERATIONS
+        or len(system.provenance.parent_sha256) != 1
+        or not _is_lowercase_sha256(system.provenance.parent_sha256[0])
+        or not isinstance(mmcif, Mapping)
+        or set(mmcif) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MMCIF_METADATA_KEYS
+        or mmcif.get("atom_site_headers")
+        != MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS
+        or mmcif.get("carrier_evidence_semantics")
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CARRIER_EVIDENCE_SEMANTICS
+        or type(mmcif.get("data_block")) is not str
+        or not mmcif.get("data_block")
+        or mmcif.get("cell") is not None
+        or system.cell is not None
+    ):
+        return False
+
+    model_ids = provenance_metadata.get("model_ids")
+    if (
+        not isinstance(model_ids, tuple)
+        or len(model_ids) != system.model_count
+        or not model_ids
+        or any(type(model_id) is not int for model_id in model_ids)
+        or len(set(model_ids)) != len(model_ids)
+    ):
+        return False
+    source_atom_row_count = len(system.atoms) * system.model_count
+
+    category_inventory = mmcif.get("category_inventory")
+    expected_categories = (
+        (
+            "_entity",
+            "partially_interpreted",
+            len({chain.entity_id for chain in system.chains}),
+        ),
+        ("_struct_asym", "partially_interpreted", len(system.chains)),
+        (
+            "_atom_site",
+            "interpreted_with_source_values_preserved",
+            source_atom_row_count,
+        ),
+    )
+    if not isinstance(category_inventory, tuple) or len(category_inventory) != 3:
+        return False
+    for entry, (category, policy, row_count) in zip(
+        category_inventory, expected_categories
+    ):
+        if (
+            not isinstance(entry, Mapping)
+            or set(entry) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CATEGORY_INVENTORY_KEYS
+            or entry.get("category") != category
+            or entry.get("policy") != policy
+            or entry.get("loop_count") != 1
+            or type(entry.get("loop_count")) is not int
+            or entry.get("scalar_item_count") != 0
+            or type(entry.get("scalar_item_count")) is not int
+            or entry.get("row_count") != row_count
+            or type(entry.get("row_count")) is not int
+        ):
+            return False
+
+    resource_usage = mmcif.get("resource_usage")
+    if (
+        not isinstance(resource_usage, Mapping)
+        or set(resource_usage) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESOURCE_USAGE_KEYS
+        or type(resource_usage.get("input_bytes")) is not int
+        or resource_usage.get("input_bytes", 0) < 1
+        or type(resource_usage.get("token_count")) is not int
+        or resource_usage.get("token_count", 0) < 1
+        or type(resource_usage.get("atom_site_rows")) is not int
+        or resource_usage.get("atom_site_rows") != source_atom_row_count
+        or any(
+            type(resource_usage.get(field)) is not int or resource_usage.get(field) != 0
+            for field in (
+                "missing_residue_evidence_rows",
+                "missing_atom_evidence_rows",
+                "total_missingness_evidence_rows",
+                "missingness_preserved_items",
+                "missingness_preserved_value_utf8_bytes",
+            )
+        )
+    ):
+        return False
+    source_missingness = mmcif.get("carrier_source_missingness")
+    if (
+        not isinstance(source_missingness, Mapping)
+        or set(source_missingness)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_SOURCE_MISSINGNESS_KEYS
+        or source_missingness.get("dictionary_validation_status") != "not_assessed"
+        or source_missingness.get("interpretation_policy")
+        != "documented_items_preserved_without_full_dictionary_validation/v1"
+        or any(
+            type(source_missingness.get(field)) is not int
+            or source_missingness.get(field) != 0
+            for field in (
+                "atom_row_count",
+                "extension_item_count",
+                "residue_row_count",
+                "unobserved_atom_claim_count",
+                "unobserved_residue_claim_count",
+                "zero_occupancy_atom_row_count",
+                "zero_occupancy_residue_row_count",
+            )
+        )
+    ):
+        return False
+
+    reported_missingness = mmcif.get("carrier_source_reported_missingness")
+    expected_missingness_blockers = (
+        "source_reported_missingness_preserved_only",
+        "source_reported_missingness_not_completeness_evidence",
+        "reference_chemistry_not_consulted",
+        "completion_not_attempted",
+        "preparation_not_assessed",
+    )
+    if (
+        not isinstance(reported_missingness, Mapping)
+        or set(reported_missingness)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_REPORTED_MISSINGNESS_KEYS
+        or reported_missingness.get("blockers") != expected_missingness_blockers
+        or reported_missingness.get("claim_safe") is not False
+        or reported_missingness.get("completion_applied") is not False
+        or reported_missingness.get("completion_attempted") is not False
+        or reported_missingness.get("preparation_ready") is not False
+        or reported_missingness.get("missing_atom_claims") != ()
+        or reported_missingness.get("missing_residue_claims") != ()
+        or type(reported_missingness.get("source_reported_missing_atom_count"))
+        is not int
+        or reported_missingness.get("source_reported_missing_atom_count") != 0
+        or type(reported_missingness.get("source_reported_missing_residue_count"))
+        is not int
+        or reported_missingness.get("source_reported_missing_residue_count") != 0
+        or reported_missingness.get("source_format") != "mmcif"
+        or reported_missingness.get("schema_id")
+        != "betelgeuze.source_reported_missingness/1.0.0"
+        or reported_missingness.get("policy_id")
+        != "source_reported_missingness_preserve_only_v1"
+        or not _is_lowercase_sha256(reported_missingness.get("report_sha256"))
+        or not _is_lowercase_sha256(reported_missingness.get("source_sha256"))
+        or reported_missingness.get("canonical_topology_schema_id")
+        != CANONICAL_TOPOLOGY_SCHEMA_ID
+        or not _is_lowercase_sha256(
+            reported_missingness.get("canonical_topology_sha256")
+        )
+    ):
+        return False
+
+    carrier_coverage = provenance_metadata.get("carrier_coverage")
+    raw_unknown_formal_charge_count = sum(
+        _mmcif_atom_site_value(
+            atom.metadata["mmcif"]["atom_site"],
+            "_atom_site.pdbx_formal_charge",
+        )
+        in {".", "?"}
+        for atom in system.atoms
+    )
+    if (
+        not isinstance(carrier_coverage, Mapping)
+        or set(carrier_coverage)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CARRIER_COVERAGE_KEYS
+        or carrier_coverage.get("preparation_ready") is not False
+        or carrier_coverage.get("claim_safe") is not False
+        or carrier_coverage.get("supported") is not True
+        or carrier_coverage.get("syntax_ingest_supported") is not True
+        or carrier_coverage.get("source_format") != "mmcif"
+        or type(carrier_coverage.get("atom_count")) is not int
+        or carrier_coverage.get("atom_count") != len(system.atoms)
+        or type(carrier_coverage.get("bond_count")) is not int
+        or carrier_coverage.get("bond_count") != 0
+        or type(carrier_coverage.get("residue_count")) is not int
+        or carrier_coverage.get("residue_count") != len(system.residues)
+        or type(carrier_coverage.get("chain_count")) is not int
+        or carrier_coverage.get("chain_count") != len(system.chains)
+        or type(carrier_coverage.get("model_count")) is not int
+        or carrier_coverage.get("model_count") != system.model_count
+        or type(carrier_coverage.get("source_atom_row_count")) is not int
+        or carrier_coverage.get("source_atom_row_count") != source_atom_row_count
+        or type(carrier_coverage.get("explicit_hydrogen_count")) is not int
+        or carrier_coverage.get("explicit_hydrogen_count")
+        != sum(atom.element == "H" for atom in system.atoms)
+        or type(carrier_coverage.get("hetero_residue_count")) is not int
+        or carrier_coverage.get("hetero_residue_count")
+        != sum(residue.hetero for residue in system.residues)
+        or type(carrier_coverage.get("unknown_formal_charge_count")) is not int
+        or carrier_coverage.get("unknown_formal_charge_count")
+        != raw_unknown_formal_charge_count
+        or carrier_coverage.get("unknown_entity_type_count") != 0
+        or carrier_coverage.get("uninterpreted_category_count") != 0
+        or carrier_coverage.get("source_reported_missing_atom_claim_count") != 0
+        or carrier_coverage.get("source_reported_missing_residue_claim_count") != 0
+        or carrier_coverage.get("canonical_topology_schema_id")
+        != CANONICAL_TOPOLOGY_SCHEMA_ID
+        or carrier_coverage.get("canonical_topology_sha256")
+        != reported_missingness.get("canonical_topology_sha256")
+        or carrier_coverage.get("source_missingness_evidence_schema_id")
+        != reported_missingness.get("schema_id")
+        or carrier_coverage.get("source_missingness_evidence_sha256")
+        != reported_missingness.get("report_sha256")
+        or provenance_metadata.get("carrier_source_missingness_evidence_schema_id")
+        != reported_missingness.get("schema_id")
+        or provenance_metadata.get("carrier_source_missingness_evidence_sha256")
+        != reported_missingness.get("report_sha256")
+    ):
+        return False
+    return True
+
+
+def _mmcif_polymer_component_topology_profile_binding_valid(
+    system: AllAtomSystem,
+    *,
+    component_count: int,
+    component_instance_count: int,
+    bond_count: int,
+) -> bool:
+    profile_marker = system.metadata.get(_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY)
+    provenance_marker = system.provenance.metadata.get(
+        _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY
+    )
+    if (
+        not isinstance(profile_marker, Mapping)
+        or set(profile_marker) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROFILE_MARKER_KEYS
+        or profile_marker.get("profile_id")
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROFILE_ID
+        or type(profile_marker.get("component_count")) is not int
+        or profile_marker.get("component_count") != component_count
+        or type(profile_marker.get("component_instance_count")) is not int
+        or profile_marker.get("component_instance_count") != component_instance_count
+        or type(profile_marker.get("bond_count")) is not int
+        or profile_marker.get("bond_count") != bond_count
+        or any(
+            profile_marker.get(field) is not False
+            for field in _MMCIF_POLYMER_COMPONENT_TOPOLOGY_FALSE_AUTHORITY_FIELDS
+        )
+        or not isinstance(provenance_marker, Mapping)
+        or set(provenance_marker)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROVENANCE_MARKER_KEYS
+        or not _is_lowercase_sha256(provenance_marker.get("canonical_output_sha256"))
+        or provenance_marker.get("parser_pedigree_id")
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID
+        or provenance_marker.get("source_sha256_semantics") != "raw_full_source_bytes"
+        or provenance_marker.get("carrier_evidence_semantics")
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CARRIER_EVIDENCE_SEMANTICS
+        or provenance_marker.get("preparation_inventory_commitment_schema_id")
+        != (MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID)
+        or not _is_lowercase_sha256(
+            provenance_marker.get("preparation_inventory_commitment_sha256")
+        )
+        or system.provenance.preparation_ready is not False
+        or system.provenance.claim_safe is not False
+        or not _mmcif_polymer_component_topology_carrier_ledger_valid(system)
+    ):
+        return False
+    try:
+        recomputed_commitment = (
+            mmcif_polymer_component_topology_preparation_inventory_sha256(system)
+        )
+    except (TypeError, ValueError, OverflowError):
+        return False
+    return hmac.compare_digest(
+        provenance_marker["preparation_inventory_commitment_sha256"],
+        recomputed_commitment,
+    )
+
+
+def _mmcif_polymer_component_topology_inventory_valid(
+    system: AllAtomSystem,
+) -> bool:
+    """Validate the complete source-declared polymer component inventory."""
+
+    if (
+        not _is_mmcif_polymer_component_topology_parser(system)
+        or not system.atoms
+        or not system.residues
+    ):
+        return False
+
+    atom_indices_seen: set[int] = set()
+    atom_templates_by_component: dict[str, tuple[tuple[Any, ...], ...]] = {}
+    aromatic_atom_indices_by_residue: dict[int, set[int]] = {}
+    for residue in system.residues:
+        if residue.entity_type != "polymer" or not residue.atom_indices:
+            return False
+        atom_names: set[str] = set()
+        atom_ordinals: list[int] = []
+        atom_template: list[tuple[Any, ...]] = []
+        aromatic_atom_indices: set[int] = set()
+        for atom_index in residue.atom_indices:
+            if (
+                not (0 <= atom_index < len(system.atoms))
+                or atom_index in atom_indices_seen
+            ):
+                return False
+            atom = system.atoms[atom_index]
+            if (
+                atom.index != atom_index
+                or atom.residue_index != residue.index
+                or atom.name in atom_names
+                or not _mmcif_polymer_component_topology_atom_marker_consistent(
+                    system, atom
+                )
+            ):
+                return False
+            marker = atom.metadata[_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY]
+            ordinal = marker["template_ordinal"]
+            atom_names.add(atom.name)
+            atom_indices_seen.add(atom_index)
+            atom_ordinals.append(ordinal)
+            if atom.aromatic:
+                aromatic_atom_indices.add(atom_index)
+            atom_template.append(
+                (
+                    ordinal,
+                    atom.name,
+                    atom.element,
+                    atom.formal_charge,
+                    atom.aromatic,
+                    atom.stereo,
+                    marker["source_reported_stereo"],
+                )
+            )
+        if sorted(atom_ordinals) != list(range(1, len(residue.atom_indices) + 1)):
+            return False
+        canonical_atom_template = tuple(sorted(atom_template))
+        existing_atom_template = atom_templates_by_component.setdefault(
+            residue.name,
+            canonical_atom_template,
+        )
+        if existing_atom_template != canonical_atom_template:
+            return False
+        aromatic_atom_indices_by_residue[residue.index] = aromatic_atom_indices
+    if atom_indices_seen != set(range(len(system.atoms))):
+        return False
+
+    bond_ordinals_by_residue: dict[int, list[int]] = {
+        residue.index: [] for residue in system.residues
+    }
+    bond_templates_by_residue: dict[int, list[tuple[Any, ...]]] = {
+        residue.index: [] for residue in system.residues
+    }
+    aromatic_bond_endpoints_by_residue: dict[int, set[int]] = {
+        residue.index: set() for residue in system.residues
+    }
+    for bond in system.bonds:
+        if (
+            not (0 <= bond.atom_i < len(system.atoms))
+            or not (0 <= bond.atom_j < len(system.atoms))
+            or set(bond.metadata) != {_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY}
+        ):
+            return False
+        marker = bond.metadata.get(_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY)
+        if (
+            not isinstance(marker, Mapping)
+            or set(marker) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_BOND_MARKER_KEYS
+        ):
+            return False
+        atom_i = system.atoms[bond.atom_i]
+        atom_j = system.atoms[bond.atom_j]
+        residue_index = atom_i.residue_index
+        value_order = marker.get("source_reported_value_order")
+        reported_aromatic = marker.get("source_reported_aromatic")
+        template_ordinal = marker.get("template_ordinal")
+        if (
+            residue_index != atom_j.residue_index
+            or not (0 <= residue_index < len(system.residues))
+            or marker.get("component_instance_residue_index") != residue_index
+            or marker.get("component_id") != system.residues[residue_index].name
+            or {
+                marker.get("template_atom_id_1"),
+                marker.get("template_atom_id_2"),
+            }
+            != {atom_i.name, atom_j.name}
+            or type(template_ordinal) is not int
+            or template_ordinal < 1
+            or type(value_order) is not str
+            or value_order not in _MMCIF_POLYMER_COMPONENT_TOPOLOGY_BOND_ORDER_BY_VALUE
+            or bond.order
+            != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_BOND_ORDER_BY_VALUE[value_order]
+            or type(reported_aromatic) is not bool
+            or reported_aromatic is not bond.aromatic
+            or reported_aromatic is not (value_order == "AROM")
+            or marker.get("source_reported_stereo") != "N"
+            or bond.stereo != "none"
+            or bond.source != "mmcif_chem_comp_bond"
+        ):
+            return False
+        bond_ordinals_by_residue[residue_index].append(template_ordinal)
+        bond_templates_by_residue[residue_index].append(
+            (
+                template_ordinal,
+                marker["template_atom_id_1"],
+                marker["template_atom_id_2"],
+                value_order,
+                reported_aromatic,
+                marker["source_reported_stereo"],
+            )
+        )
+        if bond.aromatic:
+            aromatic_bond_endpoints_by_residue[residue_index].update(
+                {bond.atom_i, bond.atom_j}
+            )
+
+    bond_templates_by_component: dict[str, tuple[tuple[Any, ...], ...]] = {}
+    for residue in system.residues:
+        ordinals = bond_ordinals_by_residue[residue.index]
+        if sorted(ordinals) != list(range(1, len(ordinals) + 1)):
+            return False
+        canonical_bond_template = tuple(
+            sorted(bond_templates_by_residue[residue.index])
+        )
+        existing_bond_template = bond_templates_by_component.setdefault(
+            residue.name,
+            canonical_bond_template,
+        )
+        if (
+            existing_bond_template != canonical_bond_template
+            or aromatic_atom_indices_by_residue[residue.index]
+            != aromatic_bond_endpoints_by_residue[residue.index]
+        ):
+            return False
+
+    return _mmcif_polymer_component_topology_profile_binding_valid(
+        system,
+        component_count=len(atom_templates_by_component),
+        component_instance_count=len(system.residues),
+        bond_count=len(system.bonds),
+    )
+
+
 def _is_mmcif_nonpoly_covalent_struct_conn_topology_parser(
     system: AllAtomSystem,
 ) -> bool:
@@ -1062,6 +2043,13 @@ def _parser_observation_consistency(
         and not _mmcif_nonpoly_covalent_struct_conn_inventory_valid(system)
     ):
         digest_bindings_valid = False
+    if (
+        digest_bindings_valid
+        and matched is not None
+        and matched[2] == _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID
+        and not _mmcif_polymer_component_topology_inventory_valid(system)
+    ):
+        digest_bindings_valid = False
     recognized = bool(
         source_sha256 is not None and matched is not None and digest_bindings_valid
     )
@@ -1149,6 +2137,11 @@ def _coordinate_source_atom_marker_consistent(
         if not common_markers_valid:
             return False
         formal_charge_source = atom.metadata.get("formal_charge_source")
+        if _is_mmcif_polymer_component_topology_parser(system):
+            return _mmcif_polymer_component_topology_atom_marker_consistent(
+                system,
+                atom,
+            )
         if _uses_mmcif_nonpoly_component_topology_atom_markers(system):
             if not (0 <= atom.residue_index < len(system.residues)):
                 return False
@@ -1575,7 +2568,10 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
                 )
                 expected_interpretation = (
                     "explicit_component_template"
-                    if _uses_mmcif_nonpoly_component_topology_atom_markers(system)
+                    if (
+                        _uses_mmcif_nonpoly_component_topology_atom_markers(system)
+                        or _is_mmcif_polymer_component_topology_parser(system)
+                    )
                     and atom.metadata.get("formal_charge_source")
                     in {
                         "_chem_comp_atom.charge",

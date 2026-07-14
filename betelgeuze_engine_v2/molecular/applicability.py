@@ -87,6 +87,10 @@ _RECOGNIZED_PARSER_PEDIGREES = frozenset(
             "mmcif",
             "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0",
         ),
+        (
+            "mmcif",
+            "betelgeuze.mmcif_polymer_component_topology_parser/1.0.0",
+        ),
         ("sdf_v2000", "betelgeuze.sdf_v2000_parser/1.5.0"),
         ("smiles", "betelgeuze.smiles_parser/1.4.0"),
     }

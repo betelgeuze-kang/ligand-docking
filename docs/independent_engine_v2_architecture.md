@@ -195,6 +195,15 @@ unselected topology category remain unchanged and fail closed.
 The separate opt-in polymer-sequence envelope likewise handles only one exact
 `_entity_poly_seq` membership loop; direct `parse_mmcif` admission remains
 unchanged and fail-closed.
+The separate strict nine-category polymer-sequence plus nonpoly
+component-topology composition envelope splits its source into the exact
+eight-category component child and exact six-category polymer/nonpoly child,
+requires both children to accept independently, and cross-binds only their
+shared carrier state and byte-exact canonical shared loops. The component child
+continues to own the detached molecular system and its pedigree; polymer
+membership remains source evidence only. Direct `parse_mmcif` admission and
+both child contracts remain unchanged and fail-closed outside their exact
+surfaces.
 The third opt-in envelope below composes that carrier with one exact
 residue-level `_pdbx_unobs_or_zero_occ_residues` loop. It does not broaden the
 base parser/writer or either lower envelope.
@@ -716,12 +725,15 @@ artifacts cross-bind full and normalized source, the unchanged carrier,
 detached materialized snapshot, topology, source identity, output, reparse,
 and stable second emission. Recomputed documents and external factory anchors
 reject stale, tampered, crosswired, and coherent whole-artifact replacements.
+Public carrier, receipt, report, and aggregate child accessors reconstruct fresh
+detached artifacts, so caller-side mutation cannot poison the retained parent.
 The public augmented system's `provenance.source_sha256` is always the exact raw
 eight-category input digest; the distinct canonical-output digest is named in
 provenance metadata and the source-binding artifact. The source-specific
-detached snapshot digest remains in source binding and receipts, while the
-round-trip topology-state digest compares only the normalized carrier,
-component projection, and materialized canonical topology.
+source ID and detached carrier/base snapshot digests remain in source binding
+and receipts, while the source-independent round-trip topology-state digest
+compares only the normalized carrier, component projection, and materialized
+canonical topology.
 Their schemas are
 `betelgeuze.mmcif_nonpoly_component_topology_projection/1.0.0`,
 `betelgeuze.mmcif_nonpoly_component_topology_state/1.0.0`,
@@ -845,7 +857,13 @@ manifest at
 `config/independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json`
 binds three round trips, fifteen typed failures, strict-JSON and fixture-path
 confinement, live-limit checks, and artifact crosswire evidence with payload
-SHA-256 `a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4`.
+SHA-256 `2a8a2428ff39646f964af01773bc69b3f71cb03cfaba78b7ebb30ef2ba2d2704`.
+
+The source-independent topology state contains the normalized component
+carrier state, ordered `_struct_conn` projection, and final canonical topology;
+the source ID and carrier/final detached snapshot digests are confined to the
+source-binding and receipt chain. Public carrier, receipt, report, and aggregate
+child accessors return fresh detached artifacts rather than internal aliases.
 
 No new chemistry or preparation profile is introduced. The exact
 `split_ethane_sing` fixture reconstructs the unchanged explicit-H, neutral,
@@ -909,7 +927,145 @@ auth/label equivalence, modeled residue existence, modified-residue identity,
 microheterogeneity chemistry, preparation, parameterability, physics, runtime,
 simulation, execution, or claim authority.
 
-A third opt-in module,
+A separate opt-in
+`betelgeuze_engine_v2.molecular.mmcif_polymer_component_topology` envelope has
+parser, writer, and envelope version 1.0.0. It accepts exactly seven
+category-local loops with exact headers and emits them in canonical order:
+`_entity`, `_struct_asym`, `_entity_poly_seq`, `_chem_comp`,
+`_chem_comp_atom`, `_chem_comp_bond`, and `_atom_site`. Source category-order
+variants normalize to that output. The unchanged four-category
+`mmcif_polymer_sequence` child must independently accept and emit the carrier;
+the wrapper does not broaden that child's grammar or membership semantics.
+
+This is an exact fully observed, source-reported `L-peptide linking` polymer
+component-topology profile. Every polymer entity is covered by sequence rows,
+and every Cartesian product of an entity's selected asym IDs and sequence
+positions must have exactly one coordinate residue instance. Each instance
+must contain every atom in its selected component template exactly once and
+no extra atom, with exact atom-name and element agreement. Component
+definitions must exactly cover the unique sequence `mon_id` set, use the
+quoted case-insensitive `L-peptide linking` type normalized to that canonical
+spelling, close component formal charge against the sum of atom charges, and
+use contiguous positive atom and bond ordinals. Selected elements are exactly
+H, C, N, O, and S; atom stereo is the explicit source-reported N/R/S surface,
+and bond stereo is exactly N. This source/template-relative coverage is not
+CCD authentication, reference-sequence evidence, or general coordinate,
+template, residue, atom, or chemistry completeness.
+
+Known `_atom_site.pdbx_formal_charge` values are cross-checked against the
+component atom charge, while `.` or `?` values are deterministically filled
+from that template. Exact `SING`, `DOUB`, `TRIP`, and `AROM` declarations
+materialize as canonical 1.0, 2.0, 3.0, and 1.5 bonds with matching aromatic
+flags. Atom aromatic and N/R/S declarations are retained as source-reported
+template metadata and parser-observation markers; N/R/S is not an independent
+CIP assignment. Materialization is strictly intra-residue. The unchanged
+carrier remains bondless, and no peptide, inter-residue, cross-component,
+`_struct_conn`, coordination, or inferred bond is added.
+
+The augmented detached system receives the exact new parser pedigree
+`betelgeuze.mmcif_polymer_component_topology_parser/1.0.0`. After charge,
+aromatic, stereo-marker, and bond materialization, the envelope refreshes both
+the attached canonical-topology and parser-observation digests rather than
+reusing the child's digests. Factory-only projection, topology-state,
+source-binding, write-receipt, round-trip-report, and aggregate artifacts bind
+the child carrier, ordered component rows, materialized topology, detached
+snapshot, raw and canonical sources, source ID, exact emitted-source reparse,
+and byte-stable second emission. Normalized carrier/component/topology
+semantics remain source independent; raw-source, source-ID, canonical-output,
+and detached-snapshot digests remain in the source-binding and receipt chain.
+
+The preparation inventory recognizes that pedigree only when the complete
+polymer-component contract remains self-consistent. It revalidates the exact
+system profile and negative-authority fields, provenance marker and carrier
+semantics, the exact 21-field `_atom_site` row shape and its label/auth,
+source-record, element, sequence, altloc, insertion, and model identity against
+the canonical atom/residue/chain state, the carrier category/resource/
+missingness ledgers, every polymer atom's component/template ordinal, aromatic
+and N/R/S marker, charge-fill or charge-crosscheck path, and every
+intra-residue bond's component, endpoints, ordinal, order, aromaticity, stereo,
+and source. The parser attaches and preparation recomputes
+`betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0`.
+Stale observation state and topology/observation-only coherent rehashes with
+that parser commitment left unchanged fail back to an unrecognized parser
+pedigree. The commitment is unkeyed digest-bound tamper evidence, not source
+authentication; an actor able to rewrite it together with every enclosing
+digest is outside this check's threat model. A valid inventory classifies
+explicit source hydrogen and `_chem_comp_atom` charge origins, but it does not
+assess or promote preparation, parameterability, peptide-link chemistry,
+physics, runtime, simulation, execution, or claim authority.
+
+Input, output, and projection are each capped at 64 MiB; polymer sequence,
+component, component-atom, component-bond, and expanded materialized-bond rows
+are capped at 100,000, 4,096, 80,000, 120,000, and 120,000 respectively.
+Source IDs are capped at 4,096 UTF-8 bytes, and selected tokens and canonical
+output lines at 2,048 characters. The fixed three-round-trip/fifteen-failure
+corpus is declared by
+`config/independent_engine_v2_v2_1_mmcif_polymer_component_topology_corpus.json`
+and binds canonical-manifest payload SHA-256
+`6ae0e794e849b66f3d9f98717d3608e29e99852ed4853812692d6b54afea2808`.
+
+This envelope establishes only exact source-reported, template-relative
+topology for that selected fully observed surface. Modified residues and
+terminal variants outside the exact selected templates, D-peptides, nucleic
+acids, saccharides, CCD/reference authentication, general chemistry and
+valence, peptide/inter-residue bonds, completion, preparation,
+parameterability, physics, runtime, simulation, execution, claim authority,
+general mmCIF, and V2-1 completion remain false or blocked.
+
+A separate opt-in
+`betelgeuze_engine_v2.molecular.mmcif_polymer_sequence_nonpoly_component_topology`
+composition envelope has parser, writer, and envelope version 1.0.0. Its
+profile ID is
+`strict_mmcif_polymer_sequence_nonpoly_component_topology_composition_envelope/1.0.0`,
+and its state schema is
+`betelgeuze.mmcif_polymer_sequence_nonpoly_component_topology_state/1.0.0`.
+The wrapper does not mint a new system parser pedigree.
+It accepts exactly this nine-category set and emits canonical order: `_entity`,
+`_struct_asym`, `_entity_poly_seq`, `_chem_comp`, `_chem_comp_atom`,
+`_chem_comp_bond`, `_pdbx_entity_nonpoly`, `_pdbx_nonpoly_scheme`, and
+`_atom_site`. Input category-order variants normalize to the same child sources
+and canonical output.
+
+The parser splits that surface into two complete child inputs rather than
+reimplementing either child: the exact eight-category nonpoly
+component-topology child and the exact six-category polymer-sequence plus
+nonpoly-identity child. Both children must independently accept and emit their
+own canonical projection. The composition then cross-binds the shared nonpoly
+identity projection and record state, base topology and representable state,
+and data block in its source-independent semantic state. The `_entity`, `_struct_asym`,
+`_pdbx_entity_nonpoly`, `_pdbx_nonpoly_scheme`, and `_atom_site` loops and the
+shared nonpoly writer payload recovered from the two child writers must be
+byte-exact. Child provenance differs, so this contract does not assert direct
+equality of child snapshot digests.
+
+The component child exclusively owns the detached `AllAtomSystem`; its exact
+component-carrier system pedigree
+`betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0` is retained. Polymer
+sequence rows remain ordered source evidence only and do not materialize
+polymer templates or chemistry into that system. Factory-only state,
+source-binding, receipt, and round-trip artifacts bind the full source, source
+ID, child source bindings, component snapshot, both child semantic states, the
+shared carrier, and the canonical output. Public nested artifacts are fresh
+detached reconstructions. Exact canonical reparse must recover both child
+states and the composition state, the emitted payload must equal the reparsed
+raw source byte-for-byte, and the second emission must be byte-identical. Input
+and output are each capped at 64 MiB, polymer-sequence rows at 100,000,
+component rows at 4,096, component-atom rows at 80,000, component-bond rows at
+120,000, selected tokens at 2,048 characters, and source IDs at 4,096 UTF-8
+bytes.
+The fixed two-positive/six-deterministic-failure corpus is declared by
+`config/independent_engine_v2_v2_1_mmcif_polymer_sequence_nonpoly_component_topology_composition_corpus.json`
+with canonical-manifest payload SHA-256
+`6ac10b99e058134bdcbf1739afd7d2d719dd15667890530e9c716beb14592e69`.
+
+This profile closes only the selected composition gap. Polymer templates,
+modified-residue chemistry, reference-sequence equivalence or completeness,
+coordinate completeness and missingness, `_struct_conn`, altloc, assembly,
+cell, multimodel composition, generic or global preparation, parameterability,
+physics, runtime, simulation, execution, claim authority, general mmCIF, and
+V2-1 completion all remain false or blocked.
+
+A separate downstream opt-in module,
 `betelgeuze_engine_v2.molecular.mmcif_unobserved_residues`, defines envelope
 1.0 for one exact source-reported residue-level missingness surface. Its carrier
 must already satisfy the polymer-sequence envelope, either alone or composed
@@ -1084,8 +1240,11 @@ materialized canonical bonds are admitted only by their separate eight-category
 opt-in envelope. The selected 23-field `_struct_conn` loop and its materialized
 inter-residue bonds are admitted only by the separate nine-category covalent
 opt-in envelope. `_entity_poly_seq` is admitted only by its separate opt-in
-envelope. The selected residue-level unobserved loop is admitted only by its
-dedicated envelope, the selected atom-level unobserved loop only by its
+envelope. The exact nine-category polymer-sequence plus nonpoly
+component-topology surface is admitted only by its separate composition
+envelope, which preserves the two child contracts and grants no broader
+category authority. The selected residue-level unobserved loop is admitted
+only by its dedicated envelope, the selected atom-level unobserved loop only by its
 dedicated envelope, and the two `occupancy_flag=0` branches only by their two
 dedicated envelopes.
 Factory-only receipt, report, and snapshot-backed aggregate objects
@@ -1098,8 +1257,10 @@ This is evidence only for the single-model-ID1 six legacy `_atom_site` profiles
 and the exact three-category common-core21 profile, plus the separate exact
 five-category nonpoly identity envelope, exact eight-category nonpoly component
 topology envelope, exact nine-category nonpoly covalent-`_struct_conn` topology
-envelope, and four- or six-category polymer sequence membership
-envelope, plus the selected source-reported unobserved and
+envelope, four- or six-category polymer sequence membership envelope, exact
+seven-category fully observed polymer component-topology envelope, and exact
+nine-category polymer-sequence plus nonpoly component-topology composition
+envelope, together with the selected source-reported unobserved and
 zero-occupancy residue- and atom-level envelopes when explicitly selected.
 Formal-charge source notation is not charge assignment,
 protonation, oxidation state, electronic-state assessment, or evidence of an
@@ -1119,6 +1280,8 @@ disorder, experimental-uncertainty assessment or propagation, or preparation
 evidence. General mmCIF categories and auth/entity semantics outside
 common-core21 or the selected nonpoly identity, nonpoly component topology,
 nonpoly covalent-`_struct_conn` topology, polymer-sequence,
+fully observed polymer component topology,
+polymer-sequence plus nonpoly component-topology composition,
 source-reported unobserved-residue and unobserved-atom, and source-reported
 zero-occupancy-residue and zero-occupancy-atom envelopes,
 other optional fields, `_struct_conn` outside the exact selected
@@ -1131,6 +1294,13 @@ and multimodel round-trip remain
 unfinished, as do general PDB and general SMILES round-trip and the all-format
 V2-1 exit condition. Preparation, parameterability, simulation, scientific
 validity, and claim authority remain false.
+
+In particular, the selected composition envelope does not promote polymer
+templates, modified-residue chemistry, reference or coordinate completeness,
+missingness, `_struct_conn`, altloc, assembly, cell, multimodel state, generic
+or global preparation, parameterability, physics, runtime, or claim authority.
+Those gates, general mmCIF support, and V2-1 completion remain false even when
+the fixed composition corpus passes.
 
 ### V2-1 strict SMILES ordered-forest/simple-ring canonical-writer boundary
 
