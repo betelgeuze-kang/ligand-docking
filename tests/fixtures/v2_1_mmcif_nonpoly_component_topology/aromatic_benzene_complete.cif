@@ -1,0 +1,113 @@
+data_aromatic_benzene_complete
+#
+loop_
+_entity.id
+_entity.type
+1 non-polymer
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+L 1
+#
+loop_
+_chem_comp.id
+_chem_comp.type
+_chem_comp.pdbx_formal_charge
+BZN non-polymer 0
+#
+loop_
+_chem_comp_atom.comp_id
+_chem_comp_atom.atom_id
+_chem_comp_atom.type_symbol
+_chem_comp_atom.charge
+_chem_comp_atom.pdbx_aromatic_flag
+_chem_comp_atom.pdbx_stereo_config
+_chem_comp_atom.pdbx_ordinal
+BZN C1 C 0 Y N 1
+BZN C2 C 0 Y N 2
+BZN C3 C 0 Y N 3
+BZN C4 C 0 Y N 4
+BZN C5 C 0 Y N 5
+BZN C6 C 0 Y N 6
+BZN H1 H 0 N N 7
+BZN H2 H 0 N N 8
+BZN H3 H 0 N N 9
+BZN H4 H 0 N N 10
+BZN H5 H 0 N N 11
+BZN H6 H 0 N N 12
+#
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+_chem_comp_bond.value_order
+_chem_comp_bond.pdbx_aromatic_flag
+_chem_comp_bond.pdbx_stereo_config
+_chem_comp_bond.pdbx_ordinal
+BZN C1 C2 AROM Y N 1
+BZN C2 C3 AROM Y N 2
+BZN C3 C4 AROM Y N 3
+BZN C4 C5 AROM Y N 4
+BZN C5 C6 AROM Y N 5
+BZN C6 C1 AROM Y N 6
+BZN C1 H1 SING N N 7
+BZN C2 H2 SING N N 8
+BZN C3 H3 SING N N 9
+BZN C4 H4 SING N N 10
+BZN C5 H5 SING N N 11
+BZN C6 H6 SING N N 12
+#
+loop_
+_pdbx_entity_nonpoly.entity_id
+_pdbx_entity_nonpoly.comp_id
+1 BZN
+#
+loop_
+_pdbx_nonpoly_scheme.asym_id
+_pdbx_nonpoly_scheme.entity_id
+_pdbx_nonpoly_scheme.mon_id
+_pdbx_nonpoly_scheme.ndb_seq_num
+_pdbx_nonpoly_scheme.pdb_seq_num
+_pdbx_nonpoly_scheme.auth_seq_num
+_pdbx_nonpoly_scheme.pdb_mon_id
+_pdbx_nonpoly_scheme.auth_mon_id
+_pdbx_nonpoly_scheme.pdb_strand_id
+_pdbx_nonpoly_scheme.pdb_ins_code
+L 1 BZN 1 1 1 BZN BZN L .
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+HETATM 1 C C1 . BZN L 1 . ? 1.400 0.000 0.000 1.00 10.00 ? 1 BZN L C1 1
+HETATM 2 C C2 . BZN L 1 . ? 0.700 1.212 0.000 1.00 10.00 ? 1 BZN L C2 1
+HETATM 3 C C3 . BZN L 1 . ? -0.700 1.212 0.000 1.00 10.00 ? 1 BZN L C3 1
+HETATM 4 C C4 . BZN L 1 . ? -1.400 0.000 0.000 1.00 10.00 ? 1 BZN L C4 1
+HETATM 5 C C5 . BZN L 1 . ? -0.700 -1.212 0.000 1.00 10.00 ? 1 BZN L C5 1
+HETATM 6 C C6 . BZN L 1 . ? 0.700 -1.212 0.000 1.00 10.00 ? 1 BZN L C6 1
+HETATM 7 H H1 . BZN L 1 . ? 2.480 0.000 0.000 1.00 10.00 ? 1 BZN L H1 1
+HETATM 8 H H2 . BZN L 1 . ? 1.240 2.148 0.000 1.00 10.00 ? 1 BZN L H2 1
+HETATM 9 H H3 . BZN L 1 . ? -1.240 2.148 0.000 1.00 10.00 ? 1 BZN L H3 1
+HETATM 10 H H4 . BZN L 1 . ? -2.480 0.000 0.000 1.00 10.00 ? 1 BZN L H4 1
+HETATM 11 H H5 . BZN L 1 . ? -1.240 -2.148 0.000 1.00 10.00 ? 1 BZN L H5 1
+HETATM 12 H H6 . BZN L 1 . ? 1.240 -2.148 0.000 1.00 10.00 ? 1 BZN L H6 1
+#

@@ -8,6 +8,8 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_altloc_selection.py"
       - "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_topology.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_covalent_struct_conn_topology.py"
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py"
@@ -28,6 +30,12 @@ on:
       - "tests/unit/test_engine_v2_mmcif_assembly_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_component_topology.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_preparation_bridge.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_preparation_bridge.py"
       - "tests/unit/test_engine_v2_mmcif_polymer_sequence.py"
       - "tests/unit/test_engine_v2_mmcif_polymer_sequence_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_unobserved_atoms.py"
@@ -50,6 +58,8 @@ on:
       - "tests/fixtures/v2_1_mmcif_altloc_selection/**"
       - "tests/fixtures/v2_1_mmcif_assembly/**"
       - "tests/fixtures/v2_1_mmcif_nonpoly_identity/**"
+      - "tests/fixtures/v2_1_mmcif_nonpoly_component_topology/**"
+      - "tests/fixtures/v2_1_mmcif_nonpoly_covalent_struct_conn_topology/**"
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_atoms/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_residues/**"
@@ -75,6 +85,8 @@ on:
       - "config/independent_engine_v2_v2_1_mmcif_altloc_selection_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_assembly_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_nonpoly_component_topology_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_atom_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_residue_corpus.json"
@@ -91,6 +103,8 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_altloc_selection.py"
       - "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_topology.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_covalent_struct_conn_topology.py"
       - "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py"
       - "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py"
@@ -111,6 +125,12 @@ on:
       - "tests/unit/test_engine_v2_mmcif_assembly_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_component_topology.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_preparation_bridge.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_preparation_bridge.py"
       - "tests/unit/test_engine_v2_mmcif_polymer_sequence.py"
       - "tests/unit/test_engine_v2_mmcif_polymer_sequence_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_unobserved_atoms.py"
@@ -133,6 +153,8 @@ on:
       - "tests/fixtures/v2_1_mmcif_altloc_selection/**"
       - "tests/fixtures/v2_1_mmcif_assembly/**"
       - "tests/fixtures/v2_1_mmcif_nonpoly_identity/**"
+      - "tests/fixtures/v2_1_mmcif_nonpoly_component_topology/**"
+      - "tests/fixtures/v2_1_mmcif_nonpoly_covalent_struct_conn_topology/**"
       - "tests/fixtures/v2_1_mmcif_polymer_sequence/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_atoms/**"
       - "tests/fixtures/v2_1_mmcif_unobserved_residues/**"
@@ -158,6 +180,8 @@ on:
       - "config/independent_engine_v2_v2_1_mmcif_altloc_selection_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_assembly_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_nonpoly_component_topology_corpus.json"
+      - "config/independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_atom_corpus.json"
       - "config/independent_engine_v2_v2_1_mmcif_unobserved_residue_corpus.json"
@@ -209,6 +233,9 @@ jobs:
       - name: Validate capability contract
         run: |
           python - <<'PY'
+          from copy import deepcopy
+          import hashlib
+          import json
           import pathlib
           import yaml
 
@@ -429,6 +456,238 @@ jobs:
               "strict_mmcif_nonpoly_identity_simulation_ready",
               "strict_mmcif_nonpoly_identity_execution_authorized",
               "strict_mmcif_nonpoly_identity_claim_safe",
+          ):
+              assert molecular_identity[field] is False
+          for field in (
+              "strict_mmcif_nonpoly_component_topology_envelope_contract_implemented",
+              "strict_mmcif_nonpoly_component_topology_round_trip_evidence_ready",
+              "strict_mmcif_nonpoly_component_topology_corpus_evidence_ready",
+              "strict_mmcif_nonpoly_component_topology_base_pedigree_bound",
+              "strict_mmcif_nonpoly_component_topology_exact_artifact_chain_bound",
+              "strict_mmcif_nonpoly_component_topology_nested_evidence_immutable",
+              "strict_mmcif_nonpoly_component_topology_single_model_id1_bound",
+              "strict_mmcif_nonpoly_component_topology_unchanged_identity_carrier_bound",
+              "strict_mmcif_nonpoly_component_topology_carrier_bondless",
+              "strict_mmcif_nonpoly_component_topology_exact_eight_category_profile_bound",
+              "strict_mmcif_nonpoly_component_topology_complete_per_instance_atom_set_bound",
+              "strict_mmcif_nonpoly_component_topology_source_reported_formal_charge_fill_or_crosscheck_bound",
+              "strict_mmcif_nonpoly_component_topology_source_reported_aromatic_atom_state_materialized",
+              "strict_mmcif_nonpoly_component_topology_source_reported_intra_residue_bond_graph_materialized",
+              "strict_mmcif_nonpoly_component_topology_final_augmented_canonical_topology_and_parser_observation_digests_refreshed",
+              "strict_mmcif_nonpoly_component_topology_component_atom_marker_parser_observation_digest_bound",
+              "strict_mmcif_nonpoly_component_topology_per_instance_component_atom_ordinal_set_exact",
+              "strict_mmcif_nonpoly_component_topology_source_observed_hydrogen_marker_bound",
+              "strict_mmcif_nonpoly_component_topology_chem_comp_atom_charge_fill_and_atom_site_crosscheck_origins_bound",
+              "strict_mmcif_nonpoly_component_topology_existing_canonical_ingest_gate_integrated",
+              "strict_mmcif_nonpoly_component_topology_existing_profile_local_preparation_gate_integrated",
+              "strict_mmcif_nonpoly_component_topology_single_methane_bridge_evidence_ready",
+              "strict_mmcif_nonpoly_component_topology_single_methane_canonical_ingest_supported",
+              "strict_mmcif_nonpoly_component_topology_single_methane_profile_local_evidence_satisfied",
+              "strict_mmcif_nonpoly_component_topology_exact_reparse_and_stable_emission_bound",
+          ):
+              assert molecular_identity[field] is True
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_envelope_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_parser_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_writer_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_base_parser_version"] == "1.9.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_base_writer_version"] == "1.5.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_nonpoly_identity_envelope_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_parser_pedigree_id"] == "betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_formal_charge_observation_origin"] == "metadata_observed_mmcif_chem_comp_atom"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_existing_canonical_ingest_profile_id"] == "source_explicit_h_neutral_nonisotopic_stereo_unassigned_acyclic_saturated_hydrocarbon_ingest_v1"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_bridge_evidence_scope"] == "exact_single_methane_fixture_under_unchanged_existing_hydrocarbon_constraints"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_projection_scope"] == "source_reported_explicit_nonpoly_component_topology_only"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_supported_elements"] == ["H", "B", "C", "N", "O", "P", "S", "F", "Cl", "Br", "I"]
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_supported_value_orders"] == ["SING", "DOUB", "TRIP", "AROM"]
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_supported_stereo_config"] == "N"
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_input_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_output_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_projection_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_component_rows"] == 4096
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_component_atom_rows"] == 80000
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_component_bond_rows"] == 120000
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_materialized_bonds"] == 120000
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_source_id_utf8_bytes"] == 4096
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_token_characters"] == 2048
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_max_output_line_characters"] == 2048
+          topology_manifest_path = pathlib.Path(
+              "config/independent_engine_v2_v2_1_mmcif_nonpoly_component_topology_corpus.json"
+          )
+          topology_manifest = json.loads(topology_manifest_path.read_text(encoding="utf-8"))
+          topology_manifest_payload = deepcopy(topology_manifest)
+          topology_manifest_payload.pop("payload_sha256")
+          topology_manifest_payload_sha256 = hashlib.sha256(
+              json.dumps(
+                  topology_manifest_payload,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=True,
+                  allow_nan=False,
+              ).encode("ascii")
+          ).hexdigest()
+          assert topology_manifest["schema_id"] == "betelgeuze.v2_1_mmcif_nonpoly_component_topology_corpus/1.0.0"
+          assert topology_manifest["payload_hash_policy_id"] == "sha256_canonical_json_without_payload_sha256/1.0.0"
+          assert topology_manifest["payload_sha256"] == topology_manifest_payload_sha256
+          assert molecular_identity["strict_mmcif_nonpoly_component_topology_corpus_manifest_payload_sha256"] == topology_manifest_payload_sha256
+          for field in (
+              "strict_mmcif_nonpoly_component_topology_source_authenticated",
+              "strict_mmcif_nonpoly_component_topology_independent_chemistry_established",
+              "strict_mmcif_nonpoly_component_topology_independent_valence_established",
+              "strict_mmcif_nonpoly_component_topology_independent_aromaticity_established",
+              "strict_mmcif_nonpoly_component_topology_independent_stereo_established",
+              "strict_mmcif_nonpoly_component_topology_chemistry_inferred",
+              "strict_mmcif_nonpoly_component_topology_role_assignment_interpreted",
+              "strict_mmcif_nonpoly_component_topology_coordination_interpreted",
+              "strict_mmcif_nonpoly_component_topology_protonation_interpreted",
+              "strict_mmcif_nonpoly_component_topology_struct_conn_interpreted",
+              "strict_mmcif_nonpoly_component_topology_struct_conn_supported",
+              "strict_mmcif_nonpoly_component_topology_inter_residue_bonds_interpreted",
+              "strict_mmcif_nonpoly_component_topology_inter_residue_bonds_supported",
+              "strict_mmcif_nonpoly_component_topology_cross_component_bonds_supported",
+              "strict_mmcif_nonpoly_component_topology_metal_coordination_supported",
+              "strict_mmcif_nonpoly_component_topology_polymer_templates_supported",
+              "strict_mmcif_nonpoly_component_topology_general_component_dictionary_supported",
+              "strict_mmcif_nonpoly_component_topology_altloc_composition_supported",
+              "strict_mmcif_nonpoly_component_topology_assembly_composition_supported",
+              "strict_mmcif_nonpoly_component_topology_missingness_composition_supported",
+              "strict_mmcif_nonpoly_component_topology_cell_composition_supported",
+              "strict_mmcif_nonpoly_component_topology_multimodel_composition_supported",
+              "strict_mmcif_nonpoly_component_topology_generic_chemistry_supported",
+              "strict_mmcif_nonpoly_component_topology_generic_molecular_preparation_ready",
+              "strict_mmcif_nonpoly_component_topology_global_molecular_preparation_ready",
+              "strict_mmcif_nonpoly_component_topology_preparation_ready",
+              "strict_mmcif_nonpoly_component_topology_parameterability_assessed",
+              "strict_mmcif_nonpoly_component_topology_physics_supported",
+              "strict_mmcif_nonpoly_component_topology_runtime_eligible",
+              "strict_mmcif_nonpoly_component_topology_simulation_ready",
+              "strict_mmcif_nonpoly_component_topology_execution_authorized",
+              "strict_mmcif_nonpoly_component_topology_claim_safe",
+              "strict_mmcif_nonpoly_component_topology_general_mmcif_topology_complete",
+              "strict_mmcif_nonpoly_component_topology_general_mmcif_round_trip_evidence_ready",
+              "strict_mmcif_nonpoly_component_topology_all_format_round_trip_evidence_ready",
+          ):
+              assert molecular_identity[field] is False
+          for field in (
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_envelope_contract_implemented",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_round_trip_evidence_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_corpus_evidence_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_corpus_manifest_payload_sha256_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_exact_nine_category_profile_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_label_and_auth_atom_identity_join_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_nonpolymer_or_water_partner_scope_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_distinct_residue_partner_scope_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_source_reported_covalent_bonds_materialized",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_bounded_inter_residue_topology_interpreted",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_final_augmented_canonical_topology_and_parser_observation_digests_refreshed",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_exact_artifact_chain_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_nested_evidence_immutable",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_exact_reparse_and_stable_emission_bound",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_existing_canonical_ingest_gate_integrated",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_existing_profile_local_preparation_gate_integrated",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_split_ethane_bridge_evidence_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_split_ethane_canonical_ingest_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_split_ethane_profile_local_evidence_satisfied",
+          ):
+              assert molecular_identity[field] is True
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_envelope_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_parser_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_writer_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_component_topology_envelope_version"] == "1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_profile_id"] == "strict_mmcif_nonpoly_covalent_struct_conn_topology_envelope/1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_parser_pedigree_id"] == "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_category_order"] == [
+              "_entity", "_struct_asym", "_chem_comp", "_chem_comp_atom",
+              "_chem_comp_bond", "_pdbx_entity_nonpoly", "_pdbx_nonpoly_scheme",
+              "_struct_conn", "_atom_site",
+          ]
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_exact_struct_conn_headers"] == [
+              "_struct_conn.id", "_struct_conn.conn_type_id",
+              "_struct_conn.ptnr1_label_asym_id", "_struct_conn.ptnr1_label_comp_id",
+              "_struct_conn.ptnr1_label_seq_id", "_struct_conn.ptnr1_label_atom_id",
+              "_struct_conn.pdbx_ptnr1_label_alt_id", "_struct_conn.pdbx_ptnr1_pdb_ins_code",
+              "_struct_conn.ptnr1_symmetry", "_struct_conn.ptnr2_label_asym_id",
+              "_struct_conn.ptnr2_label_comp_id", "_struct_conn.ptnr2_label_seq_id",
+              "_struct_conn.ptnr2_label_atom_id", "_struct_conn.pdbx_ptnr2_label_alt_id",
+              "_struct_conn.pdbx_ptnr2_pdb_ins_code", "_struct_conn.ptnr1_auth_asym_id",
+              "_struct_conn.ptnr1_auth_comp_id", "_struct_conn.ptnr1_auth_seq_id",
+              "_struct_conn.ptnr2_auth_asym_id", "_struct_conn.ptnr2_auth_comp_id",
+              "_struct_conn.ptnr2_auth_seq_id", "_struct_conn.ptnr2_symmetry",
+              "_struct_conn.pdbx_value_order",
+          ]
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_supported_conn_type_ids"] == ["covale"]
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_supported_value_orders"] == ["sing", "doub", "trip"]
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_required_partner_symmetry"] == "1_555"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_required_partner_label_seq_id"] == "."
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_required_partner_label_alt_id"] == "."
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_required_partner_pdb_ins_code"] == "?"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_projection_scope"] == "source_reported_explicit_identity_symmetry_covale_inter_residue_nonpoly_topology_only"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_existing_canonical_ingest_profile_id"] == "source_explicit_h_neutral_nonisotopic_stereo_unassigned_acyclic_saturated_hydrocarbon_ingest_v1"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_bridge_evidence_scope"] == "exact_split_ethane_sing_fixture_under_unchanged_existing_hydrocarbon_constraints"
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_input_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_output_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_projection_bytes"] == 64 * 1024 * 1024
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_struct_conn_rows"] == 120000
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_materialized_bonds"] == 120000
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_source_id_utf8_bytes"] == 4096
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_token_characters"] == 2048
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_max_output_line_characters"] == 2048
+          struct_conn_manifest_path = pathlib.Path(
+              "config/independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json"
+          )
+          struct_conn_manifest = json.loads(
+              struct_conn_manifest_path.read_text(encoding="utf-8")
+          )
+          struct_conn_manifest_payload = deepcopy(struct_conn_manifest)
+          struct_conn_manifest_payload.pop("payload_sha256")
+          struct_conn_manifest_payload_sha256 = hashlib.sha256(
+              json.dumps(
+                  struct_conn_manifest_payload,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=True,
+                  allow_nan=False,
+              ).encode("ascii")
+          ).hexdigest()
+          assert struct_conn_manifest["schema_id"] == "betelgeuze.v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus/1.0.0"
+          assert struct_conn_manifest["payload_hash_policy_id"] == "sha256_canonical_json_without_payload_sha256/1.0.0"
+          assert struct_conn_manifest["payload_sha256"] == struct_conn_manifest_payload_sha256
+          assert molecular_identity["strict_mmcif_nonpoly_covalent_struct_conn_topology_corpus_manifest_payload_sha256"] == struct_conn_manifest_payload_sha256
+          for field in (
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_source_authenticated",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_independent_chemistry_established",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_independent_valence_established",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_independent_bond_order_established",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_general_struct_conn_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_general_struct_conn_interpreted",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_disulf_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_hydrog_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_metalc_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_salt_bridge_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_quad_order_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_default_or_missing_order_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_nonidentity_symmetry_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_coordination_interpreted",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_polymer_endpoints_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_general_cross_component_topology_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_altloc_composition_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_assembly_composition_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_missingness_composition_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_cell_composition_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_multimodel_composition_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_generic_chemistry_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_generic_molecular_preparation_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_global_molecular_preparation_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_preparation_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_parameterability_assessed",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_physics_supported",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_runtime_eligible",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_simulation_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_execution_authorized",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_claim_safe",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_general_mmcif_topology_complete",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_general_mmcif_round_trip_evidence_ready",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_v2_1_complete",
+              "strict_mmcif_nonpoly_covalent_struct_conn_topology_all_format_round_trip_evidence_ready",
           ):
               assert molecular_identity[field] is False
           assert molecular_identity["strict_mmcif_polymer_sequence_membership_envelope_contract_implemented"] is True
@@ -829,6 +1088,19 @@ jobs:
           assert "source_reported_nonpolymer_identity_and_instance_nomenclature_alias_preservation_with_canonical_five_category_order_and_stable_reemission" in molecular_evidence
           assert "factory_only_source_bound_nonpoly_identity_projection_receipt_report_and_aggregate_without_role_chemistry_topology_bond_coordination_charge_protonation_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
           assert "versioned_mmcif_nonpoly_identity_five_round_trip_four_failure_corpus_with_manifest_fixture_projection_record_state_receipt_report_and_output_digest_binding" in molecular_evidence
+          assert "strict_opt_in_mmcif_nonpoly_component_topology_envelope_for_exact_nonpoly_identity_carrier_chem_comp_chem_comp_atom_chem_comp_bond_and_common_core21_profile" in molecular_evidence
+          assert "complete_per_instance_component_template_atom_set_element_and_formal_charge_fill_or_crosscheck_with_materialized_canonical_atom_aromatic_state_and_intra_residue_bonds" in molecular_evidence
+          assert "exact_mmcif_nonpoly_component_topology_parser_pedigree_with_final_augmented_canonical_topology_and_parser_observation_digest_refresh" in molecular_evidence
+          assert "mmcif_chem_comp_atom_fill_and_atom_site_crosscheck_formal_charge_origins_with_source_hydrogen_observation_binding" in molecular_evidence
+          assert "existing_acyclic_saturated_hydrocarbon_canonical_ingest_and_profile_local_preparation_gates_with_single_methane_positive_evidence_and_global_nonpromotion" in molecular_evidence
+          assert "factory_only_source_bound_nonpoly_component_topology_projection_state_receipt_report_and_aggregate_without_authentication_independent_chemistry_valence_aromaticity_stereo_role_protonation_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
+          assert "versioned_mmcif_nonpoly_component_topology_five_round_trip_twenty_five_failure_corpus_with_manifest_payload_sha256_f3f39253fbc13f69113896cb4946a776971638eba3b10b7063e8b9b4204f788c" in molecular_evidence
+          assert "strict_opt_in_mmcif_nonpoly_covalent_struct_conn_topology_envelope_for_exact_component_topology_carrier_official_order_twenty_three_field_struct_conn_and_common_core21_profile" in molecular_evidence
+          assert "exact_covale_sing_doub_trip_identity_symmetry_label_plus_auth_partner_join_to_distinct_component_materialized_nonpolymer_or_water_residues" in molecular_evidence
+          assert "source_reported_inter_residue_covalent_bond_materialization_with_final_augmented_canonical_topology_and_parser_observation_digest_refresh" in molecular_evidence
+          assert "existing_acyclic_saturated_hydrocarbon_canonical_ingest_and_profile_local_preparation_gates_with_split_ethane_sing_positive_evidence_and_global_nonpromotion" in molecular_evidence
+          assert "factory_only_source_bound_nonpoly_covalent_struct_conn_projection_state_receipt_report_and_aggregate_without_authentication_independent_chemistry_valence_bond_order_coordination_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
+          assert "versioned_mmcif_nonpoly_covalent_struct_conn_topology_three_round_trip_fifteen_failure_corpus_with_manifest_payload_sha256_a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4" in molecular_evidence
           assert "strict_opt_in_mmcif_polymer_sequence_membership_envelope_for_exact_entity_struct_asym_entity_poly_seq_and_common_core21_with_optional_existing_nonpoly_identity_carrier" in molecular_evidence
           assert "source_reported_polymer_entity_num_mon_id_nonheterogeneous_membership_preservation_with_atom_site_label_presence_join_unobserved_source_member_accounting_and_stable_reemission" in molecular_evidence
           assert "factory_only_source_bound_polymer_sequence_projection_receipt_report_and_aggregate_without_reference_sequence_equivalence_sequence_or_coordinate_completeness_missing_residue_fact_modified_residue_microheterogeneity_chemistry_preparation_parameterability_physics_runtime_simulation_execution_or_claim_authority" in molecular_evidence
@@ -886,7 +1158,9 @@ jobs:
           assert "parameter_and_chemistry_coverage_evidence_missing" in molecular_identity["blockers"]
           assert "general_sdf_stereochemistry_arbitrary_property_records_rich_data_headers_multiple_records_v3000_and_context_round_trip_missing" in molecular_identity["blockers"]
           assert "general_pdb_conect_outside_the_selected_ordered_source_declaration_envelope_and_all_conect_bond_kind_order_covalence_coordination_chemistry_semantics_altloc_general_missingness_nonrepresentable_cryst1_symmetry_and_pbc_round_trip_missing" in molecular_identity["blockers"]
-          assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_altloc_selection_explicit_biological_assembly_nonpoly_identity_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_or_assembly_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
+          assert "general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_altloc_selection_explicit_biological_assembly_nonpoly_identity_nonpoly_component_topology_nonpoly_covalent_struct_conn_topology_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_or_assembly_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing" in molecular_identity["blockers"]
+          assert "strict_mmcif_nonpoly_covalent_struct_conn_topology_corpus_manifest_payload_sha256_binding_pending" not in molecular_identity["blockers"]
+          assert "general_struct_conn_disulf_hydrog_metalc_salt_quad_default_order_nonidentity_symmetry_coordination_polymer_endpoints_altloc_composition_and_other_surfaces_outside_selected_identity_symmetry_covale_nonpoly_envelope_missing" in molecular_identity["blockers"]
           assert "zero_occupancy_residue_declarations_do_not_establish_missingness_completeness_refinement_validity_or_preparation" in molecular_identity["blockers"]
           assert "zero_occupancy_atom_declarations_do_not_establish_missingness_occupancy_population_refinement_validity_or_preparation" in molecular_identity["blockers"]
           assert "general_smiles_fragment_roles_salts_mixtures_general_rings_outside_one_selected_simple_nonaromatic_three_through_eight_member_or_fully_aromatic_five_or_six_member_ring_arbitrary_multiple_bond_chemistry_aromaticity_outside_the_selected_profile_general_charge_and_charge_assignment_isotopes_nonpositive_or_duplicate_maps_atom_stereo_outside_bounded_tetrahedral_r_s_unknown_bond_stereo_e_z_outside_the_normalized_spelling_admitted_lowest_index_carrier_profile_source_hydrogens_and_bracket_hydrogens_outside_selected_aromatic_or_tetrahedral_state_round_trip_missing" in molecular_identity["blockers"]
@@ -962,9 +1236,29 @@ jobs:
             benchmark/performance_bench.py \
             tools/export_ai_router_onnx.py
 
+      - name: Run strict mmCIF nonpoly component-topology and preparation-bridge contracts
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_mmcif_nonpoly_component_topology.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_corpus.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_preparation_bridge.py
+
+      - name: Run strict mmCIF nonpoly covalent struct-conn topology contracts
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_corpus.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_preparation_bridge.py
+
       - name: Run Engine v2 CPU regression and focused consumer tests
         run: |
           python -m pytest -q \
+            --ignore=tests/unit/test_engine_v2_mmcif_nonpoly_component_topology.py \
+            --ignore=tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_corpus.py \
+            --ignore=tests/unit/test_engine_v2_mmcif_nonpoly_component_topology_preparation_bridge.py \
+            --ignore=tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology.py \
+            --ignore=tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_corpus.py \
+            --ignore=tests/unit/test_engine_v2_mmcif_nonpoly_covalent_struct_conn_topology_preparation_bridge.py \
             tests/unit/test_engine_v2_*.py \
             tests/unit/test_runtime_inputs.py \
             tests/unit/test_evaluator_metrics.py \
@@ -1014,6 +1308,8 @@ jobs:
           assert "betelgeuze_engine_v2/molecular/mmcif_writer.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_assembly_envelope.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py" in names
+          assert "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_topology.py" in names
+          assert "betelgeuze_engine_v2/molecular/mmcif_nonpoly_covalent_struct_conn_topology.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_polymer_sequence.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_unobserved_residues.py" in names
           assert "betelgeuze_engine_v2/molecular/mmcif_unobserved_atoms.py" in names
@@ -1043,6 +1339,8 @@ jobs:
           assert not any("independent_engine_v2_v2_1_pdb_conect_declaration_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_assembly_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_nonpoly_identity_corpus.json" in name for name in names)
+          assert not any("independent_engine_v2_v2_1_mmcif_nonpoly_component_topology_corpus.json" in name for name in names)
+          assert not any("independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_polymer_sequence_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_unobserved_residue_corpus.json" in name for name in names)
           assert not any("independent_engine_v2_v2_1_mmcif_unobserved_atom_corpus.json" in name for name in names)
@@ -1201,6 +1499,86 @@ jobs:
           assert report["claim_safe"] is False
           PY
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_NONPOLY_IDENTITY_ENVELOPE_VERSION, parse_mmcif_nonpoly_identity, round_trip_mmcif_nonpoly_identity_source; assert MMCIF_NONPOLY_IDENTITY_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_nonpoly_identity); assert callable(round_trip_mmcif_nonpoly_identity_source)"
+          /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MAX_MMCIF_NONPOLY_COMPONENT_ATOM_ROWS, MAX_MMCIF_NONPOLY_COMPONENT_BOND_ROWS, MAX_MMCIF_NONPOLY_COMPONENT_ROWS, MAX_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_INPUT_BYTES, MAX_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_OUTPUT_BYTES, MAX_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PROJECTION_BYTES, MMCIF_NONPOLY_COMPONENT_TOPOLOGY_ENVELOPE_VERSION, MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID, MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_VERSION, MMCIF_NONPOLY_COMPONENT_TOPOLOGY_WRITER_VERSION, parse_mmcif_nonpoly_component_topology, round_trip_mmcif_nonpoly_component_topology_source; assert MMCIF_NONPOLY_COMPONENT_TOPOLOGY_ENVELOPE_VERSION == '1.0.0'; assert MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_VERSION == '1.0.0'; assert MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID == 'betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0'; assert MMCIF_NONPOLY_COMPONENT_TOPOLOGY_WRITER_VERSION == '1.0.0'; assert MAX_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_INPUT_BYTES == 64 * 1024 * 1024; assert MAX_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_OUTPUT_BYTES == 64 * 1024 * 1024; assert MAX_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PROJECTION_BYTES == 64 * 1024 * 1024; assert MAX_MMCIF_NONPOLY_COMPONENT_ROWS == 4096; assert MAX_MMCIF_NONPOLY_COMPONENT_ATOM_ROWS == 80000; assert MAX_MMCIF_NONPOLY_COMPONENT_BOND_ROWS == 120000; assert callable(parse_mmcif_nonpoly_component_topology); assert callable(round_trip_mmcif_nonpoly_component_topology_source)"
+          /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import parse_mmcif_nonpoly_covalent_struct_conn_topology, round_trip_mmcif_nonpoly_covalent_struct_conn_topology_source; assert callable(parse_mmcif_nonpoly_covalent_struct_conn_topology); assert callable(round_trip_mmcif_nonpoly_covalent_struct_conn_topology_source)"
+          /tmp/engine-v2-wheel-venv/bin/python - <<'PY'
+          import os
+          from pathlib import Path
+
+          from betelgeuze_engine_v2.molecular import (
+              parse_mmcif_nonpoly_component_topology,
+          )
+          from betelgeuze_engine_v2.molecular.applicability import (
+              analyze_canonical_ingest_applicability,
+          )
+          from betelgeuze_engine_v2.molecular.preparation import (
+              analyze_molecular_preparation,
+          )
+          from betelgeuze_engine_v2.molecular.profile_preparation import (
+              analyze_profile_local_preparation_evidence,
+          )
+
+          source = (
+              Path(os.environ["GITHUB_WORKSPACE"])
+              / "tests/fixtures/v2_1_mmcif_nonpoly_component_topology/"
+              / "single_methane_complete.cif"
+          ).read_bytes()
+          system = parse_mmcif_nonpoly_component_topology(
+              source,
+              source_id="isolated-wheel-single-methane",
+          ).system
+          preparation = analyze_molecular_preparation(system)
+          applicability = analyze_canonical_ingest_applicability(system)
+          local = analyze_profile_local_preparation_evidence(system)
+          assert preparation.parser_observation_self_consistent is True
+          assert preparation.metadata_observed_source_hydrogen_count == 4
+          assert preparation.unknown_hydrogen_origin_count == 0
+          assert applicability.canonical_ingest_supported is True
+          assert local.profile_local_evidence_satisfied is True
+          assert local.preparation_ready is False
+          assert local.simulation_ready is False
+          assert local.claim_safe is False
+          PY
+          /tmp/engine-v2-wheel-venv/bin/python - <<'PY'
+          import os
+          from pathlib import Path
+
+          from betelgeuze_engine_v2.molecular import (
+              parse_mmcif_nonpoly_covalent_struct_conn_topology,
+          )
+          from betelgeuze_engine_v2.molecular.applicability import (
+              analyze_canonical_ingest_applicability,
+          )
+          from betelgeuze_engine_v2.molecular.preparation import (
+              analyze_molecular_preparation,
+          )
+          from betelgeuze_engine_v2.molecular.profile_preparation import (
+              analyze_profile_local_preparation_evidence,
+          )
+
+          source = (
+              Path(os.environ["GITHUB_WORKSPACE"])
+              / "tests/fixtures/v2_1_mmcif_nonpoly_covalent_struct_conn_topology/"
+              / "split_ethane_sing.cif"
+          ).read_bytes()
+          system = parse_mmcif_nonpoly_covalent_struct_conn_topology(
+              source,
+              source_id="isolated-wheel-split-ethane-sing",
+          ).system
+          preparation = analyze_molecular_preparation(system)
+          applicability = analyze_canonical_ingest_applicability(system)
+          local = analyze_profile_local_preparation_evidence(system)
+          assert preparation.parser_observation_self_consistent is True
+          assert preparation.metadata_observed_source_hydrogen_count == 6
+          assert preparation.unknown_hydrogen_origin_count == 0
+          assert applicability.canonical_ingest_supported is True
+          assert local.profile_local_evidence_satisfied is True
+          assert preparation.preparation_ready is False
+          assert local.preparation_ready is False
+          assert local.parameterability_assessed is False
+          assert local.simulation_ready is False
+          assert local.claim_safe is False
+          PY
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_POLYMER_SEQUENCE_ENVELOPE_VERSION, parse_mmcif_polymer_sequence, round_trip_mmcif_polymer_sequence_source; assert MMCIF_POLYMER_SEQUENCE_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_polymer_sequence); assert callable(round_trip_mmcif_polymer_sequence_source)"
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_UNOBSERVED_RESIDUE_ENVELOPE_VERSION, parse_mmcif_unobserved_residues, round_trip_mmcif_unobserved_residues_source; assert MMCIF_UNOBSERVED_RESIDUE_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_unobserved_residues); assert callable(round_trip_mmcif_unobserved_residues_source)"
           /tmp/engine-v2-wheel-venv/bin/python -c "from betelgeuze_engine_v2.molecular import MMCIF_UNOBSERVED_ATOM_ENVELOPE_VERSION, parse_mmcif_unobserved_atoms, round_trip_mmcif_unobserved_atoms_source; assert MMCIF_UNOBSERVED_ATOM_ENVELOPE_VERSION == '1.0.0'; assert callable(parse_mmcif_unobserved_atoms); assert callable(round_trip_mmcif_unobserved_atoms_source)"

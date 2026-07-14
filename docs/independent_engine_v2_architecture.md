@@ -184,6 +184,14 @@ ever-growing chemistry denylist.
 The separate opt-in nonpoly identity envelope below handles only its exact two
 additional source-identity categories without changing that base admission
 policy.
+The separate opt-in nonpoly component-topology envelope below composes that
+unchanged identity carrier with one exact `_chem_comp`, `_chem_comp_atom`, and
+`_chem_comp_bond` profile. It is the only selected mmCIF path that materializes
+those source-reported intracomponent declarations as canonical bonds. A still
+narrower opt-in covalent-`_struct_conn` envelope composes that exact carrier
+with one exact 23-field loop and materializes only explicit identity-symmetry
+`covale` inter-residue bonds. Direct `parse_mmcif` admission and every
+unselected topology category remain unchanged and fail closed.
 The separate opt-in polymer-sequence envelope likewise handles only one exact
 `_entity_poly_seq` membership loop; direct `parse_mmcif` admission remains
 unchanged and fail-closed.
@@ -652,9 +660,214 @@ interpret or validate chemistry, bond topology or order, coordination,
 charge, protonation, preparation, parameterability, physics, runtime,
 simulation, execution, or scientific claims. `_chem_comp`, `_struct_conn`,
 chemical-component topology, ion or modified-residue categories, and every
-other general mmCIF surface remain blocked.
+other general mmCIF surface remain blocked in this identity-only envelope.
+Only the separate exact component-topology envelope below admits its selected
+three chemical-component loops.
 
-A second opt-in
+A separate opt-in
+`betelgeuze_engine_v2.molecular.mmcif_nonpoly_component_topology` envelope 1.0
+adds source-reported non-polymer component topology without changing the base
+parser 1.9.0, writer 1.5.0, or nonpoly-identity envelope 1.0. Its profile ID is
+`strict_mmcif_nonpoly_component_topology_envelope/1.0.0`. It accepts exactly
+the unchanged five-category nonpoly carrier plus the following three loops:
+
+- `_chem_comp.id`, `.type`, `.pdbx_formal_charge`;
+- `_chem_comp_atom.comp_id`, `.atom_id`, `.type_symbol`, `.charge`,
+  `.pdbx_aromatic_flag`, `.pdbx_stereo_config`, `.pdbx_ordinal`;
+- `_chem_comp_bond.comp_id`, `.atom_id_1`, `.atom_id_2`, `.value_order`,
+  `.pdbx_aromatic_flag`, `.pdbx_stereo_config`, `.pdbx_ordinal`.
+
+Canonical category order is `_entity`, `_struct_asym`, `_chem_comp`,
+`_chem_comp_atom`, `_chem_comp_bond`, `_pdbx_entity_nonpoly`,
+`_pdbx_nonpoly_scheme`, `_atom_site`. Scalar, mixed, additional-category, or
+additional-header inputs fail closed rather than losing chemical state. The
+selected source element domain is the organic subset
+`H B C N O P S F Cl Br I`; atom and bond stereo configuration must be exact
+`N`. Every selected nonpoly residue instance must contain exactly the template
+atom-ID set for its
+component, and each coordinate atom's source element must equal its template
+element. Missing or extra instance atoms, duplicate component/atom/bond IDs or
+ordinals, self-bonds, unknown endpoints, and template-to-instance join drift
+are typed failures.
+
+An already-known `_atom_site` formal charge must exactly equal
+`_chem_comp_atom.charge`. A raw atom-site `.` or `?` charge instead resolves
+from the explicit template charge and materializes as
+`formal_charge_known=true`; the component's `_chem_comp.pdbx_formal_charge`
+must equal the exact sum of all template atom charges. This is a deterministic
+source-declaration fill and crosscheck, not independent charge assignment,
+protonation, oxidation-state, or electronic-state inference.
+
+Only exact `SING`, `DOUB`, `TRIP`, and `AROM` value-order tokens are mapped to
+canonical bond orders `1.0`, `2.0`, `3.0`, and `1.5`, with aromatic flags
+required to agree. The ordered template bond graph is expanded into every
+complete matching residue instance and becomes real canonical `Bond` state,
+not evidence stored beside a bondless carrier. Exact output reparse must
+recover the same source projection, filled atom charges, materialized bond
+rows, and canonical topology state; a second emission must be byte-identical.
+
+Input, output, and projection are each capped at 64 MiB. The fixed row caps
+are 4,096 `_chem_comp`, 80,000 `_chem_comp_atom`, and 120,000
+`_chem_comp_bond` rows, and repeated component instances may materialize at
+most 120,000 bonds; source IDs are capped at 4,096 UTF-8 bytes, and source
+tokens and output lines at 2,048 characters. Factory-only projection,
+topology-state, source-binding, write-receipt, round-trip-report, and aggregate
+artifacts cross-bind full and normalized source, the unchanged carrier,
+detached materialized snapshot, topology, source identity, output, reparse,
+and stable second emission. Recomputed documents and external factory anchors
+reject stale, tampered, crosswired, and coherent whole-artifact replacements.
+The public augmented system's `provenance.source_sha256` is always the exact raw
+eight-category input digest; the distinct canonical-output digest is named in
+provenance metadata and the source-binding artifact. The source-specific
+detached snapshot digest remains in source binding and receipts, while the
+round-trip topology-state digest compares only the normalized carrier,
+component projection, and materialized canonical topology.
+Their schemas are
+`betelgeuze.mmcif_nonpoly_component_topology_projection/1.0.0`,
+`betelgeuze.mmcif_nonpoly_component_topology_state/1.0.0`,
+`betelgeuze.mmcif_nonpoly_component_topology_source_binding/1.0.0`,
+`betelgeuze.mmcif_nonpoly_component_topology_write_receipt/1.0.0`, and
+`betelgeuze.mmcif_nonpoly_component_topology_round_trip_report/1.0.0`.
+
+The finalized augmented state has the exact parser pedigree
+`betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0`. Materializing
+template charges, aromatic flags, and bonds invalidates the identity carrier's
+attached state digests, so the envelope refreshes both the canonical-topology
+and parser-observation digests after all augmentation is complete. Generic
+preparation recognizes this pedigree only when source format, exact parser
+name, version `1.0.0`, raw-source digest, finalized canonical topology, and
+refreshed observation digest agree. It does not accept a bare system that
+merely copies the pedigree string.
+
+The complete per-atom component marker mapping is an optional, format-local
+field in the parser-observation document. Its component ID, template atom ID,
+template ordinal, source-reported aromatic flag, and source-reported stereo
+flag are therefore covered by the refreshed digest without changing hashes
+for parsers that never emit this marker. A stale marker edit fails the digest;
+even after a coherent rehash, each non-polymer or water instance must expose
+the exact contiguous ordinal set `1..N` before any of its component-template
+markers can count as preparation evidence.
+
+The preparation marker check distinguishes a known atom-site charge that was
+cross-checked against `_chem_comp_atom.charge` from a raw `.` or `?` marker
+that was filled from that template. Both are reported under the bounded origin
+`metadata_observed_mmcif_chem_comp_atom`, but each must satisfy its own raw
+marker and template metadata rule. A hydrogen is source-observed only when its
+original atom-site identity and the same finalized pedigree/observation chain
+also agree. These observations are digest-bound source provenance, not source
+authentication or independent charge, hydrogen, or valence assignment.
+
+No new chemistry profile is introduced. The refreshed state can enter the
+existing
+`source_explicit_h_neutral_nonisotopic_stereo_unassigned_acyclic_saturated_`
+`hydrocarbon_ingest_v1` applicability gate and the existing
+`betelgeuze.profile_local_preparation_evidence/1.0.0` gate. The pinned positive
+evidence is the exact single-methane component-topology fixture: it satisfies
+the unchanged source-explicit-H, known-zero-charge, H/C-only, single-bond,
+acyclic, H=1/C=4 graph rules and therefore has
+`canonical_ingest_supported=true` and
+`profile_local_evidence_satisfied=true`. The aromatic-benzene,
+charged-ammonium, two-water, and mixed-polymer fixtures remain nonpositive
+under those same rules. This one fixture is evidence for the existing profile,
+not a new size ceiling or general mmCIF chemistry claim.
+
+Even for the positive row, generic `ChemistryCoverageReport.chemistry_supported`
+and generic `MolecularPreparationReport.preparation_ready` remain false.
+Global molecular preparation, independent chemistry or valence validation,
+protonation, parameterability, physics, runtime, execution, simulation, and
+claim authority remain false or unassessed.
+
+This profile establishes only the deterministic projection of one exact
+source-reported organic-subset nonpoly component template into selected
+canonical charge and intra-residue bonds. It does not authenticate the source
+or independently validate chemistry, valence, aromaticity, stereo, component
+role, protonation, generic or global preparation, parameterability, physics, runtime,
+simulation, execution, or claims. `_struct_conn`, inter-residue and
+cross-component links remain blocked in this eight-category envelope; only the
+separate bounded profile below admits its exact selected covalent surface.
+Coordination and metals, stereo other than `N`, other component bond orders,
+polymer templates, composition with altloc, assembly, missingness, cell, or
+multimodel state, and general mmCIF remain blocked. The envelope therefore does
+not complete V2-1.
+
+A separate opt-in
+`betelgeuze_engine_v2.molecular.mmcif_nonpoly_covalent_struct_conn_topology`
+envelope 1.0.0 composes the unchanged component-topology envelope 1.0.0 with
+one exact `_struct_conn` loop. Its profile ID is
+`strict_mmcif_nonpoly_covalent_struct_conn_topology_envelope/1.0.0`; its parser
+and writer are both 1.0.0, and its finalized parser pedigree is
+`betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0`.
+Canonical category order is `_entity`, `_struct_asym`, `_chem_comp`,
+`_chem_comp_atom`, `_chem_comp_bond`, `_pdbx_entity_nonpoly`,
+`_pdbx_nonpoly_scheme`, `_struct_conn`, `_atom_site`.
+
+The exact 23 `_struct_conn` fields are, in order, `id`, `conn_type_id`,
+`ptnr1_label_asym_id`, `ptnr1_label_comp_id`, `ptnr1_label_seq_id`,
+`ptnr1_label_atom_id`, `pdbx_ptnr1_label_alt_id`,
+`pdbx_ptnr1_pdb_ins_code`, `ptnr1_symmetry`, `ptnr2_label_asym_id`,
+`ptnr2_label_comp_id`, `ptnr2_label_seq_id`, `ptnr2_label_atom_id`,
+`pdbx_ptnr2_label_alt_id`, `pdbx_ptnr2_pdb_ins_code`,
+`ptnr1_auth_asym_id`, `ptnr1_auth_comp_id`, `ptnr1_auth_seq_id`,
+`ptnr2_auth_asym_id`, `ptnr2_auth_comp_id`, `ptnr2_auth_seq_id`,
+`ptnr2_symmetry`, and `pdbx_value_order`. No scalar, mixed, reordered,
+additional-header, or additional-category surface is projected.
+
+Each row must use exact bare `conn_type_id=covale`, explicit lowercase
+`pdbx_value_order=sing`, `doub`, or `trip`, and exact identity symmetry `1_555`
+for both partners. The selected nonpoly profile also requires label sequence
+marker `.`, label-alt marker `.`, and PDB insertion marker `?` on both partners.
+Each endpoint's complete label plus auth identity must join one unique atom in
+the component-materialized carrier. Both endpoints must belong to
+`non_polymer` or `water` residues, and the two endpoints must belong to
+different residue instances. Missing, crosswired, ambiguous, same-residue,
+self, duplicate/reversed, already materialized, polymer, or unsupported
+endpoints fail closed.
+
+Accepted `sing`, `doub`, and `trip` declarations become canonical inter-residue
+`Bond` rows with orders `1.0`, `2.0`, and `3.0`, source
+`mmcif_struct_conn_covale`, nonaromatic state, and a parser-observed row and
+endpoint marker. This is bounded source-reported topology materialization, not
+independent covalence, bond-order, valence, or chemistry validation. After the
+inter-residue graph is complete, the envelope refreshes both the attached
+canonical-topology digest and parser-observation digest under the exact new
+pedigree; stale inherited component digests are never authority for the
+augmented graph.
+
+Factory-only projection, topology-state, source-binding, write-receipt,
+round-trip-report, and aggregate artifacts bind the exact component carrier,
+ordered 23-field rows, endpoint joins, materialized bonds, raw and canonical
+source digests, detached system snapshot, refreshed topology and observation,
+source ID, exact reparse, and byte-stable second emission. Input, output, and
+projection are each capped at 64 MiB; `_struct_conn` rows and total materialized
+bonds are each capped at 120,000; source IDs are capped at 4,096 UTF-8 bytes,
+and source tokens and output lines at 2,048 characters. The fixed corpus
+manifest at
+`config/independent_engine_v2_v2_1_mmcif_nonpoly_covalent_struct_conn_topology_corpus.json`
+binds three round trips, fifteen typed failures, strict-JSON and fixture-path
+confinement, live-limit checks, and artifact crosswire evidence with payload
+SHA-256 `a3e4c2cfe42bbc458897b0e874ecc63526c4d69779a71bd7f1f65651095342a4`.
+
+No new chemistry or preparation profile is introduced. The exact
+`split_ethane_sing` fixture reconstructs the unchanged explicit-H, neutral,
+nonisotopic, stereo-unassigned acyclic saturated H/C ethane graph across two
+nonpoly residues. It therefore reaches only the existing
+`source_explicit_h_neutral_nonisotopic_stereo_unassigned_acyclic_saturated_`
+`hydrocarbon_ingest_v1` canonical-ingest gate and existing
+`betelgeuze.profile_local_preparation_evidence/1.0.0` gate, with
+`canonical_ingest_supported=true` and
+`profile_local_evidence_satisfied=true`. Generic chemistry, generic and global
+preparation, independent chemistry, valence or bond-order authority,
+parameterability, physics, runtime, simulation, execution, and claim authority
+remain false.
+
+General `_struct_conn` remains blocked. In particular, `disulf`, `hydrog`,
+`metalc`, salt/ionic interpretations, `quad`, omitted/default bond order,
+nonidentity symmetry, coordination, polymer endpoints, and composition with
+altloc, assembly, missingness, cell, or multimodel state are outside this
+profile. General cross-component topology, general mmCIF, and V2-1 therefore
+remain incomplete.
+
+A separate opt-in
 `betelgeuze_engine_v2.molecular.mmcif_polymer_sequence` envelope 1.0 preserves
 only source-reported polymer entity sequence membership. It accepts either the
 exact common-core21 carrier or that carrier composed with the unchanged
@@ -866,10 +1079,15 @@ zero-occupancy declarations outside the four selected residue- and atom-level
 envelopes, cell state, and multiple models fail with
 typed writer errors rather than being
 omitted. The two nonpoly categories are admitted only by the separate opt-in
-envelope, and `_entity_poly_seq` is admitted only by its separate opt-in
-envelope. The selected residue-level unobserved loop is admitted only by the
-third opt-in envelope, the selected atom-level unobserved loop only by the
-fourth, and the two `occupancy_flag=0` branches only by the fifth and sixth.
+identity envelope; the exact three component-topology categories and
+materialized canonical bonds are admitted only by their separate eight-category
+opt-in envelope. The selected 23-field `_struct_conn` loop and its materialized
+inter-residue bonds are admitted only by the separate nine-category covalent
+opt-in envelope. `_entity_poly_seq` is admitted only by its separate opt-in
+envelope. The selected residue-level unobserved loop is admitted only by its
+dedicated envelope, the selected atom-level unobserved loop only by its
+dedicated envelope, and the two `occupancy_flag=0` branches only by their two
+dedicated envelopes.
 Factory-only receipt, report, and snapshot-backed aggregate objects
 bind the input snapshot,
 topology, projection, emitted source, reparse, and stable re-emission while
@@ -878,13 +1096,19 @@ scientific-validity, and claim authority false.
 
 This is evidence only for the single-model-ID1 six legacy `_atom_site` profiles
 and the exact three-category common-core21 profile, plus the separate exact
-five-category nonpoly identity envelope and four- or six-category polymer
-sequence membership envelope, plus the selected source-reported unobserved and
+five-category nonpoly identity envelope, exact eight-category nonpoly component
+topology envelope, exact nine-category nonpoly covalent-`_struct_conn` topology
+envelope, and four- or six-category polymer sequence membership
+envelope, plus the selected source-reported unobserved and
 zero-occupancy residue- and atom-level envelopes when explicitly selected.
 Formal-charge source notation is not charge assignment,
 protonation, oxidation state, electronic-state assessment, or evidence of an
-ion, metal, or cofactor role. Insertion-code preservation is not auth numbering,
-polymer sequence alignment or completeness, modified-residue interpretation,
+ion, metal, or cofactor role. In the selected component-topology profile, a
+template-filled charge and materialized canonical bond remain source-reported
+component declarations; they are not independent chemistry, valence,
+aromaticity, stereo, protonation, or role evidence. Insertion-code preservation
+is not auth numbering, polymer sequence alignment or completeness,
+modified-residue interpretation,
 missingness, altloc, assembly, or entity-role evidence.
 Auth aliases are not equivalent to label identity, and source-declared entity
 type is not polymer sequence completeness, modified-residue chemistry, or
@@ -893,10 +1117,14 @@ population or occupancy-weighting interpretation, zero-occupancy missingness
 or completeness evidence, refinement validity, mobility, temperature,
 disorder, experimental-uncertainty assessment or propagation, or preparation
 evidence. General mmCIF categories and auth/entity semantics outside
-common-core21 or the selected nonpoly identity, polymer-sequence,
+common-core21 or the selected nonpoly identity, nonpoly component topology,
+nonpoly covalent-`_struct_conn` topology, polymer-sequence,
 source-reported unobserved-residue and unobserved-atom, and source-reported
 zero-occupancy-residue and zero-occupancy-atom envelopes,
-other optional fields, altloc,
+other optional fields, `_struct_conn` outside the exact selected
+identity-symmetry `covale` surface, general inter-residue or cross-component
+links, coordination, metals, stereo other than `N`, other component bond orders,
+altloc,
 biological assemblies, missingness or zero-occupancy declarations outside the
 selected envelopes, cells,
 and multimodel round-trip remain

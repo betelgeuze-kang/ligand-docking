@@ -43,9 +43,7 @@ PROFILE_LOCAL_PREPARATION_EVIDENCE_SCHEMA_ID = (
     "betelgeuze.profile_local_preparation_evidence/"
     f"{PROFILE_LOCAL_PREPARATION_EVIDENCE_SCHEMA_VERSION}"
 )
-PROFILE_LOCAL_PREPARATION_CLAIM_SCOPE = (
-    "canonical_graph_local_valence_evidence_only"
-)
+PROFILE_LOCAL_PREPARATION_CLAIM_SCOPE = "canonical_graph_local_valence_evidence_only"
 
 SOURCE_HYDROGEN_INVENTORY_STATUSES = frozenset(
     {
@@ -76,13 +74,33 @@ AROMATICITY_REQUIREMENT_STATUSES = frozenset(
         "profile_requirements_not_satisfied",
     }
 )
-PROFILE_LOCAL_EVIDENCE_STATUSES = frozenset(
-    {"invalid", "not_satisfied", "satisfied"}
-)
+PROFILE_LOCAL_EVIDENCE_STATUSES = frozenset({"invalid", "not_satisfied", "satisfied"})
 
-_SOURCE_OBSERVED_FORMAL_CHARGE_ORIGINS_BY_FORMAT = {
-    "mmcif": frozenset({"metadata_observed_mmcif_atom_site"}),
-    "sdf_v2000": frozenset({"metadata_observed_sdf_v2000_atom_block"}),
+_SOURCE_OBSERVED_FORMAL_CHARGE_ORIGINS_BY_PEDIGREE = {
+    ("mmcif", "betelgeuze.mmcif_parser/1.9.0"): frozenset(
+        {"metadata_observed_mmcif_atom_site"}
+    ),
+    (
+        "mmcif",
+        "betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0",
+    ): frozenset(
+        {
+            "metadata_observed_mmcif_atom_site",
+            "metadata_observed_mmcif_chem_comp_atom",
+        }
+    ),
+    (
+        "mmcif",
+        "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0",
+    ): frozenset(
+        {
+            "metadata_observed_mmcif_atom_site",
+            "metadata_observed_mmcif_chem_comp_atom",
+        }
+    ),
+    ("sdf_v2000", "betelgeuze.sdf_v2000_parser/1.5.0"): frozenset(
+        {"metadata_observed_sdf_v2000_atom_block"}
+    ),
 }
 _ORIGINS_THAT_IMPLY_NONZERO_FORMAL_CHARGE = frozenset(
     {
@@ -97,8 +115,8 @@ _NO_NORMALIZATION_ACTION = "none"
 def _source_observed_formal_charge_count(
     preparation: MolecularPreparationReport,
 ) -> int:
-    allowed = _SOURCE_OBSERVED_FORMAL_CHARGE_ORIGINS_BY_FORMAT.get(
-        preparation.source_format,
+    allowed = _SOURCE_OBSERVED_FORMAL_CHARGE_ORIGINS_BY_PEDIGREE.get(
+        (preparation.source_format, preparation.parser_pedigree_id),
         frozenset(),
     )
     return sum(
@@ -115,9 +133,7 @@ def _expected_statuses(
     constraints = dict(applicability.constraint_results)
     identity_valid = applicability.canonical_ingest_status != "invalid"
     profile_supported = applicability.canonical_ingest_status == "supported"
-    source_observed_charge_count = _source_observed_formal_charge_count(
-        preparation
-    )
+    source_observed_charge_count = _source_observed_formal_charge_count(preparation)
     formal_charge_source_observed = bool(
         identity_valid
         and applicability.parser_observation_self_consistent
@@ -210,13 +226,9 @@ def _expected_blockers(
         blockers.append("profile_local_preparation_evidence_not_satisfied")
     if source_hydrogen_inventory_status != "complete_relative_to_parsed_source":
         blockers.append("source_hydrogen_inventory_not_satisfied")
-    if profile_hydrogen_valence_status != (
-        "satisfied_for_declared_canonical_graph"
-    ):
+    if profile_hydrogen_valence_status != ("satisfied_for_declared_canonical_graph"):
         blockers.append("profile_hydrogen_valence_not_satisfied")
-    if formal_charge_observation_status != (
-        "source_observed_known_zero_not_assigned"
-    ):
+    if formal_charge_observation_status != ("source_observed_known_zero_not_assigned"):
         blockers.append("formal_charge_source_observation_not_satisfied")
     if aromaticity_requirement_status != (
         "not_applicable_to_acyclic_single_bond_profile"
@@ -264,9 +276,7 @@ class ProfileLocalPreparationEvidenceReport:
     def __init__(self, system: AllAtomSystem) -> None:
         if type(system) is not AllAtomSystem:
             raise TypeError("system must be an AllAtomSystem")
-        chemistry, preparation, applicability = (
-            _analyze_canonical_ingest_bundle(system)
-        )
+        chemistry, preparation, applicability = _analyze_canonical_ingest_bundle(system)
         object.__setattr__(self, "chemistry_report", chemistry)
         object.__setattr__(self, "applicability_report", applicability)
         object.__setattr__(self, "preparation_report", preparation)
@@ -275,16 +285,12 @@ class ProfileLocalPreparationEvidenceReport:
     def _validate_bound_reports(self) -> None:
         if type(self.chemistry_report) is not ChemistryCoverageReport:
             raise TypeError("chemistry_report must be a ChemistryCoverageReport")
-        if type(self.applicability_report) is not (
-            CanonicalIngestApplicabilityReport
-        ):
+        if type(self.applicability_report) is not (CanonicalIngestApplicabilityReport):
             raise TypeError(
                 "applicability_report must be a CanonicalIngestApplicabilityReport"
             )
         if type(self.preparation_report) is not MolecularPreparationReport:
-            raise TypeError(
-                "preparation_report must be a MolecularPreparationReport"
-            )
+            raise TypeError("preparation_report must be a MolecularPreparationReport")
         chemistry = self.chemistry_report
         applicability = self.applicability_report
         preparation = self.preparation_report
@@ -292,9 +298,7 @@ class ProfileLocalPreparationEvidenceReport:
             EXPLICIT_NEUTRAL_ACYCLIC_SATURATED_HYDROCARBON_PROFILE_ID
         ):
             raise ValueError("profile preparation requires the fixed profile")
-        if applicability.canonical_topology_schema_id != (
-            CANONICAL_TOPOLOGY_SCHEMA_ID
-        ):
+        if applicability.canonical_topology_schema_id != (CANONICAL_TOPOLOGY_SCHEMA_ID):
             raise ValueError("canonical topology schema mismatch")
         if applicability.chemistry_coverage_schema_version != (
             CHEMISTRY_COVERAGE_SCHEMA_VERSION
@@ -306,9 +310,7 @@ class ProfileLocalPreparationEvidenceReport:
             raise ValueError("preparation report schema version mismatch")
         if preparation.policy_id != PREPARATION_POLICY_ID:
             raise ValueError("preparation policy mismatch")
-        if applicability.chemistry_coverage_report_sha256 != (
-            chemistry.report_sha256
-        ):
+        if applicability.chemistry_coverage_report_sha256 != (chemistry.report_sha256):
             raise ValueError(
                 "applicability must be bound to the supplied chemistry report"
             )
@@ -424,8 +426,7 @@ class ProfileLocalPreparationEvidenceReport:
         )
         if mismatch is not None:
             raise ValueError(
-                "applicability and preparation reports disagree on "
-                f"{mismatch}"
+                f"applicability and preparation reports disagree on {mismatch}"
             )
         if (
             applicability.canonical_topology_sha256
@@ -446,10 +447,9 @@ class ProfileLocalPreparationEvidenceReport:
                 "valid applicability and preparation reports disagree on topology identity"
             )
         element_counts = dict(chemistry.element_counts)
-        if (
-            applicability.carbon_atom_count != element_counts.get("C", 0)
-            or applicability.hydrogen_atom_count != element_counts.get("H", 0)
-        ):
+        if applicability.carbon_atom_count != element_counts.get(
+            "C", 0
+        ) or applicability.hydrogen_atom_count != element_counts.get("H", 0):
             raise ValueError(
                 "applicability element diagnostics disagree with chemistry evidence"
             )
@@ -472,10 +472,7 @@ class ProfileLocalPreparationEvidenceReport:
         if constraint_values["formal_charges_known_zero"] and (
             chemistry.net_formal_charge != 0
             or preparation.net_formal_charge != 0
-            or bool(
-                formal_charge_origins
-                & _ORIGINS_THAT_IMPLY_NONZERO_FORMAL_CHARGE
-            )
+            or bool(formal_charge_origins & _ORIGINS_THAT_IMPLY_NONZERO_FORMAL_CHARGE)
         ):
             raise ValueError(
                 "known-zero applicability contradicts formal-charge evidence"
@@ -788,13 +785,9 @@ class ProfileLocalPreparationEvidenceReport:
     def blockers(self) -> tuple[str, ...]:
         return _expected_blockers(
             profile_local_evidence_status=self.profile_local_evidence_status,
-            source_hydrogen_inventory_status=(
-                self.source_hydrogen_inventory_status
-            ),
+            source_hydrogen_inventory_status=(self.source_hydrogen_inventory_status),
             profile_hydrogen_valence_status=self.profile_hydrogen_valence_status,
-            formal_charge_observation_status=(
-                self.formal_charge_observation_status
-            ),
+            formal_charge_observation_status=(self.formal_charge_observation_status),
             aromaticity_requirement_status=self.aromaticity_requirement_status,
             polymer_missing_residue_status=self.polymer_missing_residue_status,
         )
@@ -814,9 +807,7 @@ class ProfileLocalPreparationEvidenceReport:
             "chemistry_coverage_schema_version": (
                 self.chemistry_coverage_schema_version
             ),
-            "chemistry_coverage_report_sha256": (
-                self.chemistry_coverage_report_sha256
-            ),
+            "chemistry_coverage_report_sha256": (self.chemistry_coverage_report_sha256),
             "preparation_report_schema_version": (
                 self.preparation_report_schema_version
             ),
@@ -849,15 +840,9 @@ class ProfileLocalPreparationEvidenceReport:
             "component_count": self.component_count,
             "carbon_atom_count": self.carbon_atom_count,
             "hydrogen_atom_count": self.hydrogen_atom_count,
-            "source_observed_hydrogen_count": (
-                self.source_observed_hydrogen_count
-            ),
-            "adapter_generated_hydrogen_count": (
-                self.adapter_generated_hydrogen_count
-            ),
-            "unknown_hydrogen_origin_count": (
-                self.unknown_hydrogen_origin_count
-            ),
+            "source_observed_hydrogen_count": (self.source_observed_hydrogen_count),
+            "adapter_generated_hydrogen_count": (self.adapter_generated_hydrogen_count),
+            "unknown_hydrogen_origin_count": (self.unknown_hydrogen_origin_count),
             "unknown_formal_charge_count": self.unknown_formal_charge_count,
             "nonzero_formal_charge_count": self.nonzero_formal_charge_count,
             "isotope_count": self.isotope_count,
@@ -874,28 +859,18 @@ class ProfileLocalPreparationEvidenceReport:
                 self.source_observed_formal_charge_count
             ),
             "entity_type_counts": [list(item) for item in self.entity_type_counts],
-            "source_hydrogen_inventory_status": (
-                self.source_hydrogen_inventory_status
-            ),
-            "profile_hydrogen_valence_status": (
-                self.profile_hydrogen_valence_status
-            ),
-            "formal_charge_observation_status": (
-                self.formal_charge_observation_status
-            ),
+            "source_hydrogen_inventory_status": (self.source_hydrogen_inventory_status),
+            "profile_hydrogen_valence_status": (self.profile_hydrogen_valence_status),
+            "formal_charge_observation_status": (self.formal_charge_observation_status),
             "aromaticity_requirement_status": self.aromaticity_requirement_status,
-            "polymer_missing_residue_status": (
-                self.polymer_missing_residue_status
-            ),
+            "polymer_missing_residue_status": (self.polymer_missing_residue_status),
             "normalization_action": self.normalization_action,
             "whole_molecule_atom_completeness_status": (
                 self.whole_molecule_atom_completeness_status
             ),
             "hydrogen_completeness_status": self.hydrogen_completeness_status,
             "protonation_status": self.protonation_status,
-            "formal_charge_assignment_status": (
-                self.formal_charge_assignment_status
-            ),
+            "formal_charge_assignment_status": (self.formal_charge_assignment_status),
             "tautomer_status": self.tautomer_status,
             "aromaticity_perception_status": self.aromaticity_perception_status,
             "stereochemistry_assignment_status": (
@@ -906,14 +881,10 @@ class ProfileLocalPreparationEvidenceReport:
             "contextual_role_status": self.contextual_role_status,
             "parameterability_status": self.parameterability_status,
             "profile_local_evidence_status": self.profile_local_evidence_status,
-            "profile_local_evidence_satisfied": (
-                self.profile_local_evidence_satisfied
-            ),
+            "profile_local_evidence_satisfied": (self.profile_local_evidence_satisfied),
             "normalization_attempted": self.normalization_attempted,
             "completion_attempted": self.completion_attempted,
-            "preparation_assessment_complete": (
-                self.preparation_assessment_complete
-            ),
+            "preparation_assessment_complete": (self.preparation_assessment_complete),
             "preparation_assessed": self.preparation_assessed,
             "preparation_ready": self.preparation_ready,
             "parameterability_assessed": self.parameterability_assessed,
@@ -942,9 +913,10 @@ class ProfileLocalPreparationEvidenceReport:
     def matches_system(self, system: AllAtomSystem) -> bool:
         if type(system) is not AllAtomSystem:
             raise TypeError("system must be an AllAtomSystem")
-        return self.to_dict() == analyze_profile_local_preparation_evidence(
-            system
-        ).to_dict()
+        return (
+            self.to_dict()
+            == analyze_profile_local_preparation_evidence(system).to_dict()
+        )
 
 
 class ProfileLocalPreparationEvidenceError(RuntimeError):

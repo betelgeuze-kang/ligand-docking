@@ -52,9 +52,7 @@ PREPARATION_UNASSESSED_ASPECTS = (
     "modified_residue_identity",
 )
 
-_NON_POLYMER_LIKE_ENTITY_TYPES = frozenset(
-    {"non_polymer", "branched", "macrolide"}
-)
+_NON_POLYMER_LIKE_ENTITY_TYPES = frozenset({"non_polymer", "branched", "macrolide"})
 _ALWAYS_BLOCKERS = (
     "preparation_not_assessed",
     *(f"{aspect}_not_assessed" for aspect in PREPARATION_UNASSESSED_ASPECTS),
@@ -73,6 +71,7 @@ _FORMAL_CHARGE_ORIGINS = frozenset(
         "metadata_observed_pdb_atom_field",
         "metadata_observed_pdb_missing",
         "metadata_observed_mmcif_atom_site",
+        "metadata_observed_mmcif_chem_comp_atom",
         "metadata_observed_mmcif_missing",
         "metadata_observed_sdf_v2000_atom_block",
         "metadata_observed_sdf_v2000_m_chg",
@@ -98,31 +97,149 @@ _AROMATIC_ANNOTATION_ORIGINS = frozenset(
     }
 )
 _UNRECOGNIZED_PARSER_PEDIGREE_ID = "unrecognized"
+_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_NAME = (
+    "betelgeuze_engine_v2.molecular.mmcif_nonpoly_component_topology."
+    "parse_mmcif_nonpoly_component_topology"
+)
+_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_VERSION = "1.0.0"
+_MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID = (
+    "betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0"
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_NAME = (
+    "betelgeuze_engine_v2.molecular."
+    "mmcif_nonpoly_covalent_struct_conn_topology."
+    "parse_mmcif_nonpoly_covalent_struct_conn_topology"
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_VERSION = "1.0.0"
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_PEDIGREE_ID = (
+    "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0"
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY = (
+    "mmcif_nonpoly_covalent_struct_conn_topology"
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEYS = frozenset(
+    {
+        "connection_id",
+        "row_ordinal",
+        "conn_type_id",
+        "value_order",
+        "ptnr1_atom_site_id",
+        "ptnr2_atom_site_id",
+        "ptnr1_atom_index",
+        "ptnr2_atom_index",
+        "ptnr1_residue_index",
+        "ptnr2_residue_index",
+        "ptnr1_symmetry",
+        "ptnr2_symmetry",
+    }
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROFILE_ID = (
+    "strict_mmcif_nonpoly_covalent_struct_conn_topology_envelope/1.0.0"
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_BOUNDED_TRUE_FIELDS = frozenset(
+    {
+        "bounded_source_reported_struct_conn_materialized",
+        "bounded_inter_residue_topology_interpreted",
+        "source_reported_covalent_struct_conn_materialized",
+    }
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_FALSE_AUTHORITY_FIELDS = frozenset(
+    {
+        "source_authenticated",
+        "independent_chemistry_established",
+        "independent_valence_established",
+        "independent_aromaticity_established",
+        "independent_stereo_established",
+        "chemistry_inferred",
+        "generic_chemistry_supported",
+        "struct_conn_interpreted",
+        "inter_residue_bonds_interpreted",
+        "inter_residue_bonds_supported",
+        "general_struct_conn_supported",
+        "general_struct_conn_interpreted",
+        "general_inter_residue_topology_supported",
+        "role_assignment_interpreted",
+        "coordination_interpreted",
+        "protonation_interpreted",
+        "preparation_ready",
+        "generic_preparation_ready",
+        "generic_molecular_preparation_ready",
+        "global_preparation_ready",
+        "parameterability_assessed",
+        "physics_supported",
+        "simulation_ready",
+        "runtime_eligible",
+        "execution_authorized",
+        "claim_safe",
+        "general_mmcif_topology_complete",
+        "general_mmcif_round_trip_evidence_ready",
+        "all_format_round_trip_evidence_ready",
+    }
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROFILE_MARKER_KEYS = frozenset(
+    {
+        "profile_id",
+        "struct_conn_row_count",
+        "materialized_inter_residue_bond_count",
+        *_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_BOUNDED_TRUE_FIELDS,
+        *_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_FALSE_AUTHORITY_FIELDS,
+    }
+)
+_MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROVENANCE_MARKER_KEYS = frozenset(
+    {
+        "canonical_output_sha256",
+        "source_sha256_semantics",
+        "carrier_evidence_semantics",
+    }
+)
+_MMCIF_STRUCT_CONN_BOND_ORDER_BY_VALUE = {
+    "sing": 1.0,
+    "doub": 2.0,
+    "trip": 3.0,
+}
 _RECOGNIZED_PARSER_PEDIGREES = {
     "pdb": (
-        "betelgeuze_engine_v2.molecular.pdb_mmcif.parse_pdb",
-        "1.8.0",
-        "betelgeuze.pdb_parser/1.8.0",
+        (
+            "betelgeuze_engine_v2.molecular.pdb_mmcif.parse_pdb",
+            "1.8.0",
+            "betelgeuze.pdb_parser/1.8.0",
+        ),
     ),
     "mmcif": (
-        "betelgeuze_engine_v2.molecular.pdb_mmcif.parse_mmcif",
-        "1.9.0",
-        "betelgeuze.mmcif_parser/1.9.0",
+        (
+            "betelgeuze_engine_v2.molecular.pdb_mmcif.parse_mmcif",
+            "1.9.0",
+            "betelgeuze.mmcif_parser/1.9.0",
+        ),
+        (
+            _MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_NAME,
+            _MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_VERSION,
+            _MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID,
+        ),
+        (
+            _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_NAME,
+            _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_VERSION,
+            _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_PEDIGREE_ID,
+        ),
     ),
     "sdf_v2000": (
-        "betelgeuze_engine_v2.molecular.sdf_v2000",
-        "1.5.0",
-        "betelgeuze.sdf_v2000_parser/1.5.0",
+        (
+            "betelgeuze_engine_v2.molecular.sdf_v2000",
+            "1.5.0",
+            "betelgeuze.sdf_v2000_parser/1.5.0",
+        ),
     ),
     "smiles": (
-        "betelgeuze_strict_smiles",
-        "1.4.0",
-        "betelgeuze.smiles_parser/1.4.0",
+        (
+            "betelgeuze_strict_smiles",
+            "1.4.0",
+            "betelgeuze.smiles_parser/1.4.0",
+        ),
     ),
 }
 _RECOGNIZED_PEDIGREE_IDS_BY_FORMAT = {
-    source_format: pedigree[2]
-    for source_format, pedigree in _RECOGNIZED_PARSER_PEDIGREES.items()
+    source_format: frozenset(pedigree[2] for pedigree in pedigrees)
+    for source_format, pedigrees in _RECOGNIZED_PARSER_PEDIGREES.items()
 }
 _MAX_REPORT_JSON_INTEGER = (1 << 53) - 1
 
@@ -131,9 +248,7 @@ def _validate_count(name: str, value: Any) -> None:
     if type(value) is not int or value < 0:
         raise TypeError(f"{name} must be a non-negative integer")
     if value > _MAX_REPORT_JSON_INTEGER:
-        raise ValueError(
-            f"{name} exceeds the interoperable JSON integer range"
-        )
+        raise ValueError(f"{name} exceeds the interoperable JSON integer range")
 
 
 def _validate_count_table(name: str, value: Any) -> None:
@@ -148,9 +263,7 @@ def _validate_count_table(name: str, value: Any) -> None:
             or type(entry[1]) is not int
             or entry[1] <= 0
         ):
-            raise TypeError(
-                f"{name} entries must be string/positive integer pairs"
-            )
+            raise TypeError(f"{name} entries must be string/positive integer pairs")
         if entry[1] > _MAX_REPORT_JSON_INTEGER:
             raise ValueError(
                 f"{name} count exceeds the interoperable JSON integer range"
@@ -248,27 +361,25 @@ class MolecularPreparationReport:
         if invalid_boolean is not None:
             raise TypeError(f"{invalid_boolean} must be a boolean")
         if self.source_digest_available != (self.source_sha256 is not None):
-            raise ValueError(
-                "source_digest_available must match source_sha256"
-            )
+            raise ValueError("source_digest_available must match source_sha256")
         if self.source_sha256 is not None and (
             type(self.source_sha256) is not str
             or len(self.source_sha256) != 64
             or any(
-                character not in "0123456789abcdef"
-                for character in self.source_sha256
+                character not in "0123456789abcdef" for character in self.source_sha256
             )
         ):
             raise ValueError("source_sha256 must be lowercase SHA-256 or None")
         if type(self.parser_pedigree_id) is not str:
             raise TypeError("parser_pedigree_id must be a string")
-        expected_pedigree_id = _RECOGNIZED_PEDIGREE_IDS_BY_FORMAT.get(
-            self.source_format
+        expected_pedigree_ids = _RECOGNIZED_PEDIGREE_IDS_BY_FORMAT.get(
+            self.source_format,
+            frozenset(),
         )
         if self.parser_observation_self_consistent:
             if (
                 not self.source_digest_available
-                or self.parser_pedigree_id != expected_pedigree_id
+                or self.parser_pedigree_id not in expected_pedigree_ids
                 or not self.canonical_validation_valid
                 or not self.canonical_topology_digest_available
             ):
@@ -293,8 +404,13 @@ class MolecularPreparationReport:
                 for character in self.canonical_topology_sha256
             )
         ):
-            raise ValueError("canonical_topology_sha256 must be lowercase SHA-256 or None")
-        if self.canonical_topology_digest_available and not self.canonical_validation_valid:
+            raise ValueError(
+                "canonical_topology_sha256 must be lowercase SHA-256 or None"
+            )
+        if (
+            self.canonical_topology_digest_available
+            and not self.canonical_validation_valid
+        ):
             raise ValueError(
                 "canonical topology digest cannot be available for an invalid canonical system"
             )
@@ -355,15 +471,11 @@ class MolecularPreparationReport:
             raise ValueError(
                 "adapter_generated_hydrogen_count must match hydrogen_origin_counts"
             )
-        if self.unknown_hydrogen_origin_count != hydrogen_origin_map.get(
-            "unknown", 0
-        ):
+        if self.unknown_hydrogen_origin_count != hydrogen_origin_map.get("unknown", 0):
             raise ValueError(
                 "unknown_hydrogen_origin_count must match hydrogen_origin_counts"
             )
-        metadata_observed_hydrogen_origins = set(hydrogen_origin_map) - {
-            "unknown"
-        }
+        metadata_observed_hydrogen_origins = set(hydrogen_origin_map) - {"unknown"}
         if (
             metadata_observed_hydrogen_origins
             and not self.parser_observation_self_consistent
@@ -410,6 +522,7 @@ class MolecularPreparationReport:
             },
             "mmcif": {
                 "metadata_observed_mmcif_atom_site",
+                "metadata_observed_mmcif_chem_comp_atom",
                 "metadata_observed_mmcif_missing",
             },
             "sdf_v2000": {
@@ -460,28 +573,22 @@ class MolecularPreparationReport:
             == "metadata_observed_sdf_v2000_bond_type_4_projection"
             and self.source_format != "sdf_v2000"
         ):
-            raise ValueError(
-                "SDF aromatic provenance requires source_format sdf_v2000"
-            )
+            raise ValueError("SDF aromatic provenance requires source_format sdf_v2000")
         if (
             self.aromatic_annotation_origin
             == "metadata_observed_smiles_adapter_aromatic"
             and self.source_format != "smiles"
         ):
-            raise ValueError(
-                "SMILES aromatic provenance requires source_format smiles"
-            )
+            raise ValueError("SMILES aromatic provenance requires source_format smiles")
         if (
-            self.aromatic_annotation_origin
-            not in {"absent", "unclassified_present"}
+            self.aromatic_annotation_origin not in {"absent", "unclassified_present"}
             and not self.parser_observation_self_consistent
         ):
             raise ValueError(
                 "metadata-observed aromatic origin requires a self-consistent parser observation"
             )
         if (
-            self.aromatic_annotation_origin
-            not in {"absent", "unclassified_present"}
+            self.aromatic_annotation_origin not in {"absent", "unclassified_present"}
             and not self.canonical_validation_valid
         ):
             raise ValueError(
@@ -523,17 +630,28 @@ class MolecularPreparationReport:
             )
         if self.unknown_formal_charge_count:
             if self.net_formal_charge is not None:
-                raise ValueError("net_formal_charge must be None when any charge is unknown")
+                raise ValueError(
+                    "net_formal_charge must be None when any charge is unknown"
+                )
         elif type(self.net_formal_charge) is not int:
-            raise TypeError("net_formal_charge must be an integer when all charges are known")
+            raise TypeError(
+                "net_formal_charge must be an integer when all charges are known"
+            )
         elif abs(self.net_formal_charge) > _MAX_REPORT_JSON_INTEGER:
             raise ValueError(
                 "net_formal_charge exceeds the interoperable JSON integer range"
             )
-        if self.missing_atom_count is not None or self.missing_residue_count is not None:
-            raise ValueError("missing atom and residue counts are not assessed in report v2")
+        if (
+            self.missing_atom_count is not None
+            or self.missing_residue_count is not None
+        ):
+            raise ValueError(
+                "missing atom and residue counts are not assessed in report v2"
+            )
         if self.unassessed_aspects != PREPARATION_UNASSESSED_ASPECTS:
-            raise ValueError("preparation report v2 requires the fixed unassessed aspects")
+            raise ValueError(
+                "preparation report v2 requires the fixed unassessed aspects"
+            )
         assessment_flags = (
             self.hydrogen_completeness_assessed,
             self.protonation_assessed,
@@ -552,15 +670,19 @@ class MolecularPreparationReport:
             )
         if (
             type(self.validation_error_codes) is not tuple
-            or not all(type(value) is str and value for value in self.validation_error_codes)
+            or not all(
+                type(value) is str and value for value in self.validation_error_codes
+            )
             or type(self.blockers) is not tuple
             or not all(type(value) is str and value for value in self.blockers)
         ):
-            raise TypeError("validation errors and blockers must be tuples of nonempty strings")
-        if self.validation_error_codes != tuple(sorted(set(self.validation_error_codes))):
-            raise ValueError(
-                "validation_error_codes must be unique and sorted"
+            raise TypeError(
+                "validation errors and blockers must be tuples of nonempty strings"
             )
+        if self.validation_error_codes != tuple(
+            sorted(set(self.validation_error_codes))
+        ):
+            raise ValueError("validation_error_codes must be unique and sorted")
         if self.canonical_validation_valid != (not self.validation_error_codes):
             raise ValueError(
                 "canonical_validation_valid must match validation_error_codes"
@@ -618,9 +740,7 @@ class MolecularPreparationReport:
             "metadata_observed_source_hydrogen_count": (
                 self.metadata_observed_source_hydrogen_count
             ),
-            "adapter_generated_hydrogen_count": (
-                self.adapter_generated_hydrogen_count
-            ),
+            "adapter_generated_hydrogen_count": (self.adapter_generated_hydrogen_count),
             "unknown_hydrogen_origin_count": self.unknown_hydrogen_origin_count,
             "unknown_formal_charge_count": self.unknown_formal_charge_count,
             "formal_charge_origin_counts": [
@@ -642,14 +762,10 @@ class MolecularPreparationReport:
             "missing_residue_count": self.missing_residue_count,
             "unassessed_aspects": list(self.unassessed_aspects),
             "blockers": list(self.blockers),
-            "hydrogen_completeness_assessed": (
-                self.hydrogen_completeness_assessed
-            ),
+            "hydrogen_completeness_assessed": (self.hydrogen_completeness_assessed),
             "protonation_assessed": self.protonation_assessed,
             "tautomer_assessed": self.tautomer_assessed,
-            "aromaticity_perception_assessed": (
-                self.aromaticity_perception_assessed
-            ),
+            "aromaticity_perception_assessed": (self.aromaticity_perception_assessed),
             "formal_charge_assignment_assessed": (
                 self.formal_charge_assignment_assessed
             ),
@@ -709,6 +825,204 @@ def _is_lowercase_sha256(value: Any) -> bool:
     )
 
 
+def _is_mmcif_nonpoly_covalent_struct_conn_topology_parser(
+    system: AllAtomSystem,
+) -> bool:
+    return bool(
+        system.provenance.source_format == "mmcif"
+        and system.provenance.parser_name
+        == _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_NAME
+        and system.provenance.parser_version
+        == _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_VERSION
+    )
+
+
+def _mmcif_atom_site_id(atom: Any) -> str | None:
+    mmcif = atom.metadata.get("mmcif")
+    if not isinstance(mmcif, Mapping):
+        return None
+    source_atom_site_id = mmcif.get("source_atom_site_id")
+    if type(source_atom_site_id) is not str or not source_atom_site_id:
+        return None
+    return source_atom_site_id
+
+
+def _mmcif_nonpoly_covalent_struct_conn_profile_binding_valid(
+    system: AllAtomSystem,
+    *,
+    marked_bond_count: int,
+) -> bool:
+    profile_marker = system.metadata.get(
+        _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY
+    )
+    provenance_metadata = system.provenance.metadata
+    provenance_marker = provenance_metadata.get(
+        _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY
+    )
+    carrier_provenance_marker = provenance_metadata.get(
+        "carrier_mmcif_nonpoly_component_topology"
+    )
+    carrier_profile_marker = system.metadata.get(
+        "carrier_mmcif_nonpoly_component_topology"
+    )
+    mmcif_metadata = system.metadata.get("mmcif")
+    if (
+        type(marked_bond_count) is not int
+        or marked_bond_count < 1
+        or "mmcif_nonpoly_component_topology" in system.metadata
+        or "mmcif_nonpoly_component_topology" in provenance_metadata
+        or not isinstance(profile_marker, Mapping)
+        or set(profile_marker)
+        != _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROFILE_MARKER_KEYS
+        or profile_marker.get("profile_id")
+        != _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROFILE_ID
+        or type(profile_marker.get("struct_conn_row_count")) is not int
+        or profile_marker.get("struct_conn_row_count") != marked_bond_count
+        or type(profile_marker.get("materialized_inter_residue_bond_count")) is not int
+        or profile_marker.get("materialized_inter_residue_bond_count")
+        != marked_bond_count
+        or any(
+            profile_marker.get(field) is not True
+            for field in (
+                _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_BOUNDED_TRUE_FIELDS
+            )
+        )
+        or any(
+            profile_marker.get(field) is not False
+            for field in (
+                _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_FALSE_AUTHORITY_FIELDS
+            )
+        )
+        or not isinstance(provenance_marker, Mapping)
+        or set(provenance_marker)
+        != _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROVENANCE_MARKER_KEYS
+        or not _is_lowercase_sha256(provenance_marker.get("canonical_output_sha256"))
+        or provenance_marker.get("source_sha256_semantics") != "raw_full_source_bytes"
+        or provenance_marker.get("carrier_evidence_semantics")
+        != "preserved_component_topology_carrier_only_not_struct_conn_evidence"
+        or not isinstance(carrier_provenance_marker, Mapping)
+        or set(carrier_provenance_marker)
+        != _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PROVENANCE_MARKER_KEYS
+        or not _is_lowercase_sha256(
+            carrier_provenance_marker.get("canonical_output_sha256")
+        )
+        or carrier_provenance_marker.get("source_sha256_semantics")
+        != "raw_full_source_bytes"
+        or carrier_provenance_marker.get("carrier_evidence_semantics")
+        != "preserved_identity_carrier_only_not_augmented_topology_evidence"
+        or not isinstance(carrier_profile_marker, Mapping)
+        or not isinstance(mmcif_metadata, Mapping)
+        or mmcif_metadata.get("component_topology_carrier_evidence_semantics")
+        != "preserved_component_topology_carrier_only_not_struct_conn_evidence"
+    ):
+        return False
+    return True
+
+
+def _mmcif_nonpoly_covalent_struct_conn_inventory_valid(
+    system: AllAtomSystem,
+) -> bool:
+    """Validate the complete source-declared inter-residue bond inventory."""
+
+    if not _is_mmcif_nonpoly_covalent_struct_conn_topology_parser(system):
+        return False
+
+    connection_ids: set[str] = set()
+    row_ordinals: list[int] = []
+    marked_bond_count = 0
+    for bond in system.bonds:
+        if not (
+            0 <= bond.atom_i < len(system.atoms)
+            and 0 <= bond.atom_j < len(system.atoms)
+        ):
+            return False
+        atom_i = system.atoms[bond.atom_i]
+        atom_j = system.atoms[bond.atom_j]
+        inter_residue = atom_i.residue_index != atom_j.residue_index
+        marker_present = (
+            _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY in bond.metadata
+        )
+        if not inter_residue:
+            if marker_present:
+                return False
+            continue
+        if not marker_present or set(bond.metadata) != {
+            _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY
+        }:
+            return False
+        marker = bond.metadata.get(
+            _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEY
+        )
+        if (
+            not isinstance(marker, Mapping)
+            or set(marker) != _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_MARKER_KEYS
+        ):
+            return False
+
+        connection_id = marker.get("connection_id")
+        row_ordinal = marker.get("row_ordinal")
+        value_order = marker.get("value_order")
+        ptnr1_atom_index = marker.get("ptnr1_atom_index")
+        ptnr2_atom_index = marker.get("ptnr2_atom_index")
+        ptnr1_residue_index = marker.get("ptnr1_residue_index")
+        ptnr2_residue_index = marker.get("ptnr2_residue_index")
+        ptnr1_atom_site_id = marker.get("ptnr1_atom_site_id")
+        ptnr2_atom_site_id = marker.get("ptnr2_atom_site_id")
+        if (
+            type(connection_id) is not str
+            or not connection_id
+            or connection_id.strip() != connection_id
+            or connection_id in connection_ids
+            or type(row_ordinal) is not int
+            or row_ordinal < 1
+            or marker.get("conn_type_id") != "covale"
+            or type(value_order) is not str
+            or value_order not in _MMCIF_STRUCT_CONN_BOND_ORDER_BY_VALUE
+            or bond.order != _MMCIF_STRUCT_CONN_BOND_ORDER_BY_VALUE[value_order]
+            or bond.source != "mmcif_struct_conn_covale"
+            or bond.aromatic
+            or bond.stereo != "none"
+            or marker.get("ptnr1_symmetry") != "1_555"
+            or marker.get("ptnr2_symmetry") != "1_555"
+            or type(ptnr1_atom_index) is not int
+            or type(ptnr2_atom_index) is not int
+            or ptnr1_atom_index == ptnr2_atom_index
+            or {ptnr1_atom_index, ptnr2_atom_index} != {bond.atom_i, bond.atom_j}
+            or not (0 <= ptnr1_atom_index < len(system.atoms))
+            or not (0 <= ptnr2_atom_index < len(system.atoms))
+            or type(ptnr1_residue_index) is not int
+            or type(ptnr2_residue_index) is not int
+            or ptnr1_residue_index == ptnr2_residue_index
+            or type(ptnr1_atom_site_id) is not str
+            or not ptnr1_atom_site_id
+            or type(ptnr2_atom_site_id) is not str
+            or not ptnr2_atom_site_id
+        ):
+            return False
+
+        partner1 = system.atoms[ptnr1_atom_index]
+        partner2 = system.atoms[ptnr2_atom_index]
+        if (
+            partner1.residue_index != ptnr1_residue_index
+            or partner2.residue_index != ptnr2_residue_index
+            or _mmcif_atom_site_id(partner1) != ptnr1_atom_site_id
+            or _mmcif_atom_site_id(partner2) != ptnr2_atom_site_id
+        ):
+            return False
+        connection_ids.add(connection_id)
+        row_ordinals.append(row_ordinal)
+        marked_bond_count += 1
+
+    return bool(
+        marked_bond_count
+        and sorted(row_ordinals) == list(range(1, marked_bond_count + 1))
+        and _mmcif_nonpoly_covalent_struct_conn_profile_binding_valid(
+            system,
+            marked_bond_count=marked_bond_count,
+        )
+    )
+
+
 def _parser_observation_consistency(
     system: AllAtomSystem,
     *,
@@ -719,35 +1033,97 @@ def _parser_observation_consistency(
         if _is_lowercase_sha256(system.provenance.source_sha256)
         else None
     )
-    expected = _RECOGNIZED_PARSER_PEDIGREES.get(
-        system.provenance.source_format
+    candidates = _RECOGNIZED_PARSER_PEDIGREES.get(
+        system.provenance.source_format,
+        (),
+    )
+    matched = next(
+        (
+            candidate
+            for candidate in candidates
+            if system.provenance.parser_name == candidate[0]
+            and system.provenance.parser_version == candidate[1]
+        ),
+        None,
     )
     digest_bindings_valid = False
     if canonical_validation_valid:
         try:
-            digest_bindings_valid = (
-                attached_canonical_topology_sha256_matches(system)
-                and attached_parser_observation_sha256_matches(system)
-            )
+            digest_bindings_valid = attached_canonical_topology_sha256_matches(
+                system
+            ) and attached_parser_observation_sha256_matches(system)
         except (TypeError, ValueError, OverflowError):
             digest_bindings_valid = False
+    if (
+        digest_bindings_valid
+        and matched is not None
+        and matched[2]
+        == _MMCIF_NONPOLY_COVALENT_STRUCT_CONN_TOPOLOGY_PARSER_PEDIGREE_ID
+        and not _mmcif_nonpoly_covalent_struct_conn_inventory_valid(system)
+    ):
+        digest_bindings_valid = False
     recognized = bool(
-        source_sha256 is not None
-        and expected is not None
-        and system.provenance.parser_name == expected[0]
-        and system.provenance.parser_version == expected[1]
-        and digest_bindings_valid
+        source_sha256 is not None and matched is not None and digest_bindings_valid
     )
     return (
         source_sha256,
-        expected[2] if recognized and expected is not None else _UNRECOGNIZED_PARSER_PEDIGREE_ID,
+        matched[2]
+        if recognized and matched is not None
+        else _UNRECOGNIZED_PARSER_PEDIGREE_ID,
         recognized,
     )
+
+
+def _is_mmcif_nonpoly_component_topology_parser(system: AllAtomSystem) -> bool:
+    return bool(
+        system.provenance.source_format == "mmcif"
+        and system.provenance.parser_name
+        == _MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_NAME
+        and system.provenance.parser_version
+        == _MMCIF_NONPOLY_COMPONENT_TOPOLOGY_PARSER_VERSION
+    )
+
+
+def _uses_mmcif_nonpoly_component_topology_atom_markers(
+    system: AllAtomSystem,
+) -> bool:
+    return bool(
+        _is_mmcif_nonpoly_component_topology_parser(system)
+        or _is_mmcif_nonpoly_covalent_struct_conn_topology_parser(system)
+    )
+
+
+def _mmcif_component_template_ordinal_valid_residue_indices(
+    system: AllAtomSystem,
+) -> frozenset[int]:
+    valid_residue_indices: set[int] = set()
+    for residue in system.residues:
+        if residue.entity_type not in {"non_polymer", "water"}:
+            continue
+        ordinals: list[int] = []
+        for atom_index in residue.atom_indices:
+            if not (0 <= atom_index < len(system.atoms)):
+                break
+            marker = system.atoms[atom_index].metadata.get(
+                "mmcif_nonpoly_component_topology"
+            )
+            if (
+                not isinstance(marker, Mapping)
+                or type(marker.get("template_ordinal")) is not int
+            ):
+                break
+            ordinals.append(marker["template_ordinal"])
+        else:
+            if sorted(ordinals) == list(range(1, len(residue.atom_indices) + 1)):
+                valid_residue_indices.add(residue.index)
+    return frozenset(valid_residue_indices)
 
 
 def _coordinate_source_atom_marker_consistent(
     system: AllAtomSystem,
     atom: Any,
+    *,
+    mmcif_component_ordinal_valid_residue_indices: frozenset[int],
 ) -> bool:
     source_format = system.provenance.source_format
     if source_format == "pdb":
@@ -760,21 +1136,62 @@ def _coordinate_source_atom_marker_consistent(
         )
     if source_format == "mmcif":
         mmcif = atom.metadata.get("mmcif")
-        atom_site = (
-            mmcif.get("atom_site")
-            if isinstance(mmcif, Mapping)
-            else None
-        )
-        return (
+        atom_site = mmcif.get("atom_site") if isinstance(mmcif, Mapping) else None
+        common_markers_valid = bool(
             atom.metadata.get("source_record") in ("ATOM", "HETATM")
             and type(atom.serial) is int
             and atom.serial > 0
-            and atom.metadata.get("formal_charge_source")
-            in ("_atom_site.pdbx_formal_charge", "missing_in_mmcif")
             and isinstance(mmcif, Mapping)
             and isinstance(atom_site, Mapping)
             and type(mmcif.get("source_atom_site_id")) is str
             and bool(mmcif.get("source_atom_site_id"))
+        )
+        if not common_markers_valid:
+            return False
+        formal_charge_source = atom.metadata.get("formal_charge_source")
+        if _uses_mmcif_nonpoly_component_topology_atom_markers(system):
+            if not (0 <= atom.residue_index < len(system.residues)):
+                return False
+            residue = system.residues[atom.residue_index]
+            if residue.entity_type in {"non_polymer", "water"}:
+                component_marker = atom.metadata.get("mmcif_nonpoly_component_topology")
+                if (
+                    residue.index not in mmcif_component_ordinal_valid_residue_indices
+                    or formal_charge_source
+                    not in {
+                        "_chem_comp_atom.charge",
+                        "cross_checked_atom_site_and_chem_comp_atom",
+                    }
+                    or atom.metadata.get("formal_charge_interpretation")
+                    != "explicit_component_template"
+                    or atom.metadata.get("formal_charge_known") is not True
+                    or not atom.formal_charge_known
+                    or not isinstance(component_marker, Mapping)
+                    or set(component_marker)
+                    != {
+                        "component_id",
+                        "template_atom_id",
+                        "template_ordinal",
+                        "source_reported_aromatic",
+                        "source_reported_stereo",
+                    }
+                    or component_marker.get("component_id") != residue.name
+                    or component_marker.get("template_atom_id") != atom.name
+                    or type(component_marker.get("template_ordinal")) is not int
+                    or component_marker.get("template_ordinal", 0) < 1
+                    or component_marker.get("source_reported_aromatic")
+                    is not atom.aromatic
+                    or component_marker.get("source_reported_stereo") != "N"
+                ):
+                    return False
+                return _mmcif_component_template_charge_marker_consistent(
+                    atom,
+                    atom_site,
+                    formal_charge_source=formal_charge_source,
+                )
+        return bool(
+            formal_charge_source
+            in ("_atom_site.pdbx_formal_charge", "missing_in_mmcif")
             and _mmcif_formal_charge_marker_consistent(atom, atom_site)
         )
     if source_format == "sdf_v2000":
@@ -817,6 +1234,25 @@ def _mmcif_formal_charge_marker_consistent(
     return parsed == atom.formal_charge
 
 
+def _mmcif_component_template_charge_marker_consistent(
+    atom: Any,
+    atom_site: Mapping[str, Any],
+    *,
+    formal_charge_source: Any,
+) -> bool:
+    payload = atom_site.get("_atom_site.pdbx_formal_charge")
+    if not isinstance(payload, Mapping):
+        return False
+    if payload.get("quoted") is not False or payload.get("multiline") is not False:
+        return False
+    value = payload.get("value")
+    if formal_charge_source == "_chem_comp_atom.charge":
+        return value in (".", "?")
+    if formal_charge_source != "cross_checked_atom_site_and_chem_comp_atom":
+        return False
+    return _mmcif_formal_charge_marker_consistent(atom, atom_site)
+
+
 def _smiles_source_atom_marker_consistent(
     atom: Any,
     *,
@@ -828,8 +1264,7 @@ def _smiles_source_atom_marker_consistent(
         inventory_valid
         and 0 <= atom.index < source_atom_count
         and atom.index not in generated_atom_indices
-        and
-        type(atom.metadata.get("source_atom_index")) is int
+        and type(atom.metadata.get("source_atom_index")) is int
         and atom.metadata.get("source_atom_index") == atom.index
         and atom.metadata.get("source_atom_order_preserved") is True
         and atom.metadata.get("manually_expanded") is not True
@@ -898,9 +1333,7 @@ def _smiles_source_inventory(
     system: AllAtomSystem,
 ) -> tuple[bool, int, frozenset[int]]:
     source_atom_count = system.metadata.get("source_atom_count")
-    generated_hydrogen_count = system.metadata.get(
-        "generated_hydrogen_count"
-    )
+    generated_hydrogen_count = system.metadata.get("generated_hydrogen_count")
     coverage = system.provenance.metadata.get("coverage")
     if (
         type(source_atom_count) is not int
@@ -915,8 +1348,7 @@ def _smiles_source_inventory(
         or type(coverage.get("generated_hydrogen_count")) is not int
         or coverage.get("source_atom_count") != source_atom_count
         or coverage.get("expanded_atom_count") != len(system.atoms)
-        or coverage.get("generated_hydrogen_count")
-        != generated_hydrogen_count
+        or coverage.get("generated_hydrogen_count") != generated_hydrogen_count
     ):
         return False, 0, frozenset()
 
@@ -935,9 +1367,7 @@ def _smiles_source_inventory(
         generated_atom_indices.add(
             bond.atom_j if bond.atom_i == parent_index else bond.atom_i
         )
-    expected_generated_indices = set(
-        range(source_atom_count, len(system.atoms))
-    )
+    expected_generated_indices = set(range(source_atom_count, len(system.atoms)))
     source_indices = {
         atom.metadata.get("source_atom_index")
         for atom in system.atoms
@@ -982,9 +1412,7 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
             f"chain_count exceeds {MAX_PREPARATION_AUDIT_CHAINS}",
         )
     validation = validate_all_atom_system(system)
-    validation_error_codes = tuple(
-        sorted({issue.code for issue in validation.errors})
-    )
+    validation_error_codes = tuple(sorted({issue.code for issue in validation.errors}))
     topology_sha256: str | None = None
     if validation.valid:
         try:
@@ -1004,8 +1432,7 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
         mutable_bonds_by_atom.setdefault(bond.atom_i, []).append(bond)
         mutable_bonds_by_atom.setdefault(bond.atom_j, []).append(bond)
     bonds_by_atom = {
-        atom_index: tuple(bonds)
-        for atom_index, bonds in mutable_bonds_by_atom.items()
+        atom_index: tuple(bonds) for atom_index, bonds in mutable_bonds_by_atom.items()
     }
     if (
         validation.valid
@@ -1021,8 +1448,20 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
         smiles_source_inventory_valid = False
         smiles_source_atom_count = 0
         smiles_generated_atom_indices = frozenset()
+    if (
+        validation.valid
+        and parser_observation_self_consistent
+        and _uses_mmcif_nonpoly_component_topology_atom_markers(system)
+    ):
+        mmcif_component_ordinal_valid_residue_indices = (
+            _mmcif_component_template_ordinal_valid_residue_indices(system)
+        )
+    else:
+        mmcif_component_ordinal_valid_residue_indices = frozenset()
 
-    element_counts = tuple(sorted(Counter(atom.element for atom in system.atoms).items()))
+    element_counts = tuple(
+        sorted(Counter(atom.element for atom in system.atoms).items())
+    )
     entity_type_counts = tuple(
         sorted(Counter(residue.entity_type for residue in system.residues).items())
     )
@@ -1039,7 +1478,13 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
             and parser_observation_self_consistent
             and raw_origin == "source"
             and (
-                _coordinate_source_atom_marker_consistent(system, atom)
+                _coordinate_source_atom_marker_consistent(
+                    system,
+                    atom,
+                    mmcif_component_ordinal_valid_residue_indices=(
+                        mmcif_component_ordinal_valid_residue_indices
+                    ),
+                )
                 or (
                     system.provenance.source_format == "smiles"
                     and _smiles_source_atom_marker_consistent(
@@ -1091,6 +1536,14 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
             "missing_in_mmcif",
         ): "metadata_observed_mmcif_missing",
         (
+            "mmcif",
+            "_chem_comp_atom.charge",
+        ): "metadata_observed_mmcif_chem_comp_atom",
+        (
+            "mmcif",
+            "cross_checked_atom_site_and_chem_comp_atom",
+        ): "metadata_observed_mmcif_chem_comp_atom",
+        (
             "sdf_v2000",
             "sdf_v2000_atom_block",
         ): "metadata_observed_sdf_v2000_atom_block",
@@ -1116,9 +1569,19 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
                 marker_consistent = _coordinate_source_atom_marker_consistent(
                     system,
                     atom,
+                    mmcif_component_ordinal_valid_residue_indices=(
+                        mmcif_component_ordinal_valid_residue_indices
+                    ),
                 )
                 expected_interpretation = (
-                    "explicit"
+                    "explicit_component_template"
+                    if _uses_mmcif_nonpoly_component_topology_atom_markers(system)
+                    and atom.metadata.get("formal_charge_source")
+                    in {
+                        "_chem_comp_atom.charge",
+                        "cross_checked_atom_site_and_chem_comp_atom",
+                    }
+                    else "explicit"
                     if atom.formal_charge_known
                     else "placeholder_zero_unknown"
                 )
@@ -1135,17 +1598,15 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
                     generated_atom_indices=smiles_generated_atom_indices,
                 )
                 if not marker_consistent and atom.element == "H":
-                    marker_consistent = (
-                        _smiles_generated_hydrogen_marker_consistent(
-                            system,
-                            atom,
-                            atom.metadata.get("hydrogen_origin"),
-                            atoms_by_index=atoms_by_index,
-                            bonds_by_atom=bonds_by_atom,
-                            source_inventory_valid=smiles_source_inventory_valid,
-                            source_atom_count=smiles_source_atom_count,
-                            generated_atom_indices=smiles_generated_atom_indices,
-                        )
+                    marker_consistent = _smiles_generated_hydrogen_marker_consistent(
+                        system,
+                        atom,
+                        atom.metadata.get("hydrogen_origin"),
+                        atoms_by_index=atoms_by_index,
+                        bonds_by_atom=bonds_by_atom,
+                        source_inventory_valid=smiles_source_inventory_valid,
+                        source_atom_count=smiles_source_atom_count,
+                        generated_atom_indices=smiles_generated_atom_indices,
                     )
         origin = (
             formal_charge_source_mapping.get(
@@ -1162,15 +1623,16 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
             )
         elif atom.formal_charge_known and origin in _UNKNOWN_FORMAL_CHARGE_ORIGINS:
             origin = "unclassified_known"
-        elif not atom.formal_charge_known and origin not in _UNKNOWN_FORMAL_CHARGE_ORIGINS:
+        elif (
+            not atom.formal_charge_known
+            and origin not in _UNKNOWN_FORMAL_CHARGE_ORIGINS
+        ):
             origin = "unclassified_unknown"
         formal_charge_origins[origin] += 1
     formal_charge_origin_counts = tuple(sorted(formal_charge_origins.items()))
     observed_aromatic_atom_count = sum(atom.aromatic for atom in system.atoms)
     observed_aromatic_bond_count = sum(bond.aromatic for bond in system.bonds)
-    aromatic_atom_indices = {
-        atom.index for atom in system.atoms if atom.aromatic
-    }
+    aromatic_atom_indices = {atom.index for atom in system.atoms if atom.aromatic}
     aromatic_bonds = tuple(bond for bond in system.bonds if bond.aromatic)
     aromatic_bond_endpoints = {
         atom_index
@@ -1184,7 +1646,13 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
         and bool(aromatic_bonds)
         and aromatic_atom_indices == aromatic_bond_endpoints
         and all(
-            _coordinate_source_atom_marker_consistent(system, atom)
+            _coordinate_source_atom_marker_consistent(
+                system,
+                atom,
+                mmcif_component_ordinal_valid_residue_indices=(
+                    mmcif_component_ordinal_valid_residue_indices
+                ),
+            )
             for atom in system.atoms
             if atom.aromatic
         )
@@ -1236,9 +1704,7 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
             "metadata_observed_sdf_v2000_bond_type_4_projection"
         )
     elif smiles_aromatic_provenance:
-        aromatic_annotation_origin = (
-            "metadata_observed_smiles_adapter_aromatic"
-        )
+        aromatic_annotation_origin = "metadata_observed_smiles_adapter_aromatic"
     else:
         aromatic_annotation_origin = "unclassified_present"
     blockers = list(_ALWAYS_BLOCKERS)
@@ -1261,9 +1727,7 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
     if unknown_hydrogen_origin_count:
         blockers.append("hydrogen_origin_unknown_for_some_atoms")
     if adapter_generated_hydrogen_count:
-        blockers.append(
-            "adapter_expanded_hydrogens_not_independently_valence_verified"
-        )
+        blockers.append("adapter_expanded_hydrogens_not_independently_valence_verified")
     if observed_aromatic_atom_count or observed_aromatic_bond_count:
         blockers.append(
             "aromaticity_source_or_adapter_state_not_independently_perceived"
@@ -1276,9 +1740,7 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
         source_sha256=source_sha256,
         source_digest_available=source_sha256 is not None,
         parser_pedigree_id=parser_pedigree_id,
-        parser_observation_self_consistent=(
-            parser_observation_self_consistent
-        ),
+        parser_observation_self_consistent=(parser_observation_self_consistent),
         canonical_topology_schema_id=CANONICAL_TOPOLOGY_SCHEMA_ID,
         canonical_topology_sha256=topology_sha256,
         canonical_topology_digest_available=topology_sha256 is not None,
@@ -1308,8 +1770,7 @@ def analyze_molecular_preparation(system: AllAtomSystem) -> MolecularPreparation
         aromatic_annotation_origin=aromatic_annotation_origin,
         entity_type_counts=entity_type_counts,
         canonical_water_entity_type_residue_count=sum(
-            residue.entity_type == "water"
-            for residue in system.residues
+            residue.entity_type == "water" for residue in system.residues
         ),
         single_atom_residue_count=sum(
             len(residue.atom_indices) == 1 for residue in system.residues

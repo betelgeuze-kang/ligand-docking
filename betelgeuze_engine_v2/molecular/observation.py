@@ -23,8 +23,7 @@ from .topology import canonical_topology_sha256
 
 PARSER_OBSERVATION_SCHEMA_VERSION = "1.0.0"
 PARSER_OBSERVATION_SCHEMA_ID = (
-    "betelgeuze.parser_chemical_state_observation/"
-    f"{PARSER_OBSERVATION_SCHEMA_VERSION}"
+    f"betelgeuze.parser_chemical_state_observation/{PARSER_OBSERVATION_SCHEMA_VERSION}"
 )
 
 _ATOM_MARKER_KEYS = (
@@ -75,22 +74,15 @@ def _marker_value(value: Any) -> Any:
     if value is None or type(value) in {bool, int, str}:
         return value
     if type(value) is float:
-        return {
-            "unexpected_float_ieee754_binary64_be": struct.pack(">d", value).hex()
-        }
+        return {"unexpected_float_ieee754_binary64_be": struct.pack(">d", value).hex()}
     if isinstance(value, Mapping):
         return {
             "unexpected_mapping": {
-                key: _marker_value(item)
-                for key, item in value.items()
+                key: _marker_value(item) for key, item in value.items()
             }
         }
     if isinstance(value, (list, tuple)):
-        return {
-            "unexpected_sequence": [
-                _marker_value(item) for item in value
-            ]
-        }
+        return {"unexpected_sequence": [_marker_value(item) for item in value]}
     return {"unsupported_marker_type": type(value).__name__}
 
 
@@ -125,15 +117,16 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
     for atom in system.atoms:
         mmcif = atom.metadata.get("mmcif")
         mmcif_source_atom_site_id = (
-            mmcif.get("source_atom_site_id")
-            if isinstance(mmcif, Mapping)
-            else None
+            mmcif.get("source_atom_site_id") if isinstance(mmcif, Mapping) else None
         )
-        atom_site = (
-            mmcif.get("atom_site")
-            if isinstance(mmcif, Mapping)
-            else None
-        )
+        atom_site = mmcif.get("atom_site") if isinstance(mmcif, Mapping) else None
+        markers = {
+            key: _marker_value(atom.metadata.get(key)) for key in _ATOM_MARKER_KEYS
+        }
+        if "mmcif_nonpoly_component_topology" in atom.metadata:
+            markers["mmcif_nonpoly_component_topology"] = _marker_value(
+                atom.metadata.get("mmcif_nonpoly_component_topology")
+            )
         atoms.append(
             {
                 "index": atom.index,
@@ -142,40 +135,38 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
                 "formal_charge": atom.formal_charge,
                 "formal_charge_known": atom.formal_charge_known,
                 "aromatic": atom.aromatic,
-                "markers": {
-                    key: _marker_value(atom.metadata.get(key))
-                    for key in _ATOM_MARKER_KEYS
-                },
-                "mmcif_source_atom_site_id": _marker_value(
-                    mmcif_source_atom_site_id
-                ),
+                "markers": markers,
+                "mmcif_source_atom_site_id": _marker_value(mmcif_source_atom_site_id),
                 "mmcif_metadata_mapping_present": isinstance(
                     mmcif,
                     Mapping,
                 ),
-                "mmcif_atom_site_mapping_present": (
-                    isinstance(atom_site, Mapping)
-                ),
+                "mmcif_atom_site_mapping_present": (isinstance(atom_site, Mapping)),
                 "mmcif_formal_charge_token": (
                     _mmcif_formal_charge_token_observation(atom_site)
                 ),
             }
         )
-    bonds = [
-        {
-            "index": bond.index,
-            "atom_i": bond.atom_i,
-            "atom_j": bond.atom_j,
-            "order_ieee754_binary64_be": struct.pack(">d", bond.order).hex(),
-            "aromatic": bond.aromatic,
-            "source": bond.source,
-            "markers": {
-                key: _marker_value(bond.metadata.get(key))
-                for key in _BOND_MARKER_KEYS
-            },
+    bonds = []
+    for bond in system.bonds:
+        markers = {
+            key: _marker_value(bond.metadata.get(key)) for key in _BOND_MARKER_KEYS
         }
-        for bond in system.bonds
-    ]
+        if "mmcif_nonpoly_covalent_struct_conn_topology" in bond.metadata:
+            markers["mmcif_nonpoly_covalent_struct_conn_topology"] = _marker_value(
+                bond.metadata.get("mmcif_nonpoly_covalent_struct_conn_topology")
+            )
+        bonds.append(
+            {
+                "index": bond.index,
+                "atom_i": bond.atom_i,
+                "atom_j": bond.atom_j,
+                "order_ieee754_binary64_be": struct.pack(">d", bond.order).hex(),
+                "aromatic": bond.aromatic,
+                "source": bond.source,
+                "markers": markers,
+            }
+        )
     coverage = system.provenance.metadata.get("coverage")
     return {
         "observation_schema_id": PARSER_OBSERVATION_SCHEMA_ID,
@@ -192,8 +183,7 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
             for key in _PROVENANCE_MARKER_KEYS
         },
         "system_markers": {
-            key: _marker_value(system.metadata.get(key))
-            for key in _SYSTEM_MARKER_KEYS
+            key: _marker_value(system.metadata.get(key)) for key in _SYSTEM_MARKER_KEYS
         },
         "coverage_markers": {
             key: _marker_value(coverage.get(key))

@@ -79,6 +79,14 @@ _RECOGNIZED_PARSER_PEDIGREES = frozenset(
     {
         ("pdb", "betelgeuze.pdb_parser/1.8.0"),
         ("mmcif", "betelgeuze.mmcif_parser/1.9.0"),
+        (
+            "mmcif",
+            "betelgeuze.mmcif_nonpoly_component_topology_parser/1.0.0",
+        ),
+        (
+            "mmcif",
+            "betelgeuze.mmcif_nonpoly_covalent_struct_conn_topology_parser/1.0.0",
+        ),
         ("sdf_v2000", "betelgeuze.sdf_v2000_parser/1.5.0"),
         ("smiles", "betelgeuze.smiles_parser/1.4.0"),
     }
@@ -116,8 +124,7 @@ def _expected_blockers(
     elif canonical_ingest_status == "unsupported":
         blockers.append("canonical_ingest_profile_unsupported")
     blockers.extend(
-        f"canonical_ingest_constraint_failed_{code}"
-        for code in failed_constraint_codes
+        f"canonical_ingest_constraint_failed_{code}" for code in failed_constraint_codes
     )
     if preparation_status != "attested":
         blockers.append("preparation_not_ready")
@@ -254,11 +261,7 @@ class CanonicalIngestApplicabilityReport:
             "claim_safe": self.claim_safe,
         }
         invalid_boolean = next(
-            (
-                name
-                for name, value in boolean_fields.items()
-                if type(value) is not bool
-            ),
+            (name for name, value in boolean_fields.items() if type(value) is not bool),
             None,
         )
         if invalid_boolean is not None:
@@ -286,9 +289,7 @@ class CanonicalIngestApplicabilityReport:
             if type(value) is not int or value < 0:
                 raise TypeError(f"{name} must be a non-negative integer")
             if value > _MAX_JSON_INTEGER:
-                raise ValueError(
-                    f"{name} exceeds the interoperable JSON integer range"
-                )
+                raise ValueError(f"{name} exceeds the interoperable JSON integer range")
         if self.carbon_atom_count + self.hydrogen_atom_count > self.atom_count:
             raise ValueError("profile element counts cannot exceed atom_count")
         if self.valence_violation_count > self.atom_count:
@@ -303,13 +304,10 @@ class CanonicalIngestApplicabilityReport:
         if any(count > self.atom_count for count in atom_subset_counts):
             raise ValueError("atom diagnostic counts cannot exceed atom_count")
         if (
-            self.unknown_formal_charge_count
-            + self.nonzero_formal_charge_count
+            self.unknown_formal_charge_count + self.nonzero_formal_charge_count
             > self.atom_count
         ):
-            raise ValueError(
-                "unknown and nonzero formal-charge counts cannot overlap"
-            )
+            raise ValueError("unknown and nonzero formal-charge counts cannot overlap")
         bond_subset_counts = (
             self.aromatic_bond_count,
             self.non_single_bond_count,
@@ -318,18 +316,14 @@ class CanonicalIngestApplicabilityReport:
         if any(count > self.bond_count for count in bond_subset_counts):
             raise ValueError("bond diagnostic counts cannot exceed bond_count")
         if self.aromatic_bond_count > self.non_single_bond_count:
-            raise ValueError(
-                "aromatic_bond_count cannot exceed non_single_bond_count"
-            )
+            raise ValueError("aromatic_bond_count cannot exceed non_single_bond_count")
         if (
             self.source_observed_hydrogen_count
             + self.adapter_generated_hydrogen_count
             + self.unknown_hydrogen_origin_count
             != self.hydrogen_atom_count
         ):
-            raise ValueError(
-                "hydrogen origin counts must sum to hydrogen_atom_count"
-            )
+            raise ValueError("hydrogen origin counts must sum to hydrogen_atom_count")
         if self.component_count > self.atom_count or (
             self.atom_count > 0 and self.component_count < 1
         ):
@@ -386,8 +380,7 @@ class CanonicalIngestApplicabilityReport:
             "single_component": self.component_count == 1,
             "contains_carbon": self.carbon_atom_count > 0,
             "elements_h_c_only": (
-                self.carbon_atom_count + self.hydrogen_atom_count
-                == self.atom_count
+                self.carbon_atom_count + self.hydrogen_atom_count == self.atom_count
             ),
             "formal_charges_known_zero": (
                 self.unknown_formal_charge_count == 0
@@ -395,8 +388,7 @@ class CanonicalIngestApplicabilityReport:
             ),
             "isotopes_absent": self.isotope_count == 0,
             "aromaticity_absent": (
-                self.aromatic_atom_count == 0
-                and self.aromatic_bond_count == 0
+                self.aromatic_atom_count == 0 and self.aromatic_bond_count == 0
             ),
             "single_bonds_only": self.non_single_bond_count == 0,
             "stereo_absent": (
@@ -414,8 +406,7 @@ class CanonicalIngestApplicabilityReport:
                 and self.valence_violation_count == 0
             ),
             "hydrogens_source_observed": (
-                self.source_observed_hydrogen_count
-                == self.hydrogen_atom_count
+                self.source_observed_hydrogen_count == self.hydrogen_atom_count
                 and self.adapter_generated_hydrogen_count == 0
                 and self.unknown_hydrogen_origin_count == 0
             ),
@@ -438,9 +429,7 @@ class CanonicalIngestApplicabilityReport:
             raise ValueError(
                 "explicit valence closure disagrees with the graph degree sum"
             )
-        canonical_state_valid = dict(self.constraint_results)[
-            "canonical_state_valid"
-        ]
+        canonical_state_valid = dict(self.constraint_results)["canonical_state_valid"]
         expected_preparation_status = (
             "incomplete" if canonical_state_valid else "invalid"
         )
@@ -488,9 +477,7 @@ class CanonicalIngestApplicabilityReport:
             "chemistry_coverage_schema_version": (
                 self.chemistry_coverage_schema_version
             ),
-            "chemistry_coverage_report_sha256": (
-                self.chemistry_coverage_report_sha256
-            ),
+            "chemistry_coverage_report_sha256": (self.chemistry_coverage_report_sha256),
             "preparation_report_schema_version": (
                 self.preparation_report_schema_version
             ),
@@ -510,15 +497,9 @@ class CanonicalIngestApplicabilityReport:
             "component_count": self.component_count,
             "carbon_atom_count": self.carbon_atom_count,
             "hydrogen_atom_count": self.hydrogen_atom_count,
-            "source_observed_hydrogen_count": (
-                self.source_observed_hydrogen_count
-            ),
-            "adapter_generated_hydrogen_count": (
-                self.adapter_generated_hydrogen_count
-            ),
-            "unknown_hydrogen_origin_count": (
-                self.unknown_hydrogen_origin_count
-            ),
+            "source_observed_hydrogen_count": (self.source_observed_hydrogen_count),
+            "adapter_generated_hydrogen_count": (self.adapter_generated_hydrogen_count),
+            "unknown_hydrogen_origin_count": (self.unknown_hydrogen_origin_count),
             "unknown_formal_charge_count": self.unknown_formal_charge_count,
             "nonzero_formal_charge_count": self.nonzero_formal_charge_count,
             "isotope_count": self.isotope_count,
@@ -566,9 +547,9 @@ class CanonicalIngestApplicabilityReport:
     def matches_system(self, system: AllAtomSystem) -> bool:
         if type(system) is not AllAtomSystem:
             raise TypeError("system must be an AllAtomSystem")
-        return self.to_dict() == analyze_canonical_ingest_applicability(
-            system
-        ).to_dict()
+        return (
+            self.to_dict() == analyze_canonical_ingest_applicability(system).to_dict()
+        )
 
 
 class CanonicalIngestApplicabilityError(RuntimeError):
@@ -584,8 +565,7 @@ class CanonicalIngestApplicabilityError(RuntimeError):
             else f", +{len(self.failed_constraint_codes) - 6} more"
         )
         super().__init__(
-            "canonical ingest is not supported by the fixed profile: "
-            f"{preview}{suffix}"
+            f"canonical ingest is not supported by the fixed profile: {preview}{suffix}"
         )
 
 
@@ -630,17 +610,14 @@ def _profile_constraint_results(
         ),
         "single_component": single_component,
         "contains_carbon": any(atom.element == "C" for atom in system.atoms),
-        "elements_h_c_only": all(
-            atom.element in {"H", "C"} for atom in system.atoms
-        ),
+        "elements_h_c_only": all(atom.element in {"H", "C"} for atom in system.atoms),
         "formal_charges_known_zero": all(
             atom.formal_charge_known and atom.formal_charge == 0
             for atom in system.atoms
         ),
         "isotopes_absent": chemistry.isotope_count == 0,
         "aromaticity_absent": (
-            chemistry.aromatic_atom_count == 0
-            and chemistry.aromatic_bond_count == 0
+            chemistry.aromatic_atom_count == 0 and chemistry.aromatic_bond_count == 0
         ),
         "single_bonds_only": all(
             bond.order == 1.0 and not bond.aromatic for bond in system.bonds

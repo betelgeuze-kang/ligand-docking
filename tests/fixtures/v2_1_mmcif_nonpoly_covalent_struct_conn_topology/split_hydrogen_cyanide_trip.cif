@@ -1,0 +1,115 @@
+data_split_hydrogen_cyanide_trip
+#
+loop_
+_entity.id
+_entity.type
+1 non-polymer
+2 non-polymer
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+C 1
+N 2
+#
+loop_
+_chem_comp.id
+_chem_comp.type
+_chem_comp.pdbx_formal_charge
+HCF non-polymer 0
+NFR non-polymer 0
+#
+loop_
+_chem_comp_atom.comp_id
+_chem_comp_atom.atom_id
+_chem_comp_atom.type_symbol
+_chem_comp_atom.charge
+_chem_comp_atom.pdbx_aromatic_flag
+_chem_comp_atom.pdbx_stereo_config
+_chem_comp_atom.pdbx_ordinal
+HCF C C 0 N N 1
+HCF H H 0 N N 2
+NFR N N 0 N N 1
+#
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+_chem_comp_bond.value_order
+_chem_comp_bond.pdbx_aromatic_flag
+_chem_comp_bond.pdbx_stereo_config
+_chem_comp_bond.pdbx_ordinal
+HCF C H SING N N 1
+#
+loop_
+_pdbx_entity_nonpoly.entity_id
+_pdbx_entity_nonpoly.comp_id
+1 HCF
+2 NFR
+#
+loop_
+_pdbx_nonpoly_scheme.asym_id
+_pdbx_nonpoly_scheme.entity_id
+_pdbx_nonpoly_scheme.mon_id
+_pdbx_nonpoly_scheme.ndb_seq_num
+_pdbx_nonpoly_scheme.pdb_seq_num
+_pdbx_nonpoly_scheme.auth_seq_num
+_pdbx_nonpoly_scheme.pdb_mon_id
+_pdbx_nonpoly_scheme.auth_mon_id
+_pdbx_nonpoly_scheme.pdb_strand_id
+_pdbx_nonpoly_scheme.pdb_ins_code
+C 1 HCF 1 1 1 HCF HCF C .
+N 2 NFR 1 2 2 NFR NFR N .
+#
+loop_
+_struct_conn.id
+_struct_conn.conn_type_id
+_struct_conn.ptnr1_label_asym_id
+_struct_conn.ptnr1_label_comp_id
+_struct_conn.ptnr1_label_seq_id
+_struct_conn.ptnr1_label_atom_id
+_struct_conn.pdbx_ptnr1_label_alt_id
+_struct_conn.pdbx_ptnr1_PDB_ins_code
+_struct_conn.ptnr1_symmetry
+_struct_conn.ptnr2_label_asym_id
+_struct_conn.ptnr2_label_comp_id
+_struct_conn.ptnr2_label_seq_id
+_struct_conn.ptnr2_label_atom_id
+_struct_conn.pdbx_ptnr2_label_alt_id
+_struct_conn.pdbx_ptnr2_PDB_ins_code
+_struct_conn.ptnr1_auth_asym_id
+_struct_conn.ptnr1_auth_comp_id
+_struct_conn.ptnr1_auth_seq_id
+_struct_conn.ptnr2_auth_asym_id
+_struct_conn.ptnr2_auth_comp_id
+_struct_conn.ptnr2_auth_seq_id
+_struct_conn.ptnr2_symmetry
+_struct_conn.pdbx_value_order
+hcn_cn covale C HCF . C . ? 1_555 N NFR . N . ? C HCF 1 N NFR 2 1_555 trip
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+HETATM 1 H H . HCF C 1 . ? -1.060 0.000 0.000 1.00 10.00 ? 1 HCF C H 1
+HETATM 2 C C . HCF C 1 . ? 0.000 0.000 0.000 1.00 10.00 ? 1 HCF C C 1
+HETATM 3 N N . NFR N 2 . ? 1.160 0.000 0.000 1.00 10.00 ? 2 NFR N N 1
+#
