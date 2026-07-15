@@ -56,6 +56,13 @@ def test_h4_hosted_workflow_covers_tier_alpha_runtime_binding_contract() -> None
         for step in workflow["jobs"]["api-security"]["steps"]
         if step["name"] == "Run adjacent API regressions"
     )
+    attachment_test_command = next(
+        step["run"]
+        for step in workflow["jobs"]["api-security"]["steps"]
+        if step["name"] == "Run the attachment-required H4 regressions"
+    )
+
+    assert "--confcutdir=tests/unit" in attachment_test_command
 
     for required_source in (
         "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py",

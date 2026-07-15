@@ -107,7 +107,7 @@ jobs:
 
       - name: Run the attachment-required H4 regressions
         run: >-
-          python -m pytest -q
+          python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_api_h4_security_hardening.py
           tests/unit/test_api_attempt_artifact_confinement.py
 
