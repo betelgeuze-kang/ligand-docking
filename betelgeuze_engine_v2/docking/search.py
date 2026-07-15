@@ -12,7 +12,12 @@ import torch
 
 from betelgeuze_engine_v2.contracts import failure_receipt
 from .identity import DockingProblemIdentity
-from .metrics import direct_rmsd, kabsch_aligned_rmsd, symmetry_aware_rmsd
+from .metrics import (
+    _canonicalize_symmetry_permutations,
+    direct_rmsd,
+    kabsch_aligned_rmsd,
+    symmetry_aware_rmsd,
+)
 from .proposals import (
     DockingBudget,
     DockingProposal,
@@ -163,16 +168,20 @@ def _search_fingerprint(
     refiner_fingerprint: str,
     score_descriptor: DockingScoreDescriptor,
     diversity_metric: str,
-    symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None,
+    symmetry_permutations: tuple[tuple[int, ...], ...],
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_docking_search/3.0.0",
+        "schema_id": "betelgeuze.engine_v2_docking_search/3.1.0",
         "budget": budget.to_dict(),
         "scorer_contract_fingerprint_sha256": scorer_fingerprint,
         "refiner_contract_fingerprint_sha256": refiner_fingerprint,
         "score_descriptor": score_descriptor.to_dict(),
         "diversity_metric": diversity_metric,
-        "symmetry_permutation_count": 0 if symmetry_permutations is None else len(symmetry_permutations),
+        "symmetry_permutation_count": len(symmetry_permutations),
+        "symmetry_permutations": {
+            "atom_count": int(proposals[0].coordinates.shape[0]),
+            "mappings": [list(permutation) for permutation in symmetry_permutations],
+        },
         "problem_fingerprint_sha256": proposals[0].problem_fingerprint_sha256,
         "search_space_fingerprint_sha256": proposals[0].search_space_fingerprint_sha256,
         "proposal_fingerprints": [proposal.fingerprint_sha256 for proposal in proposals],
@@ -247,6 +256,15 @@ def run_bounded_docking_search(
     if diversity_metric == "symmetry_aware_kabsch_rmsd" and symmetry_permutations is None:
         raise ValueError("symmetry-aware diversity requires explicit permutations")
 
+    canonical_symmetry_permutations = (
+        ()
+        if symmetry_permutations is None
+        else _canonicalize_symmetry_permutations(
+            symmetry_permutations,
+            atom_count=search_space.atom_count,
+        )
+    )
+
     descriptor = scorer_descriptor(scorer)
     scorer_fingerprint = component_contract_fingerprint(scorer, kind="scorer")
     refiner_fingerprint = "" if refiner is None else component_contract_fingerprint(refiner, kind="refiner")
@@ -318,7 +336,7 @@ def run_bounded_docking_search(
                 row.proposal,
                 other.proposal,
                 metric=diversity_metric,
-                symmetry_permutations=symmetry_permutations,
+                symmetry_permutations=canonical_symmetry_permutations,
             )
             >= threshold
             for other in selected
@@ -366,7 +384,7 @@ def run_bounded_docking_search(
             refiner_fingerprint=refiner_fingerprint,
             score_descriptor=descriptor,
             diversity_metric=diversity_metric,
-            symmetry_permutations=symmetry_permutations,
+            symmetry_permutations=canonical_symmetry_permutations,
         ),
         diversity_metric=diversity_metric,
         blockers=tuple(dict.fromkeys(blockers)),

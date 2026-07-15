@@ -84,13 +84,40 @@ def _permutation_tensor(
     atom_count: int,
     device: torch.device,
 ) -> torch.Tensor:
-    tensor = torch.as_tensor(permutation, dtype=torch.long, device=device)
-    if tensor.shape != (atom_count,):
-        raise PoseMetricError("symmetry permutation must have shape [N]")
-    values = [int(value) for value in tensor.detach().cpu().tolist()]
-    if sorted(values) != list(range(atom_count)):
-        raise PoseMetricError("symmetry permutation must be a bijection over atom indices")
-    return tensor
+    values = _canonicalize_symmetry_permutations(
+        (permutation,),
+        atom_count=atom_count,
+    )[0]
+    return torch.tensor(values, dtype=torch.long, device=device)
+
+
+def _canonicalize_symmetry_permutations(
+    permutations: Sequence[Sequence[int] | torch.Tensor],
+    *,
+    atom_count: int,
+) -> tuple[tuple[int, ...], ...]:
+    if len(permutations) < 1 or len(permutations) > MAX_SYMMETRY_PERMUTATIONS:
+        raise PoseMetricError(
+            f"symmetry permutation count must be in [1,{MAX_SYMMETRY_PERMUTATIONS}]"
+        )
+    expected = list(range(int(atom_count)))
+    canonical: list[tuple[int, ...]] = []
+    for permutation in permutations:
+        try:
+            tensor = torch.as_tensor(permutation)
+        except (TypeError, ValueError, RuntimeError) as exc:
+            raise PoseMetricError(
+                "symmetry permutation must be a one-dimensional integer mapping"
+            ) from exc
+        if tensor.shape != (atom_count,):
+            raise PoseMetricError("symmetry permutation must have shape [N]")
+        if tensor.dtype == torch.bool or tensor.is_floating_point() or tensor.is_complex():
+            raise PoseMetricError("symmetry permutation atom indices must be integers")
+        values = tuple(int(value) for value in tensor.detach().cpu().tolist())
+        if sorted(values) != expected:
+            raise PoseMetricError("symmetry permutation must be a bijection over atom indices")
+        canonical.append(values)
+    return tuple(canonical)
 
 
 def symmetry_aware_rmsd(
@@ -104,11 +131,10 @@ def symmetry_aware_rmsd(
     second = _coordinates(candidate, name="candidate")
     if first.shape != second.shape:
         raise PoseMetricError("pose coordinate shapes differ")
-    candidates = permutations or (tuple(range(first.shape[0])),)
-    if len(candidates) < 1 or len(candidates) > MAX_SYMMETRY_PERMUTATIONS:
-        raise PoseMetricError(
-            f"symmetry permutation count must be in [1,{MAX_SYMMETRY_PERMUTATIONS}]"
-        )
+    candidates = _canonicalize_symmetry_permutations(
+        (tuple(range(first.shape[0])),) if permutations is None else permutations,
+        atom_count=int(first.shape[0]),
+    )
     best_value = float("inf")
     best_index = -1
     for index, permutation in enumerate(candidates):
