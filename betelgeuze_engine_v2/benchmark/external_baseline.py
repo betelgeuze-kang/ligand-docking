@@ -24,6 +24,17 @@ EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_external_baseline_receipt/1.0.0"
 )
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_RESULT_ROW_FIELDS = frozenset(
+    {"case_id", "status", "score", "pose_path", "pose_sha256", "error_code"}
+)
+_CSV_RESULT_FIELDS = (
+    "case_id",
+    "status",
+    "score",
+    "pose_path",
+    "pose_sha256",
+    "error_code",
+)
 
 
 class ExternalBaselineContractError(ValueError):
@@ -58,13 +69,44 @@ def _canonical_sha256(payload: object) -> str:
     return hashlib.sha256(_canonical_bytes(payload)).hexdigest()
 
 
-def _confined_file(root: Path, relative_path: str, expected_sha256: str) -> tuple[Path, int]:
+def _absolute_without_resolving(path: Path) -> Path:
+    return Path(os.path.abspath(path))
+
+
+def _reject_symlink_components(path: Path, *, message: str) -> None:
+    absolute = _absolute_without_resolving(path)
+    current = Path(absolute.anchor)
+    for part in absolute.parts[1:]:
+        current /= part
+        if current.is_symlink():
+            raise ExternalBaselineContractError(message)
+
+
+def _confined_file(
+    root: Path,
+    relative_path: str,
+    expected_sha256: str,
+) -> tuple[Path, int, str]:
     relative = Path(str(relative_path or ""))
     if not relative_path or relative.is_absolute() or ".." in relative.parts:
         raise ExternalBaselineContractError(
             "pose_path must be a relative path below artifact_root"
         )
-    resolved_root = root.expanduser().resolve(strict=True)
+    expanded_root = root.expanduser()
+    _reject_symlink_components(
+        expanded_root,
+        message="external baseline artifact_root may not traverse symlinks",
+    )
+    try:
+        resolved_root = expanded_root.resolve(strict=True)
+    except OSError as exc:
+        raise ExternalBaselineContractError(
+            "external baseline artifact_root does not exist"
+        ) from exc
+    if not resolved_root.is_dir():
+        raise ExternalBaselineContractError(
+            "external baseline artifact_root is not a directory"
+        )
     current = resolved_root
     for part in relative.parts:
         current = current / part
@@ -72,7 +114,12 @@ def _confined_file(root: Path, relative_path: str, expected_sha256: str) -> tupl
             raise ExternalBaselineContractError(
                 "external baseline pose path may not traverse symlinks"
             )
-    resolved = current.resolve(strict=True)
+    try:
+        resolved = current.resolve(strict=True)
+    except OSError as exc:
+        raise ExternalBaselineContractError(
+            "external baseline pose artifact does not exist"
+        ) from exc
     try:
         resolved.relative_to(resolved_root)
     except ValueError as exc:
@@ -81,11 +128,21 @@ def _confined_file(root: Path, relative_path: str, expected_sha256: str) -> tupl
         ) from exc
     if not resolved.is_file():
         raise ExternalBaselineContractError("external baseline pose is not a regular file")
-    raw = resolved.read_bytes()
-    actual = hashlib.sha256(raw).hexdigest()
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with resolved.open("rb") as handle:
+            while chunk := handle.read(1024 * 1024):
+                digest.update(chunk)
+                size += len(chunk)
+    except OSError as exc:
+        raise ExternalBaselineContractError(
+            "external baseline pose artifact cannot be read"
+        ) from exc
+    actual = digest.hexdigest()
     if actual != expected_sha256:
         raise ExternalBaselineContractError("external baseline pose SHA-256 mismatch")
-    return resolved, len(raw)
+    return resolved, size, actual
 
 
 @dataclass(frozen=True)
@@ -104,6 +161,7 @@ class ExternalBaselineEngine:
         if not str(self.engine_version or "").strip():
             raise ExternalBaselineContractError("engine_version must be non-empty")
         object.__setattr__(self, "engine_id", engine)
+        object.__setattr__(self, "engine_version", str(self.engine_version).strip())
         object.__setattr__(
             self,
             "executable_sha256",
@@ -149,6 +207,9 @@ class ExternalBaselineCase:
             raise ExternalBaselineContractError(
                 "case_id, target_id, and ligand_id must be non-empty"
             )
+        object.__setattr__(self, "case_id", str(self.case_id).strip())
+        object.__setattr__(self, "target_id", str(self.target_id).strip())
+        object.__setattr__(self, "ligand_id", str(self.ligand_id).strip())
         object.__setattr__(
             self,
             "receptor_sha256",
@@ -181,7 +242,7 @@ class ExternalBaselineWorkOrder:
     cases: tuple[ExternalBaselineCase, ...]
     command_template: tuple[str, ...]
     score_direction: str = "minimize"
-    score_unit: str | None = None
+    score_unit: str = ""
     score_semantics: str = "external_engine_native_score"
     schema_id: str = EXTERNAL_BASELINE_WORK_ORDER_SCHEMA_ID
 
@@ -208,10 +269,15 @@ class ExternalBaselineWorkOrder:
             raise ExternalBaselineContractError(
                 "score_direction must be minimize or maximize"
             )
+        if not str(self.score_unit or "").strip():
+            raise ExternalBaselineContractError("score_unit must be non-empty")
         if not str(self.score_semantics or "").strip():
             raise ExternalBaselineContractError("score_semantics must be non-empty")
+        object.__setattr__(self, "work_order_id", str(self.work_order_id).strip())
         object.__setattr__(self, "cases", cases)
         object.__setattr__(self, "command_template", command)
+        object.__setattr__(self, "score_unit", str(self.score_unit).strip())
+        object.__setattr__(self, "score_semantics", str(self.score_semantics).strip())
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -224,6 +290,10 @@ class ExternalBaselineWorkOrder:
             "score_unit": self.score_unit,
             "score_semantics": self.score_semantics,
             "execution_enabled": False,
+            "scientifically_validated": False,
+            "benchmark_validated": False,
+            "customer_execution_enabled": False,
+            "docking_accuracy_claim_allowed": False,
             "claim_safe": False,
             "claim_boundary": (
                 "Offline external-engine comparison work order only; it does not "
@@ -259,27 +329,54 @@ class ExternalBaselineResultRow:
     pose_verified: bool = False
 
     def __post_init__(self) -> None:
-        if self.status not in {"success", "failure"}:
+        case_id = str(self.case_id or "").strip()
+        status = str(self.status or "").strip().lower()
+        pose_path = str(self.pose_path or "").strip()
+        pose_sha256 = str(self.pose_sha256 or "").strip()
+        error_code = str(self.error_code or "").strip()
+        if not case_id:
+            raise ExternalBaselineContractError("result case_id must be non-empty")
+        if status not in {"success", "failure"}:
             raise ExternalBaselineContractError("result status must be success or failure")
-        if self.status == "success":
-            if self.score is None or not math.isfinite(float(self.score)):
+        if isinstance(self.pose_size_bytes, bool) or not isinstance(
+            self.pose_size_bytes, int
+        ):
+            raise ExternalBaselineContractError("pose_size_bytes must be an integer")
+        if self.pose_size_bytes < 0:
+            raise ExternalBaselineContractError("pose_size_bytes must be non-negative")
+        if not isinstance(self.pose_verified, bool):
+            raise ExternalBaselineContractError("pose_verified must be a boolean")
+        object.__setattr__(self, "case_id", case_id)
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "pose_path", pose_path)
+        object.__setattr__(self, "error_code", error_code)
+        if status == "success":
+            try:
+                score = float(self.score) if self.score is not None else math.nan
+            except (TypeError, ValueError) as exc:
+                raise ExternalBaselineContractError(
+                    "success result requires a finite score"
+                ) from exc
+            if not math.isfinite(score):
                 raise ExternalBaselineContractError("success result requires a finite score")
-            if not self.pose_path:
+            if not pose_path:
                 raise ExternalBaselineContractError("success result requires pose_path")
+            object.__setattr__(self, "score", score)
             object.__setattr__(
                 self,
                 "pose_sha256",
-                _sha256(self.pose_sha256, name="pose_sha256"),
+                _sha256(pose_sha256, name="pose_sha256"),
             )
-            if self.error_code:
+            if error_code:
                 raise ExternalBaselineContractError("success result cannot contain error_code")
         else:
-            if self.score is not None or self.pose_path or self.pose_sha256:
+            if self.score is not None or pose_path or pose_sha256:
                 raise ExternalBaselineContractError(
                     "failure result cannot contain score or pose provenance"
                 )
-            if not self.error_code:
+            if not error_code:
                 raise ExternalBaselineContractError("failure result requires error_code")
+            object.__setattr__(self, "pose_sha256", "")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -303,12 +400,25 @@ class ExternalBaselineReceipt:
     def __post_init__(self) -> None:
         if self.schema_id != EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID:
             raise ExternalBaselineContractError("unsupported baseline receipt schema")
+        rows = tuple(self.rows)
         expected = [case.case_id for case in self.work_order.cases]
-        observed = [row.case_id for row in self.rows]
+        observed = [row.case_id for row in rows]
         if observed != expected:
             raise ExternalBaselineContractError(
                 "receipt must preserve exactly one ordered row per work-order case"
             )
+        for row in rows:
+            if row.status == "success" and not row.pose_verified:
+                raise ExternalBaselineContractError(
+                    "receipt success rows require verified pose provenance"
+                )
+            if row.status == "failure" and (
+                row.pose_verified or row.pose_size_bytes != 0
+            ):
+                raise ExternalBaselineContractError(
+                    "receipt failure rows cannot contain verified pose provenance"
+                )
+        object.__setattr__(self, "rows", rows)
 
     @property
     def success_count(self) -> int:
@@ -327,6 +437,10 @@ class ExternalBaselineReceipt:
             "success_count": self.success_count,
             "failure_count": self.failure_count,
             "complete": len(self.rows) == len(self.work_order.cases),
+            "scientifically_validated": False,
+            "benchmark_validated": False,
+            "customer_execution_enabled": False,
+            "docking_accuracy_claim_allowed": False,
             "claim_safe": False,
             "blockers": [
                 "external_baseline_results_not_product_runtime",
@@ -345,7 +459,26 @@ def read_external_baseline_csv(path: str | Path) -> tuple[dict[str, str], ...]:
         reader = csv.DictReader(handle)
         if reader.fieldnames is None:
             raise ExternalBaselineContractError("external baseline CSV has no header")
-        return tuple({str(key): str(value or "") for key, value in row.items()} for row in reader)
+        if tuple(reader.fieldnames) != _CSV_RESULT_FIELDS:
+            raise ExternalBaselineContractError(
+                "external baseline CSV header must match the result schema exactly"
+            )
+        parsed: list[dict[str, str]] = []
+        for row in reader:
+            if None in row:
+                raise ExternalBaselineContractError(
+                    "external baseline CSV rows must match the result schema exactly"
+                )
+            parsed.append({str(key): str(value or "") for key, value in row.items()})
+        return tuple(parsed)
+
+
+def _row_value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return True
 
 
 def validate_external_baseline_results(
@@ -356,6 +489,12 @@ def validate_external_baseline_results(
 ) -> ExternalBaselineReceipt:
     by_case: dict[str, Mapping[str, Any]] = {}
     for row in rows:
+        unknown_fields = set(row).difference(_RESULT_ROW_FIELDS)
+        if unknown_fields:
+            raise ExternalBaselineContractError(
+                "external baseline result contains unsupported fields: "
+                + ", ".join(sorted(str(value) for value in unknown_fields))
+            )
         case_id = str(row.get("case_id", "") or "").strip()
         if not case_id or case_id in by_case:
             raise ExternalBaselineContractError(
@@ -373,6 +512,14 @@ def validate_external_baseline_results(
         row = by_case[case.case_id]
         status = str(row.get("status", "") or "").strip().lower()
         if status == "failure":
+            contradictory = any(
+                _row_value_present(row.get(field))
+                for field in ("score", "pose_path", "pose_sha256")
+            )
+            if contradictory:
+                raise ExternalBaselineContractError(
+                    f"case {case.case_id} failure result cannot contain score or pose provenance"
+                )
             validated.append(
                 ExternalBaselineResultRow(
                     case_id=case.case_id,
@@ -385,6 +532,10 @@ def validate_external_baseline_results(
             raise ExternalBaselineContractError(
                 f"case {case.case_id} has unsupported result status {status!r}"
             )
+        if _row_value_present(row.get("error_code")):
+            raise ExternalBaselineContractError(
+                f"case {case.case_id} success result cannot contain error_code"
+            )
         try:
             score = float(row.get("score", ""))
         except (TypeError, ValueError) as exc:
@@ -393,14 +544,14 @@ def validate_external_baseline_results(
             ) from exc
         pose_sha = _sha256(str(row.get("pose_sha256", "")), name="pose_sha256")
         pose_path = str(row.get("pose_path", "") or "").strip()
-        _, size = _confined_file(root, pose_path, pose_sha)
+        _, size, actual_pose_sha = _confined_file(root, pose_path, pose_sha)
         validated.append(
             ExternalBaselineResultRow(
                 case_id=case.case_id,
                 status="success",
                 score=score,
                 pose_path=pose_path,
-                pose_sha256=pose_sha,
+                pose_sha256=actual_pose_sha,
                 pose_size_bytes=size,
                 pose_verified=True,
             )

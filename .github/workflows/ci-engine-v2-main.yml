@@ -14,6 +14,7 @@ on:
       - "docs/entrypoints.md"
       - "README.md"
       - "README.ko.md"
+      - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   pull_request:
     paths:
@@ -27,6 +28,7 @@ on:
       - "docs/entrypoints.md"
       - "README.md"
       - "README.ko.md"
+      - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   workflow_dispatch:
 
@@ -84,12 +86,14 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             tests/unit/test_engine_v2_reference_physics.py
+            tests/unit/test_engine_v2_external_baseline.py
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
             docs/entrypoints.md
             README.md
             README.ko.md
+            .github/workflows/ci-engine-v2-external-baseline.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -132,7 +136,8 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_benchmark_contracts.py \
-            tests/unit/test_engine_v2_reference_physics.py > engine-v2-main.log 2>&1
+            tests/unit/test_engine_v2_reference_physics.py \
+            tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
           exit "$status"
@@ -179,7 +184,11 @@ jobs:
           import importlib.metadata as metadata
           import importlib.util
           import betelgeuze_engine_v2 as engine
-          from betelgeuze_engine_v2.benchmark import MetricDefinition, MetricDirection
+          from betelgeuze_engine_v2.benchmark import (
+              ExternalBaselineEngine,
+              MetricDefinition,
+              MetricDirection,
+          )
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.docking import DockingProblemIdentity
           from betelgeuze_engine_v2.molecular import CANONICAL_SYSTEM_JSON_SCHEMA_ID
@@ -195,6 +204,11 @@ jobs:
           assert importlib.util.find_spec("train") is None
           assert capability_snapshot()["implementation_stage"] == "v2_g_bounded_scientific_scaffolds"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
+          assert ExternalBaselineEngine(
+              engine_id="vina",
+              engine_version="1.2.5",
+              executable_sha256="a" * 64,
+          ).fingerprint_sha256
           assert MetricDefinition(
               metric_id="import_metric",
               unit=None,
