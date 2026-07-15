@@ -67,6 +67,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_packaging_guards.py",
         "test_engine_v2_bounded_scaffolds.py",
         "test_engine_v2_post_merge_state.py",
+        "test_engine_v2_docking_semantics.py",
     ):
         assert test_file in source
     assert "pip check" in source
