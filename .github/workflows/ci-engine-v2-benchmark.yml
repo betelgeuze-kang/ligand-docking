@@ -1,0 +1,68 @@
+name: ci-engine-v2-benchmark
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/benchmark/**"
+      - "betelgeuze_engine_v2/contracts/**"
+      - "tests/unit/test_engine_v2_benchmark_contracts.py"
+      - ".github/workflows/ci-engine-v2-benchmark.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/benchmark/**"
+      - "betelgeuze_engine_v2/contracts/**"
+      - "tests/unit/test_engine_v2_benchmark_contracts.py"
+      - ".github/workflows/ci-engine-v2-benchmark.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          clean: true
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_bounded_scaffolds.py
+            tests/unit/test_engine_v2_benchmark_contracts.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==8.3.5 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce package boundary
+        run: |
+          python -m compileall -q betelgeuze_engine_v2
+          python tools/check_engine_v2_architecture.py
+
+      - name: Run inherited and typed benchmark contracts
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_bounded_scaffolds.py \
+            tests/unit/test_engine_v2_benchmark_contracts.py
