@@ -4,11 +4,11 @@ Status: active extraction record
 
 Observed at: 2026-07-15
 
-- Extraction base: `origin/main@298c8223e15e353b8562ae6a0369e031f31cdfdc`
+- Extraction base: `origin/main@13af55c8f9251bc465d144b90d263efa5f5d01ea`
 - Donor PR head: `83e4eb221377b03069b3d8546e7057f475b6be8d`
 - Donor PR base: `fbf1a419b7926333b7e33f43bd751a9566b2b1d6`
 - Common ancestor: `29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
-- Divergence measured at the extraction base: 151 commits on main, 12 commits
+- Divergence measured at the extraction base: 192 commits on main, 12 commits
   on the donor side
 
 This document records source ownership, dependency order, and bounded child-PR
@@ -75,6 +75,8 @@ reviewed alkane parameter/evaluation contracts
 
 Branch: `codex/v2-mmcif-syntax-contract`
 
+Draft PR: #73, restacked directly onto the extraction base above.
+
 The first child starts from only two files added by
 `d07dc5e84eba1df92316b455e2e9077bbdea9ef7`. Their donor blobs remained
 unchanged through the PR head; the bounded current-main adaptations listed
@@ -112,7 +114,7 @@ Explicitly excluded from this child:
 | Surface | Required evidence |
 |---|---|
 | Focused contract | `python -m pytest -q tests/unit/test_engine_v2_mmcif_syntax.py` |
-| Canonical regression | Existing `ci-engine-v2-main` focused suite, including H2 docking semantics |
+| Canonical regression | Existing `ci-engine-v2-main` focused suite, including H2 docking semantics, H5 reference physics, H6 packaging guards, and H7 external-baseline contracts |
 | Architecture and syntax | `compileall`, `tools/check_engine_v2_architecture.py`, workflow YAML parse, and `git diff --check` |
 | Packaging | Build the isolated Engine v2 wheel, install it without the source checkout, import `parse_cif_block`, and parse one bounded data block |
 | Remote | Hosted Python 3.10, 3.11, and 3.12 canonical matrix |
