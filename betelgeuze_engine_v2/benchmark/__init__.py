@@ -1,5 +1,18 @@
-"""Manifest-driven benchmark contracts with complete failure rows."""
+"""Manifest-driven benchmark and offline external-baseline contracts."""
 
+from .external_baseline import (
+    EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID,
+    EXTERNAL_BASELINE_WORK_ORDER_SCHEMA_ID,
+    SUPPORTED_EXTERNAL_ENGINES,
+    ExternalBaselineCase,
+    ExternalBaselineContractError,
+    ExternalBaselineEngine,
+    ExternalBaselineReceipt,
+    ExternalBaselineResultRow,
+    ExternalBaselineWorkOrder,
+    read_external_baseline_csv,
+    validate_external_baseline_results,
+)
 from .manifest import (
     BENCHMARK_MANIFEST_SCHEMA_ID,
     BENCHMARK_REPORT_SCHEMA_ID,
@@ -23,7 +36,10 @@ from .manifest import (
 __all__ = [
     "BENCHMARK_MANIFEST_SCHEMA_ID",
     "BENCHMARK_REPORT_SCHEMA_ID",
+    "EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID",
+    "EXTERNAL_BASELINE_WORK_ORDER_SCHEMA_ID",
     "MAX_BENCHMARK_CASES",
+    "SUPPORTED_EXTERNAL_ENGINES",
     "BenchmarkCase",
     "BenchmarkCaseResult",
     "BenchmarkContractError",
@@ -32,10 +48,18 @@ __all__ = [
     "BenchmarkReport",
     "BenchmarkResultRow",
     "BenchmarkRunContext",
+    "ExternalBaselineCase",
+    "ExternalBaselineContractError",
+    "ExternalBaselineEngine",
+    "ExternalBaselineReceipt",
+    "ExternalBaselineResultRow",
+    "ExternalBaselineWorkOrder",
     "MetricAggregation",
     "MetricDefinition",
     "MetricDirection",
     "benchmark_case_seed",
+    "read_external_baseline_csv",
     "run_benchmark_manifest",
+    "validate_external_baseline_results",
     "verify_signed_benchmark_report",
 ]
