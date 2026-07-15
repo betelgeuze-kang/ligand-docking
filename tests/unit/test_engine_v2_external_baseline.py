@@ -849,6 +849,13 @@ def test_ci_owns_the_contract_without_external_engine_execution() -> None:
 
     test_path = "tests/unit/test_engine_v2_external_baseline.py"
     assert main.count(test_path) >= 2
+    assert "tests/unit/test_engine_v2_reference_physics.py" in main
+    for build_requirement in (
+        "build==1.2.2.post1",
+        "setuptools==75.8.2",
+        "wheel==0.45.1",
+    ):
+        assert build_requirement in main
     assert str(dedicated_path) in main
     assert "from betelgeuze_engine_v2.benchmark import (" in main
     assert "ExternalBaselineEngine," in main
