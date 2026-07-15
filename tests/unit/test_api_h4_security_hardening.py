@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import hashlib
 import json
+import multiprocessing
 import os
 from pathlib import Path
 import sqlite3
+import stat
 from typing import Any
 
 import pytest
@@ -27,6 +31,10 @@ from api.job_store import (
     SQLiteJobStore,
     canonical_request_sha256,
 )
+from api.job_artifacts import (
+    create_and_activate_attempt_results_dir,
+    reset_attempt_results_dir,
+)
 from api.request_identity import ProductRequestIdentity
 from api.result_manifest import write_result_manifest
 from api.security import (
@@ -42,6 +50,38 @@ from api.security_ledger import (
 from api.tasks import run_simulation_async
 from api.worker import read_status_file, write_job_result_manifest
 from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
+from betelgeuze_product.tier_beta_vertical_slice import (
+    TIER_BETA_DIRECT_RUNNER_PROFILE_ID,
+    run_tier_beta_vertical_slice_job,
+)
+
+
+@dataclass
+class _TierBetaResultStub:
+    ok: bool = True
+    claim_metadata: dict[str, Any] = field(default_factory=dict)
+    result_manifest: dict[str, Any] = field(
+        default_factory=lambda: {"signature": "test-signature"}
+    )
+    blocked_reason: str = ""
+
+
+class _TierBetaScreeningStub:
+    def __init__(self, **_: Any) -> None:
+        pass
+
+    def screen(self, **_: Any) -> _TierBetaResultStub:
+        return _TierBetaResultStub()
+
+
+def _tier_beta_request() -> dict[str, Any]:
+    return {
+        "runner_profile_id": TIER_BETA_DIRECT_RUNNER_PROFILE_ID,
+        "runner_profile_params": {
+            "protein_input": "TEST PROTEIN",
+            "ligand_input": "CCO",
+        },
+    }
 
 
 def _identity(tenant_id: str = "tenant-a") -> ProductRequestIdentity:
@@ -839,6 +879,162 @@ def test_simulation_exception_status_replace_preserves_link_victim(
     assert not status_path.is_symlink()
     assert status_path.stat().st_nlink == 1
     assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "failed"
+
+
+@pytest.mark.parametrize("execution_mode", ["standalone", "api"])
+@pytest.mark.parametrize("artifact_name", ["status.json", "tier_beta_result.json"])
+@pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
+def test_tier_beta_artifacts_replace_links_without_touching_victims(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    execution_mode: str,
+    artifact_name: str,
+    link_kind: str,
+) -> None:
+    import betelgeuze_engine.biodiscovery as biodiscovery
+
+    monkeypatch.setattr(biodiscovery, "TierBetaScreening", _TierBetaScreeningStub)
+    job_id = f"job-tier-{execution_mode}-{artifact_name}-{link_kind}"
+    storage_root = tmp_path / "results"
+    binding_token = None
+    if execution_mode == "api":
+        attempt_dir, binding_token = create_and_activate_attempt_results_dir(
+            storage_root=storage_root,
+            job_id=job_id,
+            worker_id="tier-beta-test-worker",
+            attempt_token="tier-beta-test-attempt-token",
+            attempt_count=1,
+        )
+        monkeypatch.setattr(settings, "results_storage_path", str(storage_root))
+    else:
+        attempt_dir = tmp_path / "standalone"
+        attempt_dir.mkdir()
+
+    victim = tmp_path / f"victim-{execution_mode}-{artifact_name}-{link_kind}"
+    original = b'{"owner":"VICTIM"}\n'
+    victim.write_bytes(original)
+    artifact_path = attempt_dir / artifact_name
+    try:
+        if link_kind == "symlink":
+            artifact_path.symlink_to(victim)
+        else:
+            os.link(victim, artifact_path)
+    except OSError:
+        if binding_token is not None:
+            reset_attempt_results_dir(binding_token)
+        pytest.skip(f"{link_kind}s unavailable")
+
+    try:
+        if execution_mode == "api":
+            asyncio.run(run_simulation_async(job_id, _tier_beta_request()))
+        else:
+            run_tier_beta_vertical_slice_job(
+                job_id=job_id,
+                request_data=_tier_beta_request(),
+                results_dir=attempt_dir,
+            )
+    finally:
+        if binding_token is not None:
+            reset_attempt_results_dir(binding_token)
+
+    result_path = attempt_dir / "tier_beta_result.json"
+    status_path = attempt_dir / "status.json"
+    status_payload = json.loads(status_path.read_text(encoding="utf-8"))
+    assert victim.read_bytes() == original
+    assert not artifact_path.is_symlink()
+    assert not os.path.samefile(victim, artifact_path)
+    assert artifact_path.stat().st_nlink == 1
+    assert status_payload["status"] == "completed"
+    assert status_payload["result_file"] == str(result_path)
+    assert status_payload["result_file_sha256"] == hashlib.sha256(
+        result_path.read_bytes()
+    ).hexdigest()
+
+
+@pytest.mark.parametrize("execution_mode", ["standalone", "api"])
+@pytest.mark.parametrize("artifact_name", ["status.json", "tier_beta_result.json"])
+def test_tier_beta_artifacts_replace_fifos_without_blocking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    execution_mode: str,
+    artifact_name: str,
+) -> None:
+    import betelgeuze_engine.biodiscovery as biodiscovery
+
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("FIFOs unavailable")
+    monkeypatch.setattr(biodiscovery, "TierBetaScreening", _TierBetaScreeningStub)
+    job_id = f"job-tier-fifo-{execution_mode}-{artifact_name}"
+    storage_root = tmp_path / "results"
+    binding_token = None
+    if execution_mode == "api":
+        attempt_dir, binding_token = create_and_activate_attempt_results_dir(
+            storage_root=storage_root,
+            job_id=job_id,
+            worker_id="tier-beta-fifo-worker",
+            attempt_token="tier-beta-fifo-attempt-token",
+            attempt_count=1,
+        )
+        monkeypatch.setattr(settings, "results_storage_path", str(storage_root))
+    else:
+        attempt_dir = tmp_path / "standalone"
+        attempt_dir.mkdir()
+
+    artifact_path = attempt_dir / artifact_name
+    try:
+        os.mkfifo(artifact_path, 0o600)
+    except OSError:
+        if binding_token is not None:
+            reset_attempt_results_dir(binding_token)
+        pytest.skip("FIFOs unavailable")
+
+    context = multiprocessing.get_context("fork")
+    outcome = context.Queue()
+
+    def _invoke() -> None:
+        try:
+            if execution_mode == "api":
+                asyncio.run(run_simulation_async(job_id, _tier_beta_request()))
+            else:
+                run_tier_beta_vertical_slice_job(
+                    job_id=job_id,
+                    request_data=_tier_beta_request(),
+                    results_dir=attempt_dir,
+                )
+            outcome.put({"ok": True})
+        except BaseException as exc:  # pragma: no cover - asserted in parent
+            outcome.put({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
+
+    process = context.Process(target=_invoke)
+    try:
+        process.start()
+        process.join(3.0)
+        if process.is_alive():
+            process.terminate()
+            process.join(2.0)
+            pytest.fail("tier-beta artifact publication blocked on a FIFO")
+        assert process.exitcode == 0
+        assert outcome.get(timeout=1.0) == {"ok": True}
+    finally:
+        if process.is_alive():
+            process.terminate()
+            process.join(2.0)
+        outcome.close()
+        outcome.join_thread()
+        if binding_token is not None:
+            reset_attempt_results_dir(binding_token)
+
+    assert artifact_path.is_file()
+    assert not stat.S_ISFIFO(artifact_path.stat().st_mode)
+    assert artifact_path.stat().st_nlink == 1
+    status_payload = json.loads(
+        (attempt_dir / "status.json").read_text(encoding="utf-8")
+    )
+    result_path = attempt_dir / "tier_beta_result.json"
+    assert status_payload["status"] == "completed"
+    assert status_payload["result_file_sha256"] == hashlib.sha256(
+        result_path.read_bytes()
+    ).hexdigest()
 
 
 @pytest.mark.parametrize("missing_side", ["status", "record"])

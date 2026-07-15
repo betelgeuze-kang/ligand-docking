@@ -1832,7 +1832,14 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
     late_write_done = threading.Event()
     stale_dir: list[Path] = []
 
-    def _blocking_tier_runner(*, job_id: str, request_data: dict, results_dir: str) -> None:
+    def _blocking_tier_runner(
+        *,
+        job_id: str,
+        request_data: dict,
+        results_dir: str,
+        artifact_writer=None,
+        artifact_hasher=None,
+    ) -> None:
         attempt_dir = Path(results_dir)
         stale_dir.append(attempt_dir)
         started.set()
