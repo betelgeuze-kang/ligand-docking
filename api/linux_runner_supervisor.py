@@ -4,6 +4,7 @@ import ctypes
 import errno
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -19,6 +20,7 @@ _PR_GET_CHILD_SUBREAPER = 37
 _PROTOCOL_LIMIT_BYTES = 1024 * 1024
 _POLL_INTERVAL_SECONDS = 0.02
 _DEFAULT_CLEANUP_SECONDS = 3.0
+_SUPERVISOR_KIND = "linux_pid_namespace_v1"
 _cancel_requested = False
 
 
@@ -98,6 +100,28 @@ def require_linux_runner_supervisor_support() -> None:
     # hidden by procfs policy are ignored, while malformed/read errors for
     # visible entries still fail closed.
     _process_table()
+
+
+def linux_pid_namespace_launcher() -> str:
+    """Resolve the trusted launcher used to create a private PID namespace."""
+
+    require_linux_runner_supervisor_support()
+    launcher = shutil.which("unshare", path=os.defpath)
+    if launcher is None:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runners require the util-linux unshare launcher"
+        )
+    return launcher
+
+
+def _require_namespace_init() -> None:
+    """Fail before runner spawn unless this supervisor is namespace PID 1."""
+
+    identity = _read_proc_stat(os.getpid())
+    if os.getpid() != 1 or identity.pid != 1 or identity.ppid != 0:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runner supervisor must be PID 1 in a private PID namespace"
+        )
 
 
 def _become_child_subreaper() -> None:
@@ -355,7 +379,7 @@ def _failure_payload(message: str, *, cancelled: bool = False) -> dict[str, Any]
         "stdout": "",
         "stderr": message,
         "containment_error": message,
-        "supervisor": "linux_child_subreaper_v1",
+        "supervisor": _SUPERVISOR_KIND,
     }
 
 
@@ -365,6 +389,7 @@ def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
     signal.signal(signal.SIGTERM, _handle_cancel)
     signal.signal(signal.SIGINT, _handle_cancel)
     require_linux_runner_supervisor_support()
+    _require_namespace_init()
     _become_child_subreaper()
     config = _read_config(config_fd)
     if _cancel_requested:
@@ -432,7 +457,7 @@ def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
             "stdout": stdout,
             "stderr": stderr,
             "containment_error": containment_error,
-            "supervisor": "linux_child_subreaper_v1",
+            "supervisor": _SUPERVISOR_KIND,
         },
         bool(containment_error),
     )

@@ -20,7 +20,10 @@ from api.job_artifacts import (
     read_current_attempt_file_bytes,
     resolve_job_results_dir,
 )
-from api.linux_runner_supervisor import require_linux_runner_supervisor_support
+from api.linux_runner_supervisor import (
+    linux_pid_namespace_launcher,
+    require_linux_runner_supervisor_support,
+)
 from api.request_privacy import sanitize_request_for_ledger
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
@@ -262,6 +265,7 @@ def _run_profile_command(
     cancellation_event: threading.Event | None = None,
 ) -> dict[str, Any]:
     require_linux_runner_supervisor_support()
+    namespace_launcher = linux_pid_namespace_launcher()
     bounded_timeout = max(1, int(timeout_seconds))
     config = json.dumps(
         {
@@ -277,6 +281,16 @@ def _run_profile_command(
         try:
             supervisor = subprocess.Popen(
                 [
+                    namespace_launcher,
+                    "--user",
+                    "--map-root-user",
+                    "--mount",
+                    "--pid",
+                    "--fork",
+                    "--kill-child=SIGKILL",
+                    "--mount-proc",
+                    "--propagation",
+                    "private",
                     sys.executable,
                     str(supervisor_script),
                     "--config-fd",
@@ -312,6 +326,7 @@ def _run_profile_command(
     cancellation_requested = False
     outer_timeout = False
     supervisor_stop_requested = False
+    forced_namespace_teardown = False
     shutdown_deadline: float | None = None
     hard_deadline = time.monotonic() + bounded_timeout + 5.0
     while True:
@@ -325,7 +340,8 @@ def _run_profile_command(
             supervisor_stop_requested = True
             shutdown_deadline = now + 5.0
             try:
-                supervisor.send_signal(signal.SIGTERM)
+                supervisor.kill()
+                forced_namespace_teardown = True
             except ProcessLookupError:
                 pass
         if not supervisor_stop_requested and now >= hard_deadline:
@@ -333,7 +349,8 @@ def _run_profile_command(
             supervisor_stop_requested = True
             shutdown_deadline = now + 5.0
             try:
-                supervisor.send_signal(signal.SIGTERM)
+                supervisor.kill()
+                forced_namespace_teardown = True
             except ProcessLookupError:
                 pass
         if shutdown_deadline is not None and now >= shutdown_deadline:
@@ -351,7 +368,7 @@ def _run_profile_command(
                     item for item in (supervisor_stderr or "", reason) if item
                 ),
                 "containment_error": reason,
-                "supervisor": "linux_child_subreaper_v1",
+                "supervisor": "linux_pid_namespace_v1",
             }
         try:
             supervisor_stdout, supervisor_stderr = supervisor.communicate(timeout=0.1)
@@ -361,6 +378,16 @@ def _run_profile_command(
     try:
         payload = json.loads(supervisor_stdout)
     except (TypeError, json.JSONDecodeError):
+        if forced_namespace_teardown and supervisor.returncode == -signal.SIGKILL:
+            return {
+                "returncode": -signal.SIGKILL,
+                "timed_out": outer_timeout,
+                "cancelled": cancellation_requested,
+                "stdout": "",
+                "stderr": supervisor_stderr or "",
+                "containment_error": "",
+                "supervisor": "linux_pid_namespace_v1",
+            }
         reason = "validated runner supervisor returned an invalid containment record"
         return {
             "returncode": 125,
@@ -371,7 +398,7 @@ def _run_profile_command(
                 item for item in (supervisor_stderr or "", reason) if item
             ),
             "containment_error": reason,
-            "supervisor": "linux_child_subreaper_v1",
+            "supervisor": "linux_pid_namespace_v1",
         }
     if not isinstance(payload, dict):
         raise RuntimeError("validated runner supervisor record must be an object")
@@ -387,7 +414,7 @@ def _run_profile_command(
     ]
     payload["stderr"] = "\n".join(item for item in supervisor_errors if item)
     payload.setdefault("containment_error", "")
-    payload.setdefault("supervisor", "linux_child_subreaper_v1")
+    payload.setdefault("supervisor", "linux_pid_namespace_v1")
     if supervisor.returncode != 0 and not payload["containment_error"]:
         payload["returncode"] = 125
         payload["containment_error"] = (
@@ -478,12 +505,24 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     )
     try:
         completed = await asyncio.shield(command_task)
-    except asyncio.CancelledError:
+    except asyncio.CancelledError as cancellation:
         cancellation_event.set()
-        # Do not return control to the lease manager until the child process
-        # group has been killed and its leader reaped by communicate().
-        await command_task
-        raise
+        # Do not return control to the lease manager until the namespace has
+        # been torn down. Repeated Task.cancel() calls must not cancel the
+        # to_thread Future while its OS process is still being contained.
+        while not command_task.done():
+            try:
+                await asyncio.shield(command_task)
+            except asyncio.CancelledError:
+                continue
+            except BaseException:
+                break
+        if command_task.done() and not command_task.cancelled():
+            try:
+                command_task.result()
+            except BaseException:
+                pass
+        raise cancellation
     duration = max(time.time() - t0, 0.0)
     ended = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 

@@ -154,13 +154,20 @@ def _write_detached_double_fork_runner(path: Path) -> None:
     )
 
 
-def _pid_is_running(pid: int) -> bool:
-    stat_path = Path(f"/proc/{pid}/stat")
-    try:
-        fields = stat_path.read_text(encoding="utf-8").split()
-    except OSError:
-        return False
-    return len(fields) > 2 and fields[2] not in {"Z", "X"}
+def _running_pids_with_command_token(token: str) -> list[int]:
+    matches: list[int] = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            command = (entry / "cmdline").read_bytes().replace(b"\0", b" ").decode(
+                "utf-8", errors="replace"
+            )
+        except OSError:
+            continue
+        if token in command:
+            matches.append(int(entry.name))
+    return matches
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
@@ -199,16 +206,16 @@ def test_validated_runner_cancellation_contains_detached_double_fork(
         if time.monotonic() >= deadline:
             raise AssertionError("detached double-fork runner did not start")
         time.sleep(0.01)
-    pids = json.loads(pid_file.read_text(encoding="utf-8"))
+    json.loads(pid_file.read_text(encoding="utf-8"))
     cancellation_event.set()
     thread.join(timeout=3)
 
     assert not thread.is_alive()
     assert outcome["cancelled"] is True
     deadline = time.monotonic() + 2
-    while any(_pid_is_running(int(pid)) for pid in pids.values()) and time.monotonic() < deadline:
+    while _running_pids_with_command_token(str(late_marker)) and time.monotonic() < deadline:
         time.sleep(0.02)
-    assert not any(_pid_is_running(int(pid)) for pid in pids.values())
+    assert not _running_pids_with_command_token(str(late_marker))
     time.sleep(1.1)
     assert not late_marker.exists()
 
@@ -245,9 +252,47 @@ def test_validated_runner_timeout_contains_detached_double_fork(
     assert outcome["returncode"] != 0
     assert outcome["containment_error"] == ""
     assert elapsed < 5
-    pids = json.loads(pid_file.read_text(encoding="utf-8"))
-    assert not any(_pid_is_running(int(pid)) for pid in pids.values())
+    json.loads(pid_file.read_text(encoding="utf-8"))
+    assert not _running_pids_with_command_token(str(late_marker))
     time.sleep(0.6)
+    assert not late_marker.exists()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_validated_runner_namespace_init_cannot_be_killed_by_runner(
+    tmp_path: Path,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    started_file = tmp_path / "namespace-kill-started.txt"
+    late_marker = tmp_path / "namespace-kill-late.txt"
+    probe = (
+        "import os,signal,sys,time; from pathlib import Path; "
+        "Path(sys.argv[1]).write_text('STARTED', encoding='utf-8'); "
+        "os.kill(os.getppid(), signal.SIGSTOP); "
+        "os.kill(os.getppid(), signal.SIGKILL); "
+        "time.sleep(1.5); "
+        "Path(sys.argv[2]).write_text('SURVIVED', encoding='utf-8')"
+    )
+
+    outcome = validated_runner._run_profile_command(
+        [
+            sys.executable,
+            "-c",
+            probe,
+            str(started_file),
+            str(late_marker),
+        ],
+        timeout_seconds=1,
+    )
+
+    assert started_file.read_text(encoding="utf-8") == "STARTED"
+    assert outcome["timed_out"] is True
+    assert outcome["returncode"] != 0
+    assert outcome["containment_error"] == ""
+    assert outcome["supervisor"] == "linux_pid_namespace_v1"
+    assert not _running_pids_with_command_token(str(late_marker))
+    time.sleep(0.7)
     assert not late_marker.exists()
 
 
@@ -715,7 +760,7 @@ def test_validated_runner_timeout_records_fail_closed_execution(
     assert execution_record["process_group_killed_on_timeout"] is True
     assert execution_record["descendant_tree_contained"] is True
     assert execution_record["descendant_containment_error"] == ""
-    assert execution_record["runner_supervisor"] == "linux_child_subreaper_v1"
+    assert execution_record["runner_supervisor"] == "linux_pid_namespace_v1"
     assert execution_record["returncode"] != 0
 
 
@@ -768,7 +813,7 @@ def test_validated_runner_cancellation_kills_process_group_and_waits(
         str(tmp_path / "results"),
     )
 
-    async def _scenario() -> tuple[dict[str, int], float]:
+    async def _scenario() -> float:
         task = asyncio.create_task(
             validated_runner.execute_validated_runner_profile(
                 "job_cancel_group",
@@ -780,23 +825,111 @@ def test_validated_runner_cancellation_kills_process_group_and_waits(
             if asyncio.get_running_loop().time() >= deadline:
                 raise AssertionError("validated runner did not start")
             await asyncio.sleep(0.01)
-        pids = json.loads(pid_file.read_text(encoding="utf-8"))
+        json.loads(pid_file.read_text(encoding="utf-8"))
         started = time.monotonic()
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, timeout=2)
-        return pids, time.monotonic() - started
+        return time.monotonic() - started
 
-    pids, cancellation_duration = asyncio.run(_scenario())
+    cancellation_duration = asyncio.run(_scenario())
     assert cancellation_duration < 2
     deadline = time.monotonic() + 2
-    while any(_pid_is_running(int(pid)) for pid in pids.values()) and time.monotonic() < deadline:
+    while _running_pids_with_command_token(str(late_marker)) and time.monotonic() < deadline:
         time.sleep(0.02)
-    assert not _pid_is_running(int(pids["parent"]))
-    assert not _pid_is_running(int(pids["child"]))
+    assert not _running_pids_with_command_token(str(late_marker))
     time.sleep(0.2)
     assert not late_marker.exists()
     assert not (tmp_path / "results" / "job_cancel_group" / "runner_result.json").exists()
+
+
+def test_repeated_cancellation_waits_for_validated_runner_cleanup(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    runner = tmp_path / "repeated_cancel_runner.py"
+    _write_fake_runner(runner)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    (profiles_dir / "repeated_cancel.json").write_text(
+        json.dumps(
+            _profile_payload("repeated_cancel", runner, evidence), sort_keys=True
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    command_started = threading.Event()
+    cleanup_started = threading.Event()
+    cleanup_finished = threading.Event()
+
+    def _controlled_command(
+        _command: list[str],
+        *,
+        timeout_seconds: int,
+        cancellation_event: threading.Event | None = None,
+    ) -> dict[str, object]:
+        assert timeout_seconds > 0
+        assert cancellation_event is not None
+        command_started.set()
+        assert cancellation_event.wait(timeout=2)
+        cleanup_started.set()
+        time.sleep(0.3)
+        cleanup_finished.set()
+        return {
+            "returncode": 125,
+            "timed_out": False,
+            "cancelled": True,
+            "stdout": "",
+            "stderr": "cancelled",
+            "containment_error": "",
+            "supervisor": "linux_pid_namespace_v1",
+        }
+
+    monkeypatch.setattr(validated_runner, "_run_profile_command", _controlled_command)
+    monkeypatch.setattr(validated_runner, "ALLOWED_RUNNER_SCRIPTS", {str(runner.resolve())})
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "results_storage_path",
+        str(tmp_path / "results"),
+    )
+
+    async def _scenario() -> float:
+        task = asyncio.create_task(
+            validated_runner.execute_validated_runner_profile(
+                "job_repeated_cancel",
+                {
+                    "target_name": "Chignolin",
+                    "runner_profile_id": "repeated_cancel",
+                },
+            )
+        )
+        deadline = asyncio.get_running_loop().time() + 2
+        while not command_started.is_set():
+            if asyncio.get_running_loop().time() >= deadline:
+                raise AssertionError("controlled runner did not start")
+            await asyncio.sleep(0.01)
+        task.cancel()
+        while not cleanup_started.is_set():
+            await asyncio.sleep(0.005)
+        started = time.monotonic()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, timeout=2)
+        return time.monotonic() - started
+
+    cancellation_duration = asyncio.run(_scenario())
+    assert cleanup_finished.is_set()
+    assert cancellation_duration >= 0.2
 
 
 def test_api_task_remains_fail_closed_when_validated_runner_disabled(
@@ -1071,7 +1204,7 @@ def test_worker_lease_loss_kills_validated_runner_process_group(
         {"job_id": "job_lease_loss", "status": "submitted"},
     )
 
-    async def _scenario() -> tuple[dict[str, int], dict]:
+    async def _scenario() -> dict:
         task = asyncio.create_task(
             worker.run_job_once(
                 store,
@@ -1089,7 +1222,7 @@ def test_worker_lease_loss_kills_validated_runner_process_group(
             if asyncio.get_running_loop().time() >= deadline:
                 raise AssertionError("validated runner did not start")
             await asyncio.sleep(0.01)
-        pids = json.loads(pid_file.read_text(encoding="utf-8"))
+        json.loads(pid_file.read_text(encoding="utf-8"))
         with sqlite3.connect(store.path) as conn:
             conn.execute(
                 "UPDATE simulation_jobs SET lease_expires_at_utc='2000-01-01T00:00:00+00:00' "
@@ -1100,14 +1233,14 @@ def test_worker_lease_loss_kills_validated_runner_process_group(
         assert replacement["attempt_token"] != first["attempt_token"]
         with pytest.raises(worker.JobLeaseLostError):
             await asyncio.wait_for(task, timeout=2)
-        return pids, replacement
+        return replacement
 
-    pids, replacement = asyncio.run(_scenario())
+    replacement = asyncio.run(_scenario())
     assert store.get_job("job_lease_loss")["attempt_token"] == replacement["attempt_token"]
     deadline = time.monotonic() + 2
-    while any(_pid_is_running(int(pid)) for pid in pids.values()) and time.monotonic() < deadline:
+    while _running_pids_with_command_token(str(late_marker)) and time.monotonic() < deadline:
         time.sleep(0.02)
-    assert not any(_pid_is_running(int(pid)) for pid in pids.values())
+    assert not _running_pids_with_command_token(str(late_marker))
     time.sleep(0.2)
     assert not late_marker.exists()
     assert not list((tmp_path / "results" / "job_lease_loss").rglob("runner_result.json"))
