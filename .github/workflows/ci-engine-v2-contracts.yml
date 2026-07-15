@@ -40,7 +40,7 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
     steps:
       - name: Check out contract surface only
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             betelgeuze_engine_v2

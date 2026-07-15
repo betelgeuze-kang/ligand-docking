@@ -37,7 +37,7 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
     steps:
       - name: Check out Engine v2 runtime surface
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             betelgeuze_engine_v2

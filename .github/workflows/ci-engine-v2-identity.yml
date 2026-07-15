@@ -39,7 +39,7 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: |
             betelgeuze_engine_v2
