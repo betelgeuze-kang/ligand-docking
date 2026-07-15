@@ -76,6 +76,18 @@ def _write_fake_runner(path: Path) -> None:
     )
 
 
+def _write_self_cancel_runner(path: Path) -> None:
+    _write_fake_runner(path)
+    payload = path.read_text(encoding="utf-8")
+    path.write_text(
+        payload
+        + "import os, signal\n"
+        + "os.kill(os.getppid(), signal.SIGTERM)\n"
+        + "os._exit(0)\n",
+        encoding="utf-8",
+    )
+
+
 def _write_slow_runner(path: Path) -> None:
     path.write_text(
         "\n".join(
@@ -294,6 +306,76 @@ def test_validated_runner_namespace_init_cannot_be_killed_by_runner(
     assert not _running_pids_with_command_token(str(late_marker))
     time.sleep(0.7)
     assert not late_marker.exists()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_validated_runner_cannot_ptrace_or_open_supervisor_protocol() -> None:
+    import api.validated_runner as validated_runner
+
+    probe = "\n".join(
+        [
+            "import ctypes, json, os",
+            "from pathlib import Path",
+            "status = {}",
+            "for line in Path('/proc/self/status').read_text(encoding='utf-8').splitlines():",
+            "    key, separator, value = line.partition(':')",
+            "    if separator:",
+            "        status[key] = value.strip()",
+            "libc = ctypes.CDLL(None, use_errno=True)",
+            "ptrace_rc = libc.ptrace(0x4206, 1, None, None)",
+            "ptrace_errno = ctypes.get_errno()",
+            "protocol_fd_opened = False",
+            "try:",
+            "    protocol_fd = os.open('/proc/1/fd/1', os.O_WRONLY | os.O_NONBLOCK)",
+            "except OSError:",
+            "    pass",
+            "else:",
+            "    protocol_fd_opened = True",
+            "    os.close(protocol_fd)",
+            "print(json.dumps({",
+            "    'cap_eff': status.get('CapEff', ''),",
+            "    'no_new_privs': status.get('NoNewPrivs', ''),",
+            "    'ptrace_rc': ptrace_rc,",
+            "    'ptrace_errno': ptrace_errno,",
+            "    'protocol_fd_opened': protocol_fd_opened,",
+            "}, sort_keys=True))",
+        ]
+    )
+
+    outcome = validated_runner._run_profile_command(
+        [sys.executable, "-c", probe],
+        timeout_seconds=5,
+    )
+
+    assert outcome["returncode"] == 0
+    payload = json.loads(outcome["stdout"])
+    assert int(payload["cap_eff"], 16) == 0
+    assert payload["no_new_privs"] == "1"
+    assert payload["ptrace_rc"] == -1
+    assert payload["ptrace_errno"] in {1, 13}
+    assert payload["protocol_fd_opened"] is False
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_validated_runner_self_sigterm_is_always_failure() -> None:
+    import api.validated_runner as validated_runner
+
+    probe = (
+        "import os,signal; "
+        "os.kill(os.getppid(), signal.SIGTERM); "
+        "os._exit(0)"
+    )
+    outcomes = [
+        validated_runner._run_profile_command(
+            [sys.executable, "-c", probe],
+            timeout_seconds=5,
+        )
+        for _ in range(5)
+    ]
+
+    assert all(outcome["cancelled"] is True for outcome in outcomes)
+    assert all(outcome["returncode"] != 0 for outcome in outcomes)
+    assert all(outcome["containment_error"] == "" for outcome in outcomes)
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
@@ -634,6 +716,66 @@ def test_api_task_executes_operator_approved_runner_profile(
     assert result["target_name"] == "Chignolin"
     assert execution_record.exists()
     assert "shell" not in json.loads(execution_record.read_text(encoding="utf-8"))
+
+
+def test_api_rejects_runner_that_self_cancels_after_writing_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+    from api.tasks import run_simulation_async
+
+    runner = tmp_path / "self_cancel_runner.py"
+    _write_self_cancel_runner(runner)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    (profiles_dir / "self_cancel.json").write_text(
+        json.dumps(
+            _profile_payload("self_cancel", runner, evidence), sort_keys=True
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    results_root = tmp_path / "results"
+    monkeypatch.setattr(validated_runner, "ALLOWED_RUNNER_SCRIPTS", {str(runner.resolve())})
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_timeout_seconds",
+        5,
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "results_storage_path",
+        str(results_root),
+    )
+
+    with pytest.raises(RuntimeError, match="validated runner failed"):
+        asyncio.run(
+            run_simulation_async(
+                "job_self_cancel",
+                {
+                    "target_name": "Chignolin",
+                    "runner_profile_id": "self_cancel",
+                },
+            )
+        )
+
+    execution = json.loads(
+        (results_root / "job_self_cancel" / "runner_execution.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert execution["ok"] is False
+    assert execution["cancelled"] is True
+    assert execution["returncode"] != 0
 
 
 @pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])

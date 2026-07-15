@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import signal
 import subprocess
 import sys
@@ -22,7 +23,10 @@ from api.job_artifacts import (
 )
 from api.linux_runner_supervisor import (
     linux_pid_namespace_launcher,
+    open_linux_pid_namespace_init,
     require_linux_runner_supervisor_support,
+    signal_linux_pidfd,
+    wait_linux_pidfd_exit,
 )
 from api.request_privacy import sanitize_request_for_ledger
 from betelgeuze_ai_md.contracts import EvidenceBundle
@@ -267,15 +271,18 @@ def _run_profile_command(
     require_linux_runner_supervisor_support()
     namespace_launcher = linux_pid_namespace_launcher()
     bounded_timeout = max(1, int(timeout_seconds))
+    protocol_nonce = secrets.token_hex(32)
     config = json.dumps(
         {
             "command": command,
             "cwd": str(_repo_root()),
             "timeout_seconds": bounded_timeout,
+            "protocol_nonce": protocol_nonce,
         },
         separators=(",", ":"),
     ).encode("utf-8")
     config_read_fd, config_write_fd = os.pipe()
+    start_read_fd, start_write_fd = os.pipe()
     supervisor_script = Path(__file__).with_name("linux_runner_supervisor.py")
     try:
         try:
@@ -283,7 +290,7 @@ def _run_profile_command(
                 [
                     namespace_launcher,
                     "--user",
-                    "--map-root-user",
+                    "--map-current-user",
                     "--mount",
                     "--pid",
                     "--fork",
@@ -295,6 +302,8 @@ def _run_profile_command(
                     str(supervisor_script),
                     "--config-fd",
                     str(config_read_fd),
+                    "--start-fd",
+                    str(start_read_fd),
                 ],
                 cwd=str(_repo_root()),
                 text=True,
@@ -304,12 +313,14 @@ def _run_profile_command(
                 shell=False,
                 start_new_session=True,
                 env=_safe_runner_environment(),
-                pass_fds=(config_read_fd,),
+                pass_fds=(config_read_fd, start_read_fd),
             )
         finally:
             os.close(config_read_fd)
+            os.close(start_read_fd)
     except BaseException:
         os.close(config_write_fd)
+        os.close(start_write_fd)
         raise
     try:
         view = memoryview(config)
@@ -317,48 +328,202 @@ def _run_profile_command(
             written = os.write(config_write_fd, view)
             view = view[written:]
     except (BrokenPipeError, OSError) as exc:
+        os.close(start_write_fd)
         supervisor.kill()
         supervisor.communicate()
         raise RuntimeError("validated runner supervisor rejected its configuration") from exc
     finally:
         os.close(config_write_fd)
 
-    cancellation_requested = False
-    outer_timeout = False
-    supervisor_stop_requested = False
-    forced_namespace_teardown = False
-    shutdown_deadline: float | None = None
-    hard_deadline = time.monotonic() + bounded_timeout + 5.0
-    while True:
-        now = time.monotonic()
-        if (
-            not supervisor_stop_requested
-            and cancellation_event is not None
-            and cancellation_event.is_set()
-        ):
-            cancellation_requested = True
-            supervisor_stop_requested = True
-            shutdown_deadline = now + 5.0
-            try:
-                supervisor.kill()
-                forced_namespace_teardown = True
-            except ProcessLookupError:
-                pass
-        if not supervisor_stop_requested and now >= hard_deadline:
-            outer_timeout = True
-            supervisor_stop_requested = True
-            shutdown_deadline = now + 5.0
-            try:
-                supervisor.kill()
-                forced_namespace_teardown = True
-            except ProcessLookupError:
-                pass
-        if shutdown_deadline is not None and now >= shutdown_deadline:
+    try:
+        namespace_init_pidfd = open_linux_pid_namespace_init(supervisor.pid)
+    except BaseException as exc:
+        os.close(start_write_fd)
+        try:
             supervisor.kill()
+        except ProcessLookupError:
+            pass
+        supervisor_stdout, supervisor_stderr = supervisor.communicate()
+        reason = f"validated runner namespace initialization failed: {exc}"
+        return {
+            "returncode": 125,
+            "timed_out": False,
+            "cancelled": bool(cancellation_event and cancellation_event.is_set()),
+            "stdout": "",
+            "stderr": "\n".join(
+                item for item in (supervisor_stderr or "", reason) if item
+            ),
+            "containment_error": reason,
+            "supervisor": "linux_pid_namespace_v1",
+        }
+
+    try:
+        if cancellation_event is not None and cancellation_event.is_set():
+            os.close(start_write_fd)
+            signal_linux_pidfd(namespace_init_pidfd, signal.SIGKILL)
+            try:
+                supervisor.kill()
+            except ProcessLookupError:
+                pass
             supervisor_stdout, supervisor_stderr = supervisor.communicate()
-            reason = (
-                "validated runner supervisor did not complete bounded descendant cleanup"
+            namespace_exited = wait_linux_pidfd_exit(
+                namespace_init_pidfd,
+                timeout_seconds=2.0,
             )
+            reason = "" if namespace_exited else "namespace init survived cancellation"
+            return {
+                "returncode": -signal.SIGKILL if namespace_exited else 125,
+                "timed_out": False,
+                "cancelled": True,
+                "stdout": "",
+                "stderr": "\n".join(
+                    item for item in (supervisor_stderr or "", reason) if item
+                ),
+                "containment_error": reason,
+                "supervisor": "linux_pid_namespace_v1",
+            }
+        try:
+            written = os.write(start_write_fd, b"R")
+            if written != 1:
+                raise OSError("short validated runner start authorization")
+        finally:
+            os.close(start_write_fd)
+
+        cancellation_requested = False
+        outer_timeout = False
+        supervisor_stop_requested = False
+        forced_namespace_teardown = False
+        teardown_errors: list[str] = []
+        shutdown_deadline: float | None = None
+        hard_deadline = time.monotonic() + bounded_timeout + 5.0
+        while True:
+            now = time.monotonic()
+            if (
+                not supervisor_stop_requested
+                and cancellation_event is not None
+                and cancellation_event.is_set()
+            ):
+                cancellation_requested = True
+                supervisor_stop_requested = True
+                forced_namespace_teardown = True
+                shutdown_deadline = now + 5.0
+                try:
+                    signal_linux_pidfd(namespace_init_pidfd, signal.SIGKILL)
+                except BaseException as exc:
+                    teardown_errors.append(str(exc))
+                try:
+                    supervisor.kill()
+                except ProcessLookupError:
+                    pass
+            if not supervisor_stop_requested and now >= hard_deadline:
+                outer_timeout = True
+                supervisor_stop_requested = True
+                forced_namespace_teardown = True
+                shutdown_deadline = now + 5.0
+                try:
+                    signal_linux_pidfd(namespace_init_pidfd, signal.SIGKILL)
+                except BaseException as exc:
+                    teardown_errors.append(str(exc))
+                try:
+                    supervisor.kill()
+                except ProcessLookupError:
+                    pass
+            if shutdown_deadline is not None and now >= shutdown_deadline:
+                try:
+                    signal_linux_pidfd(namespace_init_pidfd, signal.SIGKILL)
+                except BaseException as exc:
+                    teardown_errors.append(str(exc))
+                try:
+                    supervisor.kill()
+                except ProcessLookupError:
+                    pass
+                reason = (
+                    "validated runner supervisor did not complete bounded namespace teardown"
+                )
+                teardown_errors.append(reason)
+                try:
+                    supervisor_stdout, supervisor_stderr = supervisor.communicate(
+                        timeout=1.0
+                    )
+                except subprocess.TimeoutExpired:
+                    supervisor_stdout, supervisor_stderr = "", ""
+                return {
+                    "returncode": 125,
+                    "timed_out": outer_timeout,
+                    "cancelled": cancellation_requested,
+                    "stdout": "",
+                    "stderr": "\n".join(
+                        item
+                        for item in (
+                            supervisor_stderr or "",
+                            "; ".join(dict.fromkeys(teardown_errors)),
+                        )
+                        if item
+                    ),
+                    "containment_error": "; ".join(
+                        dict.fromkeys(teardown_errors)
+                    ),
+                    "supervisor": "linux_pid_namespace_v1",
+                }
+            try:
+                supervisor_stdout, supervisor_stderr = supervisor.communicate(
+                    timeout=0.1
+                )
+                break
+            except subprocess.TimeoutExpired:
+                continue
+
+        namespace_exited = wait_linux_pidfd_exit(
+            namespace_init_pidfd,
+            timeout_seconds=1.0,
+        )
+        if not namespace_exited:
+            try:
+                signal_linux_pidfd(namespace_init_pidfd, signal.SIGKILL)
+            except BaseException as exc:
+                teardown_errors.append(str(exc))
+            namespace_exited = wait_linux_pidfd_exit(
+                namespace_init_pidfd,
+                timeout_seconds=2.0,
+            )
+        if not namespace_exited:
+            reason = "validated runner namespace init remained alive after teardown"
+            teardown_errors.append(reason)
+            return {
+                "returncode": 125,
+                "timed_out": outer_timeout,
+                "cancelled": cancellation_requested,
+                "stdout": "",
+                "stderr": "\n".join(
+                    item
+                    for item in (
+                        supervisor_stderr or "",
+                        "; ".join(dict.fromkeys(teardown_errors)),
+                    )
+                    if item
+                ),
+                "containment_error": "; ".join(dict.fromkeys(teardown_errors)),
+                "supervisor": "linux_pid_namespace_v1",
+            }
+
+        if forced_namespace_teardown:
+            containment_error = "; ".join(dict.fromkeys(teardown_errors))
+            return {
+                "returncode": -signal.SIGKILL if not containment_error else 125,
+                "timed_out": outer_timeout,
+                "cancelled": cancellation_requested,
+                "stdout": "",
+                "stderr": "\n".join(
+                    item for item in (supervisor_stderr or "", containment_error) if item
+                ),
+                "containment_error": containment_error,
+                "supervisor": "linux_pid_namespace_v1",
+            }
+
+        try:
+            payload = json.loads(supervisor_stdout)
+        except (TypeError, json.JSONDecodeError):
+            reason = "validated runner supervisor returned an invalid containment record"
             return {
                 "returncode": 125,
                 "timed_out": outer_timeout,
@@ -370,62 +535,63 @@ def _run_profile_command(
                 "containment_error": reason,
                 "supervisor": "linux_pid_namespace_v1",
             }
-        try:
-            supervisor_stdout, supervisor_stderr = supervisor.communicate(timeout=0.1)
-            break
-        except subprocess.TimeoutExpired:
-            continue
-    try:
-        payload = json.loads(supervisor_stdout)
-    except (TypeError, json.JSONDecodeError):
-        if forced_namespace_teardown and supervisor.returncode == -signal.SIGKILL:
-            return {
-                "returncode": -signal.SIGKILL,
-                "timed_out": outer_timeout,
-                "cancelled": cancellation_requested,
-                "stdout": "",
-                "stderr": supervisor_stderr or "",
-                "containment_error": "",
-                "supervisor": "linux_pid_namespace_v1",
-            }
-        reason = "validated runner supervisor returned an invalid containment record"
-        return {
-            "returncode": 125,
-            "timed_out": outer_timeout,
-            "cancelled": cancellation_requested,
-            "stdout": "",
-            "stderr": "\n".join(
-                item for item in (supervisor_stderr or "", reason) if item
-            ),
-            "containment_error": reason,
-            "supervisor": "linux_pid_namespace_v1",
-        }
-    if not isinstance(payload, dict):
-        raise RuntimeError("validated runner supervisor record must be an object")
-    payload["returncode"] = int(payload.get("returncode", 125))
-    payload["timed_out"] = bool(payload.get("timed_out", False) or outer_timeout)
-    payload["cancelled"] = bool(
-        payload.get("cancelled", False) or cancellation_requested
-    )
-    payload["stdout"] = str(payload.get("stdout", "") or "")
-    supervisor_errors = [
-        str(payload.get("stderr", "") or ""),
-        supervisor_stderr or "",
-    ]
-    payload["stderr"] = "\n".join(item for item in supervisor_errors if item)
-    payload.setdefault("containment_error", "")
-    payload.setdefault("supervisor", "linux_pid_namespace_v1")
-    if supervisor.returncode != 0 and not payload["containment_error"]:
-        payload["returncode"] = 125
-        payload["containment_error"] = (
-            f"validated runner supervisor exited with code {supervisor.returncode}"
+        if not isinstance(payload, dict):
+            raise RuntimeError("validated runner supervisor record must be an object")
+        payload["returncode"] = int(payload.get("returncode", 125))
+        payload["timed_out"] = bool(payload.get("timed_out", False) or outer_timeout)
+        payload["cancelled"] = bool(
+            payload.get("cancelled", False) or cancellation_requested
         )
+        payload["stdout"] = str(payload.get("stdout", "") or "")
         payload["stderr"] = "\n".join(
             item
-            for item in (payload["stderr"], payload["containment_error"])
+            for item in (
+                str(payload.get("stderr", "") or ""),
+                supervisor_stderr or "",
+            )
             if item
         )
-    return payload
+        payload["containment_error"] = str(
+            payload.get("containment_error", "") or ""
+        )
+        protocol_errors: list[str] = []
+        if payload.get("protocol_nonce") != protocol_nonce:
+            protocol_errors.append("validated runner supervisor nonce mismatch")
+        if payload.get("supervisor") != "linux_pid_namespace_v1":
+            protocol_errors.append("validated runner supervisor kind mismatch")
+        expected_supervisor_failure = bool(
+            payload["timed_out"]
+            or payload["cancelled"]
+            or payload["containment_error"]
+        )
+        if supervisor.returncode != 0 and not expected_supervisor_failure:
+            protocol_errors.append(
+                f"validated runner supervisor exited with code {supervisor.returncode}"
+            )
+        if supervisor.returncode == 0 and expected_supervisor_failure:
+            protocol_errors.append(
+                "validated runner supervisor reported failure with a successful exit"
+            )
+        if payload["timed_out"] or payload["cancelled"]:
+            payload["returncode"] = (
+                payload["returncode"] if payload["returncode"] != 0 else 125
+            )
+        if protocol_errors:
+            reason = "; ".join(dict.fromkeys(protocol_errors))
+            payload["returncode"] = (
+                payload["returncode"] if payload["returncode"] != 0 else 125
+            )
+            payload["containment_error"] = "; ".join(
+                item
+                for item in (payload["containment_error"], reason)
+                if item
+            )
+            payload["stderr"] = "\n".join(
+                item for item in (payload["stderr"], reason) if item
+            )
+        return payload
+    finally:
+        os.close(namespace_init_pidfd)
 
 
 async def execute_validated_runner_profile(job_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
@@ -529,6 +695,12 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     result_file = Path(context["result_file"])
     evidence_bundle_path_value = context.get("evidence_bundle", "")
     evidence_bundle_path = Path(evidence_bundle_path_value) if evidence_bundle_path_value else None
+    command_ok = bool(
+        completed["returncode"] == 0
+        and not completed.get("timed_out")
+        and not completed.get("cancelled")
+        and not completed.get("containment_error")
+    )
     execution_record = {
         "adapter_version": "api_validated_runner_v1",
         "job_id": job_id,
@@ -537,8 +709,9 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "profile_readiness": readiness_record,
         "command": command,
         "returncode": int(completed["returncode"]),
-        "ok": bool(completed["returncode"] == 0),
+        "ok": command_ok,
         "timed_out": bool(completed["timed_out"]),
+        "cancelled": bool(completed.get("cancelled", False)),
         "timeout_seconds": timeout_seconds,
         "process_group_killed_on_timeout": bool(completed["timed_out"]),
         "descendant_tree_contained": not bool(completed.get("containment_error")),
@@ -563,7 +736,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     execution_record_path = results_dir / "runner_execution.json"
     _write_json_artifact(execution_record_path, execution_record)
 
-    if completed["returncode"] != 0:
+    if not command_ok:
         error = (
             f"validated_runner_timeout:{timeout_seconds}s"
             if completed["timed_out"]

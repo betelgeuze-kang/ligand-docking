@@ -4,6 +4,7 @@ import ctypes
 import errno
 import json
 import os
+import select
 import shutil
 import signal
 import subprocess
@@ -17,10 +18,15 @@ from typing import Any
 
 _PR_SET_CHILD_SUBREAPER = 36
 _PR_GET_CHILD_SUBREAPER = 37
+_PR_GET_DUMPABLE = 3
+_PR_SET_DUMPABLE = 4
+_PR_SET_NO_NEW_PRIVS = 38
+_PR_GET_NO_NEW_PRIVS = 39
 _PROTOCOL_LIMIT_BYTES = 1024 * 1024
 _POLL_INTERVAL_SECONDS = 0.02
 _DEFAULT_CLEANUP_SECONDS = 3.0
 _SUPERVISOR_KIND = "linux_pid_namespace_v1"
+_START_TOKEN = b"R"
 _cancel_requested = False
 
 
@@ -122,6 +128,150 @@ def _require_namespace_init() -> None:
         raise LinuxRunnerContainmentUnavailable(
             "validated runner supervisor must be PID 1 in a private PID namespace"
         )
+
+
+def _read_proc_status(pid: int) -> dict[str, str]:
+    try:
+        lines = Path(f"/proc/{pid}/status").read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError as exc:
+        raise ProcessLookupError(pid) from exc
+    except OSError as exc:
+        if exc.errno in {errno.ENOENT, errno.ESRCH}:
+            raise ProcessLookupError(pid) from exc
+        raise LinuxRunnerContainmentUnavailable(
+            f"/proc/{pid}/status is unreadable"
+        ) from exc
+    status: dict[str, str] = {}
+    for line in lines:
+        key, separator, value = line.partition(":")
+        if separator:
+            status[key] = value.strip()
+    return status
+
+
+def _harden_namespace_supervisor() -> None:
+    """Remove runner process-control authority before any runner is spawned."""
+
+    libc = _libc()
+    if libc.prctl(_PR_SET_DUMPABLE, 0, 0, 0, 0) != 0:
+        error_number = ctypes.get_errno()
+        raise LinuxRunnerContainmentUnavailable(
+            f"PR_SET_DUMPABLE failed: {os.strerror(error_number)}"
+        )
+    if libc.prctl(_PR_GET_DUMPABLE, 0, 0, 0, 0) != 0:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runner supervisor remained ptrace-accessible"
+        )
+    if libc.prctl(_PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
+        error_number = ctypes.get_errno()
+        raise LinuxRunnerContainmentUnavailable(
+            f"PR_SET_NO_NEW_PRIVS failed: {os.strerror(error_number)}"
+        )
+    if libc.prctl(_PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0) != 1:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runner no-new-privileges state could not be verified"
+        )
+    status = _read_proc_status(os.getpid())
+    try:
+        effective_capabilities = int(status.get("CapEff", "-1"), 16)
+    except ValueError as exc:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runner capability state is malformed"
+        ) from exc
+    if effective_capabilities != 0:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runner supervisor must have zero effective capabilities"
+        )
+
+
+def open_linux_pid_namespace_init(
+    launcher_pid: int,
+    *,
+    timeout_seconds: float = 2.0,
+) -> int:
+    """Pin the launcher's namespace-init child before the runner start gate opens."""
+
+    deadline = time.monotonic() + max(timeout_seconds, 0.1)
+    children_path = Path(
+        f"/proc/{launcher_pid}/task/{launcher_pid}/children"
+    )
+    while time.monotonic() < deadline:
+        try:
+            child_ids = [int(item) for item in children_path.read_text().split()]
+        except FileNotFoundError as exc:
+            raise LinuxRunnerContainmentUnavailable(
+                "validated runner namespace launcher exited before initialization"
+            ) from exc
+        except (OSError, ValueError) as exc:
+            raise LinuxRunnerContainmentUnavailable(
+                "validated runner namespace child inventory is unavailable"
+            ) from exc
+        if len(child_ids) > 1:
+            raise LinuxRunnerContainmentUnavailable(
+                "validated runner namespace launcher created unexpected children"
+            )
+        if child_ids:
+            child_pid = child_ids[0]
+            identity = _read_proc_stat(child_pid)
+            status = _read_proc_status(child_pid)
+            namespace_pids = status.get("NSpid", "").split()
+            if identity.ppid != launcher_pid or not namespace_pids:
+                raise LinuxRunnerContainmentUnavailable(
+                    "validated runner namespace-init ancestry is invalid"
+                )
+            try:
+                if int(namespace_pids[-1]) != 1:
+                    raise ValueError
+            except ValueError as exc:
+                raise LinuxRunnerContainmentUnavailable(
+                    "validated runner supervisor is not namespace PID 1"
+                ) from exc
+            try:
+                pidfd = os.pidfd_open(child_pid, 0)
+            except OSError as exc:
+                raise LinuxRunnerContainmentUnavailable(
+                    "validated runner namespace-init pidfd is unavailable"
+                ) from exc
+            try:
+                observed = _read_proc_stat(child_pid)
+                if (
+                    observed.ppid != launcher_pid
+                    or observed.start_time != identity.start_time
+                ):
+                    raise LinuxRunnerContainmentUnavailable(
+                        "validated runner namespace-init identity changed"
+                    )
+            except Exception:
+                os.close(pidfd)
+                raise
+            return pidfd
+        time.sleep(_POLL_INTERVAL_SECONDS)
+    raise LinuxRunnerContainmentUnavailable(
+        "validated runner namespace-init did not appear before the start deadline"
+    )
+
+
+def signal_linux_pidfd(pidfd: int, sig: int) -> None:
+    """Signal a pinned namespace-init identity."""
+
+    try:
+        signal.pidfd_send_signal(pidfd, sig, None, 0)
+    except ProcessLookupError:
+        return
+    except OSError as exc:
+        if exc.errno != errno.ESRCH:
+            raise LinuxRunnerContainmentUnavailable(
+                "validated runner namespace-init signal failed"
+            ) from exc
+
+
+def wait_linux_pidfd_exit(pidfd: int, *, timeout_seconds: float) -> bool:
+    """Return only after the pinned namespace init has exited."""
+
+    poller = select.poll()
+    poller.register(pidfd, select.POLLIN | select.POLLHUP | select.POLLERR)
+    timeout_ms = max(0, int(timeout_seconds * 1000))
+    return bool(poller.poll(timeout_ms))
 
 
 def _become_child_subreaper() -> None:
@@ -357,8 +507,24 @@ def _read_config(config_fd: int) -> dict[str, Any]:
     timeout_seconds = payload.get("timeout_seconds")
     if not isinstance(timeout_seconds, int) or isinstance(timeout_seconds, bool):
         raise ValueError("runner supervisor timeout_seconds must be an integer")
+    protocol_nonce = payload.get("protocol_nonce")
+    if not isinstance(protocol_nonce, str) or len(protocol_nonce) != 64:
+        raise ValueError("runner supervisor protocol nonce is invalid")
+    try:
+        int(protocol_nonce, 16)
+    except ValueError as exc:
+        raise ValueError("runner supervisor protocol nonce is invalid") from exc
     payload["timeout_seconds"] = max(timeout_seconds, 1)
     return payload
+
+
+def _wait_for_start(start_fd: int) -> None:
+    with os.fdopen(start_fd, "rb", closefd=True) as handle:
+        token = handle.read(2)
+    if token != _START_TOKEN:
+        raise LinuxRunnerContainmentUnavailable(
+            "validated runner start gate was not authorized"
+        )
 
 
 def _handle_cancel(_signum: int, _frame: Any) -> None:
@@ -371,7 +537,12 @@ def _emit(payload: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-def _failure_payload(message: str, *, cancelled: bool = False) -> dict[str, Any]:
+def _failure_payload(
+    message: str,
+    *,
+    cancelled: bool = False,
+    protocol_nonce: str = "",
+) -> dict[str, Any]:
     return {
         "returncode": 125,
         "timed_out": False,
@@ -380,10 +551,11 @@ def _failure_payload(message: str, *, cancelled: bool = False) -> dict[str, Any]
         "stderr": message,
         "containment_error": message,
         "supervisor": _SUPERVISOR_KIND,
+        "protocol_nonce": protocol_nonce,
     }
 
 
-def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
+def supervise(config_fd: int, start_fd: int) -> tuple[dict[str, Any], bool]:
     global _cancel_requested
     _cancel_requested = False
     signal.signal(signal.SIGTERM, _handle_cancel)
@@ -391,9 +563,19 @@ def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
     require_linux_runner_supervisor_support()
     _require_namespace_init()
     _become_child_subreaper()
+    _harden_namespace_supervisor()
     config = _read_config(config_fd)
+    protocol_nonce = config["protocol_nonce"]
+    _wait_for_start(start_fd)
     if _cancel_requested:
-        return _failure_payload("runner cancelled before spawn", cancelled=True), False
+        return (
+            _failure_payload(
+                "runner cancelled before spawn",
+                cancelled=True,
+                protocol_nonce=protocol_nonce,
+            ),
+            False,
+        )
 
     command = config["command"]
     cwd = config["cwd"]
@@ -413,8 +595,14 @@ def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
                 start_new_session=True,
                 env=dict(os.environ),
             )
-        except OSError as exc:
-            return _failure_payload(f"validated runner spawn failed: {exc}"), False
+        except (OSError, subprocess.SubprocessError) as exc:
+            return (
+                _failure_payload(
+                    f"validated runner spawn failed: {exc}",
+                    protocol_nonce=protocol_nonce,
+                ),
+                False,
+            )
 
         timed_out = False
         cancelled = False
@@ -447,6 +635,8 @@ def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
     if containment_error:
         stderr = "\n".join(item for item in (stderr, containment_error) if item)
         returncode = 125
+    elif timed_out or cancelled:
+        returncode = int(runner_returncode) if int(runner_returncode) != 0 else 125
     else:
         returncode = int(runner_returncode)
     return (
@@ -458,18 +648,28 @@ def supervise(config_fd: int) -> tuple[dict[str, Any], bool]:
             "stderr": stderr,
             "containment_error": containment_error,
             "supervisor": _SUPERVISOR_KIND,
+            "protocol_nonce": protocol_nonce,
         },
-        bool(containment_error),
+        bool(containment_error or timed_out or cancelled),
     )
 
 
 def main() -> int:
-    if len(sys.argv) != 3 or sys.argv[1] != "--config-fd":
-        _emit(_failure_payload("usage: linux_runner_supervisor.py --config-fd FD"))
+    if (
+        len(sys.argv) != 5
+        or sys.argv[1] != "--config-fd"
+        or sys.argv[3] != "--start-fd"
+    ):
+        _emit(
+            _failure_payload(
+                "usage: linux_runner_supervisor.py --config-fd FD --start-fd FD"
+            )
+        )
         return 125
     try:
         config_fd = int(sys.argv[2])
-        payload, failed = supervise(config_fd)
+        start_fd = int(sys.argv[4])
+        payload, failed = supervise(config_fd, start_fd)
     except (LinuxRunnerContainmentUnavailable, OSError, ValueError, json.JSONDecodeError) as exc:
         _emit(_failure_payload(f"validated runner containment unavailable: {exc}"))
         return 125
