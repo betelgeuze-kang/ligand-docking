@@ -13,6 +13,7 @@ from fastapi import BackgroundTasks
 from api.job_store import SQLiteJobStore
 from api.result_manifest import verify_result_manifest, write_result_manifest
 from api.models import SimulationRequest
+from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 
 
 def test_sqlite_job_store_persists_across_instances(tmp_path: Path) -> None:
@@ -832,9 +833,7 @@ def test_get_status_exposes_evidence_bundle_provenance(
     manifest_path = results_dir / "result_manifest.json"
     bundle_path = results_dir / "evidence_bundle.json"
     result_path.write_text("ATOM\n", encoding="utf-8")
-    bundle_path.write_text('{"bundle_schema_version":"ai_md_evidence_bundle_v1"}\n', encoding="utf-8")
-    evidence_sha = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
-    write_result_manifest(
+    manifest = write_result_manifest(
         manifest_path,
         job_id="job_status",
         request=record["request"],
@@ -844,6 +843,14 @@ def test_get_status_exposes_evidence_bundle_provenance(
         signing_key="test-signing-key",
         key_id="test-key-id",
     )
+    evidence_bundle = write_api_evidence_bundle(
+        bundle_path,
+        job_id="job_status",
+        request=record["request"],
+        result_manifest=manifest,
+        status_payload={"status": "completed"},
+    )
+    evidence_sha = evidence_bundle.fingerprint()
     main.write_status_file(
         main.job_status_path("job_status"),
         {
@@ -994,7 +1001,7 @@ def test_get_results_fail_closed_without_evidence_bundle_fingerprint(
 
     response = TestClient(main.app).get("/results/job_no_bundle_hash")
     assert response.status_code == 403
-    assert "evidence bundle SHA-256" in response.json()["detail"]
+    assert "evidence bundle fingerprint" in response.json()["detail"]
 
 
 def test_adopt_validated_runner_native_evidence_bundle_returns_none_without_provenance(

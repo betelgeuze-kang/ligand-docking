@@ -15,7 +15,10 @@ pytest.importorskip("fastapi")
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from api.artifact_access import verify_completed_result_artifacts
+from api.artifact_access import (
+    open_confined_regular_file,
+    verify_completed_result_artifacts,
+)
 from api.atomic_job_admission import create_owned_job_atomic
 from api.config import settings
 from api.job_store import SQLiteJobStore, canonical_request_sha256
@@ -32,6 +35,7 @@ from api.security_ledger import (
     reset_configured_security_ledger_for_tests,
 )
 from api.worker import write_job_result_manifest
+from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 
 
 def _identity(tenant_id: str = "tenant-a") -> ProductRequestIdentity:
@@ -255,6 +259,93 @@ def test_duplicate_content_length_is_rejected_before_body_read(
     assert receive_calls == 0
 
 
+def test_transfer_encoding_and_content_length_are_rejected_together(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure_security(tmp_path, monkeypatch, max_payload=5)
+    receive_calls = 0
+    sent: list[dict[str, Any]] = []
+
+    async def receive() -> dict[str, Any]:
+        nonlocal receive_calls
+        receive_calls += 1
+        return {"type": "http.request", "body": b"a", "more_body": False}
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    asyncio.run(
+        _body_app()(
+            _scope(
+                headers=[
+                    (b"x-tenant-id", b"tenant-stream"),
+                    (b"transfer-encoding", b"chunked"),
+                    (b"content-length", b"1"),
+                ]
+            ),
+            receive,
+            send,
+        )
+    )
+
+    start, payload = _sent_response(sent)
+    assert start["status"] == 400
+    assert payload["code"] == "invalid_transfer_encoding"
+    assert receive_calls == 0
+
+
+def test_unread_chunked_body_is_still_limited(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure_security(tmp_path, monkeypatch, max_payload=5)
+    downstream_called = False
+
+    async def downstream(
+        scope: dict[str, Any],
+        receive: Any,
+        send: Any,
+    ) -> None:
+        nonlocal downstream_called
+        downstream_called = True
+        await send({"type": "http.response.start", "status": 204, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    app = ProductSecurityMiddleware(downstream)
+    messages = iter(
+        [
+            {"type": "http.request", "body": b"abc", "more_body": True},
+            {"type": "http.request", "body": b"def", "more_body": False},
+        ]
+    )
+    sent: list[dict[str, Any]] = []
+
+    async def receive() -> dict[str, Any]:
+        return next(messages)
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    asyncio.run(
+        app(
+            _scope(
+                headers=[
+                    (b"x-tenant-id", b"tenant-stream"),
+                    (b"transfer-encoding", b"chunked"),
+                ]
+            ),
+            receive,
+            send,
+        )
+    )
+
+    start, payload = _sent_response(sent)
+    assert start["status"] == 413
+    assert payload["code"] == "payload_too_large"
+    assert downstream_called is False
+
+
 def test_empty_body_passes_zero_byte_limit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -306,17 +397,21 @@ def test_audit_path_failure_does_not_break_the_security_response(
     assert AUDIT_WRITE_FAILURES._value.get() == before + 1
 
 
-def test_overflow_after_response_start_never_sends_a_second_response(
+def test_overflow_is_rejected_before_downstream_can_start_a_response(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _configure_security(tmp_path, monkeypatch, max_payload=2)
+
+    downstream_called = False
 
     async def downstream(
         scope: dict[str, Any],
         receive: Any,
         send: Any,
     ) -> None:
+        nonlocal downstream_called
+        downstream_called = True
         await send({"type": "http.response.start", "status": 200, "headers": []})
         await receive()
 
@@ -329,10 +424,12 @@ def test_overflow_after_response_start_never_sends_a_second_response(
     async def send(message: dict[str, Any]) -> None:
         sent.append(message)
 
-    with pytest.raises(Exception) as raised:
-        asyncio.run(app(_scope(), receive, send))
-    assert type(raised.value).__name__ == "_PayloadTooLarge"
+    asyncio.run(app(_scope(), receive, send))
+    start, payload = _sent_response(sent)
+    assert start["status"] == 413
+    assert payload["code"] == "payload_too_large"
     assert len([item for item in sent if item["type"] == "http.response.start"]) == 1
+    assert downstream_called is False
 
 
 def test_persistent_quota_survives_middleware_recreation(
@@ -481,13 +578,12 @@ def _completed_fixture(
     result_path = root / "result.json"
     result_path.write_bytes(result_bytes)
     evidence_path = root / "evidence_bundle.json"
-    evidence_path.write_text('{"evidence": true}', encoding="utf-8")
     request = {"runner_profile_id": "smoke", "target_name": "ADRB2"}
     request_sha = canonical_request_sha256(request)
     signing_key = "unit-signing-key"
     key_id = "unit-key"
     manifest_path = root / "result_manifest.json"
-    write_result_manifest(
+    manifest = write_result_manifest(
         manifest_path,
         job_id="job-artifacts",
         request=request,
@@ -496,7 +592,15 @@ def _completed_fixture(
         signing_key=signing_key,
         key_id=key_id,
     )
-    evidence_sha = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+    evidence_bundle = write_api_evidence_bundle(
+        evidence_path,
+        job_id="job-artifacts",
+        request=request,
+        result_manifest=manifest,
+        result_payload={"score": 1},
+        status_payload={"status": "completed"},
+    )
+    evidence_sha = evidence_bundle.fingerprint()
     record = {
         "job_id": "job-artifacts",
         "status": "completed",
@@ -570,3 +674,54 @@ def test_completed_artifacts_reject_tampering_and_symlink_escape(tmp_path: Path)
             expected_key_id=key_id,
         )
     assert getattr(escaped.value, "status_code", None) == 403
+
+
+def test_confined_open_keeps_original_file_when_directory_is_replaced(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "root"
+    nested = root / "nested"
+    nested.mkdir(parents=True)
+    original = nested / "result.json"
+    original.write_text('{"source": "original"}', encoding="utf-8")
+
+    _, handle = open_confined_regular_file(root, original, label="result file")
+    moved = root / "moved"
+    nested.rename(moved)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "result.json").write_text('{"source": "outside"}', encoding="utf-8")
+    try:
+        nested.symlink_to(outside, target_is_directory=True)
+    except OSError:
+        handle.close()
+        pytest.skip("symlinks unavailable")
+
+    try:
+        assert handle.read() == b'{"source": "original"}'
+    finally:
+        handle.close()
+
+
+@pytest.mark.parametrize("missing_side", ["status", "record"])
+def test_completed_artifacts_require_status_and_durable_evidence_binding(
+    tmp_path: Path,
+    missing_side: str,
+) -> None:
+    record, status, root, signing_key, key_id, _ = _completed_fixture(tmp_path)
+    if missing_side == "status":
+        status["evidence_bundle_sha256"] = ""
+    else:
+        record["evidence_bundle_sha256"] = ""
+
+    with pytest.raises(Exception) as rejected:
+        verify_completed_result_artifacts(
+            job_id="job-artifacts",
+            record=record,
+            status_data=status,
+            result_root=root,
+            signing_key=signing_key,
+            expected_key_id=key_id,
+        )
+
+    assert getattr(rejected.value, "status_code", None) == 403

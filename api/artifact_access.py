@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,8 @@ from typing import Any, BinaryIO, Iterator
 from fastapi import HTTPException
 
 from api.result_manifest import infer_result_artifact_metadata, verify_result_manifest
+from betelgeuze_ai_md.contracts import EvidenceBundle
+from betelgeuze_ai_md.contracts.errors import ContractValidationError
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -65,25 +68,99 @@ def _forbidden(detail: str) -> HTTPException:
     return HTTPException(status_code=403, detail=detail)
 
 
-def _open_regular_no_follow(path: Path, *, label: str) -> BinaryIO:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        fd = os.open(path, flags)
-    except OSError as exc:
-        raise _forbidden(f"{label} file could not be opened safely") from exc
-    try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            raise _forbidden(f"{label} must be a regular file")
-        return os.fdopen(fd, "rb")
-    except Exception:
-        os.close(fd)
-        raise
+class _ConfinedArtifactRoot:
+    """Hold one root directory descriptor while opening confined artifacts."""
+
+    def __init__(self, root: str | Path, *, label: str = "artifact") -> None:
+        self.root_path = Path(os.path.abspath(str(Path(root).expanduser())))
+        flags = (
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_DIRECTORY", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
+        try:
+            self._fd = os.open(self.root_path, flags)
+            if not stat.S_ISDIR(os.fstat(self._fd).st_mode):
+                raise OSError("root is not a directory")
+        except OSError as exc:
+            if hasattr(self, "_fd"):
+                os.close(self._fd)
+            raise _forbidden(f"{label} root is unavailable") from exc
+
+    def __enter__(self) -> "_ConfinedArtifactRoot":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        if self._fd >= 0:
+            os.close(self._fd)
+            self._fd = -1
+
+    def normalize(self, path_like: str | Path, *, label: str) -> tuple[Path, tuple[str, ...]]:
+        candidate = Path(path_like).expanduser()
+        if not candidate.is_absolute():
+            candidate = self.root_path / candidate
+        normalized = Path(os.path.abspath(str(candidate)))
+        try:
+            relative = normalized.relative_to(self.root_path)
+        except ValueError as exc:
+            raise _forbidden(f"{label} path escapes the job result root") from exc
+        parts = tuple(relative.parts)
+        if not parts or any(part in {"", ".", ".."} for part in parts):
+            raise _forbidden(f"{label} path traversal is forbidden")
+        return normalized, parts
+
+    def open(self, path_like: str | Path, *, label: str) -> tuple[Path, BinaryIO]:
+        logical_path, parts = self.normalize(path_like, label=label)
+        directory_flags = (
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_DIRECTORY", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
+        file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        current_fd = os.dup(self._fd)
+        file_fd = -1
+        try:
+            for part in parts[:-1]:
+                next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+                if not stat.S_ISDIR(os.fstat(next_fd).st_mode):
+                    os.close(next_fd)
+                    raise OSError("intermediate component is not a directory")
+                os.close(current_fd)
+                current_fd = next_fd
+            file_fd = os.open(parts[-1], file_flags, dir_fd=current_fd)
+            if not stat.S_ISREG(os.fstat(file_fd).st_mode):
+                raise OSError("artifact is not a regular file")
+            handle = os.fdopen(file_fd, "rb")
+            file_fd = -1
+            return logical_path, handle
+        except OSError as exc:
+            raise _forbidden(f"{label} file could not be opened safely") from exc
+        finally:
+            if file_fd >= 0:
+                os.close(file_fd)
+            os.close(current_fd)
 
 
-def _hash_file(
-    path: Path,
+def open_confined_regular_file(
+    root: str | Path,
+    path_like: str | Path,
     *,
     label: str,
+) -> tuple[Path, BinaryIO]:
+    """Open a regular file through a no-symlink directory-descriptor walk."""
+
+    with _ConfinedArtifactRoot(root, label=label) as confined:
+        return confined.open(path_like, label=label)
+
+
+def _hash_handle(
+    handle: BinaryIO,
+    *,
     snapshot: bool = False,
 ) -> tuple[str, BinaryIO | None]:
     digest = hashlib.sha256()
@@ -91,11 +168,11 @@ def _hash_file(
     if snapshot:
         captured = tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b")
     try:
-        with _open_regular_no_follow(path, label=label) as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-                if captured is not None:
-                    captured.write(chunk)
+        handle.seek(0)
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+            if captured is not None:
+                captured.write(chunk)
         if captured is not None:
             captured.seek(0)
         return digest.hexdigest(), captured
@@ -105,65 +182,51 @@ def _hash_file(
         raise
 
 
-def sha256_file(path: Path) -> str:
-    digest, _ = _hash_file(path, label="artifact")
-    return digest
-
-
-def confined_regular_file(
-    root: str | Path,
-    path_like: str | Path,
+def _matching_required_value(
+    status_value: object,
+    record_value: object,
     *,
     label: str,
-) -> Path:
-    """Resolve a regular file below root without traversing symlinks."""
-
-    root_path = Path(root).expanduser()
-    if not root_path.exists() or not root_path.is_dir() or root_path.is_symlink():
-        raise _forbidden(f"{label} root is unavailable")
-    resolved_root = root_path.resolve(strict=True)
-    candidate = Path(path_like).expanduser()
-    if not candidate.is_absolute():
-        candidate = resolved_root / candidate
-    try:
-        relative = candidate.absolute().relative_to(resolved_root)
-    except ValueError as exc:
-        raise _forbidden(f"{label} path escapes the job result root") from exc
-    if ".." in relative.parts:
-        raise _forbidden(f"{label} path traversal is forbidden")
-    current = resolved_root
-    for part in relative.parts:
-        current = current / part
-        if current.is_symlink():
-            raise _forbidden(f"{label} path may not traverse symlinks")
-    try:
-        resolved = candidate.resolve(strict=True)
-        resolved.relative_to(resolved_root)
-    except (FileNotFoundError, ValueError, OSError) as exc:
-        raise _forbidden(f"{label} file is unavailable or outside the job result root") from exc
-    if not resolved.is_file():
-        raise _forbidden(f"{label} must be a regular file")
-    return resolved
-
-
-def _unique_path(*values: object, label: str) -> str:
-    observed = {str(value or "").strip() for value in values if str(value or "").strip()}
-    if not observed:
-        raise _forbidden(f"completed job is missing {label} provenance")
-    if len(observed) != 1:
+) -> str:
+    status_text = str(status_value or "").strip()
+    record_text = str(record_value or "").strip()
+    if not status_text or not record_text:
+        raise _forbidden(f"completed job is missing durable {label} provenance")
+    if status_text != record_text:
         raise _forbidden(f"{label} provenance paths disagree")
-    return observed.pop()
+    return status_text
 
 
-def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
+def _matching_sha256(status_value: object, record_value: object, *, label: str) -> str:
+    status_digest = str(status_value or "").strip().lower()
+    record_digest = str(record_value or "").strip().lower()
+    if (
+        _SHA256_RE.fullmatch(status_digest) is None
+        or _SHA256_RE.fullmatch(record_digest) is None
+    ):
+        raise _forbidden(f"completed job is missing a durable {label} fingerprint")
+    if not hmac.compare_digest(status_digest, record_digest):
+        raise _forbidden(f"{label} fingerprints disagree")
+    return record_digest
+
+
+def _load_json_object(handle: BinaryIO, *, label: str) -> dict[str, Any]:
     try:
-        with _open_regular_no_follow(path, label=label) as handle:
-            payload = json.load(handle)
+        handle.seek(0)
+        payload = json.load(handle)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise _forbidden(f"{label} is not valid UTF-8 JSON") from exc
     if not isinstance(payload, dict):
         raise _forbidden(f"{label} root must be a JSON object")
     return payload
+
+
+def _evidence_bundle_fingerprint(handle: BinaryIO) -> str:
+    payload = _load_json_object(handle, label="evidence bundle")
+    try:
+        return EvidenceBundle(**payload).fingerprint()
+    except (ContractValidationError, TypeError, ValueError) as exc:
+        raise _forbidden("evidence bundle contract verification failed") from exc
 
 
 def verify_completed_result_artifacts(
@@ -180,117 +243,119 @@ def verify_completed_result_artifacts(
 
     if str(record.get("status", "")) != "completed" or str(status_data.get("status", "")) != "completed":
         raise HTTPException(status_code=400, detail="Job is not completed")
-    manifest_path = confined_regular_file(
-        result_root,
-        _unique_path(
-            status_data.get("result_manifest"),
-            record.get("result_manifest_path"),
-            label="result manifest",
-        ),
-        label="result manifest",
-    )
-    result_path = confined_regular_file(
-        result_root,
-        _unique_path(
-            status_data.get("result_file"),
-            record.get("result_file"),
-            label="result file",
-        ),
-        label="result file",
-    )
-    evidence_bundle_path = confined_regular_file(
-        result_root,
-        _unique_path(
-            status_data.get("evidence_bundle"),
-            record.get("evidence_bundle_path"),
-            label="evidence bundle",
-        ),
-        label="evidence bundle",
-    )
-
     result_snapshot: BinaryIO | None = None
+    opened_handles: list[BinaryIO] = []
     try:
-        manifest = _load_json_object(manifest_path, label="result manifest")
-        if not signing_key or not verify_result_manifest(manifest, signing_key=signing_key):
-            raise _forbidden("result manifest signature verification failed")
-        if str(manifest.get("signature_key_id", "")) != str(expected_key_id or ""):
-            raise _forbidden("result manifest key ID does not match active configuration")
-        if str(manifest.get("job_id", "")) != str(job_id):
-            raise _forbidden("result manifest job binding mismatch")
-        if str(manifest.get("status", "")) != "completed":
-            raise _forbidden("result manifest status is not completed")
+        with _ConfinedArtifactRoot(result_root, label="job result") as confined:
+            manifest_path, manifest_handle = confined.open(
+                _matching_required_value(
+                    status_data.get("result_manifest"),
+                    record.get("result_manifest_path"),
+                    label="result manifest",
+                ),
+                label="result manifest",
+            )
+            opened_handles.append(manifest_handle)
+            result_path, result_handle = confined.open(
+                _matching_required_value(
+                    status_data.get("result_file"),
+                    record.get("result_file"),
+                    label="result file",
+                ),
+                label="result file",
+            )
+            opened_handles.append(result_handle)
+            evidence_bundle_path, evidence_handle = confined.open(
+                _matching_required_value(
+                    status_data.get("evidence_bundle"),
+                    record.get("evidence_bundle_path"),
+                    label="evidence bundle",
+                ),
+                label="evidence bundle",
+            )
+            opened_handles.append(evidence_handle)
 
-        request_sha = str(record.get("request_sha256", "") or "").lower()
-        if _SHA256_RE.fullmatch(request_sha) is None:
-            raise _forbidden("completed job is missing a durable request fingerprint")
-        if str(manifest.get("request_sha256", "")) != request_sha:
-            raise _forbidden("result manifest request binding mismatch")
+            manifest = _load_json_object(manifest_handle, label="result manifest")
+            if not signing_key or not verify_result_manifest(manifest, signing_key=signing_key):
+                raise _forbidden("result manifest signature verification failed")
+            if str(manifest.get("signature_key_id", "")) != str(expected_key_id or ""):
+                raise _forbidden("result manifest key ID does not match active configuration")
+            if str(manifest.get("job_id", "")) != str(job_id):
+                raise _forbidden("result manifest job binding mismatch")
+            if str(manifest.get("status", "")) != "completed":
+                raise _forbidden("result manifest status is not completed")
 
-        manifest_result = confined_regular_file(
-            result_root,
-            str(manifest.get("result_file", "") or ""),
-            label="manifest result file",
-        )
-        if manifest_result != result_path:
-            raise _forbidden("result manifest file binding mismatch")
+            request_sha = str(record.get("request_sha256", "") or "").lower()
+            if _SHA256_RE.fullmatch(request_sha) is None:
+                raise _forbidden("completed job is missing a durable request fingerprint")
+            if str(manifest.get("request_sha256", "")) != request_sha:
+                raise _forbidden("result manifest request binding mismatch")
 
-        result_sha, result_snapshot = _hash_file(
-            result_path,
-            label="result file",
-            snapshot=snapshot_result,
-        )
-        if str(manifest.get("result_file_sha256", "")) != result_sha:
-            raise _forbidden("result file SHA-256 verification failed")
+            manifest_result, _ = confined.normalize(
+                str(manifest.get("result_file", "") or ""),
+                label="manifest result file",
+            )
+            if manifest_result != result_path:
+                raise _forbidden("result manifest file binding mismatch")
 
-        evidence_sha, _ = _hash_file(evidence_bundle_path, label="evidence bundle")
-        recorded_evidence_hashes = {
-            str(value or "").lower()
-            for value in (
+            result_sha, result_snapshot = _hash_handle(
+                result_handle,
+                snapshot=snapshot_result,
+            )
+            if str(manifest.get("result_file_sha256", "")) != result_sha:
+                raise _forbidden("result file SHA-256 verification failed")
+
+            recorded_evidence_fingerprint = _matching_sha256(
                 status_data.get("evidence_bundle_sha256"),
                 record.get("evidence_bundle_sha256"),
+                label="evidence bundle",
             )
-            if str(value or "").strip()
-        }
-        if len(recorded_evidence_hashes) != 1 or evidence_sha not in recorded_evidence_hashes:
-            raise _forbidden("evidence bundle SHA-256 verification failed")
+            evidence_fingerprint = _evidence_bundle_fingerprint(evidence_handle)
+            if not hmac.compare_digest(
+                evidence_fingerprint,
+                recorded_evidence_fingerprint,
+            ):
+                raise _forbidden("evidence bundle fingerprint verification failed")
 
-        inferred = infer_result_artifact_metadata(result_path)
-        manifest_media_type = str(
-            manifest.get("result_file_media_type", "")
-            or inferred["result_file_media_type"]
-        )
-        manifest_artifact_type = str(
-            manifest.get("result_artifact_type", "")
-            or inferred["result_artifact_type"]
-        )
-        if manifest_media_type not in _ALLOWED_MEDIA_TYPES:
-            raise _forbidden("result media type is not allowed")
-        if manifest_media_type != inferred["result_file_media_type"]:
-            raise _forbidden("result media type does not match file suffix")
-        if manifest_artifact_type != inferred["result_artifact_type"]:
-            raise _forbidden("result artifact type does not match file suffix")
+            inferred = infer_result_artifact_metadata(result_path)
+            manifest_media_type = str(
+                manifest.get("result_file_media_type", "")
+                or inferred["result_file_media_type"]
+            )
+            manifest_artifact_type = str(
+                manifest.get("result_artifact_type", "")
+                or inferred["result_artifact_type"]
+            )
+            if manifest_media_type not in _ALLOWED_MEDIA_TYPES:
+                raise _forbidden("result media type is not allowed")
+            if manifest_media_type != inferred["result_file_media_type"]:
+                raise _forbidden("result media type does not match file suffix")
+            if manifest_artifact_type != inferred["result_artifact_type"]:
+                raise _forbidden("result artifact type does not match file suffix")
 
-        return VerifiedResultArtifacts(
-            root=Path(result_root).resolve(strict=True),
-            manifest_path=manifest_path,
-            result_path=result_path,
-            evidence_bundle_path=evidence_bundle_path,
-            manifest=manifest,
-            result_sha256=result_sha,
-            evidence_bundle_sha256=evidence_sha,
-            media_type=manifest_media_type,
-            artifact_type=manifest_artifact_type,
-            result_snapshot=result_snapshot,
-        )
+            return VerifiedResultArtifacts(
+                root=confined.root_path,
+                manifest_path=manifest_path,
+                result_path=result_path,
+                evidence_bundle_path=evidence_bundle_path,
+                manifest=manifest,
+                result_sha256=result_sha,
+                evidence_bundle_sha256=evidence_fingerprint,
+                media_type=manifest_media_type,
+                artifact_type=manifest_artifact_type,
+                result_snapshot=result_snapshot,
+            )
     except Exception:
         if result_snapshot is not None:
             result_snapshot.close()
         raise
+    finally:
+        for handle in opened_handles:
+            handle.close()
 
 
 __all__ = [
     "VerifiedResultArtifacts",
-    "confined_regular_file",
-    "sha256_file",
+    "open_confined_regular_file",
     "verify_completed_result_artifacts",
 ]

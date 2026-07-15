@@ -157,7 +157,29 @@ class ProductSecurityMiddleware:
             await send(message)
 
         try:
-            await self.app(scope, limited_receive, security_send)
+            buffered_request: list[Message] = []
+            while True:
+                message = await limited_receive()
+                if message.get("type") == "http.disconnect":
+                    raise ClientDisconnect()
+                buffered_request.append(message)
+                if (
+                    message.get("type") == "http.request"
+                    and not bool(message.get("more_body", False))
+                ):
+                    break
+
+            replay_index = 0
+
+            async def replay_receive() -> Message:
+                nonlocal replay_index
+                if replay_index < len(buffered_request):
+                    message = buffered_request[replay_index]
+                    replay_index += 1
+                    return message
+                return {"type": "http.request", "body": b"", "more_body": False}
+
+            await self.app(scope, replay_receive, security_send)
         except _PayloadTooLarge:
             if response_started:
                 finalize(response_status)
@@ -205,11 +227,24 @@ class ProductSecurityMiddleware:
         ):
             return self._blocked("hosted_tls_termination_not_verified", 503), None
 
+        raw_headers = list(request.scope.get("headers", []))
         raw_content_lengths = [
             value
-            for name, value in request.scope.get("headers", [])
+            for name, value in raw_headers
             if bytes(name).lower() == b"content-length"
         ]
+        raw_transfer_encodings = [
+            value
+            for name, value in raw_headers
+            if bytes(name).lower() == b"transfer-encoding"
+        ]
+        if raw_transfer_encodings:
+            if (
+                raw_content_lengths
+                or len(raw_transfer_encodings) != 1
+                or raw_transfer_encodings[0].strip().lower() != b"chunked"
+            ):
+                return self._blocked("invalid_transfer_encoding", 400), None
         if len(raw_content_lengths) > 1:
             return self._blocked("invalid_content_length", 400), None
         raw_content_length = raw_content_lengths[0] if raw_content_lengths else b"0"
