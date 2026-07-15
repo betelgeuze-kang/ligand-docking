@@ -198,6 +198,7 @@ jobs:
           assert ReferenceForceFieldParameters(
               parameter_set_id="import-only",
               parameter_set_version="1",
+              topology_sha256="0" * 64,
               atom_parameters=(AtomNonbondedParameter(0, 1.0, 0.0, 0.0),),
               cutoff_angstrom=2.0,
               switch_start_angstrom=1.0,

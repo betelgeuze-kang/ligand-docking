@@ -10,8 +10,16 @@ import math
 import torch
 
 from betelgeuze_engine_v2.contracts import QuantityDescriptor
-from betelgeuze_engine_v2.geometry import CompactNeighborList
-from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha256
+from betelgeuze_engine_v2.geometry import (
+    CompactNeighborList,
+    RadiusGraphConfig,
+    build_compact_radius_graph,
+)
+from betelgeuze_engine_v2.molecular import (
+    AllAtomSystem,
+    canonical_system_sha256,
+    canonical_topology_sha256,
+)
 from .composition import EnergyTermResult
 from .reference_parameters import (
     COULOMB_KCAL_ANGSTROM_PER_MOL_E2,
@@ -129,6 +137,38 @@ def _validate_indices(parameters: ReferenceForceFieldParameters, atom_count: int
     return tuple(dict.fromkeys(blockers))
 
 
+def _neighbor_graph_matches_current_system(
+    system: AllAtomSystem,
+    neighbors: CompactNeighborList,
+) -> bool:
+    """Rebuild the bounded CPU graph and require an exact current-state binding."""
+
+    try:
+        diagnostics = neighbors.diagnostics
+        if diagnostics.status != "ready" or not diagnostics.capacity_contract_satisfied:
+            return False
+        expected = build_compact_radius_graph(
+            system.coordinates,
+            RadiusGraphConfig(
+                cutoff_angstrom=float(diagnostics.cutoff_angstrom),
+                max_neighbors=int(diagnostics.max_neighbors),
+                max_atoms_per_cell=int(diagnostics.max_atoms_per_cell),
+            ),
+            cell=system.cell,
+        )
+        if diagnostics != expected.diagnostics:
+            return False
+        return bool(
+            torch.equal(neighbors.indices, expected.indices)
+            and torch.equal(neighbors.mask, expected.mask)
+            and torch.equal(neighbors.distances, expected.distances)
+            and torch.equal(neighbors.displacements, expected.displacements)
+            and torch.equal(neighbors.image_shifts, expected.image_shifts)
+        )
+    except (AttributeError, TypeError, ValueError, RuntimeError):
+        return False
+
+
 def _applicability_blockers(
     system: AllAtomSystem,
     neighbors: CompactNeighborList,
@@ -136,6 +176,34 @@ def _applicability_blockers(
 ) -> tuple[str, ...]:
     domain = parameters.applicability_domain
     blockers: list[str] = list(_validate_indices(parameters, system.atom_count))
+    if system.coordinate_unit != "angstrom":
+        blockers.append("coordinate_unit_must_be_angstrom")
+    try:
+        topology_sha256 = canonical_topology_sha256(system)
+    except (TypeError, ValueError, RuntimeError):
+        blockers.append("system_topology_identity_unavailable")
+    else:
+        if parameters.topology_sha256 != topology_sha256:
+            blockers.append("parameter_topology_identity_mismatch")
+
+    try:
+        system_bond_pairs = [
+            tuple(sorted((int(row.atom_i), int(row.atom_j))))
+            for row in system.bonds
+        ]
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        blockers.append("system_bond_topology_invalid")
+        system_bond_pairs = []
+    parameter_bond_pairs = [
+        (row.atom_i, row.atom_j)
+        for row in parameters.bonds
+    ]
+    if "system_bond_topology_invalid" not in blockers and (
+        len(system_bond_pairs) != len(set(system_bond_pairs))
+        or set(system_bond_pairs) != set(parameter_bond_pairs)
+    ):
+        blockers.append("bond_parameters_do_not_exactly_cover_system_bonds")
+
     if system.atom_count > domain.max_atoms:
         blockers.append("atom_count_outside_applicability_domain")
     if len(parameters.bonds) > domain.max_bonds:
@@ -144,18 +212,42 @@ def _applicability_blockers(
         blockers.append("angle_count_outside_applicability_domain")
     if len(parameters.torsions) > domain.max_torsions:
         blockers.append("torsion_count_outside_applicability_domain")
-    if neighbors.pair_count // 2 > domain.max_nonbonded_pairs:
-        blockers.append("nonbonded_pair_count_outside_applicability_domain")
-    if float(neighbors.diagnostics.cutoff_angstrom) + 1.0e-12 < parameters.cutoff_angstrom:
+    try:
+        neighbor_cutoff = float(neighbors.diagnostics.cutoff_angstrom)
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        neighbor_cutoff = float("nan")
+    if not math.isfinite(neighbor_cutoff) or neighbor_cutoff + 1.0e-12 < parameters.cutoff_angstrom:
         blockers.append("neighbor_cutoff_shorter_than_parameter_cutoff")
     if system.cell is not None:
         if not domain.periodic_orthorhombic_supported:
             blockers.append("periodic_system_outside_applicability_domain")
         else:
             try:
-                system.cell.orthorhombic_lengths()
-            except ValueError:
+                lengths = system.cell.orthorhombic_lengths()
+                if not bool(torch.isfinite(lengths).all().item()) or bool(
+                    (lengths <= 0.0).any().item()
+                ):
+                    raise ValueError("cell lengths must be finite and positive")
+            except (TypeError, ValueError, RuntimeError):
                 blockers.append("nonorthorhombic_cell_not_supported")
+            else:
+                periodic_lengths = [
+                    float(lengths[index].item())
+                    for index, periodic in enumerate(system.cell.periodic)
+                    if periodic
+                ]
+                if periodic_lengths:
+                    half_smallest = 0.5 * min(periodic_lengths)
+                    if parameters.cutoff_angstrom >= half_smallest:
+                        blockers.append("periodic_cutoff_not_below_half_smallest_box_length")
+    if blockers:
+        return tuple(dict.fromkeys(blockers))
+    if not _neighbor_graph_matches_current_system(system, neighbors):
+        blockers.append("neighbor_graph_not_bound_to_current_system")
+    else:
+        pair_count = int(neighbors.upper_mask().sum().detach().cpu().item())
+        if pair_count > domain.max_nonbonded_pairs:
+            blockers.append("nonbonded_pair_count_outside_applicability_domain")
     return tuple(dict.fromkeys(blockers))
 
 
@@ -172,7 +264,6 @@ def evaluate_reference_force_field(
             "reference parameter applicability failed: " + ", ".join(blockers)
         )
     coordinates = system.coordinates.detach().clone().requires_grad_(True)
-    batch_size = int(coordinates.shape[0])
     zero = coordinates.sum(dim=(1, 2)) * 0.0
     bond_energy = zero.clone()
     angle_energy = zero.clone()
@@ -303,19 +394,20 @@ def evaluate_reference_force_field(
         unit="kcal/mol",
         semantics="explicit_bond_angle_torsion_lj_screened_coulomb_total",
         physical_quantity=True,
-        calibrated=bool(parameters.scientifically_validated),
-        reference_method=reference_method if parameters.scientifically_validated else None,
+        calibrated=False,
+        reference_method=None,
     )
     force_descriptor = QuantityDescriptor(
         name="reference_force_field_force",
         unit="kcal/mol/angstrom",
         semantics="negative_coordinate_gradient_of_reference_force_field_energy",
         physical_quantity=True,
-        calibrated=bool(parameters.scientifically_validated),
-        reference_method=reference_method if parameters.scientifically_validated else None,
+        calibrated=False,
+        reference_method=None,
     )
     provenance_payload = {
         "parameter_fingerprint_sha256": parameters.fingerprint_sha256,
+        "topology_sha256": parameters.topology_sha256,
         "system_sha256": canonical_system_sha256(system),
         "neighbor_schema": neighbors.diagnostics.schema_version,
         "neighbor_cutoff_angstrom": neighbors.diagnostics.cutoff_angstrom,
@@ -324,10 +416,11 @@ def evaluate_reference_force_field(
     provenance_sha256 = hashlib.sha256(
         json.dumps(provenance_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    scientific_blockers = () if parameters.scientifically_validated else (
+    scientific_blockers = (
         "reference_parameter_set_not_scientifically_validated",
         "applicability_domain_evidence_missing",
         "public_force_energy_validation_missing",
+        "verified_validation_receipt_not_implemented",
     )
     term = EnergyTermResult(
         name=f"reference_force_field:{reference_method}",
@@ -335,7 +428,7 @@ def evaluate_reference_force_field(
         forces=forces.detach(),
         energy_descriptor=energy_descriptor,
         force_descriptor=force_descriptor,
-        validated_for_composition=bool(parameters.scientifically_validated),
+        validated_for_composition=False,
         provenance_sha256=provenance_sha256,
     )
     return ReferencePhysicsEvaluation(

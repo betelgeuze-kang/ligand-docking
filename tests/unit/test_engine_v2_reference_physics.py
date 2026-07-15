@@ -17,6 +17,7 @@ from betelgeuze_engine_v2.molecular import (
     Residue,
     StructureProvenance,
     UnitCell,
+    canonical_topology_sha256,
 )
 from betelgeuze_engine_v2.physics import (
     AtomNonbondedParameter,
@@ -26,6 +27,8 @@ from betelgeuze_engine_v2.physics import (
     PeriodicTorsionParameter,
     ReferenceApplicabilityDomain,
     ReferenceForceFieldParameters,
+    ReferenceForceFieldProvider,
+    ReferenceParameterError,
     ReferencePhysicsApplicabilityError,
     compose_energy_terms,
     evaluate_reference_force_field,
@@ -88,7 +91,13 @@ def _system(coordinates: torch.Tensor | None = None) -> AllAtomSystem:
     )
 
 
-def _parameters(*, complete: bool = True) -> ReferenceForceFieldParameters:
+def _parameters(
+    *,
+    complete: bool = True,
+    system: AllAtomSystem | None = None,
+    metadata: dict[str, object] | None = None,
+) -> ReferenceForceFieldParameters:
+    bound_system = _system() if system is None else system
     atom_parameters = tuple(
         AtomNonbondedParameter(
             atom_index=index,
@@ -101,6 +110,7 @@ def _parameters(*, complete: bool = True) -> ReferenceForceFieldParameters:
     return ReferenceForceFieldParameters(
         parameter_set_id="unit-reference",
         parameter_set_version="1.0.0",
+        topology_sha256=canonical_topology_sha256(bound_system),
         atom_parameters=atom_parameters,
         bonds=(
             HarmonicBondParameter(0, 1, 1.45, 200.0),
@@ -122,6 +132,7 @@ def _parameters(*, complete: bool = True) -> ReferenceForceFieldParameters:
         screening_kappa_per_angstrom=0.1,
         applicability_domain=ReferenceApplicabilityDomain(max_atoms=16),
         scientifically_validated=False,
+        metadata={} if metadata is None else metadata,
     )
 
 
@@ -218,11 +229,12 @@ def test_switch_makes_nonbonded_energy_and_force_continuous_at_cutoff() -> None:
                 dtype=torch.float64,
             )
         )
-        return base
+        return replace(base, bonds=())
 
     parameters = ReferenceForceFieldParameters(
         parameter_set_id="cutoff-unit",
         parameter_set_version="1",
+        topology_sha256=canonical_topology_sha256(two_atom(1.0)),
         atom_parameters=tuple(
             AtomNonbondedParameter(index, 3.0, 0.1, 0.0) for index in range(4)
         ),
@@ -250,12 +262,14 @@ def test_periodic_nonbonded_terms_use_neighbor_minimum_image_shift() -> None:
     direct_coordinates[0, 1, 0] = -0.3
     periodic = replace(
         _system(periodic_coordinates),
+        bonds=(),
         cell=UnitCell.orthorhombic((10.0, 10.0, 10.0), dtype=torch.float64),
     )
-    direct = _system(direct_coordinates)
+    direct = replace(_system(direct_coordinates), bonds=())
     parameters = ReferenceForceFieldParameters(
         parameter_set_id="periodic-unit",
         parameter_set_version="1",
+        topology_sha256=canonical_topology_sha256(periodic),
         atom_parameters=tuple(
             AtomNonbondedParameter(index, 0.3, 0.1, 0.05) for index in range(4)
         ),
@@ -272,7 +286,10 @@ def test_periodic_nonbonded_terms_use_neighbor_minimum_image_shift() -> None:
     direct_evaluation = evaluate_reference_force_field(
         direct,
         _neighbors(direct, 1.0),
-        parameters,
+        replace(
+            parameters,
+            topology_sha256=canonical_topology_sha256(direct),
+        ),
     )
 
     assert periodic_evaluation.term.energy.item() == pytest.approx(
@@ -297,7 +314,7 @@ def test_applicability_fails_closed_for_missing_parameters_and_short_neighbor_cu
 
 def test_parameter_contract_requires_evidence_before_scientific_validation() -> None:
     base = _parameters()
-    with pytest.raises(ValueError, match="validation_evidence"):
+    with pytest.raises(ValueError, match="verified evidence receipt"):
         ReferenceForceFieldParameters(
             **{
                 **base.__dict__,
@@ -305,3 +322,157 @@ def test_parameter_contract_requires_evidence_before_scientific_validation() -> 
                 "validation_evidence_sha256": "",
             }
         )
+    with pytest.raises(ValueError, match="verified evidence receipt"):
+        replace(
+            base,
+            scientifically_validated=True,
+            validation_evidence_sha256="0" * 64,
+        )
+    with pytest.raises(ValueError, match="verified evidence receipt"):
+        replace(base, validation_evidence_sha256="0" * 64)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    (
+        lambda: HarmonicBondParameter(0.5, 1, 1.0, 1.0),
+        lambda: HarmonicAngleParameter(0, 1.5, 2, 1.0, 1.0),
+        lambda: PeriodicTorsionParameter(0, 1, 2.5, 3, 1, 0.0, 1.0),
+        lambda: PeriodicTorsionParameter(0, 1, 2, 3, 1.5, 0.0, 1.0),
+        lambda: AtomNonbondedParameter(0.5, 1.0, 0.0, 0.0),
+        lambda: PairScalingParameter(0, 1.5, 1.0, 1.0),
+        lambda: ReferenceApplicabilityDomain(max_atoms=1.5),
+    ),
+)
+def test_parameter_contract_rejects_nonintegral_indices_and_periodicity(factory) -> None:
+    with pytest.raises(ReferenceParameterError, match="integer"):
+        factory()
+
+
+def test_parameter_contract_normalizes_numbers_and_freezes_metadata_snapshot() -> None:
+    torsion = PeriodicTorsionParameter(0.0, 1.0, 2.0, 3.0, 3.0, 0, 1)
+    assert torsion.periodicity == 3
+    assert isinstance(torsion.periodicity, int)
+    assert isinstance(torsion.phase_radians, float)
+    assert isinstance(torsion.amplitude_kcal_per_mol, float)
+
+    source_metadata = {"nested": {"values": [1, 2]}}
+    parameters = _parameters(metadata=source_metadata)
+    provider = ReferenceForceFieldProvider(parameters)
+    fingerprint = parameters.fingerprint_sha256
+    source_metadata["nested"]["values"].append(3)
+
+    assert parameters.fingerprint_sha256 == fingerprint
+    assert provider.parameter_fingerprint_sha256 == fingerprint
+    assert parameters.to_dict()["metadata"] == {"nested": {"values": [1, 2]}}
+    with pytest.raises(TypeError):
+        parameters.metadata["new"] = True
+    with pytest.raises(TypeError):
+        parameters.metadata["nested"]["new"] = True
+
+
+def test_parameter_topology_binding_and_bond_coverage_fail_closed() -> None:
+    system = _system()
+    parameters = _parameters(system=system)
+
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="bond_parameters"):
+        evaluate_reference_force_field(
+            system,
+            _neighbors(system),
+            replace(parameters, bonds=parameters.bonds[:-1]),
+        )
+
+    wrong_atoms = list(system.atoms)
+    wrong_atoms[0] = replace(wrong_atoms[0], element="O", atomic_number=8)
+    wrong_system = replace(system, atoms=tuple(wrong_atoms))
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="topology_identity"):
+        evaluate_reference_force_field(
+            wrong_system,
+            _neighbors(wrong_system),
+            parameters,
+        )
+
+    with pytest.raises(ReferenceParameterError, match="bond parameter definitions"):
+        replace(parameters, bonds=(*parameters.bonds, parameters.bonds[0]))
+    with pytest.raises(ReferenceParameterError, match="angle parameter definitions"):
+        replace(
+            parameters,
+            angles=(
+                *parameters.angles,
+                HarmonicAngleParameter(2, 1, 0, 2.0, 45.0),
+            ),
+        )
+    with pytest.raises(ReferenceParameterError, match="torsion parameter definitions"):
+        replace(parameters, torsions=(*parameters.torsions, parameters.torsions[0]))
+    with pytest.raises(ReferenceParameterError, match="torsion parameter definitions"):
+        replace(
+            parameters,
+            torsions=(
+                *parameters.torsions,
+                PeriodicTorsionParameter(3, 2, 1, 0, 3, 0.0, 0.5),
+            ),
+        )
+
+
+def test_stale_neighbor_graph_is_rejected_against_current_coordinates() -> None:
+    far_coordinates = torch.tensor(
+        [[[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [20.0, 0.0, 0.0], [30.0, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    near_coordinates = far_coordinates.clone()
+    near_coordinates[0, 1, 0] = 1.0
+    far = replace(_system(far_coordinates), bonds=())
+    near = replace(_system(near_coordinates), bonds=())
+    stale = _neighbors(far, 5.0)
+    fresh = _neighbors(near, 5.0)
+    parameters = ReferenceForceFieldParameters(
+        parameter_set_id="neighbor-binding-unit",
+        parameter_set_version="1",
+        topology_sha256=canonical_topology_sha256(near),
+        atom_parameters=tuple(
+            AtomNonbondedParameter(index, 0.5, 1.0, 0.0) for index in range(4)
+        ),
+        cutoff_angstrom=5.0,
+        switch_start_angstrom=4.0,
+        applicability_domain=ReferenceApplicabilityDomain(max_atoms=8),
+    )
+
+    assert stale.pair_count == 0
+    assert fresh.pair_count == 2
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="neighbor_graph_not_bound"):
+        evaluate_reference_force_field(near, stale, parameters)
+    assert evaluate_reference_force_field(near, fresh, parameters).execution_complete
+
+
+def test_non_angstrom_coordinate_unit_is_rejected() -> None:
+    system = replace(_system(), coordinate_unit="nm")
+    parameters = _parameters(system=system)
+
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="coordinate_unit"):
+        evaluate_reference_force_field(system, _neighbors(system), parameters)
+
+
+def test_periodic_cutoff_must_stay_strictly_below_half_smallest_box_length() -> None:
+    coordinates = torch.tensor(
+        [[[0.0, 0.0, 0.0], [4.9, 0.0, 0.0], [2.0, 2.0, 0.0], [3.0, -2.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    system = replace(
+        _system(coordinates),
+        bonds=(),
+        cell=UnitCell.orthorhombic((10.0, 10.0, 10.0), dtype=torch.float64),
+    )
+    parameters = ReferenceForceFieldParameters(
+        parameter_set_id="periodic-half-box-unit",
+        parameter_set_version="1",
+        topology_sha256=canonical_topology_sha256(system),
+        atom_parameters=tuple(
+            AtomNonbondedParameter(index, 3.0, 0.1, 0.0) for index in range(4)
+        ),
+        cutoff_angstrom=5.0,
+        switch_start_angstrom=4.0,
+        applicability_domain=ReferenceApplicabilityDomain(max_atoms=8),
+    )
+
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="half_smallest_box"):
+        evaluate_reference_force_field(system, _neighbors(system, 5.0), parameters)

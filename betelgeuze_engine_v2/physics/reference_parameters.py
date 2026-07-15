@@ -6,6 +6,9 @@ from dataclasses import dataclass, field
 import hashlib
 import json
 import math
+from numbers import Real
+import operator
+from types import MappingProxyType
 from typing import Any, Mapping
 
 REFERENCE_PARAMETER_SCHEMA_ID = "betelgeuze.engine_v2_reference_parameters/1.0.0"
@@ -16,18 +19,106 @@ class ReferenceParameterError(ValueError):
     """Parameter values or applicability bounds are incomplete or inconsistent."""
 
 
+def _finite_float(value: float, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ReferenceParameterError(f"{name} must be a real number")
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        raise ReferenceParameterError(f"{name} must be a finite real number") from None
+    if not math.isfinite(number):
+        raise ReferenceParameterError(f"{name} must be finite")
+    return number
+
+
 def _finite_positive(value: float, *, name: str, allow_zero: bool = False) -> float:
-    number = float(value)
+    number = _finite_float(value, name=name)
     if not math.isfinite(number) or (number < 0.0 if allow_zero else number <= 0.0):
         relation = "non-negative" if allow_zero else "positive"
         raise ReferenceParameterError(f"{name} must be finite and {relation}")
     return number
 
 
+def _exact_int(
+    value: int,
+    *,
+    name: str,
+    minimum: int | None = None,
+    maximum: int | None = None,
+) -> int:
+    if isinstance(value, bool):
+        raise ReferenceParameterError(f"{name} must be an integer")
+    try:
+        integer = operator.index(value)
+    except TypeError:
+        if not isinstance(value, Real):
+            raise ReferenceParameterError(f"{name} must be an integer") from None
+        try:
+            number = float(value)
+        except (TypeError, ValueError, OverflowError):
+            raise ReferenceParameterError(f"{name} must be an integer") from None
+        if not math.isfinite(number) or not number.is_integer():
+            raise ReferenceParameterError(f"{name} must be an integer")
+        integer = int(number)
+    integer = int(integer)
+    if minimum is not None and integer < minimum:
+        raise ReferenceParameterError(f"{name} must be at least {minimum}")
+    if maximum is not None and integer > maximum:
+        raise ReferenceParameterError(f"{name} must be at most {maximum}")
+    return integer
+
+
+def _exact_bool(value: bool, *, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ReferenceParameterError(f"{name} must be a boolean")
+    return value
+
+
+def _digest(value: str, *, name: str) -> str:
+    if not isinstance(value, str):
+        raise ReferenceParameterError(f"{name} must be a SHA-256 digest string")
+    digest = value.strip().lower()
+    if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+        raise ReferenceParameterError(f"{name} must be a lowercase SHA-256 digest")
+    return digest
+
+
+def _freeze_json(value: Any, *, path: str = "metadata") -> Any:
+    if value is None or isinstance(value, (bool, str, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ReferenceParameterError(f"{path} contains a non-finite float")
+        return float(value)
+    if isinstance(value, Mapping):
+        if not all(isinstance(key, str) for key in value):
+            raise ReferenceParameterError(f"{path} keys must be strings")
+        normalized: dict[str, Any] = {}
+        for key in sorted(value):
+            normalized[key] = _freeze_json(value[key], path=f"{path}.{key}")
+        return MappingProxyType(normalized)
+    if isinstance(value, (tuple, list)):
+        return tuple(
+            _freeze_json(item, path=f"{path}[{index}]")
+            for index, item in enumerate(value)
+        )
+    raise ReferenceParameterError(
+        f"{path} contains unsupported JSON value {type(value).__name__}"
+    )
+
+
+def _thaw_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json(item) for item in value]
+    return value
+
+
 def _canonical_sha256(payload: object) -> str:
     try:
         encoded = json.dumps(
-            payload,
+            _thaw_json(payload),
             sort_keys=True,
             separators=(",", ":"),
             allow_nan=False,
@@ -38,9 +129,14 @@ def _canonical_sha256(payload: object) -> str:
 
 
 def _pair(first: int, second: int) -> tuple[int, int]:
-    i, j = sorted((int(first), int(second)))
-    if i < 0 or i == j:
-        raise ReferenceParameterError("pair indices must be distinct and non-negative")
+    i, j = sorted(
+        (
+            _exact_int(first, name="pair atom index", minimum=0),
+            _exact_int(second, name="pair atom index", minimum=0),
+        )
+    )
+    if i == j:
+        raise ReferenceParameterError("pair indices must be distinct")
     return i, j
 
 
@@ -87,11 +183,22 @@ class HarmonicAngleParameter:
     force_constant_kcal_per_mol_radian2: float
 
     def __post_init__(self) -> None:
-        indices = (int(self.atom_i), int(self.atom_j), int(self.atom_k))
-        if len(set(indices)) != 3 or min(indices) < 0:
-            raise ReferenceParameterError("angle indices must be distinct and non-negative")
-        if not math.isfinite(float(self.equilibrium_radians)) or not 0.0 < float(self.equilibrium_radians) < math.pi:
+        indices = tuple(
+            _exact_int(value, name="angle atom index", minimum=0)
+            for value in (self.atom_i, self.atom_j, self.atom_k)
+        )
+        if len(set(indices)) != 3:
+            raise ReferenceParameterError("angle indices must be distinct")
+        equilibrium = _finite_float(
+            self.equilibrium_radians,
+            name="equilibrium_radians",
+        )
+        if not 0.0 < equilibrium < math.pi:
             raise ReferenceParameterError("equilibrium_radians must be in (0,pi)")
+        object.__setattr__(self, "atom_i", indices[0])
+        object.__setattr__(self, "atom_j", indices[1])
+        object.__setattr__(self, "atom_k", indices[2])
+        object.__setattr__(self, "equilibrium_radians", equilibrium)
         object.__setattr__(
             self,
             "force_constant_kcal_per_mol_radian2",
@@ -122,13 +229,25 @@ class PeriodicTorsionParameter:
     amplitude_kcal_per_mol: float
 
     def __post_init__(self) -> None:
-        indices = tuple(int(value) for value in (self.atom_i, self.atom_j, self.atom_k, self.atom_l))
-        if len(set(indices)) != 4 or min(indices) < 0:
-            raise ReferenceParameterError("torsion indices must be distinct and non-negative")
-        if int(self.periodicity) < 1 or int(self.periodicity) > 12:
-            raise ReferenceParameterError("torsion periodicity must be in [1,12]")
-        if not math.isfinite(float(self.phase_radians)):
-            raise ReferenceParameterError("torsion phase must be finite")
+        indices = tuple(
+            _exact_int(value, name="torsion atom index", minimum=0)
+            for value in (self.atom_i, self.atom_j, self.atom_k, self.atom_l)
+        )
+        if len(set(indices)) != 4:
+            raise ReferenceParameterError("torsion indices must be distinct")
+        periodicity = _exact_int(
+            self.periodicity,
+            name="torsion periodicity",
+            minimum=1,
+            maximum=12,
+        )
+        phase = _finite_float(self.phase_radians, name="torsion phase")
+        object.__setattr__(self, "atom_i", indices[0])
+        object.__setattr__(self, "atom_j", indices[1])
+        object.__setattr__(self, "atom_k", indices[2])
+        object.__setattr__(self, "atom_l", indices[3])
+        object.__setattr__(self, "periodicity", periodicity)
+        object.__setattr__(self, "phase_radians", phase)
         object.__setattr__(
             self,
             "amplitude_kcal_per_mol",
@@ -159,8 +278,11 @@ class AtomNonbondedParameter:
     charge_e: float
 
     def __post_init__(self) -> None:
-        if int(self.atom_index) < 0:
-            raise ReferenceParameterError("atom_index must be non-negative")
+        object.__setattr__(
+            self,
+            "atom_index",
+            _exact_int(self.atom_index, name="atom_index", minimum=0),
+        )
         object.__setattr__(
             self,
             "sigma_angstrom",
@@ -175,8 +297,11 @@ class AtomNonbondedParameter:
                 allow_zero=True,
             ),
         )
-        if not math.isfinite(float(self.charge_e)):
-            raise ReferenceParameterError("charge_e must be finite")
+        object.__setattr__(
+            self,
+            "charge_e",
+            _finite_float(self.charge_e, name="charge_e"),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -199,9 +324,10 @@ class PairScalingParameter:
         object.__setattr__(self, "atom_i", i)
         object.__setattr__(self, "atom_j", j)
         for name in ("lj_scale", "electrostatic_scale"):
-            value = float(getattr(self, name))
+            value = _finite_float(getattr(self, name), name=name)
             if not math.isfinite(value) or not 0.0 <= value <= 1.0:
                 raise ReferenceParameterError(f"{name} must be in [0,1]")
+            object.__setattr__(self, name, value)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -230,8 +356,19 @@ class ReferenceApplicabilityDomain:
             "max_torsions",
             "max_nonbonded_pairs",
         ):
-            if int(getattr(self, name)) < 0:
-                raise ReferenceParameterError(f"{name} must be non-negative")
+            object.__setattr__(
+                self,
+                name,
+                _exact_int(getattr(self, name), name=name, minimum=0),
+            )
+        object.__setattr__(
+            self,
+            "periodic_orthorhombic_supported",
+            _exact_bool(
+                self.periodic_orthorhombic_supported,
+                name="periodic_orthorhombic_supported",
+            ),
+        )
         object.__setattr__(
             self,
             "minimum_pair_distance_angstrom",
@@ -257,6 +394,7 @@ class ReferenceApplicabilityDomain:
 class ReferenceForceFieldParameters:
     parameter_set_id: str
     parameter_set_version: str
+    topology_sha256: str
     atom_parameters: tuple[AtomNonbondedParameter, ...]
     bonds: tuple[HarmonicBondParameter, ...] = ()
     angles: tuple[HarmonicAngleParameter, ...] = ()
@@ -274,16 +412,75 @@ class ReferenceForceFieldParameters:
     schema_id: str = REFERENCE_PARAMETER_SCHEMA_ID
 
     def __post_init__(self) -> None:
-        if self.schema_id != REFERENCE_PARAMETER_SCHEMA_ID:
+        if str(self.schema_id) != REFERENCE_PARAMETER_SCHEMA_ID:
             raise ReferenceParameterError("unsupported reference parameter schema")
-        if not str(self.parameter_set_id or "").strip() or not str(self.parameter_set_version or "").strip():
+        object.__setattr__(self, "schema_id", REFERENCE_PARAMETER_SCHEMA_ID)
+        parameter_set_id = str(self.parameter_set_id or "").strip()
+        parameter_set_version = str(self.parameter_set_version or "").strip()
+        if not parameter_set_id or not parameter_set_version:
             raise ReferenceParameterError("parameter set ID and version must be non-empty")
+        object.__setattr__(self, "parameter_set_id", parameter_set_id)
+        object.__setattr__(self, "parameter_set_version", parameter_set_version)
+        object.__setattr__(
+            self,
+            "topology_sha256",
+            _digest(self.topology_sha256, name="topology_sha256"),
+        )
+
         atom_parameters = tuple(self.atom_parameters)
+        if not all(isinstance(row, AtomNonbondedParameter) for row in atom_parameters):
+            raise ReferenceParameterError(
+                "atom_parameters must contain AtomNonbondedParameter rows"
+            )
         indices = [row.atom_index for row in atom_parameters]
         if len(indices) != len(set(indices)):
             raise ReferenceParameterError("atom nonbonded parameter indices must be unique")
-        excluded = tuple(sorted({_pair(*pair) for pair in self.excluded_pairs}))
+
+        bonds = tuple(self.bonds)
+        if not all(isinstance(row, HarmonicBondParameter) for row in bonds):
+            raise ReferenceParameterError("bonds must contain HarmonicBondParameter rows")
+        bond_pairs = [(row.atom_i, row.atom_j) for row in bonds]
+        if len(bond_pairs) != len(set(bond_pairs)):
+            raise ReferenceParameterError("bond parameter definitions must be unique")
+
+        angles = tuple(self.angles)
+        if not all(isinstance(row, HarmonicAngleParameter) for row in angles):
+            raise ReferenceParameterError("angles must contain HarmonicAngleParameter rows")
+        angle_keys = [
+            (min(row.atom_i, row.atom_k), row.atom_j, max(row.atom_i, row.atom_k))
+            for row in angles
+        ]
+        if len(angle_keys) != len(set(angle_keys)):
+            raise ReferenceParameterError("angle parameter definitions must be unique")
+
+        torsions = tuple(self.torsions)
+        if not all(isinstance(row, PeriodicTorsionParameter) for row in torsions):
+            raise ReferenceParameterError(
+                "torsions must contain PeriodicTorsionParameter rows"
+            )
+        torsion_keys = []
+        for row in torsions:
+            forward = (row.atom_i, row.atom_j, row.atom_k, row.atom_l)
+            reverse = tuple(reversed(forward))
+            torsion_keys.append(
+                (
+                    min(forward, reverse),
+                    row.periodicity,
+                    row.phase_radians,
+                )
+            )
+        if len(torsion_keys) != len(set(torsion_keys)):
+            raise ReferenceParameterError("torsion parameter definitions must be unique")
+
+        excluded_rows = tuple(_pair(*pair) for pair in self.excluded_pairs)
+        if len(excluded_rows) != len(set(excluded_rows)):
+            raise ReferenceParameterError("excluded pair definitions must be unique")
+        excluded = tuple(sorted(excluded_rows))
         scaled = tuple(self.scaled_pairs)
+        if not all(isinstance(row, PairScalingParameter) for row in scaled):
+            raise ReferenceParameterError(
+                "scaled_pairs must contain PairScalingParameter rows"
+            )
         scaled_pairs = [(row.atom_i, row.atom_j) for row in scaled]
         if len(scaled_pairs) != len(set(scaled_pairs)):
             raise ReferenceParameterError("scaled pair definitions must be unique")
@@ -306,25 +503,31 @@ class ReferenceForceFieldParameters:
             ),
         )
         object.__setattr__(self, "atom_parameters", atom_parameters)
-        object.__setattr__(self, "bonds", tuple(self.bonds))
-        object.__setattr__(self, "angles", tuple(self.angles))
-        object.__setattr__(self, "torsions", tuple(self.torsions))
+        object.__setattr__(self, "bonds", bonds)
+        object.__setattr__(self, "angles", angles)
+        object.__setattr__(self, "torsions", torsions)
         object.__setattr__(self, "excluded_pairs", excluded)
         object.__setattr__(self, "scaled_pairs", scaled)
-        metadata = dict(self.metadata)
+        if not isinstance(self.applicability_domain, ReferenceApplicabilityDomain):
+            raise ReferenceParameterError(
+                "applicability_domain must be ReferenceApplicabilityDomain"
+            )
+        if not isinstance(self.metadata, Mapping):
+            raise ReferenceParameterError("metadata must be a mapping")
+        metadata = _freeze_json(self.metadata)
         _canonical_sha256(metadata)
         object.__setattr__(self, "metadata", metadata)
-        evidence = str(self.validation_evidence_sha256 or "").lower()
-        if self.scientifically_validated:
-            if len(evidence) != 64 or any(char not in "0123456789abcdef" for char in evidence):
-                raise ReferenceParameterError(
-                    "scientifically validated parameters require validation_evidence_sha256"
-                )
-        elif evidence:
+        scientifically_validated = _exact_bool(
+            self.scientifically_validated,
+            name="scientifically_validated",
+        )
+        evidence = str(self.validation_evidence_sha256 or "").strip()
+        if scientifically_validated or evidence:
             raise ReferenceParameterError(
-                "validation_evidence_sha256 cannot be supplied while scientifically_validated is false"
+                "scientific validation promotion is unavailable without a verified evidence receipt"
             )
-        object.__setattr__(self, "validation_evidence_sha256", evidence)
+        object.__setattr__(self, "scientifically_validated", False)
+        object.__setattr__(self, "validation_evidence_sha256", "")
 
     @property
     def atom_parameter_map(self) -> dict[int, AtomNonbondedParameter]:
@@ -339,6 +542,7 @@ class ReferenceForceFieldParameters:
             "schema_id": self.schema_id,
             "parameter_set_id": self.parameter_set_id,
             "parameter_set_version": self.parameter_set_version,
+            "topology_sha256": self.topology_sha256,
             "atom_parameters": [row.to_dict() for row in self.atom_parameters],
             "bonds": [row.to_dict() for row in self.bonds],
             "angles": [row.to_dict() for row in self.angles],
@@ -352,7 +556,7 @@ class ReferenceForceFieldParameters:
             "applicability_domain": self.applicability_domain.to_dict(),
             "scientifically_validated": bool(self.scientifically_validated),
             "validation_evidence_sha256": self.validation_evidence_sha256,
-            "metadata": dict(self.metadata),
+            "metadata": _thaw_json(self.metadata),
         }
 
     @property
