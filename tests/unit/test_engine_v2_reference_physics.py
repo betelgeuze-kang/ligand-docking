@@ -381,6 +381,42 @@ def test_parameter_topology_binding_and_bond_coverage_fail_closed() -> None:
             _neighbors(system),
             replace(parameters, bonds=parameters.bonds[:-1]),
         )
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="angle_parameters"):
+        evaluate_reference_force_field(
+            system,
+            _neighbors(system),
+            replace(parameters, angles=parameters.angles[:-1]),
+        )
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="torsion_parameters"):
+        evaluate_reference_force_field(
+            system,
+            _neighbors(system),
+            replace(parameters, torsions=parameters.torsions[:-1]),
+        )
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="angle_parameters"):
+        evaluate_reference_force_field(
+            system,
+            _neighbors(system),
+            replace(
+                parameters,
+                angles=(
+                    *parameters.angles,
+                    HarmonicAngleParameter(0, 1, 3, 2.0, 45.0),
+                ),
+            ),
+        )
+    with pytest.raises(ReferencePhysicsApplicabilityError, match="torsion_parameters"):
+        evaluate_reference_force_field(
+            system,
+            _neighbors(system),
+            replace(
+                parameters,
+                torsions=(
+                    *parameters.torsions,
+                    PeriodicTorsionParameter(0, 2, 1, 3, 1, 0.0, 0.5),
+                ),
+            ),
+        )
 
     wrong_atoms = list(system.atoms)
     wrong_atoms[0] = replace(wrong_atoms[0], element="O", atomic_number=8)

@@ -169,6 +169,35 @@ def _neighbor_graph_matches_current_system(
         return False
 
 
+def _bonded_topology_paths(
+    atom_count: int,
+    bond_pairs: list[tuple[int, int]],
+) -> tuple[set[tuple[int, int, int]], set[tuple[int, int, int, int]]]:
+    """Derive every graph-implied angle and proper-torsion path."""
+
+    adjacency = {index: set() for index in range(atom_count)}
+    for atom_i, atom_j in bond_pairs:
+        adjacency[atom_i].add(atom_j)
+        adjacency[atom_j].add(atom_i)
+
+    angles: set[tuple[int, int, int]] = set()
+    for center, bonded_atoms in adjacency.items():
+        ordered = sorted(bonded_atoms)
+        for first_index, atom_i in enumerate(ordered):
+            for atom_k in ordered[first_index + 1 :]:
+                angles.add((atom_i, center, atom_k))
+
+    torsions: set[tuple[int, int, int, int]] = set()
+    for atom_j, atom_k in sorted(set(bond_pairs)):
+        for atom_i in adjacency[atom_j] - {atom_k}:
+            for atom_l in adjacency[atom_k] - {atom_j}:
+                forward = (atom_i, atom_j, atom_k, atom_l)
+                if len(set(forward)) != 4:
+                    continue
+                torsions.add(min(forward, tuple(reversed(forward))))
+    return angles, torsions
+
+
 def _applicability_blockers(
     system: AllAtomSystem,
     neighbors: CompactNeighborList,
@@ -191,6 +220,15 @@ def _applicability_blockers(
             tuple(sorted((int(row.atom_i), int(row.atom_j))))
             for row in system.bonds
         ]
+        if any(
+            atom_i < 0
+            or atom_j < 0
+            or atom_i >= system.atom_count
+            or atom_j >= system.atom_count
+            or atom_i == atom_j
+            for atom_i, atom_j in system_bond_pairs
+        ):
+            raise ValueError("system bond index is outside the atom topology")
     except (AttributeError, TypeError, ValueError, OverflowError):
         blockers.append("system_bond_topology_invalid")
         system_bond_pairs = []
@@ -198,11 +236,37 @@ def _applicability_blockers(
         (row.atom_i, row.atom_j)
         for row in parameters.bonds
     ]
-    if "system_bond_topology_invalid" not in blockers and (
-        len(system_bond_pairs) != len(set(system_bond_pairs))
-        or set(system_bond_pairs) != set(parameter_bond_pairs)
-    ):
-        blockers.append("bond_parameters_do_not_exactly_cover_system_bonds")
+    if "system_bond_topology_invalid" not in blockers:
+        unique_system_bonds = set(system_bond_pairs)
+        if (
+            len(system_bond_pairs) != len(unique_system_bonds)
+            or unique_system_bonds != set(parameter_bond_pairs)
+        ):
+            blockers.append("bond_parameters_do_not_exactly_cover_system_bonds")
+        else:
+            expected_angles, expected_torsions = _bonded_topology_paths(
+                system.atom_count,
+                system_bond_pairs,
+            )
+            parameter_angles = {
+                (min(row.atom_i, row.atom_k), row.atom_j, max(row.atom_i, row.atom_k))
+                for row in parameters.angles
+            }
+            parameter_torsions = {
+                min(
+                    (row.atom_i, row.atom_j, row.atom_k, row.atom_l),
+                    (row.atom_l, row.atom_k, row.atom_j, row.atom_i),
+                )
+                for row in parameters.torsions
+            }
+            if parameter_angles != expected_angles:
+                blockers.append(
+                    "angle_parameters_do_not_exactly_cover_system_topology"
+                )
+            if parameter_torsions != expected_torsions:
+                blockers.append(
+                    "torsion_parameters_do_not_exactly_cover_system_topology"
+                )
 
     if system.atom_count > domain.max_atoms:
         blockers.append("atom_count_outside_applicability_domain")
