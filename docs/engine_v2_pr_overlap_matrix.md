@@ -1,6 +1,10 @@
 # Engine v2 PR overlap and supersession matrix
 
-기준 브랜치: `main` at `29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
+역사적 분해 기준: `main@29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
+
+현재 기준: core-recovery endpoint `main@3f9ede19bb158a02eb3d06e0ed42dea6952db680`
+
+상태: #43/#49 초기 분해 결정은 유지되며, #49 대체 스택과 2026-07 복구 스택은 병합 완료됐다. #43과 #66은 여전히 donor이며 통째 병합 금지다.
 
 이 문서는 대형 draft PR #43과 #49를 통째로 병합하지 않고, 보안 스택과
 독립 Engine v2 스택을 분리해 검토하기 위한 파일 단위 기준선이다.
@@ -9,19 +13,20 @@
 
 | PR | 역할 | 현재 권장 처리 |
 | --- | --- | --- |
-| #43 | API 보안, validated runner, scientific proxy, legacy CPU physics가 혼합된 donor PR | 통째 병합 금지. 필요한 변경을 보안·proxy·legacy physics child PR로 추출 |
-| #44 | mobile-lite 의존성·CI 기준선 | 보안 스택의 기반 PR로 유지 |
-| #45 | 서버 고정 tenant identity | #44 뒤에 유지 |
-| #46 | product docking JSON ledger tenant isolation | #45 뒤에 유지 |
-| #47 | SQLite simulation ownership primitive | #46 뒤에 유지 |
-| #48 | live `/simulate`, `/status`, `/results` ownership integration | #47 뒤에 유지 |
-| #49 | 독립 Engine v2 대형 donor PR | #50~#54와 V2-F로 대체 후 donor로 종료 |
-| #50 | V2-A contracts and molecular identity | `main` 기반 첫 Engine v2 PR |
-| #51 | V2-B sparse geometry and deterministic features | #50 뒤에 병합 |
-| #52 | V2-C sparse AI, periodic gradients, projections | #51 뒤에 병합 |
-| #53 | V2-D CPU orchestration and physics/residual composition | #52 뒤에 병합 |
-| #54 | V2-E runtime vocabulary, conditioning, checkpoint contracts | #53 뒤에 병합 |
-| V2-F | independent wheel, clean install, AST guards, overlap record | #54 뒤에 병합 |
+| #43 | API 보안, validated runner, scientific proxy, legacy CPU physics가 혼합된 open donor PR | 보안 부분은 #44~#48, #67, #62가 대체했다. 나머지는 proxy·legacy physics·advanced-method child로만 추출 |
+| #44 | mobile-lite 의존성·CI 기준선 | `c48feab1`로 병합 완료 |
+| #45 | 서버 고정 tenant identity | `2f5b6589`로 병합 완료 |
+| #46 | product docking JSON ledger tenant isolation | `e997756c`로 병합 완료 |
+| #47 | SQLite simulation ownership primitive | `27d6126f`로 병합 완료 |
+| #48 | live `/simulate`, `/status`, `/results` ownership integration | `be42d1af`로 병합 완료 |
+| #62 | current API security, validated runner, signed artifact/runtime evidence, fail-closed deployment | `3f9ede19`로 병합 완료; #43의 동일 보안 파일은 재추출 금지 |
+| #49 | 독립 Engine v2 대형 donor PR | #50~#54, #56, #57로 대체되어 closed/superseded |
+| #50 | V2-A contracts and molecular identity | `27dc439c`로 병합 완료 |
+| #51 | V2-B sparse geometry and deterministic features | `48f550a7`로 병합 완료 |
+| #52 | V2-C sparse AI, periodic gradients, projections | `1adca716`으로 병합 완료 |
+| #53 | V2-D CPU orchestration and physics/residual composition | `b789ccf1`로 병합 완료 |
+| #54 | V2-E runtime vocabulary, conditioning, checkpoint contracts | `b7b90d75`로 병합 완료 |
+| V2-F (#56) | independent wheel, clean install, AST guards, overlap record | `f7309044`로 병합 완료 |
 
 ## 2. #43과 #44~#48 직접 파일 중복
 
@@ -33,12 +38,16 @@
 | #47 | 직접 동일 파일 없음 | 개념상 #43의 `api/job_store.py` hardening과 연결되므로 SQLite transaction 정책을 별도 검토 |
 | #48 | `api/main.py` | #48의 endpoint ownership wiring을 기준으로 삼고 #43의 main.py patch는 수동 분해 |
 
-#44~#48 자체는 의도적인 stacked PR이다. 다음 파일은 자식 PR에서 계속 갱신된다.
+#44~#48 자체는 의도적인 stacked PR이었고 순서대로 병합됐다. 다음 파일은 당시
+자식 PR에서 누적 갱신됐다.
 
 - `.github/workflows/ci-mobile-lite.yml`: #44, #46, #47, #48
 - `docs/api_server_bound_identity.md`: #45, #46, #47, #48
 
 이 중복은 다른 구현을 뜻하지 않고 한 보안 스택의 누적 검증을 뜻한다.
+현재 validated runner, signed result bundle, runtime qualification, deployment,
+restricted/customer verifier의 소유권은 #62의 병합 결과다. #43에서 같은 API
+security 파일을 다시 가져오지 않는다.
 
 ## 3. #49에서 새 V2 스택으로 추출된 파일군
 
@@ -49,7 +58,7 @@
 | `betelgeuze_engine_v2/ai/**`, `physics/projection.py` | #52 V2-C | 추출 완료. periodic exact-gradient path와 quantity semantics 추가 |
 | `betelgeuze_engine_v2/engine.py` | #53 V2-D | 추출 완료. independent physics와 residual/total을 분리 |
 | `train/runtime_inputs.py`, `train/checkpoint_contracts.py`, `core/ai_correction.py`, capability YAML | #54 V2-E | 추출 완료. vocabulary, `[B,P]`, strict fingerprints로 보강 |
-| `.github/workflows/ci-engine-v2-cpu.yml`, packaging portions | V2-F | 독립 wheel·clean install·AST guard로 대체 |
+| `.github/workflows/ci-engine-v2-cpu.yml`, packaging portions | #56 V2-F | 독립 wheel·clean install·AST guard로 대체 |
 
 ## 4. #49에서 아직 자동 승계하지 않는 파일
 
@@ -78,19 +87,19 @@
   V2-A~F의 독립 에너지/힘 계약과 같은 구현이 아니므로 자동 병합하지 않는다.
 - #43의 legacy neighbor/cache와 V2-B compact radius graph는 목적이 다르다. 전자는
   기존 제품 경로 hardening, 후자는 독립 Engine v2 소유 구현이다.
-- #44~#48은 제품 API security lane이며 V2-A~F에는 API route나 tenant code를 넣지 않는다.
+- #44~#48과 #62는 제품 API security lane이며 V2-A~F에는 API route나 tenant code를 넣지 않는다.
 - V2-A~F green은 제품 API readiness나 legacy restricted delivery green으로 합산하지 않는다.
 
-## 6. 권장 병합 순서
+## 6. 완료된 기반 병합 순서
 
 ```text
-Security lane: #44 -> #45 -> #46 -> #47 -> #48
+Security lane: #44 -> #45 -> #46 -> #47 -> #48 -> #67 -> #62
 Engine lane:   #50 -> #51 -> #52 -> #53 -> #54 -> V2-F
 ```
 
-두 lane은 `main`에서 각각 순서대로 병합하고, 병합 직후 다음 PR의 base를 최신
-부모 branch 또는 `main`으로 갱신한다. #43과 #49는 필요한 child PR 추출이 끝난
-뒤 `superseded` donor로 닫는다.
+두 lane은 위 순서로 `main`에 병합됐다. #49는 필요한 child PR로 대체되어 닫혔다.
+#43은 보안 부분이 현재 `main`에서 대체됐지만, 아직 분류되지 않은 proxy·legacy
+physics·advanced-method material 때문에 open donor로 남는다.
 
 ## 7. 금지 사항
 
@@ -98,3 +107,30 @@ Engine lane:   #50 -> #51 -> #52 -> #53 -> #54 -> V2-F
 - security lane green을 V2 scientific validity로 해석하지 않는다.
 - V2 unit-test green을 docking accuracy, MD validity, GPU parity 또는 commercial
   readiness로 해석하지 않는다.
+
+## 8. 2026-07 recovery stack 결과
+
+| 소유 계층 | PR | Merge SHA | 현재 의미 |
+| --- | --- | --- | --- |
+| H0/H1 | #58, #59 | `a90c1d8b`, `de83e282` | post-merge state와 canonical input identity |
+| P0 | #67 | `a3a585d5` | 공개 PR을 persistent self-hosted runner에서 구조적으로 분리 |
+| H2 | #60 | `298c8223` | symmetry mapping identity와 not-evaluated pose semantics |
+| H3 | #72 | `bf73e0ac` | #61을 대체한 clean benchmark-contract restack |
+| H5 | #63 | `8097b516` | bounded reference-physics contracts; scientific promotion 없음 |
+| H6 | #64 | `1657b6a1` | reproducible release-candidate packaging과 분리된 CI |
+| H7 | #65 | `13af55c8` | offline external-baseline receipts; public benchmark validation 아님 |
+| #66 child 1 | #73 | `6ae6d114` | bounded single-data-block CIF syntax만 추출 |
+| H4 API leaf | #62 | `3f9ede19` | artifact/runtime/deployment fail-closed hardening; customer route disabled |
+
+H3 donor #61은 #72 병합 후 superseded로 닫혔다. H4는 위 Engine 계층과 구현
+소유권을 공유하지 않는 API-only leaf로 마지막에 최신 `main`에 병합됐다.
+
+## 9. 현재 donor 경계
+
+- #43은 통째 병합 금지이며, 현재 API security 파일을 다시 가져오지 않는다.
+- #66은 stale mixed ancestry의 open donor다. 첫 child #73만 병합됐고, mmCIF
+  identity/assembly, peptide preparation, alkane physics, SPICE evidence, CI bucket은
+  각각 새 current-main child와 독립 검토가 필요하다.
+- #73의 syntax 테스트 성공은 semantic mmCIF conformance, molecular preparation,
+  scientific validation, public benchmark validation, GPU parity, customer execution,
+  또는 commercial readiness를 확립하지 않는다.
