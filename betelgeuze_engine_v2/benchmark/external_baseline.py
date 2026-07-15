@@ -6,6 +6,7 @@ work orders and validates operator-produced result rows and pose artifacts.
 
 from __future__ import annotations
 
+from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass, field
 import csv
 import hashlib
@@ -14,6 +15,8 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
+from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 SUPPORTED_EXTERNAL_ENGINES = frozenset({"vina", "gnina", "smina"})
@@ -35,6 +38,7 @@ _CSV_RESULT_FIELDS = (
     "pose_sha256",
     "error_code",
 )
+_SECURE_DIR_FD_OPEN_SUPPORTED = os.open in getattr(os, "supports_dir_fd", set())
 
 
 class ExternalBaselineContractError(ValueError):
@@ -69,80 +73,284 @@ def _canonical_sha256(payload: object) -> str:
     return hashlib.sha256(_canonical_bytes(payload)).hexdigest()
 
 
-def _absolute_without_resolving(path: Path) -> Path:
-    return Path(os.path.abspath(path))
+def _normalize_metadata(
+    value: Any,
+    *,
+    path: str = "metadata",
+    active_containers: set[int] | None = None,
+) -> Any:
+    active = active_containers if active_containers is not None else set()
+    if isinstance(value, MappingABC):
+        identity = id(value)
+        if identity in active:
+            raise ExternalBaselineContractError(
+                f"{path} must not contain cyclic containers"
+            )
+        active.add(identity)
+        try:
+            normalized: dict[str, Any] = {}
+            for key, item in value.items():
+                if type(key) is not str:
+                    raise ExternalBaselineContractError(
+                        f"{path} object keys must be strings"
+                    )
+                normalized[key] = _normalize_metadata(
+                    item,
+                    path=f"{path}.{key}",
+                    active_containers=active,
+                )
+            return {key: normalized[key] for key in sorted(normalized)}
+        finally:
+            active.remove(identity)
+    if isinstance(value, (list, tuple)):
+        identity = id(value)
+        if identity in active:
+            raise ExternalBaselineContractError(
+                f"{path} must not contain cyclic containers"
+            )
+        active.add(identity)
+        try:
+            return [
+                _normalize_metadata(
+                    item,
+                    path=f"{path}[{index}]",
+                    active_containers=active,
+                )
+                for index, item in enumerate(value)
+            ]
+        finally:
+            active.remove(identity)
+    if value is None or isinstance(value, (str, bool)):
+        return value
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ExternalBaselineContractError(
+                f"{path} floating-point values must be finite"
+            )
+        return float(value)
+    raise ExternalBaselineContractError(
+        f"{path} must contain only canonical JSON values"
+    )
 
 
-def _reject_symlink_components(path: Path, *, message: str) -> None:
-    absolute = _absolute_without_resolving(path)
-    current = Path(absolute.anchor)
-    for part in absolute.parts[1:]:
-        current /= part
-        if current.is_symlink():
-            raise ExternalBaselineContractError(message)
+def _freeze_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _thaw_json(value: Any) -> Any:
+    if isinstance(value, MappingABC):
+        return {str(key): _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json(item) for item in value]
+    return value
+
+
+def _canonical_metadata(value: Mapping[str, Any]) -> Mapping[str, Any]:
+    if not isinstance(value, MappingABC):
+        raise ExternalBaselineContractError("metadata must be a mapping")
+    normalized = _normalize_metadata(value)
+    _canonical_sha256(normalized)
+    return _freeze_json(normalized)
+
+
+def _finite_score(value: Any, *, message: str) -> float:
+    if isinstance(value, bool):
+        raise ExternalBaselineContractError(message)
+    try:
+        score = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ExternalBaselineContractError(message) from exc
+    if not math.isfinite(score):
+        raise ExternalBaselineContractError(message)
+    return score
+
+
+def _secure_open_flags(*, directory: bool) -> int:
+    required = ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK")
+    if os.name != "posix" or any(not hasattr(os, name) for name in required):
+        raise ExternalBaselineContractError(
+            "secure external baseline artifact validation is unavailable"
+        )
+    if not _SECURE_DIR_FD_OPEN_SUPPORTED:
+        raise ExternalBaselineContractError(
+            "secure external baseline artifact validation is unavailable"
+        )
+    flags = os.O_RDONLY | os.O_NOFOLLOW
+    if directory:
+        flags |= os.O_DIRECTORY
+    else:
+        flags |= getattr(os, "O_NONBLOCK", 0)
+    flags |= getattr(os, "O_CLOEXEC", 0)
+    return flags
+
+
+def _root_components(root: Path) -> tuple[str, ...]:
+    if ".." in root.parts:
+        raise ExternalBaselineContractError(
+            "external baseline artifact_root may not contain '..' or traverse symlinks"
+        )
+    expanded = root.expanduser()
+    if ".." in expanded.parts:
+        raise ExternalBaselineContractError(
+            "external baseline artifact_root may not contain '..' or traverse symlinks"
+        )
+    if expanded.is_absolute():
+        if expanded.anchor != os.sep:
+            raise ExternalBaselineContractError(
+                "external baseline artifact_root has an unsupported filesystem anchor"
+            )
+        absolute = expanded
+    else:
+        absolute = Path.cwd().joinpath(expanded)
+    if absolute.anchor != os.sep:
+        raise ExternalBaselineContractError(
+            "external baseline artifact_root has an unsupported filesystem anchor"
+        )
+    return tuple(part for part in absolute.parts[1:] if part not in {"", "."})
+
+
+def _open_directory_at(parent_fd: int, component: str, *, scope: str) -> int:
+    try:
+        return os.open(
+            component,
+            _secure_open_flags(directory=True),
+            dir_fd=parent_fd,
+        )
+    except (OSError, ValueError) as exc:
+        raise ExternalBaselineContractError(
+            f"external baseline {scope} component is missing, inaccessible, "
+            "not a directory, or a symlink"
+        ) from exc
+
+
+def _open_regular_at(parent_fd: int, component: str) -> int:
+    try:
+        return os.open(
+            component,
+            _secure_open_flags(directory=False),
+            dir_fd=parent_fd,
+        )
+    except (OSError, ValueError) as exc:
+        raise ExternalBaselineContractError(
+            "external baseline pose artifact is missing, inaccessible, or a symlink"
+        ) from exc
+
+
+def _open_directory_chain(components: Sequence[str]) -> int:
+    directory_flags = _secure_open_flags(directory=True)
+    try:
+        current_fd = os.open(os.sep, directory_flags)
+    except (OSError, ValueError) as exc:
+        raise ExternalBaselineContractError(
+            "external baseline filesystem root cannot be opened securely"
+        ) from exc
+    try:
+        for component in components:
+            previous_fd = current_fd
+            current_fd = _open_directory_at(
+                previous_fd,
+                component,
+                scope="artifact_root",
+            )
+            os.close(previous_fd)
+        result_fd = current_fd
+        current_fd = None
+        return result_fd
+    finally:
+        if current_fd is not None:
+            os.close(current_fd)
+
+
+def _open_pose_directory(root_fd: int, components: Sequence[str]) -> int:
+    current_fd = root_fd
+    try:
+        for component in components:
+            previous_fd = current_fd
+            current_fd = _open_directory_at(
+                previous_fd,
+                component,
+                scope="pose path",
+            )
+            os.close(previous_fd)
+        result_fd = current_fd
+        current_fd = None
+        return result_fd
+    finally:
+        if current_fd is not None:
+            os.close(current_fd)
 
 
 def _confined_file(
     root: Path,
     relative_path: str,
     expected_sha256: str,
-) -> tuple[Path, int, str]:
+) -> tuple[int, str]:
     relative = Path(str(relative_path or ""))
-    if not relative_path or relative.is_absolute() or ".." in relative.parts:
+    if (
+        not relative_path
+        or relative.is_absolute()
+        or ".." in relative.parts
+        or not relative.parts
+    ):
         raise ExternalBaselineContractError(
             "pose_path must be a relative path below artifact_root"
         )
-    expanded_root = root.expanduser()
-    _reject_symlink_components(
-        expanded_root,
-        message="external baseline artifact_root may not traverse symlinks",
-    )
+    root_fd = _open_directory_chain(_root_components(root))
+    directory_fd = _open_pose_directory(root_fd, relative.parts[:-1])
+    file_fd: int | None = None
     try:
-        resolved_root = expanded_root.resolve(strict=True)
-    except OSError as exc:
-        raise ExternalBaselineContractError(
-            "external baseline artifact_root does not exist"
-        ) from exc
-    if not resolved_root.is_dir():
-        raise ExternalBaselineContractError(
-            "external baseline artifact_root is not a directory"
-        )
-    current = resolved_root
-    for part in relative.parts:
-        current = current / part
-        if current.is_symlink():
+        file_fd = _open_regular_at(directory_fd, relative.parts[-1])
+        try:
+            before = os.fstat(file_fd)
+        except OSError as exc:
             raise ExternalBaselineContractError(
-                "external baseline pose path may not traverse symlinks"
+                "external baseline pose artifact cannot be inspected"
+            ) from exc
+        if not stat.S_ISREG(before.st_mode):
+            raise ExternalBaselineContractError(
+                "external baseline pose is not a regular file"
             )
-    try:
-        resolved = current.resolve(strict=True)
-    except OSError as exc:
-        raise ExternalBaselineContractError(
-            "external baseline pose artifact does not exist"
-        ) from exc
-    try:
-        resolved.relative_to(resolved_root)
-    except ValueError as exc:
-        raise ExternalBaselineContractError(
-            "external baseline pose path escapes artifact_root"
-        ) from exc
-    if not resolved.is_file():
-        raise ExternalBaselineContractError("external baseline pose is not a regular file")
-    digest = hashlib.sha256()
-    size = 0
-    try:
-        with resolved.open("rb") as handle:
-            while chunk := handle.read(1024 * 1024):
+        digest = hashlib.sha256()
+        size = 0
+        try:
+            while chunk := os.read(file_fd, 1024 * 1024):
                 digest.update(chunk)
                 size += len(chunk)
-    except OSError as exc:
-        raise ExternalBaselineContractError(
-            "external baseline pose artifact cannot be read"
-        ) from exc
-    actual = digest.hexdigest()
-    if actual != expected_sha256:
-        raise ExternalBaselineContractError("external baseline pose SHA-256 mismatch")
-    return resolved, size, actual
+        except OSError as exc:
+            raise ExternalBaselineContractError(
+                "external baseline pose artifact cannot be read"
+            ) from exc
+        try:
+            after = os.fstat(file_fd)
+        except OSError as exc:
+            raise ExternalBaselineContractError(
+                "external baseline pose artifact cannot be inspected"
+            ) from exc
+        stable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+        if any(getattr(before, name) != getattr(after, name) for name in stable_fields):
+            raise ExternalBaselineContractError(
+                "external baseline pose artifact changed during validation"
+            )
+        if size != after.st_size:
+            raise ExternalBaselineContractError(
+                "external baseline pose artifact size changed during validation"
+            )
+        actual = digest.hexdigest()
+        if actual != expected_sha256:
+            raise ExternalBaselineContractError("external baseline pose SHA-256 mismatch")
+        return size, actual
+    finally:
+        try:
+            if file_fd is not None:
+                os.close(file_fd)
+        finally:
+            os.close(directory_fd)
 
 
 @dataclass(frozen=True)
@@ -220,9 +428,7 @@ class ExternalBaselineCase:
             "ligand_sha256",
             _sha256(self.ligand_sha256, name="ligand_sha256"),
         )
-        metadata = dict(self.metadata)
-        _canonical_sha256(metadata)
-        object.__setattr__(self, "metadata", metadata)
+        object.__setattr__(self, "metadata", _canonical_metadata(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -231,7 +437,7 @@ class ExternalBaselineCase:
             "ligand_id": self.ligand_id,
             "receptor_sha256": self.receptor_sha256,
             "ligand_sha256": self.ligand_sha256,
-            "metadata": dict(self.metadata),
+            "metadata": _thaw_json(self.metadata),
         }
 
 
@@ -325,8 +531,8 @@ class ExternalBaselineResultRow:
     pose_path: str = ""
     pose_sha256: str = ""
     error_code: str = ""
-    pose_size_bytes: int = 0
-    pose_verified: bool = False
+    pose_size_bytes: int = field(default=0, init=False)
+    pose_verified: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
         case_id = str(self.case_id or "").strip()
@@ -338,27 +544,15 @@ class ExternalBaselineResultRow:
             raise ExternalBaselineContractError("result case_id must be non-empty")
         if status not in {"success", "failure"}:
             raise ExternalBaselineContractError("result status must be success or failure")
-        if isinstance(self.pose_size_bytes, bool) or not isinstance(
-            self.pose_size_bytes, int
-        ):
-            raise ExternalBaselineContractError("pose_size_bytes must be an integer")
-        if self.pose_size_bytes < 0:
-            raise ExternalBaselineContractError("pose_size_bytes must be non-negative")
-        if not isinstance(self.pose_verified, bool):
-            raise ExternalBaselineContractError("pose_verified must be a boolean")
         object.__setattr__(self, "case_id", case_id)
         object.__setattr__(self, "status", status)
         object.__setattr__(self, "pose_path", pose_path)
         object.__setattr__(self, "error_code", error_code)
         if status == "success":
-            try:
-                score = float(self.score) if self.score is not None else math.nan
-            except (TypeError, ValueError) as exc:
-                raise ExternalBaselineContractError(
-                    "success result requires a finite score"
-                ) from exc
-            if not math.isfinite(score):
-                raise ExternalBaselineContractError("success result requires a finite score")
+            score = _finite_score(
+                self.score,
+                message="success result requires a finite non-boolean score",
+            )
             if not pose_path:
                 raise ExternalBaselineContractError("success result requires pose_path")
             object.__setattr__(self, "score", score)
@@ -391,34 +585,22 @@ class ExternalBaselineResultRow:
         }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class ExternalBaselineReceipt:
     work_order: ExternalBaselineWorkOrder
     rows: tuple[ExternalBaselineResultRow, ...]
     schema_id: str = EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID
 
-    def __post_init__(self) -> None:
-        if self.schema_id != EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID:
-            raise ExternalBaselineContractError("unsupported baseline receipt schema")
-        rows = tuple(self.rows)
-        expected = [case.case_id for case in self.work_order.cases]
-        observed = [row.case_id for row in rows]
-        if observed != expected:
-            raise ExternalBaselineContractError(
-                "receipt must preserve exactly one ordered row per work-order case"
-            )
-        for row in rows:
-            if row.status == "success" and not row.pose_verified:
-                raise ExternalBaselineContractError(
-                    "receipt success rows require verified pose provenance"
-                )
-            if row.status == "failure" and (
-                row.pose_verified or row.pose_size_bytes != 0
-            ):
-                raise ExternalBaselineContractError(
-                    "receipt failure rows cannot contain verified pose provenance"
-                )
-        object.__setattr__(self, "rows", rows)
+    def __init__(
+        self,
+        work_order: ExternalBaselineWorkOrder,
+        rows: Sequence[ExternalBaselineResultRow],
+        schema_id: str = EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID,
+    ) -> None:
+        _validate_receipt_content(work_order, tuple(rows), schema_id)
+        raise ExternalBaselineContractError(
+            "external baseline receipts may only be created by result validation"
+        )
 
     @property
     def success_count(self) -> int:
@@ -449,6 +631,32 @@ class ExternalBaselineReceipt:
         }
         payload["receipt_fingerprint_sha256"] = _canonical_sha256(payload)
         return payload
+
+
+def _validate_receipt_content(
+    work_order: ExternalBaselineWorkOrder,
+    rows: tuple[ExternalBaselineResultRow, ...],
+    schema_id: str,
+) -> None:
+    if schema_id != EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID:
+        raise ExternalBaselineContractError("unsupported baseline receipt schema")
+    expected = [case.case_id for case in work_order.cases]
+    observed = [row.case_id for row in rows]
+    if observed != expected:
+        raise ExternalBaselineContractError(
+            "receipt must preserve exactly one ordered row per work-order case"
+        )
+    for row in rows:
+        if row.status == "success" and not row.pose_verified:
+            raise ExternalBaselineContractError(
+                "receipt success rows require verified pose provenance"
+            )
+        if row.status == "failure" and (
+            row.pose_verified or row.pose_size_bytes != 0
+        ):
+            raise ExternalBaselineContractError(
+                "receipt failure rows cannot contain verified pose provenance"
+            )
 
 
 def read_external_baseline_csv(path: str | Path) -> tuple[dict[str, str], ...]:
@@ -518,7 +726,8 @@ def validate_external_baseline_results(
             )
             if contradictory:
                 raise ExternalBaselineContractError(
-                    f"case {case.case_id} failure result cannot contain score or pose provenance"
+                    f"case {case.case_id} failure result cannot contain "
+                    "score or pose provenance"
                 )
             validated.append(
                 ExternalBaselineResultRow(
@@ -536,27 +745,51 @@ def validate_external_baseline_results(
             raise ExternalBaselineContractError(
                 f"case {case.case_id} success result cannot contain error_code"
             )
-        try:
-            score = float(row.get("score", ""))
-        except (TypeError, ValueError) as exc:
-            raise ExternalBaselineContractError(
-                f"case {case.case_id} score is not numeric"
-            ) from exc
-        pose_sha = _sha256(str(row.get("pose_sha256", "")), name="pose_sha256")
-        pose_path = str(row.get("pose_path", "") or "").strip()
-        _, size, actual_pose_sha = _confined_file(root, pose_path, pose_sha)
-        validated.append(
-            ExternalBaselineResultRow(
-                case_id=case.case_id,
-                status="success",
-                score=score,
-                pose_path=pose_path,
-                pose_sha256=actual_pose_sha,
-                pose_size_bytes=size,
-                pose_verified=True,
-            )
+        score = _finite_score(
+            row.get("score", ""),
+            message=f"case {case.case_id} score is not finite numeric data",
         )
-    return ExternalBaselineReceipt(work_order=work_order, rows=tuple(validated))
+        pose_sha = _sha256(
+            str(row.get("pose_sha256", "")),
+            name="pose_sha256",
+        )
+        pose_path = str(row.get("pose_path", "") or "").strip()
+        size, actual_pose_sha = _confined_file(root, pose_path, pose_sha)
+        validated_row = ExternalBaselineResultRow(
+            case_id=case.case_id,
+            status="success",
+            score=score,
+            pose_path=pose_path,
+            pose_sha256=actual_pose_sha,
+        )
+        object.__setattr__(validated_row, "pose_size_bytes", size)
+        object.__setattr__(validated_row, "pose_verified", True)
+        validated.append(validated_row)
+
+    validator_token = object()
+    validated_rows = tuple(validated)
+
+    def issue_receipt(authorization: object) -> ExternalBaselineReceipt:
+        if authorization is not validator_token:
+            raise ExternalBaselineContractError(
+                "external baseline receipt authorization is invalid"
+            )
+        _validate_receipt_content(
+            work_order,
+            validated_rows,
+            EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID,
+        )
+        receipt = object.__new__(ExternalBaselineReceipt)
+        object.__setattr__(receipt, "work_order", work_order)
+        object.__setattr__(receipt, "rows", validated_rows)
+        object.__setattr__(
+            receipt,
+            "schema_id",
+            EXTERNAL_BASELINE_RECEIPT_SCHEMA_ID,
+        )
+        return receipt
+
+    return issue_receipt(validator_token)
 
 
 __all__ = [
