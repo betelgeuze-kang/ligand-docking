@@ -9,6 +9,7 @@ from typing import Any
 
 from api.config import settings
 from api.request_privacy import sanitize_request_for_ledger
+from api.sqlite_runtime import connect_sqlite
 
 
 def _utc_now_dt() -> datetime:
@@ -25,6 +26,19 @@ def _utc_now() -> str:
 
 def _utc_after(seconds: int) -> str:
     return _format_utc(_utc_now_dt() + timedelta(seconds=seconds))
+
+
+def canonical_request_sha256(request: dict[str, Any]) -> str:
+    """Return the stable fingerprint bound to admission and result manifests."""
+
+    encoded = json.dumps(
+        request,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _outbox_summary_from_request(job_id: str, status: str, request: dict[str, Any]) -> dict[str, Any]:
@@ -82,9 +96,7 @@ class SQLiteJobStore:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.path))
-        conn.row_factory = sqlite3.Row
-        return conn
+        return connect_sqlite(self.path)
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -94,6 +106,7 @@ class SQLiteJobStore:
                     job_id TEXT PRIMARY KEY,
                     status TEXT NOT NULL,
                     request_json TEXT NOT NULL,
+                    request_sha256 TEXT NOT NULL DEFAULT '',
                     error TEXT NOT NULL DEFAULT '',
                     result_file TEXT NOT NULL DEFAULT '',
                     result_manifest_path TEXT NOT NULL DEFAULT '',
@@ -137,6 +150,10 @@ class SQLiteJobStore:
                 conn.execute("ALTER TABLE simulation_jobs ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0")
             if "max_attempts" not in columns:
                 conn.execute("ALTER TABLE simulation_jobs ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3")
+            if "request_sha256" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN request_sha256 TEXT NOT NULL DEFAULT ''"
+                )
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_simulation_jobs_status ON simulation_jobs(status)"
             )
@@ -160,6 +177,22 @@ class SQLiteJobStore:
                 """
                 CREATE INDEX IF NOT EXISTS idx_simulation_job_outbox_pending
                 ON simulation_job_outbox(delivery_state, created_at_utc)
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS simulation_job_ownership (
+                    job_id TEXT PRIMARY KEY,
+                    tenant_id TEXT NOT NULL,
+                    created_at_utc TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_simulation_job_ownership_tenant
+                ON simulation_job_ownership(tenant_id, job_id)
                 """
             )
 
@@ -275,19 +308,27 @@ class SQLiteJobStore:
         max_attempts: int = 3,
     ) -> dict[str, Any]:
         now = _utc_now()
-        request_json = json.dumps(sanitize_request_for_ledger(request), sort_keys=True, ensure_ascii=False)
+        request_sha256 = canonical_request_sha256(request)
+        request_json = json.dumps(
+            sanitize_request_for_ledger(request),
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
         outbox_payload = _outbox_summary_from_request(job_id, status, request)
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             conn.execute(
                 """
                 INSERT INTO simulation_jobs(
-                    job_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
+                    job_id, status, request_json, request_sha256,
+                    max_attempts, created_at_utc, updated_at_utc
                 )
-                VALUES(?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(job_id) DO UPDATE SET
                     status=excluded.status,
                     request_json=excluded.request_json,
+                    request_sha256=excluded.request_sha256,
                     error='',
                     result_file='',
                     result_manifest_path='',
@@ -300,7 +341,7 @@ class SQLiteJobStore:
                     max_attempts=excluded.max_attempts,
                     updated_at_utc=excluded.updated_at_utc
                 """,
-                (job_id, status, request_json, max_attempts, now, now),
+                (job_id, status, request_json, request_sha256, max_attempts, now, now),
             )
             self._insert_outbox_event(
                 conn,
@@ -327,21 +368,24 @@ class SQLiteJobStore:
         """
 
         now = _utc_now()
+        request_sha256 = canonical_request_sha256(request)
         request_json = json.dumps(
             sanitize_request_for_ledger(request),
             sort_keys=True,
             ensure_ascii=False,
+            allow_nan=False,
         )
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             cursor = conn.execute(
                 """
                 INSERT OR IGNORE INTO simulation_jobs(
-                    job_id, status, request_json, max_attempts, created_at_utc, updated_at_utc
+                    job_id, status, request_json, request_sha256,
+                    max_attempts, created_at_utc, updated_at_utc
                 )
-                VALUES(?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, status, request_json, max_attempts, now, now),
+                (job_id, status, request_json, request_sha256, max_attempts, now, now),
             )
             created = cursor.rowcount == 1
             if created:
