@@ -36,8 +36,11 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
     steps:
       - name: Check out independent package surface
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
           sparse-checkout: |
             betelgeuze_engine_v2
             packaging/engine-v2
@@ -45,17 +48,23 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_packaging_guards.py
             docs/engine_v2_pr_overlap_matrix.md
+            .github/workflows/ci-engine-v2-package.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install build and CPU test dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install "build>=1.2,<2" pytest==8.3.5 numpy==1.26.4
+          python -m pip install pip==25.0.1
+          python -m pip install \
+            build==1.2.2.post1 \
+            setuptools==75.8.2 \
+            wheel==0.45.1 \
+            pytest==8.3.5 \
+            numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Compile and enforce Engine v2 AST boundaries
@@ -78,7 +87,7 @@ jobs:
           rm -rf "$venv"
           python -m venv "$venv"
           grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
-          "$venv/bin/python" -m pip install --upgrade pip
+          "$venv/bin/python" -m pip install pip==25.0.1
           "$venv/bin/python" -m pip install numpy==1.26.4
           "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl

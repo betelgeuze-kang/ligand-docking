@@ -10,9 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
-
 DISTRIBUTION_NAME = "betelgeuze-engine-v2"
-DISTRIBUTION_VERSION = "0.1.0"
+DISTRIBUTION_VERSION = "0.2.0rc1"
 ENGINE_API_VERSION = "2.0.0"
 ENGINE_RESULT_SCHEMA_VERSION = "2.0.0"
 CHECKPOINT_SCHEMA_VERSION = "2.0.0"
@@ -24,6 +23,9 @@ ALL_ATOM_SCHEMA_ID = f"{ALL_ATOM_SCHEMA_NAME}/{ALL_ATOM_SCHEMA_VERSION}"
 _SEMVER_RE = re.compile(
     r"^(?P<major>0|[1-9][0-9]*)\.(?P<minor>0|[1-9][0-9]*)\.(?P<patch>0|[1-9][0-9]*)$"
 )
+_DISTRIBUTION_VERSION_RE = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:(a|b|rc)(0|[1-9][0-9]*))?$"
+)
 
 
 class ContractVersionError(ValueError):
@@ -32,7 +34,7 @@ class ContractVersionError(ValueError):
 
 @dataclass(frozen=True, order=True)
 class SemanticVersion:
-    """Small, dependency-free semantic-version value used by data contracts."""
+    """Small dependency-free semantic version used by serialized contracts."""
 
     major: int
     minor: int
@@ -49,6 +51,13 @@ class SemanticVersion:
         return f"{self.major}.{self.minor}.{self.patch}"
 
 
+def require_distribution_version(value: str) -> str:
+    text = str(value or "")
+    if _DISTRIBUTION_VERSION_RE.fullmatch(text) is None:
+        raise ContractVersionError(f"invalid distribution version: {value!r}")
+    return text
+
+
 @dataclass(frozen=True)
 class VersionTaxonomy:
     """Machine-readable inventory of independently evolving version surfaces."""
@@ -62,12 +71,17 @@ class VersionTaxonomy:
     runtime_input_schema_version: str = RUNTIME_INPUT_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
-        for field_name, value in self.to_dict().items():
-            if field_name == "distribution_name":
-                if not str(value).strip():
-                    raise ContractVersionError("distribution_name must be non-empty")
-            else:
-                SemanticVersion.parse(str(value))
+        if not str(self.distribution_name).strip():
+            raise ContractVersionError("distribution_name must be non-empty")
+        require_distribution_version(self.distribution_version)
+        for value in (
+            self.engine_api_version,
+            self.molecular_schema_version,
+            self.result_schema_version,
+            self.checkpoint_schema_version,
+            self.runtime_input_schema_version,
+        ):
+            SemanticVersion.parse(str(value))
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -114,8 +128,6 @@ class SchemaIdentity:
 
 
 def parse_schema_id(schema_id: str) -> SchemaIdentity:
-    """Parse ``name/x.y.z`` without accepting ambiguous partial versions."""
-
     text = str(schema_id or "")
     if "/" not in text:
         raise ContractVersionError(f"invalid schema id: {schema_id!r}")
@@ -129,3 +141,24 @@ def require_compatible_schema(schema_id: str) -> SchemaIdentity:
     identity = parse_schema_id(schema_id)
     identity.require_compatible()
     return identity
+
+
+__all__ = [
+    "ALL_ATOM_SCHEMA_ID",
+    "ALL_ATOM_SCHEMA_NAME",
+    "ALL_ATOM_SCHEMA_VERSION",
+    "CHECKPOINT_SCHEMA_VERSION",
+    "DISTRIBUTION_NAME",
+    "DISTRIBUTION_VERSION",
+    "ENGINE_API_VERSION",
+    "ENGINE_RESULT_SCHEMA_VERSION",
+    "RUNTIME_INPUT_SCHEMA_VERSION",
+    "VERSION_TAXONOMY",
+    "ContractVersionError",
+    "SchemaIdentity",
+    "SemanticVersion",
+    "VersionTaxonomy",
+    "parse_schema_id",
+    "require_compatible_schema",
+    "require_distribution_version",
+]
