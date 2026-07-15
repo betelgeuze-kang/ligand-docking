@@ -246,11 +246,12 @@ def _construct_system(payload: Mapping[str, Any], *, device: torch.device | str)
     if cell_vectors is not None:
         if not isinstance(cell_vectors, torch.Tensor):
             raise CanonicalSerializationError("canonical cell vectors are not a tensor")
-        if not isinstance(periodic, list):
+        if not isinstance(periodic, list) or len(periodic) != 3:
             raise CanonicalSerializationError("canonical cell periodic flags are missing")
+        periodic_flags = (bool(periodic[0]), bool(periodic[1]), bool(periodic[2]))
         cell = UnitCell(
             vectors=cell_vectors.to(device=device, dtype=coordinates.dtype),
-            periodic=tuple(bool(value) for value in periodic),
+            periodic=periodic_flags,
         )
 
     atoms = tuple(Atom(**dict(row)) for row in topology.get("atoms", ()))

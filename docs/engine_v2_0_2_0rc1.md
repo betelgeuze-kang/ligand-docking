@@ -73,5 +73,12 @@ python -m venv /tmp/engine-v2-rc
 ## Release decision
 
 A green release-candidate CI proves packaging and contract reproducibility only.
-It does not change any capability row to `claim_safe=true` or
-`customer_execution_enabled=true`.
+The release candidate preserves these explicit boundaries:
+
+- `claim_safe=false`
+- `scientifically_validated=false`
+- `benchmark_validated=false`
+- `customer_execution_enabled=false`
+
+GPU parity, public benchmark validation, customer execution approval, and
+commercial readiness remain unestablished.

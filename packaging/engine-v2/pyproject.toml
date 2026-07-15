@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools==75.8.2", "wheel==0.45.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,7 +23,14 @@ classifiers = [
 
 [tool.setuptools.packages.find]
 include = ["betelgeuze_engine_v2*"]
-exclude = ["tests*", "api*", "core*", "train*", "betelgeuze_product*"]
+exclude = [
+  "tests*",
+  "api*",
+  "core*",
+  "train*",
+  "betelgeuze_product*",
+  "betelgeuze_ai_md*",
+]
 
 [tool.setuptools.package-data]
 betelgeuze_engine_v2 = ["py.typed"]
