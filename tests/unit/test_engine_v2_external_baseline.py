@@ -841,6 +841,7 @@ def test_ci_owns_the_contract_without_external_engine_execution() -> None:
     assert "persist-credentials: false" in dedicated
     assert "clean: true" in dedicated
     assert "fetch-depth: 1" in dedicated
+    assert "python -m pip install pip==25.0.1" in dedicated
     for engine_id in ("vina", "gnina", "smina"):
         assert engine_id not in dedicated.lower()
     for execution_primitive in ("import subprocess", "os.system(", "Popen("):
