@@ -223,7 +223,7 @@ def evaluate_reference_force_field(
                 device=coordinates.device,
             )
             vectors = system.cell.vectors.to(dtype=coordinates.dtype, device=coordinates.device)
-            raw = raw + shifts @ vectors
+            raw = raw - shifts @ vectors
         distance = torch.linalg.vector_norm(raw, dim=-1)
         if bool((distance < parameters.applicability_domain.minimum_pair_distance_angstrom).any().item()):
             raise ReferencePhysicsApplicabilityError("nonbonded pair is below minimum_pair_distance_angstrom")

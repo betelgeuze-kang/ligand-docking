@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import math
 
 import pytest
@@ -15,6 +16,7 @@ from betelgeuze_engine_v2.molecular import (
     Chain,
     Residue,
     StructureProvenance,
+    UnitCell,
 )
 from betelgeuze_engine_v2.physics import (
     AtomNonbondedParameter,
@@ -237,6 +239,52 @@ def test_switch_makes_nonbonded_energy_and_force_continuous_at_cutoff() -> None:
     assert abs(float(below_eval.term.forces[0, 1, 0].item())) < 1.0e-5
     assert float(above_eval.term.energy.item()) == pytest.approx(0.0, abs=1.0e-14)
     assert float(above_eval.term.forces.abs().max().item()) == pytest.approx(0.0, abs=1.0e-14)
+
+
+def test_periodic_nonbonded_terms_use_neighbor_minimum_image_shift() -> None:
+    periodic_coordinates = torch.tensor(
+        [[[0.1, 0.0, 0.0], [9.7, 0.0, 0.0], [3.0, 0.0, 0.0], [6.0, 0.0, 0.0]]],
+        dtype=torch.float64,
+    )
+    direct_coordinates = periodic_coordinates.clone()
+    direct_coordinates[0, 1, 0] = -0.3
+    periodic = replace(
+        _system(periodic_coordinates),
+        cell=UnitCell.orthorhombic((10.0, 10.0, 10.0), dtype=torch.float64),
+    )
+    direct = _system(direct_coordinates)
+    parameters = ReferenceForceFieldParameters(
+        parameter_set_id="periodic-unit",
+        parameter_set_version="1",
+        atom_parameters=tuple(
+            AtomNonbondedParameter(index, 0.3, 0.1, 0.05) for index in range(4)
+        ),
+        cutoff_angstrom=1.0,
+        switch_start_angstrom=0.8,
+        applicability_domain=ReferenceApplicabilityDomain(max_atoms=8),
+    )
+
+    periodic_evaluation = evaluate_reference_force_field(
+        periodic,
+        _neighbors(periodic, 1.0),
+        parameters,
+    )
+    direct_evaluation = evaluate_reference_force_field(
+        direct,
+        _neighbors(direct, 1.0),
+        parameters,
+    )
+
+    assert periodic_evaluation.term.energy.item() == pytest.approx(
+        direct_evaluation.term.energy.item(),
+        abs=1.0e-12,
+    )
+    assert torch.allclose(
+        periodic_evaluation.term.forces,
+        direct_evaluation.term.forces,
+        atol=1.0e-10,
+        rtol=1.0e-10,
+    )
 
 
 def test_applicability_fails_closed_for_missing_parameters_and_short_neighbor_cutoff() -> None:
