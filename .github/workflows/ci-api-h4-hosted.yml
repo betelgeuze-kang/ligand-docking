@@ -5,6 +5,7 @@ on:
     paths:
       - "api/**"
       - "tests/unit/test_api_h4_security_hardening.py"
+      - "tests/unit/test_api_attempt_artifact_confinement.py"
       - "tests/unit/test_api_job_store.py"
       - "tests/unit/test_api_security_middleware.py"
       - "tests/unit/test_api_validated_runner_adapter.py"
@@ -62,6 +63,7 @@ jobs:
           api/simulation_endpoint_access.py
           api/security.py
           api/result_manifest.py
+          api/linux_runner_supervisor.py
           api/validated_runner.py
           api/worker.py
           betelgeuze_ai_md/contracts/api_adapter.py
@@ -73,7 +75,10 @@ jobs:
         run: python -c "import api.main"
 
       - name: Run the attachment-required H4 regressions
-        run: python -m pytest -q tests/unit/test_api_h4_security_hardening.py
+        run: >-
+          python -m pytest -q
+          tests/unit/test_api_h4_security_hardening.py
+          tests/unit/test_api_attempt_artifact_confinement.py
 
       - name: Run adjacent API regressions
         run: >-

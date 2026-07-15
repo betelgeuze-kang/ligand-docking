@@ -5,8 +5,10 @@ from pathlib import Path
 import asyncio
 import hashlib
 import json
+import os
 import sqlite3
 import sys
+import threading
 import time
 
 import pytest
@@ -120,6 +122,38 @@ def _write_process_group_runner(path: Path) -> None:
     )
 
 
+def _write_detached_double_fork_runner(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "import argparse, json, os, time",
+                "from pathlib import Path",
+                "p = argparse.ArgumentParser()",
+                "p.add_argument('--pid-file', required=True)",
+                "p.add_argument('--late-marker', required=True)",
+                "p.add_argument('--marker-delay', type=float, default=1.0)",
+                "args = p.parse_args()",
+                "runner_pid = os.getpid()",
+                "first = os.fork()",
+                "if first == 0:",
+                "    os.setsid()",
+                "    second = os.fork()",
+                "    if second == 0:",
+                "        Path(args.pid_file).write_text(json.dumps({'runner': runner_pid, 'detached': os.getpid()}), encoding='utf-8')",
+                "        time.sleep(args.marker_delay)",
+                "        Path(args.late_marker).write_text('LATE', encoding='utf-8')",
+                "        os._exit(0)",
+                "    os._exit(0)",
+                "os.waitpid(first, 0)",
+                "time.sleep(20)",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _pid_is_running(pid: int) -> bool:
     stat_path = Path(f"/proc/{pid}/stat")
     try:
@@ -127,6 +161,211 @@ def _pid_is_running(pid: int) -> bool:
     except OSError:
         return False
     return len(fields) > 2 and fields[2] not in {"Z", "X"}
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_validated_runner_cancellation_contains_detached_double_fork(
+    tmp_path: Path,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    runner = tmp_path / "detached_double_fork_runner.py"
+    _write_detached_double_fork_runner(runner)
+    pid_file = tmp_path / "detached-pids.json"
+    late_marker = tmp_path / "detached-late-marker.txt"
+    cancellation_event = threading.Event()
+    outcome: dict[str, object] = {}
+
+    def _run() -> None:
+        outcome.update(
+            validated_runner._run_profile_command(
+                [
+                    sys.executable,
+                    str(runner),
+                    "--pid-file",
+                    str(pid_file),
+                    "--late-marker",
+                    str(late_marker),
+                ],
+                timeout_seconds=30,
+                cancellation_event=cancellation_event,
+            )
+        )
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + 2
+    while not pid_file.exists():
+        if time.monotonic() >= deadline:
+            raise AssertionError("detached double-fork runner did not start")
+        time.sleep(0.01)
+    pids = json.loads(pid_file.read_text(encoding="utf-8"))
+    cancellation_event.set()
+    thread.join(timeout=3)
+
+    assert not thread.is_alive()
+    assert outcome["cancelled"] is True
+    deadline = time.monotonic() + 2
+    while any(_pid_is_running(int(pid)) for pid in pids.values()) and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert not any(_pid_is_running(int(pid)) for pid in pids.values())
+    time.sleep(1.1)
+    assert not late_marker.exists()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_validated_runner_timeout_contains_detached_double_fork(
+    tmp_path: Path,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    runner = tmp_path / "timeout_double_fork_runner.py"
+    _write_detached_double_fork_runner(runner)
+    pid_file = tmp_path / "timeout-detached-pids.json"
+    late_marker = tmp_path / "timeout-detached-late-marker.txt"
+
+    started = time.monotonic()
+    outcome = validated_runner._run_profile_command(
+        [
+            sys.executable,
+            str(runner),
+            "--pid-file",
+            str(pid_file),
+            "--late-marker",
+            str(late_marker),
+            "--marker-delay",
+            "1.4",
+        ],
+        timeout_seconds=1,
+    )
+    elapsed = time.monotonic() - started
+
+    assert outcome["timed_out"] is True
+    assert outcome["cancelled"] is False
+    assert outcome["returncode"] != 0
+    assert outcome["containment_error"] == ""
+    assert elapsed < 5
+    pids = json.loads(pid_file.read_text(encoding="utf-8"))
+    assert not any(_pid_is_running(int(pid)) for pid in pids.values())
+    time.sleep(0.6)
+    assert not late_marker.exists()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_concurrent_validated_runner_supervisors_do_not_cross_kill(
+    tmp_path: Path,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    detached_runner = tmp_path / "concurrent_double_fork_runner.py"
+    _write_detached_double_fork_runner(detached_runner)
+    detached_pid_file = tmp_path / "concurrent-detached-pids.json"
+    detached_marker = tmp_path / "concurrent-detached-late.txt"
+    survivor_ready = tmp_path / "concurrent-survivor-ready.txt"
+    survivor_marker = tmp_path / "concurrent-survivor-finished.txt"
+    cancel_first = threading.Event()
+    first_outcome: dict[str, object] = {}
+    second_outcome: dict[str, object] = {}
+
+    def _run_first() -> None:
+        first_outcome.update(
+            validated_runner._run_profile_command(
+                [
+                    sys.executable,
+                    str(detached_runner),
+                    "--pid-file",
+                    str(detached_pid_file),
+                    "--late-marker",
+                    str(detached_marker),
+                ],
+                timeout_seconds=30,
+                cancellation_event=cancel_first,
+            )
+        )
+
+    survivor_probe = (
+        "import sys,time; from pathlib import Path; "
+        "Path(sys.argv[1]).write_text('READY', encoding='utf-8'); "
+        "time.sleep(0.5); "
+        "Path(sys.argv[2]).write_text('FINISHED', encoding='utf-8')"
+    )
+
+    def _run_second() -> None:
+        second_outcome.update(
+            validated_runner._run_profile_command(
+                [
+                    sys.executable,
+                    "-c",
+                    survivor_probe,
+                    str(survivor_ready),
+                    str(survivor_marker),
+                ],
+                timeout_seconds=5,
+            )
+        )
+
+    first_thread = threading.Thread(target=_run_first, daemon=True)
+    second_thread = threading.Thread(target=_run_second, daemon=True)
+    first_thread.start()
+    deadline = time.monotonic() + 2
+    while not detached_pid_file.exists():
+        if time.monotonic() >= deadline:
+            raise AssertionError("first concurrent runner did not start")
+        time.sleep(0.01)
+    second_thread.start()
+    deadline = time.monotonic() + 2
+    while not survivor_ready.exists():
+        if time.monotonic() >= deadline:
+            raise AssertionError("second concurrent runner did not start")
+        time.sleep(0.01)
+
+    cancel_first.set()
+    first_thread.join(timeout=3)
+    second_thread.join(timeout=3)
+
+    assert not first_thread.is_alive()
+    assert not second_thread.is_alive()
+    assert first_outcome["cancelled"] is True
+    assert first_outcome["containment_error"] == ""
+    assert second_outcome["returncode"] == 0
+    assert second_outcome["containment_error"] == ""
+    assert survivor_marker.read_text(encoding="utf-8") == "FINISHED"
+    time.sleep(1.1)
+    assert not detached_marker.exists()
+
+
+def test_validated_runner_fails_before_spawn_without_linux_containment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+    from api.linux_runner_supervisor import LinuxRunnerContainmentUnavailable
+
+    spawned = False
+
+    def _unsupported() -> None:
+        raise LinuxRunnerContainmentUnavailable("test containment unavailable")
+
+    def _must_not_spawn(*args, **kwargs):
+        nonlocal spawned
+        spawned = True
+        raise AssertionError("runner supervisor must not spawn")
+
+    monkeypatch.setattr(
+        validated_runner,
+        "require_linux_runner_supervisor_support",
+        _unsupported,
+    )
+    monkeypatch.setattr(validated_runner.subprocess, "Popen", _must_not_spawn)
+
+    with pytest.raises(
+        LinuxRunnerContainmentUnavailable,
+        match="test containment unavailable",
+    ):
+        validated_runner._run_profile_command(
+            [sys.executable, "-c", "print('must not execute')"],
+            timeout_seconds=1,
+        )
+    assert spawned is False
 
 
 def _write_native_bundle_runner(path: Path) -> None:
@@ -352,6 +591,89 @@ def test_api_task_executes_operator_approved_runner_profile(
     assert "shell" not in json.loads(execution_record.read_text(encoding="utf-8"))
 
 
+@pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
+def test_validated_runner_execution_record_replaces_link_without_touching_victim(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    link_kind: str,
+) -> None:
+    import api.validated_runner as validated_runner
+    import api.worker as worker
+    from api.job_store import SQLiteJobStore
+    from api.tasks import run_simulation_async
+
+    runner = tmp_path / "linked_execution_record_runner.py"
+    runner.write_text(
+        "\n".join(
+            [
+                "import argparse, json, os",
+                "from pathlib import Path",
+                "p = argparse.ArgumentParser()",
+                "p.add_argument('--request-json', required=True)",
+                "p.add_argument('--out-json', required=True)",
+                "p.add_argument('--victim', required=True)",
+                "p.add_argument('--link-kind', required=True)",
+                "args = p.parse_args()",
+                "out = Path(args.out_json)",
+                "out.write_text(json.dumps({'ok': True}) + '\\n', encoding='utf-8')",
+                "reserved = out.parent / 'runner_execution.json'",
+                "reserved.symlink_to(args.victim) if args.link_kind == 'symlink' else os.link(args.victim, reserved)",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    victim = tmp_path / f"{link_kind}-execution-record-victim.json"
+    original = b'{"external":"victim"}\n'
+    victim.write_bytes(original)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    profile = _profile_payload("linked_record", runner, evidence)
+    profile["arguments"].extend(
+        ["--victim", str(victim), "--link-kind", link_kind]
+    )
+    (profiles_dir / "linked_record.json").write_text(
+        json.dumps(profile, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    results_root = tmp_path / "results"
+    monkeypatch.setattr(validated_runner, "ALLOWED_RUNNER_SCRIPTS", {str(runner.resolve())})
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_timeout_seconds", 5)
+    monkeypatch.setattr(validated_runner.settings, "results_storage_path", str(results_root))
+
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+    request = {"target_name": "Chignolin", "runner_profile_id": "linked_record"}
+    store.create_job("job_linked_record", request)
+    worker.write_status_file(
+        worker.job_status_path("job_linked_record"),
+        {"job_id": "job_linked_record", "status": "submitted"},
+    )
+    completed = asyncio.run(
+        worker.process_next_job_once(
+            store,
+            worker_id="worker-linked-record",
+            runner=run_simulation_async,
+            lease_seconds=60,
+        )
+    )
+
+    assert completed is not None
+    assert completed["status"] == "completed"
+    assert victim.read_bytes() == original
+    status = json.loads(Path(completed["published_status_path"]).read_text())
+    execution_record = Path(status["runner_execution"])
+    assert execution_record.is_file()
+    assert not os.path.samefile(victim, execution_record)
+
+
 def test_validated_runner_timeout_records_fail_closed_execution(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -391,6 +713,9 @@ def test_validated_runner_timeout_records_fail_closed_execution(
     assert execution_record["timed_out"] is True
     assert execution_record["timeout_seconds"] == 1
     assert execution_record["process_group_killed_on_timeout"] is True
+    assert execution_record["descendant_tree_contained"] is True
+    assert execution_record["descendant_containment_error"] == ""
+    assert execution_record["runner_supervisor"] == "linux_child_subreaper_v1"
     assert execution_record["returncode"] != 0
 
 

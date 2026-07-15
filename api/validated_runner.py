@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Any
 
 from api.config import settings
-from api.job_artifacts import resolve_job_results_dir
+from api.job_artifacts import (
+    atomic_write_text_file,
+    read_current_attempt_file_bytes,
+    resolve_job_results_dir,
+)
+from api.linux_runner_supervisor import require_linux_runner_supervisor_support
 from api.request_privacy import sanitize_request_for_ledger
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
@@ -76,8 +81,17 @@ def _status_path(job_id: str) -> Path:
 
 def _write_status(job_id: str, payload: dict[str, Any]) -> None:
     path = _status_path(job_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    atomic_write_text_file(
+        path,
+        json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n",
+    )
+
+
+def _write_json_artifact(path: Path, payload: dict[str, Any]) -> None:
+    atomic_write_text_file(
+        path,
+        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+    )
 
 
 def _safe_profile_id(profile_id: Any) -> str:
@@ -241,56 +255,150 @@ def _safe_runner_environment() -> dict[str, str]:
     return child_env
 
 
-def _terminate_process_group(proc: subprocess.Popen[str]) -> None:
-    try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-
-
 def _run_profile_command(
     command: list[str],
     *,
     timeout_seconds: int,
     cancellation_event: threading.Event | None = None,
 ) -> dict[str, Any]:
-    proc = subprocess.Popen(
-        command,
-        cwd=str(_repo_root()),
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        shell=False,
-        start_new_session=True,
-        env=_safe_runner_environment(),
-    )
-    timed_out = False
-    cancelled = False
-    deadline = time.monotonic() + max(1, int(timeout_seconds))
-    while True:
-        if cancellation_event is not None and cancellation_event.is_set():
-            cancelled = True
-            _terminate_process_group(proc)
-            stdout, stderr = proc.communicate()
-            break
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            timed_out = True
-            _terminate_process_group(proc)
-            stdout, stderr = proc.communicate()
-            break
+    require_linux_runner_supervisor_support()
+    bounded_timeout = max(1, int(timeout_seconds))
+    config = json.dumps(
+        {
+            "command": command,
+            "cwd": str(_repo_root()),
+            "timeout_seconds": bounded_timeout,
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    config_read_fd, config_write_fd = os.pipe()
+    supervisor_script = Path(__file__).with_name("linux_runner_supervisor.py")
+    try:
         try:
-            stdout, stderr = proc.communicate(timeout=min(0.1, remaining))
+            supervisor = subprocess.Popen(
+                [
+                    sys.executable,
+                    str(supervisor_script),
+                    "--config-fd",
+                    str(config_read_fd),
+                ],
+                cwd=str(_repo_root()),
+                text=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=False,
+                start_new_session=True,
+                env=_safe_runner_environment(),
+                pass_fds=(config_read_fd,),
+            )
+        finally:
+            os.close(config_read_fd)
+    except BaseException:
+        os.close(config_write_fd)
+        raise
+    try:
+        view = memoryview(config)
+        while view:
+            written = os.write(config_write_fd, view)
+            view = view[written:]
+    except (BrokenPipeError, OSError) as exc:
+        supervisor.kill()
+        supervisor.communicate()
+        raise RuntimeError("validated runner supervisor rejected its configuration") from exc
+    finally:
+        os.close(config_write_fd)
+
+    cancellation_requested = False
+    outer_timeout = False
+    supervisor_stop_requested = False
+    shutdown_deadline: float | None = None
+    hard_deadline = time.monotonic() + bounded_timeout + 5.0
+    while True:
+        now = time.monotonic()
+        if (
+            not supervisor_stop_requested
+            and cancellation_event is not None
+            and cancellation_event.is_set()
+        ):
+            cancellation_requested = True
+            supervisor_stop_requested = True
+            shutdown_deadline = now + 5.0
+            try:
+                supervisor.send_signal(signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        if not supervisor_stop_requested and now >= hard_deadline:
+            outer_timeout = True
+            supervisor_stop_requested = True
+            shutdown_deadline = now + 5.0
+            try:
+                supervisor.send_signal(signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        if shutdown_deadline is not None and now >= shutdown_deadline:
+            supervisor.kill()
+            supervisor_stdout, supervisor_stderr = supervisor.communicate()
+            reason = (
+                "validated runner supervisor did not complete bounded descendant cleanup"
+            )
+            return {
+                "returncode": 125,
+                "timed_out": outer_timeout,
+                "cancelled": cancellation_requested,
+                "stdout": "",
+                "stderr": "\n".join(
+                    item for item in (supervisor_stderr or "", reason) if item
+                ),
+                "containment_error": reason,
+                "supervisor": "linux_child_subreaper_v1",
+            }
+        try:
+            supervisor_stdout, supervisor_stderr = supervisor.communicate(timeout=0.1)
             break
         except subprocess.TimeoutExpired:
             continue
-    return {
-        "returncode": int(proc.returncode if proc.returncode is not None else -9),
-        "timed_out": timed_out,
-        "cancelled": cancelled,
-        "stdout": stdout or "",
-        "stderr": stderr or "",
-    }
+    try:
+        payload = json.loads(supervisor_stdout)
+    except (TypeError, json.JSONDecodeError):
+        reason = "validated runner supervisor returned an invalid containment record"
+        return {
+            "returncode": 125,
+            "timed_out": outer_timeout,
+            "cancelled": cancellation_requested,
+            "stdout": "",
+            "stderr": "\n".join(
+                item for item in (supervisor_stderr or "", reason) if item
+            ),
+            "containment_error": reason,
+            "supervisor": "linux_child_subreaper_v1",
+        }
+    if not isinstance(payload, dict):
+        raise RuntimeError("validated runner supervisor record must be an object")
+    payload["returncode"] = int(payload.get("returncode", 125))
+    payload["timed_out"] = bool(payload.get("timed_out", False) or outer_timeout)
+    payload["cancelled"] = bool(
+        payload.get("cancelled", False) or cancellation_requested
+    )
+    payload["stdout"] = str(payload.get("stdout", "") or "")
+    supervisor_errors = [
+        str(payload.get("stderr", "") or ""),
+        supervisor_stderr or "",
+    ]
+    payload["stderr"] = "\n".join(item for item in supervisor_errors if item)
+    payload.setdefault("containment_error", "")
+    payload.setdefault("supervisor", "linux_child_subreaper_v1")
+    if supervisor.returncode != 0 and not payload["containment_error"]:
+        payload["returncode"] = 125
+        payload["containment_error"] = (
+            f"validated runner supervisor exited with code {supervisor.returncode}"
+        )
+        payload["stderr"] = "\n".join(
+            item
+            for item in (payload["stderr"], payload["containment_error"])
+            if item
+        )
+    return payload
 
 
 async def execute_validated_runner_profile(job_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
@@ -305,9 +413,14 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     results_dir = _results_dir(job_id)
     results_dir.mkdir(parents=True, exist_ok=True)
     request_json_path = results_dir / "request.json"
-    request_json_path.write_text(
-        json.dumps(sanitize_request_for_ledger(request_data), sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    atomic_write_text_file(
+        request_json_path,
+        json.dumps(
+            sanitize_request_for_ledger(request_data),
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        + "\n",
     )
 
     result_file_template = str(profile.get("result_file_template", "{job_results_dir}/runner_result.json") or "")
@@ -389,6 +502,11 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "timed_out": bool(completed["timed_out"]),
         "timeout_seconds": timeout_seconds,
         "process_group_killed_on_timeout": bool(completed["timed_out"]),
+        "descendant_tree_contained": not bool(completed.get("containment_error")),
+        "descendant_containment_error": str(
+            completed.get("containment_error", "") or ""
+        ),
+        "runner_supervisor": str(completed.get("supervisor", "") or ""),
         "started_at_utc": started,
         "ended_at_utc": ended,
         "duration_sec": float(duration),
@@ -404,7 +522,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         ),
     }
     execution_record_path = results_dir / "runner_execution.json"
-    execution_record_path.write_text(json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    _write_json_artifact(execution_record_path, execution_record)
 
     if completed["returncode"] != 0:
         error = (
@@ -432,10 +550,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                 f"validated_runner_missing_native_evidence_bundle:{evidence_bundle_path_value}"
             )
             execution_record["native_evidence_bundle_error"] = error
-            execution_record_path.write_text(
-                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
+            _write_json_artifact(execution_record_path, execution_record)
             _write_status(
                 job_id,
                 {
@@ -449,16 +564,19 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                 f"validated runner did not produce expected native evidence bundle: {evidence_bundle_path_value}"
             )
         try:
-            raw_payload = json.loads(evidence_bundle_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+            pinned_evidence = read_current_attempt_file_bytes(
+                evidence_bundle_path,
+                maximum_bytes=64 * 1024 * 1024,
+            )
+            if pinned_evidence is None:
+                pinned_evidence = evidence_bundle_path.read_bytes()
+            raw_payload = json.loads(pinned_evidence)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             error = (
                 f"validated_runner_native_evidence_bundle_not_json:{evidence_bundle_path_value}"
             )
             execution_record["native_evidence_bundle_error"] = error
-            execution_record_path.write_text(
-                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
+            _write_json_artifact(execution_record_path, execution_record)
             _write_status(
                 job_id,
                 {
@@ -476,10 +594,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                 f"validated_runner_native_evidence_bundle_not_object:{evidence_bundle_path_value}"
             )
             execution_record["native_evidence_bundle_error"] = error
-            execution_record_path.write_text(
-                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
+            _write_json_artifact(execution_record_path, execution_record)
             _write_status(
                 job_id,
                 {
@@ -499,10 +614,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                 f"validated_runner_native_evidence_bundle_invalid:{exc}"
             )
             execution_record["native_evidence_bundle_error"] = error
-            execution_record_path.write_text(
-                json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
+            _write_json_artifact(execution_record_path, execution_record)
             _write_status(
                 job_id,
                 {
@@ -523,10 +635,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         }
         execution_record["native_evidence_bundle"] = str(evidence_bundle_path)
         execution_record["native_evidence_bundle_sha256"] = bundle_fingerprint
-        execution_record_path.write_text(
-            json.dumps(execution_record, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        _write_json_artifact(execution_record_path, execution_record)
 
     status_payload = {
         "job_id": job_id,
