@@ -6,16 +6,29 @@ from dataclasses import dataclass
 import hashlib
 import json
 import math
-from typing import Protocol, runtime_checkable
+from typing import Protocol, Sequence, runtime_checkable
 
 import torch
 
+from betelgeuze_engine_v2.contracts import failure_receipt
 from .identity import DockingProblemIdentity
+from .metrics import (
+    _canonicalize_symmetry_permutations,
+    direct_rmsd,
+    kabsch_aligned_rmsd,
+    symmetry_aware_rmsd,
+)
 from .proposals import (
     DockingBudget,
     DockingProposal,
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
+)
+from .scoring import (
+    DockingScoreDescriptor,
+    component_contract_fingerprint,
+    score_sort_key,
+    scorer_descriptor,
 )
 
 
@@ -55,6 +68,8 @@ class DockingSearchRow:
     proposal: DockingProposal | None
     error_code: str = ""
     error_message: str = ""
+    private_error_sha256: str = ""
+    private_error_byte_length: int = 0
     refined: bool = False
 
     @property
@@ -75,6 +90,8 @@ class DockingSearchRow:
             "refined": bool(self.refined),
             "error_code": self.error_code,
             "error_message": self.error_message,
+            "private_error_sha256": self.private_error_sha256,
+            "private_error_byte_length": int(self.private_error_byte_length),
         }
 
 
@@ -85,10 +102,14 @@ class DockingSearchResult:
     budget: DockingBudget
     scorer_id: str
     scorer_version: str
+    scorer_contract_fingerprint_sha256: str
     refiner_id: str
+    refiner_contract_fingerprint_sha256: str
+    score_descriptor: DockingScoreDescriptor
     problem_fingerprint_sha256: str
     search_space_fingerprint_sha256: str
     search_fingerprint_sha256: str
+    diversity_metric: str
     blockers: tuple[str, ...]
 
     @property
@@ -112,10 +133,14 @@ class DockingSearchResult:
             "budget": self.budget.to_dict(),
             "scorer_id": self.scorer_id,
             "scorer_version": self.scorer_version,
+            "scorer_contract_fingerprint_sha256": self.scorer_contract_fingerprint_sha256,
             "refiner_id": self.refiner_id,
+            "refiner_contract_fingerprint_sha256": self.refiner_contract_fingerprint_sha256,
+            "score_descriptor": self.score_descriptor.to_dict(),
             "problem_fingerprint_sha256": self.problem_fingerprint_sha256,
             "search_space_fingerprint_sha256": self.search_space_fingerprint_sha256,
             "search_fingerprint_sha256": self.search_fingerprint_sha256,
+            "diversity_metric": self.diversity_metric,
             "claim_safe": False,
             "blockers": list(self.blockers),
             "rows": [row.to_dict() for row in self.rows],
@@ -135,26 +160,28 @@ def _score_value(value: float | torch.Tensor) -> float:
     return score
 
 
-def _direct_rmsd(first: DockingProposal, second: DockingProposal) -> float:
-    if first.coordinates.shape != second.coordinates.shape:
-        raise DockingSearchError("proposal coordinate shapes differ")
-    delta = first.coordinates - second.coordinates
-    return float(torch.sqrt(delta.square().sum(dim=-1).mean()).item())
-
-
 def _search_fingerprint(
     proposals: tuple[DockingProposal, ...],
     budget: DockingBudget,
-    scorer: DockingPoseScorer,
-    refiner: DockingPoseRefiner | None,
+    *,
+    scorer_fingerprint: str,
+    refiner_fingerprint: str,
+    score_descriptor: DockingScoreDescriptor,
+    diversity_metric: str,
+    symmetry_permutations: tuple[tuple[int, ...], ...],
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_docking_search/2.0.0",
+        "schema_id": "betelgeuze.engine_v2_docking_search/3.1.0",
         "budget": budget.to_dict(),
-        "scorer_id": str(scorer.scorer_id),
-        "scorer_version": str(scorer.scorer_version),
-        "refiner_id": "" if refiner is None else str(refiner.refiner_id),
-        "refiner_version": "" if refiner is None else str(refiner.refiner_version),
+        "scorer_contract_fingerprint_sha256": scorer_fingerprint,
+        "refiner_contract_fingerprint_sha256": refiner_fingerprint,
+        "score_descriptor": score_descriptor.to_dict(),
+        "diversity_metric": diversity_metric,
+        "symmetry_permutation_count": len(symmetry_permutations),
+        "symmetry_permutations": {
+            "atom_count": int(proposals[0].coordinates.shape[0]),
+            "mappings": [list(permutation) for permutation in symmetry_permutations],
+        },
         "problem_fingerprint_sha256": proposals[0].problem_fingerprint_sha256,
         "search_space_fingerprint_sha256": proposals[0].search_space_fingerprint_sha256,
         "proposal_fingerprints": [proposal.fingerprint_sha256 for proposal in proposals],
@@ -183,6 +210,27 @@ def _require_refined_lineage(
         raise DockingSearchError("refined proposal refiner identity does not match the active refiner")
 
 
+def _pose_distance(
+    first: DockingProposal,
+    second: DockingProposal,
+    *,
+    metric: str,
+    symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None,
+) -> float:
+    if metric == "direct_rmsd":
+        return direct_rmsd(first.coordinates, second.coordinates)
+    if metric == "kabsch_rmsd":
+        return kabsch_aligned_rmsd(first.coordinates, second.coordinates)
+    if metric == "symmetry_aware_kabsch_rmsd":
+        return symmetry_aware_rmsd(
+            first.coordinates,
+            second.coordinates,
+            permutations=symmetry_permutations,
+            align=True,
+        ).rmsd_angstrom
+    raise ValueError("unsupported diversity metric")
+
+
 def run_bounded_docking_search(
     search_space: TorsionSearchSpace,
     budget: DockingBudget,
@@ -190,6 +238,8 @@ def run_bounded_docking_search(
     *,
     refiner: DockingPoseRefiner | None = None,
     diversity_rmsd_angstrom: float = 0.5,
+    diversity_metric: str = "direct_rmsd",
+    symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     problem: DockingProblemIdentity | None = None,
 ) -> DockingSearchResult:
     """Generate, optionally refine, score, and diversity-filter a fixed budget."""
@@ -201,7 +251,23 @@ def run_bounded_docking_search(
     threshold = float(diversity_rmsd_angstrom)
     if not math.isfinite(threshold) or threshold < 0.0:
         raise ValueError("diversity_rmsd_angstrom must be finite and non-negative")
+    if diversity_metric not in {"direct_rmsd", "kabsch_rmsd", "symmetry_aware_kabsch_rmsd"}:
+        raise ValueError("unsupported diversity_metric")
+    if diversity_metric == "symmetry_aware_kabsch_rmsd" and symmetry_permutations is None:
+        raise ValueError("symmetry-aware diversity requires explicit permutations")
 
+    canonical_symmetry_permutations = (
+        ()
+        if symmetry_permutations is None
+        else _canonicalize_symmetry_permutations(
+            symmetry_permutations,
+            atom_count=search_space.atom_count,
+        )
+    )
+
+    descriptor = scorer_descriptor(scorer)
+    scorer_fingerprint = component_contract_fingerprint(scorer, kind="scorer")
+    refiner_fingerprint = "" if refiner is None else component_contract_fingerprint(refiner, kind="refiner")
     proposals = generate_bounded_docking_proposals(search_space, budget, problem=problem)
     rows: list[DockingSearchRow] = []
     for proposal in proposals:
@@ -211,10 +277,7 @@ def run_bounded_docking_search(
             if int(budget.max_refinement_steps) > 0:
                 if refiner is None:
                     raise DockingSearchError("refinement requested but no refiner was provided")
-                current = refiner.refine(
-                    proposal,
-                    max_steps=int(budget.max_refinement_steps),
-                )
+                current = refiner.refine(proposal, max_steps=int(budget.max_refinement_steps))
                 if not isinstance(current, DockingProposal):
                     raise TypeError("refiner did not return DockingProposal")
                 if current.coordinates.shape != proposal.coordinates.shape:
@@ -237,6 +300,7 @@ def run_bounded_docking_search(
                 )
             )
         except Exception as exc:
+            receipt = failure_receipt(exc, public_message="docking candidate execution failed")
             rows.append(
                 DockingSearchRow(
                     candidate_id=proposal.candidate_id,
@@ -248,21 +312,33 @@ def run_bounded_docking_search(
                     status="failure",
                     score=None,
                     proposal=None,
-                    error_code=exc.__class__.__name__,
-                    error_message=str(exc)[:500],
+                    error_code=receipt.public_error_code,
+                    error_message=receipt.public_message,
+                    private_error_sha256=receipt.private_error_sha256,
+                    private_error_byte_length=receipt.private_error_byte_length,
                     refined=refined,
                 )
             )
 
     successful = sorted(
         (row for row in rows if row.succeeded),
-        key=lambda row: (float(row.score), row.proposal_index, row.candidate_id),
+        key=lambda row: (
+            score_sort_key(float(row.score), descriptor),
+            row.proposal_index,
+            row.candidate_id,
+        ),
     )
     selected: list[DockingSearchRow] = []
     for row in successful:
         assert row.proposal is not None
         if all(
-            _direct_rmsd(row.proposal, other.proposal) >= threshold
+            _pose_distance(
+                row.proposal,
+                other.proposal,
+                metric=diversity_metric,
+                symmetry_permutations=canonical_symmetry_permutations,
+            )
+            >= threshold
             for other in selected
             if other.proposal is not None
         ):
@@ -276,6 +352,10 @@ def run_bounded_docking_search(
     ]
     if problem is None or not problem.bound:
         blockers.append("docking_problem_identity_unbound")
+    if getattr(scorer, "score_descriptor", None) is None:
+        blockers.append("score_descriptor_not_explicit")
+    if not descriptor.calibrated:
+        blockers.append("docking_score_uncalibrated")
     if not bool(scorer.validated_for_docking_ranking):
         blockers.append("scorer_not_validated_for_docking_ranking")
     if not successful:
@@ -291,10 +371,22 @@ def run_bounded_docking_search(
         budget=budget,
         scorer_id=str(scorer.scorer_id),
         scorer_version=str(scorer.scorer_version),
+        scorer_contract_fingerprint_sha256=scorer_fingerprint,
         refiner_id="" if refiner is None else str(refiner.refiner_id),
+        refiner_contract_fingerprint_sha256=refiner_fingerprint,
+        score_descriptor=descriptor,
         problem_fingerprint_sha256=proposals[0].problem_fingerprint_sha256,
         search_space_fingerprint_sha256=proposals[0].search_space_fingerprint_sha256,
-        search_fingerprint_sha256=_search_fingerprint(proposals, budget, scorer, refiner),
+        search_fingerprint_sha256=_search_fingerprint(
+            proposals,
+            budget,
+            scorer_fingerprint=scorer_fingerprint,
+            refiner_fingerprint=refiner_fingerprint,
+            score_descriptor=descriptor,
+            diversity_metric=diversity_metric,
+            symmetry_permutations=canonical_symmetry_permutations,
+        ),
+        diversity_metric=diversity_metric,
         blockers=tuple(dict.fromkeys(blockers)),
     )
 

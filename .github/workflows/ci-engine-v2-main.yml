@@ -79,6 +79,7 @@ jobs:
             tests/unit/test_engine_v2_bounded_scaffolds.py
             tests/unit/test_engine_v2_post_merge_state.py
             tests/unit/test_engine_v2_input_identity.py
+            tests/unit/test_engine_v2_docking_semantics.py
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
@@ -118,7 +119,8 @@ jobs:
             tests/unit/test_engine_v2_packaging_guards.py \
             tests/unit/test_engine_v2_bounded_scaffolds.py \
             tests/unit/test_engine_v2_post_merge_state.py \
-            tests/unit/test_engine_v2_input_identity.py > engine-v2-main.log 2>&1
+            tests/unit/test_engine_v2_input_identity.py \
+            tests/unit/test_engine_v2_docking_semantics.py > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
           exit "$status"
