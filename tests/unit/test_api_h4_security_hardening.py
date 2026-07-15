@@ -21,7 +21,12 @@ from api.config import settings
 from api.job_store import SQLiteJobStore, canonical_request_sha256
 from api.request_identity import ProductRequestIdentity
 from api.result_manifest import write_result_manifest
-from api.security import BLOCKED_REQUESTS, HTTP_REQUESTS, ProductSecurityMiddleware
+from api.security import (
+    AUDIT_WRITE_FAILURES,
+    BLOCKED_REQUESTS,
+    HTTP_REQUESTS,
+    ProductSecurityMiddleware,
+)
 from api.security_ledger import (
     SQLiteSecurityLedger,
     reset_configured_security_ledger_for_tests,
@@ -197,7 +202,7 @@ def test_content_length_over_limit_is_rejected_before_body_read(
     assert receive_calls == 0
 
 
-@pytest.mark.parametrize("content_length", ["invalid", "-1"])
+@pytest.mark.parametrize("content_length", ["invalid", "-1", "+1", " 1", "1,1"])
 def test_invalid_content_length_is_400(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -212,6 +217,42 @@ def test_invalid_content_length_is_400(
     assert response.status_code == 400
     assert response.json()["code"] == "invalid_content_length"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
+
+
+def test_duplicate_content_length_is_rejected_before_body_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure_security(tmp_path, monkeypatch, max_payload=5)
+    receive_calls = 0
+    sent: list[dict[str, Any]] = []
+
+    async def receive() -> dict[str, Any]:
+        nonlocal receive_calls
+        receive_calls += 1
+        return {"type": "http.request", "body": b"a", "more_body": False}
+
+    async def send(message: dict[str, Any]) -> None:
+        sent.append(message)
+
+    asyncio.run(
+        _body_app()(
+            _scope(
+                headers=[
+                    (b"x-tenant-id", b"tenant-stream"),
+                    (b"content-length", b"1"),
+                    (b"content-length", b"1"),
+                ]
+            ),
+            receive,
+            send,
+        )
+    )
+
+    start, payload = _sent_response(sent)
+    assert start["status"] == 400
+    assert payload["code"] == "invalid_content_length"
+    assert receive_calls == 0
 
 
 def test_empty_body_passes_zero_byte_limit(
@@ -242,6 +283,27 @@ def test_http_disconnect_is_audited_once_without_a_second_response(
     rows = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1
     assert rows[0]["status_code"] == 499
+
+
+def test_audit_path_failure_does_not_break_the_security_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure_security(tmp_path, monkeypatch)
+    non_directory = tmp_path / "not-a-directory"
+    non_directory.write_text("occupied", encoding="utf-8")
+    monkeypatch.setattr(
+        settings,
+        "product_api_audit_log_path",
+        str(non_directory / "audit.jsonl"),
+    )
+    before = AUDIT_WRITE_FAILURES._value.get()
+
+    response = TestClient(_body_app()).get("/product/ping")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert AUDIT_WRITE_FAILURES._value.get() == before + 1
 
 
 def test_overflow_after_response_start_never_sends_a_second_response(
@@ -395,6 +457,19 @@ def test_worker_manifest_uses_durable_original_request_hash(
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     assert manifest["request_sha256"] == canonical_request_sha256(raw)
     assert manifest["request_sha256"] != canonical_request_sha256(record["request"])
+
+
+def test_result_manifest_rejects_an_invalid_explicit_request_hash(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="request_sha256"):
+        write_result_manifest(
+            tmp_path / "result_manifest.json",
+            job_id="job-invalid-hash",
+            request={"target_name": "ADRB2"},
+            request_sha256="not-a-sha256",
+            status="failed",
+            signing_key="unit-signing-key",
+            key_id="unit-key",
+        )
 
 
 def _completed_fixture(

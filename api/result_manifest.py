@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,9 @@ from core.claim_boundary import (
     general_md_accuracy_promotion_allowed,
     validate_manifest_claim_fields,
 )
+
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _utc_now() -> str:
@@ -153,12 +157,17 @@ def build_result_manifest(
         raise ValueError(
             f"accuracy_claim_grade '{GENERAL_MD_ACCURACY_CLAIM}' is forbidden for fidelity={resolved_fidelity}"
         )
+    resolved_request_sha256 = str(request_sha256 or "").lower()
+    if resolved_request_sha256 and _SHA256_RE.fullmatch(resolved_request_sha256) is None:
+        raise ValueError("request_sha256 must be a 64-character hexadecimal SHA-256")
+    if not resolved_request_sha256:
+        resolved_request_sha256 = _sha256_text(request)
     result_file_sha256 = _sha256_file(result_file) if result_file else ""
     payload: dict[str, Any] = {
         "manifest_version": "api_result_manifest_v1",
         "job_id": job_id,
         "status": status,
-        "request_sha256": str(request_sha256 or _sha256_text(request)),
+        "request_sha256": resolved_request_sha256,
         "result_file": result_file,
         "result_file_sha256": result_file_sha256,
         "error": error,

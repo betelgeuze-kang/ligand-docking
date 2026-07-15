@@ -205,13 +205,17 @@ class ProductSecurityMiddleware:
         ):
             return self._blocked("hosted_tls_termination_not_verified", 503), None
 
-        raw_content_length = request.headers.get("content-length")
-        try:
-            content_length = int(raw_content_length or 0)
-        except (TypeError, ValueError):
+        raw_content_lengths = [
+            value
+            for name, value in request.scope.get("headers", [])
+            if bytes(name).lower() == b"content-length"
+        ]
+        if len(raw_content_lengths) > 1:
             return self._blocked("invalid_content_length", 400), None
-        if content_length < 0:
+        raw_content_length = raw_content_lengths[0] if raw_content_lengths else b"0"
+        if not raw_content_length or not raw_content_length.isdigit():
             return self._blocked("invalid_content_length", 400), None
+        content_length = int(raw_content_length)
         if content_length > settings.product_api_max_payload_bytes:
             return self._blocked("payload_too_large", 413), None
 
@@ -313,7 +317,6 @@ class ProductSecurityMiddleware:
 
     def _audit_request(self, request: Request, status_code: int) -> None:
         path = Path(settings.product_api_audit_log_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
         identity = getattr(request.state, "product_identity", None)
         tenant_id = (
             identity.tenant_id
@@ -337,6 +340,7 @@ class ProductSecurityMiddleware:
             "audit_retention_days": settings.product_api_audit_retention_days,
         }
         try:
+            path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(row, sort_keys=True) + "\n")
         except Exception:
