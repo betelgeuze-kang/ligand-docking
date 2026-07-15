@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import stat
 
+from api.artifact_access import read_confined_json_object
 from api.config import settings
 from api.job_artifacts import (
     atomic_write_text_file,
@@ -118,10 +119,14 @@ def read_status_file(status_file_path: str) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ValueError("status file root must be a JSON object")
         return payload
-    if not os.path.exists(status_file_path):
-        return {}
-    with open(status_file_path, "r", encoding="utf-8") as sf:
-        return json.load(sf)
+    payload = read_confined_json_object(
+        Path(status_file_path).parent,
+        status_file_path,
+        label="status file",
+        maximum_bytes=16 * 1024 * 1024,
+        missing_ok=True,
+    )
+    return payload if payload is not None else {}
 
 
 def read_json_object_file(file_path: str) -> dict[str, Any]:

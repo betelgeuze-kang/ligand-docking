@@ -121,7 +121,12 @@ class _ConfinedArtifactRoot:
             | getattr(os, "O_DIRECTORY", 0)
             | getattr(os, "O_NOFOLLOW", 0)
         )
-        file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        file_flags = (
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_NONBLOCK", 0)
+        )
         current_fd = os.dup(self._fd)
         file_fd = -1
         try:
@@ -133,8 +138,11 @@ class _ConfinedArtifactRoot:
                 os.close(current_fd)
                 current_fd = next_fd
             file_fd = os.open(parts[-1], file_flags, dir_fd=current_fd)
-            if not stat.S_ISREG(os.fstat(file_fd).st_mode):
+            metadata = os.fstat(file_fd)
+            if not stat.S_ISREG(metadata.st_mode):
                 raise OSError("artifact is not a regular file")
+            if metadata.st_nlink != 1:
+                raise OSError("hard-linked artifacts are forbidden")
             handle = os.fdopen(file_fd, "rb")
             file_fd = -1
             return logical_path, handle
@@ -156,6 +164,39 @@ def open_confined_regular_file(
 
     with _ConfinedArtifactRoot(root, label=label) as confined:
         return confined.open(path_like, label=label)
+
+
+def read_confined_json_object(
+    root: str | Path,
+    path_like: str | Path,
+    *,
+    label: str,
+    maximum_bytes: int = 16 * 1024 * 1024,
+    missing_ok: bool = False,
+) -> dict[str, Any] | None:
+    """Read bounded JSON through one confined, no-follow regular-file descriptor."""
+
+    try:
+        with _ConfinedArtifactRoot(root, label=label) as confined:
+            _, handle = confined.open(path_like, label=label)
+            with handle:
+                payload_bytes = handle.read(maximum_bytes + 1)
+    except HTTPException as exc:
+        if missing_ok and isinstance(exc.__cause__, FileNotFoundError):
+            return None
+        raise
+    except OSError as exc:
+        raise _forbidden(f"{label} file could not be read safely") from exc
+
+    if len(payload_bytes) > maximum_bytes:
+        raise _forbidden(f"{label} exceeds the permitted size")
+    try:
+        payload = json.loads(payload_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise _forbidden(f"{label} is not valid UTF-8 JSON") from exc
+    if not isinstance(payload, dict):
+        raise _forbidden(f"{label} root must be a JSON object")
+    return payload
 
 
 def _hash_handle(

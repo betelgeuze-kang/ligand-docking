@@ -12,8 +12,7 @@ from starlette.background import BackgroundTask
 import hashlib
 import json
 import uuid
-import os
-from api.artifact_access import verify_completed_result_artifacts
+from api.artifact_access import read_confined_json_object, verify_completed_result_artifacts
 from api.cameo import router as cameo_router
 from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
@@ -59,7 +58,6 @@ from api.worker import (
     job_results_dir,
     job_status_path,
     process_next_job_once,
-    read_status_file,
     run_job_once,
     write_status_file,  # noqa: F401 - retained as a compatibility export
 )
@@ -224,17 +222,21 @@ def get_simulation_status(job_id: str, request: Request = None):
     )
 
     # Read status from file only after object authorization succeeds.
-    status_file_path = str(
-        record.get("published_status_path") or job_status_path(job_id)
+    status_file_path = str(record.get("published_status_path") or job_status_path(job_id))
+    result_root = job_results_dir(job_id)
+    status_data = read_confined_json_object(
+        result_root,
+        status_file_path,
+        label="job status",
+        missing_ok=True,
     )
-    if not os.path.exists(status_file_path):
+    if status_data is None:
         return StatusResponse(
             job_id=job_id,
             status=str(record.get("status", "unknown")),
             message="Status file unavailable",
         )
 
-    status_data = read_status_file(status_file_path)
     # SQLite is authoritative; the file is an artifact mirror that may lag or
     # fail independently during worker setup/terminalization.
     status = str(record.get("status") or status_data.get("status", "unknown"))
@@ -250,7 +252,7 @@ def get_simulation_status(job_id: str, request: Request = None):
             job_id=job_id,
             record=record,
             status_data=status_data,
-            result_root=job_results_dir(job_id),
+            result_root=result_root,
             signing_key=settings.api_result_manifest_signing_key,
             expected_key_id=settings.api_result_manifest_key_id,
         )
@@ -305,18 +307,22 @@ def get_simulation_results(job_id: str, request: Request = None):
         resource="Job",
     )
 
-    status_file_path = str(
-        record.get("published_status_path") or job_status_path(job_id)
+    status_file_path = str(record.get("published_status_path") or job_status_path(job_id))
+    result_root = job_results_dir(job_id)
+    status_data = read_confined_json_object(
+        result_root,
+        status_file_path,
+        label="job status",
+        missing_ok=True,
     )
-    if not os.path.exists(status_file_path):
+    if status_data is None:
         raise HTTPException(status_code=404, detail="Results not ready or job failed")
 
-    status_data = read_status_file(status_file_path)
     verified = verify_completed_result_artifacts(
         job_id=job_id,
         record=record,
         status_data=status_data,
-        result_root=job_results_dir(job_id),
+        result_root=result_root,
         signing_key=settings.api_result_manifest_signing_key,
         expected_key_id=settings.api_result_manifest_key_id,
         snapshot_result=True,

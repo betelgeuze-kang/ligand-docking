@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 
 from api.config import settings
-from api.job_artifacts import resolve_job_results_dir
+from api.job_artifacts import atomic_write_text_file, resolve_job_results_dir
 from api.simulation_scope import UnsupportedSimulationScopeError, validate_simulation_request_scope
 from api.validated_runner import execute_validated_runner_profile
 from betelgeuze_product.tier_beta_vertical_slice import (
@@ -41,8 +41,10 @@ async def run_simulation_async(job_id: str, request_data: dict[str, Any]):
         )
 
     except Exception as e:
-        # Update status to failed
-        with open(status_file_path, 'w') as sf:
-            json.dump({"job_id": job_id, "status": "failed", "error": str(e)}, sf)
+        # Replace the directory entry atomically; never truncate a linked victim inode.
+        atomic_write_text_file(
+            status_file_path,
+            json.dumps({"job_id": job_id, "status": "failed", "error": str(e)}),
+        )
         print(f"Simulation {job_id} failed: {e}")
-        raise e
+        raise

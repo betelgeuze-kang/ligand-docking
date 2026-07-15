@@ -4,6 +4,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -16,6 +17,7 @@ from fastapi.testclient import TestClient
 
 from api.artifact_access import (
     open_confined_regular_file,
+    read_confined_json_object,
     verify_completed_result_artifacts,
 )
 from api.atomic_job_admission import create_owned_job_atomic
@@ -37,7 +39,8 @@ from api.security_ledger import (
     SQLiteSecurityLedger,
     reset_configured_security_ledger_for_tests,
 )
-from api.worker import write_job_result_manifest
+from api.tasks import run_simulation_async
+from api.worker import read_status_file, write_job_result_manifest
 from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 
 
@@ -759,6 +762,83 @@ def test_confined_open_keeps_original_file_when_directory_is_replaced(
         assert handle.read() == b'{"source": "original"}'
     finally:
         handle.close()
+
+
+def test_confined_open_rejects_fifo_without_blocking(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    fifo = root / "status.json"
+    try:
+        os.mkfifo(fifo)
+    except (AttributeError, OSError):
+        pytest.skip("FIFOs unavailable")
+
+    with pytest.raises(Exception) as rejected:
+        open_confined_regular_file(root, fifo, label="job status")
+
+    assert getattr(rejected.value, "status_code", None) == 403
+    with pytest.raises(Exception) as status_rejected:
+        read_status_file(str(fifo))
+    assert getattr(status_rejected.value, "status_code", None) == 403
+
+
+@pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
+def test_confined_json_status_rejects_link_to_outside_root(
+    tmp_path: Path,
+    link_kind: str,
+) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+    victim = tmp_path / "outside.json"
+    victim.write_text('{"secret": true}', encoding="utf-8")
+    status_path = root / "status.json"
+    try:
+        if link_kind == "symlink":
+            status_path.symlink_to(victim)
+        else:
+            os.link(victim, status_path)
+    except OSError:
+        pytest.skip(f"{link_kind}s unavailable")
+
+    with pytest.raises(Exception) as rejected:
+        read_confined_json_object(root, status_path, label="job status")
+
+    assert getattr(rejected.value, "status_code", None) == 403
+    with pytest.raises(Exception) as status_rejected:
+        read_status_file(str(status_path))
+    assert getattr(status_rejected.value, "status_code", None) == 403
+
+
+@pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
+def test_simulation_exception_status_replace_preserves_link_victim(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    link_kind: str,
+) -> None:
+    results_root = tmp_path / "results"
+    job_id = f"job-{link_kind}"
+    job_root = results_root / job_id
+    job_root.mkdir(parents=True)
+    victim = tmp_path / f"{link_kind}-victim.json"
+    original = b'{"owner": "outside"}\n'
+    victim.write_bytes(original)
+    status_path = job_root / "status.json"
+    try:
+        if link_kind == "symlink":
+            status_path.symlink_to(victim)
+        else:
+            os.link(victim, status_path)
+    except OSError:
+        pytest.skip(f"{link_kind}s unavailable")
+    monkeypatch.setattr(settings, "results_storage_path", str(results_root))
+
+    with pytest.raises(ValueError, match="runner_profile_id is required"):
+        asyncio.run(run_simulation_async(job_id, {"target_name": "ADRB2"}))
+
+    assert victim.read_bytes() == original
+    assert not status_path.is_symlink()
+    assert status_path.stat().st_nlink == 1
+    assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "failed"
 
 
 @pytest.mark.parametrize("missing_side", ["status", "record"])
