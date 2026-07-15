@@ -8,6 +8,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from api.job_artifacts import (
+    atomic_write_text_file,
+    read_current_attempt_file_bytes,
+    sha256_current_attempt_file,
+)
 from core.claim_boundary import (
     CLAIM_SCOPE_PRODUCT_LIGAND,
     GENERAL_MD_ACCURACY_CLAIM,
@@ -36,6 +41,9 @@ def _sha256_text(payload: Any) -> str:
 
 def _sha256_file(path_like: str | Path) -> str:
     path = Path(path_like)
+    pinned_digest = sha256_current_attempt_file(path)
+    if pinned_digest is not None:
+        return pinned_digest
     if not path.exists() or not path.is_file():
         return ""
     digest = hashlib.sha256()
@@ -47,6 +55,16 @@ def _sha256_file(path_like: str | Path) -> str:
 
 def _read_json_object(path_like: str | Path) -> dict[str, Any]:
     path = Path(path_like)
+    pinned_payload = read_current_attempt_file_bytes(
+        path,
+        maximum_bytes=64 * 1024 * 1024,
+    )
+    if pinned_payload is not None:
+        try:
+            payload = json.loads(pinned_payload)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return {}
+        return payload if isinstance(payload, dict) else {}
     if not path.exists() or not path.is_file():
         return {}
     try:
@@ -255,7 +273,6 @@ def write_result_manifest(
     worker_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = Path(path_like)
-    path.parent.mkdir(parents=True, exist_ok=True)
     extracted_metadata = _extract_result_metadata(result_file) if result_file else {}
     manifest = build_result_manifest(
         job_id=job_id,
@@ -294,5 +311,8 @@ def write_result_manifest(
         ),
         worker_provenance=worker_provenance,
     )
-    path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    atomic_write_text_file(
+        path,
+        json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+    )
     return manifest

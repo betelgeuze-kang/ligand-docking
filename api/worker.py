@@ -12,13 +12,14 @@ import json
 import os
 from pathlib import Path
 import re
-import secrets
 import stat
 
 from api.config import settings
 from api.job_artifacts import (
-    activate_attempt_results_dir,
-    create_attempt_results_dir,
+    atomic_write_text_file,
+    create_and_activate_attempt_results_dir,
+    read_current_attempt_file_bytes,
+    require_current_attempt_regular_file,
     reset_attempt_results_dir,
     resolve_job_results_dir,
     token_fingerprint,
@@ -30,7 +31,7 @@ from api.job_store import (
 )
 from api.result_manifest import write_result_manifest
 from api.tasks import run_simulation_async
-from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
+from betelgeuze_ai_md.contracts.api_adapter import build_api_evidence_bundle
 
 SimulationRunner = Callable[[str, dict[str, Any]], Awaitable[None]]
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -108,6 +109,15 @@ def job_evidence_bundle_path(job_id: str) -> str:
 
 
 def read_status_file(status_file_path: str) -> dict[str, Any]:
+    pinned_payload = read_current_attempt_file_bytes(
+        status_file_path,
+        maximum_bytes=16 * 1024 * 1024,
+    )
+    if pinned_payload is not None:
+        payload = json.loads(pinned_payload)
+        if not isinstance(payload, dict):
+            raise ValueError("status file root must be a JSON object")
+        return payload
     if not os.path.exists(status_file_path):
         return {}
     with open(status_file_path, "r", encoding="utf-8") as sf:
@@ -115,20 +125,27 @@ def read_status_file(status_file_path: str) -> dict[str, Any]:
 
 
 def read_json_object_file(file_path: str) -> dict[str, Any]:
-    if not file_path or not os.path.exists(file_path):
+    if not file_path:
         return {}
     try:
+        pinned_payload = read_current_attempt_file_bytes(
+            file_path,
+            maximum_bytes=64 * 1024 * 1024,
+        )
+        if pinned_payload is not None:
+            payload = json.loads(pinned_payload)
+            return payload if isinstance(payload, dict) else {}
+        if not os.path.exists(file_path):
+            return {}
         with open(file_path, "r", encoding="utf-8") as handle:
             payload = json.load(handle)
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
 
 
 def write_status_file(status_file_path: str, status_data: dict[str, Any]) -> None:
-    os.makedirs(os.path.dirname(status_file_path), exist_ok=True)
-    with open(status_file_path, "w", encoding="utf-8") as sf:
-        json.dump(status_data, sf)
+    atomic_write_text_file(status_file_path, json.dumps(status_data))
 
 
 def create_initial_status_file(job_id: str) -> InitialStatusFileReceipt:
@@ -285,14 +302,18 @@ def write_job_evidence_bundle(
     if runner_execution_path:
         runner_execution = read_json_object_file(runner_execution_path)
     bundle_path = job_evidence_bundle_path(job_id)
-    bundle = write_api_evidence_bundle(
-        bundle_path,
+    bundle = build_api_evidence_bundle(
         job_id=job_id,
         request=request_data,
         result_manifest=result_manifest,
         result_payload=result_payload,
         runner_execution=runner_execution,
         status_payload=status_data,
+    )
+    atomic_write_text_file(
+        bundle_path,
+        json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
+        + "\n",
     )
     return bundle_path, bundle.fingerprint()
 
@@ -349,10 +370,10 @@ def adopt_validated_runner_native_evidence_bundle(
         except (ContractValidationError, TypeError):
             return None
     final_path = Path(job_evidence_bundle_path(job_id))
-    final_path.parent.mkdir(parents=True, exist_ok=True)
-    final_path.write_text(
-        json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    atomic_write_text_file(
+        final_path,
+        json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
+        + "\n",
     )
     return str(final_path), bundle.fingerprint()
 
@@ -411,22 +432,14 @@ def _publish_canonical_status_best_effort(
 ) -> None:
     """Atomically publish a terminal winner mirror after its durable CAS."""
 
-    target = Path(path)
-    temp = target.with_name(f".{target.name}.{secrets.token_hex(16)}.tmp")
     try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        write_status_file(str(temp), payload)
-        with temp.open("rb") as handle:
-            os.fsync(handle.fileno())
-        os.replace(temp, target)
-        directory_fd = os.open(target.parent, os.O_RDONLY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+        atomic_write_text_file(
+            path,
+            json.dumps(payload),
+            allow_outside_active_attempt=True,
+        )
     except (OSError, TypeError, ValueError):
-        with suppress(OSError):
-            temp.unlink()
+        return
 
 
 def _worker_attempt_provenance(
@@ -450,13 +463,23 @@ def _require_attempt_artifact_path(
 ) -> None:
     if not path_value:
         return
+    candidate = Path(path_value).expanduser()
+    if not candidate.is_absolute():
+        candidate = attempt_results_dir / candidate
+    normalized_path = Path(os.path.abspath(str(candidate)))
+    normalized_attempt_dir = Path(os.path.abspath(str(attempt_results_dir)))
     try:
-        resolved_path = Path(path_value).resolve(strict=True)
-        resolved_attempt_dir = attempt_results_dir.resolve(strict=True)
-    except OSError as exc:
-        raise JobIntegrityError(f"{label} is unavailable for the live attempt") from exc
-    if resolved_attempt_dir not in resolved_path.parents:
+        normalized_path.relative_to(normalized_attempt_dir)
+    except ValueError as exc:
+        raise JobIntegrityError(
+            f"{label} escapes the live attempt artifact directory"
+        ) from exc
+    if normalized_path == normalized_attempt_dir:
         raise JobIntegrityError(f"{label} escapes the live attempt artifact directory")
+    try:
+        require_current_attempt_regular_file(normalized_path)
+    except (OSError, PermissionError) as exc:
+        raise JobIntegrityError(f"{label} is unavailable for the live attempt") from exc
 
 
 async def run_job_once(
@@ -501,16 +524,14 @@ async def run_job_once(
                 lease_seconds=lease_seconds,
             )
             attempt_count = int(durable_record.get("attempt_count", 0) or 0)
-            attempt_results_dir = create_attempt_results_dir(
-                storage_root=settings.results_storage_path,
-                job_id=job_id,
-                worker_id=worker_id,
-                attempt_token=attempt_token,
-                attempt_count=attempt_count,
-            )
-            artifact_binding_token = activate_attempt_results_dir(
-                job_id,
-                attempt_results_dir,
+            attempt_results_dir, artifact_binding_token = (
+                create_and_activate_attempt_results_dir(
+                    storage_root=settings.results_storage_path,
+                    job_id=job_id,
+                    worker_id=worker_id,
+                    attempt_token=attempt_token,
+                    attempt_count=attempt_count,
+                )
             )
             status_file_path = job_status_path(job_id)
             worker_provenance = _worker_attempt_provenance(
