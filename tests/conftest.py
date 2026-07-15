@@ -16,21 +16,34 @@ _LIGHTWEIGHT_CONTRACT_FILES = {
     "test_release_claim_evidence_ladder_gate.py",
     "test_product_docking_response_snapshot.py",
     "test_benchmark_contract.py",
+    "test_api_h4_security_hardening.py",
+    "test_api_job_store.py",
+    "test_api_security_middleware.py",
+    "test_api_worker_deploy_artifacts.py",
 }
 
 
-def _requested_test_file_names(config) -> set[str]:
-    names: set[str] = set()
-    for arg in getattr(config, "args", []) or []:
-        text = str(arg)
-        if text.endswith(".py"):
-            names.add(Path(text).name)
-    return names
+def _requested_tests_are_lightweight(config) -> bool:
+    args = [str(arg).split("::", 1)[0] for arg in getattr(config, "args", []) or []]
+    if not args:
+        return False
+    root = Path(__file__).resolve().parents[1]
+    for text in args:
+        candidate = Path(text)
+        if candidate.name in _LIGHTWEIGHT_CONTRACT_FILES:
+            continue
+        try:
+            relative = candidate.resolve().relative_to(root)
+        except (OSError, ValueError):
+            return False
+        if relative.parts[:2] == ("tests", "mobile"):
+            continue
+        return False
+    return True
 
 
 def pytest_sessionstart(session) -> None:
-    requested = _requested_test_file_names(session.config)
-    if requested and requested <= _LIGHTWEIGHT_CONTRACT_FILES:
+    if _requested_tests_are_lightweight(session.config):
         return
     root = Path(__file__).resolve().parents[1]
     capability = root / "runs" / "product_capability_surface_contract_current.json"
