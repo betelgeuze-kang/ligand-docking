@@ -26,6 +26,38 @@ ALLOWED_RUNNER_SCRIPTS = {
 }
 
 _PROFILE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+_RUNNER_ENV_ALLOWLIST = {
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "LANG",
+    "LANGUAGE",
+    "LC_ALL",
+    "TZ",
+    "PYTHONHASHSEED",
+    "PYTHONIOENCODING",
+    "PYTHONUTF8",
+    "PYTHONDONTWRITEBYTECODE",
+    "CUDA_VISIBLE_DEVICES",
+    "HIP_VISIBLE_DEVICES",
+    "ROCR_VISIBLE_DEVICES",
+    "HSA_OVERRIDE_GFX_VERSION",
+}
+_SENSITIVE_ENV_NAME_PARTS = {
+    "AUTH",
+    "CREDENTIAL",
+    "CREDENTIALS",
+    "KEY",
+    "KEYS",
+    "PASSWORD",
+    "PASSWORDS",
+    "SECRET",
+    "SECRETS",
+    "TOKEN",
+    "TOKENS",
+}
 
 
 def _repo_root() -> Path:
@@ -160,6 +192,20 @@ def validate_profile_readiness(profile: dict[str, Any], *, runner_script_path: s
     }
 
 
+def _safe_runner_environment() -> dict[str, str]:
+    """Build a minimal child environment without API credentials or signing keys."""
+
+    child_env = {
+        key: value
+        for key, value in os.environ.items()
+        if key in _RUNNER_ENV_ALLOWLIST or key.startswith("LC_")
+        if not _SENSITIVE_ENV_NAME_PARTS.intersection(key.upper().split("_"))
+    }
+    child_env.setdefault("PATH", os.defpath)
+    child_env["PYTHONUNBUFFERED"] = "1"
+    return child_env
+
+
 def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[str, Any]:
     proc = subprocess.Popen(
         command,
@@ -169,6 +215,7 @@ def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[st
         stderr=subprocess.PIPE,
         shell=False,
         start_new_session=True,
+        env=_safe_runner_environment(),
     )
     timed_out = False
     try:

@@ -8,9 +8,8 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from api.job_store import SQLiteJobStore, canonical_request_sha256
+from api.job_store import SQLiteJobStore, materialize_execution_request
 from api.request_identity import ProductRequestIdentity, normalize_tenant_id
-from api.request_privacy import sanitize_request_for_ledger
 from api.simulation_job_ownership import validate_simulation_job_id
 
 
@@ -40,8 +39,12 @@ def create_owned_job_atomic(
         raise ValueError("max_attempts must be positive")
 
     now = _utc_now()
-    request_sha256 = canonical_request_sha256(request)
-    sanitized = sanitize_request_for_ledger(request)
+    (
+        sanitized,
+        request_sha256,
+        execution_request_sha256,
+        execution_request_transform_id,
+    ) = materialize_execution_request(request)
     request_json = json.dumps(
         sanitized,
         sort_keys=True,
@@ -83,14 +86,17 @@ def create_owned_job_atomic(
             """
             INSERT INTO simulation_jobs(
                 job_id, status, request_json, request_sha256,
+                execution_request_sha256, execution_request_transform_id,
                 max_attempts, created_at_utc, updated_at_utc
-            ) VALUES(?, ?, ?, ?, ?, ?, ?)
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 normalized_job_id,
                 str(status),
                 request_json,
                 request_sha256,
+                execution_request_sha256,
+                execution_request_transform_id,
                 int(max_attempts),
                 now,
                 now,
@@ -118,15 +124,26 @@ def create_owned_job_atomic(
                 now,
             ),
         )
+        committed_row = conn.execute(
+            "SELECT * FROM simulation_jobs WHERE job_id=?",
+            (normalized_job_id,),
+        ).fetchone()
+        if committed_row is None:
+            raise RuntimeError("atomic job admission has no readable queue row")
+        record = dict(committed_row)
+        try:
+            materialized_request = json.loads(str(record.pop("request_json")))
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("atomic job admission request JSON is unreadable") from exc
+        if not isinstance(materialized_request, dict):
+            raise RuntimeError("atomic job admission request JSON is not an object")
+        record["request"] = materialized_request
         conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
-    record = job_store.get_job(normalized_job_id)
-    if record is None:
-        raise RuntimeError("atomic job admission committed without a readable queue row")
     return record
 
 

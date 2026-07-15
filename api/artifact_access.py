@@ -221,10 +221,11 @@ def _load_json_object(handle: BinaryIO, *, label: str) -> dict[str, Any]:
     return payload
 
 
-def _evidence_bundle_fingerprint(handle: BinaryIO) -> str:
+def _evidence_bundle_fingerprint(handle: BinaryIO) -> tuple[str, EvidenceBundle]:
     payload = _load_json_object(handle, label="evidence bundle")
     try:
-        return EvidenceBundle(**payload).fingerprint()
+        bundle = EvidenceBundle(**payload)
+        return bundle.fingerprint(), bundle
     except (ContractValidationError, TypeError, ValueError) as exc:
         raise _forbidden("evidence bundle contract verification failed") from exc
 
@@ -290,6 +291,30 @@ def verify_completed_result_artifacts(
                 raise _forbidden("completed job is missing a durable request fingerprint")
             if str(manifest.get("request_sha256", "")) != request_sha:
                 raise _forbidden("result manifest request binding mismatch")
+            execution_request_sha = str(
+                record.get("execution_request_sha256", "") or ""
+            ).lower()
+            if _SHA256_RE.fullmatch(execution_request_sha) is None:
+                raise _forbidden(
+                    "completed job is missing a durable execution request fingerprint"
+                )
+            if not hmac.compare_digest(
+                str(manifest.get("execution_request_sha256", "")),
+                execution_request_sha,
+            ):
+                raise _forbidden("result manifest execution request binding mismatch")
+            execution_transform_id = str(
+                record.get("execution_request_transform_id", "") or ""
+            ).strip()
+            if not execution_transform_id:
+                raise _forbidden(
+                    "completed job is missing a durable execution request transform"
+                )
+            if (
+                str(manifest.get("execution_request_transform_id", ""))
+                != execution_transform_id
+            ):
+                raise _forbidden("result manifest request transform binding mismatch")
 
             manifest_result, _ = confined.normalize(
                 str(manifest.get("result_file", "") or ""),
@@ -310,12 +335,35 @@ def verify_completed_result_artifacts(
                 record.get("evidence_bundle_sha256"),
                 label="evidence bundle",
             )
-            evidence_fingerprint = _evidence_bundle_fingerprint(evidence_handle)
+            evidence_fingerprint, evidence_bundle = _evidence_bundle_fingerprint(
+                evidence_handle
+            )
             if not hmac.compare_digest(
                 evidence_fingerprint,
                 recorded_evidence_fingerprint,
             ):
                 raise _forbidden("evidence bundle fingerprint verification failed")
+            evidence_input_hash = str(
+                evidence_bundle.source_hashes.get("input_hash", "") or ""
+            ).lower()
+            if not hmac.compare_digest(evidence_input_hash, execution_request_sha):
+                raise _forbidden("evidence bundle execution request binding mismatch")
+            request_provenance = evidence_bundle.request_provenance
+            if not hmac.compare_digest(
+                str(request_provenance.get("admission_request_sha256", "") or "").lower(),
+                request_sha,
+            ):
+                raise _forbidden("evidence bundle admission request binding mismatch")
+            if not hmac.compare_digest(
+                str(request_provenance.get("execution_request_sha256", "") or "").lower(),
+                execution_request_sha,
+            ):
+                raise _forbidden("evidence bundle execution provenance mismatch")
+            if (
+                str(request_provenance.get("execution_request_transform_id", "") or "")
+                != execution_transform_id
+            ):
+                raise _forbidden("evidence bundle request transform binding mismatch")
 
             inferred = infer_result_artifact_metadata(result_path)
             manifest_media_type = str(

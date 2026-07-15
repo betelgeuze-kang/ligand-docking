@@ -38,6 +38,7 @@ class EvidenceBundle:
     wetlab_handoff_table: list[dict[str, Any]]
     verdict: Verdict
     result_manifest: dict[str, Any] = field(default_factory=dict)
+    request_provenance: dict[str, str] = field(default_factory=dict)
     bundle_schema_version: str = "ai_md_evidence_bundle_v1"
     claim_boundary: str = ""
 
@@ -50,6 +51,8 @@ class EvidenceBundle:
             object.__setattr__(self, "verdict", Verdict(**self.verdict))
         if not isinstance(self.result_manifest, dict):
             object.__setattr__(self, "result_manifest", {})
+        if not isinstance(self.request_provenance, dict):
+            object.__setattr__(self, "request_provenance", {})
         if isinstance(self.interaction_report, dict):
             interactions = [
                 item if isinstance(item, dict) else to_plain(item)
@@ -146,10 +149,15 @@ class EvidenceBundle:
             object.__setattr__(self, "claim_boundary", self.verdict.claim_boundary)
 
     def to_dict(self) -> dict[str, Any]:
-        return to_plain(self)
+        payload = to_plain(self)
+        # Preserve the v1 canonical fingerprint for pre-provenance bundles.
+        # API-bound bundles opt in by carrying a non-empty provenance mapping.
+        if not self.request_provenance:
+            payload.pop("request_provenance", None)
+        return payload
 
     def canonical_json(self) -> str:
-        return canonical_json(self)
+        return canonical_json(self.to_dict())
 
     def fingerprint(self) -> str:
-        return sha256_payload(self)
+        return sha256_payload(self.to_dict())

@@ -7,6 +7,7 @@ on:
       - "tests/unit/test_api_h4_security_hardening.py"
       - "tests/unit/test_api_job_store.py"
       - "tests/unit/test_api_security_middleware.py"
+      - "tests/unit/test_api_validated_runner_adapter.py"
       - "tests/mobile/test_simulation_job_ownership.py"
       - "tests/mobile/test_simulation_endpoint_access.py"
       - "requirements-mobile.txt"
@@ -61,7 +62,10 @@ jobs:
           api/simulation_endpoint_access.py
           api/security.py
           api/result_manifest.py
+          api/validated_runner.py
           api/worker.py
+          betelgeuze_ai_md/contracts/api_adapter.py
+          betelgeuze_ai_md/contracts/manifest.py
           api/models.py
           api/main.py
 
@@ -76,6 +80,7 @@ jobs:
           python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_api_job_store.py
           tests/unit/test_api_security_middleware.py
+          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_child_environment_excludes_service_secrets
 
       - name: Run ownership and endpoint regressions
         run: >-

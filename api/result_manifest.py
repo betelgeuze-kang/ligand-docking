@@ -20,6 +20,7 @@ from core.claim_boundary import (
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_TRANSFORM_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 
 
 def _utc_now() -> str:
@@ -135,6 +136,8 @@ def build_result_manifest(
     request: dict[str, Any],
     status: str,
     request_sha256: str | None = None,
+    execution_request_sha256: str | None = None,
+    execution_request_transform_id: str | None = None,
     result_file: str = "",
     error: str = "",
     signing_key: str,
@@ -162,12 +165,29 @@ def build_result_manifest(
         raise ValueError("request_sha256 must be a 64-character hexadecimal SHA-256")
     if not resolved_request_sha256:
         resolved_request_sha256 = _sha256_text(request)
+    resolved_execution_request_sha256 = str(execution_request_sha256 or "").lower()
+    if (
+        resolved_execution_request_sha256
+        and _SHA256_RE.fullmatch(resolved_execution_request_sha256) is None
+    ):
+        raise ValueError(
+            "execution_request_sha256 must be a 64-character hexadecimal SHA-256"
+        )
+    if not resolved_execution_request_sha256:
+        resolved_execution_request_sha256 = _sha256_text(request)
+    resolved_transform_id = str(
+        execution_request_transform_id or "identity_v1"
+    ).strip()
+    if _TRANSFORM_ID_RE.fullmatch(resolved_transform_id) is None:
+        raise ValueError("execution_request_transform_id is invalid")
     result_file_sha256 = _sha256_file(result_file) if result_file else ""
     payload: dict[str, Any] = {
         "manifest_version": "api_result_manifest_v1",
         "job_id": job_id,
         "status": status,
         "request_sha256": resolved_request_sha256,
+        "execution_request_sha256": resolved_execution_request_sha256,
+        "execution_request_transform_id": resolved_transform_id,
         "result_file": result_file,
         "result_file_sha256": result_file_sha256,
         "error": error,
@@ -216,6 +236,8 @@ def write_result_manifest(
     request: dict[str, Any],
     status: str,
     request_sha256: str | None = None,
+    execution_request_sha256: str | None = None,
+    execution_request_transform_id: str | None = None,
     result_file: str = "",
     error: str = "",
     signing_key: str,
@@ -237,6 +259,8 @@ def write_result_manifest(
         request=request,
         status=status,
         request_sha256=request_sha256,
+        execution_request_sha256=execution_request_sha256,
+        execution_request_transform_id=execution_request_transform_id,
         result_file=result_file,
         error=error,
         signing_key=signing_key,

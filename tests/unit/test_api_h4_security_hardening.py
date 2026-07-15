@@ -21,7 +21,11 @@ from api.artifact_access import (
 )
 from api.atomic_job_admission import create_owned_job_atomic
 from api.config import settings
-from api.job_store import SQLiteJobStore, canonical_request_sha256
+from api.job_store import (
+    EXECUTION_REQUEST_TRANSFORM_ID,
+    SQLiteJobStore,
+    canonical_request_sha256,
+)
 from api.request_identity import ProductRequestIdentity
 from api.result_manifest import write_result_manifest
 from api.security import (
@@ -496,6 +500,10 @@ def test_atomic_admission_persists_original_hash_owner_and_outbox(tmp_path: Path
     record = create_owned_job_atomic(store, _identity(), "job-atomic", request)
     assert record["request_sha256"] == canonical_request_sha256(request)
     assert record["request"]["pdb_content"]["redacted"] is True
+    assert record["execution_request_sha256"] == canonical_request_sha256(
+        record["request"]
+    )
+    assert record["execution_request_transform_id"] == EXECUTION_REQUEST_TRANSFORM_ID
     with sqlite3.connect(store.path) as conn:
         owner = conn.execute(
             "SELECT tenant_id FROM simulation_job_ownership WHERE job_id='job-atomic'"
@@ -503,8 +511,20 @@ def test_atomic_admission_persists_original_hash_owner_and_outbox(tmp_path: Path
         events = conn.execute(
             "SELECT COUNT(*) FROM simulation_job_outbox WHERE job_id='job-atomic'"
         ).fetchone()[0]
+        provenance = conn.execute(
+            """
+            SELECT request_sha256, execution_request_sha256,
+                   execution_request_transform_id
+            FROM simulation_jobs WHERE job_id='job-atomic'
+            """
+        ).fetchone()
     assert owner == "tenant-a"
     assert events == 1
+    assert provenance == (
+        record["request_sha256"],
+        record["execution_request_sha256"],
+        EXECUTION_REQUEST_TRANSFORM_ID,
+    )
 
 
 def test_atomic_admission_rolls_back_owner_and_job_when_outbox_insert_fails(
@@ -534,6 +554,30 @@ def test_atomic_admission_rolls_back_owner_and_job_when_outbox_insert_fails(
     assert owner_count == 0
 
 
+def test_atomic_admission_returns_its_transaction_row_without_postcommit_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+
+    def _postcommit_read_must_not_run(job_id: str):
+        raise OSError("postcommit connection unavailable")
+
+    monkeypatch.setattr(store, "get_job", _postcommit_read_must_not_run)
+    record = create_owned_job_atomic(
+        store,
+        _identity(),
+        "job-no-postcommit-read",
+        {"target_name": "ADRB2"},
+    )
+
+    assert record["job_id"] == "job-no-postcommit-read"
+    with sqlite3.connect(store.path) as conn:
+        assert conn.execute(
+            "SELECT COUNT(*) FROM simulation_jobs WHERE job_id='job-no-postcommit-read'"
+        ).fetchone()[0] == 1
+
+
 def test_worker_manifest_uses_durable_original_request_hash(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -548,12 +592,21 @@ def test_worker_manifest_uses_durable_original_request_hash(
         job_id="job-hash",
         request_data=record["request"],
         request_sha256=record["request_sha256"],
+        execution_request_sha256=record["execution_request_sha256"],
+        execution_request_transform_id=record["execution_request_transform_id"],
         status="failed",
         error="bounded test",
     )
     manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
     assert manifest["request_sha256"] == canonical_request_sha256(raw)
     assert manifest["request_sha256"] != canonical_request_sha256(record["request"])
+    assert manifest["execution_request_sha256"] == canonical_request_sha256(
+        record["request"]
+    )
+    assert (
+        manifest["execution_request_transform_id"]
+        == EXECUTION_REQUEST_TRANSFORM_ID
+    )
 
 
 def test_result_manifest_rejects_an_invalid_explicit_request_hash(tmp_path: Path) -> None:
@@ -580,6 +633,7 @@ def _completed_fixture(
     evidence_path = root / "evidence_bundle.json"
     request = {"runner_profile_id": "smoke", "target_name": "ADRB2"}
     request_sha = canonical_request_sha256(request)
+    execution_request_sha = canonical_request_sha256(request)
     signing_key = "unit-signing-key"
     key_id = "unit-key"
     manifest_path = root / "result_manifest.json"
@@ -587,6 +641,9 @@ def _completed_fixture(
         manifest_path,
         job_id="job-artifacts",
         request=request,
+        request_sha256=request_sha,
+        execution_request_sha256=execution_request_sha,
+        execution_request_transform_id=EXECUTION_REQUEST_TRANSFORM_ID,
         status="completed",
         result_file=str(result_path),
         signing_key=signing_key,
@@ -605,6 +662,8 @@ def _completed_fixture(
         "job_id": "job-artifacts",
         "status": "completed",
         "request_sha256": request_sha,
+        "execution_request_sha256": execution_request_sha,
+        "execution_request_transform_id": EXECUTION_REQUEST_TRANSFORM_ID,
         "result_file": str(result_path),
         "result_manifest_path": str(manifest_path),
         "evidence_bundle_path": str(evidence_path),
@@ -713,6 +772,35 @@ def test_completed_artifacts_require_status_and_durable_evidence_binding(
         status["evidence_bundle_sha256"] = ""
     else:
         record["evidence_bundle_sha256"] = ""
+
+    with pytest.raises(Exception) as rejected:
+        verify_completed_result_artifacts(
+            job_id="job-artifacts",
+            record=record,
+            status_data=status,
+            result_root=root,
+            signing_key=signing_key,
+            expected_key_id=key_id,
+        )
+
+    assert getattr(rejected.value, "status_code", None) == 403
+
+
+@pytest.mark.parametrize(
+    ("record_field", "replacement"),
+    [
+        ("request_sha256", "a" * 64),
+        ("execution_request_sha256", "b" * 64),
+        ("execution_request_transform_id", "different_transform_v1"),
+    ],
+)
+def test_completed_artifacts_require_both_signed_request_bindings(
+    tmp_path: Path,
+    record_field: str,
+    replacement: str,
+) -> None:
+    record, status, root, signing_key, key_id, _ = _completed_fixture(tmp_path)
+    record[record_field] = replacement
 
     with pytest.raises(Exception) as rejected:
         verify_completed_result_artifacts(

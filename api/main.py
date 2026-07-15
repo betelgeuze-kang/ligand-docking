@@ -54,6 +54,8 @@ from api.simulation_endpoint_access import (
     get_simulation_job_for_identity,
 )
 from api.worker import (
+    cleanup_initial_status_file,
+    create_initial_status_file,
     job_results_dir,
     job_status_path,
     process_next_job_once,
@@ -164,19 +166,20 @@ async def submit_simulation(
         ) from exc
 
     store = get_job_store()
-    create_simulation_job_for_identity(
-        store,
-        identity,
-        job_id,
-        request_data,
-        status="submitted",
-    )
-
-    # Create status file only after the durable owner binding and job row exist.
-    results_dir = job_results_dir(job_id)
-    os.makedirs(results_dir, exist_ok=True)
-    status_file_path = job_status_path(job_id)
-    write_status_file(status_file_path, {"job_id": job_id, "status": "submitted"})
+    # Prepare the client-visible status mirror before publishing the executable
+    # queue row.  If the atomic DB admission fails, remove only this exact inode.
+    status_receipt = create_initial_status_file(job_id)
+    try:
+        create_simulation_job_for_identity(
+            store,
+            identity,
+            job_id,
+            request_data,
+            status="submitted",
+        )
+    except Exception:
+        cleanup_initial_status_file(status_receipt)
+        raise
 
     if settings.api_inline_worker_enabled:
         background_tasks.add_task(
@@ -230,9 +233,11 @@ def get_simulation_status(job_id: str, request: Request = None):
         )
 
     status_data = read_status_file(status_file_path)
-    status = str(status_data.get("status", record.get("status", "unknown")))
+    # SQLite is authoritative; the file is an artifact mirror that may lag or
+    # fail independently during worker setup/terminalization.
+    status = str(record.get("status") or status_data.get("status", "unknown"))
     error_code, error_reference = _error_receipt(
-        status_data.get("error") or record.get("error")
+        record.get("error") or status_data.get("error")
     )
 
     manifest_available = False

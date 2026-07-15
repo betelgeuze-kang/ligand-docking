@@ -5,8 +5,44 @@ from pathlib import Path
 import asyncio
 import hashlib
 import json
+import sys
 
 import pytest
+
+
+def test_validated_runner_child_environment_excludes_service_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    secret_names = [
+        "PRODUCT_API_TOKEN",
+        "PRODUCT_API_ADMIN_TOKEN",
+        "API_RESULT_MANIFEST_SIGNING_KEY",
+        "DOCKING_PRIVATE_PAYLOAD_KEYS",
+        "AWS_SECRET_ACCESS_KEY",
+        "UNRELATED_SERVICE_TOKEN",
+        "LC_API_TOKEN",
+    ]
+    for name in secret_names:
+        monkeypatch.setenv(name, f"secret-for-{name}")
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
+    probe = (
+        "import json,os; "
+        f"names={secret_names!r}; "
+        "print(json.dumps({'secret_presence': {name: name in os.environ for name in names}, "
+        "'cuda_visible': os.environ.get('CUDA_VISIBLE_DEVICES', '')}, sort_keys=True))"
+    )
+
+    completed = validated_runner._run_profile_command(
+        [sys.executable, "-c", probe],
+        timeout_seconds=10,
+    )
+
+    assert completed["returncode"] == 0
+    payload = json.loads(completed["stdout"])
+    assert payload["secret_presence"] == {name: False for name in secret_names}
+    assert payload["cuda_visible"] == "0"
 
 
 def _write_fake_runner(path: Path) -> None:
