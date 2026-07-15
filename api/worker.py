@@ -6,6 +6,7 @@ from typing import Any
 
 import asyncio
 from contextlib import suppress
+import datetime as dt
 import hashlib
 import hmac
 import json
@@ -32,10 +33,26 @@ from api.job_store import (
 )
 from api.result_manifest import write_result_manifest
 from api.tasks import run_simulation_async
+from api.validated_runner_execution_evidence import (
+    EXECUTION_EVIDENCE_PROVENANCE_KEY,
+    validate_validated_runner_execution_evidence,
+)
+from api.validated_runner_runtime_qualification import (
+    MAX_RECEIPT_VALIDITY,
+    RECEIPT_SCHEMA_VERSION,
+)
 from betelgeuze_ai_md.contracts.api_adapter import build_api_evidence_bundle
 
 SimulationRunner = Callable[[str, dict[str, Any]], Awaitable[None]]
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_RUNTIME_QUALIFICATION_STATUS_KEYS = (
+    "validated_runner_namespace_runtime_qualified",
+    "validated_runner_namespace_runtime_receipt_schema_version",
+    "validated_runner_namespace_runtime_receipt_sha256",
+    "validated_runner_namespace_runtime_receipt_issued_at_utc",
+    "validated_runner_namespace_runtime_receipt_expires_at_utc",
+)
+_RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 class JobIntegrityError(RuntimeError):
@@ -460,6 +477,81 @@ def _worker_attempt_provenance(
     }
 
 
+def _bind_validated_runner_runtime_qualification(
+    worker_provenance: dict[str, Any] | None,
+    status_data: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Bind validated runtime and execution-purpose records into provenance."""
+
+    present_keys = {
+        key for key in _RUNTIME_QUALIFICATION_STATUS_KEYS if key in status_data
+    }
+    if present_keys and present_keys != set(_RUNTIME_QUALIFICATION_STATUS_KEYS):
+        raise JobIntegrityError(
+            "validated runner runtime qualification status is incomplete"
+        )
+    bound_provenance = dict(worker_provenance or {})
+    if present_keys:
+        qualified = status_data[_RUNTIME_QUALIFICATION_STATUS_KEYS[0]]
+        schema_version = status_data[_RUNTIME_QUALIFICATION_STATUS_KEYS[1]]
+        receipt_sha256 = status_data[_RUNTIME_QUALIFICATION_STATUS_KEYS[2]]
+        issued_at_utc = status_data[_RUNTIME_QUALIFICATION_STATUS_KEYS[3]]
+        expires_at_utc = status_data[_RUNTIME_QUALIFICATION_STATUS_KEYS[4]]
+        if qualified is not True or type(qualified) is not bool:
+            raise JobIntegrityError(
+                "validated runner runtime qualification status is not qualified"
+            )
+        if type(schema_version) is not str or schema_version != RECEIPT_SCHEMA_VERSION:
+            raise JobIntegrityError(
+                "validated runner runtime qualification schema is invalid"
+            )
+        if (
+            type(receipt_sha256) is not str
+            or _SHA256_RE.fullmatch(receipt_sha256) is None
+        ):
+            raise JobIntegrityError(
+                "validated runner runtime qualification receipt SHA-256 is invalid"
+            )
+        if type(issued_at_utc) is not str or type(expires_at_utc) is not str:
+            raise JobIntegrityError(
+                "validated runner runtime qualification timestamps are invalid"
+            )
+        try:
+            issued_at = dt.datetime.strptime(
+                issued_at_utc,
+                _RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT,
+            ).replace(tzinfo=dt.timezone.utc)
+            expires_at = dt.datetime.strptime(
+                expires_at_utc,
+                _RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT,
+            ).replace(tzinfo=dt.timezone.utc)
+        except ValueError as exc:
+            raise JobIntegrityError(
+                "validated runner runtime qualification timestamps are invalid"
+            ) from exc
+        if expires_at <= issued_at or expires_at - issued_at > MAX_RECEIPT_VALIDITY:
+            raise JobIntegrityError(
+                "validated runner runtime qualification validity window is invalid"
+            )
+        bound_provenance["validated_runner_runtime_qualification"] = {
+            key: status_data[key] for key in _RUNTIME_QUALIFICATION_STATUS_KEYS
+        }
+
+    execution_evidence = status_data.get(EXECUTION_EVIDENCE_PROVENANCE_KEY)
+    if execution_evidence is not None:
+        try:
+            validated_evidence = validate_validated_runner_execution_evidence(
+                execution_evidence
+            )
+        except ValueError as exc:
+            raise JobIntegrityError(
+                "validated runner execution evidence status is invalid"
+            ) from exc
+        bound_provenance[EXECUTION_EVIDENCE_PROVENANCE_KEY] = validated_evidence
+
+    return bound_provenance or None
+
+
 def _require_attempt_artifact_path(
     path_value: str,
     *,
@@ -584,6 +676,10 @@ async def run_job_once(
             await runner(job_id, request_data)
 
         status_data = read_status_file(status_file_path)
+        worker_provenance = _bind_validated_runner_runtime_qualification(
+            worker_provenance,
+            status_data,
+        )
         if worker_provenance is not None:
             status_data["worker_provenance"] = worker_provenance
         result_file = str(status_data.get("result_file", "") or "")

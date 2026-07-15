@@ -16,10 +16,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from api.deployment_secret_policy import (
+    docking_private_payload_keys_are_operator_managed,
+    product_api_token_is_operator_managed,
+    result_manifest_key_id_is_operator_managed,
+    result_manifest_signing_key_is_operator_managed,
+)
 
-DEV_RESULT_MANIFEST_SIGNING_KEY = "local-dev-result-manifest-signing-key-change-me"
-DEV_RESULT_MANIFEST_KEY_IDS = {"", "local-dev", "dev", "local"}
+logger = logging.getLogger(__name__)
 
 
 def _flag(settings: Any, name: str, default: bool = False) -> bool:
@@ -39,6 +43,7 @@ def run_startup_preflight(settings: Any) -> None:
 
     auth_required = _flag(settings, "product_api_auth_required")
     token = _text(settings, "product_api_token")
+    admin_token = _text(settings, "product_api_admin_token")
     hosted_exposure = _flag(settings, "product_api_hosted_exposure_approved")
     tls_verified = _flag(settings, "product_api_tls_termination_operator_verified")
     signing_key = _text(settings, "api_result_manifest_signing_key")
@@ -51,6 +56,44 @@ def run_startup_preflight(settings: Any) -> None:
             "The server cannot authenticate any request in this state. Set "
             "PRODUCT_API_TOKEN or disable PRODUCT_API_AUTH_REQUIRED before starting."
         )
+    if auth_required and not product_api_token_is_operator_managed(token):
+        _fatal(
+            "PRODUCT_API_AUTH_REQUIRED=1 requires PRODUCT_API_TOKEN to be an "
+            "operator-managed non-placeholder secret."
+        )
+    if (
+        auth_required
+        and admin_token
+        and not product_api_token_is_operator_managed(admin_token)
+    ):
+        _fatal(
+            "PRODUCT_API_AUTH_REQUIRED=1 requires a configured "
+            "PRODUCT_API_ADMIN_TOKEN to be an operator-managed non-placeholder "
+            "secret."
+        )
+
+    if auth_required and not result_manifest_signing_key_is_operator_managed(
+        signing_key
+    ):
+        _fatal(
+            "PRODUCT_API_AUTH_REQUIRED=1 requires "
+            "API_RESULT_MANIFEST_SIGNING_KEY to be an operator-managed "
+            "non-development secret."
+        )
+    if auth_required and not result_manifest_key_id_is_operator_managed(signing_key_id):
+        _fatal(
+            "PRODUCT_API_AUTH_REQUIRED=1 requires API_RESULT_MANIFEST_KEY_ID "
+            "to be a non-development key identifier."
+        )
+    if auth_required and not docking_private_payload_keys_are_operator_managed(
+        private_payload_keys
+    ):
+        _fatal(
+            "PRODUCT_API_AUTH_REQUIRED=1 requires DOCKING_PRIVATE_PAYLOAD_KEYS "
+            "to contain an operator-managed keyring in "
+            "key_id:base64secret format with at least 32 decoded secret bytes "
+            "per key."
+        )
 
     if not hosted_exposure:
         return
@@ -60,31 +103,10 @@ def run_startup_preflight(settings: Any) -> None:
             "PRODUCT_API_HOSTED_EXPOSURE_APPROVED=1 requires "
             "PRODUCT_API_AUTH_REQUIRED=1."
         )
-    if not token:
-        _fatal(
-            "PRODUCT_API_HOSTED_EXPOSURE_APPROVED=1 requires a non-empty "
-            "PRODUCT_API_TOKEN."
-        )
     if not tls_verified:
         _fatal(
             "PRODUCT_API_HOSTED_EXPOSURE_APPROVED=1 requires "
             "PRODUCT_API_TLS_TERMINATION_OPERATOR_VERIFIED=1."
-        )
-    if not signing_key or signing_key == DEV_RESULT_MANIFEST_SIGNING_KEY:
-        _fatal(
-            "hosted product exposure requires API_RESULT_MANIFEST_SIGNING_KEY "
-            "to be set to an operator-managed non-development secret."
-        )
-    if signing_key_id in DEV_RESULT_MANIFEST_KEY_IDS:
-        _fatal(
-            "hosted product exposure requires API_RESULT_MANIFEST_KEY_ID to be "
-            "a non-development key identifier."
-        )
-    if not private_payload_keys:
-        _fatal(
-            "hosted product exposure requires DOCKING_PRIVATE_PAYLOAD_KEYS so "
-            "raw customer docking inputs are encrypted at rest and can be "
-            "recovered only inside the validated runner boundary."
         )
 
 

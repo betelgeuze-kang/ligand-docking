@@ -15,11 +15,15 @@ import time
 from pathlib import Path
 from typing import Any
 
+from fastapi import HTTPException
+
+from api.artifact_access import open_confined_regular_file
 from api.config import settings
 from api.job_artifacts import (
     atomic_write_text_file,
     read_current_attempt_file_bytes,
     resolve_job_results_dir,
+    sha256_current_attempt_file,
 )
 from api.linux_runner_supervisor import (
     linux_pid_namespace_launcher,
@@ -29,6 +33,15 @@ from api.linux_runner_supervisor import (
     wait_linux_pidfd_exit,
 )
 from api.request_privacy import sanitize_request_for_ledger
+from api.runner_profile_contract import validate_runner_profile_execution_contract
+from api.validated_runner_execution_evidence import (
+    EXECUTION_EVIDENCE_PROVENANCE_KEY,
+    build_validated_runner_execution_evidence,
+)
+from api.validated_runner_runtime_qualification import (
+    NamespaceRuntimeQualification,
+    require_validated_runner_namespace_runtime,
+)
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
 
@@ -189,6 +202,77 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _sha256_confined_result_file(path: Path, *, results_dir: Path) -> str:
+    """Hash one regular, single-link result without trusting its pathname."""
+
+    try:
+        pinned_digest = sha256_current_attempt_file(path)
+        if pinned_digest is not None:
+            return pinned_digest
+        _, handle = open_confined_regular_file(
+            results_dir,
+            path,
+            label="validated runner result",
+        )
+        digest = hashlib.sha256()
+        with handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    except (OSError, HTTPException) as exc:
+        raise PermissionError(
+            "validated runner result_file must be a confined regular single-link file"
+        ) from exc
+
+
+def _read_confined_result_bytes(
+    path: Path,
+    *,
+    results_dir: Path,
+    maximum_bytes: int,
+    label: str,
+) -> bytes:
+    """Read bounded runner output through a pinned or root-confined descriptor."""
+
+    try:
+        pinned_payload = read_current_attempt_file_bytes(
+            path,
+            maximum_bytes=maximum_bytes,
+        )
+        if pinned_payload is not None:
+            return pinned_payload
+        _, handle = open_confined_regular_file(results_dir, path, label=label)
+        with handle:
+            payload = handle.read(maximum_bytes + 1)
+        if len(payload) > maximum_bytes:
+            raise OSError(f"{label} exceeds the permitted size")
+        return payload
+    except (OSError, HTTPException) as exc:
+        raise PermissionError(
+            f"{label} must be a confined regular single-link file"
+        ) from exc
+
+
+def _runtime_qualification_record(
+    qualification: NamespaceRuntimeQualification,
+) -> dict[str, Any]:
+    return {
+        "validated_runner_namespace_runtime_qualified": qualification.qualified,
+        "validated_runner_namespace_runtime_receipt_schema_version": (
+            qualification.schema_version
+        ),
+        "validated_runner_namespace_runtime_receipt_sha256": (
+            qualification.receipt_sha256
+        ),
+        "validated_runner_namespace_runtime_receipt_issued_at_utc": (
+            qualification.issued_at_utc
+        ),
+        "validated_runner_namespace_runtime_receipt_expires_at_utc": (
+            qualification.expires_at_utc
+        ),
+    }
 
 
 def _require_nonempty_text(payload: dict[str, Any], key: str) -> str:
@@ -594,15 +678,40 @@ def _run_profile_command(
         os.close(namespace_init_pidfd)
 
 
-async def execute_validated_runner_profile(job_id: str, request_data: dict[str, Any]) -> dict[str, Any]:
+async def execute_validated_runner_profile(
+    job_id: str,
+    request_data: dict[str, Any],
+    *,
+    require_customer_submission_allowed: bool = True,
+) -> dict[str, Any]:
     if not settings.api_validated_runner_enabled:
         raise NotImplementedError(
-            "API validated runner execution is disabled; set API_VALIDATED_RUNNER_ENABLED=1 and provide an "
-            "operator-approved runner profile."
+            "API validated runner execution is disabled; enabling it requires an "
+            "operator-approved profile and a namespace-qualified host runtime receipt."
         )
+    runtime_qualification = require_validated_runner_namespace_runtime()
+    runtime_qualification_record = _runtime_qualification_record(
+        runtime_qualification
+    )
 
     profile_id = _safe_profile_id(request_data.get("runner_profile_id"))
     profile = _load_profile(profile_id)
+    execution_contract = validate_runner_profile_execution_contract(
+        profile,
+        require_explicit=True,
+    )
+    if (
+        require_customer_submission_allowed
+        and execution_contract.get("customer_submission_allowed") is not True
+    ):
+        raise PermissionError(
+            f"runner profile does not allow customer submissions: {profile_id}"
+        )
+    execution_evidence = build_validated_runner_execution_evidence(
+        profile_id=profile_id,
+        execution_contract=execution_contract,
+        request_data=request_data,
+    )
     results_dir = _results_dir(job_id)
     results_dir.mkdir(parents=True, exist_ok=True)
     request_json_path = results_dir / "request.json"
@@ -707,6 +816,8 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "profile_id": profile_id,
         "runner_script": str(profile.get("runner_script", "")),
         "profile_readiness": readiness_record,
+        "profile_execution_contract": execution_contract,
+        EXECUTION_EVIDENCE_PROVENANCE_KEY: execution_evidence,
         "command": command,
         "returncode": int(completed["returncode"]),
         "ok": command_ok,
@@ -728,6 +839,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "evidence_bundle_template": evidence_bundle_template or "",
         "native_evidence_bundle": str(evidence_bundle_path) if evidence_bundle_path else "",
         "native_evidence_bundle_sha256": "",
+        **runtime_qualification_record,
         "claim_boundary": (
             "Validated runner adapter only. It executes an operator-approved local profile and records provenance; "
             "scientific claim scope remains governed by the profile and downstream gates."
@@ -749,11 +861,14 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                 "status": "failed",
                 "error": error,
                 "runner_execution": str(execution_record_path),
+                **runtime_qualification_record,
             },
         )
         raise RuntimeError(f"validated runner failed for profile {profile_id}; see {execution_record_path}")
-    if not result_file.exists() or not result_file.is_file():
-        raise FileNotFoundError(f"validated runner did not produce expected result_file: {result_file}")
+    result_file_sha256 = _sha256_confined_result_file(
+        result_file,
+        results_dir=results_dir,
+    )
 
     native_bundle_record: dict[str, str] = {}
     if has_evidence_bundle_template:
@@ -770,20 +885,21 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                     "status": "failed",
                     "error": error,
                     "runner_execution": str(execution_record_path),
+                    **runtime_qualification_record,
                 },
             )
             raise FileNotFoundError(
                 f"validated runner did not produce expected native evidence bundle: {evidence_bundle_path_value}"
             )
         try:
-            pinned_evidence = read_current_attempt_file_bytes(
+            pinned_evidence = _read_confined_result_bytes(
                 evidence_bundle_path,
+                results_dir=results_dir,
                 maximum_bytes=64 * 1024 * 1024,
+                label="validated runner native evidence bundle",
             )
-            if pinned_evidence is None:
-                pinned_evidence = evidence_bundle_path.read_bytes()
             raw_payload = json.loads(pinned_evidence)
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except (OSError, PermissionError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             error = (
                 f"validated_runner_native_evidence_bundle_not_json:{evidence_bundle_path_value}"
             )
@@ -796,6 +912,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                     "status": "failed",
                     "error": error,
                     "runner_execution": str(execution_record_path),
+                    **runtime_qualification_record,
                 },
             )
             raise PermissionError(
@@ -814,6 +931,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                     "status": "failed",
                     "error": error,
                     "runner_execution": str(execution_record_path),
+                    **runtime_qualification_record,
                 },
             )
             raise PermissionError(
@@ -834,6 +952,7 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
                     "status": "failed",
                     "error": error,
                     "runner_execution": str(execution_record_path),
+                    **runtime_qualification_record,
                 },
             )
             raise PermissionError(
@@ -855,8 +974,10 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
         "runner_profile_id": profile_id,
         "runner_profile_claim_scope": readiness_record["claim_scope"],
         "result_file": str(result_file),
-        "result_file_sha256": _sha256_file(result_file),
+        "result_file_sha256": result_file_sha256,
         "runner_execution": str(execution_record_path),
+        EXECUTION_EVIDENCE_PROVENANCE_KEY: execution_evidence,
+        **runtime_qualification_record,
     }
     status_payload.update(native_bundle_record)
     _write_status(job_id, status_payload)

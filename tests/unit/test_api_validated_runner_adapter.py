@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import asyncio
+import datetime as dt
 import hashlib
 import json
 import os
@@ -12,6 +13,31 @@ import threading
 import time
 
 import pytest
+
+from api.validated_runner_runtime_qualification import (
+    RECEIPT_PATH_ENV,
+    RECEIPT_SHA256_ENV,
+    RECEIPT_SCHEMA_VERSION,
+    validated_runner_namespace_runtime_receipt_template,
+)
+
+
+@pytest.fixture(autouse=True)
+def _qualified_namespace_runtime_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+    payload = validated_runner_namespace_runtime_receipt_template(
+        issued_at=now - dt.timedelta(minutes=1),
+        expires_at=now + dt.timedelta(hours=1),
+    )
+    raw = (json.dumps(payload, sort_keys=True) + "\n").encode()
+    receipt = tmp_path / "validated-runner-namespace-runtime.json"
+    receipt.write_bytes(raw)
+    receipt.chmod(0o600)
+    monkeypatch.setenv(RECEIPT_PATH_ENV, str(receipt))
+    monkeypatch.setenv(RECEIPT_SHA256_ENV, hashlib.sha256(raw).hexdigest())
 
 
 def test_validated_runner_child_environment_excludes_service_secrets(
@@ -379,6 +405,43 @@ def test_validated_runner_self_sigterm_is_always_failure() -> None:
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
+def test_validated_runner_post_reap_descendant_sigterm_is_failure() -> None:
+    import api.validated_runner as validated_runner
+
+    signal_sent_marker = "post_reap_sigterm_sent"
+    probe = "\n".join(
+        [
+            "import os, signal",
+            "runner_pid = os.getpid()",
+            "if os.fork():",
+            "    os._exit(0)",
+            "while os.path.exists(f'/proc/{runner_pid}'):",
+            "    pass",
+            "os.kill(1, signal.SIGTERM)",
+            f"os.write(1, b'{signal_sent_marker}\\n')",
+            "os._exit(0)",
+        ]
+    )
+    outcomes = [
+        validated_runner._run_profile_command(
+            [sys.executable, "-c", probe],
+            timeout_seconds=5,
+        )
+        for _ in range(20)
+    ]
+    signal_sent_outcomes = [
+        outcome
+        for outcome in outcomes
+        if signal_sent_marker in outcome["stdout"]
+    ]
+
+    assert signal_sent_outcomes
+    assert all(outcome["cancelled"] is True for outcome in signal_sent_outcomes)
+    assert all(outcome["returncode"] != 0 for outcome in signal_sent_outcomes)
+    assert all(outcome["containment_error"] == "" for outcome in outcomes)
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux process containment regression")
 def test_concurrent_validated_runner_supervisors_do_not_cross_kill(
     tmp_path: Path,
 ) -> None:
@@ -552,6 +615,44 @@ def _write_native_bundle_runner(path: Path) -> None:
     )
 
 
+def _native_bundle_payload(project_id: str = "native-audit") -> dict:
+    return {
+        "bundle_id": f"native_{project_id}",
+        "project_id": project_id,
+        "ranked_shortlist": [],
+        "trajectory_summary": {"frame_count": 0},
+        "backmapped_poses": [],
+        "interaction_report": {},
+        "topology_report": {
+            "status": "not_assessed",
+            "topology_fidelity": "placeholder_alanine",
+            "claim_blockers": ["topology_validity_not_assessed"],
+        },
+        "ai_residual_report": {
+            "residual_mode": "disabled",
+            "uncertainty": 1.0,
+            "abstained": True,
+        },
+        "failure_flags": ["delivery_bundle_validation_not_attached"],
+        "source_hashes": {
+            "input_hash": "i" * 64,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        "viewer_assets": [],
+        "wetlab_handoff_table": [],
+        "verdict": {
+            "claim_safe": False,
+            "verdict_label": "native_runner_review_only",
+            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+            "topology_fidelity": "placeholder_alanine",
+            "accuracy_claim_grade": "restricted-local-delivery",
+            "failure_flags": ["delivery_bundle_validation_not_attached"],
+        },
+    }
+
+
 def _write_invalid_bundle_runner(path: Path) -> None:
     path.write_text(
         "\n".join(
@@ -629,9 +730,9 @@ def _profile_payload(profile_id: str, fake_runner: Path, evidence: Path) -> dict
     return {
         "profile_id": profile_id,
         "enabled": True,
-        "execution_mode": "smoke",
-        "customer_submission_allowed": False,
-        "synthetic_input_allowed": True,
+        "execution_mode": "restricted-production",
+        "customer_submission_allowed": True,
+        "synthetic_input_allowed": False,
         "production_claim_allowed": False,
         "customer_pose_emission_allowed": False,
         "runner_script": str(fake_runner.resolve()),
@@ -859,6 +960,102 @@ def test_validated_runner_execution_record_replaces_link_without_touching_victim
     execution_record = Path(status["runner_execution"])
     assert execution_record.is_file()
     assert not os.path.samefile(victim, execution_record)
+
+
+@pytest.mark.parametrize("attempt_bound", [False, True], ids=["direct", "attempt"])
+@pytest.mark.parametrize("artifact_kind", ["symlink", "hardlink", "fifo"])
+def test_validated_runner_rejects_unsafe_result_artifacts_without_blocking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    artifact_kind: str,
+    attempt_bound: bool,
+) -> None:
+    import api.validated_runner as validated_runner
+    from api.job_artifacts import (
+        create_and_activate_attempt_results_dir,
+        reset_attempt_results_dir,
+    )
+    from api.tasks import run_simulation_async
+
+    runner = tmp_path / "unsafe_result_runner.py"
+    runner.write_text("# execution is replaced by the deterministic test callback\n", encoding="utf-8")
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    (profiles_dir / "unsafe_result.json").write_text(
+        json.dumps(
+            _profile_payload("unsafe_result", runner, evidence),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    results_root = tmp_path / "results"
+    victim = tmp_path / f"outside-{artifact_kind}.json"
+    original = b'{"outside":"victim"}\n'
+    victim.write_bytes(original)
+
+    monkeypatch.setattr(validated_runner, "ALLOWED_RUNNER_SCRIPTS", {str(runner.resolve())})
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_timeout_seconds", 5)
+    monkeypatch.setattr(validated_runner.settings, "results_storage_path", str(results_root))
+
+    def _unsafe_result_callback(command, *, timeout_seconds, cancellation_event):
+        del timeout_seconds, cancellation_event
+        result_path = Path(command[command.index("--out-json") + 1])
+        if artifact_kind == "symlink":
+            result_path.symlink_to(victim)
+        elif artifact_kind == "hardlink":
+            os.link(victim, result_path)
+        else:
+            os.mkfifo(result_path, 0o600)
+        return {
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "",
+            "timed_out": False,
+            "cancelled": False,
+            "containment_error": "",
+            "supervisor": "linux_pid_namespace_v1",
+        }
+
+    monkeypatch.setattr(validated_runner, "_run_profile_command", _unsafe_result_callback)
+    binding_token = None
+    job_id = f"job-{artifact_kind}-{'attempt' if attempt_bound else 'direct'}"
+    if attempt_bound:
+        _, binding_token = create_and_activate_attempt_results_dir(
+            storage_root=results_root,
+            job_id=job_id,
+            worker_id="unsafe-result-worker",
+            attempt_token="unsafe-result-attempt-token",
+            attempt_count=1,
+        )
+
+    try:
+        with pytest.raises(PermissionError, match="confined regular single-link"):
+            asyncio.run(
+                run_simulation_async(
+                    job_id,
+                    {
+                        "target_name": "Chignolin",
+                        "runner_profile_id": "unsafe_result",
+                    },
+                )
+            )
+        status_path = Path(validated_runner._status_path(job_id))
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        assert status["status"] == "failed"
+        assert "result_file_sha256" not in status
+        assert victim.read_bytes() == original
+    finally:
+        if binding_token is not None:
+            reset_attempt_results_dir(binding_token)
 
 
 def test_validated_runner_timeout_records_fail_closed_execution(
@@ -1181,10 +1378,15 @@ def test_validated_runner_rejects_enabled_profile_without_evidence(
     profiles_dir.mkdir()
     (profiles_dir / "missing_evidence.json").write_text(
         json.dumps(
-            {
-                "profile_id": "missing_evidence",
-                "enabled": True,
-                "runner_script": str(fake_runner.resolve()),
+                {
+                    "profile_id": "missing_evidence",
+                    "enabled": True,
+                    "execution_mode": "smoke",
+                    "customer_submission_allowed": False,
+                    "synthetic_input_allowed": True,
+                    "production_claim_allowed": False,
+                    "customer_pose_emission_allowed": False,
+                    "runner_script": str(fake_runner.resolve()),
                 "arguments": ["--request-json", "{request_json_path}", "--out-json", "{result_file}"],
                 "result_file_template": "{job_results_dir}/runner_result.json",
             },
@@ -1199,11 +1401,40 @@ def test_validated_runner_rejects_enabled_profile_without_evidence(
     monkeypatch.setattr(validated_runner.settings, "api_validated_runner_profiles_path", str(profiles_dir))
     monkeypatch.setattr(validated_runner.settings, "results_storage_path", str(tmp_path / "results"))
 
+    profile_path = profiles_dir / "missing_evidence.json"
+    explicit_profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    legacy_profile = dict(explicit_profile)
+    for field in (
+        "execution_mode",
+        "customer_submission_allowed",
+        "synthetic_input_allowed",
+        "production_claim_allowed",
+        "customer_pose_emission_allowed",
+    ):
+        legacy_profile.pop(field)
+    profile_path.write_text(
+        json.dumps(legacy_profile, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(PermissionError, match="execution_mode is required"):
+        asyncio.run(
+            validated_runner.execute_validated_runner_profile(
+                "job_missing_contract",
+                {"target_name": "Chignolin", "runner_profile_id": "missing_evidence"},
+                require_customer_submission_allowed=False,
+            )
+        )
+
+    profile_path.write_text(
+        json.dumps(explicit_profile, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     with pytest.raises(PermissionError, match="production_readiness"):
         asyncio.run(
             validated_runner.execute_validated_runner_profile(
                 "job_missing_evidence",
                 {"target_name": "Chignolin", "runner_profile_id": "missing_evidence"},
+                require_customer_submission_allowed=False,
             )
         )
 
@@ -1212,11 +1443,16 @@ def test_worker_queue_executes_validated_runner_profile_and_signs_manifest(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from api.artifact_access import verify_completed_result_artifacts
     import api.validated_runner as validated_runner
     import api.worker as worker
     from api.job_store import SQLiteJobStore
     from api.result_manifest import verify_result_manifest
     from api.tasks import run_simulation_async
+    from api.validated_runner_execution_evidence import (
+        EXECUTION_EVIDENCE_PROVENANCE_KEY,
+        validate_validated_runner_execution_evidence,
+    )
 
     fake_runner = tmp_path / "fake_validated_runner.py"
     _write_fake_runner(fake_runner)
@@ -1273,6 +1509,37 @@ def test_worker_queue_executes_validated_runner_profile_and_signs_manifest(
     assert manifest["result_file"] == completed["result_file"]
     assert verify_result_manifest(manifest, signing_key=validated_runner.settings.api_result_manifest_signing_key)
     status = json.loads((tmp_path / "results" / "job_worker_profile" / "status.json").read_text(encoding="utf-8"))
+    runtime_qualification_keys = {
+        "validated_runner_namespace_runtime_qualified",
+        "validated_runner_namespace_runtime_receipt_schema_version",
+        "validated_runner_namespace_runtime_receipt_sha256",
+        "validated_runner_namespace_runtime_receipt_issued_at_utc",
+        "validated_runner_namespace_runtime_receipt_expires_at_utc",
+    }
+    signed_runtime_qualification = manifest["worker_provenance"][
+        "validated_runner_runtime_qualification"
+    ]
+    assert signed_runtime_qualification == {
+        key: status[key] for key in runtime_qualification_keys
+    }
+    assert signed_runtime_qualification[
+        "validated_runner_namespace_runtime_qualified"
+    ] is True
+    assert signed_runtime_qualification[
+        "validated_runner_namespace_runtime_receipt_schema_version"
+    ] == RECEIPT_SCHEMA_VERSION
+    assert signed_runtime_qualification[
+        "validated_runner_namespace_runtime_receipt_sha256"
+    ] == os.environ[RECEIPT_SHA256_ENV]
+    signed_execution_evidence = manifest["worker_provenance"][
+        EXECUTION_EVIDENCE_PROVENANCE_KEY
+    ]
+    assert signed_execution_evidence == status[EXECUTION_EVIDENCE_PROVENANCE_KEY]
+    assert validate_validated_runner_execution_evidence(
+        signed_execution_evidence
+    ) == signed_execution_evidence
+    assert signed_execution_evidence["runner_profile_id"] == "worker_smoke"
+    assert signed_execution_evidence["customer_submission_allowed"] is True
     evidence_bundle = Path(status["evidence_bundle"])
     assert evidence_bundle.exists()
     assert len(status["evidence_bundle_sha256"]) == 64
@@ -1287,6 +1554,140 @@ def test_worker_queue_executes_validated_runner_profile_and_signs_manifest(
     assert "CCO" not in runner_request
     assert "CCN" not in runner_request
     assert "sha256" in runner_request
+
+    verified = verify_completed_result_artifacts(
+        job_id="job_worker_profile",
+        record=completed,
+        status_data=status,
+        result_root=tmp_path / "results" / "job_worker_profile",
+        signing_key=validated_runner.settings.api_result_manifest_signing_key,
+        expected_key_id=validated_runner.settings.api_result_manifest_key_id,
+    )
+    try:
+        assert verified.manifest["worker_provenance"] == manifest[
+            "worker_provenance"
+        ]
+    finally:
+        verified.close()
+
+
+@pytest.mark.parametrize(
+    "status_data",
+    [
+        {"validated_runner_namespace_runtime_qualified": True},
+        {
+            "validated_runner_namespace_runtime_qualified": 1,
+            "validated_runner_namespace_runtime_receipt_schema_version": RECEIPT_SCHEMA_VERSION,
+            "validated_runner_namespace_runtime_receipt_sha256": "a" * 64,
+            "validated_runner_namespace_runtime_receipt_issued_at_utc": "2026-07-16T00:00:00Z",
+            "validated_runner_namespace_runtime_receipt_expires_at_utc": "2026-07-16T01:00:00Z",
+        },
+        {
+            "validated_runner_namespace_runtime_qualified": True,
+            "validated_runner_namespace_runtime_receipt_schema_version": RECEIPT_SCHEMA_VERSION,
+            "validated_runner_namespace_runtime_receipt_sha256": "A" * 64,
+            "validated_runner_namespace_runtime_receipt_issued_at_utc": "2026-07-16T00:00:00Z",
+            "validated_runner_namespace_runtime_receipt_expires_at_utc": "2026-07-16T01:00:00Z",
+        },
+        {
+            "validated_runner_namespace_runtime_qualified": True,
+            "validated_runner_namespace_runtime_receipt_schema_version": RECEIPT_SCHEMA_VERSION,
+            "validated_runner_namespace_runtime_receipt_sha256": "a" * 64,
+            "validated_runner_namespace_runtime_receipt_issued_at_utc": "2026-07-16T00:00:00+00:00",
+            "validated_runner_namespace_runtime_receipt_expires_at_utc": "2026-07-16T01:00:00Z",
+        },
+    ],
+)
+def test_worker_rejects_partial_or_malformed_runtime_qualification_status(
+    status_data: dict[str, object],
+) -> None:
+    import api.worker as worker
+
+    with pytest.raises(worker.JobIntegrityError, match="runtime qualification"):
+        worker._bind_validated_runner_runtime_qualification(
+            {"worker_id": "worker"},
+            status_data,
+        )
+
+
+def test_artifact_reader_rejects_boolean_alias_in_signed_worker_provenance() -> None:
+    from fastapi import HTTPException
+
+    from api.artifact_access import _require_published_worker_provenance
+
+    expected = {
+        "worker_id": "worker",
+        "attempt_count": 1,
+        "attempt_token_sha256": "a" * 64,
+    }
+    status_data = {"worker_provenance": dict(expected)}
+    manifest = {
+        "worker_provenance": {
+            **expected,
+            "attempt_count": True,
+        }
+    }
+
+    with pytest.raises(HTTPException, match="provenance disagree"):
+        _require_published_worker_provenance(
+            status_data=status_data,
+            manifest=manifest,
+            expected=expected,
+        )
+
+
+def test_artifact_reader_rejects_unsigned_runtime_qualification_status() -> None:
+    from fastapi import HTTPException
+
+    from api.artifact_access import _require_published_worker_provenance
+
+    expected = {
+        "worker_id": "worker",
+        "attempt_count": 1,
+        "attempt_token_sha256": "a" * 64,
+    }
+    status_data = {
+        "worker_provenance": dict(expected),
+        "validated_runner_namespace_runtime_qualified": True,
+    }
+    manifest = {"worker_provenance": dict(expected)}
+
+    with pytest.raises(HTTPException, match="not signed"):
+        _require_published_worker_provenance(
+            status_data=status_data,
+            manifest=manifest,
+            expected=expected,
+        )
+
+
+def test_artifact_reader_rejects_unsigned_execution_evidence_status() -> None:
+    from fastapi import HTTPException
+
+    from api.artifact_access import _require_published_worker_provenance
+    from api.validated_runner_execution_evidence import (
+        EXECUTION_EVIDENCE_PROVENANCE_KEY,
+        tier_alpha_adrb2_execution_evidence,
+    )
+
+    expected = {
+        "worker_id": "worker",
+        "attempt_count": 1,
+        "attempt_token_sha256": "a" * 64,
+    }
+    status_data = {
+        "worker_provenance": dict(expected),
+        EXECUTION_EVIDENCE_PROVENANCE_KEY: (
+            tier_alpha_adrb2_execution_evidence("tier_alpha_job")
+        ),
+    }
+    manifest = {"worker_provenance": dict(expected)}
+
+    with pytest.raises(HTTPException, match="execution evidence is not signed"):
+        _require_published_worker_provenance(
+            status_data=status_data,
+            manifest=manifest,
+            expected=expected,
+        )
 
 
 def test_worker_lease_loss_kills_validated_runner_process_group(
@@ -1503,6 +1904,91 @@ def test_validated_runner_validates_native_evidence_bundle_and_records_fingerpri
     assert execution_record["evidence_bundle_template"] == "{job_results_dir}/evidence_bundle.json"
     assert execution_record["native_evidence_bundle"] == str(native_bundle_path)
     assert execution_record["native_evidence_bundle_sha256"] == expected_fingerprint
+
+
+@pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
+def test_direct_validated_runner_rejects_linked_native_evidence_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    link_kind: str,
+) -> None:
+    import api.validated_runner as validated_runner
+    from api.tasks import run_simulation_async
+
+    runner = tmp_path / "linked_native_bundle_runner.py"
+    runner.write_text("# execution is replaced by the deterministic test callback\n", encoding="utf-8")
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    (profiles_dir / "linked_native.json").write_text(
+        json.dumps(
+            _profile_payload_with_evidence_bundle(
+                "linked_native",
+                runner,
+                evidence,
+            ),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    victim = tmp_path / f"outside-native-{link_kind}.json"
+    original = (
+        json.dumps(_native_bundle_payload(), sort_keys=True) + "\n"
+    ).encode("utf-8")
+    victim.write_bytes(original)
+    results_root = tmp_path / "results"
+
+    monkeypatch.setattr(validated_runner, "ALLOWED_RUNNER_SCRIPTS", {str(runner.resolve())})
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_timeout_seconds", 5)
+    monkeypatch.setattr(validated_runner.settings, "results_storage_path", str(results_root))
+
+    def _linked_native_callback(command, *, timeout_seconds, cancellation_event):
+        del timeout_seconds, cancellation_event
+        result_path = Path(command[command.index("--out-json") + 1])
+        result_path.write_text('{"ok":true}\n', encoding="utf-8")
+        bundle_path = Path(command[command.index("--evidence-bundle") + 1])
+        if link_kind == "symlink":
+            bundle_path.symlink_to(victim)
+        else:
+            os.link(victim, bundle_path)
+        return {
+            "returncode": 0,
+            "stdout": "",
+            "stderr": "",
+            "timed_out": False,
+            "cancelled": False,
+            "containment_error": "",
+            "supervisor": "linux_pid_namespace_v1",
+        }
+
+    monkeypatch.setattr(validated_runner, "_run_profile_command", _linked_native_callback)
+
+    with pytest.raises(PermissionError, match="native evidence bundle is not valid JSON"):
+        asyncio.run(
+            run_simulation_async(
+                f"job-native-{link_kind}",
+                {
+                    "target_name": "Chignolin",
+                    "runner_profile_id": "linked_native",
+                },
+            )
+        )
+
+    status = json.loads(
+        (results_root / f"job-native-{link_kind}" / "status.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert status["status"] == "failed"
+    assert victim.read_bytes() == original
 
 
 def test_validated_runner_fail_closed_when_native_bundle_missing(

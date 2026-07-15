@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import datetime as dt
 import hashlib
 import hmac
 import json
@@ -16,11 +17,27 @@ from typing import Any, BinaryIO, Iterator
 from fastapi import HTTPException
 
 from api.result_manifest import infer_result_artifact_metadata, verify_result_manifest
+from api.validated_runner_execution_evidence import (
+    EXECUTION_EVIDENCE_PROVENANCE_KEY,
+    validate_validated_runner_execution_evidence,
+)
+from api.validated_runner_runtime_qualification import (
+    MAX_RECEIPT_VALIDITY,
+    RECEIPT_SCHEMA_VERSION,
+)
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+_RUNTIME_QUALIFICATION_KEYS = (
+    "validated_runner_namespace_runtime_qualified",
+    "validated_runner_namespace_runtime_receipt_schema_version",
+    "validated_runner_namespace_runtime_receipt_sha256",
+    "validated_runner_namespace_runtime_receipt_issued_at_utc",
+    "validated_runner_namespace_runtime_receipt_expires_at_utc",
+)
 _ALLOWED_MEDIA_TYPES = {
     "application/json",
     "chemical/x-pdb",
@@ -303,6 +320,145 @@ def _require_attempt_prefix(
         raise _forbidden(f"{label} is not bound to the published attempt")
 
 
+def _exact_json_value_matches(left: Any, right: Any) -> bool:
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return set(left) == set(right) and all(
+            _exact_json_value_matches(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            _exact_json_value_matches(left_item, right_item)
+            for left_item, right_item in zip(left, right)
+        )
+    return left == right
+
+
+def _require_published_worker_provenance(
+    *,
+    status_data: dict[str, Any],
+    manifest: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    """Verify the selected attempt and optional signed runtime qualification."""
+
+    status_provenance = status_data.get("worker_provenance")
+    manifest_provenance = manifest.get("worker_provenance")
+    if not isinstance(status_provenance, dict):
+        raise _forbidden("published status worker attempt provenance mismatch")
+    if not isinstance(manifest_provenance, dict):
+        raise _forbidden("result manifest worker attempt provenance mismatch")
+    if not _exact_json_value_matches(status_provenance, manifest_provenance):
+        raise _forbidden("published status and result manifest provenance disagree")
+
+    base_keys = set(expected)
+    observed_keys = set(status_provenance)
+    runtime_key = "validated_runner_runtime_qualification"
+    optional_keys = {runtime_key, EXECUTION_EVIDENCE_PROVENANCE_KEY}
+    if not base_keys.issubset(observed_keys) or not observed_keys.issubset(
+        base_keys | optional_keys
+    ):
+        raise _forbidden("published worker attempt provenance fields are invalid")
+    for key, expected_value in expected.items():
+        observed_value = status_provenance.get(key)
+        if type(observed_value) is not type(expected_value) or observed_value != expected_value:
+            raise _forbidden("published status worker attempt provenance mismatch")
+
+    runtime_qualification = status_provenance.get(runtime_key)
+    if runtime_qualification is None:
+        if any(key in status_data for key in _RUNTIME_QUALIFICATION_KEYS):
+            raise _forbidden(
+                "validated runner runtime qualification is not signed"
+            )
+    else:
+        if not isinstance(runtime_qualification, dict) or set(
+            runtime_qualification
+        ) != set(_RUNTIME_QUALIFICATION_KEYS):
+            raise _forbidden("validated runner runtime qualification provenance is invalid")
+        if (
+            type(
+                runtime_qualification[
+                    "validated_runner_namespace_runtime_qualified"
+                ]
+            )
+            is not bool
+            or runtime_qualification[
+                "validated_runner_namespace_runtime_qualified"
+            ]
+            is not True
+        ):
+            raise _forbidden("validated runner runtime qualification provenance is invalid")
+        schema_version = runtime_qualification[
+            "validated_runner_namespace_runtime_receipt_schema_version"
+        ]
+        receipt_sha256 = runtime_qualification[
+            "validated_runner_namespace_runtime_receipt_sha256"
+        ]
+        issued_at_utc = runtime_qualification[
+            "validated_runner_namespace_runtime_receipt_issued_at_utc"
+        ]
+        expires_at_utc = runtime_qualification[
+            "validated_runner_namespace_runtime_receipt_expires_at_utc"
+        ]
+        if type(schema_version) is not str or schema_version != RECEIPT_SCHEMA_VERSION:
+            raise _forbidden("validated runner runtime qualification provenance is invalid")
+        if (
+            type(receipt_sha256) is not str
+            or _SHA256_RE.fullmatch(receipt_sha256) is None
+        ):
+            raise _forbidden("validated runner runtime qualification provenance is invalid")
+        if type(issued_at_utc) is not str or type(expires_at_utc) is not str:
+            raise _forbidden("validated runner runtime qualification provenance is invalid")
+        try:
+            issued_at = dt.datetime.strptime(
+                issued_at_utc,
+                _RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT,
+            ).replace(tzinfo=dt.timezone.utc)
+            expires_at = dt.datetime.strptime(
+                expires_at_utc,
+                _RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT,
+            ).replace(tzinfo=dt.timezone.utc)
+        except ValueError as exc:
+            raise _forbidden(
+                "validated runner runtime qualification provenance is invalid"
+            ) from exc
+        if expires_at <= issued_at or expires_at - issued_at > MAX_RECEIPT_VALIDITY:
+            raise _forbidden("validated runner runtime qualification provenance is invalid")
+        for key in _RUNTIME_QUALIFICATION_KEYS:
+            status_value = status_data.get(key)
+            signed_value = runtime_qualification[key]
+            if (
+                type(status_value) is not type(signed_value)
+                or status_value != signed_value
+            ):
+                raise _forbidden(
+                    "validated runner runtime qualification status binding mismatch"
+                )
+
+    execution_evidence = status_provenance.get(EXECUTION_EVIDENCE_PROVENANCE_KEY)
+    status_execution_evidence = status_data.get(EXECUTION_EVIDENCE_PROVENANCE_KEY)
+    if execution_evidence is None:
+        if status_execution_evidence is not None:
+            raise _forbidden("validated runner execution evidence is not signed")
+    else:
+        try:
+            validated_evidence = validate_validated_runner_execution_evidence(
+                execution_evidence
+            )
+        except ValueError as exc:
+            raise _forbidden(
+                "validated runner execution evidence provenance is invalid"
+            ) from exc
+        if not _exact_json_value_matches(
+            status_execution_evidence,
+            validated_evidence,
+        ):
+            raise _forbidden(
+                "validated runner execution evidence status binding mismatch"
+            )
+
+
 def verify_completed_result_artifacts(
     *,
     job_id: str,
@@ -399,10 +555,11 @@ def verify_completed_result_artifacts(
                         record.get("published_attempt_token_sha256", "") or ""
                     ).lower(),
                 }
-                if status_data.get("worker_provenance") != expected_worker_provenance:
-                    raise _forbidden("published status worker attempt provenance mismatch")
-                if manifest.get("worker_provenance") != expected_worker_provenance:
-                    raise _forbidden("result manifest worker attempt provenance mismatch")
+                _require_published_worker_provenance(
+                    status_data=status_data,
+                    manifest=manifest,
+                    expected=expected_worker_provenance,
+                )
 
             request_sha = str(record.get("request_sha256", "") or "").lower()
             if _SHA256_RE.fullmatch(request_sha) is None:

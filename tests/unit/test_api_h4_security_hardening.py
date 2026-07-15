@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -12,11 +13,12 @@ from pathlib import Path
 import sqlite3
 import stat
 from typing import Any
+from types import SimpleNamespace
 
 import pytest
 
 pytest.importorskip("fastapi")
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 
 from api.artifact_access import (
@@ -881,7 +883,7 @@ def test_simulation_exception_status_replace_preserves_link_victim(
     assert json.loads(status_path.read_text(encoding="utf-8"))["status"] == "failed"
 
 
-@pytest.mark.parametrize("execution_mode", ["standalone", "api"])
+@pytest.mark.parametrize("execution_mode", ["standalone"])
 @pytest.mark.parametrize("artifact_name", ["status.json", "tier_beta_result.json"])
 @pytest.mark.parametrize("link_kind", ["symlink", "hardlink"])
 def test_tier_beta_artifacts_replace_links_without_touching_victims(
@@ -951,7 +953,7 @@ def test_tier_beta_artifacts_replace_links_without_touching_victims(
     ).hexdigest()
 
 
-@pytest.mark.parametrize("execution_mode", ["standalone", "api"])
+@pytest.mark.parametrize("execution_mode", ["standalone"])
 @pytest.mark.parametrize("artifact_name", ["status.json", "tier_beta_result.json"])
 def test_tier_beta_artifacts_replace_fifos_without_blocking(
     tmp_path: Path,
@@ -1037,6 +1039,104 @@ def test_tier_beta_artifacts_replace_fifos_without_blocking(
     ).hexdigest()
 
 
+def test_tier_beta_api_execution_is_disabled_before_any_runner_starts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    results_root = tmp_path / "results"
+    monkeypatch.setattr(settings, "results_storage_path", str(results_root))
+    monkeypatch.setattr(settings, "api_validated_runner_enabled", False)
+    monkeypatch.setattr(
+        validated_runner,
+        "_run_profile_command",
+        lambda *args, **kwargs: pytest.fail("runner must not start while disabled"),
+    )
+
+    with pytest.raises(NotImplementedError, match="execution is disabled"):
+        asyncio.run(run_simulation_async("job-tier-disabled", _tier_beta_request()))
+
+    status = json.loads(
+        (results_root / "job-tier-disabled" / "status.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert status["status"] == "failed"
+    assert not (results_root / "job-tier-disabled" / "tier_beta_result.json").exists()
+
+
+def test_tier_beta_api_execution_rejects_non_customer_profile_even_when_runtime_is_qualified(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+    from api.validated_runner_runtime_qualification import (
+        NamespaceRuntimeQualification,
+    )
+
+    results_root = tmp_path / "results"
+    profiles_root = Path(__file__).resolve().parents[2] / "config" / "api_validated_runner_profiles"
+    monkeypatch.setattr(settings, "results_storage_path", str(results_root))
+    monkeypatch.setattr(settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_root),
+    )
+    monkeypatch.setattr(
+        validated_runner,
+        "require_validated_runner_namespace_runtime",
+        lambda: NamespaceRuntimeQualification(
+            qualified=True,
+            reason="qualified",
+            schema_version="validated_runner_namespace_runtime_receipt_v1",
+            receipt_sha256="a" * 64,
+            issued_at_utc="2026-07-15T00:00:00Z",
+            expires_at_utc="2026-07-15T01:00:00Z",
+        ),
+    )
+    monkeypatch.setattr(
+        validated_runner,
+        "_run_profile_command",
+        lambda *args, **kwargs: pytest.fail(
+            "non-customer Tier-beta profile must not start"
+        ),
+    )
+
+    with pytest.raises(PermissionError, match="does not allow customer submissions"):
+        asyncio.run(run_simulation_async("job-tier-profile-blocked", _tier_beta_request()))
+
+    status = json.loads(
+        (results_root / "job-tier-profile-blocked" / "status.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert status["status"] == "failed"
+    assert not (
+        results_root / "job-tier-profile-blocked" / "tier_beta_result.json"
+    ).exists()
+
+
+def test_public_tier_beta_submission_endpoint_is_explicitly_disabled() -> None:
+    from api.product_tier_beta import (
+        TierBetaScreeningRequest,
+        submit_tier_beta_docking_job,
+    )
+
+    payload = TierBetaScreeningRequest(
+        protein_input="TEST PROTEIN",
+        ligand_input="CCO",
+    )
+    with pytest.raises(HTTPException) as raised:
+        asyncio.run(submit_tier_beta_docking_job(payload))
+
+    assert raised.value.status_code == 503
+    assert raised.value.detail["execution_enabled"] is False
+    assert raised.value.detail["customer_execution_enabled"] is False
+    assert raised.value.detail["external_state_mutated"] is False
+
+
 @pytest.mark.parametrize("missing_side", ["status", "record"])
 def test_completed_artifacts_require_status_and_durable_evidence_binding(
     tmp_path: Path,
@@ -1088,3 +1188,183 @@ def test_completed_artifacts_require_both_signed_request_bindings(
         )
 
     assert getattr(rejected.value, "status_code", None) == 403
+
+
+def _hosted_startup_settings() -> SimpleNamespace:
+    return SimpleNamespace(
+        product_api_auth_required=True,
+        product_api_token="unit-test-operator-token-32-bytes-minimum",
+        product_api_admin_token="",
+        product_api_hosted_exposure_approved=True,
+        product_api_tls_termination_operator_verified=True,
+        api_result_manifest_signing_key=(
+            "unit-test-operator-manifest-signing-key-32-bytes"
+        ),
+        api_result_manifest_key_id="unit-test-operator-key-v1",
+        docking_private_payload_keys=(
+            "unit-test-private-payload-v1:"
+            + base64.b64encode(
+                b"unit-test-private-payload-secret-more-than-32-bytes"
+            ).decode("ascii")
+        ),
+    )
+
+
+def _auth_required_nonhosted_startup_settings() -> SimpleNamespace:
+    return SimpleNamespace(
+        product_api_auth_required=True,
+        product_api_token="unit-test-operator-token-32-bytes-minimum",
+        product_api_admin_token="",
+        product_api_hosted_exposure_approved=False,
+        product_api_tls_termination_operator_verified=False,
+        api_result_manifest_signing_key=(
+            "unit-test-operator-manifest-signing-key-32-bytes"
+        ),
+        api_result_manifest_key_id="unit-test-operator-key-v1",
+        docking_private_payload_keys=(
+            "unit-test-private-payload-v1:"
+            + base64.b64encode(
+                b"unit-test-private-payload-secret-more-than-32-bytes"
+            ).decode("ascii")
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "placeholder", "message"),
+    [
+        (
+            "product_api_token",
+            "replace-with-operator-managed-token",
+            "PRODUCT_API_TOKEN.*non-placeholder secret",
+        ),
+        (
+            "product_api_token",
+            "x",
+            "PRODUCT_API_TOKEN.*non-placeholder secret",
+        ),
+        (
+            "product_api_admin_token",
+            "replace-with-operator-managed-admin-token",
+            "PRODUCT_API_ADMIN_TOKEN.*non-placeholder",
+        ),
+        (
+            "product_api_admin_token",
+            "weak-admin",
+            "PRODUCT_API_ADMIN_TOKEN.*non-placeholder",
+        ),
+    ],
+)
+def test_auth_required_nonhosted_startup_rejects_weak_tokens(
+    field: str,
+    placeholder: str,
+    message: str,
+) -> None:
+    from api.startup_preflight import run_startup_preflight
+
+    configured = _auth_required_nonhosted_startup_settings()
+    setattr(configured, field, placeholder)
+
+    with pytest.raises(SystemExit, match=message):
+        run_startup_preflight(configured)
+
+
+def test_auth_required_nonhosted_startup_allows_unverified_tls_only() -> None:
+    from api.startup_preflight import run_startup_preflight
+
+    run_startup_preflight(_auth_required_nonhosted_startup_settings())
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value", "message"),
+    [
+        (
+            "api_result_manifest_signing_key",
+            "local-dev-result-manifest-signing-key-change-me",
+            "API_RESULT_MANIFEST_SIGNING_KEY",
+        ),
+        (
+            "api_result_manifest_key_id",
+            "local-dev",
+            "API_RESULT_MANIFEST_KEY_ID",
+        ),
+        (
+            "docking_private_payload_keys",
+            "unit-test-private-payload-key",
+            "DOCKING_PRIVATE_PAYLOAD_KEYS",
+        ),
+        (
+            "docking_private_payload_keys",
+            "operator-private-v1:"
+            + base64.b64encode(b"only-sixteen-byte").decode("ascii"),
+            "at least 32 decoded secret bytes",
+        ),
+    ],
+)
+def test_auth_required_nonhosted_startup_rejects_weak_product_secrets(
+    field: str,
+    invalid_value: str,
+    message: str,
+) -> None:
+    from api.startup_preflight import run_startup_preflight
+
+    configured = _auth_required_nonhosted_startup_settings()
+    setattr(configured, field, invalid_value)
+
+    with pytest.raises(SystemExit, match=message):
+        run_startup_preflight(configured)
+
+
+@pytest.mark.parametrize(
+    ("field", "placeholder", "message"),
+    [
+        (
+            "product_api_token",
+            "replace-with-operator-managed-token",
+            "non-placeholder secret",
+        ),
+        ("product_api_token", "x", "non-placeholder secret"),
+        (
+            "product_api_admin_token",
+            "weak-admin",
+            "PRODUCT_API_ADMIN_TOKEN",
+        ),
+        (
+            "api_result_manifest_signing_key",
+            "replace-with-operator-managed-secret",
+            "non-development secret",
+        ),
+        (
+            "api_result_manifest_signing_key",
+            "replace-with-operator-managed-signing-key",
+            "non-development secret",
+        ),
+        (
+            "api_result_manifest_key_id",
+            "product-local-tier-alpha",
+            "non-development key identifier",
+        ),
+        (
+            "docking_private_payload_keys",
+            "replace-with-operator-managed-private-payload-keyring",
+            "DOCKING_PRIVATE_PAYLOAD_KEYS",
+        ),
+    ],
+)
+def test_hosted_startup_rejects_committed_deployment_placeholders(
+    field: str,
+    placeholder: str,
+    message: str,
+) -> None:
+    from api.startup_preflight import run_startup_preflight
+
+    configured = _hosted_startup_settings()
+    setattr(configured, field, placeholder)
+    with pytest.raises(SystemExit, match=message):
+        run_startup_preflight(configured)
+
+
+def test_hosted_startup_accepts_non_placeholder_operator_secrets() -> None:
+    from api.startup_preflight import run_startup_preflight
+
+    run_startup_preflight(_hosted_startup_settings())

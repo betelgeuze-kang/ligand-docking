@@ -625,6 +625,12 @@ def supervise(config_fd: int, start_fd: int) -> tuple[dict[str, Any], bool]:
             runner,
             cleanup_seconds=_DEFAULT_CLEANUP_SECONDS,
         )
+        # A descendant can signal PID 1 after the runner has been reaped but
+        # before descendant cleanup completes. Reconcile cancellation only
+        # after no successfully contained descendant remains able to signal
+        # this supervisor, so that post-reap self-cancellation cannot be
+        # accepted as a successful run.
+        cancelled = bool(cancelled or _cancel_requested)
         if runner_returncode is None:
             runner_returncode = contained_returncode
         stdout_file.seek(0)

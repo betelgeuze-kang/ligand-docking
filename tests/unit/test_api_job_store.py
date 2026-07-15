@@ -1808,11 +1808,10 @@ def test_periodic_heartbeat_loss_cancels_runner_without_retry_mutation(
     )
 
 
-def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
+def test_late_thread_write_is_confined_after_lease_loss(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import api.tasks as tasks
     import api.worker as worker
 
     store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
@@ -1820,9 +1819,6 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
     first = store.acquire_next_job("stable-tier-worker", lease_seconds=60)
     assert first is not None
     monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
-    monkeypatch.setattr(tasks.settings, "results_storage_path", str(tmp_path / "results"))
-    monkeypatch.setattr(tasks, "validate_simulation_request_scope", lambda request: None)
-    monkeypatch.setattr(tasks, "is_tier_beta_vertical_slice_request", lambda request: True)
     worker.write_status_file(
         worker.job_status_path("job_tier_thread"),
         {"job_id": "job_tier_thread", "status": "submitted"},
@@ -1832,15 +1828,8 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
     late_write_done = threading.Event()
     stale_dir: list[Path] = []
 
-    def _blocking_tier_runner(
-        *,
-        job_id: str,
-        request_data: dict,
-        results_dir: str,
-        artifact_writer=None,
-        artifact_hasher=None,
-    ) -> None:
-        attempt_dir = Path(results_dir)
+    def _blocking_late_writer(job_id: str) -> None:
+        attempt_dir = Path(worker.job_results_dir(job_id))
         stale_dir.append(attempt_dir)
         started.set()
         assert allow_late_write.wait(timeout=5)
@@ -1858,7 +1847,9 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
         )
         late_write_done.set()
 
-    monkeypatch.setattr(tasks, "run_tier_beta_vertical_slice_job", _blocking_tier_runner)
+    async def _stale_thread_runner(job_id: str, request_data: dict) -> None:
+        del request_data
+        await asyncio.to_thread(_blocking_late_writer, job_id)
 
     async def _scenario() -> dict:
         stale_task = asyncio.create_task(
@@ -1866,7 +1857,7 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
                 store,
                 job_id="job_tier_thread",
                 request_data=dict(first["request"]),
-                runner=tasks.run_simulation_async,
+                runner=_stale_thread_runner,
                 worker_id="stable-tier-worker",
                 attempt_token=first["attempt_token"],
                 lease_seconds=60,
@@ -1876,7 +1867,7 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
         deadline = asyncio.get_running_loop().time() + 1
         while not started.is_set():
             if asyncio.get_running_loop().time() >= deadline:
-                raise AssertionError("tier-beta thread did not start")
+                raise AssertionError("late writer thread did not start")
             await asyncio.sleep(0.01)
         with sqlite3.connect(store.path) as conn:
             conn.execute(
@@ -1914,7 +1905,7 @@ def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
         deadline = asyncio.get_running_loop().time() + 1
         while not late_write_done.is_set():
             if asyncio.get_running_loop().time() >= deadline:
-                raise AssertionError("tier-beta thread did not finish its late write")
+                raise AssertionError("late writer thread did not finish its write")
             await asyncio.sleep(0.01)
         return winner
 
