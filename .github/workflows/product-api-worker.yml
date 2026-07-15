@@ -134,11 +134,13 @@ jobs:
             tests/mobile
 
       - name: Enforce workflow trust boundaries
-        run: python -m pytest -q tests/unit/test_github_workflow_trust_boundaries.py
+        run: >-
+          python -m pytest --confcutdir=tests/unit -q
+          tests/unit/test_github_workflow_trust_boundaries.py
 
       - name: Run dependency-light API contracts
         run: >-
-          python -m pytest -c pytest-mobile.ini -q
+          python -m pytest --confcutdir=tests/mobile -c pytest-mobile.ini -q
           tests/mobile
           tests/unit/test_api_security_middleware.py
           tests/unit/test_api_job_store.py

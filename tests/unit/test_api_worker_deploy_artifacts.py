@@ -208,6 +208,8 @@ def test_product_api_worker_ci_workflow_runs_contract_checks() -> None:
     assert "if: ${{ github.event_name == 'pull_request' }}" in pull_request_workflow
     assert "runs-on: ubuntu-latest" in pull_request_workflow
     assert "self-hosted" not in pull_request_workflow
+    assert "python -m pytest --confcutdir=tests/unit -q" in pull_request_workflow
+    assert "python -m pytest --confcutdir=tests/mobile -c pytest-mobile.ini -q" in pull_request_workflow
     assert "pull_request:" not in trusted_workflow
     assert "api-worker-contract-trusted:" in trusted_workflow
     assert "runs-on: [self-hosted, linux]" in trusted_workflow
