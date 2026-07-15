@@ -28,6 +28,10 @@ PARSER_OBSERVATION_SCHEMA_ID = (
 MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID = (
     "betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0"
 )
+MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID = (
+    "betelgeuze.mmcif_archive_standard_l_peptide_topology_"
+    "preparation_inventory_commitment/1.0.0"
+)
 MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS = (
     "_atom_site.group_pdb",
     "_atom_site.id",
@@ -59,6 +63,20 @@ _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME = (
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION = "1.0.0"
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY = "mmcif_polymer_component_topology"
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_COMMITMENT_FIELDS = frozenset(
+    {
+        "preparation_inventory_commitment_schema_id",
+        "preparation_inventory_commitment_sha256",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_NAME = (
+    "betelgeuze_engine_v2.molecular.mmcif_archive_standard_l_peptide_topology."
+    "parse_mmcif_archive_standard_l_peptide_topology"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_VERSION = "1.0.0"
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY = (
+    "mmcif_archive_standard_l_peptide_topology"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_COMMITMENT_FIELDS = frozenset(
     {
         "preparation_inventory_commitment_schema_id",
         "preparation_inventory_commitment_sha256",
@@ -108,10 +126,12 @@ _PROVENANCE_MARKER_KEYS = (
     "rdkit_version",
 )
 _ATOM_TOPOLOGY_MARKER_KEYS = (
+    "mmcif_archive_standard_l_peptide_topology",
     "mmcif_nonpoly_component_topology",
     "mmcif_polymer_component_topology",
 )
 _BOND_TOPOLOGY_MARKER_KEYS = (
+    "mmcif_archive_standard_l_peptide_topology",
     "mmcif_nonpoly_covalent_struct_conn_topology",
     "mmcif_polymer_component_topology",
 )
@@ -165,6 +185,18 @@ def _is_mmcif_polymer_component_topology_parser(system: AllAtomSystem) -> bool:
     )
 
 
+def _is_mmcif_archive_standard_l_peptide_topology_parser(
+    system: AllAtomSystem,
+) -> bool:
+    return bool(
+        system.provenance.source_format == "mmcif"
+        and system.provenance.parser_name
+        == _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_NAME
+        and system.provenance.parser_version
+        == _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_VERSION
+    )
+
+
 def _normalized_inventory_value(value: Any) -> Any:
     if value is None or type(value) in {bool, int, str}:
         return value
@@ -180,30 +212,25 @@ def _normalized_inventory_value(value: Any) -> Any:
     )
 
 
-def mmcif_polymer_component_topology_preparation_inventory_document(
+def _preparation_inventory_document(
     system: AllAtomSystem,
+    *,
+    schema_id: str,
+    marker_key: str,
+    commitment_fields: frozenset[str],
 ) -> dict[str, Any]:
-    """Build the source-bound normalized preparation-inventory commitment.
-
-    This is digest-bound tamper evidence, not source authentication.  An attacker
-    able to rewrite this commitment and every enclosing digest is outside this
-    unkeyed integrity check's threat model.
-    """
-
     if type(system) is not AllAtomSystem:
         raise TypeError("system must be an AllAtomSystem")
 
     provenance_metadata = dict(system.provenance.metadata)
     provenance_metadata.pop("parser_observation_schema_id", None)
     provenance_metadata.pop("parser_observation_sha256", None)
-    provenance_marker = provenance_metadata.get(
-        _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY
-    )
+    provenance_marker = provenance_metadata.get(marker_key)
     if isinstance(provenance_marker, Mapping):
-        provenance_metadata[_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY] = {
+        provenance_metadata[marker_key] = {
             key: item
             for key, item in provenance_marker.items()
-            if key not in _MMCIF_POLYMER_COMPONENT_TOPOLOGY_COMMITMENT_FIELDS
+            if key not in commitment_fields
         }
 
     atoms = [
@@ -267,9 +294,7 @@ def mmcif_polymer_component_topology_preparation_inventory_document(
         for chain in system.chains
     ]
     return {
-        "schema_id": (
-            MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID
-        ),
+        "schema_id": schema_id,
         "commitment_semantics": (
             "source_bound_digest_tamper_evidence_not_source_authentication"
         ),
@@ -306,6 +331,26 @@ def mmcif_polymer_component_topology_preparation_inventory_document(
     }
 
 
+def mmcif_polymer_component_topology_preparation_inventory_document(
+    system: AllAtomSystem,
+) -> dict[str, Any]:
+    """Build the source-bound normalized polymer-component inventory commitment.
+
+    This is digest-bound tamper evidence, not source authentication.  An attacker
+    able to rewrite this commitment and every enclosing digest is outside this
+    unkeyed integrity check's threat model.
+    """
+
+    return _preparation_inventory_document(
+        system,
+        schema_id=(
+            MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID
+        ),
+        marker_key=_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY,
+        commitment_fields=_MMCIF_POLYMER_COMPONENT_TOPOLOGY_COMMITMENT_FIELDS,
+    )
+
+
 def mmcif_polymer_component_topology_preparation_inventory_sha256(
     system: AllAtomSystem,
 ) -> str:
@@ -313,6 +358,40 @@ def mmcif_polymer_component_topology_preparation_inventory_sha256(
 
     payload = json.dumps(
         mmcif_polymer_component_topology_preparation_inventory_document(system),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def mmcif_archive_standard_l_peptide_topology_preparation_inventory_document(
+    system: AllAtomSystem,
+) -> dict[str, Any]:
+    """Build the normalized archive-standard peptide inventory commitment."""
+
+    return _preparation_inventory_document(
+        system,
+        schema_id=(
+            MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID
+        ),
+        marker_key=_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY,
+        commitment_fields=(
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_COMMITMENT_FIELDS
+        ),
+    )
+
+
+def mmcif_archive_standard_l_peptide_topology_preparation_inventory_sha256(
+    system: AllAtomSystem,
+) -> str:
+    """Hash the normalized archive-standard peptide preparation inventory."""
+
+    payload = json.dumps(
+        mmcif_archive_standard_l_peptide_topology_preparation_inventory_document(
+            system
+        ),
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=True,
@@ -397,6 +476,21 @@ def parser_observation_document(system: AllAtomSystem) -> dict[str, Any]:
         system_markers[_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY] = _marker_value(
             system.metadata.get(_MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY)
         )
+    if _is_mmcif_archive_standard_l_peptide_topology_parser(system):
+        provenance_markers[_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY] = (
+            _marker_value(
+                system.provenance.metadata.get(
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+                )
+            )
+        )
+        system_markers[_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY] = (
+            _marker_value(
+                system.metadata.get(
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+                )
+            )
+        )
     return {
         "observation_schema_id": PARSER_OBSERVATION_SCHEMA_ID,
         "canonical_topology_sha256": canonical_topology_sha256(system),
@@ -471,12 +565,15 @@ def attached_parser_observation_sha256_matches(system: AllAtomSystem) -> bool:
 
 
 __all__ = [
+    "MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID",
     "MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS",
     "MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID",
     "PARSER_OBSERVATION_SCHEMA_ID",
     "PARSER_OBSERVATION_SCHEMA_VERSION",
     "attach_parser_observation_digest",
     "attached_parser_observation_sha256_matches",
+    "mmcif_archive_standard_l_peptide_topology_preparation_inventory_document",
+    "mmcif_archive_standard_l_peptide_topology_preparation_inventory_sha256",
     "mmcif_polymer_component_topology_preparation_inventory_document",
     "mmcif_polymer_component_topology_preparation_inventory_sha256",
     "parser_observation_document",

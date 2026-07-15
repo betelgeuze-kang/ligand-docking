@@ -15,18 +15,32 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import hmac
 import json
+import math
 from typing import Any
 
+from .missingness import build_source_reported_missingness_report
 from .models import AllAtomSystem
 from .observation import (
+    MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID,
     MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS,
     MMCIF_POLYMER_COMPONENT_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID,
     attached_parser_observation_sha256_matches,
+    mmcif_archive_standard_l_peptide_topology_preparation_inventory_sha256,
     mmcif_polymer_component_topology_preparation_inventory_sha256,
+)
+from .standard_l_peptide_rules import (
+    STANDARD_L_PEPTIDE_COMPONENT_RULES,
+    STANDARD_L_PEPTIDE_INTER_RESIDUE_ATOM_IDS,
+    STANDARD_L_PEPTIDE_INTER_RESIDUE_BOND_ORDER,
+    STANDARD_L_PEPTIDE_INTER_RESIDUE_RULE_ID,
+    STANDARD_L_PEPTIDE_RULE_MANIFEST_SCHEMA_ID,
+    STANDARD_L_PEPTIDE_RULE_MANIFEST_SHA256,
+    StandardLPeptideRuleError,
+    validate_standard_l_peptide_rule_manifest,
 )
 from .topology import (
     CANONICAL_TOPOLOGY_SCHEMA_ID,
@@ -127,6 +141,225 @@ _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME = (
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION = "1.0.0"
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID = (
     "betelgeuze.mmcif_polymer_component_topology_parser/1.0.0"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_NAME = (
+    "betelgeuze_engine_v2.molecular.mmcif_archive_standard_l_peptide_topology."
+    "parse_mmcif_archive_standard_l_peptide_topology"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_VERSION = "1.0.0"
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_PEDIGREE_ID = (
+    "betelgeuze.mmcif_archive_standard_l_peptide_topology_parser/1.0.0"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROFILE_ID = (
+    "strict_mmcif_archive_standard_l_peptide_ALA_GLY_heavy_topology/1.0.0"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY = (
+    "mmcif_archive_standard_l_peptide_topology"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256 = (
+    "4d941815d26431a5de9bd74b4860f84ce39232e7123ee87b3b61a104457eb244"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SCHEMA_ID = (
+    "betelgeuze.standard_l_peptide_heavy_topology_rule_manifest/1.0.0"
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_BOUNDED_TRUE_FIELDS = frozenset(
+    {
+        "engine_rule_manifest_matched",
+        "sequence_implied_standard_l_peptide_reference_topology_materialized",
+        "sequence_implied_sequence_adjacent_peptide_reference_bonds_materialized",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_FALSE_AUTHORITY_FIELDS = frozenset(
+    {
+        "source_authenticated",
+        "observed_covalent_bond_established",
+        "source_observed_covalence_established",
+        "coordinate_peptide_geometry_validated",
+        "coordinate_chain_breaks_excluded",
+        "chemical_chain_breaks_detected_or_excluded",
+        "independent_chemistry_established",
+        "generic_chemistry_supported",
+        "formal_charge_assigned",
+        "protonation_interpreted",
+        "hydrogens_completed",
+        "stereochemistry_assigned",
+        "modified_residue_supported",
+        "nonstandard_monomer_supported",
+        "preparation_ready",
+        "generic_preparation_ready",
+        "parameterability_assessed",
+        "physics_supported",
+        "runtime_eligible",
+        "simulation_ready",
+        "execution_authorized",
+        "claim_safe",
+        "general_mmcif_topology_complete",
+        "general_mmcif_round_trip_evidence_ready",
+        "all_format_round_trip_evidence_ready",
+        "v2_1_complete",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_ATOM_MARKER_KEYS = frozenset(
+    {
+        "component_id",
+        "atom_id",
+        "asym_id",
+        "sequence_number",
+        "sequence_role",
+        "rule_id",
+        "rule_manifest_sha256",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_RESIDUE_MARKER_KEYS = frozenset(
+    {
+        "component_id",
+        "asym_id",
+        "sequence_number",
+        "sequence_role",
+        "rule_manifest_sha256",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_CHAIN_MARKER_KEYS = frozenset(
+    {"asym_id", "sequence_implied_link_count", "rule_manifest_sha256"}
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_BOND_MARKER_KEYS = frozenset(
+    {
+        "bond_kind",
+        "rule_id",
+        "rule_manifest_sha256",
+        "asym_id",
+        "left_sequence_number",
+        "right_sequence_number",
+        "left_atom_id",
+        "right_atom_id",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROFILE_MARKER_KEYS = frozenset(
+    {
+        "profile_id",
+        "parser_pedigree_id",
+        "rule_manifest_schema_id",
+        "rule_manifest_sha256",
+        "materialized_intra_residue_bond_count",
+        "materialized_inter_residue_bond_count",
+        *_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_BOUNDED_TRUE_FIELDS,
+        *_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_FALSE_AUTHORITY_FIELDS,
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROVENANCE_MARKER_KEYS = frozenset(
+    {
+        "profile_id",
+        "parser_pedigree_id",
+        "rule_manifest_schema_id",
+        "rule_manifest_sha256",
+        "canonical_output_sha256",
+        "source_hash_semantics",
+        "source_authenticated",
+        "preparation_inventory_commitment_schema_id",
+        "preparation_inventory_commitment_sha256",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_OPERATIONS = (
+    "parse_cif_1_1_block_structure",
+    "parse_pdbx_atom_site_label_identity",
+    "align_models_by_canonical_label_identity",
+    "preserve_source_atom_order_from_first_model",
+    "synthesize_canonical_atom_serials_from_first_model_order",
+    "validate_pinned_standard_l_peptide_rule_manifest/v1",
+    "materialize_sequence_implied_ALA_GLY_heavy_reference_topology/v1",
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_SYSTEM_METADATA_KEYS = frozenset(
+    {"mmcif", _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY}
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROVENANCE_METADATA_KEYS = frozenset(
+    {
+        "canonical_topology_schema_id",
+        "canonical_topology_sha256",
+        "coverage",
+        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY,
+        "model_ids",
+        "parser_observation_schema_id",
+        "parser_observation_sha256",
+        "source_missingness_evidence_schema_id",
+        "source_missingness_evidence_sha256",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MMCIF_METADATA_KEYS = frozenset(
+    {
+        "altloc_selection",
+        "assembly",
+        "atom_site_headers",
+        "category_inventory",
+        "cell",
+        "coordinate_scope",
+        "data_block",
+        "preserved_category_payloads",
+        "resource_limits",
+        "resource_usage",
+        "source_missingness",
+        "source_reported_missingness",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_ATOM_METADATA_KEYS = frozenset(
+    {
+        "formal_charge_interpretation",
+        "formal_charge_known",
+        "formal_charge_source",
+        "hydrogen_origin",
+        "mmcif",
+        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY,
+        "mmcif_auth_asym_id",
+        "source_record",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_RESIDUE_METADATA_KEYS = frozenset(
+    {
+        "canonical_sequence_source",
+        "entity_id",
+        "entity_type_basis",
+        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY,
+        "mmcif_auth_seq_id",
+        "mmcif_label_seq_id",
+        "source_record",
+        "source_residue_namespace",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_CHAIN_METADATA_KEYS = frozenset(
+    {
+        "auth_asym_ids",
+        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY,
+        "source_format",
+    }
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_HEADERS = (
+    "_entity.id",
+    "_entity.type",
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_POLY_HEADERS = (
+    "_entity_poly.entity_id",
+    "_entity_poly.type",
+    "_entity_poly.nstd_chirality",
+    "_entity_poly.nstd_linkage",
+    "_entity_poly.nstd_monomer",
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_STRUCT_ASYM_HEADERS = (
+    "_struct_asym.id",
+    "_struct_asym.entity_id",
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_POLY_SEQ_HEADERS = (
+    "_entity_poly_seq.entity_id",
+    "_entity_poly_seq.num",
+    "_entity_poly_seq.mon_id",
+    "_entity_poly_seq.hetero",
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_PRESERVED_CATEGORY_KEYS = frozenset(
+    {"category", "loops", "policy", "scalar_items"}
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_PRESERVED_LOOP_KEYS = frozenset(
+    {"rows", "source_loop_index", "tags"}
+)
+_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_RAW_TOKEN_KEYS = frozenset(
+    {"multiline", "quoted", "value"}
 )
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_MARKER_KEY = "mmcif_polymer_component_topology"
 _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PROFILE_ID = (
@@ -511,6 +744,11 @@ _RECOGNIZED_PARSER_PEDIGREES = {
             _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_NAME,
             _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_VERSION,
             _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID,
+        ),
+        (
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_NAME,
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_VERSION,
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_PEDIGREE_ID,
         ),
     ),
     "sdf_v2000": (
@@ -1204,6 +1442,13 @@ def _mmcif_polymer_atom_site_identity_matches(
 def _mmcif_polymer_component_topology_raw_atom_identity_consistent(
     system: AllAtomSystem,
     atom: Any,
+    *,
+    residue_metadata_keys: frozenset[str] = (
+        _MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESIDUE_METADATA_KEYS
+    ),
+    chain_metadata_keys: frozenset[str] = (
+        _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CHAIN_METADATA_KEYS
+    ),
 ) -> bool:
     if not (0 <= atom.residue_index < len(system.residues)):
         return False
@@ -1235,9 +1480,8 @@ def _mmcif_polymer_component_topology_raw_atom_identity_consistent(
         or len(atom_site_id_by_model) != len(model_ids)
         or not isinstance(auth_identity, Mapping)
         or set(auth_identity) != {"alt_id", "asym_id", "atom_id", "comp_id", "seq_id"}
-        or set(residue.metadata)
-        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESIDUE_METADATA_KEYS
-        or set(chain.metadata) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CHAIN_METADATA_KEYS
+        or set(residue.metadata) != residue_metadata_keys
+        or set(chain.metadata) != chain_metadata_keys
         or type(atom.serial) is not int
         or atom.serial != atom.index + 1
         or mmcif.get("canonical_identity_namespace") != "label"
@@ -1806,6 +2050,1024 @@ def _mmcif_polymer_component_topology_inventory_valid(
     )
 
 
+def _is_mmcif_archive_standard_l_peptide_topology_parser(
+    system: AllAtomSystem,
+) -> bool:
+    return bool(
+        system.provenance.source_format == "mmcif"
+        and system.provenance.parser_name
+        == _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_NAME
+        and system.provenance.parser_version
+        == _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_VERSION
+    )
+
+
+def _mmcif_archive_standard_l_peptide_sequence_role(
+    sequence_number: int,
+    sequence_length: int,
+) -> str:
+    if sequence_length == 1:
+        return "singleton"
+    if sequence_number == 1:
+        return "n_sequence_boundary"
+    if sequence_number == sequence_length:
+        return "c_sequence_boundary"
+    return "internal"
+
+
+def _mmcif_archive_standard_l_peptide_bare_token_value(
+    payload: Any,
+) -> str | None:
+    if (
+        not isinstance(payload, Mapping)
+        or set(payload) != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_RAW_TOKEN_KEYS
+        or type(payload.get("value")) is not str
+        or not payload.get("value")
+        or payload.get("quoted") is not False
+        or payload.get("multiline") is not False
+    ):
+        return None
+    value = payload["value"]
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError:
+        return None
+    return value
+
+
+def _mmcif_archive_standard_l_peptide_preserved_rows(
+    system: AllAtomSystem,
+) -> tuple[tuple[tuple[str, ...], ...], tuple[tuple[str, ...], ...]] | None:
+    mmcif = system.metadata.get("mmcif")
+    preserved = (
+        mmcif.get("preserved_category_payloads") if isinstance(mmcif, Mapping) else None
+    )
+    expected = (
+        (
+            "_entity",
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_HEADERS,
+            0,
+        ),
+        (
+            "_struct_asym",
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_STRUCT_ASYM_HEADERS,
+            1,
+        ),
+    )
+    if not isinstance(preserved, tuple) or len(preserved) != len(expected):
+        return None
+
+    extracted: list[tuple[tuple[str, ...], ...]] = []
+    for entry, (category, headers, loop_index) in zip(preserved, expected, strict=True):
+        if (
+            not isinstance(entry, Mapping)
+            or set(entry) != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_PRESERVED_CATEGORY_KEYS
+            or entry.get("category") != category
+            or entry.get("policy") != "partially_interpreted"
+            or entry.get("scalar_items") != ()
+            or not isinstance(entry.get("loops"), tuple)
+            or len(entry["loops"]) != 1
+        ):
+            return None
+        loop = entry["loops"][0]
+        if (
+            not isinstance(loop, Mapping)
+            or set(loop) != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_PRESERVED_LOOP_KEYS
+            or loop.get("tags") != headers
+            or type(loop.get("source_loop_index")) is not int
+            or loop.get("source_loop_index") != loop_index
+            or not isinstance(loop.get("rows"), tuple)
+            or not loop["rows"]
+        ):
+            return None
+        rows: list[tuple[str, ...]] = []
+        for row in loop["rows"]:
+            if not isinstance(row, tuple) or len(row) != len(headers):
+                return None
+            values = tuple(
+                _mmcif_archive_standard_l_peptide_bare_token_value(token)
+                for token in row
+            )
+            if any(value is None for value in values):
+                return None
+            rows.append(tuple(value for value in values if value is not None))
+        extracted.append(tuple(rows))
+    return extracted[0], extracted[1]
+
+
+def _mmcif_archive_standard_l_peptide_emit_loop(
+    headers: tuple[str, ...],
+    rows: tuple[tuple[str, ...], ...],
+) -> bytes:
+    lines = ["loop_", *headers]
+    for row in rows:
+        joined = " ".join(row)
+        lines.extend((joined,) if len(joined) <= 2_048 else row)
+    lines.append("#")
+    return ("\n".join(lines) + "\n").encode("ascii")
+
+
+def _mmcif_archive_standard_l_peptide_reconstructed_sources(
+    system: AllAtomSystem,
+) -> tuple[bytes, bytes] | None:
+    mmcif = system.metadata.get("mmcif")
+    preserved_rows = _mmcif_archive_standard_l_peptide_preserved_rows(system)
+    if not isinstance(mmcif, Mapping) or preserved_rows is None:
+        return None
+    entity_rows, struct_asym_rows = preserved_rows
+    entity_ids = tuple(row[0] for row in entity_rows)
+    if (
+        any(row[1] != "polymer" for row in entity_rows)
+        or len(set(entity_ids)) != len(entity_ids)
+        or set(entity_ids) != {chain.entity_id for chain in system.chains}
+        or struct_asym_rows
+        != tuple((chain.chain_id, chain.entity_id) for chain in system.chains)
+    ):
+        return None
+
+    sequence_rows: list[tuple[str, ...]] = []
+    for entity_id in entity_ids:
+        entity_chains = tuple(
+            chain for chain in system.chains if chain.entity_id == entity_id
+        )
+        if not entity_chains:
+            return None
+        entity_sequence: tuple[str, ...] | None = None
+        for chain in entity_chains:
+            sequence: list[str] = []
+            for sequence_number, residue_index in enumerate(
+                chain.residue_indices, start=1
+            ):
+                if not (0 <= residue_index < len(system.residues)):
+                    return None
+                residue = system.residues[residue_index]
+                if (
+                    residue.chain_index != chain.index
+                    or residue.sequence_number != sequence_number
+                    or residue.name not in {"ALA", "GLY"}
+                ):
+                    return None
+                sequence.append(residue.name)
+            canonical_sequence = tuple(sequence)
+            if not canonical_sequence:
+                return None
+            if entity_sequence is None:
+                entity_sequence = canonical_sequence
+            elif entity_sequence != canonical_sequence:
+                return None
+        if entity_sequence is None:
+            return None
+        sequence_rows.extend(
+            (entity_id, str(number), component_id, "n")
+            for number, component_id in enumerate(entity_sequence, start=1)
+        )
+
+    atom_site_rows: list[tuple[str, ...]] = []
+    atom_site_ids: set[str] = set()
+    auth_asym_ids_by_chain: dict[str, list[str]] = {
+        chain.chain_id: [] for chain in system.chains
+    }
+    for atom_index, atom in enumerate(system.atoms):
+        mmcif_atom = atom.metadata.get("mmcif")
+        atom_site = (
+            mmcif_atom.get("atom_site") if isinstance(mmcif_atom, Mapping) else None
+        )
+        if (
+            atom.index != atom_index
+            or atom.serial != atom_index + 1
+            or not isinstance(atom_site, Mapping)
+            or set(atom_site) != set(MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS)
+        ):
+            return None
+        values = tuple(
+            _mmcif_archive_standard_l_peptide_bare_token_value(atom_site.get(header))
+            for header in MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS
+        )
+        if any(value is None for value in values):
+            return None
+        row = tuple(value for value in values if value is not None)
+        row_by_header = dict(
+            zip(MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS, row, strict=True)
+        )
+        source_atom_site_id = row_by_header["_atom_site.id"]
+        if (
+            source_atom_site_id in atom_site_ids
+            or row_by_header["_atom_site.group_pdb"] != "ATOM"
+            or row_by_header["_atom_site.label_alt_id"] != "."
+            or row_by_header["_atom_site.pdbx_pdb_ins_code"] != "?"
+            or row_by_header["_atom_site.pdbx_formal_charge"] != "?"
+            or row_by_header["_atom_site.pdbx_pdb_model_num"] != "1"
+            or not isinstance(mmcif_atom, Mapping)
+            or mmcif_atom.get("source_atom_site_id") != source_atom_site_id
+            or not (0 <= atom.residue_index < len(system.residues))
+        ):
+            return None
+        residue = system.residues[atom.residue_index]
+        if not (0 <= residue.chain_index < len(system.chains)):
+            return None
+        chain = system.chains[residue.chain_index]
+        if row_by_header["_atom_site.label_asym_id"] != chain.chain_id:
+            return None
+        raw_auth_asym_id = row_by_header["_atom_site.auth_asym_id"]
+        observed_auth_asym_ids = auth_asym_ids_by_chain[chain.chain_id]
+        if raw_auth_asym_id not in observed_auth_asym_ids:
+            observed_auth_asym_ids.append(raw_auth_asym_id)
+
+        try:
+            raw_coordinates = tuple(
+                float(row_by_header[header])
+                for header in (
+                    "_atom_site.cartn_x",
+                    "_atom_site.cartn_y",
+                    "_atom_site.cartn_z",
+                )
+            )
+            raw_occupancy = float(row_by_header["_atom_site.occupancy"])
+            raw_b_factor = float(row_by_header["_atom_site.b_iso_or_equiv"])
+        except ValueError:
+            return None
+        if (
+            not all(math.isfinite(value) for value in raw_coordinates)
+            or not math.isfinite(raw_occupancy)
+            or not math.isfinite(raw_b_factor)
+            or raw_coordinates
+            != tuple(
+                float(system.coordinates[0, atom_index, axis].item())
+                for axis in range(3)
+            )
+            or atom.occupancy != raw_occupancy
+            or atom.b_factor != raw_b_factor
+        ):
+            return None
+        atom_site_ids.add(source_atom_site_id)
+        atom_site_rows.append(row)
+
+    if any(
+        chain.metadata.get("auth_asym_ids")
+        != tuple(auth_asym_ids_by_chain[chain.chain_id])
+        for chain in system.chains
+    ):
+        return None
+
+    data_block = mmcif.get("data_block")
+    if type(data_block) is not str or not data_block:
+        return None
+    try:
+        prefix = f"data_{data_block}\n#\n".encode("ascii")
+        entity_loop = _mmcif_archive_standard_l_peptide_emit_loop(
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_HEADERS,
+            entity_rows,
+        )
+        struct_asym_loop = _mmcif_archive_standard_l_peptide_emit_loop(
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_STRUCT_ASYM_HEADERS,
+            struct_asym_rows,
+        )
+        atom_site_loop = _mmcif_archive_standard_l_peptide_emit_loop(
+            MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS,
+            tuple(atom_site_rows),
+        )
+        inner_source = b"".join((prefix, entity_loop, struct_asym_loop, atom_site_loop))
+        full_source = b"".join(
+            (
+                prefix,
+                entity_loop,
+                _mmcif_archive_standard_l_peptide_emit_loop(
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_POLY_HEADERS,
+                    tuple(
+                        (entity_id, "polypeptide(L)", "no", "no", "no")
+                        for entity_id in entity_ids
+                    ),
+                ),
+                struct_asym_loop,
+                _mmcif_archive_standard_l_peptide_emit_loop(
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_ENTITY_POLY_SEQ_HEADERS,
+                    tuple(sequence_rows),
+                ),
+                atom_site_loop,
+            )
+        )
+    except UnicodeEncodeError:
+        return None
+    return inner_source, full_source
+
+
+def _mmcif_archive_standard_l_peptide_exact_carrier_valid(
+    system: AllAtomSystem,
+) -> bool:
+    sources = _mmcif_archive_standard_l_peptide_reconstructed_sources(system)
+    if sources is None:
+        return False
+    inner_source, full_source = sources
+    mmcif = system.metadata.get("mmcif")
+    reported_missingness = (
+        mmcif.get("source_reported_missingness") if isinstance(mmcif, Mapping) else None
+    )
+    if (
+        not isinstance(reported_missingness, Mapping)
+        or reported_missingness.get("source_sha256")
+        != hashlib.sha256(inner_source).hexdigest()
+    ):
+        return False
+    try:
+        from .mmcif_archive_standard_l_peptide_topology import (
+            parse_mmcif_archive_standard_l_peptide_topology,
+        )
+
+        reparsed = parse_mmcif_archive_standard_l_peptide_topology(
+            full_source,
+            source_id=system.provenance.source_id,
+        ).system
+    except (OverflowError, TypeError, ValueError):
+        return False
+
+    records = (
+        (system.atoms, reparsed.atoms),
+        (system.bonds, reparsed.bonds),
+        (system.residues, reparsed.residues),
+        (system.chains, reparsed.chains),
+    )
+    if any(
+        left != right
+        or any(
+            left_record.metadata != right_record.metadata
+            for left_record, right_record in zip(left, right, strict=True)
+        )
+        for left, right in records
+    ):
+        return False
+    compared_provenance_metadata_keys = (
+        "coverage",
+        "model_ids",
+        "source_missingness_evidence_schema_id",
+        "source_missingness_evidence_sha256",
+    )
+    provenance_marker = system.provenance.metadata.get(
+        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+    )
+    reparsed_provenance_marker = reparsed.provenance.metadata.get(
+        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+    )
+    return bool(
+        system.system_id == reparsed.system_id
+        and system.coordinate_unit == reparsed.coordinate_unit
+        and system.cell == reparsed.cell
+        and system.coordinates.equal(reparsed.coordinates)
+        and system.metadata.get("mmcif") == reparsed.metadata.get("mmcif")
+        and system.provenance.parent_sha256 == reparsed.provenance.parent_sha256
+        and isinstance(provenance_marker, Mapping)
+        and isinstance(reparsed_provenance_marker, Mapping)
+        and provenance_marker.get("canonical_output_sha256")
+        == reparsed_provenance_marker.get("canonical_output_sha256")
+        and all(
+            system.provenance.metadata.get(key) == reparsed.provenance.metadata.get(key)
+            for key in compared_provenance_metadata_keys
+        )
+    )
+
+
+def _mmcif_archive_standard_l_peptide_carrier_ledger_valid(
+    system: AllAtomSystem,
+) -> bool:
+    provenance_metadata = system.provenance.metadata
+    mmcif = system.metadata.get("mmcif")
+    if (
+        set(system.metadata)
+        != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_SYSTEM_METADATA_KEYS
+        or set(provenance_metadata)
+        != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROVENANCE_METADATA_KEYS
+        or system.provenance.operations
+        != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_OPERATIONS
+        or len(system.provenance.parent_sha256) != 1
+        or not _is_lowercase_sha256(system.provenance.parent_sha256[0])
+        or system.provenance.preparation_ready is not False
+        or system.provenance.claim_safe is not False
+        or system.model_count != 1
+        or system.coordinate_unit != "angstrom"
+        or system.cell is not None
+        or not isinstance(mmcif, Mapping)
+        or set(mmcif) != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MMCIF_METADATA_KEYS
+        or mmcif.get("atom_site_headers")
+        != MMCIF_POLYMER_COMPONENT_TOPOLOGY_ATOM_SITE_HEADERS
+        or type(mmcif.get("data_block")) is not str
+        or not mmcif.get("data_block")
+        or mmcif.get("cell") is not None
+        or mmcif.get("coordinate_scope") != "deposited_asymmetric_unit"
+        or mmcif.get("altloc_selection")
+        != {"models": (), "requested_altloc_id": "", "status": "not_present"}
+        or mmcif.get("assembly")
+        != {
+            "assembly_id": "",
+            "selection_policy": "explicit_only",
+            "status": "not_present",
+        }
+        or not isinstance(mmcif.get("preserved_category_payloads"), tuple)
+        or not isinstance(mmcif.get("resource_limits"), Mapping)
+        or not mmcif.get("resource_limits")
+        or provenance_metadata.get("model_ids") != (1,)
+        or not _mmcif_archive_standard_l_peptide_exact_carrier_valid(system)
+    ):
+        return False
+
+    source_atom_row_count = len(system.atoms)
+    category_inventory = mmcif.get("category_inventory")
+    expected_categories = (
+        (
+            "_entity",
+            "partially_interpreted",
+            len({chain.entity_id for chain in system.chains}),
+        ),
+        ("_struct_asym", "partially_interpreted", len(system.chains)),
+        (
+            "_atom_site",
+            "interpreted_with_source_values_preserved",
+            source_atom_row_count,
+        ),
+    )
+    if not isinstance(category_inventory, tuple) or len(category_inventory) != 3:
+        return False
+    for entry, (category, policy, row_count) in zip(
+        category_inventory, expected_categories, strict=True
+    ):
+        if (
+            not isinstance(entry, Mapping)
+            or set(entry) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CATEGORY_INVENTORY_KEYS
+            or entry.get("category") != category
+            or entry.get("policy") != policy
+            or entry.get("loop_count") != 1
+            or type(entry.get("loop_count")) is not int
+            or entry.get("scalar_item_count") != 0
+            or type(entry.get("scalar_item_count")) is not int
+            or entry.get("row_count") != row_count
+            or type(entry.get("row_count")) is not int
+        ):
+            return False
+
+    resource_usage = mmcif.get("resource_usage")
+    if (
+        not isinstance(resource_usage, Mapping)
+        or set(resource_usage) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_RESOURCE_USAGE_KEYS
+        or type(resource_usage.get("input_bytes")) is not int
+        or resource_usage.get("input_bytes", 0) < 1
+        or type(resource_usage.get("token_count")) is not int
+        or resource_usage.get("token_count", 0) < 1
+        or type(resource_usage.get("atom_site_rows")) is not int
+        or resource_usage.get("atom_site_rows") != source_atom_row_count
+        or any(
+            type(resource_usage.get(field)) is not int or resource_usage.get(field) != 0
+            for field in (
+                "missing_residue_evidence_rows",
+                "missing_atom_evidence_rows",
+                "total_missingness_evidence_rows",
+                "missingness_preserved_items",
+                "missingness_preserved_value_utf8_bytes",
+            )
+        )
+    ):
+        return False
+
+    source_missingness = mmcif.get("source_missingness")
+    if (
+        not isinstance(source_missingness, Mapping)
+        or set(source_missingness)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_SOURCE_MISSINGNESS_KEYS
+        or source_missingness.get("dictionary_validation_status") != "not_assessed"
+        or source_missingness.get("interpretation_policy")
+        != "documented_items_preserved_without_full_dictionary_validation/v1"
+        or any(
+            type(source_missingness.get(field)) is not int
+            or source_missingness.get(field) != 0
+            for field in (
+                "atom_row_count",
+                "extension_item_count",
+                "residue_row_count",
+                "unobserved_atom_claim_count",
+                "unobserved_residue_claim_count",
+                "zero_occupancy_atom_row_count",
+                "zero_occupancy_residue_row_count",
+            )
+        )
+    ):
+        return False
+
+    reported_missingness = mmcif.get("source_reported_missingness")
+    expected_missingness_blockers = (
+        "source_reported_missingness_preserved_only",
+        "source_reported_missingness_not_completeness_evidence",
+        "reference_chemistry_not_consulted",
+        "completion_not_attempted",
+        "preparation_not_assessed",
+    )
+    if (
+        not isinstance(reported_missingness, Mapping)
+        or set(reported_missingness)
+        != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_REPORTED_MISSINGNESS_KEYS
+        or reported_missingness.get("blockers") != expected_missingness_blockers
+        or reported_missingness.get("claim_safe") is not False
+        or reported_missingness.get("completion_applied") is not False
+        or reported_missingness.get("completion_attempted") is not False
+        or reported_missingness.get("preparation_ready") is not False
+        or reported_missingness.get("missing_atom_claims") != ()
+        or reported_missingness.get("missing_residue_claims") != ()
+        or reported_missingness.get("source_reported_missing_atom_count") != 0
+        or type(reported_missingness.get("source_reported_missing_atom_count"))
+        is not int
+        or reported_missingness.get("source_reported_missing_residue_count") != 0
+        or type(reported_missingness.get("source_reported_missing_residue_count"))
+        is not int
+        or reported_missingness.get("source_format") != "mmcif"
+        or reported_missingness.get("schema_id")
+        != "betelgeuze.source_reported_missingness/1.0.0"
+        or reported_missingness.get("policy_id")
+        != "source_reported_missingness_preserve_only_v1"
+        or reported_missingness.get("coordinate_scope") != "deposited_asymmetric_unit"
+        or reported_missingness.get("altloc_status") != "not_present"
+        or reported_missingness.get("assembly_status") != "not_present"
+        or reported_missingness.get("requested_altloc_id") != ""
+        or reported_missingness.get("requested_assembly_id") != ""
+        or not _is_lowercase_sha256(reported_missingness.get("report_sha256"))
+        or not _is_lowercase_sha256(reported_missingness.get("source_sha256"))
+        or reported_missingness.get("canonical_topology_schema_id")
+        != CANONICAL_TOPOLOGY_SCHEMA_ID
+        or not _is_lowercase_sha256(
+            reported_missingness.get("canonical_topology_sha256")
+        )
+    ):
+        return False
+
+    try:
+        carrier_topology_sha256 = canonical_topology_sha256(replace(system, bonds=()))
+        expected_missingness = build_source_reported_missingness_report(
+            source_format="mmcif",
+            source_sha256=reported_missingness.get("source_sha256"),
+            canonical_topology_sha256=carrier_topology_sha256,
+            coordinate_scope="deposited_asymmetric_unit",
+            altloc_status="not_present",
+            requested_altloc_id="",
+            assembly_status="not_present",
+            requested_assembly_id="",
+        ).to_dict()
+    except (CanonicalTopologyError, OverflowError, TypeError, ValueError):
+        return False
+    if dict(reported_missingness) != expected_missingness:
+        return False
+
+    coverage = provenance_metadata.get("coverage")
+    fixed_coverage = {
+        "altloc_affected_residue_count": 0,
+        "altloc_discarded_row_count": 0,
+        "altloc_kept_row_count": len(system.atoms),
+        "altloc_status": "not_present",
+        "assembly_chain_instance_count": 0,
+        "assembly_operation_application_count": 0,
+        "assembly_operation_sequence_count": 0,
+        "assembly_output_atom_count": 0,
+        "assembly_status": "not_present",
+        "bond_count": 0,
+        "cell_present": False,
+        "claim_safe": False,
+        "coordinate_scope": "deposited_asymmetric_unit",
+        "explicit_hydrogen_count": 0,
+        "hetero_residue_count": 0,
+        "missingness_completion_policy_id": (
+            "source_reported_missingness_preserve_only_v1"
+        ),
+        "missingness_completion_status": "not_assessed",
+        "missingness_evidence_status": "not_present",
+        "preparation_ready": False,
+        "requested_altloc_id": "",
+        "requested_assembly_id": "",
+        "source_format": "mmcif",
+        "source_reported_missing_atom_claim_count": 0,
+        "source_reported_missing_residue_claim_count": 0,
+        "support_scope": "syntax_and_canonical_projection_only",
+        "supported": True,
+        "syntax_ingest_supported": True,
+        "uninterpreted_category_count": 0,
+        "unknown_entity_type_count": 0,
+        "unknown_formal_charge_count": len(system.atoms),
+    }
+    if (
+        not isinstance(coverage, Mapping)
+        or set(coverage) != _MMCIF_POLYMER_COMPONENT_TOPOLOGY_CARRIER_COVERAGE_KEYS
+        or any(coverage.get(key) != value for key, value in fixed_coverage.items())
+        or coverage.get("atom_count") != len(system.atoms)
+        or type(coverage.get("atom_count")) is not int
+        or coverage.get("residue_count") != len(system.residues)
+        or type(coverage.get("residue_count")) is not int
+        or coverage.get("chain_count") != len(system.chains)
+        or type(coverage.get("chain_count")) is not int
+        or coverage.get("model_count") != 1
+        or type(coverage.get("model_count")) is not int
+        or coverage.get("source_atom_row_count") != source_atom_row_count
+        or type(coverage.get("source_atom_row_count")) is not int
+        or coverage.get("canonical_topology_schema_id") != CANONICAL_TOPOLOGY_SCHEMA_ID
+        or coverage.get("canonical_topology_sha256") != carrier_topology_sha256
+        or coverage.get("source_missingness_evidence_schema_id")
+        != expected_missingness["schema_id"]
+        or coverage.get("source_missingness_evidence_sha256")
+        != expected_missingness["report_sha256"]
+        or provenance_metadata.get("source_missingness_evidence_schema_id")
+        != expected_missingness["schema_id"]
+        or provenance_metadata.get("source_missingness_evidence_sha256")
+        != expected_missingness["report_sha256"]
+    ):
+        return False
+    return True
+
+
+def _mmcif_archive_standard_l_peptide_topology_inventory_valid(
+    system: AllAtomSystem,
+) -> bool:
+    """Recompute the exact bounded ALA/GLY heavy topology from pinned rules."""
+
+    if (
+        not _is_mmcif_archive_standard_l_peptide_topology_parser(system)
+        or not system.atoms
+        or not system.residues
+        or not system.chains
+    ):
+        return False
+    try:
+        manifest_sha256 = validate_standard_l_peptide_rule_manifest()
+        if (
+            STANDARD_L_PEPTIDE_RULE_MANIFEST_SCHEMA_ID
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SCHEMA_ID
+            or not hmac.compare_digest(
+                STANDARD_L_PEPTIDE_RULE_MANIFEST_SHA256,
+                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256,
+            )
+            or not hmac.compare_digest(
+                manifest_sha256,
+                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256,
+            )
+            or not _mmcif_archive_standard_l_peptide_carrier_ledger_valid(system)
+        ):
+            return False
+
+        rule_by_component = {
+            rule.component_id: rule for rule in STANDARD_L_PEPTIDE_COMPONENT_RULES
+        }
+        if (
+            type(STANDARD_L_PEPTIDE_COMPONENT_RULES) is not tuple
+            or set(rule_by_component) != {"ALA", "GLY"}
+            or len(rule_by_component) != len(STANDARD_L_PEPTIDE_COMPONENT_RULES)
+        ):
+            return False
+
+        atom_indices_seen: set[int] = set()
+        residue_indices_seen: set[int] = set()
+        chain_ids_seen: set[str] = set()
+        sequence_by_entity: dict[str, tuple[str, ...]] = {}
+        expected_bonds: dict[tuple[int, int], tuple[float, dict[str, Any]]] = {}
+        intra_residue_bond_count = 0
+        inter_residue_bond_count = 0
+
+        for chain_index, chain in enumerate(system.chains):
+            sequence_length = len(chain.residue_indices)
+            chain_marker = chain.metadata.get(
+                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+            )
+            if (
+                chain.index != chain_index
+                or not chain.chain_id
+                or chain.chain_id in chain_ids_seen
+                or not chain.entity_id
+                or sequence_length < 1
+                or set(chain.metadata)
+                != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_CHAIN_METADATA_KEYS
+                or not isinstance(chain_marker, Mapping)
+                or set(chain_marker)
+                != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_CHAIN_MARKER_KEYS
+                or type(chain_marker.get("sequence_implied_link_count")) is not int
+                or dict(chain_marker)
+                != {
+                    "asym_id": chain.chain_id,
+                    "sequence_implied_link_count": sequence_length - 1,
+                    "rule_manifest_sha256": (
+                        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+                    ),
+                }
+                or chain.metadata.get("source_format") != "mmcif"
+                or not isinstance(chain.metadata.get("auth_asym_ids"), tuple)
+                or not chain.metadata.get("auth_asym_ids")
+            ):
+                return False
+            chain_ids_seen.add(chain.chain_id)
+
+            chain_sequence: list[str] = []
+            atom_indices_by_residue: list[dict[str, int]] = []
+            for sequence_number, residue_index in enumerate(
+                chain.residue_indices, start=1
+            ):
+                if (
+                    not (0 <= residue_index < len(system.residues))
+                    or residue_index in residue_indices_seen
+                ):
+                    return False
+                residue = system.residues[residue_index]
+                sequence_role = _mmcif_archive_standard_l_peptide_sequence_role(
+                    sequence_number, sequence_length
+                )
+                rule = rule_by_component.get(residue.name)
+                residue_marker = residue.metadata.get(
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+                )
+                if (
+                    rule is None
+                    or residue.index != residue_index
+                    or residue.chain_index != chain_index
+                    or residue.sequence_number != sequence_number
+                    or residue.entity_type != "polymer"
+                    or residue.hetero is not False
+                    or residue.insertion_code != ""
+                    or not residue.atom_indices
+                    or set(residue.metadata)
+                    != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_RESIDUE_METADATA_KEYS
+                    or not isinstance(residue_marker, Mapping)
+                    or set(residue_marker)
+                    != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_RESIDUE_MARKER_KEYS
+                    or type(residue_marker.get("sequence_number")) is not int
+                    or dict(residue_marker)
+                    != {
+                        "component_id": residue.name,
+                        "asym_id": chain.chain_id,
+                        "sequence_number": sequence_number,
+                        "sequence_role": sequence_role,
+                        "rule_manifest_sha256": (
+                            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+                        ),
+                    }
+                    or residue.metadata.get("canonical_sequence_source")
+                    != "label_seq_id"
+                    or residue.metadata.get("entity_id") != chain.entity_id
+                    or residue.metadata.get("entity_type_basis")
+                    != "mmcif_entity_category"
+                    or residue.metadata.get("mmcif_label_seq_id")
+                    != str(sequence_number)
+                    or residue.metadata.get("source_record") != "ATOM"
+                    or residue.metadata.get("source_residue_namespace") != ""
+                ):
+                    return False
+                residue_indices_seen.add(residue_index)
+                chain_sequence.append(residue.name)
+
+                expected_atom_elements = dict(
+                    rule.atom_elements(
+                        c_sequence_boundary=sequence_number == sequence_length
+                    )
+                )
+                atom_index_by_name: dict[str, int] = {}
+                for atom_index in residue.atom_indices:
+                    if (
+                        not (0 <= atom_index < len(system.atoms))
+                        or atom_index in atom_indices_seen
+                    ):
+                        return False
+                    atom = system.atoms[atom_index]
+                    atom_marker = atom.metadata.get(
+                        _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+                    )
+                    expected_element = expected_atom_elements.get(atom.name)
+                    if (
+                        expected_element is None
+                        or atom.name in atom_index_by_name
+                        or atom.index != atom_index
+                        or atom.residue_index != residue_index
+                        or atom.element != expected_element
+                        or atom.atomic_number
+                        != {"C": 6, "N": 7, "O": 8}[expected_element]
+                        or atom.formal_charge != 0
+                        or atom.formal_charge_known is not False
+                        or atom.partial_charge_e is not None
+                        or atom.mass_da is not None
+                        or atom.isotope_mass_number is not None
+                        or atom.serial != atom_index + 1
+                        or atom.atom_map is not None
+                        or atom.altloc != ""
+                        or atom.aromatic is not False
+                        or atom.stereo != "unspecified"
+                        or set(atom.metadata)
+                        != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_ATOM_METADATA_KEYS
+                        or atom.metadata.get("formal_charge_interpretation")
+                        != "placeholder_zero_unknown"
+                        or atom.metadata.get("formal_charge_known") is not False
+                        or atom.metadata.get("formal_charge_source")
+                        != "missing_in_mmcif"
+                        or atom.metadata.get("hydrogen_origin") != "not_hydrogen"
+                        or atom.metadata.get("source_record") != "ATOM"
+                        or not isinstance(atom_marker, Mapping)
+                        or set(atom_marker)
+                        != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_ATOM_MARKER_KEYS
+                        or type(atom_marker.get("sequence_number")) is not int
+                        or dict(atom_marker)
+                        != {
+                            "component_id": residue.name,
+                            "atom_id": atom.name,
+                            "asym_id": chain.chain_id,
+                            "sequence_number": sequence_number,
+                            "sequence_role": sequence_role,
+                            "rule_id": rule.rule_id,
+                            "rule_manifest_sha256": (
+                                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+                            ),
+                        }
+                        or not _mmcif_polymer_component_topology_raw_atom_identity_consistent(
+                            system,
+                            atom,
+                            residue_metadata_keys=(
+                                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_RESIDUE_METADATA_KEYS
+                            ),
+                            chain_metadata_keys=(
+                                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_CHAIN_METADATA_KEYS
+                            ),
+                        )
+                    ):
+                        return False
+                    atom_indices_seen.add(atom_index)
+                    atom_index_by_name[atom.name] = atom_index
+                if set(atom_index_by_name) != set(expected_atom_elements):
+                    return False
+                atom_indices_by_residue.append(atom_index_by_name)
+
+                for rule_bond in rule.active_bonds(
+                    c_sequence_boundary=sequence_number == sequence_length
+                ):
+                    atom_i = atom_index_by_name[rule_bond.atom_id_1]
+                    atom_j = atom_index_by_name[rule_bond.atom_id_2]
+                    endpoints = (min(atom_i, atom_j), max(atom_i, atom_j))
+                    if endpoints in expected_bonds:
+                        return False
+                    expected_bonds[endpoints] = (
+                        rule_bond.order,
+                        {
+                            "bond_kind": "intra_residue_reference",
+                            "rule_id": rule.rule_id,
+                            "rule_manifest_sha256": (
+                                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+                            ),
+                            "asym_id": chain.chain_id,
+                            "left_sequence_number": sequence_number,
+                            "right_sequence_number": sequence_number,
+                            "left_atom_id": rule_bond.atom_id_1,
+                            "right_atom_id": rule_bond.atom_id_2,
+                        },
+                    )
+                    intra_residue_bond_count += 1
+
+            canonical_sequence = tuple(chain_sequence)
+            previous_sequence = sequence_by_entity.setdefault(
+                chain.entity_id, canonical_sequence
+            )
+            if previous_sequence != canonical_sequence:
+                return False
+
+            left_atom_id, right_atom_id = STANDARD_L_PEPTIDE_INTER_RESIDUE_ATOM_IDS
+            for left_number in range(1, sequence_length):
+                right_number = left_number + 1
+                atom_i = atom_indices_by_residue[left_number - 1][left_atom_id]
+                atom_j = atom_indices_by_residue[right_number - 1][right_atom_id]
+                endpoints = (min(atom_i, atom_j), max(atom_i, atom_j))
+                if endpoints in expected_bonds:
+                    return False
+                expected_bonds[endpoints] = (
+                    STANDARD_L_PEPTIDE_INTER_RESIDUE_BOND_ORDER,
+                    {
+                        "bond_kind": "sequence_adjacent_peptide_reference",
+                        "rule_id": STANDARD_L_PEPTIDE_INTER_RESIDUE_RULE_ID,
+                        "rule_manifest_sha256": (
+                            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+                        ),
+                        "asym_id": chain.chain_id,
+                        "left_sequence_number": left_number,
+                        "right_sequence_number": right_number,
+                        "left_atom_id": left_atom_id,
+                        "right_atom_id": right_atom_id,
+                    },
+                )
+                inter_residue_bond_count += 1
+
+        if atom_indices_seen != set(
+            range(len(system.atoms))
+        ) or residue_indices_seen != set(range(len(system.residues))):
+            return False
+
+        actual_endpoint_order: list[tuple[int, int]] = []
+        if len(system.bonds) != len(expected_bonds):
+            return False
+        for bond_index, bond in enumerate(system.bonds):
+            endpoints = (bond.atom_i, bond.atom_j)
+            expected = expected_bonds.get(endpoints)
+            marker = bond.metadata.get(
+                _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+            )
+            if (
+                expected is None
+                or bond.index != bond_index
+                or not (0 <= bond.atom_i < bond.atom_j < len(system.atoms))
+                or bond.order != expected[0]
+                or bond.aromatic is not False
+                or bond.stereo != "none"
+                or bond.source != "engine_sequence_implied_standard_l_peptide_rule"
+                or set(bond.metadata)
+                != {_MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY}
+                or not isinstance(marker, Mapping)
+                or set(marker)
+                != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_BOND_MARKER_KEYS
+                or type(marker.get("left_sequence_number")) is not int
+                or type(marker.get("right_sequence_number")) is not int
+                or dict(marker) != expected[1]
+            ):
+                return False
+            actual_endpoint_order.append(endpoints)
+        if actual_endpoint_order != sorted(expected_bonds):
+            return False
+
+        profile_marker = system.metadata.get(
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+        )
+        provenance_marker = system.provenance.metadata.get(
+            _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_MARKER_KEY
+        )
+        if (
+            not isinstance(profile_marker, Mapping)
+            or set(profile_marker)
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROFILE_MARKER_KEYS
+            or profile_marker.get("profile_id")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROFILE_ID
+            or profile_marker.get("parser_pedigree_id")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_PEDIGREE_ID
+            or profile_marker.get("rule_manifest_schema_id")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SCHEMA_ID
+            or profile_marker.get("rule_manifest_sha256")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+            or type(profile_marker.get("materialized_intra_residue_bond_count"))
+            is not int
+            or profile_marker.get("materialized_intra_residue_bond_count")
+            != intra_residue_bond_count
+            or type(profile_marker.get("materialized_inter_residue_bond_count"))
+            is not int
+            or profile_marker.get("materialized_inter_residue_bond_count")
+            != inter_residue_bond_count
+            or any(
+                profile_marker.get(field) is not True
+                for field in (
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_BOUNDED_TRUE_FIELDS
+                )
+            )
+            or any(
+                profile_marker.get(field) is not False
+                for field in (
+                    _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_FALSE_AUTHORITY_FIELDS
+                )
+            )
+            or not isinstance(provenance_marker, Mapping)
+            or set(provenance_marker)
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROVENANCE_MARKER_KEYS
+            or provenance_marker.get("profile_id")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PROFILE_ID
+            or provenance_marker.get("parser_pedigree_id")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_PEDIGREE_ID
+            or provenance_marker.get("rule_manifest_schema_id")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SCHEMA_ID
+            or provenance_marker.get("rule_manifest_sha256")
+            != _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_EXPECTED_RULE_MANIFEST_SHA256
+            or not _is_lowercase_sha256(
+                provenance_marker.get("canonical_output_sha256")
+            )
+            or provenance_marker.get("source_hash_semantics")
+            != "raw_full_source_bytes_tamper_evidence"
+            or provenance_marker.get("source_authenticated") is not False
+            or provenance_marker.get("preparation_inventory_commitment_schema_id")
+            != (
+                MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PREPARATION_INVENTORY_COMMITMENT_SCHEMA_ID
+            )
+            or not _is_lowercase_sha256(
+                provenance_marker.get("preparation_inventory_commitment_sha256")
+            )
+        ):
+            return False
+        recomputed_commitment = (
+            mmcif_archive_standard_l_peptide_topology_preparation_inventory_sha256(
+                system
+            )
+        )
+        if not hmac.compare_digest(
+            provenance_marker["preparation_inventory_commitment_sha256"],
+            recomputed_commitment,
+        ):
+            return False
+    except (
+        IndexError,
+        KeyError,
+        OverflowError,
+        StandardLPeptideRuleError,
+        TypeError,
+        ValueError,
+    ):
+        return False
+    return True
+
+
 def _is_mmcif_nonpoly_covalent_struct_conn_topology_parser(
     system: AllAtomSystem,
 ) -> bool:
@@ -2048,6 +3310,13 @@ def _parser_observation_consistency(
         and matched is not None
         and matched[2] == _MMCIF_POLYMER_COMPONENT_TOPOLOGY_PARSER_PEDIGREE_ID
         and not _mmcif_polymer_component_topology_inventory_valid(system)
+    ):
+        digest_bindings_valid = False
+    if (
+        digest_bindings_valid
+        and matched is not None
+        and matched[2] == _MMCIF_ARCHIVE_STANDARD_L_PEPTIDE_TOPOLOGY_PARSER_PEDIGREE_ID
+        and not _mmcif_archive_standard_l_peptide_topology_inventory_valid(system)
     ):
         digest_bindings_valid = False
     recognized = bool(

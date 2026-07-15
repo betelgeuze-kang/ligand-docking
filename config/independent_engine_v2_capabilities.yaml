@@ -623,6 +623,518 @@ capabilities:
     strict_mmcif_polymer_component_topology_general_mmcif_round_trip_evidence_ready: false
     strict_mmcif_polymer_component_topology_all_format_round_trip_evidence_ready: false
     strict_mmcif_polymer_component_topology_v2_1_complete: false
+    strict_mmcif_archive_standard_l_peptide_topology_envelope_contract_implemented: true
+    strict_mmcif_archive_standard_l_peptide_topology_round_trip_evidence_ready: true
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_evidence_ready: true
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_manifest_payload_sha256_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_envelope_version: "1.0.0"
+    strict_mmcif_archive_standard_l_peptide_topology_parser_version: "1.0.0"
+    strict_mmcif_archive_standard_l_peptide_topology_writer_version: "1.0.0"
+    strict_mmcif_archive_standard_l_peptide_topology_parser_name: betelgeuze_engine_v2.molecular.mmcif_archive_standard_l_peptide_topology.parse_mmcif_archive_standard_l_peptide_topology
+    strict_mmcif_archive_standard_l_peptide_topology_parser_pedigree_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_parser/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_profile_id: strict_mmcif_archive_standard_l_peptide_ALA_GLY_heavy_topology/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_projection_schema_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_projection/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_state_schema_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_state/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_source_binding_schema_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_source_binding/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_write_receipt_schema_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_write_receipt/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_round_trip_report_schema_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_round_trip_report/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_new_system_parser_pedigree_introduced: true
+    strict_mmcif_archive_standard_l_peptide_topology_exact_five_category_profile_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_category_order:
+      - _entity
+      - _entity_poly
+      - _struct_asym
+      - _entity_poly_seq
+      - _atom_site
+    strict_mmcif_archive_standard_l_peptide_topology_exact_five_field_entity_poly_header_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_entity_poly_headers:
+      - _entity_poly.entity_id
+      - _entity_poly.type
+      - _entity_poly.nstd_chirality
+      - _entity_poly.nstd_linkage
+      - _entity_poly.nstd_monomer
+    strict_mmcif_archive_standard_l_peptide_topology_required_entity_poly_type: "polypeptide(L)"
+    strict_mmcif_archive_standard_l_peptide_topology_required_entity_poly_nstd_chirality: "no"
+    strict_mmcif_archive_standard_l_peptide_topology_required_entity_poly_nstd_linkage: "no"
+    strict_mmcif_archive_standard_l_peptide_topology_required_entity_poly_nstd_monomer: "no"
+    strict_mmcif_archive_standard_l_peptide_topology_unchanged_polymer_sequence_carrier_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_carrier_profile_id: strict_mmcif_source_reported_entity_poly_seq_envelope/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_supported_components: [ALA, GLY]
+    strict_mmcif_archive_standard_l_peptide_topology_core_heavy_atom_roles:
+      ALA: [N, CA, C, O, CB]
+      GLY: [N, CA, C, O]
+    strict_mmcif_archive_standard_l_peptide_topology_c_sequence_boundary_additional_atom_roles:
+      ALA: [OXT]
+      GLY: [OXT]
+    strict_mmcif_archive_standard_l_peptide_topology_c_sequence_boundary_or_singleton_oxt_required: true
+    strict_mmcif_archive_standard_l_peptide_topology_outgoing_linked_residue_oxt_forbidden: true
+    strict_mmcif_archive_standard_l_peptide_topology_intra_residue_bonds_materialized_from_pinned_rules: true
+    strict_mmcif_archive_standard_l_peptide_topology_inter_residue_rule_id: betelgeuze.standard_l_peptide_sequence_adjacent_C_N/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_inter_residue_atom_ids: [C, N]
+    strict_mmcif_archive_standard_l_peptide_topology_inter_residue_bond_order: 1.0
+    strict_mmcif_archive_standard_l_peptide_topology_same_asym_sequence_adjacent_c_n_bonds_materialized: true
+    strict_mmcif_archive_standard_l_peptide_topology_exact_n_minus_one_chain_path_required: true
+    strict_mmcif_archive_standard_l_peptide_topology_cross_asym_bonds_forbidden: true
+    strict_mmcif_archive_standard_l_peptide_topology_coordinate_distance_used_for_topology_selection: false
+    strict_mmcif_archive_standard_l_peptide_topology_auth_alias_used_for_topology_selection: false
+    strict_mmcif_archive_standard_l_peptide_topology_coordinate_or_auth_value_changes_drive_topology: false
+    strict_mmcif_archive_standard_l_peptide_topology_offline_engine_owned_rules_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_runtime_network_required: false
+    strict_mmcif_archive_standard_l_peptide_topology_rule_manifest_schema_id: betelgeuze.standard_l_peptide_heavy_topology_rule_manifest/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_rule_manifest_sha256: 4d941815d26431a5de9bd74b4860f84ce39232e7123ee87b3b61a104457eb244
+    strict_mmcif_archive_standard_l_peptide_topology_rule_manifest_runtime_recomputed: true
+    strict_mmcif_archive_standard_l_peptide_topology_official_ccd_provenance:
+      ALA:
+        download_url: https://files.rcsb.org/ligands/download/ALA.cif
+        downloaded_file_sha256: 6d32b34d4f7b3ddf0cd3dff3f98ddaf7649bc5303ff9a8bd95ba62283f47a1ca
+        downloaded_file_size_bytes: 6071
+        component_type: "L-PEPTIDE LINKING"
+        initial_date: "1999-07-08"
+        modified_date: "2024-09-27"
+        release_status: REL
+      GLY:
+        download_url: https://files.rcsb.org/ligands/download/GLY.cif
+        downloaded_file_sha256: c49458946b0ebc057db6ad0a4e1557a1caaed4c80a203accd458efddccbf92ff
+        downloaded_file_size_bytes: 5615
+        component_type: "PEPTIDE LINKING"
+        initial_date: "1999-07-08"
+        modified_date: "2024-09-27"
+        release_status: REL
+    strict_mmcif_archive_standard_l_peptide_topology_ccd_hashes_are_tamper_evidence_not_source_authentication: true
+    strict_mmcif_archive_standard_l_peptide_topology_final_augmented_canonical_topology_and_parser_observation_digests_refreshed: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_parser_inventory_bridge_implemented: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_parser_pedigree_recognized: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_inventory_commitment_schema_id: betelgeuze.mmcif_archive_standard_l_peptide_topology_preparation_inventory_commitment/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_parser_provenance_commitment_schema_and_sha_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_exact_rule_manifest_recomputed: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_carrier_ledger_recomputed: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_exact_atom_residue_chain_bond_marker_key_sets_recomputed: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_exact_graph_recomputed: true
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_inventory_commitment_recomputed: true
+    strict_mmcif_archive_standard_l_peptide_topology_topology_and_observation_only_coherent_rehash_against_parser_commitment_fail_closed: true
+    strict_mmcif_archive_standard_l_peptide_topology_downstream_identity_consumers_recognize_parser_pedigree: true
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_all_positive_preparation_parser_pedigree_recognized: true
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_all_positive_parser_observation_self_consistent: true
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_all_positive_canonical_ingest_status: unsupported
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_all_positive_preparation_status: incomplete
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_all_positive_promotion_gates_false: true
+    strict_mmcif_archive_standard_l_peptide_topology_valid_input_canonical_ingest_status: unsupported
+    strict_mmcif_archive_standard_l_peptide_topology_valid_input_preparation_status: incomplete
+    strict_mmcif_archive_standard_l_peptide_topology_valid_input_parser_observation_self_consistent: true
+    strict_mmcif_archive_standard_l_peptide_topology_valid_input_is_invalid: false
+    strict_mmcif_archive_standard_l_peptide_topology_valid_input_promoted: false
+    strict_mmcif_archive_standard_l_peptide_topology_exact_factory_artifact_chain_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_factory_artifacts_cross_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_emitted_source_reparsed_byte_exact: true
+    strict_mmcif_archive_standard_l_peptide_topology_exact_reparse_and_stable_emission_bound: true
+    strict_mmcif_archive_standard_l_peptide_topology_projection_scope: sequence_implied_archive_standard_ALA_GLY_heavy_reference_topology_only
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_schema_id: betelgeuze.v2_1_mmcif_archive_standard_l_peptide_topology_corpus/1.0.0
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_id: v2_1_strict_mmcif_archive_standard_l_peptide_topology_v1
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_round_trip_case_count: 5
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_failure_case_count: 24
+    strict_mmcif_archive_standard_l_peptide_topology_corpus_manifest_payload_sha256: 58377d1b60a493e62a53af8250c912b49b7475e76d41316ee8d2380ffaf967de
+    strict_mmcif_archive_standard_l_peptide_topology_max_input_bytes: 67108864
+    strict_mmcif_archive_standard_l_peptide_topology_max_output_bytes: 67108864
+    strict_mmcif_archive_standard_l_peptide_topology_max_source_id_utf8_bytes: 4096
+    strict_mmcif_archive_standard_l_peptide_topology_max_token_characters: 2048
+    strict_mmcif_archive_standard_l_peptide_topology_max_atom_rows: 80000
+    strict_mmcif_archive_standard_l_peptide_topology_max_materialized_bonds: 300000
+    strict_mmcif_archive_standard_l_peptide_topology_engine_rule_manifest_matched: true
+    strict_mmcif_archive_standard_l_peptide_topology_sequence_implied_standard_l_peptide_reference_topology_materialized: true
+    strict_mmcif_archive_standard_l_peptide_topology_sequence_implied_sequence_adjacent_peptide_reference_bonds_materialized: true
+    strict_mmcif_archive_standard_l_peptide_topology_source_authenticated: false
+    strict_mmcif_archive_standard_l_peptide_topology_observed_covalent_bond_established: false
+    strict_mmcif_archive_standard_l_peptide_topology_source_observed_covalence_established: false
+    strict_mmcif_archive_standard_l_peptide_topology_coordinate_peptide_geometry_validated: false
+    strict_mmcif_archive_standard_l_peptide_topology_coordinate_chain_breaks_excluded: false
+    strict_mmcif_archive_standard_l_peptide_topology_chemical_chain_breaks_detected_or_excluded: false
+    strict_mmcif_archive_standard_l_peptide_topology_independent_chemistry_established: false
+    strict_mmcif_archive_standard_l_peptide_topology_generic_chemistry_supported: false
+    strict_mmcif_archive_standard_l_peptide_topology_formal_charge_assigned: false
+    strict_mmcif_archive_standard_l_peptide_topology_protonation_interpreted: false
+    strict_mmcif_archive_standard_l_peptide_topology_hydrogens_completed: false
+    strict_mmcif_archive_standard_l_peptide_topology_stereochemistry_assigned: false
+    strict_mmcif_archive_standard_l_peptide_topology_modified_residue_supported: false
+    strict_mmcif_archive_standard_l_peptide_topology_nonstandard_monomer_supported: false
+    strict_mmcif_archive_standard_l_peptide_topology_preparation_ready: false
+    strict_mmcif_archive_standard_l_peptide_topology_generic_preparation_ready: false
+    strict_mmcif_archive_standard_l_peptide_topology_parameterability_assessed: false
+    strict_mmcif_archive_standard_l_peptide_topology_physics_supported: false
+    strict_mmcif_archive_standard_l_peptide_topology_runtime_eligible: false
+    strict_mmcif_archive_standard_l_peptide_topology_simulation_ready: false
+    strict_mmcif_archive_standard_l_peptide_topology_execution_authorized: false
+    strict_mmcif_archive_standard_l_peptide_topology_claim_safe: false
+    strict_mmcif_archive_standard_l_peptide_topology_general_mmcif_topology_complete: false
+    strict_mmcif_archive_standard_l_peptide_topology_general_mmcif_round_trip_evidence_ready: false
+    strict_mmcif_archive_standard_l_peptide_topology_all_format_round_trip_evidence_ready: false
+    strict_mmcif_archive_standard_l_peptide_topology_v2_1_complete: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_envelope_contract_implemented: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_round_trip_evidence_ready: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_evidence_ready: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_envelope_version: "1.0.0"
+    strict_mmcif_polymer_component_terminal_leaving_annotation_parser_version: "1.0.0"
+    strict_mmcif_polymer_component_terminal_leaving_annotation_writer_version: "1.0.0"
+    strict_mmcif_polymer_component_terminal_leaving_annotation_parser_name: betelgeuze_engine_v2.molecular.mmcif_polymer_component_terminal_leaving_policy.parse_mmcif_polymer_component_terminal_leaving_policy
+    strict_mmcif_polymer_component_terminal_leaving_annotation_profile_id: strict_mmcif_polymer_component_terminal_leaving_annotation_envelope/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_projection_schema_id: betelgeuze.mmcif_polymer_component_terminal_leaving_annotation_projection/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_rules_schema_id: betelgeuze.mmcif_polymer_terminal_leaving_rules/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_rules_sha256: 9235a365be1ee9f0189f94f37ed3317ff14903f0469d41f6fea2a6d2678f92b1
+    strict_mmcif_polymer_component_terminal_leaving_annotation_policy_schema_id: betelgeuze.mmcif_polymer_terminal_leaving_policy/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_state_schema_id: betelgeuze.mmcif_polymer_component_terminal_leaving_policy_state/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_source_binding_schema_id: betelgeuze.mmcif_polymer_component_terminal_leaving_policy_source_binding/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_write_receipt_schema_id: betelgeuze.mmcif_polymer_component_terminal_leaving_policy_write_receipt/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_round_trip_report_schema_id: betelgeuze.mmcif_polymer_component_terminal_leaving_policy_round_trip_report/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_projection_scope: source_reported_l_peptide_terminal_leaving_annotation_inventory_only
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_manifest_payload_sha256_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_manifest_payload_sha256: 3cfc5731f9943479f7246baf17148ac52a52b3557b35a584a14a6e606a579a3d
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_schema_id: betelgeuze.v2_1_mmcif_polymer_component_terminal_leaving_policy_corpus/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_id: v2_1_strict_mmcif_polymer_component_terminal_leaving_policy_v1
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_round_trip_case_count: 3
+    strict_mmcif_polymer_component_terminal_leaving_annotation_corpus_failure_case_count: 20
+    strict_mmcif_polymer_component_terminal_leaving_annotation_exact_seven_category_profile_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_category_order:
+      - _entity
+      - _struct_asym
+      - _entity_poly_seq
+      - _chem_comp
+      - _chem_comp_atom
+      - _chem_comp_bond
+      - _atom_site
+    strict_mmcif_polymer_component_terminal_leaving_annotation_exact_eleven_field_atom_header_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_chem_comp_atom_headers:
+      - _chem_comp_atom.comp_id
+      - _chem_comp_atom.atom_id
+      - _chem_comp_atom.type_symbol
+      - _chem_comp_atom.charge
+      - _chem_comp_atom.pdbx_aromatic_flag
+      - _chem_comp_atom.pdbx_leaving_atom_flag
+      - _chem_comp_atom.pdbx_stereo_config
+      - _chem_comp_atom.pdbx_backbone_atom_flag
+      - _chem_comp_atom.pdbx_n_terminal_atom_flag
+      - _chem_comp_atom.pdbx_c_terminal_atom_flag
+      - _chem_comp_atom.pdbx_ordinal
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_field_indices_zero_based: [0, 1, 2, 3, 4, 6, 10]
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_chem_comp_atom_headers:
+      - _chem_comp_atom.comp_id
+      - _chem_comp_atom.atom_id
+      - _chem_comp_atom.type_symbol
+      - _chem_comp_atom.charge
+      - _chem_comp_atom.pdbx_aromatic_flag
+      - _chem_comp_atom.pdbx_stereo_config
+      - _chem_comp_atom.pdbx_ordinal
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_profile_id: strict_mmcif_polymer_component_topology_envelope/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_parser_pedigree_id: betelgeuze.mmcif_polymer_component_topology_parser/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_preparation_inventory_commitment_schema_id: betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0
+    strict_mmcif_polymer_component_terminal_leaving_annotation_selected_child_column_order_and_token_values_preserved: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_projected_child_matches_independent_projection: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_parser_independent_acceptance_required: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_system_owner_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_new_system_parser_pedigree_introduced: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_system_snapshot_matches_independent_projection: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_topology_and_observation_digests_match_independent_projection: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_augmented_system_parser_observation_sha256_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_child_parser_pedigree_unchanged: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_preparation_inventory_commitment_matches_independent_projection: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_proof_sha256_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_gate_results_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_gate_count: 12
+    strict_mmcif_polymer_component_terminal_leaving_annotation_stage_local_child_gate_fields:
+      - child_stage_local_validation_required
+      - child_stage_local_validation_passed
+      - child_stage_local_parser_pedigree_equal
+      - child_stage_local_component_projection_equal
+      - child_stage_local_topology_state_equal
+      - child_stage_local_augmented_topology_equal
+      - child_stage_local_source_binding_equal
+      - child_stage_local_system_byte_exact
+      - child_stage_local_snapshot_equal
+      - child_stage_local_parser_observation_equal
+      - child_stage_local_preparation_commitment_equal
+      - child_stage_local_canonical_emission_byte_exact
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_stage_child_stage_proof_equality_required: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_stage_child_source_binding_equality_required: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_stage_child_snapshot_equality_required: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_stage_child_parser_observation_equality_required: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_stage_child_preparation_commitment_equality_required: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_stage_child_source_binding_snapshot_or_commitment_equality_required: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_source_flags:
+      - leaving_atom
+      - backbone_atom
+      - n_terminal_atom
+      - c_terminal_atom
+    strict_mmcif_polymer_component_terminal_leaving_annotation_source_flag_values: [N, Y]
+    strict_mmcif_polymer_component_terminal_leaving_annotation_source_flags_preserved_only: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_sequence_boundary_roles:
+      - c_sequence_boundary
+      - internal
+      - n_sequence_boundary
+      - singleton
+    strict_mmcif_polymer_component_terminal_leaving_annotation_sequence_boundary_roles_positional_not_chemical: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_atom_names_not_used_to_infer_links_or_terminal_chemistry: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_auth_identity_not_used_for_policy: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_coordinate_geometry_not_used: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_factory_only_evidence_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_bare_system_serialization_loses_wrapper_evidence: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_exact_artifact_chain_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_nested_evidence_immutable: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_semantic_state_source_identity_independent: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_source_identity_and_child_snapshot_bound_in_source_binding: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_emitted_source_reparsed_byte_exact: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_exact_reparse_and_stable_emission_bound: true
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_input_bytes: 67108864
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_output_bytes: 67108864
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_projection_bytes: 67108864
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_polymer_sequence_rows: 100000
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_component_rows: 4096
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_component_atom_rows: 80000
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_component_bond_rows: 120000
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_materialized_bonds: 120000
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_source_id_utf8_bytes: 4096
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_token_characters: 2048
+    strict_mmcif_polymer_component_terminal_leaving_annotation_max_output_line_characters: 2048
+    strict_mmcif_polymer_component_terminal_leaving_annotation_source_authenticated: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_atom_names_used_to_infer_links: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_auth_identity_used_for_policy: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_coordinate_geometry_used: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_geometry_or_distance_used: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_role_assignment_interpreted: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_chemical_terminal_state_assessed: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_terminal_chemistry_assigned: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_leaving_atom_policy_applied: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_leaving_atoms_removed: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_peptide_bonds_inferred: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_inter_residue_bonds_interpreted: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_inter_residue_bonds_materialized: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_cross_component_bonds_interpreted: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_independent_chemistry_established: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_chemistry_inferred: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_chemistry_interpreted: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_generic_chemistry_supported: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_preparation_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_generic_preparation_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_generic_molecular_preparation_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_global_preparation_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_global_molecular_preparation_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_parameterability_assessed: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_parameterizable: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_physics_supported: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_runtime_eligible: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_simulation_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_execution_authorized: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_claim_safe: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_general_mmcif_round_trip_evidence_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_all_format_round_trip_evidence_ready: false
+    strict_mmcif_polymer_component_terminal_leaving_annotation_v2_1_complete: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_contract_implemented: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_version: "1.0.0"
+    strict_mmcif_standard_l_peptide_neutral_preparation_transformer_name: betelgeuze_engine_v2.molecular.mmcif_standard_l_peptide_neutral_preparation.prepare_mmcif_standard_l_peptide_neutral_linkage
+    strict_mmcif_standard_l_peptide_neutral_preparation_transformer_version: "1.0.0"
+    strict_mmcif_standard_l_peptide_neutral_preparation_profile_id: strict_mmcif_ALA_GLY_source_explicit_CCD_neutral_linkage_preparation/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_policy_id: exact_ALA_GLY_source_explicit_CCD_neutral_linkage_policy/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_state_schema_id: betelgeuze.mmcif_standard_l_peptide_neutral_preparation_state/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_source_binding_schema_id: betelgeuze.mmcif_standard_l_peptide_neutral_preparation_source_binding/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_report_schema_id: betelgeuze.mmcif_standard_l_peptide_neutral_preparation_report/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_atom_mapping_schema_id: betelgeuze.mmcif_standard_l_peptide_neutral_preparation_atom_mapping/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_parameter_requirement_inventory_schema_id: betelgeuze.mmcif_standard_l_peptide_parameter_requirement_inventory/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_preparation_rule_manifest_schema_id: betelgeuze.standard_l_peptide_neutral_linkage_preparation_rule_manifest/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_preparation_rule_manifest_sha256: daa2beb6648d2749204093bfd0db5dd316cb38557b29890054ddc54c73193d7f
+    strict_mmcif_standard_l_peptide_neutral_preparation_heavy_rule_manifest_schema_id: betelgeuze.standard_l_peptide_heavy_topology_rule_manifest/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_heavy_rule_manifest_sha256: 4d941815d26431a5de9bd74b4860f84ce39232e7123ee87b3b61a104457eb244
+    strict_mmcif_standard_l_peptide_neutral_preparation_microstate_semantics: source_explicit_CCD_neutral_linkage_not_environmental_pH_or_protonation_correctness
+    strict_mmcif_standard_l_peptide_neutral_preparation_component_type_semantics: child_normalized_quoted_L_peptide_linking_for_ALA_and_GLY_not_byte_exact_official_GLY_component_type
+    strict_mmcif_standard_l_peptide_neutral_preparation_parameter_requirement_inventory_semantics: exact_instance_requirements_not_force_field_types_or_parameters
+    strict_mmcif_standard_l_peptide_neutral_preparation_exact_eight_category_profile_bound: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_category_order:
+      - _entity
+      - _entity_poly
+      - _struct_asym
+      - _entity_poly_seq
+      - _chem_comp
+      - _chem_comp_atom
+      - _chem_comp_bond
+      - _atom_site
+    strict_mmcif_standard_l_peptide_neutral_preparation_supported_components: [ALA, GLY]
+    strict_mmcif_standard_l_peptide_neutral_preparation_single_outer_source_reprojected: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_terminal_component_child_independently_accepted: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_archive_heavy_child_independently_accepted: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_exact_microstate_policy_matched: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_source_explicit_hydrogen_inventory_complete_for_profile: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_per_atom_formal_charge_policy_matched: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_source_stereochemistry_policy_matched: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_role_specific_atom_transform_applied: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_retained_source_to_prepared_atom_bijection_verified: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_input_bond_partition_verified: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_sequence_adjacent_peptide_bonds_materialized: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_prepared_heavy_reference_graph_matched: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_retained_coordinates_binary64_exact: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_generated_hydrogen_count_zero: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_profile_molecular_preparation_assessed: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_profile_molecular_preparation_ready: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_raw_outer_source_replay_verified: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_outer_source_writer_implemented: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_outer_source_round_trip_evidence_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_evidence_ready: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_manifest_payload_sha256_bound: true
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_schema_id: betelgeuze.v2_1_mmcif_standard_l_peptide_neutral_preparation_corpus/1.0.0
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_id: v2_1_exact_mmcif_standard_l_peptide_neutral_preparation_v1
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_positive_case_count: 4
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_failure_case_count: 16
+    strict_mmcif_standard_l_peptide_neutral_preparation_stored_artifact_tamper_case_count: 12
+    strict_mmcif_standard_l_peptide_neutral_preparation_corpus_manifest_payload_sha256: c5c0ab935305c8d15fb2868c8327d38622de85fe84b8426e32d14be88ff3c20d
+    strict_mmcif_standard_l_peptide_neutral_preparation_sequence_role_deleted_atom_ids:
+      singleton: []
+      n_sequence_boundary: [OXT, HXT]
+      internal: [H2, OXT, HXT]
+      c_sequence_boundary: [H2]
+    strict_mmcif_standard_l_peptide_neutral_preparation_link_partition_semantics: delete_3L_atoms_delete_3L_source_bonds_add_L_bonds_final_source_bonds_minus_2L
+    strict_mmcif_standard_l_peptide_neutral_preparation_production_parameter_set_status: missing
+    strict_mmcif_standard_l_peptide_neutral_preparation_improper_and_cmap_requirements_enumerated: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_input_bytes: 67108864
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_source_id_utf8_bytes: 4096
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_token_characters: 2048
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_output_line_characters: 2048
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_atoms: 80000
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_bonds: 120000
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_parameter_angles: 1000000
+    strict_mmcif_standard_l_peptide_neutral_preparation_max_parameter_propers: 1000000
+    strict_mmcif_standard_l_peptide_neutral_preparation_source_authenticated: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_source_observed_covalence_established: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_coordinate_peptide_geometry_validated: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_coordinate_chain_breaks_excluded: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_environmental_ph_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_environmental_protonation_correctness_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_generic_hydrogen_generation_performed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_generic_hydrogen_completion_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_independent_tautomer_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_independent_aromaticity_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_independent_cip_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_electronic_structure_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_modified_residue_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_nonstandard_monomer_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_water_role_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_ion_role_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_metal_role_or_coordination_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_cofactor_role_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_generic_chemistry_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_preparation_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_generic_preparation_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_generic_molecular_preparation_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_global_preparation_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_global_molecular_preparation_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_parameterability_assessed: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_parameterizable: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_production_parameter_set_available: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_physics_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_runtime_eligible: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_energy_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_force_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_minimization_supported: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_simulation_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_execution_authorized: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_claim_safe: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_general_mmcif_round_trip_evidence_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_all_format_round_trip_evidence_ready: false
+    strict_mmcif_standard_l_peptide_neutral_preparation_v2_1_complete: false
+    strict_mmcif_standard_l_peptide_heavy_completion_contract_implemented: true
+    strict_mmcif_standard_l_peptide_heavy_completion_version: "1.0.0"
+    strict_mmcif_standard_l_peptide_heavy_completion_transformer_name: betelgeuze_engine_v2.molecular.mmcif_standard_l_peptide_heavy_completion.complete_mmcif_standard_l_peptide_heavy_neutral_microstate
+    strict_mmcif_standard_l_peptide_heavy_completion_transformer_version: "1.0.0"
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_id: strict_mmcif_ALA_GLY_heavy_complete_fixed_neutral_microstate_completion/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_policy_id: exact_ALA_GLY_heavy_to_fixed_neutral_microstate_completion_policy/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_state_schema_id: betelgeuze.mmcif_standard_l_peptide_heavy_completion_state/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_source_binding_schema_id: betelgeuze.mmcif_standard_l_peptide_heavy_completion_source_binding/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_report_schema_id: betelgeuze.mmcif_standard_l_peptide_heavy_completion_report/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_atom_mapping_schema_id: betelgeuze.mmcif_standard_l_peptide_heavy_completion_atom_mapping/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_parameter_requirement_inventory_schema_id: betelgeuze.mmcif_standard_l_peptide_heavy_completion_parameter_requirements/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_rule_manifest_schema_id: betelgeuze.standard_l_peptide_heavy_to_fixed_neutral_all_atom_completion_rule_manifest/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_rule_manifest_version: "1.0.0"
+    strict_mmcif_standard_l_peptide_heavy_completion_rule_manifest_sha256: eed2b432c6a4b916370e14d922830a5eeb9f531acc579c94b7e823b8949810c6
+    strict_mmcif_standard_l_peptide_heavy_completion_microstate_semantics: fixed_neutral_profile_assignment_not_environmental_ph_or_protonation_correctness
+    strict_mmcif_standard_l_peptide_heavy_completion_geometry_semantics: profile_contract_admission_not_scientific_validation
+    strict_mmcif_standard_l_peptide_heavy_completion_parameter_requirement_inventory_semantics: bounded_exact_instance_requirements_not_force_field_types_or_parameters
+    strict_mmcif_standard_l_peptide_heavy_completion_exact_five_category_profile_bound: true
+    strict_mmcif_standard_l_peptide_heavy_completion_category_order:
+      - _entity
+      - _entity_poly
+      - _struct_asym
+      - _entity_poly_seq
+      - _atom_site
+    strict_mmcif_standard_l_peptide_heavy_completion_supported_components: [ALA, GLY]
+    strict_mmcif_standard_l_peptide_heavy_completion_heavy_bond_ideal_absolute_tolerance_angstrom: 0.20
+    strict_mmcif_standard_l_peptide_heavy_completion_same_asym_adjacent_c_n_distance_angstrom: [1.15, 1.55]
+    strict_mmcif_standard_l_peptide_heavy_completion_frame_anchor_atom_ids: [N, CA, C]
+    strict_mmcif_standard_l_peptide_heavy_completion_normalized_frame_sine_minimum: 0.05
+    strict_mmcif_standard_l_peptide_heavy_completion_ala_orientation_ordered_atom_ids: [N, C, CB]
+    strict_mmcif_standard_l_peptide_heavy_completion_ala_orientation_ideal_sign: positive
+    strict_mmcif_standard_l_peptide_heavy_completion_ala_normalized_absolute_triple_product_minimum: 0.05
+    strict_mmcif_standard_l_peptide_heavy_completion_archive_heavy_source_independently_accepted: true
+    strict_mmcif_standard_l_peptide_heavy_completion_completion_rule_manifest_matched: true
+    strict_mmcif_standard_l_peptide_heavy_completion_source_heavy_graph_preserved: true
+    strict_mmcif_standard_l_peptide_heavy_completion_source_heavy_coordinates_binary64_preserved: true
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_geometry_admission_assessed: true
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_geometry_admission_satisfied: true
+    strict_mmcif_standard_l_peptide_heavy_completion_role_specific_hydrogen_completion_applied: true
+    strict_mmcif_standard_l_peptide_heavy_completion_fixed_neutral_microstate_formal_charges_assigned: true
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_heavy_completion_assessed: true
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_heavy_completion_ready: true
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_molecular_preparation_assessed: true
+    strict_mmcif_standard_l_peptide_heavy_completion_profile_molecular_preparation_ready: true
+    strict_mmcif_standard_l_peptide_heavy_completion_raw_outer_source_replay_verified: true
+    strict_mmcif_standard_l_peptide_heavy_completion_outer_source_round_trip_evidence_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_evidence_ready: true
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_manifest_payload_sha256_bound: true
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_schema_id: betelgeuze.v2_1_mmcif_standard_l_peptide_heavy_completion_corpus/1.0.0
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_id: v2_1_exact_mmcif_standard_l_peptide_heavy_completion_v1
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_positive_case_count: 4
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_failure_case_count: 13
+    strict_mmcif_standard_l_peptide_heavy_completion_corpus_manifest_payload_sha256: 7fed000628174709fb5cd30955239f65e9395e981d3a34422fdcdb3a932bfb1f
+    strict_mmcif_standard_l_peptide_heavy_completion_production_parameter_set_status: missing
+    strict_mmcif_standard_l_peptide_heavy_completion_improper_and_cmap_requirements_enumerated: false
+    strict_mmcif_standard_l_peptide_heavy_completion_max_input_bytes: 67108864
+    strict_mmcif_standard_l_peptide_heavy_completion_max_source_id_utf8_bytes: 4096
+    strict_mmcif_standard_l_peptide_heavy_completion_max_atoms: 80000
+    strict_mmcif_standard_l_peptide_heavy_completion_max_bonds: 120000
+    strict_mmcif_standard_l_peptide_heavy_completion_max_parameter_angles: 1000000
+    strict_mmcif_standard_l_peptide_heavy_completion_max_parameter_propers: 1000000
+    strict_mmcif_standard_l_peptide_heavy_completion_source_authenticated: false
+    strict_mmcif_standard_l_peptide_heavy_completion_source_observed_covalence_established: false
+    strict_mmcif_standard_l_peptide_heavy_completion_scientific_geometry_validated: false
+    strict_mmcif_standard_l_peptide_heavy_completion_angles_validated: false
+    strict_mmcif_standard_l_peptide_heavy_completion_omega_validated: false
+    strict_mmcif_standard_l_peptide_heavy_completion_clashes_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_environmental_ph_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_environmental_protonation_correctness_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_generic_hydrogen_completion_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_independent_tautomer_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_independent_aromaticity_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_independent_cip_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_modified_residue_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_nonstandard_monomer_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_water_role_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_ion_role_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_metal_role_or_coordination_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_cofactor_role_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_generic_chemistry_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_preparation_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_generic_preparation_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_generic_molecular_preparation_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_global_preparation_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_global_molecular_preparation_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_parameterability_assessed: false
+    strict_mmcif_standard_l_peptide_heavy_completion_parameterizable: false
+    strict_mmcif_standard_l_peptide_heavy_completion_production_parameter_set_available: false
+    strict_mmcif_standard_l_peptide_heavy_completion_physics_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_runtime_eligible: false
+    strict_mmcif_standard_l_peptide_heavy_completion_energy_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_force_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_minimization_supported: false
+    strict_mmcif_standard_l_peptide_heavy_completion_simulation_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_execution_authorized: false
+    strict_mmcif_standard_l_peptide_heavy_completion_claim_safe: false
+    strict_mmcif_standard_l_peptide_heavy_completion_outer_source_writer_available: false
+    strict_mmcif_standard_l_peptide_heavy_completion_general_mmcif_round_trip_evidence_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_all_format_round_trip_evidence_ready: false
+    strict_mmcif_standard_l_peptide_heavy_completion_v2_1_complete: false
     strict_mmcif_polymer_sequence_nonpoly_component_topology_composition_envelope_contract_implemented: true
     strict_mmcif_polymer_sequence_nonpoly_component_topology_composition_round_trip_evidence_ready: true
     strict_mmcif_polymer_sequence_nonpoly_component_topology_composition_corpus_evidence_ready: true
@@ -1132,6 +1644,19 @@ capabilities:
       - exact_mmcif_polymer_component_topology_preparation_inventory_bridge_with_raw_atom_site_21_field_shape_and_canonical_identity_profile_provenance_carrier_category_resource_missingness_atom_bond_and_charge_hydrogen_origin_validation_plus_parser_attached_inventory_commitment
       - topology_and_observation_only_coherent_rehash_tamper_rejected_against_unkeyed_parser_inventory_commitment_without_source_authentication_or_preparation_promotion
       - versioned_mmcif_polymer_component_topology_three_round_trip_fifteen_failure_corpus_with_manifest_payload_sha256_6ae0e794e849b66f3d9f98717d3608e29e99852ed4853812692d6b54afea2808
+      - strict_opt_in_mmcif_archive_standard_l_peptide_topology_envelope_for_exact_five_category_polymer_entity_sequence_and_atom_site_profile
+      - archive_aligned_offline_pinned_ALA_GLY_sequence_implied_heavy_reference_topology_with_exact_residue_roles_c_boundary_OXT_same_asym_N_minus_one_C_N_materialization_and_no_coordinate_distance_auth_alias_or_cross_asym_selection
+      - exact_mmcif_archive_standard_l_peptide_topology_parser_pedigree_factory_artifact_chain_stable_round_trip_and_preparation_inventory_bridge_with_rule_manifest_carrier_ledger_marker_key_graph_and_commitment_semantic_recomputation
+      - versioned_mmcif_archive_standard_l_peptide_topology_five_round_trip_twenty_four_failure_corpus_with_manifest_payload_sha256_58377d1b60a493e62a53af8250c912b49b7475e76d41316ee8d2380ffaf967de
+      - strict_opt_in_mmcif_polymer_terminal_leaving_annotation_inventory_envelope_for_exact_eleven_field_chem_comp_atom_and_unchanged_seven_category_polymer_component_child
+      - stage_local_byte_exact_child_projection_system_snapshot_parser_pedigree_topology_observation_and_preparation_inventory_commitment_validation_with_factory_only_wrapper_evidence_and_no_cross_stage_source_binding_snapshot_or_commitment_equality_claim
+      - exact_source_y_n_leaving_backbone_n_terminal_c_terminal_flags_and_per_asym_sequence_boundary_roles_without_chemical_terminus_atom_removal_link_inference_or_preparation_promotion
+      - versioned_mmcif_polymer_terminal_leaving_annotation_inventory_three_round_trip_twenty_failure_corpus_with_manifest_payload_sha256_3cfc5731f9943479f7246baf17148ac52a52b3557b35a584a14a6e606a579a3d
+      - exact_eight_category_ALA_GLY_source_explicit_CCD_neutral_linkage_profile_local_preparation_transform_with_independent_terminal_and_archive_child_reprojection_role_specific_H2_OXT_HXT_deletion_same_asym_C_N_materialization_source_coordinate_retention_heavy_graph_crosscheck_factory_bound_mapping_parameter_requirements_and_raw_source_replay
+      - versioned_exact_ALA_GLY_neutral_linkage_preparation_four_positive_sixteen_failure_corpus_with_manifest_payload_sha256_c5c0ab935305c8d15fb2868c8327d38622de85fe84b8426e32d14be88ff3c20d
+      - exact_five_category_archive_heavy_ALA_GLY_to_fixed_neutral_all_atom_profile_transform_with_bit_exact_source_heavy_coordinates_N_CA_C_frame_parent_relative_CCD_ideal_hydrogen_generation_known_zero_formal_charge_deterministic_atom_bond_order_factory_bound_mapping_parameter_requirements_and_raw_source_replay
+      - bounded_heavy_bond_C_N_frame_and_ALA_orientation_profile_admission_without_scientific_geometry_angle_omega_clash_environmental_pH_protonation_CIP_generic_preparation_parameterability_physics_runtime_or_claim_promotion
+      - versioned_exact_ALA_GLY_heavy_completion_four_positive_thirteen_failure_corpus_with_manifest_payload_sha256_7fed000628174709fb5cd30955239f65e9395e981d3a34422fdcdb3a932bfb1f
       - strict_opt_in_mmcif_polymer_sequence_nonpoly_component_topology_composition_envelope_for_exact_nine_category_polymer_sequence_and_nonpoly_component_carrier
       - unchanged_nonpoly_component_topology_system_owner_and_parser_pedigree_with_polymer_sequence_source_evidence_only_exact_child_source_state_cross_binding_and_canonical_shared_loop_byte_equality
       - factory_only_source_bound_composition_state_receipt_report_and_aggregate_without_base_system_snapshot_equality_new_system_parser_or_scientific_authority_promotion
@@ -1224,8 +1749,12 @@ capabilities:
       - parameter_and_chemistry_coverage_evidence_missing
       - general_sdf_stereochemistry_arbitrary_property_records_rich_data_headers_multiple_records_v3000_and_context_round_trip_missing
       - general_pdb_conect_outside_the_selected_ordered_source_declaration_envelope_and_all_conect_bond_kind_order_covalence_coordination_chemistry_semantics_altloc_general_missingness_nonrepresentable_cryst1_symmetry_and_pbc_round_trip_missing
-      - general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_altloc_selection_explicit_biological_assembly_nonpoly_identity_nonpoly_component_topology_polymer_component_topology_polymer_sequence_nonpoly_component_topology_composition_nonpoly_covalent_struct_conn_topology_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_or_assembly_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing
+      - general_mmcif_categories_and_auth_entity_surfaces_outside_the_exact_common_core21_opt_in_explicit_altloc_selection_explicit_biological_assembly_nonpoly_identity_nonpoly_component_topology_polymer_component_topology_archive_standard_l_peptide_topology_polymer_component_terminal_leaving_annotation_inventory_standard_l_peptide_neutral_preparation_transform_standard_l_peptide_heavy_completion_transform_polymer_sequence_nonpoly_component_topology_composition_nonpoly_covalent_struct_conn_topology_polymer_sequence_membership_source_reported_unobserved_residue_unobserved_atom_zero_occupancy_residue_and_zero_occupancy_atom_envelope_profiles_optional_fields_altloc_or_assembly_forms_outside_the_selected_envelopes_missingness_and_zero_occupancy_outside_the_selected_envelopes_cell_and_multimodel_round_trip_missing
       - selected_fully_observed_polymer_component_topology_does_not_establish_ccd_or_reference_authentication_independent_chemistry_valence_aromaticity_stereo_peptide_or_inter_residue_bonds_modified_residue_meaning_preparation_parameterability_physics_runtime_claim_authority_general_mmcif_or_v2_1_completion
+      - selected_archive_standard_ALA_GLY_sequence_implied_heavy_reference_topology_does_not_establish_source_observed_covalence_coordinate_peptide_geometry_or_chain_break_detection_charge_hydrogen_protonation_stereo_generic_chemistry_preparation_parameterability_physics_runtime_simulation_execution_claim_authority_general_mmcif_or_v2_1_completion
+      - selected_polymer_component_terminal_leaving_annotation_inventory_does_not_establish_chemical_terminal_state_terminal_chemistry_leaving_atom_policy_atom_removal_peptide_or_inter_residue_bonds_independent_chemistry_preparation_parameterability_physics_runtime_claim_authority_general_mmcif_or_v2_1_completion
+      - exact_ALA_GLY_source_explicit_neutral_linkage_profile_readiness_does_not_promote_generic_or_global_preparation_environmental_pH_or_protonation_correctness_parameterability_production_parameters_physics_runtime_energy_force_minimization_simulation_execution_claim_authority_general_mmcif_all_format_readiness_or_v2_1_completion
+      - exact_ALA_GLY_heavy_completion_profile_readiness_does_not_promote_scientific_geometry_generic_hydrogen_completion_generic_or_global_preparation_environmental_pH_or_protonation_correctness_parameterability_production_parameters_physics_runtime_energy_force_minimization_simulation_execution_claim_authority_general_mmcif_all_format_readiness_or_v2_1_completion
       - general_struct_conn_disulf_hydrog_metalc_salt_quad_default_order_nonidentity_symmetry_coordination_polymer_endpoints_altloc_composition_and_other_surfaces_outside_selected_identity_symmetry_covale_nonpoly_envelope_missing
       - zero_occupancy_residue_declarations_do_not_establish_missingness_completeness_refinement_validity_or_preparation
       - zero_occupancy_atom_declarations_do_not_establish_missingness_occupancy_population_refinement_validity_or_preparation
@@ -1278,7 +1807,7 @@ capabilities:
       - customer_product_route_not_authorized
 
   - id: v2_independent_force_field
-    current_state: bounded_c1_c4_topology_nonphysical_full_parameter_assignment_direct_uncut_method_binding_schema_owned_scalar_energy_diagnostic_and_method_owned_cpu_energy_force_nonperiodic_virial_reference_kernel_contracts_plus_dual_schema_exact_methane_fit_harmonic_virial_and_descent_restart_diagnostics
+    current_state: bounded_c1_c4_topology_nonphysical_full_parameter_assignment_direct_uncut_method_binding_schema_owned_scalar_energy_diagnostic_and_method_owned_cpu_energy_force_nonperiodic_virial_reference_kernel_contracts_plus_dual_schema_exact_methane_fit_harmonic_virial_and_descent_restart_diagnostics_plus_spice_2_0_1_c1_c4_quantum_reference_observation_evidence_nonpromoting_source_review_packet_source_bound_pair_relative_energy_negative_gradient_target_view_fit_only_bonded_basis_observability_and_prospective_graph_family_disjoint_population_preflight
     scientific_validity_green: false
     benchmark_validity_green: false
     execution_enabled: false
@@ -1303,6 +1832,207 @@ capabilities:
     production_evaluation_method_defined: false
     physics_supported: false
     runtime_eligible: false
+    spice_c1_c4_quantum_reference_contract_implemented: true
+    spice_c1_c4_quantum_reference_schema_id: betelgeuze.spice_c1_c4_quantum_reference_evidence/1.0.0
+    spice_c1_c4_quantum_reference_admission_report_schema_id: betelgeuze.spice_c1_c4_quantum_reference_admission_report/1.0.0
+    spice_c1_c4_quantum_reference_source_release: SPICE 2.0.1
+    spice_c1_c4_quantum_reference_doi: 10.5281/zenodo.10975225
+    spice_c1_c4_quantum_reference_qcarchive_dataset_id: 340
+    spice_c1_c4_quantum_reference_qcarchive_specification_name: spec_4
+    spice_c1_c4_quantum_reference_split_policy_id: per_group_related_conformation_pair_sha256_15_5_5/1.0.0
+    spice_c1_c4_quantum_reference_artifact_byte_count: 251253
+    spice_c1_c4_quantum_reference_artifact_sha256: ffa884e94f624b89ac8602cda8ff01f363f60838e4efc1c2a3c0a057bf94c0a3
+    spice_c1_c4_quantum_reference_core_sha256: 265c9883c06755cb845dd682b3b16634ea1f0d8ffd76dc60094b2224ab072dae
+    spice_c1_c4_reference_observation_inventory_complete: true
+    spice_c1_c4_source_declared_cc0_metadata_admitted: true
+    spice_c1_c4_license_human_reviewed: false
+    spice_c1_c4_source_whole_file_authenticated: false
+    spice_c1_c4_source_review_packet_contract_implemented: true
+    spice_c1_c4_source_review_packet_schema_id: betelgeuze.spice_c1_c4_source_authentication_license_review_packet/1.0.0
+    spice_c1_c4_source_review_packet_report_schema_id: betelgeuze.spice_c1_c4_source_review_packet_report/1.0.0
+    spice_c1_c4_source_review_packet_claim_scope: machine_prefilled_upstream_metadata_and_review_requirements_only
+    spice_c1_c4_source_review_packet_artifact_byte_count: 8933
+    spice_c1_c4_source_review_packet_artifact_sha256: cf1c5179809331e8effb2c22e8dcd746169779b16c71b8629eb16c487c1099ad
+    spice_c1_c4_source_review_packet_core_sha256: a88fa4ead67c5a04ac372715b60e68573981f49cdac95785389e175a2efdee84
+    spice_c1_c4_source_review_packet_captured_at_utc: "2026-07-15T03:01:58Z"
+    spice_c1_c4_source_review_packet_integrity: true
+    spice_c1_c4_upstream_metadata_projection_bound: true
+    spice_c1_c4_repository_release_projection_bound: true
+    spice_c1_c4_zenodo_record_id: 10975225
+    spice_c1_c4_zenodo_record_revision: 10
+    spice_c1_c4_zenodo_record_etag: '"10"'
+    spice_c1_c4_zenodo_concept_doi: 10.5281/zenodo.7258939
+    spice_c1_c4_zenodo_file_id: 0680b54c-17a3-4d17-bdd0-6385b2733181
+    spice_c1_c4_zenodo_file_version_id: 4792aaf4-e39a-4f1f-bc2b-b96c10f82f56
+    spice_c1_c4_zenodo_expected_whole_file_byte_count: 37479271148
+    spice_c1_c4_zenodo_upstream_checksum_algorithm: md5
+    spice_c1_c4_zenodo_upstream_checksum_hex: bfba2224b6540e1390a579569b475510
+    spice_c1_c4_zenodo_official_sha256_available: false
+    spice_c1_c4_github_release_id: 151245684
+    spice_c1_c4_github_tag_kind: lightweight
+    spice_c1_c4_github_tag_target_commit: b99b3f4d85585df6bdfeca5a56420c57ec6385f1
+    spice_c1_c4_github_commit_verification_observed: verified
+    spice_c1_c4_github_tag_signature_present: false
+    spice_c1_c4_github_dataset_artifact_digest_published: false
+    spice_c1_c4_dataset_cc0_declarations_observed: true
+    spice_c1_c4_repository_mit_license_observed: true
+    spice_c1_c4_dataset_and_repository_license_scopes_distinguished: true
+    spice_c1_c4_whole_file_local_stream_completed: false
+    spice_c1_c4_whole_file_upstream_byte_count_matched: false
+    spice_c1_c4_whole_file_upstream_checksum_matched: false
+    spice_c1_c4_whole_file_byte_identity_established: false
+    spice_c1_c4_whole_file_local_sha256_available: false
+    spice_c1_c4_subset_extraction_receipt_available: false
+    spice_c1_c4_subset_extraction_replayed: false
+    spice_c1_c4_admitted_subset_bound_to_whole_file: false
+    spice_c1_c4_cryptographic_publisher_signature_present: false
+    spice_c1_c4_cryptographic_publisher_identity_authenticated: false
+    spice_c1_c4_license_scope_interpretation_status: pending_human_review
+    spice_c1_c4_commercial_use_authorized: false
+    spice_c1_c4_redistribution_authorized: false
+    spice_c1_c4_reference_group_count: 4
+    spice_c1_c4_reference_record_count: 200
+    spice_c1_c4_fit_record_count: 120
+    spice_c1_c4_selection_record_count: 40
+    spice_c1_c4_holdout_record_count: 40
+    spice_c1_c4_fit_source_pair_count: 60
+    spice_c1_c4_selection_source_pair_count: 20
+    spice_c1_c4_holdout_source_pair_count: 20
+    spice_c1_c4_exact_record_overlap_count: 0
+    spice_c1_c4_geometry_overlap_count: 0
+    spice_c1_c4_qcarchive_molecule_id_overlap_count: 0
+    spice_c1_c4_source_pair_overlap_count: 0
+    spice_c1_c4_molecular_graph_overlap_count: 4
+    spice_c1_c4_molecular_graph_disjoint: false
+    spice_c1_c4_time_disjoint: false
+    spice_c1_c4_release_disjoint: false
+    spice_c1_c4_generic_validation_split: false
+    spice_c1_c4_claim_scope: within_same_four_graphs_unseen_conformations_only
+    spice_c1_c4_energy_gradient_is_force: false
+    spice_c1_c4_absolute_cross_molecule_energy_fitting_allowed: false
+    spice_c1_c4_force_matching_target_view_contract_implemented: true
+    spice_c1_c4_force_matching_target_view_schema_id: betelgeuze.spice_c1_c4_relative_energy_force_targets/1.0.0
+    spice_c1_c4_force_matching_target_view_report_schema_id: betelgeuze.spice_c1_c4_relative_energy_force_target_report/1.0.0
+    spice_c1_c4_force_matching_target_view_protocol_id: spice_c1_c4_pair_relative_energy_negative_gradient_targets/1.0.0
+    spice_c1_c4_force_matching_target_view_protocol_sha256: 34757b44cb6ca6471ed835dce41b70bc85d4c687347fb6e598bbc7951ccd2f75
+    spice_c1_c4_force_matching_target_view_core_sha256: caff216e22207a368ad640dc2fa0567dec3d3f04027b3ce2c3b8c433ee1c4c74
+    spice_c1_c4_force_matching_target_view_byte_count: 686561
+    spice_c1_c4_force_matching_target_view_sha256: ff19771d03dc476dd538c99b1468bce3ada25e68623b3cb329f8e71c05fd7e13
+    spice_c1_c4_force_matching_target_view_claim_scope: source_bound_pair_relative_energy_and_negative_gradient_target_view_only
+    spice_c1_c4_force_matching_target_view_validation_scope: within_same_four_graphs_unseen_conformations_only
+    spice_c1_c4_force_matching_target_view_source_artifact_sha256: ffa884e94f624b89ac8602cda8ff01f363f60838e4efc1c2a3c0a057bf94c0a3
+    spice_c1_c4_force_matching_target_view_unit_convention_id: codata_2022_central_value_decimal_rational_single_binary64_round/1.0.0
+    spice_c1_c4_force_matching_target_view_energy_definition: source_suffix_p_energy_minus_source_suffix_p_plus_25_energy
+    spice_c1_c4_force_matching_target_view_force_definition: exact_float32_sign_bit_negation_of_source_energy_gradient
+    spice_c1_c4_force_matching_target_view_force_projection_applied: false
+    spice_c1_c4_force_matching_target_view_mean_removal_applied: false
+    spice_c1_c4_force_matching_target_view_clipping_applied: false
+    spice_c1_c4_force_matching_target_view_denoising_applied: false
+    spice_c1_c4_force_matching_target_view_pair_energy_count: 100
+    spice_c1_c4_force_matching_target_view_fit_pair_energy_count: 60
+    spice_c1_c4_force_matching_target_view_selection_pair_energy_count: 20
+    spice_c1_c4_force_matching_target_view_holdout_pair_energy_count: 20
+    spice_c1_c4_force_matching_target_view_force_record_count: 200
+    spice_c1_c4_force_matching_target_view_fit_force_record_count: 120
+    spice_c1_c4_force_matching_target_view_selection_force_record_count: 40
+    spice_c1_c4_force_matching_target_view_holdout_force_record_count: 40
+    spice_c1_c4_force_matching_target_view_force_scalar_count: 5700
+    spice_c1_c4_force_matching_target_view_fit_force_scalar_count: 3420
+    spice_c1_c4_force_matching_target_view_selection_force_scalar_count: 1140
+    spice_c1_c4_force_matching_target_view_holdout_force_scalar_count: 1140
+    spice_c1_c4_force_matching_target_view_max_net_force_norm_binary64_be_hex: 3fc1ae32cb6de50c
+    spice_c1_c4_force_matching_target_view_max_centroid_torque_norm_binary64_be_hex: 3fc759704f02a8db
+    spice_c1_c4_force_matching_target_view_derived_on_demand_from_frozen_source_bytes: true
+    spice_c1_c4_force_matching_target_view_committed_duplicate_artifact: false
+    spice_c1_c4_force_matching_target_view_public_holdout_blind_to_humans: false
+    spice_c1_c4_force_matching_target_view_loss_defined: false
+    spice_c1_c4_force_matching_target_view_identifiability_established: false
+    spice_c1_c4_bonded_basis_observability_contract_implemented: true
+    spice_c1_c4_bonded_basis_observability_schema_id: betelgeuze.spice_c1_c4_bonded_basis_observability/1.0.0
+    spice_c1_c4_bonded_basis_observability_protocol_id: spice_c1_c4_fit_partition_graph_pair_balanced_bonded_basis_observability/1.0.0
+    spice_c1_c4_bonded_basis_observability_protocol_sha256: "063bbbea6d97ddc6f65242e70898442ae6514838c5acc02c9e2d57562089af93"
+    spice_c1_c4_bonded_basis_observability_claim_scope: fit_partition_graph_pair_balanced_bonded_design_observability_only
+    spice_c1_c4_bonded_basis_observability_source_target_core_sha256: caff216e22207a368ad640dc2fa0567dec3d3f04027b3ce2c3b8c433ee1c4c74
+    spice_c1_c4_bonded_basis_observability_primary_variant_id: parity_even_low_order_n1_3
+    spice_c1_c4_bonded_basis_observability_primary_variant_column_count: 51
+    spice_c1_c4_bonded_basis_observability_variant_column_counts: [51, 72, 72, 114]
+    spice_c1_c4_bonded_basis_observability_fit_pair_count: 60
+    spice_c1_c4_bonded_basis_observability_fit_energy_row_count: 60
+    spice_c1_c4_bonded_basis_observability_fit_force_row_count: 3420
+    spice_c1_c4_bonded_basis_observability_fit_total_row_count: 3480
+    spice_c1_c4_bonded_basis_observability_bond_environment_key_count: 6
+    spice_c1_c4_bonded_basis_observability_angle_environment_key_count: 9
+    spice_c1_c4_bonded_basis_observability_proper_environment_key_count: 7
+    spice_c1_c4_bonded_basis_observability_loss_weighting: fit_only_target_rms_about_zero_graph_quarter_energy_force_half_pair_and_scalar_mean
+    spice_c1_c4_bonded_basis_observability_energy_target_rms_binary64_be_hex: "4045541210b48320"
+    spice_c1_c4_bonded_basis_observability_force_target_rms_binary64_be_hex: "40515b5c68e9628d"
+    spice_c1_c4_bonded_basis_observability_near_null_ratio_gate: 1.0e-8
+    spice_c1_c4_bonded_basis_observability_selection_or_holdout_used: false
+    spice_c1_c4_bonded_basis_observability_target_centering_applied: false
+    spice_c1_c4_bonded_basis_observability_regularization_applied: false
+    spice_c1_c4_bonded_basis_observability_cross_platform_bitwise_svd_assessed: false
+    spice_c1_c4_bonded_basis_observability_all_declared_variants_conditional_numerical_full_column_rank: true
+    spice_c1_c4_bonded_basis_observability_conditional_fit_design_full_column_rank: true
+    spice_c1_c4_bonded_basis_observability_coefficient_fit_performed: false
+    spice_c1_c4_bonded_basis_observability_bonded_parameter_identifiability_established: false
+    spice_c1_c4_bonded_basis_observability_physical_parameter_identifiability_established: false
+    spice_c1_c4_bonded_basis_observability_transferability_established: false
+    spice_c1_c4_bonded_basis_observability_committed_duplicate_report_artifact: false
+    spice_graph_family_disjoint_population_preflight_contract_implemented: true
+    spice_graph_family_disjoint_population_preflight_schema_id: betelgeuze.spice_graph_family_disjoint_population_preflight/1.0.0
+    spice_graph_family_disjoint_population_preflight_protocol_id: spice_hydrocarbon_target_independent_hierarchical_graph_family_split_preflight/1.0.0
+    spice_graph_family_disjoint_population_preflight_protocol_sha256: 57482f6a531b068c3589c7820025ed52e4af0cb3bde482180f8e9d08ba877415
+    spice_graph_family_disjoint_population_preflight_claim_scope: prospective_metadata_only_graph_family_split_requirements_no_scientific_evidence
+    spice_graph_family_disjoint_population_preflight_isotope_stereo_scope: explicitly_absent_only
+    spice_graph_family_disjoint_population_preflight_isotope_or_stereo_present_requires_new_identity_schema: true
+    spice_graph_family_disjoint_population_preflight_graph_hash_and_topology_receipt_goldens_protocol_bound: true
+    spice_graph_family_disjoint_population_preflight_source_integrity_replay_decodes_target_values: true
+    spice_graph_family_disjoint_population_preflight_population_or_split_decision_uses_target_values: false
+    spice_graph_family_disjoint_population_preflight_uncertainty_outer_unit: graph_or_family
+    spice_graph_family_disjoint_population_preflight_source_pair_blocks_nested_within_graph_only: true
+    spice_graph_family_disjoint_population_preflight_source_review_packet_artifact_sha256: cf1c5179809331e8effb2c22e8dcd746169779b16c71b8629eb16c487c1099ad
+    spice_graph_family_disjoint_population_preflight_current_graph_count: 4
+    spice_graph_family_disjoint_population_preflight_current_family_count: 1
+    spice_graph_family_disjoint_population_preflight_current_family_id: neutral_singlet_explicit_h_linear_alkane
+    spice_graph_family_disjoint_population_preflight_current_graph_overlap_count: 4
+    spice_graph_family_disjoint_population_preflight_current_family_overlap_count: 1
+    spice_graph_family_disjoint_population_preflight_current_graph_disjoint: false
+    spice_graph_family_disjoint_population_preflight_current_family_disjoint: false
+    spice_graph_family_disjoint_population_preflight_current_time_disjoint: false
+    spice_graph_family_disjoint_population_preflight_current_release_disjoint: false
+    spice_graph_family_disjoint_population_preflight_current_public_holdout_blind_to_humans: false
+    spice_graph_family_disjoint_population_preflight_current_canonical_graph_sha256:
+      - [c, aba02557b2c9cb089288307c7ceb2dbfafb65d3f1cf4e43b3cd60193b5474c20]
+      - [cc, 1dd4a184939eb977a437b6e760eae448aef2a3990f09fe51bc04eb927f149293]
+      - [ccc, e9c44323a148dd0bbe9cd9cc559ca6ae97e98a585bb92d8b7a16cfca6bcc2fd0]
+      - [cccc, c35a8d7eae753900b4ee0b86669c5b047359122aa7ed8122f612362ae00e19f9]
+    spice_graph_family_disjoint_population_preflight_current_topology_receipt_sha256: 560e0331afad68873a6d62fb2577f9af6ee7434b656e24c4231811f82238d805
+    spice_graph_family_disjoint_population_preflight_current_bond_angle_proper_key_counts: [6, 9, 7]
+    spice_graph_family_disjoint_population_preflight_c5_delta_key_counts_vs_c1_c4: [0, 1, 2]
+    spice_graph_family_disjoint_population_preflight_c6_delta_key_counts_vs_c1_c4: [0, 1, 3]
+    spice_graph_family_disjoint_population_preflight_c6_delta_key_counts_vs_c5: [0, 0, 1]
+    spice_graph_family_disjoint_population_preflight_c7_plus_no_new_local_keys_after_c1_c6: true
+    spice_graph_family_disjoint_population_preflight_c5_c6_accuracy_holdout_eligible: false
+    spice_graph_family_disjoint_population_preflight_c5_c6_ood_or_coverage_expansion_only: true
+    spice_graph_family_disjoint_population_preflight_versioned_coverage_expansion_required: true
+    spice_graph_family_disjoint_population_preflight_prerequisite_receipts_satisfied: false
+    spice_graph_family_disjoint_population_preflight_expanded_source_data_acquired: false
+    spice_graph_family_disjoint_population_preflight_expanded_target_view_available: false
+    spice_graph_family_disjoint_population_preflight_split_manifest_available: false
+    spice_graph_family_disjoint_population_preflight_threshold_manifest_available: false
+    spice_graph_family_disjoint_population_preflight_scientific_validation_performed: false
+    spice_graph_family_disjoint_population_preflight_transferability_established: false
+    spice_c1_c4_candidate_fitting_performed: false
+    spice_c1_c4_candidate_parameter_set_available: false
+    spice_c1_c4_parameter_family_sufficiency_assessed: false
+    spice_c1_c4_reference_validation_performed: false
+    spice_c1_c4_production_parameters_available: false
+    spice_c1_c4_parameterability_assessed: false
+    spice_c1_c4_parameterizable: false
+    spice_c1_c4_physics_ready: false
+    spice_c1_c4_runtime_eligible: false
+    spice_c1_c4_execution_authorized: false
+    spice_c1_c4_claim_safe: false
     implementation_evidence:
       - factory_only_source_bound_exact_methane_canonical_bond_and_angle_identity_inventory
       - deterministic_four_ch_bond_and_six_hch_angle_identities_without_parameter_or_physics_promotion
@@ -1360,13 +2090,47 @@ capabilities:
       - literal_bond_angle_proper_lj_coulomb_energy_with_same_graph_local_reverse_mode_force_and_one_four_scaling_once
       - canonical_per_term_force_decomposition_and_complete_cell_free_nonperiodic_virial_without_pressure_stress_or_volume_semantics
       - c1_c4_scalar_energy_parity_coordinate_finite_difference_affine_virial_invariance_conservation_and_fail_closed_evidence
+      - spice_2_0_1_c1_c4_200_row_float32_coordinate_gradient_float64_energy_quantum_reference_observation_inventory
+      - target_independent_source_pair_preserving_15_5_5_per_graph_split_with_zero_exact_record_geometry_qcarchive_molecule_and_source_pair_overlap
+      - same_four_graphs_unseen_conformations_only_with_graph_time_and_release_disjointness_false
+      - energy_gradient_not_force_and_isolated_monomer_nonidentifiability_nonpromotion
+      - source_declared_cc0_with_human_license_review_and_whole_source_authentication_pending
+      - frozen_machine_prefilled_zenodo_revision_file_checksum_and_github_release_tag_readme_license_review_input_snapshot
+      - dataset_cc0_declarations_and_repository_mit_software_license_contexts_explicitly_separated_without_human_scope_decision
+      - whole_file_stream_and_exact_hdf5_subset_extraction_receipt_requirements_predeclared_but_missing
+      - review_packet_replayed_offline_from_small_frozen_bytes_without_hdf5_network_runtime_or_wheel_data_packaging
+      - source_bound_spice_c1_c4_pair_relative_energy_seed_minus_nearby_lower_and_negative_gradient_force_target_view
+      - codata_2022_central_value_convention_with_exact_rational_unit_conversion_and_one_binary64_round
+      - pair_atomic_100_relative_energy_200_force_row_5700_force_scalar_target_view_with_60_20_20_and_120_40_40_partitions
+      - canonical_target_view_replayed_from_frozen_source_bytes_without_committed_duplicate_target_artifact
+      - fit_only_graph_and_energy_force_balanced_bonded_basis_loss_with_selection_and_holdout_excluded
+      - same_scalar_pair_energy_and_negative_cartesian_derivative_force_design_with_exact_3480_by_114_full_family_shape
+      - predeclared_primary_parity_even_51_column_basis_and_three_nonselecting_misspecification_allowed_family_audits
+      - conditional_full_column_rank_for_all_four_fit_design_variants_without_coefficients_candidate_or_physical_identifiability_promotion
+      - target_independent_release_family_scaffold_graph_conformer_record_hierarchy_frozen_as_prospective_metadata_only_preflight
+      - current_public_c1_c4_partitions_replayed_with_four_graph_and_one_linear_alkane_family_overlap_and_no_disjoint_or_blind_claim
+      - absent_isotope_stereo_only_canonical_graph_sha256_recipe_domain_and_c1_c4_golden_topology_receipt_bound_to_protocol
+      - uncertainty_outer_graph_or_family_with_source_pair_blocks_nested_within_graph
+      - strict_source_integrity_replay_decodes_targets_but_population_split_decisions_use_topology_partition_metadata_only
+      - exact_c5_one_angle_two_proper_and_c6_one_additional_proper_coverage_deltas_block_relabeling_as_current_accuracy_holdout
+      - future_in_family_graph_family_ood_and_externally_sealed_blind_lanes_separated_without_expanded_data_or_candidate
     blockers:
       - scientifically_fitted_bonded_charge_and_lj_parameters_missing
       - scientifically_validated_production_evaluation_method_and_energy_force_virial_kernel_missing
       - force_energy_reference_validation_missing
       - bounded_nonphysical_contract_fixture_mapping_exists_but_scientifically_validated_production_domain_missing
       - legacy_v1_0_artifact_migration_and_deprecation_policy_missing
-      - licensed_scientific_fit_dataset_and_split_missing
+      - source_review_packet_binds_official_metadata_but_local_whole_file_stream_and_subset_extraction_receipts_are_missing
+      - future_subset_extraction_receipt_must_explicitly_bind_atomic_numbers_mapped_identity_connectivity_and_record_index_mapping
+      - dataset_cc0_and_repository_mit_declarations_observed_but_human_license_scope_and_commercial_legal_clearance_are_pending
+      - publisher_signed_dataset_digest_or_equivalent_strong_source_authentication_missing
+      - pair_preserving_same_four_graph_conformer_split_is_not_graph_family_time_or_release_disjoint_validation
+      - exact_c1_c4_applicability_contains_no_distinct_in_domain_graph_holdout
+      - c5_c6_introduce_new_local_keys_and_require_versioned_applicability_basis_and_observability_expansion
+      - immutable_graph_family_split_threshold_and_externally_sealed_blind_manifests_missing
+      - scientific_fit_protocol_candidate_receipt_and_independent_holdout_validation_missing
+      - fit_only_bonded_design_full_rank_does_not_establish_physical_parameter_identifiability_family_sufficiency_or_transferability
+      - isolated_monomer_total_energy_and_energy_gradient_evidence_does_not_identify_transferable_charge_lj_or_one_four_parameters
       - reviewed_parameter_provenance_missing
       - complete_nonbonded_periodic_pressure_virial_evidence_missing
       - diagnostic_first_order_stationarity_is_not_minimum_evidence

@@ -1,0 +1,67 @@
+data_ala_gly_ala_heavy_completion
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#
+loop_
+_entity_poly.entity_id
+_entity_poly.type
+_entity_poly.nstd_chirality
+_entity_poly.nstd_linkage
+_entity_poly.nstd_monomer
+1 polypeptide(L) no no no
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_entity_poly_seq.entity_id
+_entity_poly_seq.num
+_entity_poly_seq.mon_id
+_entity_poly_seq.hetero
+1 1 ALA n
+1 2 GLY n
+1 3 ALA n
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+ATOM 1 N N . ALA A 1 1 ? -0.966 0.493 1.500 1.00 10.00 ? 101 ALA XA N 1
+ATOM 2 C CA . ALA A 1 1 ? 0.257 0.418 0.692 1.00 10.00 ? 101 ALA XA CA 1
+ATOM 3 C C . ALA A 1 1 ? -0.094 0.017 -0.716 1.00 10.00 ? 101 ALA XA C 1
+ATOM 4 O O . ALA A 1 1 ? -1.056 -0.682 -0.923 1.00 10.00 ? 101 ALA XA O 1
+ATOM 5 C CB . ALA A 1 1 ? 1.204 -0.620 1.296 1.00 10.00 ? 101 ALA XA CB 1
+ATOM 6 N N . GLY A 1 2 ? 1.236 0.017 -0.716 1.00 11.00 ? 102 GLY XA N 1
+ATOM 7 C CA . GLY A 1 2 ? 0.066 -0.872 -0.690 1.00 11.00 ? 102 GLY XA CA 1
+ATOM 8 C C . GLY A 1 2 ? -1.193 -0.044 -0.687 1.00 11.00 ? 102 GLY XA C 1
+ATOM 9 O O . GLY A 1 2 ? -1.124 1.162 -0.705 1.00 11.00 ? 102 GLY XA O 1
+ATOM 10 N N . ALA A 1 3 ? 0.137 -0.044 -0.687 1.00 12.00 ? 103 ALA XA N 1
+ATOM 11 C CA . ALA A 1 3 ? 1.360 -0.119 -1.495 1.00 12.00 ? 103 ALA XA CA 1
+ATOM 12 C C . ALA A 1 3 ? 1.009 -0.520 -2.903 1.00 12.00 ? 103 ALA XA C 1
+ATOM 13 O O . ALA A 1 3 ? 0.047 -1.219 -3.110 1.00 12.00 ? 103 ALA XA O 1
+ATOM 14 C CB . ALA A 1 3 ? 2.307 -1.157 -0.891 1.00 12.00 ? 103 ALA XA CB 1
+ATOM 15 O OXT . ALA A 1 3 ? 1.764 -0.098 -3.929 1.00 12.00 ? 103 ALA XA OXT 1
+#

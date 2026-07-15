@@ -1,0 +1,172 @@
+data_exact_ala_gly_preparation
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#
+loop_
+_entity_poly.entity_id
+_entity_poly.type
+_entity_poly.nstd_chirality
+_entity_poly.nstd_linkage
+_entity_poly.nstd_monomer
+1 polypeptide(L) no no no
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_entity_poly_seq.entity_id
+_entity_poly_seq.num
+_entity_poly_seq.mon_id
+_entity_poly_seq.hetero
+1 1 ALA n
+1 2 GLY n
+1 3 ALA n
+1 4 GLY n
+#
+loop_
+_chem_comp.id
+_chem_comp.type
+_chem_comp.pdbx_formal_charge
+ALA 'L-peptide linking' 0
+GLY 'L-peptide linking' 0
+#
+loop_
+_chem_comp_atom.comp_id
+_chem_comp_atom.atom_id
+_chem_comp_atom.type_symbol
+_chem_comp_atom.charge
+_chem_comp_atom.pdbx_aromatic_flag
+_chem_comp_atom.pdbx_leaving_atom_flag
+_chem_comp_atom.pdbx_stereo_config
+_chem_comp_atom.pdbx_backbone_atom_flag
+_chem_comp_atom.pdbx_n_terminal_atom_flag
+_chem_comp_atom.pdbx_c_terminal_atom_flag
+_chem_comp_atom.pdbx_ordinal
+ALA N N 0 N N N Y Y N 1
+ALA CA C 0 N N S Y N N 2
+ALA C C 0 N N N Y N Y 3
+ALA O O 0 N N N Y N Y 4
+ALA CB C 0 N N N N N N 5
+ALA OXT O 0 N Y N Y N Y 6
+ALA H H 0 N N N Y Y N 7
+ALA H2 H 0 N Y N Y Y N 8
+ALA HA H 0 N N N Y N N 9
+ALA HB1 H 0 N N N N N N 10
+ALA HB2 H 0 N N N N N N 11
+ALA HB3 H 0 N N N N N N 12
+ALA HXT H 0 N Y N Y N Y 13
+GLY N N 0 N N N Y Y N 1
+GLY CA C 0 N N N Y N N 2
+GLY C C 0 N N N Y N Y 3
+GLY O O 0 N N N Y N Y 4
+GLY OXT O 0 N Y N Y N Y 5
+GLY H H 0 N N N Y Y N 6
+GLY H2 H 0 N Y N Y Y N 7
+GLY HA2 H 0 N N N Y N N 8
+GLY HA3 H 0 N N N Y N N 9
+GLY HXT H 0 N Y N Y N Y 10
+#
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+_chem_comp_bond.value_order
+_chem_comp_bond.pdbx_aromatic_flag
+_chem_comp_bond.pdbx_stereo_config
+_chem_comp_bond.pdbx_ordinal
+ALA N CA SING N N 1
+ALA N H SING N N 2
+ALA N H2 SING N N 3
+ALA CA C SING N N 4
+ALA CA CB SING N N 5
+ALA CA HA SING N N 6
+ALA C O DOUB N N 7
+ALA C OXT SING N N 8
+ALA CB HB1 SING N N 9
+ALA CB HB2 SING N N 10
+ALA CB HB3 SING N N 11
+ALA OXT HXT SING N N 12
+GLY N CA SING N N 1
+GLY N H SING N N 2
+GLY N H2 SING N N 3
+GLY CA C SING N N 4
+GLY CA HA2 SING N N 5
+GLY CA HA3 SING N N 6
+GLY C O DOUB N N 7
+GLY C OXT SING N N 8
+GLY OXT HXT SING N N 9
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+ATOM 1 N N . ALA A 1 1 ? 0.125 -0.125 1.125 1.00 10.00 ? 901 ALA AUTHA AUTH_N 1
+ATOM 2 C CA . ALA A 1 1 ? 0.250 -0.250 1.250 1.00 10.00 ? 901 ALA AUTHA AUTH_CA 1
+ATOM 3 C C . ALA A 1 1 ? 0.375 -0.375 1.375 1.00 10.00 ? 901 ALA AUTHA AUTH_C 1
+ATOM 4 O O . ALA A 1 1 ? 0.500 -0.500 1.500 1.00 10.00 ? 901 ALA AUTHA AUTH_O 1
+ATOM 5 C CB . ALA A 1 1 ? 0.625 -0.625 1.625 1.00 10.00 ? 901 ALA AUTHA AUTH_CB 1
+ATOM 6 O OXT . ALA A 1 1 ? 0.750 -0.750 1.750 1.00 10.00 ? 901 ALA AUTHA AUTH_OXT 1
+ATOM 7 H H . ALA A 1 1 ? 0.875 -0.875 1.875 1.00 10.00 ? 901 ALA AUTHA AUTH_H 1
+ATOM 8 H H2 . ALA A 1 1 ? 1.000 -1.000 2.000 1.00 10.00 ? 901 ALA AUTHA AUTH_H2 1
+ATOM 9 H HA . ALA A 1 1 ? 1.125 -1.125 2.125 1.00 10.00 ? 901 ALA AUTHA AUTH_HA 1
+ATOM 10 H HB1 . ALA A 1 1 ? 1.250 -1.250 2.250 1.00 10.00 ? 901 ALA AUTHA AUTH_HB1 1
+ATOM 11 H HB2 . ALA A 1 1 ? 1.375 -1.375 2.375 1.00 10.00 ? 901 ALA AUTHA AUTH_HB2 1
+ATOM 12 H HB3 . ALA A 1 1 ? 1.500 -1.500 2.500 1.00 10.00 ? 901 ALA AUTHA AUTH_HB3 1
+ATOM 13 H HXT . ALA A 1 1 ? 1.625 -1.625 2.625 1.00 10.00 ? 901 ALA AUTHA AUTH_HXT 1
+ATOM 14 N N . GLY A 1 2 ? 1.750 -1.750 2.750 1.00 10.00 ? 902 GLY AUTHA AUTH_N 1
+ATOM 15 C CA . GLY A 1 2 ? 1.875 -1.875 2.875 1.00 10.00 ? 902 GLY AUTHA AUTH_CA 1
+ATOM 16 C C . GLY A 1 2 ? 2.000 -2.000 3.000 1.00 10.00 ? 902 GLY AUTHA AUTH_C 1
+ATOM 17 O O . GLY A 1 2 ? 2.125 -2.125 3.125 1.00 10.00 ? 902 GLY AUTHA AUTH_O 1
+ATOM 18 O OXT . GLY A 1 2 ? 2.250 -2.250 3.250 1.00 10.00 ? 902 GLY AUTHA AUTH_OXT 1
+ATOM 19 H H . GLY A 1 2 ? 2.375 -2.375 3.375 1.00 10.00 ? 902 GLY AUTHA AUTH_H 1
+ATOM 20 H H2 . GLY A 1 2 ? 2.500 -2.500 3.500 1.00 10.00 ? 902 GLY AUTHA AUTH_H2 1
+ATOM 21 H HA2 . GLY A 1 2 ? 2.625 -2.625 3.625 1.00 10.00 ? 902 GLY AUTHA AUTH_HA2 1
+ATOM 22 H HA3 . GLY A 1 2 ? 2.750 -2.750 3.750 1.00 10.00 ? 902 GLY AUTHA AUTH_HA3 1
+ATOM 23 H HXT . GLY A 1 2 ? 2.875 -2.875 3.875 1.00 10.00 ? 902 GLY AUTHA AUTH_HXT 1
+ATOM 24 N N . ALA A 1 3 ? 3.000 -3.000 4.000 1.00 10.00 ? 903 ALA AUTHA AUTH_N 1
+ATOM 25 C CA . ALA A 1 3 ? 3.125 -3.125 4.125 1.00 10.00 ? 903 ALA AUTHA AUTH_CA 1
+ATOM 26 C C . ALA A 1 3 ? 3.250 -3.250 4.250 1.00 10.00 ? 903 ALA AUTHA AUTH_C 1
+ATOM 27 O O . ALA A 1 3 ? 3.375 -3.375 4.375 1.00 10.00 ? 903 ALA AUTHA AUTH_O 1
+ATOM 28 C CB . ALA A 1 3 ? 3.500 -3.500 4.500 1.00 10.00 ? 903 ALA AUTHA AUTH_CB 1
+ATOM 29 O OXT . ALA A 1 3 ? 3.625 -3.625 4.625 1.00 10.00 ? 903 ALA AUTHA AUTH_OXT 1
+ATOM 30 H H . ALA A 1 3 ? 3.750 -3.750 4.750 1.00 10.00 ? 903 ALA AUTHA AUTH_H 1
+ATOM 31 H H2 . ALA A 1 3 ? 3.875 -3.875 4.875 1.00 10.00 ? 903 ALA AUTHA AUTH_H2 1
+ATOM 32 H HA . ALA A 1 3 ? 4.000 -4.000 5.000 1.00 10.00 ? 903 ALA AUTHA AUTH_HA 1
+ATOM 33 H HB1 . ALA A 1 3 ? 4.125 -4.125 5.125 1.00 10.00 ? 903 ALA AUTHA AUTH_HB1 1
+ATOM 34 H HB2 . ALA A 1 3 ? 4.250 -4.250 5.250 1.00 10.00 ? 903 ALA AUTHA AUTH_HB2 1
+ATOM 35 H HB3 . ALA A 1 3 ? 4.375 -4.375 5.375 1.00 10.00 ? 903 ALA AUTHA AUTH_HB3 1
+ATOM 36 H HXT . ALA A 1 3 ? 4.500 -4.500 5.500 1.00 10.00 ? 903 ALA AUTHA AUTH_HXT 1
+ATOM 37 N N . GLY A 1 4 ? 4.625 -4.625 5.625 1.00 10.00 ? 904 GLY AUTHA AUTH_N 1
+ATOM 38 C CA . GLY A 1 4 ? 4.750 -4.750 5.750 1.00 10.00 ? 904 GLY AUTHA AUTH_CA 1
+ATOM 39 C C . GLY A 1 4 ? 4.875 -4.875 5.875 1.00 10.00 ? 904 GLY AUTHA AUTH_C 1
+ATOM 40 O O . GLY A 1 4 ? 5.000 -5.000 6.000 1.00 10.00 ? 904 GLY AUTHA AUTH_O 1
+ATOM 41 O OXT . GLY A 1 4 ? 5.125 -5.125 6.125 1.00 10.00 ? 904 GLY AUTHA AUTH_OXT 1
+ATOM 42 H H . GLY A 1 4 ? 5.250 -5.250 6.250 1.00 10.00 ? 904 GLY AUTHA AUTH_H 1
+ATOM 43 H H2 . GLY A 1 4 ? 5.375 -5.375 6.375 1.00 10.00 ? 904 GLY AUTHA AUTH_H2 1
+ATOM 44 H HA2 . GLY A 1 4 ? 5.500 -5.500 6.500 1.00 10.00 ? 904 GLY AUTHA AUTH_HA2 1
+ATOM 45 H HA3 . GLY A 1 4 ? 5.625 -5.625 6.625 1.00 10.00 ? 904 GLY AUTHA AUTH_HA3 1
+ATOM 46 H HXT . GLY A 1 4 ? 5.750 -5.750 6.750 1.00 10.00 ? 904 GLY AUTHA AUTH_HXT 1
+#

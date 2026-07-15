@@ -1,0 +1,89 @@
+data_xaa_mid_xaa
+#
+loop_
+_entity.id
+_entity.type
+1 polymer
+#
+loop_
+_struct_asym.id
+_struct_asym.entity_id
+A 1
+#
+loop_
+_entity_poly_seq.entity_id
+_entity_poly_seq.num
+_entity_poly_seq.mon_id
+_entity_poly_seq.hetero
+1 1 XAA n
+1 2 MID n
+1 3 XAA n
+#
+loop_
+_chem_comp.id
+_chem_comp.type
+_chem_comp.pdbx_formal_charge
+XAA 'L-peptide linking' 0
+MID 'L-peptide linking' 0
+#
+loop_
+_chem_comp_atom.comp_id
+_chem_comp_atom.atom_id
+_chem_comp_atom.type_symbol
+_chem_comp_atom.charge
+_chem_comp_atom.pdbx_aromatic_flag
+_chem_comp_atom.pdbx_leaving_atom_flag
+_chem_comp_atom.pdbx_stereo_config
+_chem_comp_atom.pdbx_backbone_atom_flag
+_chem_comp_atom.pdbx_n_terminal_atom_flag
+_chem_comp_atom.pdbx_c_terminal_atom_flag
+_chem_comp_atom.pdbx_ordinal
+XAA Q1 N 0 N Y N Y Y N 1
+XAA Q2 C 0 N N N Y N Y 2
+XAA Q3 O 0 N Y N Y N Y 3
+MID Z9 S 0 N Y N N Y N 1
+MID Y8 C 0 N Y N N N Y 2
+#
+loop_
+_chem_comp_bond.comp_id
+_chem_comp_bond.atom_id_1
+_chem_comp_bond.atom_id_2
+_chem_comp_bond.value_order
+_chem_comp_bond.pdbx_aromatic_flag
+_chem_comp_bond.pdbx_stereo_config
+_chem_comp_bond.pdbx_ordinal
+XAA Q1 Q2 SING N N 1
+XAA Q2 Q3 DOUB N N 2
+MID Z9 Y8 SING N N 1
+#
+loop_
+_atom_site.group_PDB
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.label_atom_id
+_atom_site.label_alt_id
+_atom_site.label_comp_id
+_atom_site.label_asym_id
+_atom_site.label_entity_id
+_atom_site.label_seq_id
+_atom_site.pdbx_PDB_ins_code
+_atom_site.Cartn_x
+_atom_site.Cartn_y
+_atom_site.Cartn_z
+_atom_site.occupancy
+_atom_site.B_iso_or_equiv
+_atom_site.pdbx_formal_charge
+_atom_site.auth_seq_id
+_atom_site.auth_comp_id
+_atom_site.auth_asym_id
+_atom_site.auth_atom_id
+_atom_site.pdbx_PDB_model_num
+ATOM 8 O Q3 . XAA A 1 3 ? -500.000 3.000 9.000 1.00 11.00 ? 103 AX U R3 1
+ATOM 4 S Z9 . MID A 1 2 ? 1000.000 2.000 -7.000 1.00 12.00 ? 502 MX U M9 1
+ATOM 1 N Q1 . XAA A 1 1 ? 0.000 1.000 2.000 1.00 13.00 ? 701 AX U R1 1
+ATOM 6 N Q1 . XAA A 1 3 ? 300.000 3.000 4.000 1.00 14.00 ? 103 AX U R1 1
+ATOM 5 C Y8 . MID A 1 2 ? -1000.000 2.000 7.000 1.00 15.00 ? 502 MX U M8 1
+ATOM 2 C Q2 . XAA A 1 1 ? 200.000 1.000 3.000 1.00 16.00 ? 701 AX U R2 1
+ATOM 7 C Q2 . XAA A 1 3 ? -300.000 3.000 8.000 1.00 17.00 ? 103 AX U R2 1
+ATOM 3 O Q3 . XAA A 1 1 ? 900.000 1.000 4.000 1.00 18.00 ? 701 AX U R3 1
+#

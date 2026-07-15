@@ -50,7 +50,10 @@ The existing `forcefield/typing.py`, `term_inventory.py`,
 `linear_alkane_parameters.py`, `linear_alkane_assignment.py`,
 `linear_alkane_evaluation_method.py`, `linear_alkane_method_binding.py`,
 `linear_alkane_energy_diagnostic.py`,
-`parameters.py`, `fitting.py`, `harmonic_diagnostics.py`,
+`parameters.py`, `fitting.py`, `spice_c1c4_quantum_reference.py`,
+`spice_c1c4_force_matching_targets.py`,
+`spice_c1c4_bonded_basis_observability.py`,
+`harmonic_diagnostics.py`,
 `harmonic_virial_diagnostics.py`, and `harmonic_minimization.py` modules are
 topology-contract, nonphysical, or non-runtime scaffolds. Future modules add
 production force terms, integrators, long-range electrostatics, docking search,
@@ -1013,6 +1016,272 @@ parameterability, physics, runtime, simulation, execution, claim authority,
 general mmCIF, and V2-1 completion remain false or blocked.
 
 A separate opt-in
+`betelgeuze_engine_v2.molecular.mmcif_archive_standard_l_peptide_topology`
+envelope has parser and writer version 1.0.0, parser pedigree
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_parser/1.0.0`, and
+profile
+`strict_mmcif_archive_standard_l_peptide_ALA_GLY_heavy_topology/1.0.0`.
+It accepts exactly five categories and emits them in engine-selected canonical
+order: `_entity`, `_entity_poly`, `_struct_asym`, `_entity_poly_seq`, and
+`_atom_site`. The `_entity_poly` loop must have exactly `entity_id`, `type`,
+`nstd_chirality`, `nstd_linkage`, and `nstd_monomer`; every row must contain
+exact bare values `polypeptide(L)`, `no`, `no`, and `no` for the final four
+fields. The unchanged exact polymer-sequence carrier must independently accept
+the other four categories. No additional mmCIF category or explicit link
+field is admitted.
+
+This profile materializes only a sequence-implied, archive-standard ALA/GLY
+heavy reference graph from a pinned engine-owned offline manifest. GLY uses
+exact core roles N, CA, C, and O; ALA adds CB. A residue at its asym's final
+sequence boundary, including a singleton, must additionally contain OXT,
+whereas a residue with an outgoing sequence link must not contain OXT. The
+manifest pins all intra-residue bonds. For each asym independently, consecutive
+`_entity_poly_seq` positions add one exact single C(i)--N(i+1) reference bond,
+so an n-residue asym has exactly n-1 such links. Links never cross asym IDs.
+Atom identity is an exact rule-name join. Coordinate distance and auth aliases
+do not select links, and coordinate or auth-value changes therefore cannot
+change the materialized graph.
+
+The immutable rule manifest schema is
+`betelgeuze.standard_l_peptide_heavy_topology_rule_manifest/1.0.0`, with
+SHA-256
+`4d941815d26431a5de9bd74b4860f84ce39232e7123ee87b3b61a104457eb244`.
+Its recorded official CCD provenance is ALA from
+`https://files.rcsb.org/ligands/download/ALA.cif`, 6,071 bytes, SHA-256
+`6d32b34d4f7b3ddf0cd3dff3f98ddaf7649bc5303ff9a8bd95ba62283f47a1ca`,
+component type `L-PEPTIDE LINKING`; and GLY from
+`https://files.rcsb.org/ligands/download/GLY.cif`, 5,615 bytes, SHA-256
+`c49458946b0ebc057db6ad0a4e1557a1caaed4c80a203accd458efddccbf92ff`,
+component type `PEPTIDE LINKING` rather than `L-PEPTIDE LINKING`. Both records
+pin initial date 1999-07-08, modified date 2024-09-27, and release status REL.
+Those downloaded-file hashes are tamper evidence, not source authentication;
+runtime never fetches CCD data and instead recomputes the engine-owned manifest
+hash before use.
+
+The projection, state, source-binding, write-receipt, and round-trip-report
+schemas are respectively
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_projection/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_state/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_source_binding/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_write_receipt/1.0.0`,
+and
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_round_trip_report/1.0.0`.
+Factory-only artifacts bind the ordered projection, rule manifest, final graph,
+detached system, source identity, canonical emission, exact reparse, and stable
+second emission across artifacts. After graph materialization, the parser
+refreshes both canonical-topology and parser-observation digests.
+
+The parser provenance marker also binds schema and SHA for
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_preparation_inventory_commitment/1.0.0`.
+The preparation bridge recognizes this pedigree only after semantically
+recomputing the exact rule manifest, carrier ledger, exact system/chain/residue/
+atom/bond marker-key sets, graph, and commitment. Leaving the parser commitment
+unchanged while coherently rehashing only topology and observation state fails
+closed. All five fixed positive inputs have a recognized preparation parser
+pedigree and self-consistent parser observation, but canonical applicability
+remains `unsupported` and preparation remains `incomplete`; none is classified
+`invalid`, and no preparation or execution promotion follows.
+
+Input and output are capped at 64 MiB, source IDs at 4,096 UTF-8 bytes,
+selected tokens at 2,048 characters, atom rows at 80,000, and materialized
+bonds at 300,000. The fixed five-positive/twenty-four-failure corpus manifest
+`config/independent_engine_v2_v2_1_mmcif_archive_standard_l_peptide_topology_corpus.json`
+binds canonical payload SHA-256
+`58377d1b60a493e62a53af8250c912b49b7475e76d41316ee8d2380ffaf967de`.
+
+The three positive statements are narrowly limited to a matching engine rule
+manifest, materialized sequence-implied ALA/GLY heavy reference topology, and
+materialized same-asym sequence-adjacent peptide reference bonds. This does not
+establish source authentication or observed covalence, validate peptide
+geometry, detect or exclude coordinate or chemical chain breaks, assign formal
+charge, hydrogens, protonation, or stereochemistry, support modified or
+nonstandard monomers, establish generic chemistry, preparation, or
+parameterability, support physics/runtime/simulation, authorize execution or
+claims, complete general mmCIF topology or round-trip evidence, establish
+all-format readiness, or complete V2-1.
+
+A second opt-in wrapper,
+`betelgeuze_engine_v2.molecular.mmcif_polymer_component_terminal_leaving_policy`,
+has envelope, parser, and writer version 1.0.0 and profile
+`strict_mmcif_polymer_component_terminal_leaving_annotation_envelope/1.0.0`.
+It retains the same exact seven categories and canonical category order as the
+polymer component-topology child, but requires this exact official-order
+eleven-field `_chem_comp_atom` header: `comp_id`, `atom_id`, `type_symbol`,
+`charge`, `pdbx_aromatic_flag`, `pdbx_leaving_atom_flag`,
+`pdbx_stereo_config`, `pdbx_backbone_atom_flag`,
+`pdbx_n_terminal_atom_flag`, `pdbx_c_terminal_atom_flag`, and `pdbx_ordinal`.
+The wrapper projects zero-based columns 0, 1, 2, 3, 4, 6, and 10 while
+preserving the selected token values and column order to reconstruct the
+unchanged seven-field child input.
+That child must independently parse and canonically emit before the wrapper is
+accepted.
+At each source and canonical-reparse stage, the wrapper performs a second exact
+child parse. A private proof compares parser pedigree, component projection,
+topology state, augmented topology, source binding, serialized system bytes,
+snapshot, parser observation, preparation-inventory commitment, and canonical
+child emission. The existing wrapper state binds the exact twelve-field
+required/pass-and-comparison gate map; the source binding binds that same map,
+the private proof SHA-256, and the state hash. The policy and round-trip reports
+consume those computed gates. Any mismatch fails closed with a typed error.
+Source-stage and canonical-reparse child proofs and
+parser-observation values are not required to equal because canonical source
+and provenance normalization legitimately change their source binding.
+
+The four added fields admit only exact bare Y/N source annotations. They are
+preserved in an ordered projection and are never inferred from atom names,
+coordinates, distances, valence, component names, or sequence position. The
+versioned rules schema
+`betelgeuze.mmcif_polymer_terminal_leaving_rules/1.0.0` also derives only the
+per-asym sequence-position roles `singleton`, `n_sequence_boundary`,
+`internal`, and `c_sequence_boundary`. These roles are positional boundaries,
+not chemical termini, retained or leaving atom decisions, reaction endpoints,
+or peptide-link assignments. Reuse of one component template at both internal
+and boundary positions does not synthesize or select a terminal variant.
+The canonical rules payload binds SHA-256
+`9235a365be1ee9f0189f94f37ed3317ff14903f0469d41f6fea2a6d2678f92b1`.
+
+The wrapper mints no system parser pedigree. Its `AllAtomSystem` snapshot,
+canonical topology, parser observation, exact
+`betelgeuze.mmcif_polymer_component_topology_parser/1.0.0` pedigree, and
+`betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0`
+schema and value are byte-identical to the independently projected child.
+Annotation projection, rules and policy reports, child state and source
+binding, wrapper source binding, receipt, reparse, and stable second emission
+are bound only in factory artifacts. Serializing the bare child-owned system
+therefore intentionally loses the wrapper annotations and grants no wrapper
+authority.
+
+The wrapper inherits the child limits of 100,000 polymer-sequence rows, 4,096
+components, 80,000 component atoms, 120,000 component bonds, and 120,000
+materialized child bonds. Input, output, and projection payloads are each
+capped at 64 MiB; source IDs at 4,096 UTF-8 bytes; and tokens and canonical
+output lines at 2,048 characters. The fixed three-round-trip/twenty-failure
+corpus manifest
+`config/independent_engine_v2_v2_1_mmcif_polymer_component_terminal_leaving_policy_corpus.json`
+binds canonical-manifest payload SHA-256
+`3cfc5731f9943479f7246baf17148ac52a52b3557b35a584a14a6e606a579a3d`.
+
+This is source-reported annotation inventory only. It does not assess a
+chemical terminal state, assign terminal chemistry, apply a leaving-atom
+policy, remove H/H2/OXT or any other atom, infer a C--N endpoint from names or
+geometry, or materialize a peptide, inter-residue, or cross-component bond.
+Generic chemistry, generic or global preparation, parameterability, physics,
+runtime, simulation, execution, claim authority, general mmCIF, and V2-1
+completion remain false or blocked.
+
+A distinct non-writer transform,
+`betelgeuze_engine_v2.molecular.mmcif_standard_l_peptide_neutral_preparation`,
+implements version 1.0.0 of profile
+`strict_mmcif_ALA_GLY_source_explicit_CCD_neutral_linkage_preparation/1.0.0`
+under the literal policy
+`exact_ALA_GLY_source_explicit_CCD_neutral_linkage_policy/1.0.0`. It accepts
+one exact eight-category source in this order: `_entity`, `_entity_poly`,
+`_struct_asym`, `_entity_poly_seq`, `_chem_comp`, `_chem_comp_atom`,
+`_chem_comp_bond`, and `_atom_site`. The same raw source is independently
+reprojected into the exact seven-category terminal/leaving child and the exact
+five-category archive-heavy child before any transform is accepted. This is a
+profile-local preparation transform, not another mmCIF envelope, parser-owned
+writer, write receipt, or canonical source round-trip contract.
+
+The pinned preparation-rule manifest schema is
+`betelgeuze.standard_l_peptide_neutral_linkage_preparation_rule_manifest/1.0.0`
+with SHA-256
+`daa2beb6648d2749204093bfd0db5dd316cb38557b29890054ddc54c73193d7f`.
+The complete source templates contain 13 atoms and 12 bonds for ALA and 10
+atoms and 9 bonds for GLY. Every source formal charge must be known zero; ALA
+CA must carry source stereo `S`, while the other selected source stereo markers
+are `N`. The outer source uses the child-normalized quoted component type
+`L-peptide linking` for both components. The official GLY CCD provenance says
+`PEPTIDE LINKING`, so this contract does not claim that the normalized outer
+component-type token is byte-exact official GLY CCD text.
+
+Sequence-position policy deletes no atoms from a `singleton`; deletes OXT and
+HXT from an `n_sequence_boundary`; deletes H2, OXT, and HXT from an `internal`
+residue; and deletes H2 from a `c_sequence_boundary`. All remaining atoms and
+coordinates are retained from source without generated hydrogens or coordinate
+construction. Only exact consecutive positions within one asym receive a
+single C(i)--N(i+1) bond. For `L` links, the transform must delete exactly
+`3L` source atoms and `3L` source bonds, add `L` peptide bonds, and finish with
+the source bond count minus `2L`. The induced prepared heavy graph and exact
+binary64 retained coordinates must match the independently projected
+archive-heavy child.
+
+Factory-only state, source-binding, report, atom-mapping, and exact-instance
+parameter-requirement inventory artifacts bind the raw source, both child
+projections, transformed snapshot, topology and observation digests, mapping,
+and heavy crosscheck. `verify_replay()` recomputes those artifacts from the
+retained raw source and requires byte-exact state equality; it is replay
+evidence, not serialization round-trip evidence. The parameter inventory lists
+atom, bond, angle, proper-torsion, nonbonded, and partial-charge requirements
+only. It does not enumerate improper or CMAP terms, supplies no force-field
+types or production parameters, and its
+production parameter-set status remains missing.
+The fixed four-positive/sixteen-failure corpus manifest
+`config/independent_engine_v2_v2_1_mmcif_standard_l_peptide_neutral_preparation_corpus.json`
+binds canonical payload SHA-256
+`c5c0ab935305c8d15fb2868c8327d38622de85fe84b8426e32d14be88ff3c20d`.
+
+Only the exact profile fields `profile_molecular_preparation_assessed` and
+`profile_molecular_preparation_ready` are promoted. Generic or global
+preparation, environmental pH or protonation correctness, generic hydrogen
+completion, independent tautomer/aromaticity/CIP/electronic structure,
+modified or nonstandard residues, water/ion/metal/cofactor roles,
+parameterability, physics, energy, force, minimization, runtime, simulation,
+execution, claims, general mmCIF/all-format round-trip readiness, and V2-1
+completion all remain false or blocked.
+
+A second non-writer transform,
+`betelgeuze_engine_v2.molecular.mmcif_standard_l_peptide_heavy_completion`,
+implements version 1.0.0 of profile
+`strict_mmcif_ALA_GLY_heavy_complete_fixed_neutral_microstate_completion/1.0.0`
+under policy
+`exact_ALA_GLY_heavy_to_fixed_neutral_microstate_completion_policy/1.0.0`.
+It accepts only the exact five-category archive-standard ALA/GLY heavy source
+and requires that child to accept the same raw bytes independently. The
+engine-owned completion-rule manifest schema
+`betelgeuze.standard_l_peptide_heavy_to_fixed_neutral_all_atom_completion_rule_manifest/1.0.0`
+is pinned at SHA-256
+`eed2b432c6a4b916370e14d922830a5eeb9f531acc579c94b7e823b8949810c6`.
+It contains the official ALA/GLY CCD ideal coordinate decimal tokens, atom
+ordinals, hydrogen-parent rows, role inventories, and provenance pins used by
+the transform; the pins are offline tamper evidence, not source authentication.
+
+Admission preserves every source heavy coordinate bit-for-bit in binary64 and
+requires each active heavy bond to be within 0.20 angstrom of its pinned ideal
+length. Same-asym adjacent C--N links must be in the inclusive 1.15--1.55
+angstrom interval. Each residue must have a nondegenerate N--CA--C frame with
+normalized sine at least 0.05, and ALA must retain the positive N/C/CB-about-CA
+orientation with normalized absolute triple product at least 0.05. These are
+bounded profile admission checks, not scientific geometry validation: angles,
+omega, clashes, conformational quality, and energetics are not assessed.
+
+For each admitted role, the transform rotates the pinned parent-relative ideal
+hydrogen vector from the ideal N--CA--C frame into the source frame and anchors
+it at the retained source parent. Atom and bond order are deterministic.
+Mapping rows partition every output atom into `source_retained` or
+`profile_generated` and bind each generated H to its parent, rule atom ordinal,
+and rule-manifest SHA. All output formal charges are profile-assigned known
+zero, and ALA CA receives profile-owned `S`; this fixed neutral microstate is
+not environmental pH or protonation correctness and is not independent CIP.
+
+Factory-only state, source-binding, report, mapping, and exact-instance
+parameter-requirement artifacts bind the raw source, archive child, completed
+snapshot, topology and observation digests, and rule manifest. Raw-source
+`verify_replay()` is supported, but there is no outer writer or serialization
+round-trip claim. Atom, bond, angle, proper, nonbonded, and partial-charge
+requirements are enumerated without duplicates; improper and CMAP terms are
+not enumerated and production parameters remain missing. The fixed
+four-positive/thirteen-failure corpus manifest
+`config/independent_engine_v2_v2_1_mmcif_standard_l_peptide_heavy_completion_corpus.json`
+binds canonical payload SHA-256
+`7fed000628174709fb5cd30955239f65e9395e981d3a34422fdcdb3a932bfb1f`.
+Only profile-local heavy-completion and molecular-preparation readiness are
+true. Generic/global preparation, source authentication, generic hydrogen
+completion, pH/protonation correctness, parameterability, physics, runtime,
+energy, force, minimization, simulation, execution, claim authority, general
+mmCIF/all-format readiness, and V2-1 completion remain false or blocked.
+
+A separate opt-in
 `betelgeuze_engine_v2.molecular.mmcif_polymer_sequence_nonpoly_component_topology`
 composition envelope has parser, writer, and envelope version 1.0.0. Its
 profile ID is
@@ -1240,7 +1509,9 @@ materialized canonical bonds are admitted only by their separate eight-category
 opt-in envelope. The selected 23-field `_struct_conn` loop and its materialized
 inter-residue bonds are admitted only by the separate nine-category covalent
 opt-in envelope. `_entity_poly_seq` is admitted only by its separate opt-in
-envelope. The exact nine-category polymer-sequence plus nonpoly
+envelope. The exact eleven-field polymer terminal/leaving annotation inventory
+is admitted only by its dedicated wrapper; its annotations remain outside the
+child-owned `AllAtomSystem`. The exact nine-category polymer-sequence plus nonpoly
 component-topology surface is admitted only by its separate composition
 envelope, which preserves the two child contracts and grants no broader
 category authority. The selected residue-level unobserved loop is admitted
@@ -1258,7 +1529,8 @@ and the exact three-category common-core21 profile, plus the separate exact
 five-category nonpoly identity envelope, exact eight-category nonpoly component
 topology envelope, exact nine-category nonpoly covalent-`_struct_conn` topology
 envelope, four- or six-category polymer sequence membership envelope, exact
-seven-category fully observed polymer component-topology envelope, and exact
+seven-category fully observed polymer component-topology envelope, its exact
+eleven-field terminal/leaving annotation inventory wrapper, and exact
 nine-category polymer-sequence plus nonpoly component-topology composition
 envelope, together with the selected source-reported unobserved and
 zero-occupancy residue- and atom-level envelopes when explicitly selected.
@@ -1281,6 +1553,7 @@ evidence. General mmCIF categories and auth/entity semantics outside
 common-core21 or the selected nonpoly identity, nonpoly component topology,
 nonpoly covalent-`_struct_conn` topology, polymer-sequence,
 fully observed polymer component topology,
+polymer terminal/leaving annotation inventory,
 polymer-sequence plus nonpoly component-topology composition,
 source-reported unobserved-residue and unobserved-atom, and source-reported
 zero-occupancy-residue and zero-occupancy-atom envelopes,
@@ -1294,6 +1567,12 @@ and multimodel round-trip remain
 unfinished, as do general PDB and general SMILES round-trip and the all-format
 V2-1 exit condition. Preparation, parameterability, simulation, scientific
 validity, and claim authority remain false.
+
+In particular, source-reported terminal/leaving flags and sequence-boundary
+roles do not establish chemical termini, leaving-atom transformations, or
+peptide-link materialization. The wrapper keeps the child snapshot, parser
+pedigree, preparation-inventory commitment, and all readiness and claim gates
+unchanged even when its fixed corpus passes.
 
 In particular, the selected composition envelope does not promote polymer
 templates, modified-residue chemistry, reference or coordinate completeness,
@@ -2194,6 +2473,220 @@ physical validation, parameterability, runtime eligibility, energy, forces,
 minimization, simulation, and claims all remain blocked. A licensed scientific
 dataset, immutable split, reviewed provenance, independent validation, and a
 trusted release attestation are still required.
+
+### V2-2 SPICE C1--C4 quantum-reference observation evidence
+
+The separate `spice_c1c4_quantum_reference.py` contract admits an exact,
+non-runtime observation slice from SPICE 2.0.1 (DOI
+`10.5281/zenodo.10975225`) and QCArchive singlepoint dataset 340,
+`SPICE DES Monomers Single Points Dataset v1.1`, specification `spec_4`.
+All 200 complete records are bound as four groups of 50 for methane through
+n-butane, with Psi4 1.4.1 `wb97m-d3bj/def2-tzvppd` provenance. The admitted
+release values preserve float32 coordinates in bohr, float64 total energies in
+hartree, and float32 total energy gradients in hartree/bohr. The gradient is
+`dE/dr`; it is not a force, and this contract performs no `force=-gradient`
+transform.
+
+The source generator contributes 25 related high/nearby-low conformation pairs
+per graph. Partitioning is therefore pair-atomic: a domain-separated SHA-256
+ordering over `(group_id, pair_id)` assigns 15/5/5 pairs per graph to
+fit/selection/holdout, or 120/40/40 records globally. Exact record, geometry,
+QCArchive molecule-ID, and source-pair overlap are zero, but all partitions
+contain the same four molecular graphs and share release/time provenance. The
+only valid split claim is
+`within_same_four_graphs_unseen_conformations_only`; it is not graph-, family-,
+time-, or release-disjoint validation.
+
+This is observation-inventory evidence, not parameter evidence. Absolute
+energies from different molecules cannot be fitted against one common offset;
+a future protocol must use per-molecule relative energies or explicit nuisance
+intercepts. Isolated monomer total energies and gradients do not identify a
+transferable partial-charge, Lennard-Jones, or 1--4 model. The upstream source
+declares CC0, while human license review and whole-file authentication remain
+pending. No fit, candidate parameter set, parameterability, reference
+validation, production parameter, physics, runtime, execution, or claim gate
+is promoted.
+
+### V2-2 SPICE C1--C4 source-authentication and license-review input packet
+
+`spice_c1c4_source_review_packet.py` adds a factory-only, non-runtime review
+input around the unchanged quantum-reference evidence. Its schema is
+`betelgeuze.spice_c1_c4_source_authentication_license_review_packet/1.0.0`
+and its exact claim scope is
+`machine_prefilled_upstream_metadata_and_review_requirements_only`. The
+canonical external packet binds the frozen evidence schema, byte count, core
+and artifact SHA-256 before admitting any review fields.
+
+The normalized metadata snapshot records the Zenodo version record, concept
+DOI, revision, timestamps, dataset type and license identifier, and the one
+HDF5 file's stable identifiers, exact byte count, official MD5, and content
+URL. A separate GitHub snapshot binds release 2.0.1, its lightweight tag and
+target commit, plus tag-pinned README and LICENSE blob IDs, byte counts, and
+SHA-256 digests. GitHub reports the commit signature as verified, but the tag
+itself is unsigned and the commit contains no HDF5 digest. Zenodo also has no
+machine-typed GitHub relation. The packet therefore records observations and
+tamper bindings, not a publisher signature or publisher-identity proof.
+
+License contexts stay separate. Zenodo and the tagged README declare the
+dataset data as CC0, while the repository LICENSE applies MIT terms to the
+software and associated documentation. Neither declaration is converted into
+a human scope decision, commercial-use clearance, or redistribution approval.
+Reviewer decision, identity, timestamp, and attestation fields remain absent;
+no reviewer PII or local absolute path is committed.
+
+The packet also predeclares two missing receipts. The whole-file receipt must
+stream all 37,479,271,148 bytes, match the official byte count and MD5, and
+record a local SHA-256. A separate extraction receipt must bind that whole-file
+receipt to exact HDF5 paths, selection/order protocol, shapes, dtypes, raw
+array hashes, atomic numbers, mapped molecular identity, connectivity
+derivation, record/index mapping, and the admitted evidence artifact/core
+hashes. Those identity/mapping fields remain an explicit requirement for the
+future receipt rather than a completed field in this prefilled packet. A locally
+matched MD5 establishes only expected byte integrity, not collision-resistant
+publisher authentication. Until those receipts and the independent human
+review exist, whole-file integrity, subset extraction provenance, strong
+publisher authentication, license review, legal clearance, fitting, science,
+production, runtime, execution, and claim fields all remain false. CI and
+runtime replay only the small committed packet and existing evidence; they do
+not fetch or hash the HDF5 file.
+
+### V2-2 SPICE C1--C4 source-bound force-matching target view
+
+`spice_c1c4_force_matching_targets.py` is a separate, non-runtime transform
+over the exact admitted source bytes. It replays the strict evidence loader and
+derives 100 pair-relative energy targets as
+`E(entry suffix p) - E(entry suffix p+25)`. Pair roles come only from the
+numeric QCArchive entry suffix; the transform never energy-sorts the members,
+takes an absolute difference, or uses a shared cross-molecule energy offset.
+The `p+25` role preserves the source generator's nearby-lower provenance and
+does not assert a QM minimum or a torsion-scan endpoint.
+
+For all 200 source records, the raw force view is formed by flipping each
+float32 gradient scalar's IEEE-754 sign bit, including signed zero, so its
+meaning is explicitly `F=-dE/dr`. Coordinates, pair-energy differences, and
+forces are converted to angstrom, kJ/mol, and kJ/mol/angstrom with a versioned
+2022 CODATA central-value convention. The decimal central values are frozen as
+protocol rationals and each output is rounded once to binary64; this is a
+reproducibility convention, not a claim that measured constants are exact.
+The resulting on-demand view contains 100 energy rows, 200 force rows, and
+5,700 force scalars, partitioned 60/20/20 pairs and 120/40/40 records.
+
+The canonical view is regenerated from the external evidence rather than
+committed as a duplicate data artifact. It preserves source, topology, row,
+protocol, value, and derived hashes and reports the raw net-force and
+coordinate-centroid torque residuals. No rigid-body projection, centering,
+clipping, or denoising is applied. The public holdout is pair-preserving but is
+not blind to humans, and all partitions still share the same four graphs and
+release/time provenance. This target transform defines no loss, fit, force-
+field type, parameter, identifiability result, validation claim, production
+physics, runtime dispatch, execution authority, or product claim.
+
+### V2-2 SPICE C1--C4 fit-only bonded-basis observability
+
+`spice_c1c4_bonded_basis_observability.py` is a downstream, non-runtime
+preflight over the exact source-bound target view. It rebuilds the four C1--C4
+graphs only from atomic numbers and connectivity and uses their 6 bond, 9
+angle, and 7 proper graph-environment keys solely as diagnostic grouping
+labels. Those labels are not force-field atom types, parameter identifiers,
+chemistry perception, or a transferable typing claim.
+
+The primary predeclared linear basis contains `0.5*r^2` and `-r` for every
+bond key, `0.5*theta^2` and `-theta` for every angle key, and the parity-even
+`cos(n*phi)` family for `n=1..3` for every proper key: 51 columns total.
+Constants and intercepts are absent because same-topology pair differences
+cancel them and their Cartesian derivatives are zero. Three additional,
+non-selecting audit variants add sine terms and/or extend the declared
+periodicity range through six. They are misspecification and allowed-family
+stress checks, not candidate models, and no target residual is used to choose
+among them.
+
+Only the 60 fit pairs enter the audit. Canonical rows comprise one
+`Phi(seed)-Phi(related)` energy row and both records' atom-major Cartesian
+`-dPhi/dR` force rows per pair, for 60 energy and 3,420 force rows. A frozen
+fit-only, graph-balanced and energy/force-class-balanced loss convention uses
+RMS scales computed about zero from the fit targets; selection and holdout
+values do not enter basis selection, scaling, rank, or conditioning. Pair
+blocks remain the indivisible unit for any future resampling.
+
+Each loss-weighted design column is normalized by its fit-only L2 norm before
+a binary64 SVD. The report records matrix and metadata hashes, rank, nullity,
+condition diagnostics, tolerance, backend metadata, and an explicit statement
+that SVD values are not a cross-platform bitwise contract. All four
+predeclared variants have full numerical column rank on the frozen fit slice,
+but the only promoted statement is conditional design observability on these
+coordinates and this weighting convention.
+
+The protocol SHA-256 is
+`063bbbea6d97ddc6f65242e70898442ae6514838c5acc02c9e2d57562089af93`.
+The frozen fit-only RMS scales are 42.65680130781243 kJ/mol
+(`4045541210b48320`) and 69.42751524726391 kJ/mol/angstrom
+(`40515b5c68e9628d`). They are weighting receipts computed about zero, not
+accuracy thresholds. With those weights, current local NumPy binary64 replay
+gives rank/column counts and approximate condition numbers of `51/51, 181.87`,
+`72/72, 198.23`, `72/72, 221.06`, and `114/114, 376.95` in protocol variant
+order. Tests freeze exact shape, rank, nullity, and wide numerical gates rather
+than singular-value bit patterns.
+
+No coefficient, prediction, residual fit, candidate parameter, or committed
+report artifact is produced. SPICE total energies and gradients also contain
+intramolecular electrostatics, dispersion, 1--4, polarization, and coupled
+effects that a bonded-only projection could absorb. Consequently bonded or
+physical parameter identifiability, parameter-family sufficiency,
+transferability, reference validation, parameterability, production physics,
+runtime, execution, and claim gates all remain false.
+
+### V2-2 prospective graph/family-disjoint population preflight
+
+The metadata-decided `spice_graph_family_disjoint_population_preflight.py`
+protocol keeps future scientific split claims separate before any expanded
+population is admitted. Strict source-integrity replay decodes and validates the
+already-frozen target payload, but population, family, and split decisions
+consume topology and partition metadata only and never branch on target values.
+Schema
+`betelgeuze.spice_graph_family_disjoint_population_preflight/1.0.0` binds
+protocol SHA-256
+`57482f6a531b068c3589c7820025ed52e4af0cb3bde482180f8e9d08ba877415`.
+Its hierarchy is `release -> chemistry family ->
+parent/scaffold -> exact molecular graph -> related-conformer or geometry
+cluster -> record`. A graph lane moves whole graphs; a family lane moves whole
+families. Records, source pairs, and force scalars are never independent split
+units. The outer uncertainty resampling unit is a graph or, when applicable, a
+family; source-pair blocks may only be nested inside a graph, and force
+components are not independent observations.
+
+The current public C1--C4 partitions have four graph intersections and one
+`linear_alkane` family intersection. They also share release and time
+provenance and are not blind to humans, so every graph-, family-, time-,
+release-disjoint and blind flag remains false. The v1 atom-order-independent
+graph identity is exact only for bounded C/H trees whose isotope and stereo
+states are both explicitly absent. It binds atomic numbers, bond orders,
+molecular charge, and multiplicity. Any isotope- or stereo-present graph fails
+closed until a new schema carries atom-level isotope labels and stereo
+descriptors. The SHA-256 domain, rooted-tree encoding, canonical JSON recipe,
+four C1--C4 graph digests, and topology receipt are all protocol-bound; current
+local environment keys are prohibited as graph or family identities. Family
+taxonomy, population inventory, split domains, metrics, thresholds, and
+minimum graph counts must be derived without using energy or gradient values,
+even though strict source-integrity replay decodes and validates those values.
+
+Longer linear alkanes expose a coverage boundary. The C1--C4 union has 6 bond,
+9 angle, and 7 proper keys. C5 adds one all-interior angle and two proper keys;
+C6 adds a third new proper key, while C7+ adds no further local key under this
+exact graph-only scheme. Therefore C5/C6 cannot validate the current C1--C4
+parameter universe. A new version must put whole C1--C6 graphs into fit-only
+coverage and establish the expanded basis and observability before unseen
+C7+ graphs can be eligible for in-family graph-disjoint accuracy validation.
+Branched, cyclic, or unsaturated families remain OOD/abstention evidence until
+their own versioned applicability, coverage, and observability contracts exist.
+
+The prescribed sequence is source/license receipts, target-independent
+population and immutable split/threshold manifests, fit-only scaling and
+candidate construction, selection, candidate/method freeze, one-shot public
+graph holdout, family OOD or separately eligible-family evaluation, and then a
+separate externally sealed blind set. Post-holdout changes require new dataset,
+protocol, and candidate versions. This preflight contains no expanded rows,
+targets, fit, coefficients, parameters, validation result, transferability,
+production, runtime, execution, or claim promotion.
 
 ### V2-2 exact-methane harmonic numerical diagnostic
 

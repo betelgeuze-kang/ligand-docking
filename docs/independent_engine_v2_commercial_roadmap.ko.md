@@ -1,6 +1,6 @@
 # Independent Engine v2 독립 상용화 장기 로드맵
 
-기준일: 2026-07-14
+기준일: 2026-07-15
 
 문서 상태: 장기 개발 참고 기준선·비실행 문서·비주장 문서
 
@@ -30,7 +30,22 @@ opt-in polymer sequence membership envelope 1.0, 그 변경 없는 child에 exac
 asym×sequence residue의 coordinate/template atom coverage를 요구하고
 H/C/N/O/S·atom N/R/S·bond `SING/DOUB/TRIP/AROM`만 source-reported
 intra-residue topology로 물질화하는 별도 exact 7-category fully-observed
-polymer component-topology envelope 1.0, 그리고 exact 6-category
+polymer component-topology envelope 1.0, 그리고 exact 5-category
+`_entity`·`_entity_poly`·`_struct_asym`·`_entity_poly_seq`·`_atom_site`와
+`_entity_poly(entity_id,type,nstd_chirality,nstd_linkage,nstd_monomer)`의
+`polypeptide(L),no,no,no`만 받아 pinned offline ALA/GLY heavy role·intra-residue
+rule·same-asym n-1 C--N path를 sequence-implied reference topology로
+물질화하는 archive-standard ALA/GLY envelope 1.0, fully-observed child를
+변경하지 않고 exact
+11-field `_chem_comp_atom`의 source-reported leaving/backbone/N-terminal/
+C-terminal flag와 asym별 sequence-boundary role만 보존하는 별도
+polymer terminal/leaving annotation inventory envelope 1.0, 그 두 child를 exact
+    8-category raw source에서 독립 재투영한 뒤 source-explicit ALA/GLY
+    CCD-neutral role atom 삭제·same-asym C--N bond·prepared heavy crosscheck를
+    적용하는 non-writer profile-local preparation transform 1.0, exact 5-category
+    archive-heavy source의 binary64 heavy 좌표를 유지하면서 N--CA--C frame과
+    pinned CCD ideal parent vector로 role-specific H를 생성하고 fixed-neutral
+    microstate를 배정하는 별도 non-writer heavy-completion transform 1.0, 그리고 exact 6-category
 polymer-sequence+nonpoly-identity child와 exact 8-category nonpoly
 component-topology child를 source split 후 공통 carrier와 canonical loop로
 교차 결속하는 별도 strict 9-category polymer-sequence+nonpoly
@@ -56,7 +71,11 @@ positive/failure corpus 계약과 source-observed explicit-H neutral exact H2O
 graph-local bond-order/valence-ledger profile·고정 positive/failure corpus 계약,
 V2-2 bounded C1–C4 topology·비물리 full parameter
 assignment·direct-uncut method binding·snapshot-bound schema-owned scalar-energy
-진단 계약 및 exact-methane 수치 진단 비승격 스캐폴드 진행 중
+진단 계약, SPICE 2.0.1 C1–C4 200행 quantum-reference observation evidence와
+비승격 source-authentication/license-review 입력 패킷,
+source-bound pair-relative-energy·negative-gradient target view, fit-only
+bonded-basis conditional-observability 감사 및 exact-methane 수치 진단 비승격
+스캐폴드 진행 중
 
 적용 범위: 단백질·리간드 구조분석, 도킹, 분자동역학, AI 보정, ROCm/HIP, 로컬 제품화
 
@@ -117,7 +136,7 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 
 | 구분 | 현재 확보한 기반 | 현재 차단된 주장 또는 기능 |
 | --- | --- | --- |
-| 계약 | 버전형 all-atom 상태, 결합, isotope, R/S·E/Z, provenance, legacy adapter, strict PDB/mmCIF/SDF/SMILES canonical projection과 고정 ingest/failure corpus, 정확히 표현 가능한 parser-owned 단일-record SDF V2000과 별도 opt-in simple named opaque data-field envelope 1.0, bondless·no-altloc·optional-exact-`CRYST1` PDB와 single-model-ID1 source-reported `REMARK 465/470` semantic round-trip profile 및 별도 opt-in ordered `CONECT` source-declaration envelope 1.0, single-model-ID1 여섯 `_atom_site`-only profile과 exact `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity mmCIF 및 별도 opt-in explicit biological assembly envelope 1.0.0, source-reported nonpoly identity envelope 1.0, exact 8-category nonpoly component topology envelope 1.0, exact 9-category identity-symmetry `covale` nonpoly struct-conn topology envelope 1.0, polymer sequence membership envelope 1.0, exact 9-category polymer-sequence+nonpoly component-topology composition envelope 1.0, source-reported unobserved-residue envelope 1.0, source-reported unobserved-atom envelope 1.0, 그리고 1–256개 ordered organic-subset component에서 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member ring 또는 fully-aromatic 5/6-member `B C N O P S` ring·선택 unit-charge/bracket-H token·bounded parser-typed E/Z·tetrahedral R/S를 직렬화하는 SMILES writer 1.8 및 각 선언 projection round-trip evidence | 선택 envelope 밖 `CONECT`와 모든 bond-kind/order·covalence·coordination·chemistry 의미론, altloc·general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB, exact common-core21·선택 assembly·nonpoly identity·nonpoly component topology·선택 nonpoly covalent struct-conn topology·polymer sequence membership·선택 polymer-sequence+nonpoly component-topology composition·residue/atom-level source-reported unobserved envelope 밖 categories·auth/entity·optional fields·altloc·assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·zero-occupancy semantics·cell·multimodel을 포함한 general mmCIF, general `_struct_conn`의 disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, fragment role·salt·mixture chemistry·선택 ring 밖의 general rings·fused/polycyclic aromaticity·두 번째 ring double·ring triple·multiple-bond closure를 포함한 일반 multiple-bond chemistry·일반 charge/charge assignment·isotope·nonpositive/duplicate map·bounded tetrahedral R/S 밖 atom stereo·unknown bond stereo·bounded profile 밖 E/Z·source H·선택 aromatic/tetrahedral 상태 밖 bracket H를 포함한 general SMILES, simple named envelope 밖의 arbitrary `M` property record·rich data header·multi-record·V3000·stereo를 포함한 general SDF와 완전한 parser·preparation·지원 chemistry coverage |
+| 계약 | 버전형 all-atom 상태, 결합, isotope, R/S·E/Z, provenance, legacy adapter, strict PDB/mmCIF/SDF/SMILES canonical projection과 고정 ingest/failure corpus, 정확히 표현 가능한 parser-owned 단일-record SDF V2000과 별도 opt-in simple named opaque data-field envelope 1.0, bondless·no-altloc·optional-exact-`CRYST1` PDB와 single-model-ID1 source-reported `REMARK 465/470` semantic round-trip profile 및 별도 opt-in ordered `CONECT` source-declaration envelope 1.0, single-model-ID1 여섯 `_atom_site`-only profile과 exact `_entity`·`_struct_asym`·official-order common-core21 label/auth/entity identity mmCIF 및 별도 opt-in explicit biological assembly envelope 1.0.0, source-reported nonpoly identity envelope 1.0, exact 8-category nonpoly component topology envelope 1.0, exact 9-category identity-symmetry `covale` nonpoly struct-conn topology envelope 1.0, polymer sequence membership envelope 1.0, exact 7-category fully-observed polymer component topology envelope 1.0, exact 5-category archive-standard ALA/GLY sequence-implied heavy reference-topology envelope 1.0, exact 11-field polymer terminal/leaving annotation inventory envelope 1.0, exact 8-category ALA/GLY source-explicit CCD-neutral profile-local preparation transform 1.0, exact 9-category polymer-sequence+nonpoly component-topology composition envelope 1.0, source-reported unobserved-residue envelope 1.0, source-reported unobserved-atom envelope 1.0, 그리고 1–256개 ordered organic-subset component에서 global cycle rank 0/1·at-most-one simple non-aromatic 3–8-member ring 또는 fully-aromatic 5/6-member `B C N O P S` ring·선택 unit-charge/bracket-H token·bounded parser-typed E/Z·tetrahedral R/S를 직렬화하는 SMILES writer 1.8 및 각 선언 projection round-trip evidence | 선택 envelope 밖 `CONECT`와 모든 bond-kind/order·covalence·coordination·chemistry 의미론, altloc·general missingness·비표현 `CRYST1`·symmetry/PBC 의미론을 포함한 general PDB, exact common-core21·선택 assembly·nonpoly identity·nonpoly component topology·선택 nonpoly covalent struct-conn topology·polymer sequence membership·선택 fully-observed polymer component topology·선택 archive-standard ALA/GLY heavy reference topology·선택 polymer terminal/leaving annotation inventory·선택 ALA/GLY neutral preparation transform 밖의 general preparation·선택 polymer-sequence+nonpoly component-topology composition·residue/atom-level source-reported unobserved envelope 밖 categories·auth/entity·optional fields·altloc·assembly declaration/operator form·선택 atom envelope 밖 atom-level missingness·zero-occupancy semantics·cell·multimodel을 포함한 general mmCIF, general `_struct_conn`의 disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, fragment role·salt·mixture chemistry·선택 ring 밖의 general rings·fused/polycyclic aromaticity·두 번째 ring double·ring triple·multiple-bond closure를 포함한 일반 multiple-bond chemistry·일반 charge/charge assignment·isotope·nonpositive/duplicate map·bounded tetrahedral R/S 밖 atom stereo·unknown bond stereo·bounded profile 밖 E/Z·source H·선택 aromatic/tetrahedral 상태 밖 bracket H를 포함한 general SMILES, simple named envelope 밖의 arbitrary `M` property record·rich data header·multi-record·V3000·stereo를 포함한 general SDF와 완전한 parser·preparation·지원 chemistry coverage |
 | V2-1 PDB ordered `CONECT` source-declaration envelope | single-model-ID1의 trailing contiguous fixed-column `CONECT` row와 directed source serial·ordered target slot·duplicate slot·directional asymmetry projection, canonical 80-column re-emission 및 고정 positive/failure corpus | canonical `Bond`·bond kind/order·covalence·coordination·chemistry 해석, bare `.system` 보존, altloc·multimodel·일반 `CONECT`, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general PDB round-trip |
 | V2-1 mmCIF explicit biological assembly envelope | exact common-core21 ASU와 단일 assembly definition, official-order generator/operator loop, explicit `assembly_id`, right-to-left rigid transform, ASU 재출력과 bitwise expanded coordinate·topology·atom/chain instance order projection, stable re-emission 및 고정 positive/failure corpus | source authentication·biological correctness, 다른 assembly category/header/operator form, numeric uncertainty, altloc·multimodel·cell/symmetry/PBC, bond·chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF nonpoly identity envelope | exact `_entity`·`_struct_asym`·common-core21 `_atom_site`와 선택 `_pdbx_entity_nonpoly`·official-order `_pdbx_nonpoly_scheme`의 source identity·instance nomenclature alias projection 및 canonical five-category re-emission | role·chemistry·topology·bond/order·coordination·charge·protonation·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
@@ -125,6 +144,10 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 | V2-1 mmCIF nonpoly covalent struct-conn topology envelope | unchanged exact 8-category component carrier와 official-order 23-field `_struct_conn`의 9-category profile, `covale`·explicit lowercase `sing/doub/trip`·양쪽 `1_555`, exact label+auth atom identity join, 서로 다른 non-polymer/water residue endpoint, canonical inter-residue `Bond` 물질화, 최종 topology/observation digest refresh·factory artifact chain·exact reparse·stable emission, 기존 hydrocarbon canonical-ingest/profile-local gate의 exact `split_ethane_sing` positive evidence, 3개 round-trip·15개 typed-failure 고정 corpus와 payload SHA-256 `2a8a2428ff39646f964af01773bc69b3f71cb03cfaba78b7ebb30ef2ba2d2704` | general `_struct_conn`, disulf/hydrog/metalc/salt·quad/default order·nonidentity symmetry·coordination·polymer endpoint, altloc·assembly·missingness·cell·multimodel 조합, source authentication·independent chemistry/valence/bond-order, generic/global preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
 | V2-1 mmCIF polymer sequence membership envelope | exact common-core21 또는 기존 nonpoly identity carrier와 official-order `_entity_poly_seq`의 source-reported polymer entity·sequence number·opaque monomer-code membership, atom-site label tuple presence join 및 canonical four/six-category re-emission | reference sequence 동일성·완전성, coordinate observation completeness, missing-residue fact, auth alignment, modified-residue identity, general microheterogeneity·chemistry, preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF fully-observed polymer component-topology envelope | unchanged exact 4-category polymer-sequence child에 exact 3/7/7-field `_chem_comp`·`_chem_comp_atom`·`_chem_comp_bond`를 결합한 exact 7-category profile, 모든 entity의 every-asym×sequence residue 인스턴스와 component template atom-set의 exact 전체 coverage, quoted `L-peptide linking`, H/C/N/O/S, atom N/R/S·bond N, source charge fill/crosscheck, `SING/DOUB/TRIP/AROM`의 canonical 1.0/2.0/3.0/1.5 intra-residue `Bond`, 신규 parser pedigree·최종 topology/observation digest refresh·exact reparse·stable second emission·bounded factory artifact evidence | CCD/reference authentication·general completeness, 독립 CIP/chemistry/valence/aromaticity/stereo 판정, peptide·inter-residue·cross-component bond, modified/terminal residue 밖 general template·D-peptide·nucleic acid·saccharide, completion·preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
+| V2-1 mmCIF archive-standard ALA/GLY heavy reference-topology envelope | exact 5-category `_entity`, `_entity_poly`, `_struct_asym`, `_entity_poly_seq`, `_atom_site`와 exact `_entity_poly(entity_id,type,nstd_chirality,nstd_linkage,nstd_monomer)=polypeptide(L),no,no,no`, unchanged polymer-sequence carrier, pinned offline engine-owned manifest SHA-256 `4d941815d26431a5de9bd74b4860f84ce39232e7123ee87b3b61a104457eb244`, GLY N/CA/C/O 및 ALA N/CA/C/O/CB, C-boundary·singleton OXT와 outgoing-linked OXT 금지, pinned intra-residue bond 및 same-asym exact n-1 C--N path, no cross-asym·no coordinate-distance/auth-alias selection, parser pedigree·최종 topology/observation digest refresh·factory artifact cross-binding·stable round-trip, semantic preparation commitment 재계산, 5-positive/24-failure corpus payload SHA-256 `58377d1b60a493e62a53af8250c912b49b7475e76d41316ee8d2380ffaf967de`; 고정 5 positives 모두 recognized/self-consistent지만 canonical ingest `unsupported`, preparation `incomplete` | CCD file hash를 source authentication으로 보는 것, source-observed covalence·coordinate peptide geometry·chain-break 탐지/배제, formal charge·H·protonation·stereo 할당, modified/nonstandard monomer, generic chemistry·preparation·parameterability, physics·runtime·simulation·execution·claim 권한, general mmCIF/all-format readiness와 V2-1 완료 |
+| V2-1 mmCIF polymer terminal/leaving annotation inventory envelope | exact 11-field `_chem_comp_atom`에서 선택 column 순서와 token 값을 보존해 unchanged exact 7-category polymer component-topology child를 투영하고, source Y/N leaving/backbone/N-terminal/C-terminal flag와 asym별 `singleton`/`n_sequence_boundary`/`internal`/`c_sequence_boundary` 위치 role을 factory-only evidence로 보존한다. 각 stage에서 child `AllAtomSystem`, parser pedigree, topology/observation digest, preparation-inventory commitment와 canonical 7-field child emission은 같은 stage의 독립 projected child와 일치하며, exact reparse·stable second emission과 고정 corpus를 갖는다. | chemical terminal state·terminal chemistry, leaving-atom policy 적용·원자 삭제, atom-name/geometry 기반 C–N 추론, peptide·inter-residue bond 물질화, source/CCD authentication, generic chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
+| V2-1 exact ALA/GLY source-explicit neutral-linkage preparation transform | exact 8-category source를 terminal/leaving 7-category child와 archive-heavy 5-category child로 독립 투영한 뒤, pinned manifest SHA-256 `daa2beb6648d2749204093bfd0db5dd316cb38557b29890054ddc54c73193d7f`의 ALA 13-atom/12-bond·GLY 10-atom/9-bond known-zero-charge source-explicit microstate만 적용한다. role별 H2/OXT/HXT만 삭제하고 same-asym consecutive C--N bond만 추가하며 `L` links에 대해 `3L` atom·`3L` source-bond 삭제, `L` bond 추가, final source-bond-minus-`2L`을 강제한다. source coordinate를 유지하고 H를 생성하지 않으며 prepared heavy graph를 archive child와 교차 검증한다. 4-positive/16-failure corpus payload SHA-256 `c5c0ab935305c8d15fb2868c8327d38622de85fe84b8426e32d14be88ff3c20d`를 결속하고 profile-local preparation readiness만 true이다. | outer writer·canonical source round-trip, environmental pH/protonation correctness, generic H completion·generic/global preparation, production parameter set·parameterability, physics·runtime·energy·force·minimization·simulation·execution·claim 권한, general mmCIF/all-format readiness와 V2-1 완료 |
+| V2-1 exact ALA/GLY heavy-to-fixed-neutral all-atom completion transform | exact 5-category archive-heavy child를 독립 수용하고 manifest SHA-256 `eed2b432c6a4b916370e14d922830a5eeb9f531acc579c94b7e823b8949810c6`의 CCD ideal coordinate·H parent·role inventory를 적용한다. source heavy coordinate는 binary64 bit-exact로 유지한다. heavy bond ideal ±0.20 Å, same-asym C--N 1.15–1.55 Å, N--CA--C frame sine ≥0.05, ALA positive N/C/CB orientation을 profile admission으로 검사한 뒤 parent-relative ideal vector를 source frame으로 회전해 role-specific H를 생성하고 known-zero formal charge를 배정한다. source-retained/profile-generated mapping, deterministic atom/bond order, raw-source replay, exact-instance parameter inventory와 4-positive/13-failure corpus payload SHA-256 `7fed000628174709fb5cd30955239f65e9395e981d3a34422fdcdb3a932bfb1f`를 결속한다. | outer writer·serialization round-trip, scientific geometry·angle·omega·clash 검증, environmental pH/protonation correctness, generic H completion·generic/global preparation, improper/CMAP·production parameter set·parameterability, physics·runtime·energy·force·minimization·simulation·execution·claim 권한, general mmCIF/all-format readiness와 V2-1 완료 |
 | V2-1 mmCIF polymer-sequence+nonpoly component-topology composition envelope | exact 9-category `_entity`, `_struct_asym`, `_entity_poly_seq`, `_chem_comp`, `_chem_comp_atom`, `_chem_comp_bond`, `_pdbx_entity_nonpoly`, `_pdbx_nonpoly_scheme`, `_atom_site`를 exact 8-category component child와 exact 6-category polymer child로 split해 각각 독립 수용시키고, shared nonpoly identity projection/record state·base topology/representable state·source ID·data block·공통 5개 canonical loop와 nonpoly writer payload를 교차 결속한다. component child만 detached component-carrier system pedigree를 소유하고 polymer sequence는 source evidence로만 남으며, exact reparse·stable second emission과 고정 2-positive/6-failure corpus를 갖는다. | polymer template·modified-residue chemistry, reference-sequence/coordinate completeness·missingness, `_struct_conn`, altloc·assembly·cell·multimodel 조합, generic/global preparation·parameterability·physics·runtime·simulation·execution·claim 권한, general mmCIF과 V2-1 완료 |
 | V2-1 mmCIF source-reported unobserved-residue envelope | polymer sequence carrier 또는 기존 nonpoly identity와 조합된 carrier에 exact official-order residue missingness loop를 추가하고, label sequence join·selected coordinate absence·ordered source claim projection 및 canonical five/seven-category re-emission을 검증 | 실제 missing-residue fact, reference/sequence/coordinate completeness, auth-label equivalence, modeled/modified residue identity, atom-level missingness, zero-occupancy 의미론, chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
 | V2-1 mmCIF source-reported unobserved-atom envelope | 같은 carrier에 exact official-order 14-field atom missingness loop를 추가하고, label sequence join·selected coordinate parent-residue presence·exact atom absence·raw insertion/altloc marker·ordered source claim projection 및 canonical five/seven-category re-emission을 검증 | 실제 missing-atom fact, residue-template 또는 atom-name dictionary 검증, completion, reference/sequence/coordinate completeness, auth-label equivalence, zero-occupancy 의미론, chemistry·preparation·parameterability·physics·runtime·simulation·execution·claim 권한과 general mmCIF round-trip |
@@ -138,7 +161,7 @@ V2-0은 완성된 분자구조 해석 제품이 아니라 독립 엔진을 만�
 | 기하 | bounded cell-list, sparse radius graph, 고정 capacity와 overflow 차단 | release-scale occupancy·memory evidence와 periodic AI gradient |
 | AI | non-attention parity-aware local energy, exact force VJP, torsion·temporal GNN, PINN gate | 학습된 production checkpoint, calibration, OOD 및 공개 holdout evidence |
 | 수학 | matrix-free 고정 rank 직교사영과 adjoint | 광범위한 constraint·coordinate-dependent basis 검증 |
-| 힘장 위상·계약 | source-bound explicit-H 중립 선형 알케인 C1–C4 적용성, graph-only environment key, bond·angle·proper·모든 원자 쌍 분류, 비물리 full parameter protocol/artifact·snapshot-bound assignment, `N≤14` cell-free CPU float64 direct-uncut method/binding 계약과 별도의 binding-report-only schema-owned scalar-energy 진단 | 과학적으로 fitting·검증된 FF type·charge·bonded/LJ parameter, production evaluation method, 과학적으로 검증된 production runtime energy·force·virial kernel와 production 적용 범위 |
+| 힘장 위상·계약 | source-bound explicit-H 중립 선형 알케인 C1–C4 적용성, graph-only environment key, bond·angle·proper·모든 원자 쌍 분류, 비물리 full parameter protocol/artifact·snapshot-bound assignment, `N≤14` cell-free CPU float64 direct-uncut method/binding 계약과 별도의 binding-report-only schema-owned scalar-energy 진단, SPICE 2.0.1 C1–C4 200행 energy-gradient observation inventory·pair-preserving split·source-bound pair-relative-energy/negative-gradient target view·fit-only bonded-basis conditional-observability 감사, Zenodo/GitHub snapshot·전체 파일/추출 receipt 요구사항·license scope를 분리한 비승격 review 입력 패킷, 그리고 current overlap·계층 split·C5/C6 coverage 경계를 고정한 prospective graph/family preflight | 사람의 license/legal 승인, 전체 HDF5 local-stream integrity receipt와 강한 publisher authentication, admitted subset extraction receipt, 실제 versioned coverage expansion과 graph/family-disjoint reference/manifest/sealed blind evidence, 과학적으로 fitting·검증된 FF type·charge·bonded/LJ parameter, production evaluation method, 과학적으로 검증된 production runtime energy·force·virial kernel와 production 적용 범위 |
 | 실행 | fail-closed 내부 CPU orchestrator, C1–C4 비물리 scalar-energy 계약 진단, exact-methane 파라미터·합성 fit 계약과 비실행 조화 energy·force·bonded virial·bounded-descent/restart 수치 진단 | 독립 힘장 runtime, 과학적으로 검증된 최소화, docking, 장거리 물리, MD와 고객 실행 route |
 | 검증 | focused CPU tests, wheel, Python 3.10/3.11 CI, canonical hash·tamper·finite-difference·translation·proper-rotation·accepted-prefix restart 계약 검사 | 과학 benchmark, 실제 force-field reference, 실제 ROCm parity, 고객 shadow evidence |
 
@@ -927,7 +950,239 @@ chemistry·valence·completion, preparation·parameterability·physics·runtime�
 execution·claim 권한, general mmCIF과 V2-1 완료는 계속 false 또는
 blocked다.
 
-이 두 선택 surface를 함께 보존하는 별도 opt-in module
+별도 opt-in
+`betelgeuze_engine_v2.molecular.mmcif_archive_standard_l_peptide_topology`
+envelope는 parser/writer 1.0.0, pedigree
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_parser/1.0.0`, profile
+`strict_mmcif_archive_standard_l_peptide_ALA_GLY_heavy_topology/1.0.0`을
+사용한다. exact category는 `_entity`, `_entity_poly`, `_struct_asym`,
+`_entity_poly_seq`, `_atom_site` 다섯 개이고 이 engine-selected 순서로
+canonical emit한다. `_entity_poly` header는 exact `entity_id`, `type`,
+`nstd_chirality`, `nstd_linkage`, `nstd_monomer`이며
+후자 네 값은 bare `polypeptide(L),no,no,no`여야
+한다. 나머지 네 category는 변경 없는 polymer-sequence carrier가
+독립적으로 수용해야 하며 explicit link field나 추가 category는 fail-close한다.
+
+이 profile은 pinned offline engine-owned rule에서 sequence-implied archive-standard
+ALA/GLY heavy reference graph만 물질화한다. GLY core role은 N/CA/C/O,
+ALA는 여기에 CB를 추가한다. asym별 마지막 residue와 singleton은 OXT를
+반드시 갖고, outgoing sequence link가 있는 residue는 OXT를 갖지 않는다.
+Intra-residue bond는 exact manifest rule에서 오며, 같은 asym의 인접한
+`_entity_poly_seq` 위치만 exact single C(i)--N(i+1)로 연결한다. n개
+residue chain은 exact n-1 path를 갖고 cross-asym bond는 없다. 좌표 거리와
+auth alias는 topology 선택에 쓰지 않으며 이 값의 변경이 graph를 바꾸지
+않는다.
+
+Rule manifest schema는
+`betelgeuze.standard_l_peptide_heavy_topology_rule_manifest/1.0.0`, SHA-256은
+`4d941815d26431a5de9bd74b4860f84ce39232e7123ee87b3b61a104457eb244`다.
+공식 CCD provenance는 ALA
+`https://files.rcsb.org/ligands/download/ALA.cif`, 6,071 byte, SHA-256
+`6d32b34d4f7b3ddf0cd3dff3f98ddaf7649bc5303ff9a8bd95ba62283f47a1ca`, type
+`L-PEPTIDE LINKING`; GLY
+`https://files.rcsb.org/ligands/download/GLY.cif`, 5,615 byte, SHA-256
+`c49458946b0ebc057db6ad0a4e1557a1caaed4c80a203accd458efddccbf92ff`, type
+`PEPTIDE LINKING`(즉 L type이 아님)을 고정한다. 둘 다 initial 1999-07-08,
+modified 2024-09-27, release status REL이다. 이 파일 hash는 tamper evidence일
+뿐 source authentication이 아니며 runtime은 CCD를 fetch하지 않고 내장 rule
+manifest를 다시 hash한다.
+
+Projection/state/source-binding/write-receipt/round-trip-report schema는 각각
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_projection/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_state/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_source_binding/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_write_receipt/1.0.0`,
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_round_trip_report/1.0.0`으로
+고정된다.
+Factory-only artifact chain은 ordered projection, rule manifest, final graph,
+detached system, source identity, canonical output, exact reparse와 byte-stable 두 번째
+emission을 상호 결속한다. Graph 물질화 후 canonical-topology와
+parser-observation digest를 둘 다 새로 계산한다.
+
+Parser provenance marker는
+`betelgeuze.mmcif_archive_standard_l_peptide_topology_preparation_inventory_commitment/1.0.0`
+schema와 SHA를 함께 결속한다. Preparation bridge는 exact rule manifest,
+carrier ledger, system/chain/residue/atom/bond marker key set, graph와 commitment를
+의미론적으로 재계산한 후에만 pedigree를 recognized로 다룬다. Commitment를
+두고 topology/observation만 coherent rehash한 tamper는 fail-close한다. 고정
+5-positive 모두 parser pedigree가 recognized이고 observation이 self-consistent하지만
+canonical ingest는 `unsupported`, preparation은 `incomplete`이며 `invalid`는 아니다.
+어떤 promotion도 없다.
+
+Input/output은 각 64 MiB, source ID는 UTF-8 4,096 byte, token은 2,048 character,
+atom row는 80,000개, materialized bond는 300,000개로 제한한다. 고정
+5-positive/24-failure corpus
+`config/independent_engine_v2_v2_1_mmcif_archive_standard_l_peptide_topology_corpus.json`의
+canonical payload SHA-256은
+`58377d1b60a493e62a53af8250c912b49b7475e76d41316ee8d2380ffaf967de`다.
+성공은 rule manifest match·sequence-implied heavy reference topology·same-asym 인접
+peptide reference bond만 확인한다. Source-observed covalence, coordinate peptide
+geometry나 chain-break 탐지/배제, source authentication, formal charge·H·protonation·
+stereo 할당, modified/nonstandard monomer, generic chemistry·preparation·parameterability,
+physics·runtime·simulation·execution·claim, general mmCIF/all-format readiness와 V2-1은
+모두 false다.
+
+앞의 fully-observed polymer component-topology child를 변경하지 않는 별도
+opt-in
+`betelgeuze_engine_v2.molecular.mmcif_polymer_component_terminal_leaving_policy`
+envelope 1.0은 profile
+`strict_mmcif_polymer_component_terminal_leaving_annotation_envelope/1.0.0`을
+사용한다. category 집합과 canonical category 순서는 기존 exact 7-category
+polymer component-topology와 같고, `_chem_comp_atom` header만 다음 exact
+official-order 11-field로 확장한다.
+
+`comp_id, atom_id, type_symbol, charge, pdbx_aromatic_flag,
+pdbx_leaving_atom_flag, pdbx_stereo_config, pdbx_backbone_atom_flag,
+pdbx_n_terminal_atom_flag, pdbx_c_terminal_atom_flag, pdbx_ordinal`.
+Wrapper는 0-based index `0,1,2,3,4,6,10`을 순서 그대로 투영해 기존 exact
+7-field child source를 만들고, 그 source가 변경 없는 child parser에서 독립적으로
+수용·canonical emit되는 경우에만 성공한다. 네 추가 flag는 bare `Y` 또는 `N`만
+받아 ordered source annotation으로 보존하며 atom 이름, 좌표, 거리, valence 또는
+component 이름에서 값을 추론하지 않는다.
+원본 source stage와 canonical reparse stage는 각각 두 번째 exact child parse를
+수행한다. private proof는 parser pedigree, component projection, topology state,
+augmented topology, source binding, serialized system byte, snapshot, parser
+observation, preparation-inventory commitment, canonical child emission을 실제로
+비교한다. 기존 state는 exact 12-field required/pass-and-comparison gate map을,
+source binding은 같은 gate map과 private proof SHA-256·state hash를 결속한다.
+policy/round-trip report는 이 computed gate를 소비한다. 불일치는 typed
+error로 fail-close한다.
+source stage와 canonical reparse stage의 child proof·parser observation은 source/provenance
+canonicalization으로 달라질 수 있으므로 cross-stage 동일성을 요구하지 않는다.
+
+`betelgeuze.mmcif_polymer_terminal_leaving_rules/1.0.0`은 이 보존 규칙과
+`singleton`, `n_sequence_boundary`, `internal`, `c_sequence_boundary` 네 위치 role만
+고정한다. 각 role은 `_struct_asym`과 `_entity_poly_seq` 순서로부터 asym별로
+결정되는 sequence boundary일 뿐 chemical terminus, retained/leaving atom,
+reaction endpoint 또는 peptide-link chemistry가 아니다. 같은 component template이
+internal과 boundary 위치에 나타나도 wrapper는 terminal variant를 합성하거나
+다르게 적용하지 않는다.
+canonical rules payload SHA-256은
+`9235a365be1ee9f0189f94f37ed3317ff14903f0469d41f6fea2a6d2678f92b1`이다.
+
+성공 결과의 `AllAtomSystem`은 같은 stage에서 독립 투영·parse한 child system의
+byte-exact snapshot이며 parser
+pedigree `betelgeuze.mmcif_polymer_component_topology_parser/1.0.0`, canonical
+topology, parser observation과
+`betelgeuze.mmcif_polymer_component_topology_preparation_inventory_commitment/1.0.0`
+값도 그대로 유지한다. Annotation projection, rules/policy report, child state와
+source binding, wrapper receipt와 round-trip report는 factory-only artifact chain에
+결속된다. 따라서 bare system serialization은 wrapper annotation evidence를
+의도적으로 잃으며, child chemistry/topology 권한을 넓히지 않는다.
+
+Wrapper는 child의 polymer-sequence 100,000행, component 4,096행,
+component atom 80,000행, component bond 120,000행, materialized child bond
+120,000개 cap을 그대로 사용한다. input/output/projection은 각각 64 MiB,
+source ID는 UTF-8 4,096 byte, token과 canonical output line은 2,048 character로
+제한한다. 3개 round-trip과 20개 deterministic failure를 고정한 corpus
+`config/independent_engine_v2_v2_1_mmcif_polymer_component_terminal_leaving_policy_corpus.json`은
+canonical-manifest payload SHA-256
+`3cfc5731f9943479f7246baf17148ac52a52b3557b35a584a14a6e606a579a3d`를 결속한다.
+
+이 envelope는 `chemical_terminal_state_assessed`, `terminal_chemistry_assigned`,
+`leaving_atom_policy_applied`, `leaving_atoms_removed`, `peptide_bonds_inferred`,
+`inter_residue_bonds_materialized`를 모두 false로 고정한다. H/H2/OXT 또는 다른
+atom을 삭제하지 않고, C/N 이름이나 geometry로 peptide bond를 만들지 않으며,
+generic chemistry, generic/global preparation, parameterability, physics, runtime,
+simulation, execution, claim, general mmCIF과 V2-1 상태를 승격하지 않는다.
+
+`betelgeuze_engine_v2.molecular.mmcif_standard_l_peptide_neutral_preparation`
+은 위 두 증거 surface를 하나의 raw source에서 독립적으로 다시
+투영한 뒤에만 적용하는 별도의 non-writer 준비 transform 1.0이다.
+profile은
+`strict_mmcif_ALA_GLY_source_explicit_CCD_neutral_linkage_preparation/1.0.0`,
+literal policy는
+`exact_ALA_GLY_source_explicit_CCD_neutral_linkage_policy/1.0.0`이다. exact
+8-category `_entity`, `_entity_poly`, `_struct_asym`, `_entity_poly_seq`,
+`_chem_comp`, `_chem_comp_atom`, `_chem_comp_bond`, `_atom_site` source를 받아
+exact 7-category terminal/leaving child와 exact 5-category archive-heavy child가
+각각 독립적으로 수용되는지 검증한다. 이 경로는 outer-source writer,
+write receipt 또는 canonical mmCIF round-trip을 구현하지 않는다.
+
+고정 preparation-rule manifest schema는
+`betelgeuze.standard_l_peptide_neutral_linkage_preparation_rule_manifest/1.0.0`,
+SHA-256은
+`daa2beb6648d2749204093bfd0db5dd316cb38557b29890054ddc54c73193d7f`이다.
+source template은 ALA 13 atom/12 bond, GLY 10 atom/9 bond를 완전히
+포함해야 하고 모든 formal charge는 known zero여야 한다. ALA CA는
+source stereo `S`, 나머지 선택 stereo marker는 `N`이다. outer child는 ALA와
+GLY 모두 quoted `L-peptide linking`으로 normalization하며, official GLY CCD의
+`PEPTIDE LINKING`과 byte-exact하다고 주장하지 않는다.
+
+role policy는 `singleton`에서 삭제하지 않고,
+`n_sequence_boundary`에서 OXT/HXT, `internal`에서 H2/OXT/HXT,
+`c_sequence_boundary`에서 H2만 삭제한다. 나머지 atom과 coordinate는
+source의 exact binary64 값을 유지하며 hydrogen을 생성하지 않는다. 같은
+asym의 연속 sequence position에만 single C(i)--N(i+1) bond를 추가한다.
+link가 `L`개면 atom과 source bond를 각각 exact `3L`개 삭제하고 `L`개 bond를
+추가하여 최종 bond 수가 source bond 수에서 `2L`을 뺀 값이어야 한다.
+준비된 heavy induced graph는 독립 archive child와 일치해야 한다.
+
+factory-only state/source-binding/report/atom-mapping/parameter-requirement
+inventory는 raw source, 두 child, transformed snapshot, topology/observation,
+mapping과 heavy crosscheck를 결속한다. `verify_replay()`는 보존한 raw
+source에서 state를 byte-exact로 재생하지만 serialization round-trip 증거가
+아니다. parameter inventory는 atom/bond/angle/proper/nonbonded/partial-charge
+요구량만 나열하고 improper·CMAP을 나열하지 않으며 production parameter
+set은 missing이다. 4-positive/16-failure 고정 corpus manifest
+`config/independent_engine_v2_v2_1_mmcif_standard_l_peptide_neutral_preparation_corpus.json`
+은 canonical payload SHA-256
+`c5c0ab935305c8d15fb2868c8327d38622de85fe84b8426e32d14be88ff3c20d`를
+결속한다. 따라서
+`profile_molecular_preparation_assessed/ready`만 true고 generic/global
+preparation, pH/protonation correctness, parameterability, physics/energy/force,
+runtime/minimization/simulation/execution/claim, general mmCIF/all-format readiness와
+V2-1 완료는 모두 false다.
+
+다음 bounded slice인
+`betelgeuze_engine_v2.molecular.mmcif_standard_l_peptide_heavy_completion`
+은 exact 5-category archive-heavy ALA/GLY source만 받는 별도의 non-writer
+heavy-to-all-atom transform 1.0이다. profile은
+`strict_mmcif_ALA_GLY_heavy_complete_fixed_neutral_microstate_completion/1.0.0`,
+policy는
+`exact_ALA_GLY_heavy_to_fixed_neutral_microstate_completion_policy/1.0.0`이다.
+같은 raw byte를 archive child가 독립 수용한 뒤에만 transform을 시작한다.
+engine-owned rule manifest schema
+`betelgeuze.standard_l_peptide_heavy_to_fixed_neutral_all_atom_completion_rule_manifest/1.0.0`
+와 SHA-256
+`eed2b432c6a4b916370e14d922830a5eeb9f531acc579c94b7e823b8949810c6`은
+공식 ALA/GLY CCD ideal coordinate decimal token, atom ordinal, H parent와
+sequence-role inventory를 offline으로 고정한다. CCD file과 manifest hash는
+tamper evidence이지 source authentication이 아니다.
+
+모든 source heavy coordinate는 output에서 binary64 bit-exact로 유지한다.
+active intra-residue heavy bond 길이는 pinned ideal의 ±0.20 Å, 같은 asym의
+인접 C--N은 inclusive 1.15–1.55 Å여야 한다. 각 residue의 N--CA--C frame
+normalized sine은 0.05 이상이어야 하고, ALA는 N/C/CB-about-CA normalized
+triple의 absolute value가 0.05 이상이면서 ideal과 같은 positive orientation을
+가져야 한다. 이 값들은 bounded profile admission일 뿐 angle, omega, clash,
+conformation 또는 scientific geometry validation이 아니다.
+
+role-active hydrogen은 pinned ideal parent-relative vector를 ideal N--CA--C
+frame에서 source frame으로 회전하고 retained parent에 anchor해 결정적으로
+생성한다. output mapping은 모든 atom을 `source_retained`와
+`profile_generated`의 disjoint union으로 나누고 generated H의 parent, rule
+ordinal과 manifest SHA를 결속한다. 모든 formal charge는 fixed-neutral profile이
+소유하는 known zero이며 ALA CA의 `S`도 profile-owned assignment다. 이는
+environmental pH/protonation correctness나 independent CIP가 아니다.
+
+factory-only state/source-binding/report/mapping/parameter-requirement artifact는
+raw source, archive child, completed snapshot, topology/observation digest와 rule
+manifest를 함께 결속한다. `verify_replay()`는 raw source에서 byte-exact state를
+재계산하지만 outer writer나 serialization round-trip은 없다. atom/bond/angle/
+proper/nonbonded/partial-charge instance requirement는 중복 없이 열거하지만
+improper와 CMAP은 열거하지 않고 production parameter set은 missing이다.
+4-positive/13-failure corpus
+`config/independent_engine_v2_v2_1_mmcif_standard_l_peptide_heavy_completion_corpus.json`
+은 canonical payload SHA-256
+`7fed000628174709fb5cd30955239f65e9395e981d3a34422fdcdb3a932bfb1f`를
+결속한다. profile-local heavy completion과 molecular preparation readiness만
+true이며 generic/global preparation, generic H completion, parameterability,
+physics/runtime/energy/force/minimization/simulation/execution/claim, general
+mmCIF/all-format readiness와 V2-1 완료는 모두 false다.
+
+polymer sequence와 nonpoly component-topology 두 기존 선택 surface를 함께
+보존하는 별도 opt-in module
 `betelgeuze_engine_v2.molecular.mmcif_polymer_sequence_nonpoly_component_topology`
 은 envelope/parser/writer 1.0.0과 profile
 `strict_mmcif_polymer_sequence_nonpoly_component_topology_composition_envelope/1.0.0`
@@ -1434,6 +1689,7 @@ profile 밖의 general missingness·비표현 `CRYST1`·symmetry/PBC 의미론�
 포함한 general PDB,
 exact common-core21·선택 explicit assembly·nonpoly identity·nonpoly component
 topology·선택 nonpoly identity-symmetry covalent struct-conn topology·polymer sequence membership·
+선택 polymer terminal/leaving annotation inventory·
 선택 exact polymer-sequence+nonpoly component-topology composition·
 source-reported unobserved-residue·unobserved-atom·zero-occupancy-residue·
 zero-occupancy-atom envelope 밖 categories·auth/entity와
@@ -1452,6 +1708,11 @@ bracket H를 포함한 general SMILES,
 hydrogen·protonation·tautomer·
 aromaticity 준비, contextual chemistry 해석과 일반 parameterability는 계속
 차단되므로 V2-1을 완료로 표시하지 않는다.
+
+선택 terminal/leaving annotation inventory의 source flag와 sequence boundary는
+chemical terminus, leaving-atom transformation 또는 peptide-link materialization의
+근거가 아니다. 해당 wrapper corpus가 통과해도 child system과 preparation·claim
+권한은 바뀌지 않는다.
 
 특히 위의 선택 exact composition은 polymer template·modified-residue chemistry,
 reference 또는 coordinate completeness·missingness, `_struct_conn`, altloc,
@@ -1715,6 +1976,134 @@ dataset fitting·provenance, force-energy reference validation, cutoff·switch·
 PBC·long-range와 pressure virial을 포함한 production method, minimizer와
 release attestation은 계속 blocker다.
 
+실제 과학 참조 증거의 첫 bounded slice로 SPICE 2.0.1 (DOI
+`10.5281/zenodo.10975225`)의 QCArchive singlepoint dataset 340,
+`SPICE DES Monomers Single Points Dataset v1.1`, `spec_4`에서 methane,
+ethane, propane, n-butane 각 50개씩 총 200개 complete record를 exact
+artifact로 수용했다. Psi4 1.4.1 `wb97m-d3bj/def2-tzvppd` provenance와 release의
+float32 coordinate·float32 total gradient, float64 total energy를 보존한다.
+gradient는 `dE/dr`이며 force가 아니고, 이 slice는 `force=-gradient` 변환을
+수행하지 않는다.
+
+source 생성기의 `(i, i+25)` high/nearby-low conformation pair를 분리하지
+않도록 group·pair ID의 domain-separated SHA-256 순서로 graph마다
+15/5/5 pair, 즉 30/10/10 record를 fit/selection/holdout에 배치한다. 전역
+record 수는 120/40/40, pair 수는 60/20/20이며 exact record·geometry·
+QCArchive molecule ID·source-pair overlap은 모두 0이다. 그러나 세 partition은
+같은 네 molecular graph와 같은 release/time provenance를 공유한다. 따라서
+허용되는 claim은 `within_same_four_graphs_unseen_conformations_only`뿐이고,
+graph·family·time·release-disjoint 또는 generic validation split이 아니다.
+
+이는 observation inventory이지 parameter fitting이나 force-field validation이
+아니다. 서로 다른 molecule의 absolute total energy는 공통 offset으로 직접 fit하지
+않으며, 향후에는 molecule별 relative energy 또는 nuisance intercept protocol이
+필요하다. isolated monomer energy·gradient만으로 transferable partial charge,
+LJ 또는 1–4 parameter를 식별할 수 없다. upstream은 CC0를 선언하지만 human
+license review와 whole-file authentication은 아직 pending이다. candidate fit,
+parameter set, parameterability, reference validation, production parameter,
+physics·runtime·execution·claim gate는 모두 false다.
+
+이 pending 상태를 사람이 검토할 수 있는 입력으로 바꾸기 위해 별도의
+`betelgeuze.spice_c1_c4_source_authentication_license_review_packet/1.0.0`
+패킷을 둔다. 이 패킷은 기존 251,253-byte evidence를 수정하지 않고 그 exact
+artifact/core SHA-256에 결속한다. 2026-07-15에 관찰한 Zenodo version record
+10975225 revision 10과 단일 HDF5 file ID·37,479,271,148-byte 크기·공식 MD5,
+GitHub release 2.0.1의 lightweight tag→commit, tag-pinned README와 LICENSE의
+blob/byte/SHA-256을 canonical snapshot으로 분리해 보존한다. Zenodo와 README의
+dataset CC0 선언은 저장소 code/documentation의 MIT LICENSE와 같은 범위가 아니며,
+scope 해석은 사람의 검토 전까지 pending이다.
+
+이 패킷은 인증서나 법적 승인서가 아니다. 37.5 GB 전체 파일을 local stream으로
+읽은 byte-count/official-MD5/local-SHA-256 receipt, admitted C1–C4 array가 그
+whole file에서 어떤 HDF5 path·dtype·shape·selection/order로 추출됐는지를 다시
+결속하는 receipt, 그리고 그 receipt에 atomic number·mapped identity·connectivity
+derivation·record/index mapping을 명시적으로 연결하는 요구, reviewer
+decision/attestation은 모두 비어 있고 관련 gate는
+false다. GitHub verified commit에는 HDF5 digest가 없고 tag 자체도 서명되지
+않았으므로 publisher-signed dataset digest로 해석하지 않는다. 공식 MD5를 향후
+로컬에서 일치시켜도 whole-file byte integrity evidence일 뿐 강한 publisher
+identity authentication과는 별도다. CI·wheel·runtime은 원본 HDF5를 fetch하거나
+hash하지 않고 패킷과 기존 evidence bytes만 offline replay한다.
+
+이 exact source bytes만을 다시 strict replay하는 별도 target-view
+계약에서 graph당 25개의 source pair를
+`E(entry suffix p) - E(entry suffix p+25)`로 변환해 100개
+pair-relative energy target을 만들고, 200개 record의 float32
+gradient 스칼라 부호 비트를 정확히 반전해 `F=-dE/dr`인
+5,700개 force scalar target을 만든다. pair 역할은 오직 numeric
+QCArchive suffix로 결정하며 energy 정렬·절댓값을 사용하지 않는다.
+`p+25`는 source 생성기의 nearby-lower member일 뿐 QM minimum이나
+torsion-scan endpoint가 아니다. 2022 CODATA central value를 versioned
+rational 관례로 고정하고 각 output을 binary64로 한 번만 반올림하며,
+이는 측정된 물리상수가 exact라는 주장이 아니다.
+
+target view는 60/20/20 energy pair와 120/40/40 force record로 기존
+pair-atomic split을 그대로 보존한다. source·topology·row·protocol·derived
+hash와 raw net-force/coordinate-centroid torque 잔차를 결속하지만 force
+projection·centering·clipping·denoising은 수행하지 않는다. 별도 target
+JSON을 commit하지 않고 외부 evidence에서 on demand로 재생성한다.
+공개 holdout은 사람에게 blind가 아니고 세 partition이 같은 네 graph·
+release·time provenance를 공유하므로 허용 claim은 여전히
+`within_same_four_graphs_unseen_conformations_only`다. 이 변환은 loss,
+fit, parameter identifiability, candidate parameter, scientific validation,
+production physics·runtime·execution·claim gate를 승격하지 않는다.
+
+그 downstream의 별도 fit-only bonded-basis observability 계약은 exact source
+bytes와 target view를 다시 replay하고, atomic number·connectivity만으로 네 graph의
+6 bond·9 angle·7 proper environment key를 재구성한다. 이 key는 frozen C1--C4
+좌표에서 feature를 묶는 진단 label일 뿐 FF atom type·parameter ID·transferable
+chemistry typing이 아니다. primary basis는 bond별 `0.5*r^2`, `-r`, angle별
+`0.5*theta^2`, `-theta`, proper별 parity-even `cos(n*phi), n=1..3`의 51열로
+사전 고정한다. sine 포함 또는 `n=1..6`까지 확장한 세 family도 함께 계산하지만
+이는 target residual을 보지 않는 비선택 misspecification/allowed-family 감사이며
+candidate model이 아니다.
+
+오직 fit 60 pair만 사용해 pair당 `Phi(seed)-Phi(related)` energy 1행과 두
+record의 atom-major `-dPhi/dR` force 행을 만들므로 전체 design은 energy 60행,
+force 3,420행이다. fit target만으로 고정한 graph-balanced·energy/force-balanced
+RMS loss scale과 fit-only column L2 normalization을 적용한 뒤 binary64 SVD의
+rank·nullity·condition을 보고한다. selection·holdout은 basis·scale·rank·threshold에
+사용하지 않고, SVD bit pattern도 cross-platform 계약으로 고정하지 않는다.
+
+네 사전고정 variant가 frozen fit 좌표에서 full column rank인 결과는 해당 design
+direction을 수치적으로 구분한다는 좁은 조건부 observability일 뿐이다. coefficient,
+prediction, residual fit, candidate parameter와 별도 committed report artifact는
+만들지 않는다. SPICE total energy·gradient에는 electrostatics·dispersion·1–4·
+polarization·coupling이 함께 있으므로 bonded/physical parameter identifiability,
+family sufficiency, transferability, reference validation, parameterability,
+production physics·runtime·execution·claim gate는 모두 false다.
+
+별도의 metadata-decided
+`betelgeuze.spice_graph_family_disjoint_population_preflight/1.0.0`은 source와
+review packet을 strict replay하고 current partition의 graph overlap 4·family
+overlap 1, graph/family/time/release-disjoint false와 public-blind false를 고정한다.
+strict integrity replay는 이미 동결된 target payload를 decode·검증하지만,
+population·family·split 결정은 topology와 partition metadata만 소비하고 target
+값으로 분기하지 않는다. 그 prospective protocol은
+release→family→parent/scaffold→exact graph→related-conformer/cluster→record 계층,
+whole-graph/whole-family split unit, metric·threshold·candidate 순서를 고정하지만
+expanded row나 split manifest 자체를 만들지는 않는다. uncertainty의 outer
+resampling unit은 graph 또는 family이고 source-pair block은 graph 내부에만
+nested된다.
+
+v1 exact graph identity는 isotope와 stereo가 모두 `explicitly_absent`인 bounded
+C/H tree에만 적용된다. atomic number·bond order·molecular charge·multiplicity와
+SHA-256 domain·rooted-tree encoding·canonical JSON recipe·C1–C4 graph digest·
+topology receipt를 protocol에 결합한다. isotope 또는 stereo가 present이면
+atom-level isotope label과 stereo descriptor를 담는 새 identity schema가 생길
+때까지 fail closed한다.
+
+graph-disjoint evidence를 단순히 C5+ holdout으로 덧붙일 수도 없다. 현재 C1–C4
+합집합은 6 bond·9 angle·7 proper key인데 C5는 새로운 all-interior angle 1개와
+proper 2개, C6는 추가 all-interior proper 1개를 요구한다. 따라서 C5/C6는 기존
+C1–C4 parameter key universe의 in-domain accuracy holdout이 아니라 versioned
+coverage expansion 또는 OOD다. 새 applicability·key·fit-only basis·observability
+계약에서 C1–C6 coverage를 먼저 확립한 뒤에야 C7+의 whole graph를 같은
+linear-alkane family 안 graph-disjoint selection/holdout 후보로 쓸 수 있다.
+branched/cyclic/unsaturated family는 별도 applicability·coverage 계약 전까지
+accuracy가 아니라 abstention/OOD evidence로만 취급한다. 공개 graph/family set은
+사람에게 blind하지 않으며, 진짜 sealed blind evidence와 별도 lane이어야 한다.
+
 별도로 exact methane의 네 C-H bond·여섯 H-C-H angle에 한해 1.0 legacy
 파라미터 계약과 동일 바이트를 유지하면서, 1.1은 고정 harmonic
 functional form을 payload에 결합한다. 합성 비물리 fixture의 exact-arithmetic fit,
@@ -1934,8 +2323,17 @@ AI 학습과 GPU 최적화는 독립 CPU 물리 기준선보다 앞서지 않는
 2. V2-1 parser·preparation과 supported-chemistry 표를 먼저 완성한다.
 3. V2-2의 bounded C1–C4 topology·비물리 full-assignment·direct-uncut method
    binding·schema-owned scalar-energy 진단과 별도 bounded nonphysical
-   method-kernel energy·force·nonperiodic-virial reference 계약 다음으로,
-   licensed dataset에서 실제 type·charge·bonded/LJ parameter를 fitting·검증하고
+   method-kernel energy·force·nonperiodic-virial reference 계약 및 source-declared
+   CC0 SPICE 2.0.1 C1–C4 observation inventory와 source-bound
+   pair-relative-energy/negative-gradient target view와 현재 fit-only
+   basis·loss·conditional-observability 및 nonidentifiability 경계 계약 다음으로,
+   machine-prefilled source/license review 패킷의 남은 사람 license/legal 결정,
+   whole-file local-stream·subset-extraction receipt와 필요한 strong publisher
+   authentication을 닫는다. 그 뒤 target을 보기 전에 population taxonomy와
+   graph/family 계층 split을 동결하고 graph-disjoint in-family validation,
+   family-disjoint OOD/abstention, 외부 sealed blind evidence를 서로 분리한
+   scientific protocol에서 실제
+   type·charge·bonded/LJ parameter를 fitting·검증하고
    method-owned production energy·force·virial kernel 및 cutoff·switch·Coulomb·
    1–4·PBC 경계를 포함한 작은 production chemistry 범위를 정확하게 닫는다.
 4. 정확한 structure-quality·pocket 분석을 초기 독립 capability로 만든다.
