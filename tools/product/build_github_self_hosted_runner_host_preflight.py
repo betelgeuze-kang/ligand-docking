@@ -25,9 +25,12 @@ INVENTORY_REFRESH_COMMAND = (
     "runs/github_self_hosted_runner_inventory_current.json"
 )
 API_WORKER_RERUN_COMMAND = (
-    "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
+    "gh workflow run product-api-worker-trusted.yml --ref main"
 )
-ROCM_RUNTIME_RERUN_COMMAND = "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+ROCM_RUNTIME_RERUN_COMMAND = (
+    "gh workflow run product-image-smoke-trusted.yml --ref main "
+    "-f verify_mode=rocm-runtime"
+)
 RUNNER_WORKSPACE_CLEANUP_COMMAND = (
     'RUNNER_WORKSPACE="${RUNNER_WORKSPACE:-$(pwd)/.betelgeuze/github-runner/_work/ligand-docking/ligand-docking}" '
     'bash -lc \'set -euo pipefail; '
@@ -221,13 +224,12 @@ def build_github_self_hosted_runner_host_preflight(
         ]
     else:
         next_required_steps = [
-            f"Open {RUNNER_NEW_URL} as a repo admin and create a Linux x64 self-hosted runner.",
-            "Run the GitHub-provided download/config commands on this ROCm host; add custom label: rocm.",
-            "Install/start the runner service from the GitHub-provided runner directory.",
+            "Keep this public repository's runner inventory empty until the previously exposed host is cleanly rebuilt or replaced and all host-accessible credentials are reviewed and rotated.",
+            "Do not create another persistent personal-repository runner; move trusted execution to an organization/private selected-workflow surface pinned to main, or use an isolated ephemeral runner.",
+            "Only after that protected execution boundary exists, configure the Linux labels self-hosted, linux and the ROCm labels self-hosted, linux, rocm.",
             f"Refresh inventory: {INVENTORY_REFRESH_COMMAND}",
-            f"Before rerunning remote workflows, clear any stale product-image smoke worktree artifacts on the runner host: {RUNNER_WORKSPACE_CLEANUP_COMMAND}",
-            f"Rerun API worker: {API_WORKER_RERUN_COMMAND}",
-            f"Rerun ROCm runtime smoke: {ROCM_RUNTIME_RERUN_COMMAND}",
+            f"After host remediation and protected registration, Rerun API worker: {API_WORKER_RERUN_COMMAND}",
+            f"After host remediation and protected registration, Rerun ROCm runtime smoke: {ROCM_RUNTIME_RERUN_COMMAND}",
         ]
 
     summary = {

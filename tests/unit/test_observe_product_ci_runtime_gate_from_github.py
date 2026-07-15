@@ -51,7 +51,7 @@ def test_observe_product_ci_runtime_gate_from_github_rebuilds_workspace_cleanup_
     sha = "f28bab0aa1067b154b1f6dc7ce8a774274ba1cc6"
     repo = "example/repo"
     runs_by_workflow = {
-        "product-api-worker.yml": [
+        "product-api-worker-trusted.yml": [
             {
                 "databaseId": 101,
                 "status": "completed",
@@ -65,7 +65,7 @@ def test_observe_product_ci_runtime_gate_from_github_rebuilds_workspace_cleanup_
                 "name": "product-api-worker",
             }
         ],
-        "product-image-smoke.yml": [
+        "product-image-smoke-trusted.yml": [
             {
                 "databaseId": 303,
                 "status": "completed",
@@ -93,14 +93,14 @@ def test_observe_product_ci_runtime_gate_from_github_rebuilds_workspace_cleanup_
         ],
     }
     jobs_by_run = {
-        "101": [{"name": "api-worker-contract", "status": "completed", "conclusion": "failure", "started_at": "2026-07-05T07:22:26Z"}],
+        "101": [{"name": "api-worker-contract-trusted", "status": "completed", "conclusion": "failure", "started_at": "2026-07-05T07:22:26Z"}],
         "202": [
-            {"name": "product-image-build-smoke", "status": "completed", "conclusion": "failure", "started_at": "2026-07-05T07:22:38Z"},
+            {"name": "product-image-build-smoke-trusted", "status": "completed", "conclusion": "failure", "started_at": "2026-07-05T07:22:38Z"},
             {"name": "product-image-rocm-runtime-smoke", "status": "completed", "conclusion": "skipped", "started_at": "2026-07-05T07:22:25Z"},
         ],
         "303": [
             {"name": "product-image-rocm-runtime-smoke", "status": "completed", "conclusion": "failure", "started_at": "2026-07-05T07:22:50Z"},
-            {"name": "product-image-build-smoke", "status": "completed", "conclusion": "skipped", "started_at": "2026-07-05T07:22:26Z"},
+            {"name": "product-image-build-smoke-trusted", "status": "completed", "conclusion": "skipped", "started_at": "2026-07-05T07:22:26Z"},
         ],
     }
     log = (

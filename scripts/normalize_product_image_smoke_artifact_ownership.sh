@@ -6,11 +6,10 @@ usage() {
 Usage: normalize_product_image_smoke_artifact_ownership.sh [--log-path <path>]
 
 Normalizes self-hosted product-image-smoke artifacts to the current runner
-UID:GID before upload and before the next checkout. This script is intended for
-post-checkout workflow steps; pre-checkout recovery must remain inline in the
-workflow because repository scripts are not available before checkout. When
---log-path is omitted, only the standard receipt and smoke artifact directories
-are normalized.
+UID:GID before upload. This script is intended only for post-checkout trusted
+workflow steps; pre-checkout repository mutation is deliberately prohibited.
+When --log-path is omitted, only the standard receipt and smoke artifact
+directories are normalized.
 EOF
 }
 
@@ -47,8 +46,8 @@ OWNERSHIP_REPAIR_IMAGE="${PRODUCT_IMAGE_OWNERSHIP_REPAIR_IMAGE:-busybox:1.36.1}"
 RUNS_DIR="${WORKSPACE}/runs"
 RECEIPT_PATH="${RUNS_DIR}/product_image_smoke_receipt_current.json"
 WORKSPACE_SMOKE_DIR="${RUNS_DIR}/product_image_smoke_runner_artifacts"
-SMOKE_DIR=""
-if [[ -n "${TEMP_ROOT}" ]]; then
+SMOKE_DIR="${PRODUCT_IMAGE_RUNNER_SMOKE_DIR:-}"
+if [[ -z "${SMOKE_DIR}" && -n "${TEMP_ROOT}" ]]; then
   SMOKE_DIR="${TEMP_ROOT}/product_image_smoke_runner_artifacts"
 fi
 

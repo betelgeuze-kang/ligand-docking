@@ -2127,10 +2127,10 @@ def test_ai_md_product_evidence_bundle_keeps_local_claim_ready_when_self_hosted_
             "blocker_code": "github_actions_billing_or_spending_limit",
             "billing_free_self_hosted_path_recommended": True,
             "billing_free_self_hosted_api_worker_command": (
-                "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
+                "gh workflow run product-api-worker-trusted.yml --ref main"
             ),
             "billing_free_self_hosted_rocm_runtime_command": (
-                "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+                "gh workflow run product-image-smoke-trusted.yml --ref main -f verify_mode=rocm-runtime"
             ),
             "hosted_spending_limit_increase_required": False,
             "self_hosted_runner_inventory_present": True,

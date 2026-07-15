@@ -54,7 +54,9 @@ def _copy_product_image_preflight_fixture(root: Path) -> None:
         "scripts/normalize_product_image_smoke_artifact_ownership.sh",
         "scripts/prepare_product_docker_host.sh",
         ".github/workflows/product-image-smoke.yml",
+        ".github/workflows/product-image-smoke-trusted.yml",
         ".github/workflows/product-api-worker.yml",
+        ".github/workflows/product-api-worker-trusted.yml",
         "Dockerfile.product",
         "requirements-base.txt",
         "requirements.txt",
@@ -134,7 +136,13 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     assert rows_by_id["workflow_rocm_runtime_self_hosted_runner_declared"]["passed"] is True
     assert rows_by_id["workflow_hosted_build_summary_not_product_claim"]["passed"] is True
     assert rows_by_id["workflow_artifact_retention_declared"]["passed"] is True
-    workflow = Path(".github/workflows/product-image-smoke.yml").read_text(encoding="utf-8")
+    product_pr_workflow = Path(".github/workflows/product-image-smoke.yml").read_text(
+        encoding="utf-8"
+    )
+    product_trusted_workflow = Path(
+        ".github/workflows/product-image-smoke-trusted.yml"
+    ).read_text(encoding="utf-8")
+    workflow = "\n".join((product_pr_workflow, product_trusted_workflow))
     verify_script = Path("deploy/verify_product_image.sh").read_text(encoding="utf-8")
     dockerfile = Path("Dockerfile.product").read_text(encoding="utf-8")
     ownership_script = Path("scripts/normalize_product_image_smoke_artifact_ownership.sh").read_text(
@@ -143,38 +151,21 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     pull_request_block = mod._workflow_event_block(workflow, "pull_request")
     for trigger_path in mod.PRODUCT_IMAGE_SMOKE_PR_TRIGGER_REQUIRED_PATHS:
         assert f"- {trigger_path}" in pull_request_block
-    assert mod._workflow_step_before_checkout(
-        workflow,
-        "Recover stale product image smoke workspace artifacts",
-        minimum_count=2,
-    )
-    assert mod._workflow_checkout_clean_false_ready(workflow, minimum_count=2)
+    assert "Recover stale product image smoke workspace artifacts" not in workflow
+    assert "sudo" not in workflow
+    assert "clean: false" not in workflow
+    assert mod._workflow_checkout_secure_ready(workflow, minimum_count=3)
     assert mod._workflow_checkout_subdir_ready(
         workflow,
         checkout_path="product-ci-checkout",
         minimum_count=2,
     )
     assert workflow.count("working-directory: product-ci-checkout") >= 4
-    assert "product-ci-checkout/runs/product_image_smoke_receipt_current.json" in workflow
-    assert "product-ci-checkout/runs/product_image_build_smoke.log" in workflow
-    assert "product-ci-checkout/runs/product_image_rocm_runtime_smoke.log" in workflow
-    assert workflow.count("receipt_path=") >= 2
-    assert workflow.count("build_log_path=") >= 2
-    assert workflow.count("rocm_log_path=") >= 2
-    assert workflow.count('repair_path "${receipt_path}"') >= 2
-    assert workflow.count('repair_path "${build_log_path}"') >= 2
-    assert workflow.count('repair_path "${rocm_log_path}"') >= 2
-    assert workflow.count('if ! rm -rf "${smoke_dir}"; then') >= 2
-    assert workflow.count("product_image_smoke_workspace_cleanup_failed") >= 2
-    assert (
-        workflow.count("${{ runner.temp }}/product_image_smoke_runner_artifacts/**")
-        >= 2
-    )
-    assert workflow.count(
-        "continuing so verify_product_image.sh can emit a fail-closed receipt"
-    ) >= 2
+    assert workflow.count('ln -s "${artifact_root}" product-ci-checkout/runs') >= 2
+    assert workflow.count("${{ runner.temp }}/product-image-") >= 2
+    assert workflow.count("persist-credentials: false") == 3
+    assert workflow.count("clean: true") == 3
     assert workflow.count('export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"') >= 2
-    assert "chmod -R u+rwX" in workflow
     assert "repair_receipt_path" in verify_script
     assert "clear_stale_receipt" in verify_script
     assert "receipt_path_cleanup_failed" in verify_script
@@ -202,46 +193,43 @@ def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path:
     assert "run --rm" in ownership_script
     assert "/repair-root" in ownership_script
     assert "chmod -R u+rwX" in ownership_script
-    api_worker_workflow = Path(".github/workflows/product-api-worker.yml").read_text(encoding="utf-8")
-    assert "Recover stale product image smoke workspace artifacts" in api_worker_workflow
-    assert mod._workflow_step_before_checkout(
-        api_worker_workflow,
-        "Recover stale product image smoke workspace artifacts",
-        minimum_count=1,
+    api_worker_workflow = "\n".join(
+        (
+            Path(".github/workflows/product-api-worker.yml").read_text(encoding="utf-8"),
+            Path(".github/workflows/product-api-worker-trusted.yml").read_text(
+                encoding="utf-8"
+            ),
+        )
     )
-    assert mod._workflow_checkout_clean_false_ready(api_worker_workflow, minimum_count=1)
+    assert "Recover stale product image smoke workspace artifacts" not in api_worker_workflow
+    assert "sudo" not in api_worker_workflow
+    assert "clean: false" not in api_worker_workflow
+    assert mod._workflow_checkout_secure_ready(api_worker_workflow, minimum_count=2)
     assert mod._workflow_checkout_subdir_ready(
         api_worker_workflow,
         checkout_path="product-ci-checkout",
         minimum_count=1,
     )
     assert api_worker_workflow.count("working-directory: product-ci-checkout") >= 7
-    assert "clean: false" in api_worker_workflow
-    assert 'repair_path "${receipt_path}"' in api_worker_workflow
-    assert 'repair_path "${build_log_path}"' in api_worker_workflow
-    assert 'repair_path "${rocm_log_path}"' in api_worker_workflow
-    assert 'if ! rm -rf "${smoke_dir}"; then' in api_worker_workflow
-    assert "product_image_smoke_workspace_cleanup_failed" in api_worker_workflow
-    assert (
-        "continuing because product-image-smoke owns the fail-closed hygiene receipt"
-        in api_worker_workflow
-    )
+    assert "Prepare ephemeral API artifact root" in api_worker_workflow
+    assert 'ln -s "${artifact_root}" product-ci-checkout/runs' in api_worker_workflow
     assert all(row["execution_enabled"] is False for row in payload["rows"])
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
 
 
-def test_product_image_smoke_preflight_blocks_checkout_before_recovery(tmp_path: Path) -> None:
+def test_product_image_smoke_preflight_blocks_pre_checkout_workspace_mutation(tmp_path: Path) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
-    workflow_path = tmp_path / ".github" / "workflows" / "product-image-smoke.yml"
+    workflow_path = (
+        tmp_path / ".github" / "workflows" / "product-image-smoke-trusted.yml"
+    )
     workflow = workflow_path.read_text(encoding="utf-8")
     workflow_path.write_text(
         workflow.replace(
-            "      - name: Recover stale product image smoke workspace artifacts",
+            "      - name: Check out trusted source",
             (
-                "      - uses: actions/checkout@v5\n"
-                "        with:\n"
-                "          clean: false\n"
-                "      - name: Recover stale product image smoke workspace artifacts"
+                "      - name: Recover stale product image smoke workspace artifacts\n"
+                "        run: sudo chown -R runner:runner \"${GITHUB_WORKSPACE}\"\n"
+                "      - name: Check out trusted source"
             ),
             1,
         ),
@@ -267,7 +255,9 @@ def test_product_image_smoke_preflight_blocks_checkout_without_subdir_isolation(
     tmp_path: Path,
 ) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
-    workflow_path = tmp_path / ".github" / "workflows" / "product-image-smoke.yml"
+    workflow_path = (
+        tmp_path / ".github" / "workflows" / "product-image-smoke-trusted.yml"
+    )
     workflow_path.write_text(
         workflow_path.read_text(encoding="utf-8").replace(
             "          path: product-ci-checkout\n",
@@ -298,7 +288,7 @@ def test_product_image_smoke_preflight_blocks_checkout_without_subdir_isolation(
     ]
 
 
-def test_product_image_smoke_preflight_blocks_malformed_workspace_recovery_shell(
+def test_product_image_smoke_preflight_blocks_insecure_checkout_cleanup(
     tmp_path: Path,
 ) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
@@ -306,8 +296,8 @@ def test_product_image_smoke_preflight_blocks_malformed_workspace_recovery_shell
     workflow = workflow_path.read_text(encoding="utf-8")
     workflow_path.write_text(
         workflow.replace(
-            '          if [[ -e "${runs_dir}" ]]; then',
-            '          }\n          if [[ -e "${runs_dir}" ]]; then',
+            "          clean: true\n",
+            "          clean: false\n",
             1,
         ),
         encoding="utf-8",
@@ -328,20 +318,21 @@ def test_product_image_smoke_preflight_blocks_malformed_workspace_recovery_shell
     assert {"code": "workflow_pre_checkout_workspace_artifact_recovery_declared"} in payload["blockers"]
 
 
-def test_product_image_smoke_preflight_blocks_api_worker_checkout_before_recovery(
+def test_product_image_smoke_preflight_blocks_api_worker_pre_checkout_mutation(
     tmp_path: Path,
 ) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
-    workflow_path = tmp_path / ".github" / "workflows" / "product-api-worker.yml"
+    workflow_path = (
+        tmp_path / ".github" / "workflows" / "product-api-worker-trusted.yml"
+    )
     workflow = workflow_path.read_text(encoding="utf-8")
     workflow_path.write_text(
         workflow.replace(
-            "      - name: Recover stale product image smoke workspace artifacts",
+            "      - name: Check out trusted source",
             (
-                "      - uses: actions/checkout@v5\n"
-                "        with:\n"
-                "          clean: false\n"
-                "      - name: Recover stale product image smoke workspace artifacts"
+                "      - name: Recover stale product image smoke workspace artifacts\n"
+                "        run: sudo chmod -R u+rwX \"${GITHUB_WORKSPACE}\"\n"
+                "      - name: Check out trusted source"
             ),
             1,
         ),
@@ -363,7 +354,7 @@ def test_product_image_smoke_preflight_blocks_api_worker_checkout_before_recover
     assert {"code": "api_worker_pre_checkout_workspace_artifact_recovery_declared"} in payload["blockers"]
 
 
-def test_product_image_smoke_preflight_blocks_api_worker_malformed_recovery_shell(
+def test_product_image_smoke_preflight_blocks_api_worker_persisted_credentials(
     tmp_path: Path,
 ) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
@@ -371,8 +362,8 @@ def test_product_image_smoke_preflight_blocks_api_worker_malformed_recovery_shel
     workflow = workflow_path.read_text(encoding="utf-8")
     workflow_path.write_text(
         workflow.replace(
-            '          if [[ -e "${runs_dir}" ]]; then',
-            '          }\n          if [[ -e "${runs_dir}" ]]; then',
+            "          persist-credentials: false\n",
+            "          persist-credentials: true\n",
             1,
         ),
         encoding="utf-8",
@@ -398,7 +389,7 @@ def test_post_smoke_ownership_script_normalizes_existing_artifacts(tmp_path: Pat
     runner_temp = tmp_path / "runner-temp"
     runs = workspace / "runs"
     workspace_smoke_dir = runs / "product_image_smoke_runner_artifacts"
-    smoke_dir = runner_temp / "product_image_smoke_runner_artifacts"
+    smoke_dir = runner_temp / "product-image-build-smoke-1-1"
     runs.mkdir(parents=True)
     workspace_smoke_dir.mkdir(parents=True)
     smoke_dir.mkdir(parents=True)
@@ -410,6 +401,7 @@ def test_post_smoke_ownership_script_normalizes_existing_artifacts(tmp_path: Pat
     log.write_text("log", encoding="utf-8")
     workspace_smoke_artifact.write_text("stale", encoding="utf-8")
     smoke_artifact.write_text("artifact", encoding="utf-8")
+    smoke_artifact.chmod(0o400)
 
     result = subprocess.run(
         [
@@ -424,6 +416,7 @@ def test_post_smoke_ownership_script_normalizes_existing_artifacts(tmp_path: Pat
             "PATH": "/usr/bin:/bin",
             "GITHUB_WORKSPACE": str(workspace),
             "RUNNER_TEMP": str(runner_temp),
+            "PRODUCT_IMAGE_RUNNER_SMOKE_DIR": str(smoke_dir),
         },
         capture_output=True,
         text=True,
@@ -435,6 +428,7 @@ def test_post_smoke_ownership_script_normalizes_existing_artifacts(tmp_path: Pat
     assert log.is_file()
     assert workspace_smoke_artifact.is_file()
     assert smoke_artifact.is_file()
+    assert smoke_artifact.stat().st_mode & 0o200
 
 
 def test_product_image_smoke_preflight_reports_current_workspace_artifact_cleanup_state(
