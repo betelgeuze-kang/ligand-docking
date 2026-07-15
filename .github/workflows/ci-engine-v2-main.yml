@@ -52,8 +52,10 @@ jobs:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
       - name: Check out canonical Engine v2 surface
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          persist-credentials: false
+          clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
             packaging/engine-v2
@@ -81,6 +83,7 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_benchmark_contracts.py
+            tests/unit/test_engine_v2_reference_physics.py
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
@@ -91,7 +94,7 @@ jobs:
           sparse-checkout-cone-mode: false
           show-progress: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -122,14 +125,15 @@ jobs:
             tests/unit/test_engine_v2_post_merge_state.py \
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
-            tests/unit/test_engine_v2_benchmark_contracts.py > engine-v2-main.log 2>&1
+            tests/unit/test_engine_v2_benchmark_contracts.py \
+            tests/unit/test_engine_v2_reference_physics.py > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
           exit "$status"
 
       - name: Upload canonical suite diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: engine-v2-main-py${{ matrix.python-version }}-${{ github.run_id }}
           path: engine-v2-main.log
@@ -173,6 +177,10 @@ jobs:
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.docking import DockingProblemIdentity
           from betelgeuze_engine_v2.molecular import CANONICAL_SYSTEM_JSON_SCHEMA_ID
+          from betelgeuze_engine_v2.physics import (
+              AtomNonbondedParameter,
+              ReferenceForceFieldParameters,
+          )
 
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
           assert engine.__version__ == engine.ENGINE_API_VERSION
@@ -187,5 +195,13 @@ jobs:
               direction=MetricDirection.MINIMIZE,
               bootstrap_samples=0,
           ).metric_id == "import_metric"
+          assert ReferenceForceFieldParameters(
+              parameter_set_id="import-only",
+              parameter_set_version="1",
+              topology_sha256="0" * 64,
+              atom_parameters=(AtomNonbondedParameter(0, 1.0, 0.0, 0.0),),
+              cutoff_angstrom=2.0,
+              switch_start_angstrom=1.0,
+          ).scientifically_validated is False
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           PY

@@ -15,6 +15,24 @@ from betelgeuze_engine_v2.physics.projection import (
     local_normal_projection,
     project_rigid_body_forces,
 )
+from betelgeuze_engine_v2.physics.reference_forcefield import (
+    ReferenceForceFieldProvider,
+    ReferencePhysicsApplicabilityError,
+    ReferencePhysicsEvaluation,
+    evaluate_reference_force_field,
+)
+from betelgeuze_engine_v2.physics.reference_parameters import (
+    COULOMB_KCAL_ANGSTROM_PER_MOL_E2,
+    REFERENCE_PARAMETER_SCHEMA_ID,
+    AtomNonbondedParameter,
+    HarmonicAngleParameter,
+    HarmonicBondParameter,
+    PairScalingParameter,
+    PeriodicTorsionParameter,
+    ReferenceApplicabilityDomain,
+    ReferenceForceFieldParameters,
+    ReferenceParameterError,
+)
 from betelgeuze_engine_v2.physics.registry import (
     MAX_REGISTERED_PHYSICS_TERMS,
     IndependentPhysicsTerm,
@@ -26,19 +44,33 @@ from betelgeuze_engine_v2.physics.registry import (
 )
 
 __all__ = [
+    "COULOMB_KCAL_ANGSTROM_PER_MOL_E2",
+    "REFERENCE_PARAMETER_SCHEMA_ID",
+    "AtomNonbondedParameter",
     "EnergyCompositionResult",
     "EnergyTermResult",
+    "HarmonicAngleParameter",
+    "HarmonicBondParameter",
     "IndependentPhysicsProvider",
     "IndependentPhysicsTerm",
     "MAX_FIXED_PROJECTION_RANK",
     "MAX_REGISTERED_PHYSICS_TERMS",
+    "PairScalingParameter",
+    "PeriodicTorsionParameter",
     "PhysicsRegistryEvaluation",
     "PhysicsTermRegistry",
     "PhysicsTermRegistryError",
     "PhysicsTermRow",
     "ProjectionDiagnostics",
     "ProjectionRankError",
+    "ReferenceApplicabilityDomain",
+    "ReferenceForceFieldParameters",
+    "ReferenceForceFieldProvider",
+    "ReferenceParameterError",
+    "ReferencePhysicsApplicabilityError",
+    "ReferencePhysicsEvaluation",
     "compose_energy_terms",
+    "evaluate_reference_force_field",
     "fixed_rank_orthogonal_complement",
     "fixed_rank_projection_adjoint",
     "local_normal_projection",
