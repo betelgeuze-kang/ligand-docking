@@ -3,17 +3,17 @@ from __future__ import annotations
 import hmac
 import json
 import time
-from collections import defaultdict, deque
 from pathlib import Path
-from typing import Awaitable, Callable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import ClientDisconnect
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from api.config import settings
 from api.request_identity import ProductRequestIdentity, normalize_tenant_id
+from api.security_ledger import SecurityLedgerError, get_configured_security_ledger
 
 ALLOWED_PRODUCT_PREFIXES = (
     "/product",
@@ -58,10 +58,10 @@ AUDIT_WRITE_FAILURES = Counter(
 
 for _control in (
     "auth_hook",
-    "tenant_header",
-    "rate_limit",
-    "tenant_quota",
-    "payload_limit",
+    "server_bound_tenant_identity",
+    "persistent_rate_limit",
+    "persistent_tenant_quota",
+    "streamed_payload_limit",
     "path_allowlist",
     "audit_log",
     "audit_retention",
@@ -71,11 +71,15 @@ for _control in (
     SECURITY_CONTROL_GAUGE.labels(control=_control).set(1)
 
 
-class ProductSecurityMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app) -> None:  # type: ignore[no-untyped-def]
-        super().__init__(app)
-        self._requests: dict[str, deque[float]] = defaultdict(deque)
-        self._tenant_quota_counts: dict[tuple[str, str], int] = defaultdict(int)
+class _PayloadTooLarge(RuntimeError):
+    pass
+
+
+class ProductSecurityMiddleware:
+    """Pure-ASGI product security chain with streamed body enforcement."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
     @staticmethod
     def _path_is_allowed(path: str) -> bool:
@@ -84,38 +88,108 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
             for prefix in ALLOWED_PRODUCT_PREFIXES
         ) or path == "/simulate" or path.startswith(("/status/", "/results/"))
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
+    @staticmethod
+    def _security_ledger_path() -> str:
+        configured = str(settings.product_api_security_ledger_path or "").strip()
+        default = "./results/product_security.sqlite3"
+        audit_path = Path(settings.product_api_audit_log_path)
+        if configured in {"", default} and str(audit_path) not in {
+            "results/product_audit_log.jsonl",
+            "./results/product_audit_log.jsonl",
+        }:
+            return str(audit_path.parent / "product_security.sqlite3")
+        return configured or default
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive=receive)
+        finalized = False
+
+        def finalize(status_code: int, blocked_code: str = "") -> None:
+            nonlocal finalized
+            if finalized:
+                return
+            finalized = True
+            self._audit_request(request, status_code)
+            self._record_metrics(request, status_code, blocked_code=blocked_code)
+
         blocked, identity = self._preflight_blocker(request)
+        if identity is not None:
+            request.state.product_identity = identity
         if blocked is not None:
-            self._audit_request(request, blocked.status_code)
             self._attach_security_headers(blocked)
-            self._record_metrics(
-                request,
+            finalize(
                 blocked.status_code,
-                blocked_code=str(blocked.headers.get("X-Block-Code", "") or "blocked"),
+                str(blocked.headers.get("X-Block-Code", "") or "blocked"),
             )
-            return blocked
+            await blocked(scope, receive, send)
+            return
 
         assert identity is not None
-        request.state.product_identity = identity
+        consumed = 0
+        max_bytes = int(settings.product_api_max_payload_bytes)
+        response_started = False
+        response_status = 500
+
+        async def limited_receive() -> Message:
+            nonlocal consumed
+            message = await receive()
+            if message.get("type") == "http.request":
+                body = message.get("body", b"")
+                consumed += len(body)
+                if consumed > max_bytes:
+                    raise _PayloadTooLarge("request body exceeds configured byte limit")
+            return message
+
+        async def security_send(message: Message) -> None:
+            nonlocal response_started, response_status
+            if message.get("type") == "http.response.start":
+                if not response_started:
+                    response_status = int(message.get("status", 500))
+                response_started = True
+                message = dict(message)
+                message["headers"] = self._headers_with_security_defaults(
+                    list(message.get("headers", []))
+                )
+            await send(message)
+
         try:
-            response = await call_next(request)
+            await self.app(scope, limited_receive, security_send)
+        except _PayloadTooLarge:
+            if response_started:
+                finalize(response_status)
+                raise
+            response = self._blocked("payload_too_large", 413)
+            self._attach_security_headers(response)
+            finalize(413, "payload_too_large")
+            await response(scope, receive, send)
+            return
+        except ClientDisconnect:
+            finalize(499)
+            return
         except Exception:
-            self._record_metrics(request, 500, blocked_code="")
+            finalize(response_status if response_started else 500)
             raise
-        self._attach_security_headers(response)
-        self._audit_request(request, response.status_code)
-        self._record_metrics(request, response.status_code, blocked_code="")
-        return response
+        finalize(response_status if response_started else 500)
 
     @staticmethod
     def _attach_security_headers(response: Response) -> None:
         for key, value in SECURITY_HEADERS.items():
             response.headers.setdefault(key, value)
+
+    @staticmethod
+    def _headers_with_security_defaults(
+        headers: list[tuple[bytes, bytes]],
+    ) -> list[tuple[bytes, bytes]]:
+        observed = {key.lower() for key, _ in headers}
+        for key, value in SECURITY_HEADERS.items():
+            encoded_key = key.lower().encode("latin-1")
+            if encoded_key not in observed:
+                headers.append((encoded_key, value.encode("latin-1")))
+        return headers
 
     def _preflight_blocker(
         self,
@@ -146,12 +220,24 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
             return identity_or_block, None
         identity = identity_or_block
 
+        if path == "/metrics":
+            return None, identity
+
         client_host = request.client.host if request.client else "unknown"
         rate_key = f"{identity.tenant_id}:{client_host}"
-        if self._rate_limited(rate_key):
-            return self._blocked("rate_limited", 429), None
-        if self._tenant_quota_exceeded(identity.tenant_id):
-            return self._blocked("tenant_quota_exceeded", 429), None
+        try:
+            block_code = get_configured_security_ledger(
+                self._security_ledger_path()
+            ).consume(
+                rate_key=rate_key,
+                tenant_id=identity.tenant_id,
+                rate_limit_per_minute=settings.product_api_rate_limit_per_minute,
+                tenant_daily_quota=settings.product_api_tenant_daily_quota,
+            )
+        except SecurityLedgerError:
+            return self._blocked("security_ledger_unavailable", 503), identity
+        if block_code:
+            return self._blocked(block_code, 429), identity
         return None, identity
 
     def _authenticate(
@@ -224,27 +310,6 @@ class ProductSecurityMiddleware(BaseHTTPMiddleware):
             authenticated=True,
             is_admin=False,
         )
-
-    def _rate_limited(self, key: str) -> bool:
-        now = time.time()
-        window = self._requests[key]
-        while window and now - window[0] > 60:
-            window.popleft()
-        if len(window) >= settings.product_api_rate_limit_per_minute:
-            return True
-        window.append(now)
-        return False
-
-    def _tenant_quota_exceeded(self, tenant_id: str) -> bool:
-        quota = int(settings.product_api_tenant_daily_quota or 0)
-        if quota <= 0:
-            return False
-        day_key = time.strftime("%Y-%m-%d", time.gmtime())
-        key = (tenant_id or "local", day_key)
-        if self._tenant_quota_counts[key] >= quota:
-            return True
-        self._tenant_quota_counts[key] += 1
-        return False
 
     def _audit_request(self, request: Request, status_code: int) -> None:
         path = Path(settings.product_api_audit_log_path)
