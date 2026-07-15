@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload runtime contract diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: runtime-contracts-py${{ matrix.python-version }}-${{ github.run_id }}
           path: runtime-contracts.log
