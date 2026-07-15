@@ -25,7 +25,6 @@ CLAIM_BOUNDARY = (
 
 REQUIRED_MAIN_CHECKS = (
     "product-image-build-smoke",
-    "product-image-rocm-runtime-smoke",
 )
 
 
@@ -152,12 +151,24 @@ def _run_matches_rocm_success(run: dict[str, Any], *, event: str | None = None, 
         for key in ("name", "display_title", "workflow_name", "path")
     ).lower()
     product_image_workflow = "product-image" in name_text or "product image" in name_text
-    rocm_runtime_scope = "rocm" in name_text and "runtime" in name_text
+    run_id = str(run.get("id") or "")
+    head_sha = str(run.get("head_sha") or "")
+    rocm_job_succeeded = any(
+        isinstance(job, dict)
+        and str(job.get("name") or "") == "product-image-rocm-runtime-smoke"
+        and str(job.get("status") or "").lower() == "completed"
+        and str(job.get("conclusion") or "").lower() == "success"
+        and str(job.get("run_id") or "") == run_id
+        and str(job.get("head_sha") or "") == head_sha
+        for job in run.get("jobs") or []
+    )
     return (
-        str(run.get("status") or "").lower() == "completed"
+        bool(run_id)
+        and bool(head_sha)
+        and str(run.get("status") or "").lower() == "completed"
         and str(run.get("conclusion") or "").lower() == "success"
         and product_image_workflow
-        and rocm_runtime_scope
+        and rocm_job_succeeded
     )
 
 
@@ -279,7 +290,7 @@ def build_release_ci_remote_green_receipt(
     rocm_ready, rocm_runners = _runner_ready(runners_payload, {"self-hosted", "linux", "rocm"})
     branch_protected = bool(isinstance(branch_payload, dict) and branch_payload.get("protected") is True)
     checks = _required_checks(required_checks_payload, branch_payload)
-    missing_checks = [check for check in REQUIRED_MAIN_CHECKS if not any(check in observed for observed in checks)]
+    missing_checks = [check for check in REQUIRED_MAIN_CHECKS if check not in checks]
     main_required_checks_ready = bool(branch_protected and not missing_checks)
     weekly_rocm_schedule_green, weekly_url = _successful_rocm_run(schedule_runs_payload, event="schedule")
     failure_artifacts_preserved, artifact_names = _failure_artifacts_ready(failed_artifacts_payload)

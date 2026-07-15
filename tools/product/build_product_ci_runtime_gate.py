@@ -689,6 +689,7 @@ def build_product_ci_runtime_gate(
             "Keep the public personal-repository runner inventory empty while the previously exposed host is rebuilt or replaced and host-accessible credentials are reviewed and rotated.",
             "Create a protected organization/private selected-workflow execution surface pinned to main for self-hosted runners, or use an isolated ephemeral runner; do not restore a persistent public repository runner.",
             "After that boundary exists, configure Linux labels self-hosted, linux and ROCm labels self-hosted, linux, rocm.",
+            "After human verification of the protected boundary and remediated host, explicitly set repository variable TRUSTED_SELF_HOSTED_CI_ENABLED=true; never enable it automatically.",
             f"Then run the trusted API worker contract: {SELF_HOSTED_API_WORKER_COMMAND}",
             f"Then run the trusted ROCm runtime smoke: {SELF_HOSTED_ROCM_RUNTIME_COMMAND}",
             "Only raise GitHub-hosted Actions spending limits if intentionally choosing hosted CI.",

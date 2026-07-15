@@ -109,6 +109,11 @@ def test_self_hosted_runner_host_preflight_blocks_only_registration_when_local_r
     assert {"code": "github_self_hosted_linux_runner_not_online"} in payload["blockers"]
     assert {"code": "github_self_hosted_rocm_runner_not_online"} in payload["blockers"]
     assert "rocm" == summary["recommended_rocm_custom_label"]
+    assert any(
+        "TRUSTED_SELF_HOSTED_CI_ENABLED=true" in step
+        and "never enable it automatically" in step
+        for step in summary["next_required_steps"]
+    )
     assert any("Rerun ROCm runtime smoke" in step for step in summary["next_required_steps"])
 
 
@@ -153,6 +158,11 @@ def test_self_hosted_runner_host_preflight_ready_when_repo_runner_online(tmp_pat
     assert "product_image_smoke_runner_artifacts" in summary["runner_workspace_cleanup_command"]
     assert all("create a Linux x64 self-hosted runner" not in step for step in summary["next_required_steps"])
     assert any("clear any stale product-image smoke worktree artifacts" in step for step in summary["next_required_steps"])
+    assert any(
+        "TRUSTED_SELF_HOSTED_CI_ENABLED=true" in step
+        and "never enable it automatically" in step
+        for step in summary["next_required_steps"]
+    )
     assert any("Rerun API worker" in step for step in summary["next_required_steps"])
     assert any("Rerun ROCm runtime smoke" in step for step in summary["next_required_steps"])
 

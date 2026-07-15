@@ -219,6 +219,7 @@ def build_github_self_hosted_runner_host_preflight(
     if repo_runner_ready:
         next_required_steps = [
             f"Before rerunning remote workflows, clear any stale product-image smoke worktree artifacts on the runner host: {RUNNER_WORKSPACE_CLEANUP_COMMAND}",
+            "After a human verifies the protected runner boundary and remediated host, explicitly set repository variable TRUSTED_SELF_HOSTED_CI_ENABLED=true; never enable it automatically.",
             f"Rerun API worker: {API_WORKER_RERUN_COMMAND}",
             f"Rerun ROCm runtime smoke: {ROCM_RUNTIME_RERUN_COMMAND}",
         ]
@@ -228,6 +229,7 @@ def build_github_self_hosted_runner_host_preflight(
             "Do not create another persistent personal-repository runner; move trusted execution to an organization/private selected-workflow surface pinned to main, or use an isolated ephemeral runner.",
             "Only after that protected execution boundary exists, configure the Linux labels self-hosted, linux and the ROCm labels self-hosted, linux, rocm.",
             f"Refresh inventory: {INVENTORY_REFRESH_COMMAND}",
+            "After a human verifies the protected runner boundary and remediated host, explicitly set repository variable TRUSTED_SELF_HOSTED_CI_ENABLED=true; never enable it automatically.",
             f"After host remediation and protected registration, Rerun API worker: {API_WORKER_RERUN_COMMAND}",
             f"After host remediation and protected registration, Rerun ROCm runtime smoke: {ROCM_RUNTIME_RERUN_COMMAND}",
         ]

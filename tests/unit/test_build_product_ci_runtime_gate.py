@@ -187,6 +187,11 @@ def test_product_ci_runtime_gate_blocks_github_billing_without_mutation(tmp_path
     assert any("self-hosted runners" in step for step in summary["next_required_steps"])
     assert any("self-hosted, linux" in step for step in summary["next_required_steps"])
     assert any("self-hosted, linux, rocm" in step for step in summary["next_required_steps"])
+    assert any(
+        "TRUSTED_SELF_HOSTED_CI_ENABLED=true" in step
+        and "never enable it automatically" in step
+        for step in summary["next_required_steps"]
+    )
     assert any("product-api-worker-trusted.yml" in step for step in summary["next_required_steps"])
     assert not any(step.startswith("Owner resolves GitHub Billing") for step in summary["next_required_steps"])
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
