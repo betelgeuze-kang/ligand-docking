@@ -8,6 +8,9 @@
   "exclude": [
     "../../betelgeuze_engine_v2/molecular/legacy.py"
   ],
+  "extraPaths": [
+    "../.."
+  ],
   "pythonVersion": "3.10",
   "typeCheckingMode": "basic",
   "reportMissingTypeStubs": false,

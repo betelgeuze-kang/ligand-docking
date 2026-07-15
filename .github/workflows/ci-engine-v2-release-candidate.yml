@@ -49,6 +49,7 @@ jobs:
             packaging/engine-v2
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_sbom.py
+            .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -59,7 +60,8 @@ jobs:
       - name: Install pinned static-analysis tools
         run: |
           python -m pip install pip==25.0.1
-          python -m pip install ruff==0.12.4 pyright==1.1.403
+          python -m pip install ruff==0.12.4 pyright==1.1.403 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Run focused static analysis
         shell: bash
@@ -121,6 +123,10 @@ jobs:
             tests/unit/test_engine_v2_packaging_guards.py
             CHANGELOG.md
             docs/engine_v2_0_2_0rc1.md
+            docs/engine_v2_pr_overlap_matrix.md
+            .github/workflows/ci-engine-v2-main.yml
+            .github/workflows/ci-engine-v2-package.yml
+            .github/workflows/ci-engine-v2-release-candidate.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 

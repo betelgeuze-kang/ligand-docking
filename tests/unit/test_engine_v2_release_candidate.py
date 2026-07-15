@@ -58,6 +58,7 @@ def test_static_analysis_configuration_is_scoped_to_independent_contracts() -> N
     assert pyright["typeCheckingMode"] == "basic"
     assert any("betelgeuze_engine_v2/contracts" in path for path in pyright["include"])
     assert "../../betelgeuze_engine_v2/molecular/legacy.py" in pyright["exclude"]
+    assert pyright["extraPaths"] == ["../.."]
 
     metadata = tomllib.loads(
         Path("packaging/engine-v2/pyproject.toml").read_text(encoding="utf-8")
@@ -101,6 +102,24 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert "clean: true" in workflow
     assert workflow.count("python -m pip install pip==25.0.1") >= 2
     assert '"$venv/bin/python" -m pip install pip==25.0.1' in workflow
+    assert "docs/engine_v2_pr_overlap_matrix.md" in workflow
+    assert ".github/workflows/ci-engine-v2-release-candidate.yml" in workflow
     action_refs = re.findall(r"uses: [^@\s]+@([^\s]+)", workflow)
     assert action_refs
     assert all(re.fullmatch(r"[0-9a-f]{40}", ref) for ref in action_refs)
+
+
+def test_all_wheel_build_lanes_install_the_exact_backend_contract() -> None:
+    required = (
+        "build==1.2.2.post1",
+        "setuptools==75.8.2",
+        "wheel==0.45.1",
+    )
+    for path in (
+        ".github/workflows/ci-engine-v2-main.yml",
+        ".github/workflows/ci-engine-v2-package.yml",
+        ".github/workflows/ci-engine-v2-release-candidate.yml",
+    ):
+        workflow = Path(path).read_text(encoding="utf-8")
+        for requirement in required:
+            assert requirement in workflow, f"{path} does not install {requirement}"
