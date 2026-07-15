@@ -2,14 +2,18 @@
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
-from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from fastapi.responses import PlainTextResponse
+from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
+import hashlib
 import json
 import uuid
 import os
+from api.artifact_access import verify_completed_result_artifacts
 from api.cameo import router as cameo_router
 from api.casp17 import router as casp17_router
 from api.cleanup import router as cleanup_router
@@ -33,7 +37,6 @@ from api.product_release_evidence import router as product_release_evidence_rout
 from api.product_release_ops import router as product_release_ops_router
 from api.product_service_contracts import router as product_service_contracts_router
 from api.product_tier_beta import router as product_tier_beta_router
-from api.result_manifest import infer_result_artifact_metadata
 from api.models import SimulationRequest, SimulationResponse, StatusResponse
 from api.simulation_scope import (
     PRODUCT_SIMULATION_SCOPE,
@@ -131,6 +134,14 @@ def _model_to_dict(model: SimulationRequest) -> dict[str, Any]:
     return model.dict()
 
 
+def _error_receipt(value: object) -> tuple[str | None, str | None]:
+    text = str(value or "")
+    if not text:
+        return None, None
+    raw = text.encode("utf-8", errors="replace")
+    return "job_execution_failed", hashlib.sha256(raw).hexdigest()
+
+
 @app.post("/simulate", response_model=SimulationResponse)
 async def submit_simulation(
     payload: SimulationRequest,
@@ -212,27 +223,52 @@ def get_simulation_status(job_id: str, request: Request = None):
     # Read status from file only after object authorization succeeds.
     status_file_path = job_status_path(job_id)
     if not os.path.exists(status_file_path):
-        return StatusResponse(job_id=job_id, status="unknown", message="Status file missing")
+        return StatusResponse(
+            job_id=job_id,
+            status=str(record.get("status", "unknown")),
+            message="Status file unavailable",
+        )
 
     status_data = read_status_file(status_file_path)
+    status = str(status_data.get("status", record.get("status", "unknown")))
+    error_code, error_reference = _error_receipt(
+        status_data.get("error") or record.get("error")
+    )
 
-    def _artifact_path(*values: object) -> str | None:
-        for value in values:
-            text = str(value or "").strip()
-            if text:
-                return text
-        return None
+    manifest_available = False
+    bundle_available = False
+    evidence_sha: str | None = None
+    if status == "completed":
+        verified = verify_completed_result_artifacts(
+            job_id=job_id,
+            record=record,
+            status_data=status_data,
+            result_root=job_results_dir(job_id),
+            signing_key=settings.api_result_manifest_signing_key,
+            expected_key_id=settings.api_result_manifest_key_id,
+        )
+        manifest_available = True
+        bundle_available = True
+        evidence_sha = verified.evidence_bundle_sha256
+
+    if error_code:
+        message = "Job failed; use error_reference for operator lookup"
+    elif status == "completed":
+        message = "Completed"
+    else:
+        message = "Running..."
 
     return StatusResponse(
         job_id=job_id,
-        status=status_data.get("status", "unknown"),
-        message=status_data.get("error", "Running..."),
-        result_manifest=_artifact_path(status_data.get("result_manifest"), record.get("result_manifest_path")),
-        evidence_bundle=_artifact_path(status_data.get("evidence_bundle"), record.get("evidence_bundle_path")),
-        evidence_bundle_sha256=_artifact_path(
-            status_data.get("evidence_bundle_sha256"),
-            record.get("evidence_bundle_sha256"),
-        ),
+        status=status,
+        message=message,
+        error_code=error_code,
+        error_reference=error_reference,
+        result_manifest_available=manifest_available,
+        evidence_bundle_available=bundle_available,
+        evidence_bundle_sha256=evidence_sha,
+        result_manifest=None,
+        evidence_bundle=None,
     )
 
 
@@ -267,68 +303,31 @@ def get_simulation_results(job_id: str, request: Request = None):
         raise HTTPException(status_code=404, detail="Results not ready or job failed")
 
     status_data = read_status_file(status_file_path)
-
-    if status_data["status"] != "completed":
-        raise HTTPException(status_code=400, detail=f"Job not completed. Status: {status_data['status']}")
-
-    def _artifact_path(*values: object) -> str:
-        for value in values:
-            text = str(value or "").strip()
-            if text:
-                return text
-        return ""
-
-    manifest_path = _artifact_path(status_data.get("result_manifest"), record.get("result_manifest_path"))
-    evidence_bundle_path = _artifact_path(status_data.get("evidence_bundle"), record.get("evidence_bundle_path"))
-    evidence_bundle_sha256 = _artifact_path(
-        status_data.get("evidence_bundle_sha256"),
-        record.get("evidence_bundle_sha256"),
+    verified = verify_completed_result_artifacts(
+        job_id=job_id,
+        record=record,
+        status_data=status_data,
+        result_root=job_results_dir(job_id),
+        signing_key=settings.api_result_manifest_signing_key,
+        expected_key_id=settings.api_result_manifest_key_id,
+        snapshot_result=True,
     )
-    if not manifest_path or not os.path.exists(manifest_path):
-        raise HTTPException(
-            status_code=403,
-            detail="Completed job missing result manifest provenance",
-        )
-    if not evidence_bundle_path or not os.path.exists(evidence_bundle_path):
-        raise HTTPException(
-            status_code=403,
-            detail="Completed job missing evidence bundle provenance",
-        )
-    if len(evidence_bundle_sha256) != 64:
-        raise HTTPException(
-            status_code=403,
-            detail="Completed job missing evidence bundle fingerprint",
-        )
-
-    result_file = status_data.get("result_file")
-    if not result_file or not os.path.exists(result_file):
-        raise HTTPException(status_code=404, detail="Result file not found")
-
-    result_path = Path(result_file)
-    manifest_payload: dict[str, Any] = {}
-    try:
-        loaded_manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
-        manifest_payload = loaded_manifest if isinstance(loaded_manifest, dict) else {}
-    except (OSError, json.JSONDecodeError):
-        manifest_payload = {}
-    artifact_metadata = infer_result_artifact_metadata(result_path)
-    media_type = str(
-        manifest_payload.get("result_file_media_type")
-        or artifact_metadata["result_file_media_type"]
-    )
-    artifact_type = str(
-        manifest_payload.get("result_artifact_type")
-        or artifact_metadata["result_artifact_type"]
-    )
-    if artifact_type == "json" or media_type == "application/json":
+    if verified.artifact_type == "json" or verified.media_type == "application/json":
         try:
-            result_payload = json.loads(result_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
+            assert verified.result_snapshot is not None
+            result_payload = json.load(verified.result_snapshot)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise HTTPException(status_code=500, detail="Result JSON artifact is invalid") from exc
+        finally:
+            verified.close()
         return JSONResponse(result_payload)
-    return FileResponse(result_file, media_type=media_type, filename=os.path.basename(result_file))
-    # Or return a ResultsResponse object with a download link if serving via URL is preferred
-    # return ResultsResponse(job_id=job_id, status="completed", result_url=f"/download/{job_id}")
+    disposition = f"attachment; filename*=UTF-8''{quote(verified.result_path.name)}"
+    return StreamingResponse(
+        verified.iter_result(),
+        media_type=verified.media_type,
+        headers={"Content-Disposition": disposition},
+        background=BackgroundTask(verified.close),
+    )
 
 
 if __name__ == "__main__":

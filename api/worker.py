@@ -94,6 +94,7 @@ def write_job_result_manifest(
     *,
     job_id: str,
     request_data: dict[str, Any],
+    request_sha256: str = "",
     status: str,
     result_file: str = "",
     error: str = "",
@@ -104,6 +105,7 @@ def write_job_result_manifest(
         job_id=job_id,
         request=request_data,
         status=status,
+        request_sha256=request_sha256 or None,
         result_file=result_file,
         error=error,
         signing_key=settings.api_result_manifest_signing_key,
@@ -211,6 +213,8 @@ async def run_job_once(
     status_data = read_status_file(status_file_path)
     status_data.update({"job_id": job_id, "status": "running"})
     write_status_file(status_file_path, status_data)
+    durable_record = store.get_job(job_id) or {}
+    durable_request_sha256 = str(durable_record.get("request_sha256", "") or "")
 
     try:
         if worker_id:
@@ -230,6 +234,7 @@ async def run_job_once(
         manifest_path = write_job_result_manifest(
             job_id=job_id,
             request_data=request_data,
+            request_sha256=durable_request_sha256,
             status="completed",
             result_file=result_file,
         )
@@ -284,6 +289,7 @@ async def run_job_once(
         manifest_path = write_job_result_manifest(
             job_id=job_id,
             request_data=request_data,
+            request_sha256=durable_request_sha256,
             status="failed",
             error=error,
         )

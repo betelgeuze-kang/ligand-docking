@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import asyncio
+import hashlib
 import json
 import sqlite3
 
@@ -817,33 +818,50 @@ def test_get_status_exposes_evidence_bundle_provenance(
     import api.main as main
 
     store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
-    store.create_job("job_status", {"target_name": "Chignolin"}, status="completed")
+    record = store.create_job(
+        "job_status", {"target_name": "Chignolin"}, status="completed"
+    )
     monkeypatch.setattr(main, "job_store", store)
     monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    monkeypatch.setattr(main.settings, "api_result_manifest_signing_key", "test-signing-key")
+    monkeypatch.setattr(main.settings, "api_result_manifest_key_id", "test-key-id")
 
     results_dir = tmp_path / "results" / "job_status"
     results_dir.mkdir(parents=True)
+    result_path = results_dir / "result.pdb"
     manifest_path = results_dir / "result_manifest.json"
     bundle_path = results_dir / "evidence_bundle.json"
-    manifest_path.write_text('{"status":"completed"}\n', encoding="utf-8")
+    result_path.write_text("ATOM\n", encoding="utf-8")
     bundle_path.write_text('{"bundle_schema_version":"ai_md_evidence_bundle_v1"}\n', encoding="utf-8")
+    evidence_sha = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+    write_result_manifest(
+        manifest_path,
+        job_id="job_status",
+        request=record["request"],
+        request_sha256=record["request_sha256"],
+        status="completed",
+        result_file=str(result_path),
+        signing_key="test-signing-key",
+        key_id="test-key-id",
+    )
     main.write_status_file(
         main.job_status_path("job_status"),
         {
             "job_id": "job_status",
             "status": "completed",
+            "result_file": str(result_path),
             "result_manifest": str(manifest_path),
             "evidence_bundle": str(bundle_path),
-            "evidence_bundle_sha256": "c" * 64,
+            "evidence_bundle_sha256": evidence_sha,
         },
     )
     store.update_job(
         "job_status",
         status="completed",
-        result_file=str(results_dir / "result.pdb"),
+        result_file=str(result_path),
         result_manifest_path=str(manifest_path),
         evidence_bundle_path=str(bundle_path),
-        evidence_bundle_sha256="c" * 64,
+        evidence_bundle_sha256=evidence_sha,
     )
 
     from fastapi.testclient import TestClient
@@ -851,9 +869,41 @@ def test_get_status_exposes_evidence_bundle_provenance(
     response = TestClient(main.app).get("/status/job_status")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["result_manifest"] == str(manifest_path)
-    assert payload["evidence_bundle"] == str(bundle_path)
-    assert payload["evidence_bundle_sha256"] == "c" * 64
+    assert payload["result_manifest"] is None
+    assert payload["evidence_bundle"] is None
+    assert payload["result_manifest_available"] is True
+    assert payload["evidence_bundle_available"] is True
+    assert payload["evidence_bundle_sha256"] == evidence_sha
+
+
+def test_get_status_replaces_raw_worker_error_with_operator_reference(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.main as main
+
+    raw_error = "runner token=super-secret failed for /private/operator/path"
+    store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
+    store.create_job("job_failed", {"target_name": "Chignolin"}, status="submitted")
+    store.update_job("job_failed", status="failed", error=raw_error)
+    monkeypatch.setattr(main, "job_store", store)
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    main.write_status_file(
+        main.job_status_path("job_failed"),
+        {"job_id": "job_failed", "status": "failed", "error": raw_error},
+    )
+
+    from fastapi.testclient import TestClient
+
+    response = TestClient(main.app).get("/status/job_failed")
+    assert response.status_code == 200
+    payload_text = response.text
+    payload = response.json()
+    assert raw_error not in payload_text
+    assert "super-secret" not in payload_text
+    assert "/private/operator/path" not in payload_text
+    assert payload["error_code"] == "job_execution_failed"
+    assert payload["error_reference"] == hashlib.sha256(raw_error.encode()).hexdigest()
 
 
 def test_get_results_fail_closed_without_evidence_bundle_provenance(
@@ -896,9 +946,13 @@ def test_get_results_fail_closed_without_evidence_bundle_fingerprint(
     import api.main as main
 
     store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
-    store.create_job("job_no_bundle_hash", {"target_name": "Chignolin"}, status="completed")
+    record = store.create_job(
+        "job_no_bundle_hash", {"target_name": "Chignolin"}, status="completed"
+    )
     monkeypatch.setattr(main, "job_store", store)
     monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    monkeypatch.setattr(main.settings, "api_result_manifest_signing_key", "test-signing-key")
+    monkeypatch.setattr(main.settings, "api_result_manifest_key_id", "test-key-id")
 
     results_dir = tmp_path / "results" / "job_no_bundle_hash"
     results_dir.mkdir(parents=True)
@@ -906,8 +960,17 @@ def test_get_results_fail_closed_without_evidence_bundle_fingerprint(
     manifest_path = results_dir / "result_manifest.json"
     bundle_path = results_dir / "evidence_bundle.json"
     result_file.write_text("ATOM\n", encoding="utf-8")
-    manifest_path.write_text('{"status":"completed"}\n', encoding="utf-8")
     bundle_path.write_text('{"bundle_schema_version":"ai_md_evidence_bundle_v1"}\n', encoding="utf-8")
+    write_result_manifest(
+        manifest_path,
+        job_id="job_no_bundle_hash",
+        request=record["request"],
+        request_sha256=record["request_sha256"],
+        status="completed",
+        result_file=str(result_file),
+        signing_key="test-signing-key",
+        key_id="test-key-id",
+    )
     main.write_status_file(
         main.job_status_path("job_no_bundle_hash"),
         {
@@ -931,7 +994,7 @@ def test_get_results_fail_closed_without_evidence_bundle_fingerprint(
 
     response = TestClient(main.app).get("/results/job_no_bundle_hash")
     assert response.status_code == 403
-    assert "evidence bundle fingerprint" in response.json()["detail"]
+    assert "evidence bundle SHA-256" in response.json()["detail"]
 
 
 def test_adopt_validated_runner_native_evidence_bundle_returns_none_without_provenance(
