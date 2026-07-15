@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import sqlite3
 import stat
+import sys
 from typing import Any
 from types import SimpleNamespace
 
@@ -893,9 +894,11 @@ def test_tier_beta_artifacts_replace_links_without_touching_victims(
     artifact_name: str,
     link_kind: str,
 ) -> None:
-    import betelgeuze_engine.biodiscovery as biodiscovery
-
-    monkeypatch.setattr(biodiscovery, "TierBetaScreening", _TierBetaScreeningStub)
+    monkeypatch.setitem(
+        sys.modules,
+        "betelgeuze_engine.biodiscovery",
+        SimpleNamespace(TierBetaScreening=_TierBetaScreeningStub),
+    )
     job_id = f"job-tier-{execution_mode}-{artifact_name}-{link_kind}"
     storage_root = tmp_path / "results"
     binding_token = None
@@ -961,11 +964,13 @@ def test_tier_beta_artifacts_replace_fifos_without_blocking(
     execution_mode: str,
     artifact_name: str,
 ) -> None:
-    import betelgeuze_engine.biodiscovery as biodiscovery
-
     if not hasattr(os, "mkfifo"):
         pytest.skip("FIFOs unavailable")
-    monkeypatch.setattr(biodiscovery, "TierBetaScreening", _TierBetaScreeningStub)
+    monkeypatch.setitem(
+        sys.modules,
+        "betelgeuze_engine.biodiscovery",
+        SimpleNamespace(TierBetaScreening=_TierBetaScreeningStub),
+    )
     job_id = f"job-tier-fifo-{execution_mode}-{artifact_name}"
     storage_root = tmp_path / "results"
     binding_token = None

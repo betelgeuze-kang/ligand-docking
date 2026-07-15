@@ -5954,14 +5954,31 @@ def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
     assert shared_execution_sources <= tier_alpha_dependencies
     assert shared_execution_sources <= restricted_dependencies
 
+    tier_alpha_runtime_sources = {
+        "api/config.py",
+        "api/job_artifacts.py",
+        "api/linux_runner_supervisor.py",
+        "api/request_privacy.py",
+        "api/runner_profile_contract.py",
+        "api/sqlite_runtime.py",
+        "api/tasks.py",
+    }
+    assert tier_alpha_runtime_sources <= tier_alpha_dependencies
+    assert (
+        "runs/local_delivery_verdict_gate_current.json"
+        in restricted_dependencies
+    )
+
     image_verifier_sources = {
         "api/validated_runner_runtime_qualification.py",
         "tools/product/github_workflow_trust_boundaries.py",
         "scripts/normalize_product_image_smoke_artifact_ownership.sh",
+        "scripts/prepare_product_docker_host.sh",
         ".github/workflows/product-api-worker.yml",
         ".github/workflows/product-api-worker-trusted.yml",
         ".github/workflows/product-image-smoke.yml",
         ".github/workflows/product-image-smoke-trusted.yml",
+        "requirements.txt",
     }
     assert image_verifier_sources <= image_preflight_dependencies
 
