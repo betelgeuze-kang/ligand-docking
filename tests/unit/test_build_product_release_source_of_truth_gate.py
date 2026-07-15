@@ -5943,6 +5943,15 @@ def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
     deployment_contract_dependencies = set(
         by_id["product_security_deployment_contract"]["depends_on"]
     )
+    promotion_dependencies = set(
+        by_id["api_runner_profile_promotion_readiness"]["depends_on"]
+    )
+    e2e_dependencies = set(
+        by_id["api_docking_dispatch_e2e_evidence"]["depends_on"]
+    )
+    customer_dependencies = set(
+        by_id["api_customer_flow_release_evidence"]["depends_on"]
+    )
 
     shared_execution_sources = {
         "api/artifact_access.py",
@@ -6002,6 +6011,55 @@ def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
         "requirements-deploy.txt",
     }
     assert deployment_contract_sources <= deployment_contract_dependencies
+
+    profile_sources = {
+        "tools/product/build_api_runner_profile_promotion_readiness.py",
+        "tools/accounting/build_api_runner_profile_promotion_readiness.py",
+        "tools/build_api_runner_profile_promotion_readiness.py",
+        "config/api_validated_runner_profiles",
+        "config/api_validated_runner_profiles/evidence",
+        "config/api_validated_runner_profiles/backmapping_scoring.example.json",
+        "config/api_validated_runner_profiles/backmapping_scoring.production.json",
+        "config/api_validated_runner_profiles/ligand_htvs_pipeline_default.json",
+        "config/api_validated_runner_profiles/ligand_topk_delivery.production.json",
+        "config/api_validated_runner_profiles/tier_beta_biodiscovery_direct.json",
+        "config/api_validated_runner_profiles/evidence/backmapping_scoring.example.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/backmapping_scoring.production.evidence.json",
+        "config/api_validated_runner_profiles/evidence/backmapping_scoring.production.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.json",
+        "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/ligand_topk_delivery.production.evidence.json",
+        "config/api_validated_runner_profiles/evidence/ligand_topk_delivery.production.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/tier_beta_biodiscovery_direct.evidence.json",
+        "tools/run_ligand_htvs_pipeline.py",
+        "tools/run_ligand_backmapping_scoring.py",
+        "tools/run_ligand_topk_delivery.py",
+        "tools/run_tier_beta_vertical_slice.py",
+    }
+    assert profile_sources <= promotion_dependencies
+
+    e2e_sources = {
+        "tools/product/build_api_docking_dispatch_e2e_evidence.py",
+        "tools/build_api_docking_dispatch_e2e_evidence.py",
+        "api/docking_dispatch.py",
+        "betelgeuze_product/job_orchestration.py",
+        "betelgeuze_product/job_terminal_state.py",
+        "config/api_validated_runner_profiles",
+        "config/ligand_htvs_api_dispatch_smoke_v1.json",
+        "deploy/docker-compose.product.yml",
+        "tools/run_api_docking_dispatch_worker.py",
+        "tools/run_api_simulation_worker.py",
+    }
+    assert e2e_sources <= e2e_dependencies
+
+    customer_sources = {
+        "tools/product/build_api_customer_flow_release_evidence.py",
+        "tools/accounting/build_api_customer_flow_release_evidence.py",
+        "tools/build_api_customer_flow_release_evidence.py",
+        "api/validated_runner_runtime_qualification.py",
+        "tools/product/build_restricted_unattended_execution_readiness.py",
+    }
+    assert customer_sources <= customer_dependencies
 
 
 def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:
