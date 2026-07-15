@@ -14,7 +14,6 @@ from fastapi import BackgroundTasks
 from api.job_store import SQLiteJobStore
 from api.result_manifest import verify_result_manifest, write_result_manifest
 from api.models import SimulationRequest
-from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 
 
 def test_sqlite_job_store_persists_across_instances(tmp_path: Path) -> None:
@@ -967,6 +966,7 @@ def test_get_status_exposes_evidence_bundle_provenance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import api.main as main
+    from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 
     store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
     record = store.create_job(
