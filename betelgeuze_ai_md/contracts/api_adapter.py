@@ -85,7 +85,7 @@ def _source_hashes(
 ) -> dict[str, str]:
     readiness = _as_dict(runner_execution.get("profile_readiness"))
     runner_script_sha256 = _text(readiness.get("runner_script_sha256"))
-    request_hash = _text(result_manifest.get("request_sha256")) or sha256_payload(request)
+    request_hash = _text(result_manifest.get("execution_request_sha256")) or sha256_payload(request)
     result_hash = _text(result_manifest.get("result_file_sha256"))
     model_hash = (
         _text(result_payload.get("model_hash"))
@@ -284,6 +284,16 @@ def build_api_evidence_bundle(
         wetlab_handoff_table=_as_list(result_payload.get("wetlab_handoff_table") or summary.get("wetlab_handoff_table")),
         verdict=verdict,
         result_manifest=result_manifest,
+        request_provenance={
+            "admission_request_sha256": _text(result_manifest.get("request_sha256")),
+            "execution_request_sha256": (
+                _text(result_manifest.get("execution_request_sha256"))
+                or sha256_payload(request)
+            ),
+            "execution_request_transform_id": _text(
+                result_manifest.get("execution_request_transform_id")
+            ),
+        },
         claim_boundary=verdict.claim_boundary,
     )
 

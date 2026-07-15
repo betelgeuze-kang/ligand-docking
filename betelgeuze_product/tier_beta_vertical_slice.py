@@ -4,11 +4,17 @@ import dataclasses
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
-from typing import Any
+import secrets
+import stat
+from typing import Any, Callable
 
 TIER_BETA_DIRECT_RUNNER_PROFILE_ID = "tier_beta_biodiscovery_direct"
 TIER_BETA_WORKFLOW_ID = "tier_beta_biodiscovery_screening_v1"
+
+SafeTextWriter = Callable[[Path, str], None]
+SafeFileHasher = Callable[[Path], str]
 
 
 def is_tier_beta_vertical_slice_request(request_data: dict[str, Any]) -> bool:
@@ -22,12 +28,98 @@ def is_tier_beta_vertical_slice_request(request_data: dict[str, Any]) -> bool:
     )
 
 
-def _sha256_file(path: Path) -> str:
+def _directory_open_flags() -> int:
+    return (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+
+
+def _write_all(file_fd: int, payload: bytes) -> None:
+    view = memoryview(payload)
+    while view:
+        written = os.write(file_fd, view)
+        if written <= 0:
+            raise OSError("short tier-beta artifact write")
+        view = view[written:]
+
+
+def _standalone_atomic_write_text(path: Path, payload: str) -> None:
+    """Atomically replace one standalone artifact without following links."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    directory_fd = os.open(path.parent, _directory_open_flags())
+    temporary_name = f".{path.name}.{secrets.token_hex(16)}.tmp"
+    file_fd = -1
+    try:
+        file_fd = os.open(
+            temporary_name,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+            dir_fd=directory_fd,
+        )
+        metadata = os.fstat(file_fd)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise OSError("temporary tier-beta artifact is not an exclusive regular file")
+        _write_all(file_fd, payload.encode("utf-8"))
+        os.fsync(file_fd)
+        os.close(file_fd)
+        file_fd = -1
+        os.replace(
+            temporary_name,
+            path.name,
+            src_dir_fd=directory_fd,
+            dst_dir_fd=directory_fd,
+        )
+        os.fsync(directory_fd)
+    except Exception:
+        if file_fd >= 0:
+            os.close(file_fd)
+        try:
+            os.unlink(temporary_name, dir_fd=directory_fd)
+        except OSError:
+            pass
+        raise
+    finally:
+        os.close(directory_fd)
+
+
+def _standalone_sha256_file(path: Path) -> str:
+    """Hash one standalone no-follow, single-link regular-file descriptor."""
+
+    directory_fd = os.open(path.parent, _directory_open_flags())
+    file_fd = -1
     digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+    try:
+        file_fd = os.open(
+            path.name,
+            os.O_RDONLY
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_NONBLOCK", 0),
+            dir_fd=directory_fd,
+        )
+        metadata = os.fstat(file_fd)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise OSError("tier-beta artifact is not a regular file")
+        if metadata.st_nlink != 1:
+            raise OSError("hard-linked tier-beta artifacts are forbidden")
+        while True:
+            chunk = os.read(file_fd, 1024 * 1024)
+            if not chunk:
+                break
             digest.update(chunk)
-    return digest.hexdigest()
+        return digest.hexdigest()
+    finally:
+        if file_fd >= 0:
+            os.close(file_fd)
+        os.close(directory_fd)
 
 
 def _json_safe(value: Any) -> Any:
@@ -86,6 +178,8 @@ def run_tier_beta_vertical_slice_job(
     job_id: str,
     request_data: dict[str, Any],
     results_dir: str | Path,
+    artifact_writer: SafeTextWriter | None = None,
+    artifact_hasher: SafeFileHasher | None = None,
 ) -> dict[str, Any]:
     # The request predicate and API schema remain importable without Torch/RDKit.
     # Load the scientific execution stack only when an approved job actually runs.
@@ -94,6 +188,8 @@ def run_tier_beta_vertical_slice_job(
     request = build_tier_beta_request_from_api(request_data)
     out_dir = Path(results_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    write_artifact = artifact_writer or _standalone_atomic_write_text
+    hash_artifact = artifact_hasher or _standalone_sha256_file
 
     service = TierBetaScreening(
         device="cpu",
@@ -131,11 +227,11 @@ def run_tier_beta_vertical_slice_job(
         "external_state_mutated": False,
     }
     result_path = out_dir / "tier_beta_result.json"
-    result_path.write_text(
+    write_artifact(
+        result_path,
         json.dumps(result_payload, indent=2, sort_keys=True, ensure_ascii=True) + "\n",
-        encoding="utf-8",
     )
-    result_sha = _sha256_file(result_path)
+    result_sha = hash_artifact(result_path)
     status = "completed" if result.ok else "failed"
     status_payload = {
         "job_id": str(job_id),
@@ -148,9 +244,9 @@ def run_tier_beta_vertical_slice_job(
         "tier_beta_blocked_reason": str(result.blocked_reason),
     }
     status_path = out_dir / "status.json"
-    status_path.write_text(
+    write_artifact(
+        status_path,
         json.dumps(status_payload, sort_keys=True, ensure_ascii=True) + "\n",
-        encoding="utf-8",
     )
     if not result.ok:
         raise RuntimeError(str(result.blocked_reason or "tier_beta_vertical_slice_failed"))

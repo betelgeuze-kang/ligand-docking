@@ -19,7 +19,15 @@ RELEASE_SCALING_ATOM_COUNTS="${PRODUCT_IMAGE_RELEASE_SCALING_ATOM_COUNTS:-1000,2
 RELEASE_SCALING_REPEATS="${PRODUCT_IMAGE_RELEASE_SCALING_REPEATS:-3}"
 RELEASE_SCALING_WARMUP_REPEATS="${PRODUCT_IMAGE_RELEASE_SCALING_WARMUP_REPEATS:-1}"
 RUST_HIP_PARITY_ATOM_COUNTS="${PRODUCT_IMAGE_RUST_HIP_PARITY_ATOM_COUNTS:-216,1000}"
-RECEIPT_JSON="${PRODUCT_IMAGE_SMOKE_RECEIPT_JSON:-${ROOT}/runs/product_image_smoke_receipt_current.json}"
+WORKSPACE_ARTIFACT_ROOT_EXPLICIT=false
+if [[ -n "${PRODUCT_IMAGE_WORKSPACE_ARTIFACT_ROOT:-}" ]]; then
+  WORKSPACE_ARTIFACT_ROOT_EXPLICIT=true
+fi
+WORKSPACE_ARTIFACT_ROOT="${PRODUCT_IMAGE_WORKSPACE_ARTIFACT_ROOT:-${ROOT}/runs}"
+if [[ "${WORKSPACE_ARTIFACT_ROOT}" != /* ]]; then
+  WORKSPACE_ARTIFACT_ROOT="${ROOT}/${WORKSPACE_ARTIFACT_ROOT}"
+fi
+RECEIPT_JSON="${PRODUCT_IMAGE_SMOKE_RECEIPT_JSON:-${WORKSPACE_ARTIFACT_ROOT}/product_image_smoke_receipt_current.json}"
 if [[ "${RECEIPT_JSON}" != /* ]]; then
   RECEIPT_JSON="${ROOT}/${RECEIPT_JSON}"
 fi
@@ -28,10 +36,11 @@ RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_RUNNER_SMOKE_DIR:-${DEFAULT_RUNNER_SMOKE_DIR}}
 if [[ "${RUNNER_SMOKE_DIR}" != /* ]]; then
   RUNNER_SMOKE_DIR="${ROOT}/${RUNNER_SMOKE_DIR}"
 fi
-WORKSPACE_RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR:-${ROOT}/runs/product_image_smoke_runner_artifacts}"
+WORKSPACE_RUNNER_SMOKE_DIR="${PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR:-${WORKSPACE_ARTIFACT_ROOT}/product_image_smoke_runner_artifacts}"
 if [[ "${WORKSPACE_RUNNER_SMOKE_DIR}" != /* ]]; then
   WORKSPACE_RUNNER_SMOKE_DIR="${ROOT}/${WORKSPACE_RUNNER_SMOKE_DIR}"
 fi
+SAFE_TEMP_ROOT="${RUNNER_TEMP:-/tmp}"
 RUNNER_HYGIENE_SCHEMA_VERSION="product_image_runner_hygiene_v1"
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
@@ -70,9 +79,9 @@ write_blocked_receipt() {
     workspace_cleanup_required_action="Repair ownership with sudo chown -R ${host_uid_gid} ${workspace_runner_smoke_dir} before treating product CI as verified."
   fi
   mkdir -p "$(dirname "${RECEIPT_JSON}")"
-  repair_path_ownership "$(dirname "${RECEIPT_JSON}")"
+  repair_directory_entry_ownership "$(dirname "${RECEIPT_JSON}")"
   repair_path_ownership "${RECEIPT_JSON}"
-  printf '{"status":"%s","mode":"%s","reason":"%s","receipt_ready":false,"clean_container_smoke_ready":false,"product_runner_smoke_ready":false,"product_runner_claim_metadata_ready":false,"container_runtime_proof_ready":false,"runtime_neighbor_release_scaling_ready":false,"rust_hip_neighbor_provider_parity_ready":false,"runner_hygiene_schema_version":"%s","runner_smoke_dir":"%s","workspace_runner_smoke_dir":"%s","runner_smoke_dir_outside_workspace":%s,"host_uid_gid":"%s","container_uid_gid":"%s","container_output_uid_gid_pinned":%s,"container_output_uid_gid_matches_host":%s,"container_output_uid_gid_non_root":%s,"workspace_runner_smoke_dir_cleanup_ready":%s,"workspace_runner_smoke_dir_cleanup_blockers":%s,"workspace_runner_smoke_dir_cleanup_required_action":"%s","next_required_step":"%s","receipt_failure_stage":"early_or_error_exit","external_state_mutated":false,"claim_boundary":"Fail-closed product image smoke receipt; product claim promotion requires a successful rocm-runtime receipt on a self-hosted ROCm runner."}\n' \
+  printf '{"status":"%s","mode":"%s","reason":"%s","receipt_ready":false,"clean_container_smoke_ready":false,"product_runner_smoke_ready":false,"validated_runner_namespace_runtime_qualified":false,"validated_runner_namespace_runtime_receipt_schema_version":"","validated_runner_namespace_runtime_receipt_sha256":"","validated_runner_namespace_runtime_receipt_verification_reason":"standard_container_runtime_unqualified","validated_runner_namespace_runtime_receipt_issued_at_utc":"","validated_runner_namespace_runtime_receipt_expires_at_utc":"","customer_execution_enabled":false,"blockers":["validated_runner_namespace_runtime_unqualified"],"product_runner_claim_metadata_ready":false,"container_runtime_proof_ready":false,"runtime_neighbor_release_scaling_ready":false,"rust_hip_neighbor_provider_parity_ready":false,"runner_hygiene_schema_version":"%s","runner_smoke_dir":"%s","workspace_runner_smoke_dir":"%s","runner_smoke_dir_outside_workspace":%s,"host_uid_gid":"%s","container_uid_gid":"%s","container_output_uid_gid_pinned":%s,"container_output_uid_gid_matches_host":%s,"container_output_uid_gid_non_root":%s,"workspace_runner_smoke_dir_cleanup_ready":%s,"workspace_runner_smoke_dir_cleanup_blockers":%s,"workspace_runner_smoke_dir_cleanup_required_action":"%s","next_required_step":"%s","receipt_failure_stage":"early_or_error_exit","external_state_mutated":false,"claim_boundary":"Fail-closed product image smoke receipt; standard containers cannot qualify validated execution, and future promotion requires a separate independently pinned namespace runtime receipt."}\n' \
     "${status}" \
     "${mode}" \
     "${reason}" \
@@ -149,9 +158,22 @@ repair_path_ownership() {
   docker_repair_ownership "${path}"
 }
 
+repair_directory_entry_ownership() {
+  local path="$1"
+  if [[ ! -d "${path}" ]]; then
+    return 0
+  fi
+  chown "${HOST_UID_GID}" "${path}" 2>/dev/null \
+    || sudo -n chown "${HOST_UID_GID}" "${path}" 2>/dev/null \
+    || true
+  chmod u+rwx "${path}" 2>/dev/null \
+    || sudo -n chmod u+rwx "${path}" 2>/dev/null \
+    || true
+}
+
 repair_receipt_path() {
   mkdir -p "$(dirname "${RECEIPT_JSON}")"
-  repair_path_ownership "$(dirname "${RECEIPT_JSON}")"
+  repair_directory_entry_ownership "$(dirname "${RECEIPT_JSON}")"
   repair_path_ownership "${RECEIPT_JSON}"
 }
 
@@ -191,10 +213,130 @@ reset_runner_smoke_dir() {
 }
 
 normalize_runner_artifacts_on_exit() {
-  repair_path_ownership "$(dirname "${RECEIPT_JSON}")"
+  repair_directory_entry_ownership "$(dirname "${RECEIPT_JSON}")"
   repair_path_ownership "${RECEIPT_JSON}"
   repair_path_ownership "${WORKSPACE_RUNNER_SMOKE_DIR}"
   repair_path_ownership "${RUNNER_SMOKE_DIR}"
+}
+
+canonical_path() {
+  realpath -m -- "$1" 2>/dev/null
+}
+
+mutation_path_guard_error() {
+  MUTATION_PATH_GUARD_ERROR="$1"
+  return 1
+}
+
+validate_mutation_paths() {
+  local canonical_root=""
+  local canonical_home=""
+  local canonical_temp_root=""
+  local canonical_workspace_root=""
+  local canonical_receipt=""
+  local canonical_workspace_smoke=""
+  local canonical_runner_smoke=""
+  local workspace_root_parent=""
+  local workspace_root_basename=""
+  local runner_smoke_parent=""
+  local runner_smoke_basename=""
+
+  MUTATION_PATH_GUARD_ERROR=""
+  if ! command -v realpath >/dev/null 2>&1; then
+    mutation_path_guard_error "realpath_unavailable"
+    return 1
+  fi
+
+  canonical_root="$(canonical_path "${ROOT}")" || {
+    mutation_path_guard_error "repository_root_invalid"
+    return 1
+  }
+  canonical_home="$(canonical_path "${HOME:-/nonexistent-product-image-home}")" || {
+    mutation_path_guard_error "home_root_invalid"
+    return 1
+  }
+  canonical_temp_root="$(canonical_path "${SAFE_TEMP_ROOT}")" || {
+    mutation_path_guard_error "runner_temp_root_invalid"
+    return 1
+  }
+  canonical_workspace_root="$(canonical_path "${WORKSPACE_ARTIFACT_ROOT}")" || {
+    mutation_path_guard_error "workspace_artifact_root_invalid"
+    return 1
+  }
+
+  case "${canonical_temp_root}" in
+    ""|/|"${canonical_root}"|"${canonical_home}")
+      mutation_path_guard_error "runner_temp_root_unsafe"
+      return 1
+      ;;
+  esac
+  workspace_root_parent="$(dirname "${canonical_workspace_root}")"
+  workspace_root_basename="$(basename "${canonical_workspace_root}")"
+  if [[ "${WORKSPACE_ARTIFACT_ROOT_EXPLICIT}" == "true" ]]; then
+    if [[ "${workspace_root_parent}" != "${canonical_temp_root}" ]] \
+      || [[ ! "${workspace_root_basename}" =~ ^product-image-[A-Za-z0-9._-]+$ ]]; then
+      mutation_path_guard_error "workspace_artifact_root_unsafe"
+      return 1
+    fi
+  elif [[ "${canonical_workspace_root}" != "${canonical_root}/runs" ]]; then
+    if [[ "${workspace_root_parent}" != "${canonical_temp_root}" ]] \
+      || [[ ! "${workspace_root_basename}" =~ ^product-image-(build|rocm)-[0-9]+-[0-9]+$ ]]; then
+      mutation_path_guard_error "workspace_artifact_root_unsafe"
+      return 1
+    fi
+  fi
+
+  canonical_receipt="$(canonical_path "${RECEIPT_JSON}")" || {
+    mutation_path_guard_error "receipt_path_invalid"
+    return 1
+  }
+  if [[ "${canonical_receipt}" != "${canonical_workspace_root}/product_image_smoke_receipt_current.json" ]]; then
+    mutation_path_guard_error "receipt_path_not_designated"
+    return 1
+  fi
+  if [[ -L "${RECEIPT_JSON}" ]] \
+    || { [[ -e "${RECEIPT_JSON}" ]] && [[ ! -f "${RECEIPT_JSON}" ]]; }; then
+    mutation_path_guard_error "receipt_path_not_regular"
+    return 1
+  fi
+  if [[ -e "${RECEIPT_JSON}" ]] \
+    && [[ "$(stat -c '%h' -- "${RECEIPT_JSON}" 2>/dev/null || true)" != "1" ]]; then
+    mutation_path_guard_error "receipt_path_hardlinked"
+    return 1
+  fi
+
+  canonical_workspace_smoke="$(canonical_path "${WORKSPACE_RUNNER_SMOKE_DIR}")" || {
+    mutation_path_guard_error "workspace_smoke_path_invalid"
+    return 1
+  }
+  if [[ "${canonical_workspace_smoke}" != "${canonical_workspace_root}/product_image_smoke_runner_artifacts" ]]; then
+    mutation_path_guard_error "workspace_smoke_path_not_designated"
+    return 1
+  fi
+  if [[ -L "${WORKSPACE_RUNNER_SMOKE_DIR}" ]] \
+    || { [[ -e "${WORKSPACE_RUNNER_SMOKE_DIR}" ]] && [[ ! -d "${WORKSPACE_RUNNER_SMOKE_DIR}" ]]; }; then
+    mutation_path_guard_error "workspace_smoke_path_not_directory"
+    return 1
+  fi
+
+  canonical_runner_smoke="$(canonical_path "${RUNNER_SMOKE_DIR}")" || {
+    mutation_path_guard_error "runner_smoke_path_invalid"
+    return 1
+  }
+  runner_smoke_parent="$(dirname "${canonical_runner_smoke}")"
+  runner_smoke_basename="$(basename "${canonical_runner_smoke}")"
+  if [[ "${runner_smoke_parent}" != "${canonical_temp_root}" ]] \
+    || { [[ "${runner_smoke_basename}" != "product_image_smoke_runner_artifacts" ]] \
+      && [[ ! "${runner_smoke_basename}" =~ ^product-image-(build|rocm)-smoke-[0-9]+-[0-9]+$ ]] \
+      && [[ "${runner_smoke_basename}" != "product-image-test-smoke" ]]; }; then
+    mutation_path_guard_error "runner_smoke_path_not_designated"
+    return 1
+  fi
+  if [[ -L "${RUNNER_SMOKE_DIR}" ]] \
+    || { [[ -e "${RUNNER_SMOKE_DIR}" ]] && [[ ! -d "${RUNNER_SMOKE_DIR}" ]]; }; then
+    mutation_path_guard_error "runner_smoke_path_not_directory"
+    return 1
+  fi
 }
 
 cleanup_and_on_exit_write_blocked_receipt() {
@@ -207,6 +349,12 @@ cleanup_and_on_exit_write_blocked_receipt() {
   fi
   exit "${exit_code}"
 }
+MUTATION_PATH_GUARD_ERROR=""
+if ! validate_mutation_paths; then
+  printf '{"status":"blocked_product_image_smoke","reason":"unsafe_mutation_path","path_guard_error":"%s","external_state_mutated":false,"claim_boundary":"Product image verification refused to mutate a receipt or smoke directory outside its dedicated workspace-artifact and runner-temp roots."}\n' \
+    "${MUTATION_PATH_GUARD_ERROR}"
+  exit 2
+fi
 trap cleanup_and_on_exit_write_blocked_receipt EXIT
 clear_stale_receipt
 
@@ -339,15 +487,7 @@ queue_id,target,ligand_id,ligand_smiles,native_pdb_path,pocket_x,pocket_y,pocket
 q1,container,l1,CC(=O)N,/smoke/container_native.pdb,0,0,0,0,0,0,1.6,0,0
 q2,container,l2,CCCC,/smoke/container_native.pdb,0,0,0,0,0,0,1.6,0,0
 CSV
-  echo "Running real validated runner dispatch smoke inside ROCm container" >&2
-  "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
-    -v "${RUNNER_SMOKE_DIR}:/smoke" \
-    -e API_VALIDATED_RUNNER_ENABLED=1 \
-    "${IMAGE}" \
-    python tools/product/run_tier_alpha_adrb2_dispatch_smoke.py \
-      --timeout-seconds "${RUNNER_TIMEOUT_SECONDS}" \
-      --runner-timeout-seconds "${RUNNER_PROFILE_TIMEOUT_SECONDS}" \
-      --out-json /smoke/tier_alpha_adrb2_dispatch_smoke.json
+  echo "Validated runner dispatch remains blocked: the standard container runtime is not namespace-qualified" >&2
 
   echo "Running backmapping scoring claim-metadata smoke inside ROCm container" >&2
   "${DOCKER_BIN[@]}" run "${DOCKER_SMOKE_RUN_ARGS[@]}" \
@@ -410,10 +550,8 @@ fi
 
 clean_container_smoke_ready=false
 product_runner_smoke_ready=false
-if [[ "${VERIFY_MODE}" == "rocm-runtime" ]]; then
-  clean_container_smoke_ready=true
-  product_runner_smoke_ready=true
-fi
+# ROCm/HIP/Rust checks may succeed, but they do not qualify the validated
+# runner's nested namespace contract or customer execution route.
 
 RECEIPT_JSON="${RECEIPT_JSON}" \
 RUNNER_SMOKE_DIR="${RUNNER_SMOKE_DIR}" \
@@ -498,6 +636,7 @@ tier_alpha_manifest_ready = bool(
     and tier_alpha.get("result_manifest_status") == "completed"
 )
 product_runner_claim_metadata_ready = bool(tier_alpha_manifest_ready and backmapping_claim_metadata_ready)
+validated_runner_namespace_runtime_qualified = False
 runtime_neighbor_release_scaling_ready = bool(
     os.environ["VERIFY_MODE"] == "rocm-runtime"
     and runtime_scaling.get("packet_type") == "runtime_neighbor_release_scaling"
@@ -519,6 +658,7 @@ rust_hip_neighbor_provider_parity_ready = bool(
 receipt_ready = bool(
     os.environ["VERIFY_MODE"] == "rocm-runtime"
     and container_runtime_proof_ready
+    and validated_runner_namespace_runtime_qualified
     and product_runner_claim_metadata_ready
     and runtime_neighbor_release_scaling_ready
     and rust_hip_neighbor_provider_parity_ready
@@ -569,6 +709,14 @@ payload = {
     "container_runtime_rust_hip_kernel_name": str(runtime_proof.get("rust_hip_kernel_name") or ""),
     "container_runtime_rust_hip_backend_reason": str(runtime_proof.get("rust_hip_backend_reason") or ""),
     "product_runner_smoke_ready": os.environ["PRODUCT_RUNNER_SMOKE_READY"] == "true",
+    "validated_runner_namespace_runtime_qualified": False,
+    "validated_runner_namespace_runtime_receipt_schema_version": "",
+    "validated_runner_namespace_runtime_receipt_sha256": "",
+    "validated_runner_namespace_runtime_receipt_verification_reason": "standard_container_runtime_unqualified",
+    "validated_runner_namespace_runtime_receipt_issued_at_utc": "",
+    "validated_runner_namespace_runtime_receipt_expires_at_utc": "",
+    "customer_execution_enabled": False,
+    "blockers": ["validated_runner_namespace_runtime_unqualified"],
     "product_runner_claim_metadata_ready": product_runner_claim_metadata_ready,
     "runtime_neighbor_release_scaling_present": bool(runtime_scaling),
     "runtime_neighbor_release_scaling_ready": runtime_neighbor_release_scaling_ready,
@@ -642,7 +790,9 @@ payload = {
     "external_state_mutated": False,
     "claim_boundary": (
         "Receipt means deploy/verify_product_image.sh completed all checks in the selected mode; "
-        "product claim promotion requires mode=rocm-runtime, product_runner_smoke_ready=true, "
+        "the standard container route is not validated-runner namespace-qualified and customer execution remains disabled; "
+        "future product claim promotion requires a separate validated_runner_namespace_runtime_receipt_v1, "
+        "mode=rocm-runtime, product_runner_smoke_ready=true, "
         "product_runner_claim_metadata_ready=true, container_runtime_proof_ready=true, "
         "container_runtime_rust_hip_backend_enabled=true, runtime_neighbor_release_scaling_ready=true, "
         "rust_hip_neighbor_provider_parity_ready=true, hbond_evidence_schema_version=hbond_evidence_v1, "

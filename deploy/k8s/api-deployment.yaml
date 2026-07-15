@@ -13,6 +13,9 @@ spec:
       labels:
         app: micf-api-server
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api-server
           image: micf-api:product
@@ -24,8 +27,30 @@ spec:
           envFrom:
             - configMapRef:
                 name: micf-api-config
-            - secretRef:
-                name: micf-api-secrets
+          env:
+            - name: PRODUCT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: micf-api-secrets
+                  key: PRODUCT_API_TOKEN
+            - name: API_RESULT_MANIFEST_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: micf-api-secrets
+                  key: API_RESULT_MANIFEST_SIGNING_KEY
+            - name: DOCKING_PRIVATE_PAYLOAD_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: micf-api-secrets
+                  key: DOCKING_PRIVATE_PAYLOAD_KEYS
+            # Explicit env entries override every envFrom source. Keep the
+            # standard Kubernetes route fail-closed even if a Secret repeats it.
+            - name: API_VALIDATED_RUNNER_ENABLED
+              value: "0"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: results
               mountPath: /data

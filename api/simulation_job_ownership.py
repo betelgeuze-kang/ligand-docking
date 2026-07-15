@@ -14,6 +14,7 @@ from api.request_identity import (
     normalize_tenant_id,
     require_tenant_match,
 )
+from api.sqlite_runtime import connect_sqlite
 
 _JOB_ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,128}$")
 
@@ -45,10 +46,7 @@ class SQLiteSimulationJobOwnershipStore:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.path), timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA busy_timeout=5000")
-        return conn
+        return connect_sqlite(self.path)
 
     def _init_db(self) -> None:
         with self._connect() as conn:

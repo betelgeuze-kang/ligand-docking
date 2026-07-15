@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import datetime as dt
 import json
 import os
 import re
@@ -11,6 +12,11 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from api.validated_runner_runtime_qualification import (
+    NamespaceRuntimeQualification,
+    RECEIPT_SCHEMA_VERSION,
+    verify_validated_runner_namespace_runtime,
+)
 from tools.product.github_workflow_trust_boundaries import (
     audit_workflow_trust_boundaries,
 )
@@ -51,7 +57,9 @@ PRODUCT_IMAGE_SMOKE_PR_TRIGGER_REQUIRED_PATHS = (
     "scripts/normalize_product_image_smoke_artifact_ownership.sh",
     "tools/product/build_product_image_smoke_preflight.py",
     "tools/build_product_image_smoke_preflight.py",
+    "api/validated_runner_runtime_qualification.py",
     "tests/unit/test_build_product_image_smoke_preflight.py",
+    "tests/unit/test_validated_runner_runtime_qualification.py",
     ".github/workflows/product-image-smoke-trusted.yml",
     "tools/product/github_workflow_trust_boundaries.py",
     "tests/unit/test_github_workflow_trust_boundaries.py",
@@ -833,6 +841,9 @@ def build_product_image_smoke_preflight(
     docker_cli_path: str | None = None,
     docker_daemon_ready: bool | None = None,
     receipt_json: str | Path = DEFAULT_RECEIPT_JSON,
+    namespace_runtime_receipt_json: str | Path | None = None,
+    namespace_runtime_receipt_sha256: str | None = None,
+    namespace_runtime_now: dt.datetime | None = None,
 ) -> dict[str, Any]:
     root_path = Path(root)
     workspace_artifact_state = _workspace_smoke_artifact_state(root_path)
@@ -881,6 +892,10 @@ def build_product_image_smoke_preflight(
     api_worker_workflow = "\n".join((api_pr_workflow, api_trusted_workflow))
     workflow_trust_boundary_errors = audit_workflow_trust_boundaries(root_path)
     ownership_script = _read_text(root_path, "scripts/normalize_product_image_smoke_artifact_ownership.sh")
+    namespace_runtime_verifier = _read_text(
+        root_path,
+        "api/validated_runner_runtime_qualification.py",
+    )
     dockerfile = _read_text(root_path, "Dockerfile.product")
     base_requirements = _read_text(root_path, "requirements-base.txt")
     default_requirements = _read_text(root_path, "requirements.txt")
@@ -1008,7 +1023,7 @@ def build_product_image_smoke_preflight(
             and "trap cleanup_and_on_exit_write_blocked_receipt EXIT" in verify_script
             and 'repair_path_ownership "${WORKSPACE_RUNNER_SMOKE_DIR}"' in verify_script
             and 'repair_path_ownership "${RUNNER_SMOKE_DIR}"' in verify_script
-            and 'repair_path_ownership "$(dirname "${RECEIPT_JSON}")"' in verify_script
+            and 'repair_directory_entry_ownership "$(dirname "${RECEIPT_JSON}")"' in verify_script
             and 'repair_path_ownership "${RECEIPT_JSON}"' in verify_script,
             "exit trap normalizes smoke artifact ownership"
             if "normalize_runner_artifacts_on_exit" in verify_script
@@ -1082,6 +1097,9 @@ def build_product_image_smoke_preflight(
             and "busybox:1.36.1" in ownership_script
             and "needs_ownership_repair" in ownership_script
             and "docker_repair_ownership" in ownership_script
+            and "validate_normalization_paths" in ownership_script
+            and "log_path_not_designated" in ownership_script
+            and "runner_smoke_not_designated" in ownership_script
             and "run --rm" in ownership_script
             and "/repair-root" in ownership_script,
             "post-smoke ownership script present"
@@ -1161,13 +1179,29 @@ def build_product_image_smoke_preflight(
             "deploy/verify_product_image.sh",
         ),
         _contract_row(
-            "real_validated_runner_smoke_required",
-            "run_tier_alpha_adrb2_dispatch_smoke.py" in verify_script
-            and "API_VALIDATED_RUNNER_ENABLED=1" in verify_script
-            and "tier_alpha_adrb2_dispatch_smoke.json" in verify_script,
-            "tier alpha runner smoke present" if "run_tier_alpha_adrb2_dispatch_smoke.py" in verify_script else "missing",
-            "rocm-runtime mode runs real validated runner dispatch smoke",
+            "standard_container_validated_runner_disabled",
+            "run_tier_alpha_adrb2_dispatch_smoke.py" not in verify_script
+            and "API_VALIDATED_RUNNER_ENABLED=1" not in verify_script
+            and "validated_runner_namespace_runtime_qualified" in verify_script
+            and "validated_runner_namespace_runtime_unqualified" in verify_script,
+            "standard container runner disabled"
+            if "API_VALIDATED_RUNNER_ENABLED=1" not in verify_script
+            else "unsafe enablement present",
+            "standard container receipts keep validated execution blocked until a separate namespace runtime receipt exists",
             "deploy/verify_product_image.sh",
+        ),
+        _contract_row(
+            "namespace_runtime_receipt_verifier_fail_closed",
+            "O_NOFOLLOW" in namespace_runtime_verifier
+            and "MAX_RECEIPT_BYTES" in namespace_runtime_verifier
+            and "receipt_sha256_mismatch" in namespace_runtime_verifier
+            and "receipt_expired" in namespace_runtime_verifier
+            and "receipt_containment_invalid" in namespace_runtime_verifier,
+            "separate bounded pinned receipt verifier present"
+            if "verify_validated_runner_namespace_runtime" in namespace_runtime_verifier
+            else "missing",
+            "namespace qualification comes from a separate regular receipt with an independent digest pin and freshness checks",
+            "api/validated_runner_runtime_qualification.py",
         ),
         _contract_row(
             "backmapping_claim_metadata_smoke_required",
@@ -1352,7 +1386,11 @@ def build_product_image_smoke_preflight(
         _contract_row(
             "workflow_hosted_build_summary_not_product_claim",
             "product runtime claim: `false`" in workflow
-            and "required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`" in workflow,
+            and (
+                "required runtime claim mode: `rocm-runtime on a trusted ROCm runner "
+                "plus a separately pinned namespace runtime receipt`"
+            )
+            in workflow,
             "build summary claim boundary present"
             if "product runtime claim: `false`" in workflow
             else "missing",
@@ -1485,7 +1523,75 @@ def build_product_image_smoke_preflight(
         and container_runtime_visible_device_count > 0
         and container_runtime_rust_hip_backend_enabled
     )
-    product_runner_smoke_ready = bool(receipt.get("product_runner_smoke_ready") is True)
+    resolved_namespace_runtime_receipt: str | Path | None = (
+        namespace_runtime_receipt_json
+    )
+    if resolved_namespace_runtime_receipt is not None:
+        namespace_path = Path(resolved_namespace_runtime_receipt)
+        if not namespace_path.is_absolute():
+            namespace_path = root_path / namespace_path
+        resolved_namespace_runtime_receipt = namespace_path
+    namespace_runtime_verification: NamespaceRuntimeQualification = (
+        verify_validated_runner_namespace_runtime(
+            receipt_path=resolved_namespace_runtime_receipt,
+            expected_sha256=namespace_runtime_receipt_sha256,
+            now=namespace_runtime_now,
+        )
+    )
+    namespace_runtime_receipt_schema_version = (
+        namespace_runtime_verification.schema_version
+    )
+    namespace_runtime_receipt_actual_sha256 = (
+        namespace_runtime_verification.receipt_sha256
+    )
+    validated_runner_namespace_runtime_qualified = (
+        namespace_runtime_verification.qualified
+    )
+    receipt_product_runner_smoke_ready = bool(
+        receipt.get("product_runner_smoke_ready") is True
+    )
+    product_receipt_namespace_runtime_qualified = bool(
+        receipt.get("validated_runner_namespace_runtime_qualified") is True
+    )
+    product_receipt_namespace_runtime_receipt_schema_version = receipt.get(
+        "validated_runner_namespace_runtime_receipt_schema_version"
+    )
+    product_receipt_namespace_runtime_receipt_sha256 = receipt.get(
+        "validated_runner_namespace_runtime_receipt_sha256"
+    )
+    product_receipt_namespace_runtime_receipt_issued_at_utc = receipt.get(
+        "validated_runner_namespace_runtime_receipt_issued_at_utc"
+    )
+    product_receipt_namespace_runtime_receipt_expires_at_utc = receipt.get(
+        "validated_runner_namespace_runtime_receipt_expires_at_utc"
+    )
+    product_receipt_namespace_binding_matches = bool(
+        validated_runner_namespace_runtime_qualified
+        and product_receipt_namespace_runtime_qualified
+        and product_receipt_namespace_runtime_receipt_schema_version
+        == RECEIPT_SCHEMA_VERSION
+        and product_receipt_namespace_runtime_receipt_schema_version
+        == namespace_runtime_verification.schema_version
+        and product_receipt_namespace_runtime_receipt_sha256
+        == namespace_runtime_verification.receipt_sha256
+        and product_receipt_namespace_runtime_receipt_issued_at_utc
+        == namespace_runtime_verification.issued_at_utc
+        and product_receipt_namespace_runtime_receipt_expires_at_utc
+        == namespace_runtime_verification.expires_at_utc
+    )
+    product_receipt_namespace_binding_reason = (
+        "qualified"
+        if product_receipt_namespace_binding_matches
+        else (
+            "product_receipt_namespace_binding_mismatch"
+            if receipt_product_runner_smoke_ready
+            else "not_applicable"
+        )
+    )
+    product_runner_smoke_ready = bool(
+        receipt_product_runner_smoke_ready
+        and product_receipt_namespace_binding_matches
+    )
     product_runner_claim_metadata_ready = bool(receipt.get("product_runner_claim_metadata_ready") is True)
     tier_alpha_manifest_signature_verified = bool(receipt.get("tier_alpha_result_manifest_signature_verified") is True)
     tier_alpha_manifest_status = str(receipt.get("tier_alpha_result_manifest_status") or "")
@@ -1619,6 +1725,7 @@ def build_product_image_smoke_preflight(
     clean_container_smoke_ready = bool(
         receipt_status == "product_image_smoke_ready"
         and receipt_mode == "rocm-runtime"
+        and validated_runner_namespace_runtime_qualified
         and receipt_simulate_missing_profile_http == 422
         and product_runner_smoke_ready
         and product_runner_claim_metadata_ready
@@ -1646,6 +1753,14 @@ def build_product_image_smoke_preflight(
         and workspace_artifact_cleanup_ready
         and (docker_access_ready or clean_container_smoke_ready)
         and receipt_runner_hygiene_ready
+        and (
+            not receipt_runner_hygiene_applicable
+            or validated_runner_namespace_runtime_qualified
+        )
+        and (
+            not receipt_product_runner_smoke_ready
+            or product_receipt_namespace_binding_matches
+        )
     )
     blockers = []
     if not clean_container_smoke_ready and not docker_cli_present:
@@ -1659,6 +1774,16 @@ def build_product_image_smoke_preflight(
         blockers.append({"code": blocker})
     for blocker in receipt_runner_hygiene_blockers:
         blockers.append({"code": blocker})
+    if (
+        receipt_runner_hygiene_applicable
+        and not validated_runner_namespace_runtime_qualified
+    ):
+        blockers.append({"code": "validated_runner_namespace_runtime_unqualified"})
+    if (
+        receipt_product_runner_smoke_ready
+        and not product_receipt_namespace_binding_matches
+    ):
+        blockers.append({"code": "product_receipt_namespace_binding_mismatch"})
     summary = {
         "packet_type": "product_image_smoke_preflight",
         "status": "product_image_smoke_preflight_ready" if preflight_ready else "blocked_product_image_smoke_preflight",
@@ -1750,6 +1875,64 @@ def build_product_image_smoke_preflight(
             "runtime_neighbor_release_max_memory_peak_mb_per_atom"
         ),
         "product_runner_smoke_ready": product_runner_smoke_ready,
+        "receipt_product_runner_smoke_ready": receipt_product_runner_smoke_ready,
+        "product_receipt_namespace_binding_matches": (
+            product_receipt_namespace_binding_matches
+        ),
+        "product_receipt_namespace_binding_reason": (
+            product_receipt_namespace_binding_reason
+        ),
+        "product_receipt_namespace_runtime_qualified": (
+            product_receipt_namespace_runtime_qualified
+        ),
+        "product_receipt_namespace_runtime_receipt_schema_version": (
+            product_receipt_namespace_runtime_receipt_schema_version
+            if isinstance(
+                product_receipt_namespace_runtime_receipt_schema_version,
+                str,
+            )
+            else ""
+        ),
+        "product_receipt_namespace_runtime_receipt_sha256": (
+            product_receipt_namespace_runtime_receipt_sha256
+            if isinstance(product_receipt_namespace_runtime_receipt_sha256, str)
+            else ""
+        ),
+        "product_receipt_namespace_runtime_receipt_issued_at_utc": (
+            product_receipt_namespace_runtime_receipt_issued_at_utc
+            if isinstance(
+                product_receipt_namespace_runtime_receipt_issued_at_utc,
+                str,
+            )
+            else ""
+        ),
+        "product_receipt_namespace_runtime_receipt_expires_at_utc": (
+            product_receipt_namespace_runtime_receipt_expires_at_utc
+            if isinstance(
+                product_receipt_namespace_runtime_receipt_expires_at_utc,
+                str,
+            )
+            else ""
+        ),
+        "validated_runner_namespace_runtime_qualified": (
+            validated_runner_namespace_runtime_qualified
+        ),
+        "validated_runner_namespace_runtime_receipt_schema_version": (
+            namespace_runtime_receipt_schema_version
+        ),
+        "validated_runner_namespace_runtime_receipt_sha256": (
+            namespace_runtime_receipt_actual_sha256
+        ),
+        "validated_runner_namespace_runtime_receipt_verification_reason": (
+            namespace_runtime_verification.reason
+        ),
+        "validated_runner_namespace_runtime_receipt_issued_at_utc": (
+            namespace_runtime_verification.issued_at_utc
+        ),
+        "validated_runner_namespace_runtime_receipt_expires_at_utc": (
+            namespace_runtime_verification.expires_at_utc
+        ),
+        "customer_execution_enabled": False,
         "product_runner_claim_metadata_ready": product_runner_claim_metadata_ready,
         "tier_alpha_result_manifest_signature_verified": tier_alpha_manifest_signature_verified,
         "tier_alpha_result_manifest_status": tier_alpha_manifest_status,
@@ -1835,12 +2018,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_OUT_RUNNER_HYGIENE_COMMAND_PACK_MD,
     )
     parser.add_argument("--receipt-json", default=DEFAULT_RECEIPT_JSON)
+    parser.add_argument("--namespace-runtime-receipt-json", default=None)
+    parser.add_argument("--namespace-runtime-receipt-sha256", default=None)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    payload = build_product_image_smoke_preflight(root=args.root, receipt_json=args.receipt_json)
+    payload = build_product_image_smoke_preflight(
+        root=args.root,
+        receipt_json=args.receipt_json,
+        namespace_runtime_receipt_json=args.namespace_runtime_receipt_json,
+        namespace_runtime_receipt_sha256=args.namespace_runtime_receipt_sha256,
+    )
     work_order_payload = build_product_image_smoke_runner_hygiene_work_order(payload)
     command_pack_payload = build_product_image_smoke_runner_hygiene_command_pack(
         payload,

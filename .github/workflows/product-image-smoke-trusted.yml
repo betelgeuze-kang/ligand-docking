@@ -30,7 +30,9 @@ on:
       - scripts/normalize_product_image_smoke_artifact_ownership.sh
       - tools/product/build_product_image_smoke_preflight.py
       - tools/build_product_image_smoke_preflight.py
+      - api/validated_runner_runtime_qualification.py
       - tests/unit/test_build_product_image_smoke_preflight.py
+      - tests/unit/test_validated_runner_runtime_qualification.py
       - .github/workflows/product-image-smoke.yml
       - .github/workflows/product-image-smoke-trusted.yml
       - tools/product/run_runtime_neighbor_release_scaling.py
@@ -145,11 +147,11 @@ jobs:
               f"- mode: `{payload.get('mode', 'build')}`",
               f"- status: `{payload.get('status', 'missing_receipt')}`",
               f"- product runtime claim: `false`",
-              f"- required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`",
+              f"- required runtime claim mode: `rocm-runtime on a trusted ROCm runner plus a separately pinned namespace runtime receipt`",
               "",
               payload.get(
                   "claim_boundary",
-                  "Build smoke verifies image build/import scope only; product claim promotion requires a rocm-runtime receipt on a self-hosted ROCm runner.",
+                  "Build smoke verifies image build/import scope only; product claim promotion also requires a ROCm runtime receipt and a separately pinned namespace runtime receipt.",
               ),
               "",
           ]
@@ -249,7 +251,10 @@ jobs:
               f"- status: `{payload.get('status', 'missing_receipt')}`",
               f"- clean_container_smoke_ready: `{payload.get('clean_container_smoke_ready', False)}`",
               f"- container_runtime_proof_ready: `{payload.get('container_runtime_proof_ready', False)}`",
+              f"- validated_runner_namespace_runtime_qualified: `{payload.get('validated_runner_namespace_runtime_qualified', False)}`",
+              f"- customer_execution_enabled: `{payload.get('customer_execution_enabled', False)}`",
               f"- product_runner_claim_metadata_ready: `{payload.get('product_runner_claim_metadata_ready', False)}`",
+              f"- blockers: `{payload.get('blockers', [])}`",
               f"- runtime_neighbor_release_scaling_status: `{payload.get('runtime_neighbor_release_scaling_status', 'missing_scaling_receipt')}`",
               f"- runtime_neighbor_release_scaling_ready: `{payload.get('runtime_neighbor_release_scaling_ready', False)}`",
               f"- runtime_neighbor_release_atom_counts_ready: `{payload.get('runtime_neighbor_release_atom_counts_ready', False)}`",
@@ -261,7 +266,7 @@ jobs:
               "",
               payload.get(
                   "claim_boundary",
-                  "ROCm runtime smoke must prove in-container ROCm/HIP/Rust runtime and signed runner claim metadata.",
+                  "ROCm runtime smoke does not qualify validated execution; a separately pinned namespace runtime receipt is also required.",
               ),
               "",
           ]

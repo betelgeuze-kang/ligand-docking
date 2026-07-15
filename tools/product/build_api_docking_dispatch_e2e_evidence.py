@@ -245,7 +245,7 @@ def build_api_docking_dispatch_e2e_evidence(
         "synthetic_ledger_sync": synthetic,
         "checks": checks,
         "next_action": (
-            "Deploy api-server, api-worker, and api-docking-dispatch with API_VALIDATED_RUNNER_ENABLED=1 and run ADRB2 dispatch smoke."
+            "Qualify a namespace-capable host runtime before enabling the runner and executing the ADRB2 dispatch smoke."
             if wiring_ready and evidence_mode != "live_job"
             else "Repair blocked wiring checks before claiming API dispatch E2E readiness."
             if not wiring_ready

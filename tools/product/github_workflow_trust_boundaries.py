@@ -14,6 +14,7 @@ WORKFLOW_DIR = Path(".github/workflows")
 FULL_SHA_ACTION = re.compile(r"^[^@\s]+@[0-9a-f]{40}$")
 
 PR_WORKFLOWS = {
+    "ci-api-h4-hosted.yml": {"api-security"},
     "product-api-worker.yml": {"api-worker-contract"},
     "product-image-smoke.yml": {"product-image-build-smoke"},
 }

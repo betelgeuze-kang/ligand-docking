@@ -3,19 +3,28 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from api.job_artifacts import (
+    atomic_write_text_file,
+    read_current_attempt_file_bytes,
+    sha256_current_attempt_file,
+)
 from core.claim_boundary import (
     CLAIM_SCOPE_PRODUCT_LIGAND,
-    CLAIM_SCOPE_RESTRICTED_LOCAL,
     GENERAL_MD_ACCURACY_CLAIM,
     PRODUCT_CLAIM_BOUNDARY_TEXT,
     TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
     general_md_accuracy_promotion_allowed,
     validate_manifest_claim_fields,
 )
+
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_TRANSFORM_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 
 
 def _utc_now() -> str:
@@ -32,6 +41,9 @@ def _sha256_text(payload: Any) -> str:
 
 def _sha256_file(path_like: str | Path) -> str:
     path = Path(path_like)
+    pinned_digest = sha256_current_attempt_file(path)
+    if pinned_digest is not None:
+        return pinned_digest
     if not path.exists() or not path.is_file():
         return ""
     digest = hashlib.sha256()
@@ -43,6 +55,16 @@ def _sha256_file(path_like: str | Path) -> str:
 
 def _read_json_object(path_like: str | Path) -> dict[str, Any]:
     path = Path(path_like)
+    pinned_payload = read_current_attempt_file_bytes(
+        path,
+        maximum_bytes=64 * 1024 * 1024,
+    )
+    if pinned_payload is not None:
+        try:
+            payload = json.loads(pinned_payload)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return {}
+        return payload if isinstance(payload, dict) else {}
     if not path.exists() or not path.is_file():
         return {}
     try:
@@ -130,6 +152,9 @@ def build_result_manifest(
     job_id: str,
     request: dict[str, Any],
     status: str,
+    request_sha256: str | None = None,
+    execution_request_sha256: str | None = None,
+    execution_request_transform_id: str | None = None,
     result_file: str = "",
     error: str = "",
     signing_key: str,
@@ -142,6 +167,7 @@ def build_result_manifest(
     hbond_evidence_summary: dict[str, Any] | None = None,
     force_residual_summary: dict[str, Any] | None = None,
     refine_element_summary: dict[str, Any] | None = None,
+    worker_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_fidelity = str(topology_fidelity or fidelity or TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE)
     resolved_scope = str(claim_scope or CLAIM_SCOPE_PRODUCT_LIGAND)
@@ -152,12 +178,34 @@ def build_result_manifest(
         raise ValueError(
             f"accuracy_claim_grade '{GENERAL_MD_ACCURACY_CLAIM}' is forbidden for fidelity={resolved_fidelity}"
         )
+    resolved_request_sha256 = str(request_sha256 or "").lower()
+    if resolved_request_sha256 and _SHA256_RE.fullmatch(resolved_request_sha256) is None:
+        raise ValueError("request_sha256 must be a 64-character hexadecimal SHA-256")
+    if not resolved_request_sha256:
+        resolved_request_sha256 = _sha256_text(request)
+    resolved_execution_request_sha256 = str(execution_request_sha256 or "").lower()
+    if (
+        resolved_execution_request_sha256
+        and _SHA256_RE.fullmatch(resolved_execution_request_sha256) is None
+    ):
+        raise ValueError(
+            "execution_request_sha256 must be a 64-character hexadecimal SHA-256"
+        )
+    if not resolved_execution_request_sha256:
+        resolved_execution_request_sha256 = _sha256_text(request)
+    resolved_transform_id = str(
+        execution_request_transform_id or "identity_v1"
+    ).strip()
+    if _TRANSFORM_ID_RE.fullmatch(resolved_transform_id) is None:
+        raise ValueError("execution_request_transform_id is invalid")
     result_file_sha256 = _sha256_file(result_file) if result_file else ""
     payload: dict[str, Any] = {
         "manifest_version": "api_result_manifest_v1",
         "job_id": job_id,
         "status": status,
-        "request_sha256": _sha256_text(request),
+        "request_sha256": resolved_request_sha256,
+        "execution_request_sha256": resolved_execution_request_sha256,
+        "execution_request_transform_id": resolved_transform_id,
         "result_file": result_file,
         "result_file_sha256": result_file_sha256,
         "error": error,
@@ -184,6 +232,8 @@ def build_result_manifest(
         payload["force_residual_summary"] = dict(force_residual_summary)
     if isinstance(refine_element_summary, dict):
         payload["refine_element_summary"] = dict(refine_element_summary)
+    if isinstance(worker_provenance, dict):
+        payload["worker_provenance"] = dict(worker_provenance)
     validate_manifest_claim_fields(payload)
     signature = hmac.new(signing_key.encode("utf-8"), _canonical_json(payload), hashlib.sha256).hexdigest()
     payload["signature"] = signature
@@ -205,6 +255,9 @@ def write_result_manifest(
     job_id: str,
     request: dict[str, Any],
     status: str,
+    request_sha256: str | None = None,
+    execution_request_sha256: str | None = None,
+    execution_request_transform_id: str | None = None,
     result_file: str = "",
     error: str = "",
     signing_key: str,
@@ -217,14 +270,17 @@ def write_result_manifest(
     hbond_evidence_summary: dict[str, Any] | None = None,
     force_residual_summary: dict[str, Any] | None = None,
     refine_element_summary: dict[str, Any] | None = None,
+    worker_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = Path(path_like)
-    path.parent.mkdir(parents=True, exist_ok=True)
     extracted_metadata = _extract_result_metadata(result_file) if result_file else {}
     manifest = build_result_manifest(
         job_id=job_id,
         request=request,
         status=status,
+        request_sha256=request_sha256,
+        execution_request_sha256=execution_request_sha256,
+        execution_request_transform_id=execution_request_transform_id,
         result_file=result_file,
         error=error,
         signing_key=signing_key,
@@ -253,6 +309,10 @@ def write_result_manifest(
             if refine_element_summary is not None
             else extracted_metadata.get("refine_element_summary")
         ),
+        worker_provenance=worker_provenance,
     )
-    path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    atomic_write_text_file(
+        path,
+        json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+    )
     return manifest

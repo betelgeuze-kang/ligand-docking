@@ -5,12 +5,12 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from api.atomic_job_admission import create_owned_job_atomic
 from api.config import settings
 from api.job_store import SQLiteJobStore
 from api.request_identity import ProductRequestIdentity, require_tenant_match
 from api.simulation_job_ownership import (
     SQLiteSimulationJobOwnershipStore,
-    create_owned_job,
     validate_simulation_job_id,
 )
 
@@ -55,10 +55,8 @@ def create_simulation_job_for_identity(
     status: str = "submitted",
     max_attempts: int = 3,
 ) -> dict[str, Any]:
-    ownership_store = get_configured_simulation_ownership_store(job_store)
-    return create_owned_job(
+    return create_owned_job_atomic(
         job_store,
-        ownership_store,
         identity,
         job_id,
         request_data,

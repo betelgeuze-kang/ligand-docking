@@ -796,7 +796,10 @@ def test_product_release_current_refresh_blocks_if_final_gate_is_blocked(tmp_pat
     monkeypatch.setattr(
         refresh_mod,
         "_run_command",
-        lambda command, *, cwd, timeout_seconds: {"returncode": 0, "timed_out": False},
+        lambda command, *, cwd, timeout_seconds, env=None: {
+            "returncode": 0,
+            "timed_out": False,
+        },
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -847,7 +850,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     monkeypatch.setattr(
         refresh_mod,
         "_run_command",
-        lambda command, *, cwd, timeout_seconds: {"returncode": 0, "timed_out": False},
+        lambda command, *, cwd, timeout_seconds, env=None: {
+            "returncode": 0,
+            "timed_out": False,
+        },
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -1265,7 +1271,10 @@ def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path
     monkeypatch.setattr(
         refresh_mod,
         "_run_command",
-        lambda command, *, cwd, timeout_seconds: {"returncode": -9, "timed_out": True},
+        lambda command, *, cwd, timeout_seconds, env=None: {
+            "returncode": -9,
+            "timed_out": True,
+        },
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -1291,7 +1300,14 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
         if spec["gate_id"] == "product_release_source_of_truth_gate"
     )
 
-    def fake_run(command: str, *, cwd: Path, timeout_seconds: int) -> dict:
+    def fake_run(
+        command: str,
+        *,
+        cwd: Path,
+        timeout_seconds: int,
+        env: dict[str, str] | None = None,
+    ) -> dict:
+        del command, cwd, env
         observed.append(timeout_seconds)
         return {"returncode": 0, "timed_out": False}
 
@@ -5911,6 +5927,139 @@ def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> 
     assert "runs/product_security_deployment_contract_current.json" in depends_on
     # The capability builder is part of the regular release refresh pipeline.
     assert "python3 tools/build_product_capability_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
+
+
+def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+    tier_alpha_dependencies = set(
+        by_id["tier_alpha_adrb2_dispatch_smoke"]["depends_on"]
+    )
+    restricted_dependencies = set(
+        by_id["restricted_unattended_execution_readiness"]["depends_on"]
+    )
+    image_preflight_dependencies = set(
+        by_id["product_image_smoke_preflight"]["depends_on"]
+    )
+    deployment_contract_dependencies = set(
+        by_id["product_security_deployment_contract"]["depends_on"]
+    )
+    promotion_dependencies = set(
+        by_id["api_runner_profile_promotion_readiness"]["depends_on"]
+    )
+    e2e_dependencies = set(
+        by_id["api_docking_dispatch_e2e_evidence"]["depends_on"]
+    )
+    customer_dependencies = set(
+        by_id["api_customer_flow_release_evidence"]["depends_on"]
+    )
+
+    shared_execution_sources = {
+        "api/artifact_access.py",
+        "api/deployment_secret_policy.py",
+        "api/job_store.py",
+        "api/validated_runner_execution_evidence.py",
+        "api/validated_runner_runtime_qualification.py",
+        "api/worker.py",
+        "betelgeuze_product/job_orchestration.py",
+        "betelgeuze_product/job_terminal_state.py",
+    }
+    assert shared_execution_sources <= tier_alpha_dependencies
+    assert shared_execution_sources <= restricted_dependencies
+
+    tier_alpha_runtime_sources = {
+        "api/config.py",
+        "api/job_artifacts.py",
+        "api/linux_runner_supervisor.py",
+        "api/request_privacy.py",
+        "api/runner_profile_contract.py",
+        "api/sqlite_runtime.py",
+        "api/tasks.py",
+    }
+    assert tier_alpha_runtime_sources <= tier_alpha_dependencies
+    assert (
+        "runs/local_delivery_verdict_gate_current.json"
+        in restricted_dependencies
+    )
+
+    image_verifier_sources = {
+        "api/validated_runner_runtime_qualification.py",
+        "tools/product/github_workflow_trust_boundaries.py",
+        "scripts/normalize_product_image_smoke_artifact_ownership.sh",
+        "scripts/prepare_product_docker_host.sh",
+        ".github/workflows/product-api-worker.yml",
+        ".github/workflows/product-api-worker-trusted.yml",
+        ".github/workflows/product-image-smoke.yml",
+        ".github/workflows/product-image-smoke-trusted.yml",
+        "requirements.txt",
+    }
+    assert image_verifier_sources <= image_preflight_dependencies
+
+    deployment_contract_sources = {
+        "tools/product/build_product_security_deployment_contract.py",
+        "tools/accounting/build_product_security_deployment_contract.py",
+        "tools/build_product_security_deployment_contract.py",
+        "api/config.py",
+        "api/security.py",
+        "api/main.py",
+        "Dockerfile.product",
+        "deploy/docker-compose.product.yml",
+        "deploy/docker-compose.product.env.example",
+        "deploy/product_rollback_runbook.md",
+        "docs/product_security_deployment_policy.md",
+        "requirements.txt",
+        "requirements-api.txt",
+        "requirements-deploy.txt",
+    }
+    assert deployment_contract_sources <= deployment_contract_dependencies
+
+    profile_sources = {
+        "tools/product/build_api_runner_profile_promotion_readiness.py",
+        "tools/accounting/build_api_runner_profile_promotion_readiness.py",
+        "tools/build_api_runner_profile_promotion_readiness.py",
+        "config/api_validated_runner_profiles",
+        "config/api_validated_runner_profiles/evidence",
+        "config/api_validated_runner_profiles/backmapping_scoring.example.json",
+        "config/api_validated_runner_profiles/backmapping_scoring.production.json",
+        "config/api_validated_runner_profiles/ligand_htvs_pipeline_default.json",
+        "config/api_validated_runner_profiles/ligand_topk_delivery.production.json",
+        "config/api_validated_runner_profiles/tier_beta_biodiscovery_direct.json",
+        "config/api_validated_runner_profiles/evidence/backmapping_scoring.example.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/backmapping_scoring.production.evidence.json",
+        "config/api_validated_runner_profiles/evidence/backmapping_scoring.production.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.json",
+        "config/api_validated_runner_profiles/evidence/ligand_htvs_pipeline_default.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/ligand_topk_delivery.production.evidence.json",
+        "config/api_validated_runner_profiles/evidence/ligand_topk_delivery.production.evidence.template.json",
+        "config/api_validated_runner_profiles/evidence/tier_beta_biodiscovery_direct.evidence.json",
+        "tools/run_ligand_htvs_pipeline.py",
+        "tools/run_ligand_backmapping_scoring.py",
+        "tools/run_ligand_topk_delivery.py",
+        "tools/run_tier_beta_vertical_slice.py",
+    }
+    assert profile_sources <= promotion_dependencies
+
+    e2e_sources = {
+        "tools/product/build_api_docking_dispatch_e2e_evidence.py",
+        "tools/build_api_docking_dispatch_e2e_evidence.py",
+        "api/docking_dispatch.py",
+        "betelgeuze_product/job_orchestration.py",
+        "betelgeuze_product/job_terminal_state.py",
+        "config/api_validated_runner_profiles",
+        "config/ligand_htvs_api_dispatch_smoke_v1.json",
+        "deploy/docker-compose.product.yml",
+        "tools/run_api_docking_dispatch_worker.py",
+        "tools/run_api_simulation_worker.py",
+    }
+    assert e2e_sources <= e2e_dependencies
+
+    customer_sources = {
+        "tools/product/build_api_customer_flow_release_evidence.py",
+        "tools/accounting/build_api_customer_flow_release_evidence.py",
+        "tools/build_api_customer_flow_release_evidence.py",
+        "api/validated_runner_runtime_qualification.py",
+        "tools/product/build_restricted_unattended_execution_readiness.py",
+    }
+    assert customer_sources <= customer_dependencies
 
 
 def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:

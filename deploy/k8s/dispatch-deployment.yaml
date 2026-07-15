@@ -13,6 +13,9 @@ spec:
       labels:
         app: micf-api-docking-dispatch
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api-docking-dispatch
           image: micf-api:product
@@ -27,13 +30,17 @@ spec:
           envFrom:
             - configMapRef:
                 name: micf-api-config
-            - secretRef:
-                name: micf-api-secrets
           env:
+            - name: API_VALIDATED_RUNNER_ENABLED
+              value: "0"
             - name: API_DOCKING_DISPATCH_POLL_INTERVAL_SECONDS
               value: "2"
             - name: API_DOCKING_DISPATCH_LIMIT
               value: "1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: results
               mountPath: /data

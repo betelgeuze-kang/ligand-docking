@@ -3,15 +3,21 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import signal
 import shlex
+import stat
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
+from api.deployment_secret_policy import (
+    result_manifest_key_id_is_operator_managed,
+    result_manifest_signing_key_is_operator_managed,
+)
 from tools.product.build_product_release_source_of_truth_gate import RELEASE_REFRESH_COMMANDS
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -692,13 +698,29 @@ def _load_json_file(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-def _verify_tier_alpha_manifest(manifest_payload: dict[str, Any]) -> bool:
+def _verify_tier_alpha_manifest(
+    manifest_payload: dict[str, Any],
+    *,
+    expected_job_id: str = "",
+) -> bool:
     try:
         from api.result_manifest import verify_result_manifest
 
+        signing_key = os.environ.get("API_RESULT_MANIFEST_SIGNING_KEY", "")
+        expected_key_id = os.environ.get("API_RESULT_MANIFEST_KEY_ID", "")
+        if (
+            not result_manifest_signing_key_is_operator_managed(signing_key)
+            or not result_manifest_key_id_is_operator_managed(expected_key_id)
+            or manifest_payload.get("manifest_version") != "api_result_manifest_v1"
+            or manifest_payload.get("signature_algorithm") != "hmac-sha256"
+            or manifest_payload.get("status") != "completed"
+            or manifest_payload.get("signature_key_id") != expected_key_id
+            or (expected_job_id and manifest_payload.get("job_id") != expected_job_id)
+        ):
+            return False
         return verify_result_manifest(
             manifest_payload,
-            signing_key=os.environ.get("API_RESULT_MANIFEST_SIGNING_KEY", "tier-alpha-local-smoke-signing-key"),
+            signing_key=signing_key,
         )
     except Exception:
         return False
@@ -708,40 +730,133 @@ def _latest_completed_tier_alpha_evidence(workspace: Path, *, started_at: float)
     results_dir = workspace / "results"
     if not results_dir.is_dir():
         return {}
+    signing_key = os.environ.get("API_RESULT_MANIFEST_SIGNING_KEY", "")
+    expected_key_id = os.environ.get("API_RESULT_MANIFEST_KEY_ID", "")
+    if (
+        not result_manifest_signing_key_is_operator_managed(signing_key)
+        or not result_manifest_key_id_is_operator_managed(expected_key_id)
+    ):
+        return {}
+
+    from api.artifact_access import (
+        open_confined_regular_file,
+        read_confined_json_object,
+        verify_completed_result_artifacts,
+    )
+    from api.job_store import SQLiteJobStore
+    from api.validated_runner_execution_evidence import (
+        EXECUTION_EVIDENCE_PROVENANCE_KEY,
+        tier_alpha_adrb2_execution_evidence,
+        validate_validated_runner_execution_evidence,
+    )
+
     candidates: list[tuple[float, dict[str, Any]]] = []
-    for status_path in results_dir.glob(f"{TIER_ALPHA_JOB_PREFIX}*/status.json"):
+    for store_path in results_dir.glob(f"{TIER_ALPHA_JOB_PREFIX}*.sqlite3"):
         try:
-            if status_path.stat().st_mtime < started_at - 1:
+            store_metadata = store_path.lstat()
+            if (
+                not stat.S_ISREG(store_metadata.st_mode)
+                or store_metadata.st_nlink != 1
+                or store_metadata.st_mtime < started_at - 1
+            ):
                 continue
         except OSError:
             continue
-        status_payload = _load_json_file(status_path)
-        if str(status_payload.get("status", "") or "") != "completed":
+        job_id = store_path.name.removesuffix(".sqlite3")
+        if Path(job_id).parts != (job_id,):
             continue
-        job_id = str(status_payload.get("job_id", "") or status_path.parent.name).strip()
-        result_file = Path(str(status_payload.get("result_file", "") or ""))
-        runner_execution = Path(str(status_payload.get("runner_execution", "") or ""))
-        result_manifest = Path(str(status_payload.get("result_manifest", "") or ""))
-        if not result_file.is_file() or not runner_execution.is_file() or not result_manifest.is_file():
+        record = SQLiteJobStore(str(store_path)).get_job(job_id) or {}
+        if str(record.get("status", "") or "") != "completed":
             continue
-        manifest_payload = _load_json_file(result_manifest)
-        if str(manifest_payload.get("status", "") or "") != "completed":
+        job_result_root = results_dir / job_id
+        published_status_path = str(record.get("published_status_path", "") or "")
+        try:
+            status_payload = read_confined_json_object(
+                job_result_root,
+                published_status_path,
+                label="Tier alpha recovered published status",
+                maximum_bytes=16 * 1024 * 1024,
+            )
+            if status_payload is None:
+                continue
+            verified_artifacts = verify_completed_result_artifacts(
+                job_id=job_id,
+                record=record,
+                status_data=status_payload,
+                result_root=job_result_root,
+                signing_key=signing_key,
+                expected_key_id=expected_key_id,
+            )
+        except Exception:
             continue
-        runner_payload = _load_json_file(runner_execution)
-        ledger_path = results_dir / "product_docking_jobs" / f"{job_id}.json"
-        ledger_payload = _load_json_file(ledger_path)
+        try:
+            runner_execution = str(status_payload.get("runner_execution", "") or "")
+            runner_payload = read_confined_json_object(
+                job_result_root,
+                runner_execution,
+                label="Tier alpha recovered runner execution",
+                maximum_bytes=16 * 1024 * 1024,
+            )
+            ledger_root = results_dir / "product_docking_jobs"
+            ledger_path = ledger_root / f"{job_id}.json"
+            ledger_payload = read_confined_json_object(
+                ledger_root,
+                ledger_path,
+                label="Tier alpha recovered docking ledger",
+                maximum_bytes=16 * 1024 * 1024,
+            )
+            _, manifest_handle = open_confined_regular_file(
+                job_result_root,
+                verified_artifacts.manifest_path,
+                label="Tier alpha recovered result manifest",
+            )
+            with manifest_handle:
+                raw_manifest = manifest_handle.read(1024 * 1024 + 1)
+            if len(raw_manifest) > 1024 * 1024:
+                continue
+            result_manifest_sha256 = hashlib.sha256(raw_manifest).hexdigest()
+            worker_provenance = verified_artifacts.manifest.get(
+                "worker_provenance"
+            )
+            if not isinstance(worker_provenance, dict):
+                continue
+            execution_evidence = validate_validated_runner_execution_evidence(
+                worker_provenance.get(EXECUTION_EVIDENCE_PROVENANCE_KEY)
+            )
+            if (
+                not isinstance(runner_payload, dict)
+                or not isinstance(ledger_payload, dict)
+                or runner_payload.get("ok") is not True
+                or type(runner_payload.get("returncode")) is not int
+                or runner_payload.get("returncode") != 0
+                or runner_payload.get("timed_out") is True
+                or ledger_payload.get("worker_dispatch_enqueued") is not True
+                or str(ledger_payload.get("worker_state", "") or "")
+                != "completed_fail_closed"
+                or str(ledger_payload.get("simulation_sync_status", "") or "")
+                != "completed"
+                or str(ledger_payload.get("simulation_result_file", "") or "")
+                != str(verified_artifacts.result_path)
+                or execution_evidence != tier_alpha_adrb2_execution_evidence(job_id)
+            ):
+                continue
+        except Exception:
+            continue
+        finally:
+            verified_artifacts.close()
         candidates.append(
             (
-                status_path.stat().st_mtime,
+                store_metadata.st_mtime,
                 {
                     "job_id": job_id,
-                    "status_path": status_path,
+                    "status_path": Path(published_status_path),
                     "status_payload": status_payload,
-                    "result_file": result_file,
-                    "runner_execution": runner_execution,
+                    "result_file": verified_artifacts.result_path,
+                    "runner_execution": Path(runner_execution),
                     "runner_payload": runner_payload,
-                    "result_manifest": result_manifest,
-                    "manifest_payload": manifest_payload,
+                    "result_manifest": verified_artifacts.manifest_path,
+                    "result_manifest_sha256": result_manifest_sha256,
+                    "manifest_payload": verified_artifacts.manifest,
                     "ledger_payload": ledger_payload,
                 },
             )
@@ -766,6 +881,14 @@ def _write_recovered_tier_alpha_payload(
     result_file = evidence["result_file"]
     runner_execution = evidence["runner_execution"]
     runner_returncode = runner_payload.get("returncode")
+    worker_provenance = manifest_payload.get("worker_provenance")
+    runtime_qualification = (
+        worker_provenance.get("validated_runner_runtime_qualification")
+        if isinstance(worker_provenance, dict)
+        else None
+    )
+    if not isinstance(runtime_qualification, dict):
+        runtime_qualification = {}
     payload = {
         "summary": {
             "packet_type": "tier_alpha_adrb2_dispatch_smoke",
@@ -774,6 +897,11 @@ def _write_recovered_tier_alpha_payload(
             "api_validated_runner_enabled": True,
             "workspace": _relative_or_absolute(workspace),
             "claim_boundary": TIER_ALPHA_CLAIM_BOUNDARY,
+            "validated_runner_namespace_runtime_manifest_binding_verified": True,
+            "validated_runner_execution_evidence_manifest_binding_verified": True,
+            "validated_result_artifacts_verified": True,
+            "ledger_result_binding_verified": True,
+            **runtime_qualification,
         },
         "job_id": evidence["job_id"],
         "ledger_worker_state": str(ledger_payload.get("worker_state", "") or "completed_fail_closed"),
@@ -797,13 +925,20 @@ def _write_recovered_tier_alpha_payload(
         "worker_dispatch_enqueued": ledger_payload.get("worker_dispatch_enqueued") is True,
         "ledger_progress_state": str(ledger_payload.get("progress_state", "") or ""),
         "ledger_current_step": str(ledger_payload.get("current_step", "") or ""),
-        "htvs_summary_exists": result_file.is_file(),
+        "htvs_summary_exists": True,
         "result_file": str(result_file),
         "status_json": str(status_path),
         "result_manifest": str(result_manifest),
-        "result_manifest_exists": result_manifest.is_file(),
-        "result_manifest_signature_verified": _verify_tier_alpha_manifest(manifest_payload),
+        "result_manifest_exists": True,
+        "result_manifest_sha256": str(
+            evidence.get("result_manifest_sha256", "") or ""
+        ),
+        "result_manifest_signature_verified": _verify_tier_alpha_manifest(
+            manifest_payload,
+            expected_job_id=str(evidence["job_id"]),
+        ),
         "result_manifest_status": str(manifest_payload.get("status", "") or ""),
+        "result_manifest_status_verified": True,
         "result_manifest_key_id": str(manifest_payload.get("signature_key_id", "") or ""),
         "recovered_from_completed_artifacts": True,
         "generated_at_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
@@ -812,13 +947,24 @@ def _write_recovered_tier_alpha_payload(
     out_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _run_tier_alpha_smoke_in_process(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
+def _run_tier_alpha_smoke_in_process(
+    command: str,
+    *,
+    cwd: Path,
+    timeout_seconds: int,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
     parts = shlex.split(command)
     workspace = _resolve_command_path(_arg_value(parts, "--workspace", TIER_ALPHA_DEFAULT_WORKSPACE), cwd=cwd)
     out_json = _resolve_command_path(_arg_value(parts, "--out-json", TIER_ALPHA_DEFAULT_OUT_JSON), cwd=cwd)
     started_at = time.time()
     deadline = started_at + max(1, int(timeout_seconds))
-    proc = subprocess.Popen(shlex.split(command), cwd=cwd, start_new_session=True)
+    proc = subprocess.Popen(
+        shlex.split(command),
+        cwd=cwd,
+        start_new_session=True,
+        env=None if env is None else dict(env),
+    )
     while True:
         returncode = proc.poll()
         if returncode is not None:
@@ -848,10 +994,26 @@ def _run_tier_alpha_smoke_in_process(command: str, *, cwd: Path, timeout_seconds
     return {"returncode": int(returncode), "timed_out": True}
 
 
-def _run_command(command: str, *, cwd: Path, timeout_seconds: int) -> dict[str, Any]:
+def _run_command(
+    command: str,
+    *,
+    cwd: Path,
+    timeout_seconds: int,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
     if _is_tier_alpha_smoke_command(command):
-        return _run_tier_alpha_smoke_in_process(command, cwd=cwd, timeout_seconds=timeout_seconds)
-    proc = subprocess.Popen(shlex.split(command), cwd=cwd, start_new_session=True)
+        return _run_tier_alpha_smoke_in_process(
+            command,
+            cwd=cwd,
+            timeout_seconds=timeout_seconds,
+            env=env,
+        )
+    proc = subprocess.Popen(
+        shlex.split(command),
+        cwd=cwd,
+        start_new_session=True,
+        env=None if env is None else dict(env),
+    )
     try:
         returncode = proc.wait(timeout=max(1, int(timeout_seconds)))
         return {"returncode": int(returncode), "timed_out": False}
@@ -1009,6 +1171,7 @@ def run_product_release_current_refresh(
 ) -> dict[str, Any]:
     root_path = Path(root)
     commands = list(RELEASE_REFRESH_COMMANDS if commands is None else commands)
+    command_environment = dict(os.environ)
     rows: list[dict[str, Any]] = []
     failed = False
     for index, command in enumerate(commands, start=1):
@@ -1025,13 +1188,31 @@ def run_product_release_current_refresh(
         if execute and not failed:
             row_timeout_seconds = _command_timeout_seconds(command, int(command_timeout_seconds))
             row["timeout_seconds"] = row_timeout_seconds
-            completed = _run_command(command, cwd=root_path, timeout_seconds=row_timeout_seconds)
+            completed = _run_command(
+                command,
+                cwd=root_path,
+                timeout_seconds=row_timeout_seconds,
+                env=command_environment,
+            )
             row["executed"] = True
             row["returncode"] = completed["returncode"]
             row["timed_out"] = bool(completed["timed_out"])
             row["status"] = "timeout" if row["timed_out"] else "pass" if completed["returncode"] == 0 else "fail"
             row["release_blocker"] = completed["returncode"] != 0 or row["timed_out"]
             failed = bool(row["release_blocker"])
+            if not failed and _is_tier_alpha_smoke_command(command):
+                command_parts = shlex.split(command)
+                workspace = _resolve_command_path(
+                    _arg_value(
+                        command_parts,
+                        "--workspace",
+                        TIER_ALPHA_DEFAULT_WORKSPACE,
+                    ),
+                    cwd=root_path,
+                )
+                command_environment["RESULTS_STORAGE_PATH"] = str(
+                    workspace / "results"
+                )
         rows.append(row)
 
     verification_rows = _verify_final_gates(root=root_path) if execute and not failed else []
