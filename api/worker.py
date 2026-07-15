@@ -12,9 +12,17 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import stat
 
 from api.config import settings
+from api.job_artifacts import (
+    activate_attempt_results_dir,
+    create_attempt_results_dir,
+    reset_attempt_results_dir,
+    resolve_job_results_dir,
+    token_fingerprint,
+)
 from api.job_store import (
     EXECUTION_REQUEST_TRANSFORM_ID,
     SQLiteJobStore,
@@ -84,7 +92,7 @@ def _sync_docking_ledger_if_needed(
 
 
 def job_results_dir(job_id: str) -> str:
-    return os.path.join(settings.results_storage_path, job_id)
+    return str(resolve_job_results_dir(job_id, settings.results_storage_path))
 
 
 def job_status_path(job_id: str) -> str:
@@ -228,6 +236,7 @@ def write_job_result_manifest(
     status: str,
     result_file: str = "",
     error: str = "",
+    worker_provenance: dict[str, Any] | None = None,
 ) -> str:
     manifest_path = job_manifest_path(job_id)
     write_result_manifest(
@@ -242,6 +251,7 @@ def write_job_result_manifest(
         error=error,
         signing_key=settings.api_result_manifest_signing_key,
         key_id=settings.api_result_manifest_key_id,
+        worker_provenance=worker_provenance,
     )
     return manifest_path
 
@@ -374,9 +384,15 @@ def _require_live_worker_lease(
     *,
     job_id: str,
     worker_id: str,
+    attempt_token: str,
     lease_seconds: int,
 ) -> dict[str, Any]:
-    record = store.heartbeat_job(job_id, worker_id, lease_seconds=lease_seconds)
+    record = store.heartbeat_job(
+        job_id,
+        worker_id,
+        attempt_token=attempt_token,
+        lease_seconds=lease_seconds,
+    )
     if record is None:
         raise JobLeaseLostError(f"worker lease lost for job {job_id}")
     return record
@@ -389,6 +405,60 @@ def _write_status_best_effort(path: str, payload: dict[str, Any]) -> None:
         return
 
 
+def _publish_canonical_status_best_effort(
+    path: str,
+    payload: dict[str, Any],
+) -> None:
+    """Atomically publish a terminal winner mirror after its durable CAS."""
+
+    target = Path(path)
+    temp = target.with_name(f".{target.name}.{secrets.token_hex(16)}.tmp")
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        write_status_file(str(temp), payload)
+        with temp.open("rb") as handle:
+            os.fsync(handle.fileno())
+        os.replace(temp, target)
+        directory_fd = os.open(target.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except (OSError, TypeError, ValueError):
+        with suppress(OSError):
+            temp.unlink()
+
+
+def _worker_attempt_provenance(
+    *,
+    worker_id: str,
+    attempt_token: str,
+    attempt_count: int,
+) -> dict[str, Any]:
+    return {
+        "worker_id": worker_id,
+        "attempt_count": attempt_count,
+        "attempt_token_sha256": token_fingerprint(attempt_token),
+    }
+
+
+def _require_attempt_artifact_path(
+    path_value: str,
+    *,
+    attempt_results_dir: Path,
+    label: str,
+) -> None:
+    if not path_value:
+        return
+    try:
+        resolved_path = Path(path_value).resolve(strict=True)
+        resolved_attempt_dir = attempt_results_dir.resolve(strict=True)
+    except OSError as exc:
+        raise JobIntegrityError(f"{label} is unavailable for the live attempt") from exc
+    if resolved_attempt_dir not in resolved_path.parents:
+        raise JobIntegrityError(f"{label} escapes the live attempt artifact directory")
+
+
 async def run_job_once(
     store: SQLiteJobStore,
     *,
@@ -396,26 +466,57 @@ async def run_job_once(
     request_data: dict[str, Any],
     runner: SimulationRunner = run_simulation_async,
     worker_id: str = "",
+    attempt_token: str = "",
     lease_seconds: int = 300,
     heartbeat_interval_seconds: float | None = None,
     retry_on_failure: bool = False,
 ) -> dict[str, Any]:
-    """Run one job with request-integrity and live-lease terminal binding."""
+    """Run one job with request-integrity and exact-attempt publication."""
 
-    status_file_path = job_status_path(job_id)
+    canonical_status_file_path = str(
+        Path(settings.results_storage_path) / job_id / "status.json"
+    )
+    status_file_path = canonical_status_file_path
     durable_record: dict[str, Any] = {}
     admission_sha256 = ""
     execution_sha256 = ""
     transform_id = ""
     status_data: dict[str, Any] = {}
+    attempt_count = 0
+    attempt_results_dir: Path | None = None
+    artifact_binding_token = None
+    worker_provenance: dict[str, Any] | None = None
 
     try:
         if worker_id:
+            if not attempt_token:
+                raise JobLeaseLostError(
+                    f"worker attempt token is required for job {job_id}"
+                )
             durable_record = _require_live_worker_lease(
                 store,
                 job_id=job_id,
                 worker_id=worker_id,
+                attempt_token=attempt_token,
                 lease_seconds=lease_seconds,
+            )
+            attempt_count = int(durable_record.get("attempt_count", 0) or 0)
+            attempt_results_dir = create_attempt_results_dir(
+                storage_root=settings.results_storage_path,
+                job_id=job_id,
+                worker_id=worker_id,
+                attempt_token=attempt_token,
+                attempt_count=attempt_count,
+            )
+            artifact_binding_token = activate_attempt_results_dir(
+                job_id,
+                attempt_results_dir,
+            )
+            status_file_path = job_status_path(job_id)
+            worker_provenance = _worker_attempt_provenance(
+                worker_id=worker_id,
+                attempt_token=attempt_token,
+                attempt_count=attempt_count,
             )
         else:
             durable_record = store.update_job(job_id, status="running") or {}
@@ -427,8 +528,12 @@ async def run_job_once(
         )
         _verify_execution_request(execution_sha256, request_data)
 
-        status_data = read_status_file(status_file_path)
+        status_data = read_status_file(
+            canonical_status_file_path if worker_id else status_file_path
+        )
         status_data.update({"job_id": job_id, "status": "running"})
+        if worker_provenance is not None:
+            status_data["worker_provenance"] = worker_provenance
         write_status_file(status_file_path, status_data)
 
         if worker_id:
@@ -436,6 +541,7 @@ async def run_job_once(
                 store,
                 job_id=job_id,
                 worker_id=worker_id,
+                attempt_token=attempt_token,
                 runner=runner,
                 request_data=request_data,
                 lease_seconds=lease_seconds,
@@ -445,13 +551,25 @@ async def run_job_once(
                 store,
                 job_id=job_id,
                 worker_id=worker_id,
+                attempt_token=attempt_token,
                 lease_seconds=lease_seconds,
             )
         else:
             await runner(job_id, request_data)
 
         status_data = read_status_file(status_file_path)
+        if worker_provenance is not None:
+            status_data["worker_provenance"] = worker_provenance
         result_file = str(status_data.get("result_file", "") or "")
+        if attempt_results_dir is not None:
+            if not result_file:
+                raise JobIntegrityError("runner did not record a result file")
+            for artifact_key in ("result_file", "runner_execution", "evidence_bundle"):
+                _require_attempt_artifact_path(
+                    str(status_data.get(artifact_key, "") or ""),
+                    attempt_results_dir=attempt_results_dir,
+                    label=artifact_key.replace("_", " "),
+                )
         manifest_path = write_job_result_manifest(
             job_id=job_id,
             request_data=request_data,
@@ -460,6 +578,7 @@ async def run_job_once(
             execution_request_transform_id=transform_id,
             status="completed",
             result_file=result_file,
+            worker_provenance=worker_provenance,
         )
         bundle_path, bundle_hash = write_job_evidence_bundle(
             job_id=job_id,
@@ -479,14 +598,30 @@ async def run_job_once(
                 "evidence_bundle_sha256": bundle_hash,
             }
         )
+        published_status_path = status_file_path
+        if attempt_results_dir is not None:
+            _require_attempt_artifact_path(
+                manifest_path,
+                attempt_results_dir=attempt_results_dir,
+                label="result manifest",
+            )
+            _require_attempt_artifact_path(
+                bundle_path,
+                attempt_results_dir=attempt_results_dir,
+                label="evidence bundle",
+            )
+            published_status_path = str(attempt_results_dir / "published_status.json")
         if worker_id:
             _require_live_worker_lease(
                 store,
                 job_id=job_id,
                 worker_id=worker_id,
+                attempt_token=attempt_token,
                 lease_seconds=lease_seconds,
             )
         write_status_file(status_file_path, status_data)
+        if published_status_path != status_file_path:
+            write_status_file(published_status_path, status_data)
         completed = store.update_job(
             job_id,
             status="completed",
@@ -494,10 +629,22 @@ async def run_job_once(
             result_manifest_path=manifest_path,
             evidence_bundle_path=bundle_path,
             evidence_bundle_sha256=bundle_hash,
+            published_status_path=(published_status_path if worker_id else None),
+            published_worker_id=(worker_id if worker_id else None),
+            published_attempt_count=(attempt_count if worker_id else None),
+            published_attempt_token_sha256=(
+                token_fingerprint(attempt_token) if worker_id else None
+            ),
             expected_worker_id=worker_id or None,
+            expected_attempt_token=attempt_token or None,
         )
         if completed is None:
             raise JobLeaseLostError(f"worker lease lost before completing job {job_id}")
+        if worker_id:
+            _publish_canonical_status_best_effort(
+                canonical_status_file_path,
+                status_data,
+            )
         _sync_docking_ledger_if_needed(
             job_id=job_id,
             request_data=request_data,
@@ -518,11 +665,20 @@ async def run_job_once(
             and not isinstance(exc, JobIntegrityError)
             and str(current.get("status", "")) == "running"
             and str(current.get("worker_id", "")) == worker_id
+            and hmac.compare_digest(
+                str(current.get("attempt_token", "") or ""),
+                attempt_token,
+            )
             and int(current.get("attempt_count", 0) or 0)
             < int(current.get("max_attempts", 0) or 0)
         )
         if can_retry:
-            released = store.release_job_for_retry(job_id, worker_id, error=error)
+            released = store.release_job_for_retry(
+                job_id,
+                worker_id,
+                attempt_token=attempt_token,
+                error=error,
+            )
             if released is None:
                 raise JobLeaseLostError(f"worker lease lost while releasing job {job_id}") from exc
             if released.get("status") == "retry_ready":
@@ -536,7 +692,12 @@ async def run_job_once(
         # Failure artifacts are best effort.  A broken filesystem must not keep
         # the authoritative SQLite row running forever.
         manifest_path = ""
-        if admission_sha256 and execution_sha256 and transform_id:
+        if (
+            admission_sha256
+            and execution_sha256
+            and transform_id
+            and (not worker_id or attempt_results_dir is not None)
+        ):
             try:
                 manifest_path = write_job_result_manifest(
                     job_id=job_id,
@@ -546,6 +707,7 @@ async def run_job_once(
                     execution_request_transform_id=transform_id,
                     status="failed",
                     error=error,
+                    worker_provenance=worker_provenance,
                 )
             except (OSError, TypeError, ValueError):
                 manifest_path = ""
@@ -553,17 +715,34 @@ async def run_job_once(
         failed_status.update({"job_id": job_id, "status": "failed", "error": error})
         if manifest_path:
             failed_status["result_manifest"] = manifest_path
-        _write_status_best_effort(status_file_path, failed_status)
+        if not worker_id or attempt_results_dir is not None:
+            _write_status_best_effort(status_file_path, failed_status)
+        published_status_path = ""
+        if attempt_results_dir is not None:
+            published_status_path = str(attempt_results_dir / "published_status.json")
+            _write_status_best_effort(published_status_path, failed_status)
 
         failed = store.update_job(
             job_id,
             status="failed",
             error=error,
             result_manifest_path=manifest_path or None,
+            published_status_path=(published_status_path or None),
+            published_worker_id=(worker_id if published_status_path else None),
+            published_attempt_count=(attempt_count if published_status_path else None),
+            published_attempt_token_sha256=(
+                token_fingerprint(attempt_token) if published_status_path else None
+            ),
             expected_worker_id=worker_id or None,
+            expected_attempt_token=attempt_token or None,
         )
         if failed is None:
             raise JobLeaseLostError(f"worker lease lost before failing job {job_id}") from exc
+        if worker_id:
+            _publish_canonical_status_best_effort(
+                canonical_status_file_path,
+                failed_status,
+            )
         _sync_docking_ledger_if_needed(
             job_id=job_id,
             request_data=request_data,
@@ -572,6 +751,9 @@ async def run_job_once(
             worker_id=worker_id,
         )
         return failed
+    finally:
+        if artifact_binding_token is not None:
+            reset_attempt_results_dir(artifact_binding_token)
 
 
 async def process_next_job_once(
@@ -592,6 +774,7 @@ async def process_next_job_once(
         request_data=dict(acquired.get("request") or {}),
         runner=runner,
         worker_id=worker_id,
+        attempt_token=str(acquired.get("attempt_token", "") or ""),
         lease_seconds=lease_seconds,
         heartbeat_interval_seconds=heartbeat_interval_seconds,
         retry_on_failure=retry_on_failure,
@@ -603,6 +786,7 @@ async def _run_with_periodic_heartbeat(
     *,
     job_id: str,
     worker_id: str,
+    attempt_token: str,
     runner: SimulationRunner,
     request_data: dict[str, Any],
     lease_seconds: int,
@@ -623,6 +807,7 @@ async def _run_with_periodic_heartbeat(
                     store,
                     job_id=job_id,
                     worker_id=worker_id,
+                    attempt_token=attempt_token,
                     lease_seconds=lease_seconds,
                 )
     finally:

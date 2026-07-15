@@ -224,7 +224,9 @@ def get_simulation_status(job_id: str, request: Request = None):
     )
 
     # Read status from file only after object authorization succeeds.
-    status_file_path = job_status_path(job_id)
+    status_file_path = str(
+        record.get("published_status_path") or job_status_path(job_id)
+    )
     if not os.path.exists(status_file_path):
         return StatusResponse(
             job_id=job_id,
@@ -303,7 +305,9 @@ def get_simulation_results(job_id: str, request: Request = None):
         resource="Job",
     )
 
-    status_file_path = job_status_path(job_id)
+    status_file_path = str(
+        record.get("published_status_path") or job_status_path(job_id)
+    )
     if not os.path.exists(status_file_path):
         raise HTTPException(status_code=404, detail="Results not ready or job failed")
 

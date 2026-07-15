@@ -2,9 +2,11 @@
 
 import json
 import os
+import asyncio
 from typing import Any
 
 from api.config import settings
+from api.job_artifacts import resolve_job_results_dir
 from api.simulation_scope import UnsupportedSimulationScopeError, validate_simulation_request_scope
 from api.validated_runner import execute_validated_runner_profile
 from betelgeuze_product.tier_beta_vertical_slice import (
@@ -17,13 +19,14 @@ async def run_simulation_async(job_id: str, request_data: dict[str, Any]):
     Asynchronously run a simulation task.
     This function should be called by the API endpoint.
     """
-    results_dir = os.path.join(settings.results_storage_path, job_id)
+    results_dir = str(resolve_job_results_dir(job_id, settings.results_storage_path))
     os.makedirs(results_dir, exist_ok=True)
     status_file_path = os.path.join(results_dir, "status.json")
     try:
         validate_simulation_request_scope(request_data)
         if is_tier_beta_vertical_slice_request(request_data):
-            run_tier_beta_vertical_slice_job(
+            await asyncio.to_thread(
+                run_tier_beta_vertical_slice_job,
                 job_id=job_id,
                 request_data=request_data,
                 results_dir=results_dir,

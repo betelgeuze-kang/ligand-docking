@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import secrets
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -140,7 +141,12 @@ class SQLiteJobStore:
                     result_manifest_path TEXT NOT NULL DEFAULT '',
                     evidence_bundle_path TEXT NOT NULL DEFAULT '',
                     evidence_bundle_sha256 TEXT NOT NULL DEFAULT '',
+                    published_status_path TEXT NOT NULL DEFAULT '',
+                    published_worker_id TEXT NOT NULL DEFAULT '',
+                    published_attempt_count INTEGER NOT NULL DEFAULT 0,
+                    published_attempt_token_sha256 TEXT NOT NULL DEFAULT '',
                     worker_id TEXT NOT NULL DEFAULT '',
+                    attempt_token TEXT NOT NULL DEFAULT '',
                     lease_expires_at_utc TEXT NOT NULL DEFAULT '',
                     heartbeat_at_utc TEXT NOT NULL DEFAULT '',
                     attempt_count INTEGER NOT NULL DEFAULT 0,
@@ -166,8 +172,28 @@ class SQLiteJobStore:
                 conn.execute(
                     "ALTER TABLE simulation_jobs ADD COLUMN evidence_bundle_sha256 TEXT NOT NULL DEFAULT ''"
                 )
+            if "published_status_path" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN published_status_path TEXT NOT NULL DEFAULT ''"
+                )
+            if "published_worker_id" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN published_worker_id TEXT NOT NULL DEFAULT ''"
+                )
+            if "published_attempt_count" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN published_attempt_count INTEGER NOT NULL DEFAULT 0"
+                )
+            if "published_attempt_token_sha256" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN published_attempt_token_sha256 TEXT NOT NULL DEFAULT ''"
+                )
             if "worker_id" not in columns:
                 conn.execute("ALTER TABLE simulation_jobs ADD COLUMN worker_id TEXT NOT NULL DEFAULT ''")
+            if "attempt_token" not in columns:
+                conn.execute(
+                    "ALTER TABLE simulation_jobs ADD COLUMN attempt_token TEXT NOT NULL DEFAULT ''"
+                )
             if "lease_expires_at_utc" not in columns:
                 conn.execute(
                     "ALTER TABLE simulation_jobs ADD COLUMN lease_expires_at_utc TEXT NOT NULL DEFAULT ''"
@@ -408,7 +434,12 @@ class SQLiteJobStore:
                     result_manifest_path='',
                     evidence_bundle_path='',
                     evidence_bundle_sha256='',
+                    published_status_path='',
+                    published_worker_id='',
+                    published_attempt_count=0,
+                    published_attempt_token_sha256='',
                     worker_id='',
+                    attempt_token='',
                     lease_expires_at_utc='',
                     heartbeat_at_utc='',
                     attempt_count=0,
@@ -513,19 +544,32 @@ class SQLiteJobStore:
         result_manifest_path: str | None = None,
         evidence_bundle_path: str | None = None,
         evidence_bundle_sha256: str | None = None,
+        published_status_path: str | None = None,
+        published_worker_id: str | None = None,
+        published_attempt_count: int | None = None,
+        published_attempt_token_sha256: str | None = None,
         expected_worker_id: str | None = None,
+        expected_attempt_token: str | None = None,
     ) -> dict[str, Any] | None:
         """Update a job, optionally only for its current live lease owner.
 
-        Passing ``expected_worker_id`` turns the update into a terminal-worker
-        compare-and-swap.  The status/outbox mutation then succeeds only while
-        that worker still owns an unexpired running lease.
+        Passing ``expected_worker_id`` and ``expected_attempt_token`` turns the
+        update into a terminal-attempt compare-and-swap.  The status/outbox
+        mutation then succeeds only while that exact attempt still owns an
+        unexpired running lease.  A worker id is not an attempt identity because
+        a process name can be reused after lease expiry.
         """
 
         now = _utc_now()
         terminal_status = status in {"completed", "failed"}
+        if (expected_worker_id is None) != (expected_attempt_token is None):
+            raise ValueError(
+                "expected_worker_id and expected_attempt_token must be provided together"
+            )
         if expected_worker_id is not None and not terminal_status:
-            raise ValueError("expected_worker_id is supported only for terminal updates")
+            raise ValueError("worker attempt expectations are supported only for terminal updates")
+        if expected_attempt_token is not None and not expected_attempt_token:
+            raise ValueError("expected_attempt_token must not be empty")
 
         assignments = [
             "status=?",
@@ -551,10 +595,34 @@ class SQLiteJobStore:
                         "evidence_bundle_sha256=''",
                     ]
                 )
+        if published_status_path is not None:
+            if (
+                published_worker_id is None
+                or published_attempt_count is None
+                or published_attempt_token_sha256 is None
+            ):
+                raise ValueError("published attempt provenance must be provided together")
+            assignments.extend(
+                [
+                    "published_status_path=?",
+                    "published_worker_id=?",
+                    "published_attempt_count=?",
+                    "published_attempt_token_sha256=?",
+                ]
+            )
+            values.extend(
+                [
+                    published_status_path,
+                    published_worker_id,
+                    published_attempt_count,
+                    published_attempt_token_sha256,
+                ]
+            )
         if terminal_status:
             assignments.extend(
                 [
                     "worker_id=''",
+                    "attempt_token=''",
                     "lease_expires_at_utc=''",
                     "heartbeat_at_utc=''",
                 ]
@@ -566,10 +634,10 @@ class SQLiteJobStore:
         values.append(job_id)
         if expected_worker_id is not None:
             where += (
-                " AND status='running' AND worker_id=?"
+                " AND status='running' AND worker_id=? AND attempt_token=?"
                 " AND lease_expires_at_utc != '' AND lease_expires_at_utc > ?"
             )
-            values.extend([expected_worker_id, now])
+            values.extend([expected_worker_id, expected_attempt_token, now])
 
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -599,6 +667,7 @@ class SQLiteJobStore:
     def acquire_next_job(self, worker_id: str, *, lease_seconds: int = 300) -> dict[str, Any] | None:
         now = _utc_now()
         lease_until = _utc_after(lease_seconds)
+        attempt_token = secrets.token_urlsafe(32)
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             exhausted = conn.execute(
@@ -619,7 +688,7 @@ class SQLiteJobStore:
                 cursor = conn.execute(
                     """
                     UPDATE simulation_jobs
-                    SET status='failed', error=?, worker_id='',
+                    SET status='failed', error=?, worker_id='', attempt_token='',
                         lease_expires_at_utc='', heartbeat_at_utc='', updated_at_utc=?
                     WHERE job_id=? AND status='running'
                       AND attempt_count >= max_attempts
@@ -667,18 +736,28 @@ class SQLiteJobStore:
                 UPDATE simulation_jobs
                 SET status='running',
                     worker_id=?,
+                    attempt_token=?,
                     lease_expires_at_utc=?,
                     heartbeat_at_utc=?,
                     attempt_count=attempt_count + 1,
                     updated_at_utc=?
                 WHERE job_id=?
                 """,
-                (worker_id, lease_until, now, now, job_id),
+                (worker_id, attempt_token, lease_until, now, now, job_id),
             )
             conn.commit()
         return self.get_job(job_id)
 
-    def heartbeat_job(self, job_id: str, worker_id: str, *, lease_seconds: int = 300) -> dict[str, Any] | None:
+    def heartbeat_job(
+        self,
+        job_id: str,
+        worker_id: str,
+        *,
+        attempt_token: str,
+        lease_seconds: int = 300,
+    ) -> dict[str, Any] | None:
+        if not attempt_token:
+            return None
         now = _utc_now()
         lease_until = _utc_after(lease_seconds)
         with self._connect() as conn:
@@ -686,16 +765,25 @@ class SQLiteJobStore:
                 """
                 UPDATE simulation_jobs
                 SET lease_expires_at_utc=?, heartbeat_at_utc=?, updated_at_utc=?
-                WHERE job_id=? AND worker_id=? AND status='running'
+                WHERE job_id=? AND worker_id=? AND attempt_token=? AND status='running'
                   AND lease_expires_at_utc != '' AND lease_expires_at_utc > ?
                 """,
-                (lease_until, now, now, job_id, worker_id, now),
+                (lease_until, now, now, job_id, worker_id, attempt_token, now),
             )
             if cursor.rowcount == 0:
                 return None
         return self.get_job(job_id)
 
-    def release_job_for_retry(self, job_id: str, worker_id: str, *, error: str = "") -> dict[str, Any] | None:
+    def release_job_for_retry(
+        self,
+        job_id: str,
+        worker_id: str,
+        *,
+        attempt_token: str,
+        error: str = "",
+    ) -> dict[str, Any] | None:
+        if not attempt_token:
+            return None
         now = _utc_now()
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -703,10 +791,10 @@ class SQLiteJobStore:
                 """
                 SELECT attempt_count, max_attempts
                 FROM simulation_jobs
-                WHERE job_id=? AND worker_id=? AND status='running'
+                WHERE job_id=? AND worker_id=? AND attempt_token=? AND status='running'
                   AND lease_expires_at_utc != '' AND lease_expires_at_utc > ?
                 """,
-                (job_id, worker_id, now),
+                (job_id, worker_id, attempt_token, now),
             ).fetchone()
             if row is None:
                 conn.rollback()
@@ -716,7 +804,7 @@ class SQLiteJobStore:
                 """
                 UPDATE simulation_jobs
                 SET status=?, error=?,
-                    worker_id='', lease_expires_at_utc='', heartbeat_at_utc='',
+                    worker_id='', attempt_token='', lease_expires_at_utc='', heartbeat_at_utc='',
                     updated_at_utc=?
                 WHERE job_id=?
                 """,

@@ -150,6 +150,7 @@ def build_result_manifest(
     hbond_evidence_summary: dict[str, Any] | None = None,
     force_residual_summary: dict[str, Any] | None = None,
     refine_element_summary: dict[str, Any] | None = None,
+    worker_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     resolved_fidelity = str(topology_fidelity or fidelity or TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE)
     resolved_scope = str(claim_scope or CLAIM_SCOPE_PRODUCT_LIGAND)
@@ -214,6 +215,8 @@ def build_result_manifest(
         payload["force_residual_summary"] = dict(force_residual_summary)
     if isinstance(refine_element_summary, dict):
         payload["refine_element_summary"] = dict(refine_element_summary)
+    if isinstance(worker_provenance, dict):
+        payload["worker_provenance"] = dict(worker_provenance)
     validate_manifest_claim_fields(payload)
     signature = hmac.new(signing_key.encode("utf-8"), _canonical_json(payload), hashlib.sha256).hexdigest()
     payload["signature"] = signature
@@ -250,6 +253,7 @@ def write_result_manifest(
     hbond_evidence_summary: dict[str, Any] | None = None,
     force_residual_summary: dict[str, Any] | None = None,
     refine_element_summary: dict[str, Any] | None = None,
+    worker_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = Path(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -289,6 +293,7 @@ def write_result_manifest(
             if refine_element_summary is not None
             else extracted_metadata.get("refine_element_summary")
         ),
+        worker_provenance=worker_provenance,
     )
     path.write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
     return manifest

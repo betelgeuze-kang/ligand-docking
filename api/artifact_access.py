@@ -230,6 +230,38 @@ def _evidence_bundle_fingerprint(handle: BinaryIO) -> tuple[str, EvidenceBundle]
         raise _forbidden("evidence bundle contract verification failed") from exc
 
 
+def _published_attempt_prefix(record: dict[str, Any]) -> tuple[str, str] | None:
+    published_status_path = str(record.get("published_status_path", "") or "").strip()
+    if not published_status_path:
+        return None
+    worker_id = str(record.get("published_worker_id", "") or "")
+    attempt_count = int(record.get("published_attempt_count", 0) or 0)
+    token_sha256 = str(
+        record.get("published_attempt_token_sha256", "") or ""
+    ).lower()
+    if not worker_id or attempt_count < 1 or _SHA256_RE.fullmatch(token_sha256) is None:
+        raise _forbidden("completed job is missing published attempt provenance")
+    worker_sha256 = hashlib.sha256(worker_id.encode("utf-8")).hexdigest()
+    return (
+        ".attempts",
+        f"attempt-{attempt_count:06d}-{worker_sha256}-{token_sha256}",
+    )
+
+
+def _require_attempt_prefix(
+    confined: _ConfinedArtifactRoot,
+    path_like: str | Path,
+    *,
+    expected_prefix: tuple[str, str] | None,
+    label: str,
+) -> None:
+    if expected_prefix is None:
+        return
+    _, parts = confined.normalize(path_like, label=label)
+    if parts[:2] != expected_prefix:
+        raise _forbidden(f"{label} is not bound to the published attempt")
+
+
 def verify_completed_result_artifacts(
     *,
     job_id: str,
@@ -248,6 +280,27 @@ def verify_completed_result_artifacts(
     opened_handles: list[BinaryIO] = []
     try:
         with _ConfinedArtifactRoot(result_root, label="job result") as confined:
+            expected_attempt_prefix = _published_attempt_prefix(record)
+            if expected_attempt_prefix is not None:
+                published_status_path = str(record.get("published_status_path", "") or "")
+                _require_attempt_prefix(
+                    confined,
+                    published_status_path,
+                    expected_prefix=expected_attempt_prefix,
+                    label="published status",
+                )
+                _, published_status_handle = confined.open(
+                    published_status_path,
+                    label="published status",
+                )
+                opened_handles.append(published_status_handle)
+                published_status = _load_json_object(
+                    published_status_handle,
+                    label="published status",
+                )
+                if published_status != status_data:
+                    raise _forbidden("published status snapshot changed during verification")
+
             manifest_path, manifest_handle = confined.open(
                 _matching_required_value(
                     status_data.get("result_manifest"),
@@ -276,6 +329,18 @@ def verify_completed_result_artifacts(
             )
             opened_handles.append(evidence_handle)
 
+            for artifact_path, label in (
+                (manifest_path, "result manifest"),
+                (result_path, "result file"),
+                (evidence_bundle_path, "evidence bundle"),
+            ):
+                _require_attempt_prefix(
+                    confined,
+                    artifact_path,
+                    expected_prefix=expected_attempt_prefix,
+                    label=label,
+                )
+
             manifest = _load_json_object(manifest_handle, label="result manifest")
             if not signing_key or not verify_result_manifest(manifest, signing_key=signing_key):
                 raise _forbidden("result manifest signature verification failed")
@@ -285,6 +350,18 @@ def verify_completed_result_artifacts(
                 raise _forbidden("result manifest job binding mismatch")
             if str(manifest.get("status", "")) != "completed":
                 raise _forbidden("result manifest status is not completed")
+            if expected_attempt_prefix is not None:
+                expected_worker_provenance = {
+                    "worker_id": str(record.get("published_worker_id", "") or ""),
+                    "attempt_count": int(record.get("published_attempt_count", 0) or 0),
+                    "attempt_token_sha256": str(
+                        record.get("published_attempt_token_sha256", "") or ""
+                    ).lower(),
+                }
+                if status_data.get("worker_provenance") != expected_worker_provenance:
+                    raise _forbidden("published status worker attempt provenance mismatch")
+                if manifest.get("worker_provenance") != expected_worker_provenance:
+                    raise _forbidden("result manifest worker attempt provenance mismatch")
 
             request_sha = str(record.get("request_sha256", "") or "").lower()
             if _SHA256_RE.fullmatch(request_sha) is None:

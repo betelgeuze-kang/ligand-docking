@@ -9,11 +9,13 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
 from api.config import settings
+from api.job_artifacts import resolve_job_results_dir
 from api.request_privacy import sanitize_request_for_ledger
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
@@ -65,7 +67,7 @@ def _repo_root() -> Path:
 
 
 def _results_dir(job_id: str) -> Path:
-    return Path(settings.results_storage_path) / job_id
+    return resolve_job_results_dir(job_id, settings.results_storage_path)
 
 
 def _status_path(job_id: str) -> Path:
@@ -113,6 +115,39 @@ def _render_template(value: str, context: dict[str, str]) -> str:
         return str(value).format(**context)
     except KeyError as exc:
         raise ValueError(f"unsupported runner profile placeholder: {exc}") from exc
+
+
+def _require_output_within_results_dir(
+    path_value: str,
+    *,
+    results_dir: Path,
+    label: str,
+) -> None:
+    candidate = Path(path_value)
+    if not candidate.is_absolute():
+        candidate = _repo_root() / candidate
+    try:
+        logical_root = Path(os.path.abspath(str(results_dir)))
+        logical_parent = Path(os.path.abspath(str(candidate.parent)))
+        relative_parent = logical_parent.relative_to(logical_root)
+        resolved_root = results_dir.resolve(strict=True)
+        resolved_parent = candidate.parent.resolve(strict=True)
+    except ValueError as exc:
+        raise PermissionError(f"{label} escapes the job attempt results directory") from exc
+    except OSError as exc:
+        raise PermissionError(f"{label} parent is unavailable") from exc
+    if resolved_parent != resolved_root and resolved_root not in resolved_parent.parents:
+        raise PermissionError(f"{label} escapes the job attempt results directory")
+    cursor = logical_root
+    for part in relative_parent.parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise PermissionError(f"{label} parent must not contain symbolic links")
+    try:
+        if candidate.is_symlink():
+            raise PermissionError(f"{label} must not be a symbolic link")
+    except OSError as exc:
+        raise PermissionError(f"{label} could not be validated") from exc
 
 
 def _runner_script(profile: dict[str, Any]) -> str:
@@ -206,7 +241,19 @@ def _safe_runner_environment() -> dict[str, str]:
     return child_env
 
 
-def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[str, Any]:
+def _terminate_process_group(proc: subprocess.Popen[str]) -> None:
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+def _run_profile_command(
+    command: list[str],
+    *,
+    timeout_seconds: int,
+    cancellation_event: threading.Event | None = None,
+) -> dict[str, Any]:
     proc = subprocess.Popen(
         command,
         cwd=str(_repo_root()),
@@ -218,18 +265,29 @@ def _run_profile_command(command: list[str], *, timeout_seconds: int) -> dict[st
         env=_safe_runner_environment(),
     )
     timed_out = False
-    try:
-        stdout, stderr = proc.communicate(timeout=max(1, int(timeout_seconds)))
-    except subprocess.TimeoutExpired:
-        timed_out = True
+    cancelled = False
+    deadline = time.monotonic() + max(1, int(timeout_seconds))
+    while True:
+        if cancellation_event is not None and cancellation_event.is_set():
+            cancelled = True
+            _terminate_process_group(proc)
+            stdout, stderr = proc.communicate()
+            break
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            timed_out = True
+            _terminate_process_group(proc)
+            stdout, stderr = proc.communicate()
+            break
         try:
-            os.killpg(proc.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        stdout, stderr = proc.communicate()
+            stdout, stderr = proc.communicate(timeout=min(0.1, remaining))
+            break
+        except subprocess.TimeoutExpired:
+            continue
     return {
         "returncode": int(proc.returncode if proc.returncode is not None else -9),
         "timed_out": timed_out,
+        "cancelled": cancelled,
         "stdout": stdout or "",
         "stderr": stderr or "",
     }
@@ -273,6 +331,18 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
             },
         )
 
+    _require_output_within_results_dir(
+        context["result_file"],
+        results_dir=results_dir,
+        label="result_file",
+    )
+    if has_evidence_bundle_template:
+        _require_output_within_results_dir(
+            context["evidence_bundle"],
+            results_dir=results_dir,
+            label="evidence_bundle",
+        )
+
     args = profile.get("arguments", [])
     if not isinstance(args, list) or not all(isinstance(item, str) for item in args):
         raise ValueError("runner profile arguments must be a list of strings")
@@ -284,11 +354,23 @@ async def execute_validated_runner_profile(job_id: str, request_data: dict[str, 
     started = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     t0 = time.time()
     timeout_seconds = int(settings.api_validated_runner_timeout_seconds)
-    completed = await asyncio.to_thread(
-        _run_profile_command,
-        command,
-        timeout_seconds=timeout_seconds,
+    cancellation_event = threading.Event()
+    command_task = asyncio.create_task(
+        asyncio.to_thread(
+            _run_profile_command,
+            command,
+            timeout_seconds=timeout_seconds,
+            cancellation_event=cancellation_event,
+        )
     )
+    try:
+        completed = await asyncio.shield(command_task)
+    except asyncio.CancelledError:
+        cancellation_event.set()
+        # Do not return control to the lease manager until the child process
+        # group has been killed and its leader reaped by communicate().
+        await command_task
+        raise
     duration = max(time.time() - t0, 0.0)
     ended = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 

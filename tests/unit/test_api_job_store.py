@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import sqlite3
+import threading
 
 import pytest
 from fastapi import BackgroundTasks
@@ -180,7 +181,12 @@ def test_sqlite_job_store_retry_outbox_event_recoverable_after_reopen(tmp_path: 
     acquired = store.acquire_next_job("worker_a", lease_seconds=60)
     assert acquired is not None
 
-    released = store.release_job_for_retry("job_outbox_retry", "worker_a", error="transient failure")
+    released = store.release_job_for_retry(
+        "job_outbox_retry",
+        "worker_a",
+        attempt_token=acquired["attempt_token"],
+        error="transient failure",
+    )
     assert released is not None
     assert released["status"] == "retry_ready"
 
@@ -346,12 +352,25 @@ def test_sqlite_job_store_acquires_jobs_with_worker_lease(tmp_path: Path) -> Non
 
     assert store.acquire_next_job("worker_b", lease_seconds=60) is None
 
-    refreshed = store.heartbeat_job("job_1", "worker_a", lease_seconds=60)
+    refreshed = store.heartbeat_job(
+        "job_1",
+        "worker_a",
+        attempt_token=acquired["attempt_token"],
+        lease_seconds=60,
+    )
     assert refreshed is not None
     assert refreshed["worker_id"] == "worker_a"
     assert refreshed["heartbeat_at_utc"]
 
-    assert store.heartbeat_job("job_1", "worker_b", lease_seconds=60) is None
+    assert (
+        store.heartbeat_job(
+            "job_1",
+            "worker_b",
+            attempt_token=acquired["attempt_token"],
+            lease_seconds=60,
+        )
+        is None
+    )
 
 
 def test_sqlite_job_store_retry_release_respects_max_attempts(tmp_path: Path) -> None:
@@ -362,7 +381,12 @@ def test_sqlite_job_store_retry_release_respects_max_attempts(tmp_path: Path) ->
     assert first is not None
     assert first["attempt_count"] == 1
 
-    retry_ready = store.release_job_for_retry("job_retry", "worker_a", error="transient runner failure")
+    retry_ready = store.release_job_for_retry(
+        "job_retry",
+        "worker_a",
+        attempt_token=first["attempt_token"],
+        error="transient runner failure",
+    )
     assert retry_ready is not None
     assert retry_ready["status"] == "retry_ready"
     assert retry_ready["worker_id"] == ""
@@ -373,7 +397,12 @@ def test_sqlite_job_store_retry_release_respects_max_attempts(tmp_path: Path) ->
     assert second["attempt_count"] == 2
     assert second["worker_id"] == "worker_b"
 
-    failed = store.release_job_for_retry("job_retry", "worker_b", error="retry budget exhausted")
+    failed = store.release_job_for_retry(
+        "job_retry",
+        "worker_b",
+        attempt_token=second["attempt_token"],
+        error="retry budget exhausted",
+    )
     assert failed is not None
     assert failed["status"] == "failed"
     assert failed["worker_id"] == ""
@@ -411,7 +440,7 @@ def test_worker_process_next_job_retries_then_writes_failed_manifest(
     assert first["status"] == "retry_ready"
     assert first["attempt_count"] == 1
     first_status = json.loads(Path(worker.job_status_path("job_worker_fail")).read_text(encoding="utf-8"))
-    assert first_status["status"] == "retry_ready"
+    assert first_status["status"] == "submitted"
     assert "result_manifest" not in first_status
 
     second = asyncio.run(
@@ -510,6 +539,92 @@ def test_worker_process_next_job_writes_completed_manifest(
     )
 
 
+def test_completed_api_uses_published_status_when_canonical_mirror_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.main as main
+    import api.worker as worker
+
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+    store.create_job("job_published_status", {"target_name": "ADRB2"})
+    monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
+    monkeypatch.setattr(main.settings, "results_storage_path", str(tmp_path / "results"))
+    monkeypatch.setattr(main.settings, "api_job_store_path", str(store.path))
+    monkeypatch.setattr(main, "job_store", store)
+    worker.write_status_file(
+        worker.job_status_path("job_published_status"),
+        {"job_id": "job_published_status", "status": "submitted"},
+    )
+
+    async def _winner(job_id: str, request_data: dict) -> None:
+        result_file = Path(worker.job_results_dir(job_id)) / "result.json"
+        result_file.write_text('{"owner":"WINNER"}\n', encoding="utf-8")
+        worker.write_status_file(
+            worker.job_status_path(job_id),
+            {
+                "job_id": job_id,
+                "status": "completed",
+                "result_file": str(result_file),
+            },
+        )
+
+    monkeypatch.setattr(worker, "_publish_canonical_status_best_effort", lambda *args: None)
+    completed = asyncio.run(
+        worker.process_next_job_once(
+            store,
+            worker_id="worker-published",
+            runner=_winner,
+            lease_seconds=60,
+        )
+    )
+    assert completed is not None
+    assert completed["status"] == "completed"
+    canonical = json.loads(
+        Path(worker.job_status_path("job_published_status")).read_text(encoding="utf-8")
+    )
+    assert canonical["status"] == "submitted"
+    assert Path(completed["published_status_path"]).exists()
+
+    from fastapi.testclient import TestClient
+
+    client = TestClient(main.app)
+    status_response = client.get("/status/job_published_status")
+    assert status_response.status_code == 200
+    assert status_response.json()["status"] == "completed"
+    assert status_response.json()["result_manifest_available"] is True
+    result_response = client.get("/results/job_published_status")
+    assert result_response.status_code == 200
+    assert result_response.json() == {"owner": "WINNER"}
+
+    other_attempt = (
+        tmp_path
+        / "results"
+        / "job_published_status"
+        / ".attempts"
+        / "attempt-cross-mix"
+    )
+    other_attempt.mkdir()
+    mixed_result = other_attempt / "result.json"
+    mixed_result.write_text('{"owner":"MIXED"}\n', encoding="utf-8")
+    published_status = json.loads(
+        Path(completed["published_status_path"]).read_text(encoding="utf-8")
+    )
+    published_status["result_file"] = str(mixed_result)
+    Path(completed["published_status_path"]).write_text(
+        json.dumps(published_status),
+        encoding="utf-8",
+    )
+    with sqlite3.connect(store.path) as conn:
+        conn.execute(
+            "UPDATE simulation_jobs SET result_file=? WHERE job_id='job_published_status'",
+            (str(mixed_result),),
+        )
+    mixed_response = client.get("/results/job_published_status")
+    assert mixed_response.status_code == 403
+    assert "published attempt" in mixed_response.json()["detail"]
+
+
 def test_worker_extends_lease_while_runner_is_active(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -524,9 +639,21 @@ def test_worker_extends_lease_while_runner_is_active(
         def __getattr__(self, name: str):
             return getattr(self.wrapped, name)
 
-        def heartbeat_job(self, job_id: str, worker_id: str, *, lease_seconds: int = 300):
+        def heartbeat_job(
+            self,
+            job_id: str,
+            worker_id: str,
+            *,
+            attempt_token: str,
+            lease_seconds: int = 300,
+        ):
             self.heartbeat_calls += 1
-            return self.wrapped.heartbeat_job(job_id, worker_id, lease_seconds=lease_seconds)
+            return self.wrapped.heartbeat_job(
+                job_id,
+                worker_id,
+                attempt_token=attempt_token,
+                lease_seconds=lease_seconds,
+            )
 
     wrapped_store = SQLiteJobStore(tmp_path / "api_jobs.sqlite3")
     wrapped_store.create_job("job_heartbeat", {"target_name": "Chignolin"}, status="submitted")
@@ -774,6 +901,12 @@ def test_sqlite_job_store_migrates_evidence_bundle_columns(tmp_path: Path) -> No
     assert record is not None
     assert record["evidence_bundle_path"] == ""
     assert record["evidence_bundle_sha256"] == ""
+    assert record["attempt_token"] == ""
+    assert record["published_status_path"] == ""
+    assert record["published_attempt_token_sha256"] == ""
+    acquired = store.acquire_next_job("legacy-worker", lease_seconds=60)
+    assert acquired is not None
+    assert acquired["attempt_token"]
 
 
 def test_sqlite_job_store_create_job_clears_result_pointers_on_recreate(tmp_path: Path) -> None:
@@ -1275,6 +1408,7 @@ def test_worker_rejects_execution_payload_hash_mismatch_without_retrying(
             request_data=tampered_request,
             runner=_must_not_run,
             worker_id="worker-integrity",
+            attempt_token=acquired["attempt_token"],
             lease_seconds=60,
             retry_on_failure=True,
         )
@@ -1368,6 +1502,7 @@ def test_stale_worker_cannot_overwrite_new_lease_owner_completion(
         status="completed",
         result_file="/tmp/stale-result.pdb",
         expected_worker_id="worker-a",
+        expected_attempt_token=first["attempt_token"],
     )
     assert stale_terminal is None
     assert store.get_job("job_two_workers")["worker_id"] == "worker-b"
@@ -1391,6 +1526,7 @@ def test_stale_worker_cannot_overwrite_new_lease_owner_completion(
                 request_data=dict(first["request"]),
                 runner=_stale_runner,
                 worker_id="worker-a",
+                attempt_token=first["attempt_token"],
                 lease_seconds=60,
             )
         )
@@ -1410,11 +1546,196 @@ def test_stale_worker_cannot_overwrite_new_lease_owner_completion(
             request_data=dict(second["request"]),
             runner=_winner,
             worker_id="worker-b",
+            attempt_token=second["attempt_token"],
             lease_seconds=60,
         )
     )
     assert completed["status"] == "completed"
     assert completed["result_file"].endswith("winner.pdb")
+    terminal_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_status_changed"
+        and event["payload"].get("status") == "completed"
+    ]
+    assert len(terminal_events) == 1
+
+
+def test_same_worker_reacquisition_invalidates_old_attempt_token(tmp_path: Path) -> None:
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+    store.create_job("job_same_worker", {"target_name": "ADRB2"}, max_attempts=2)
+    first = store.acquire_next_job("stable-worker", lease_seconds=60)
+    assert first is not None
+    assert first["attempt_token"]
+
+    with sqlite3.connect(store.path) as conn:
+        conn.execute(
+            "UPDATE simulation_jobs SET lease_expires_at_utc='2000-01-01T00:00:00+00:00' "
+            "WHERE job_id='job_same_worker'"
+        )
+    second = store.acquire_next_job("stable-worker", lease_seconds=60)
+    assert second is not None
+    assert second["attempt_token"] != first["attempt_token"]
+    assert second["attempt_count"] == 2
+
+    assert (
+        store.heartbeat_job(
+            "job_same_worker",
+            "stable-worker",
+            attempt_token=first["attempt_token"],
+            lease_seconds=60,
+        )
+        is None
+    )
+    assert (
+        store.release_job_for_retry(
+            "job_same_worker",
+            "stable-worker",
+            attempt_token=first["attempt_token"],
+            error="stale",
+        )
+        is None
+    )
+    assert (
+        store.update_job(
+            "job_same_worker",
+            status="completed",
+            result_file="/tmp/stale.pdb",
+            expected_worker_id="stable-worker",
+            expected_attempt_token=first["attempt_token"],
+        )
+        is None
+    )
+    current = store.get_job("job_same_worker")
+    assert current is not None
+    assert current["status"] == "running"
+    assert current["attempt_token"] == second["attempt_token"]
+
+    completed = store.update_job(
+        "job_same_worker",
+        status="completed",
+        result_file="/tmp/winner.pdb",
+        expected_worker_id="stable-worker",
+        expected_attempt_token=second["attempt_token"],
+    )
+    assert completed is not None
+    assert completed["status"] == "completed"
+    terminal_events = [
+        event
+        for event in store.list_pending_outbox_events()
+        if event["event_type"] == "job_status_changed"
+        and event["payload"].get("status") == "completed"
+    ]
+    assert len(terminal_events) == 1
+
+
+def test_stale_attempt_late_write_cannot_replace_same_worker_winner(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.worker as worker
+
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+    store.create_job("job_late_write", {"target_name": "ADRB2"}, max_attempts=2)
+    first = store.acquire_next_job("stable-worker", lease_seconds=60)
+    assert first is not None
+    monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
+    worker.write_status_file(
+        worker.job_status_path("job_late_write"),
+        {"job_id": "job_late_write", "status": "submitted"},
+    )
+
+    async def _scenario() -> tuple[dict, Path, Path]:
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+        allow_late_write = asyncio.Event()
+        stale_attempt_dir: Path | None = None
+
+        async def _stale_runner(job_id: str, request_data: dict) -> None:
+            nonlocal stale_attempt_dir
+            stale_attempt_dir = Path(worker.job_results_dir(job_id))
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.set()
+                await allow_late_write.wait()
+                stale_result = stale_attempt_dir / "result.pdb"
+                stale_result.write_text("ATOM STALE\n", encoding="utf-8")
+                worker.write_status_file(
+                    str(stale_attempt_dir / "status.json"),
+                    {
+                        "job_id": job_id,
+                        "status": "completed",
+                        "result_file": str(stale_result),
+                    },
+                )
+
+        stale_task = asyncio.create_task(
+            worker.run_job_once(
+                store,
+                job_id="job_late_write",
+                request_data=dict(first["request"]),
+                runner=_stale_runner,
+                worker_id="stable-worker",
+                attempt_token=first["attempt_token"],
+                lease_seconds=60,
+                heartbeat_interval_seconds=0.05,
+            )
+        )
+        await asyncio.wait_for(started.wait(), timeout=1)
+        with sqlite3.connect(store.path) as conn:
+            conn.execute(
+                "UPDATE simulation_jobs SET lease_expires_at_utc='2000-01-01T00:00:00+00:00' "
+                "WHERE job_id='job_late_write'"
+            )
+        second = store.acquire_next_job("stable-worker", lease_seconds=60)
+        assert second is not None
+
+        async def _winner(job_id: str, request_data: dict) -> None:
+            winner_dir = Path(worker.job_results_dir(job_id))
+            winner_result = winner_dir / "result.pdb"
+            winner_result.write_text("ATOM WINNER\n", encoding="utf-8")
+            worker.write_status_file(
+                worker.job_status_path(job_id),
+                {
+                    "job_id": job_id,
+                    "status": "completed",
+                    "result_file": str(winner_result),
+                },
+            )
+
+        winner = await worker.run_job_once(
+            store,
+            job_id="job_late_write",
+            request_data=dict(second["request"]),
+            runner=_winner,
+            worker_id="stable-worker",
+            attempt_token=second["attempt_token"],
+            lease_seconds=60,
+        )
+        await asyncio.wait_for(cancelled.wait(), timeout=1)
+        allow_late_write.set()
+        with pytest.raises(worker.JobLeaseLostError):
+            await asyncio.wait_for(stale_task, timeout=1)
+        assert stale_attempt_dir is not None
+        return winner, stale_attempt_dir, Path(winner["result_file"]).parent
+
+    winner, stale_attempt_dir, winner_attempt_dir = asyncio.run(_scenario())
+    assert stale_attempt_dir != winner_attempt_dir
+    assert (stale_attempt_dir / "result.pdb").read_text(encoding="utf-8") == "ATOM STALE\n"
+    assert Path(winner["result_file"]).read_text(encoding="utf-8") == "ATOM WINNER\n"
+    current = store.get_job("job_late_write")
+    assert current is not None
+    assert current["result_file"] == winner["result_file"]
+    published_status = json.loads(
+        Path(current["published_status_path"]).read_text(encoding="utf-8")
+    )
+    assert published_status["result_file"] == winner["result_file"]
+    canonical_status = json.loads(
+        Path(worker.job_status_path("job_late_write")).read_text(encoding="utf-8")
+    )
+    assert canonical_status["result_file"] == winner["result_file"]
     terminal_events = [
         event
         for event in store.list_pending_outbox_events()
@@ -1458,6 +1779,7 @@ def test_periodic_heartbeat_loss_cancels_runner_without_retry_mutation(
                 request_data=dict(acquired["request"]),
                 runner=_slow_runner,
                 worker_id="worker-a",
+                attempt_token=acquired["attempt_token"],
                 lease_seconds=60,
                 heartbeat_interval_seconds=0.05,
                 retry_on_failure=True,
@@ -1484,6 +1806,123 @@ def test_periodic_heartbeat_loss_cancels_runner_without_retry_mutation(
         event["payload"].get("status") in {"retry_ready", "failed"}
         for event in store.list_pending_outbox_events()
     )
+
+
+def test_tier_beta_late_thread_write_is_confined_after_lease_loss(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.tasks as tasks
+    import api.worker as worker
+
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+    store.create_job("job_tier_thread", {"target_name": "ADRB2"}, max_attempts=2)
+    first = store.acquire_next_job("stable-tier-worker", lease_seconds=60)
+    assert first is not None
+    monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
+    monkeypatch.setattr(tasks.settings, "results_storage_path", str(tmp_path / "results"))
+    monkeypatch.setattr(tasks, "validate_simulation_request_scope", lambda request: None)
+    monkeypatch.setattr(tasks, "is_tier_beta_vertical_slice_request", lambda request: True)
+    worker.write_status_file(
+        worker.job_status_path("job_tier_thread"),
+        {"job_id": "job_tier_thread", "status": "submitted"},
+    )
+    started = threading.Event()
+    allow_late_write = threading.Event()
+    late_write_done = threading.Event()
+    stale_dir: list[Path] = []
+
+    def _blocking_tier_runner(*, job_id: str, request_data: dict, results_dir: str) -> None:
+        attempt_dir = Path(results_dir)
+        stale_dir.append(attempt_dir)
+        started.set()
+        assert allow_late_write.wait(timeout=5)
+        result_file = attempt_dir / "tier_result.json"
+        result_file.write_text('{"owner":"STALE"}\n', encoding="utf-8")
+        (attempt_dir / "status.json").write_text(
+            json.dumps(
+                {
+                    "job_id": job_id,
+                    "status": "completed",
+                    "result_file": str(result_file),
+                }
+            ),
+            encoding="utf-8",
+        )
+        late_write_done.set()
+
+    monkeypatch.setattr(tasks, "run_tier_beta_vertical_slice_job", _blocking_tier_runner)
+
+    async def _scenario() -> dict:
+        stale_task = asyncio.create_task(
+            worker.run_job_once(
+                store,
+                job_id="job_tier_thread",
+                request_data=dict(first["request"]),
+                runner=tasks.run_simulation_async,
+                worker_id="stable-tier-worker",
+                attempt_token=first["attempt_token"],
+                lease_seconds=60,
+                heartbeat_interval_seconds=0.05,
+            )
+        )
+        deadline = asyncio.get_running_loop().time() + 1
+        while not started.is_set():
+            if asyncio.get_running_loop().time() >= deadline:
+                raise AssertionError("tier-beta thread did not start")
+            await asyncio.sleep(0.01)
+        with sqlite3.connect(store.path) as conn:
+            conn.execute(
+                "UPDATE simulation_jobs SET lease_expires_at_utc='2000-01-01T00:00:00+00:00' "
+                "WHERE job_id='job_tier_thread'"
+            )
+        second = store.acquire_next_job("stable-tier-worker", lease_seconds=60)
+        assert second is not None
+        with pytest.raises(worker.JobLeaseLostError):
+            await asyncio.wait_for(stale_task, timeout=1)
+
+        async def _winner(job_id: str, request_data: dict) -> None:
+            attempt_dir = Path(worker.job_results_dir(job_id))
+            result_file = attempt_dir / "winner.json"
+            result_file.write_text('{"owner":"WINNER"}\n', encoding="utf-8")
+            worker.write_status_file(
+                worker.job_status_path(job_id),
+                {
+                    "job_id": job_id,
+                    "status": "completed",
+                    "result_file": str(result_file),
+                },
+            )
+
+        winner = await worker.run_job_once(
+            store,
+            job_id="job_tier_thread",
+            request_data=dict(second["request"]),
+            runner=_winner,
+            worker_id="stable-tier-worker",
+            attempt_token=second["attempt_token"],
+            lease_seconds=60,
+        )
+        allow_late_write.set()
+        deadline = asyncio.get_running_loop().time() + 1
+        while not late_write_done.is_set():
+            if asyncio.get_running_loop().time() >= deadline:
+                raise AssertionError("tier-beta thread did not finish its late write")
+            await asyncio.sleep(0.01)
+        return winner
+
+    winner = asyncio.run(_scenario())
+    assert stale_dir
+    assert stale_dir[0] != Path(winner["result_file"]).parent
+    assert (stale_dir[0] / "tier_result.json").read_text(encoding="utf-8") == '{"owner":"STALE"}\n'
+    assert Path(winner["result_file"]).read_text(encoding="utf-8") == '{"owner":"WINNER"}\n'
+    current = store.get_job("job_tier_thread")
+    assert current is not None
+    assert current["result_file"] == winner["result_file"]
+    canonical_status = json.loads(
+        Path(worker.job_status_path("job_tier_thread")).read_text(encoding="utf-8")
+    )
+    assert canonical_status["result_file"] == winner["result_file"]
 
 
 def test_expired_final_attempt_is_recovered_as_failed(tmp_path: Path) -> None:

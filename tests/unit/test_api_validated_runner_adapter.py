@@ -5,7 +5,9 @@ from pathlib import Path
 import asyncio
 import hashlib
 import json
+import sqlite3
 import sys
+import time
 
 import pytest
 
@@ -90,6 +92,41 @@ def _write_slow_runner(path: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+
+
+def _write_process_group_runner(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "import argparse, json, subprocess, sys, time",
+                "from pathlib import Path",
+                "p = argparse.ArgumentParser()",
+                "p.add_argument('--request-json', required=True)",
+                "p.add_argument('--out-json', required=True)",
+                "p.add_argument('--pid-file', required=True)",
+                "p.add_argument('--late-marker', required=True)",
+                "args = p.parse_args()",
+                "child_code = (\"import time; from pathlib import Path; \"",
+                "              \"time.sleep(3); Path(sys.argv[1]).write_text('LATE', encoding='utf-8')\")",
+                "child = subprocess.Popen([sys.executable, '-c', 'import sys; ' + child_code, args.late_marker])",
+                "Path(args.pid_file).write_text(json.dumps({'parent': __import__('os').getpid(), 'child': child.pid}), encoding='utf-8')",
+                "time.sleep(20)",
+                "Path(args.out_json).write_text(json.dumps({'ok': True}) + '\\n', encoding='utf-8')",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _pid_is_running(pid: int) -> bool:
+    stat_path = Path(f"/proc/{pid}/stat")
+    try:
+        fields = stat_path.read_text(encoding="utf-8").split()
+    except OSError:
+        return False
+    return len(fields) > 2 and fields[2] not in {"Z", "X"}
 
 
 def _write_native_bundle_runner(path: Path) -> None:
@@ -357,6 +394,86 @@ def test_validated_runner_timeout_records_fail_closed_execution(
     assert execution_record["returncode"] != 0
 
 
+def test_validated_runner_cancellation_kills_process_group_and_waits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    slow_runner = tmp_path / "process_group_runner.py"
+    _write_process_group_runner(slow_runner)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    pid_file = tmp_path / "runner_pids.json"
+    late_marker = tmp_path / "late-marker.txt"
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    profile = _profile_payload("cancel_group", slow_runner, evidence)
+    profile["arguments"].extend(
+        [
+            "--pid-file",
+            str(pid_file),
+            "--late-marker",
+            str(late_marker),
+        ]
+    )
+    (profiles_dir / "cancel_group.json").write_text(
+        json.dumps(profile, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        validated_runner,
+        "ALLOWED_RUNNER_SCRIPTS",
+        {str(slow_runner.resolve())},
+    )
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_timeout_seconds",
+        30,
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "results_storage_path",
+        str(tmp_path / "results"),
+    )
+
+    async def _scenario() -> tuple[dict[str, int], float]:
+        task = asyncio.create_task(
+            validated_runner.execute_validated_runner_profile(
+                "job_cancel_group",
+                {"target_name": "Chignolin", "runner_profile_id": "cancel_group"},
+            )
+        )
+        deadline = asyncio.get_running_loop().time() + 2
+        while not pid_file.exists():
+            if asyncio.get_running_loop().time() >= deadline:
+                raise AssertionError("validated runner did not start")
+            await asyncio.sleep(0.01)
+        pids = json.loads(pid_file.read_text(encoding="utf-8"))
+        started = time.monotonic()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, timeout=2)
+        return pids, time.monotonic() - started
+
+    pids, cancellation_duration = asyncio.run(_scenario())
+    assert cancellation_duration < 2
+    deadline = time.monotonic() + 2
+    while any(_pid_is_running(int(pid)) for pid in pids.values()) and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert not _pid_is_running(int(pids["parent"]))
+    assert not _pid_is_running(int(pids["child"]))
+    time.sleep(0.2)
+    assert not late_marker.exists()
+    assert not (tmp_path / "results" / "job_cancel_group" / "runner_result.json").exists()
+
+
 def test_api_task_remains_fail_closed_when_validated_runner_disabled(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -397,6 +514,59 @@ def test_validated_runner_rejects_profile_path_traversal(
                 {"target_name": "Chignolin", "runner_profile_id": "../bad"},
             )
         )
+
+
+def test_validated_runner_rejects_output_outside_job_results_before_spawn(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    fake_runner = tmp_path / "fake_validated_runner.py"
+    _write_fake_runner(fake_runner)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    profile = _profile_payload("escaped_output", fake_runner, evidence)
+    profile["result_file_template"] = "{job_results_dir}/../escaped.json"
+    (profiles_dir / "escaped_output.json").write_text(
+        json.dumps(profile, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        validated_runner,
+        "ALLOWED_RUNNER_SCRIPTS",
+        {str(fake_runner.resolve())},
+    )
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "results_storage_path",
+        str(tmp_path / "results"),
+    )
+    spawned = False
+
+    def _must_not_spawn(*args, **kwargs):
+        nonlocal spawned
+        spawned = True
+        raise AssertionError("runner must not spawn")
+
+    monkeypatch.setattr(validated_runner, "_run_profile_command", _must_not_spawn)
+    with pytest.raises(PermissionError, match="escapes the job attempt"):
+        asyncio.run(
+            validated_runner.execute_validated_runner_profile(
+                "job_escaped_output",
+                {"target_name": "Chignolin", "runner_profile_id": "escaped_output"},
+            )
+        )
+    assert spawned is False
+    assert not (tmp_path / "results" / "escaped.json").exists()
 
 
 def test_validated_runner_rejects_enabled_profile_without_evidence(
@@ -510,13 +680,112 @@ def test_worker_queue_executes_validated_runner_profile_and_signs_manifest(
     assert bundle["verdict"]["claim_safe"] is False
     assert bundle["source_hashes"]["executable_hash"] == _sha256(fake_runner)
     assert "delivery_bundle_validation_not_attached" in bundle["failure_flags"]
-    runner_request = (tmp_path / "results" / "job_worker_profile" / "request.json").read_text(
+    runner_request = (Path(completed["result_file"]).parent / "request.json").read_text(
         encoding="utf-8"
     )
     assert "ATOM      1" not in runner_request
     assert "CCO" not in runner_request
     assert "CCN" not in runner_request
     assert "sha256" in runner_request
+
+
+def test_worker_lease_loss_kills_validated_runner_process_group(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+    import api.worker as worker
+    from api.job_store import SQLiteJobStore
+    from api.tasks import run_simulation_async
+
+    slow_runner = tmp_path / "lease_loss_runner.py"
+    _write_process_group_runner(slow_runner)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    pid_file = tmp_path / "lease_loss_pids.json"
+    late_marker = tmp_path / "lease-loss-late.txt"
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    profile = _profile_payload("lease_loss", slow_runner, evidence)
+    profile["arguments"].extend(
+        ["--pid-file", str(pid_file), "--late-marker", str(late_marker)]
+    )
+    (profiles_dir / "lease_loss.json").write_text(
+        json.dumps(profile, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        validated_runner,
+        "ALLOWED_RUNNER_SCRIPTS",
+        {str(slow_runner.resolve())},
+    )
+    monkeypatch.setattr(validated_runner.settings, "api_validated_runner_enabled", True)
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_timeout_seconds",
+        30,
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "results_storage_path",
+        str(tmp_path / "results"),
+    )
+
+    store = SQLiteJobStore(tmp_path / "jobs.sqlite3")
+    request = {"target_name": "Chignolin", "runner_profile_id": "lease_loss"}
+    store.create_job("job_lease_loss", request, max_attempts=2)
+    first = store.acquire_next_job("stable-worker", lease_seconds=60)
+    assert first is not None
+    worker.write_status_file(
+        worker.job_status_path("job_lease_loss"),
+        {"job_id": "job_lease_loss", "status": "submitted"},
+    )
+
+    async def _scenario() -> tuple[dict[str, int], dict]:
+        task = asyncio.create_task(
+            worker.run_job_once(
+                store,
+                job_id="job_lease_loss",
+                request_data=dict(first["request"]),
+                runner=run_simulation_async,
+                worker_id="stable-worker",
+                attempt_token=first["attempt_token"],
+                lease_seconds=60,
+                heartbeat_interval_seconds=0.05,
+            )
+        )
+        deadline = asyncio.get_running_loop().time() + 2
+        while not pid_file.exists():
+            if asyncio.get_running_loop().time() >= deadline:
+                raise AssertionError("validated runner did not start")
+            await asyncio.sleep(0.01)
+        pids = json.loads(pid_file.read_text(encoding="utf-8"))
+        with sqlite3.connect(store.path) as conn:
+            conn.execute(
+                "UPDATE simulation_jobs SET lease_expires_at_utc='2000-01-01T00:00:00+00:00' "
+                "WHERE job_id='job_lease_loss'"
+            )
+        replacement = store.acquire_next_job("stable-worker", lease_seconds=60)
+        assert replacement is not None
+        assert replacement["attempt_token"] != first["attempt_token"]
+        with pytest.raises(worker.JobLeaseLostError):
+            await asyncio.wait_for(task, timeout=2)
+        return pids, replacement
+
+    pids, replacement = asyncio.run(_scenario())
+    assert store.get_job("job_lease_loss")["attempt_token"] == replacement["attempt_token"]
+    deadline = time.monotonic() + 2
+    while any(_pid_is_running(int(pid)) for pid in pids.values()) and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert not any(_pid_is_running(int(pid)) for pid in pids.values())
+    time.sleep(0.2)
+    assert not late_marker.exists()
+    assert not list((tmp_path / "results" / "job_lease_loss").rglob("runner_result.json"))
 
 
 def test_validate_api_runner_profiles_cli_reports_ready_enabled_profile(
