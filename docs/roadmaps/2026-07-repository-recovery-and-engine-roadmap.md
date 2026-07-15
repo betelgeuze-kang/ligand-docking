@@ -1,9 +1,10 @@
 # Repository recovery and Engine v2 roadmap — 2026-07
 
-Status: active recovery record
+Status: core recovery complete; donor extraction and governance follow-up active
 
 Observed at: 2026-07-15
 Starting `main`: `de83e282d4e69b0e5233ea3306ca2ab929fc823e`
+Core-recovery endpoint `main`: `3f9ede19bb158a02eb3d06e0ed42dea6952db680`
 
 This is the living decision record for recovering the open pull-request stack. It records code ownership and merge order; it is not scientific evidence and does not promote any product or execution claim.
 
@@ -17,7 +18,14 @@ The following remain false unless separate reviewed evidence changes them:
 - `scientifically_validated=false`
 - `benchmark_validated=false`
 - `customer_execution_enabled=false`
-- GPU parity, commercial readiness, and public benchmark validation are not established
+- `scientific_validation=false`
+- `public_benchmark_validation=false`
+- `gpu_parity=false`
+- `customer_execution=false`
+- `commercial_readiness=false`
+
+Future evidence stages and promotion rules are recorded separately in the
+[Engine v2 scientific evidence roadmap](engine-v2-scientific-evidence-roadmap.md).
 
 ## Open PR graph at recovery start
 
@@ -61,7 +69,7 @@ old donor parent ── #66          (must be decomposed)
 | 5 | H6 #64 | `0.2.0rc1` release/package/static-analysis scope | Restack onto merged H5 | Merge after static-analysis and release matrix are green. |
 | 6 | H7 #65 | Offline external baseline work orders and reviewed receipts | Restack as leaf on merged H3 | Leaf merge after exact coverage/integrity tests. |
 
-H4 #62 may proceed after P0 in parallel with H2/H3 because it is API-only. Immediately before merge it must be updated to the latest main and have `ci-api-h4-hosted`, `product-api-worker`, `ci-mobile-lite`, and `product-image-smoke` green.
+H4 #62 was eligible to proceed after P0 in parallel with H2/H3 because it was API-only. It was deliberately merged last, after the first bounded #66 child, so its final restack and four required hosted checks covered the then-current `main`. The numbered recovery slices above are now merged.
 
 ## Validation matrix
 
@@ -76,16 +84,16 @@ H4 #62 may proceed after P0 in parallel with H2/H3 because it is API-only. Immed
 | H7 | Receipt identity, confinement, exact row coverage, failure retention, no claim promotion | Canonical/benchmark leaf checks |
 | #66 children | Focused contract tests per extraction bucket, including 3.10–3.12 determinism where applicable | One focused workflow per ownership bucket |
 
-## Additional observed blockers
+## Observed blockers and resolution state
 
 - A persistent repository-level self-hosted ROCm runner existed on this public, personal-account repository, and historical pull-request workloads were confirmed on it. The runner registration was removed on 2026-07-15; repository runner inventory was then verified empty.
 - Fork workflow approval was tightened from first-time contributors to all external contributors on 2026-07-15. This is defense in depth, not a substitute for runner isolation.
 - Trusted self-hosted jobs also fail closed unless repository variable `TRUSTED_SELF_HOSTED_CI_ENABLED` is explicitly `true`. The variable is not enabled during recovery.
 - The former runner host must be treated as untrusted. Re-registration is blocked pending clean rebuild/reimage, review and rotation of host-accessible credentials, and an execution design that does not expose a persistent repository runner to public PR workflows.
 - PR-only and trusted self-hosted workflows are now separate files, with exact semantic policy tests. Those tests detect repository regressions but do not replace the external runner-access boundary.
-- #61 no longer has clean H2 ancestry; #63/#64/#65 depend on that old H3 line.
-- #66 is 141 commits behind the starting main and combines unrelated ownership buckets.
-- Existing product preflight tests and status builders encode the old unsafe `clean:false`/pre-checkout recovery behavior and must be updated with P0 instead of being preserved as comments or compatibility tokens.
+- The #61 ancestry break was resolved by reconstructing and merging replacement #72; #63/#64/#65 were then restacked and merged on the repaired line.
+- #66 is now 220 commits behind current `main` and 12 donor commits ahead, and still combines unrelated ownership buckets.
+- The unsafe `clean:false`/pre-checkout recovery assumptions in product preflight tests and status builders were removed with P0 instead of being preserved as compatibility tokens.
 - No promotion flag may be changed as a shortcut for a failing test or missing runtime receipt.
 
 ## P0 containment and local validation snapshot
@@ -105,17 +113,63 @@ Observed after remediation on 2026-07-15:
 
 | Donor | Replacement status | Remaining action |
 |---|---|---|
-| #38 | pending matrix | Identify current-main unique benchmark/product deltas. |
-| #40 | pending comparison | Confirm whether its single delta is already represented or create one bounded replacement. |
-| #41 | pending extraction | Split product-safety contracts; do not inherit stale ancestry. |
-| #42 | pending post-H4 comparison | Preserve only operations changes not covered by H4/current main. |
-| #43 | pending multi-bucket matrix | Separate API, naming, legacy physics, and advanced-method material. |
-| #66 | extraction matrix required | Create at least the first current-main child PR, then close donor after all retained children are linked. |
+| #38 | open donor; not bulk-merged | Identify current-main-unique benchmark/product deltas and extract only bounded reviewed children. |
+| #40 | closed and superseded without merge | It contained only an obsolete task scaffold and no implementation delta; current release source-of-truth code and freshness contracts were merged through #62. |
+| #41 | open mixed donor; CI-isolation portion superseded by #67 | Split any still-unique product-safety contracts; do not inherit stale ancestry or promote readiness flags. |
+| #42 | open API-operations donor; partially overlapped by #62 | Compare changed files against current H4 and preserve only still-unique operations changes in a bounded child. |
+| #43 | open donor-only PR; security portions superseded by #44–#48, #67, and #62 | Separately audit naming, legacy physics, and advanced-method material; never bulk merge. |
+| #49 | closed and superseded | Engine v2 scope was decomposed into merged #50–#54, #56, and #57; no donor branch merge remains. |
+| #61 | closed and superseded | Replacement #72 was reconstructed on merged H2 and merged cleanly. No donor branch merge remains. |
+| #66 | open donor; first child #73 merged | Continue the extraction matrix by dependency bucket. Close only after every retained bucket has a linked child or an explicit discard decision. |
+
+## Open PR snapshot after core recovery
+
+Observed after `main@3f9ede19` on 2026-07-15:
+
+| PR | State | Recovery decision | Next action |
+|---|---|---|---|
+| #38 | draft; conflicting | donor only | Build a current-main changed-file matrix, then extract or discard bounded deltas. |
+| #41 | draft; conflicting | mixed donor only | Extract still-unique safety contracts without promotion changes. |
+| #42 | draft; conflicting | API-operations donor only | Compare against merged H4 and replace only unique operations scope. |
+| #43 | draft; conflicting | explicitly donor only | Split API, naming, legacy physics, and advanced-method ownership. |
+| #66 | draft on stale donor base | bounded extraction donor | Continue after merged child #73; never bulk merge. |
+| #68–#71 | open Dependabot updates | outside the recovery merge sequence | Review immutable action updates and run the complete workflow-policy/check matrix independently. |
+
+## Deferred governance follow-up
+
+These items require separate reviewable PRs and were not folded into the
+ancestry/security recovery:
+
+- audit the tracked `.betelgeuze/state.md`, `.betelgeuze/run_log.md`, and local
+  audit document; retain only sanitized templates or move mutable state out of
+  the source tree without rewriting history;
+- add a hygiene gate for generated state, large binaries, checkpoints,
+  trajectories, archives, secret-like filenames, and Python build/cache files;
+- add reviewed `SECURITY.md`, `CONTRIBUTING.md`, and `.github/CODEOWNERS`
+  ownership for workflows, API, deployment, Engine v2, packaging, and capability
+  configuration;
+- document dependency pinning/constraints policy and review Dependabot PRs
+  independently from functional recovery.
+
+## H4 final acceptance snapshot
+
+- PR #62 head `3016ebea96a05742266e7fd722b0596626098a92` was merged as `3f9ede19bb158a02eb3d06e0ed42dea6952db680` only after all four required hosted API/product checks passed.
+- The final 16-file H4 unit regression set reported `310 passed`; the exact hosted command groups were reproduced locally before push.
+- An independent final security/evidence re-audit reported `140 passed` and no P0/P1 issue or push blocker.
+- The merged implementation binds validated execution to a short-lived hash-pinned runtime receipt and signed purpose evidence, confines access to the database-selected winning attempt and signed artifact bundle, keeps standard deployment routes fail closed, and leaves public/customer execution disabled.
+- Remaining P2 trust boundaries include same-UID pathname/TOCTOU exposure, an unsigned local docking ledger, receipt-expiry/re-evaluation hardening, and mutable image/container hardening. These are residual engineering risks, not evidence of scientific or product qualification.
 
 ## Actual merge order
 
-This table is append-only. Planned order is not recorded as completed work.
+This append-only table records the exact completed core-recovery merge order.
 
 | Actual order | PR | Merge SHA | Method | Evidence |
 |---:|---|---|---|---|
-| — | none as of 2026-07-15 | — | — | Recovery in progress. |
+| 1 | #67 | `a3a585d5eb94f19b2e8e715ac4914a2d3b4e1f30` | merge commit | Hosted PR isolation, workflow-policy tests, empty repository runner inventory, and fail-closed trusted lanes. |
+| 2 | #60 | `298c8223e15e353b8562ae6a0369e031f31cdfdc` | merge commit | H2 symmetry-mapping identity, not-evaluated pose semantics, and canonical CI ownership. |
+| 3 | #72 | `bf73e0acf13b41496b4c3592ea027c61b028ce72` | merge commit | Clean H3 replacement on merged H2; #61 closed as superseded. |
+| 4 | #63 | `8097b516d112e33abd64887e8ad4cb6f6ce6799c` | merge commit | Restacked H5 bounded reference-physics contracts with promotion flags unchanged. |
+| 5 | #64 | `1657b6a1039ba75799cf167a609eefc49faa75fd` | merge commit | Restacked H6 release candidate with separate static-analysis and release-matrix checks. |
+| 6 | #65 | `13af55c8f9251bc465d144b90d263efa5f5d01ea` | merge commit | Independent H7 offline external-baseline receipt leaf. |
+| 7 | #73 | `6ae6d1140c52402a3d375d74b4c34d3a3b7e9ddb` | merge commit | First bounded #66 child: CIF syntax only; donor remains open. |
+| 8 | #62 | `3f9ede19bb158a02eb3d06e0ed42dea6952db680` | merge commit | Final H4 API security restack; four required hosted lanes green and final security re-audit clear of P0/P1. |
