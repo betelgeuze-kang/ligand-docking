@@ -61,7 +61,7 @@ from api.worker import (
     process_next_job_once,
     read_status_file,
     run_job_once,
-    write_status_file,
+    write_status_file,  # noqa: F401 - retained as a compatibility export
 )
 from betelgeuze_product.tier_beta_vertical_slice import is_tier_beta_vertical_slice_request
 

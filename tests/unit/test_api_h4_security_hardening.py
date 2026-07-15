@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path
 import sqlite3
