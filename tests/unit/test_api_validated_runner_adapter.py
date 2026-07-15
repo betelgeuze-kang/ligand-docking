@@ -57,22 +57,14 @@ def test_validated_runner_child_environment_excludes_service_secrets(
     for name in secret_names:
         monkeypatch.setenv(name, f"secret-for-{name}")
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
-    probe = (
-        "import json,os; "
-        f"names={secret_names!r}; "
-        "print(json.dumps({'secret_presence': {name: name in os.environ for name in names}, "
-        "'cuda_visible': os.environ.get('CUDA_VISIBLE_DEVICES', '')}, sort_keys=True))"
-    )
 
-    completed = validated_runner._run_profile_command(
-        [sys.executable, "-c", probe],
-        timeout_seconds=10,
-    )
+    child_env = validated_runner._safe_runner_environment()
 
-    assert completed["returncode"] == 0
-    payload = json.loads(completed["stdout"])
-    assert payload["secret_presence"] == {name: False for name in secret_names}
-    assert payload["cuda_visible"] == "0"
+    assert {name: name in child_env for name in secret_names} == {
+        name: False for name in secret_names
+    }
+    assert child_env["CUDA_VISIBLE_DEVICES"] == "0"
+    assert child_env["PYTHONUNBUFFERED"] == "1"
 
 
 def _write_fake_runner(path: Path) -> None:

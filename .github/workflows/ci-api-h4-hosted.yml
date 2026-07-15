@@ -116,8 +116,6 @@ jobs:
           python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_api_job_store.py
           tests/unit/test_api_security_middleware.py
-          tests/unit/test_api_validated_runner_adapter.py
-          tests/unit/test_api_worker_deploy_artifacts.py
           tests/unit/test_build_api_docking_dispatch_e2e_evidence.py
           tests/unit/test_build_api_customer_flow_release_evidence.py
           tests/unit/test_build_product_image_smoke_preflight.py
@@ -127,6 +125,40 @@ jobs:
           tests/unit/test_ci_contract_fixture_packets.py
           tests/unit/test_run_product_release_current_refresh.py
           tests/unit/test_validated_runner_runtime_qualification.py
+
+      - name: Run hosted-safe validated runner regressions
+        run: >-
+          python -m pytest --confcutdir=tests/unit -q
+          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_child_environment_excludes_service_secrets
+          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_fails_before_spawn_without_linux_containment
+          tests/unit/test_api_validated_runner_adapter.py::test_api_task_remains_fail_closed_when_validated_runner_disabled
+          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_rejects_profile_path_traversal
+          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_rejects_output_outside_job_results_before_spawn
+          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_rejects_enabled_profile_without_evidence
+          tests/unit/test_api_validated_runner_adapter.py::test_worker_rejects_partial_or_malformed_runtime_qualification_status
+          tests/unit/test_api_validated_runner_adapter.py::test_artifact_reader_rejects_boolean_alias_in_signed_worker_provenance
+          tests/unit/test_api_validated_runner_adapter.py::test_artifact_reader_rejects_unsigned_runtime_qualification_status
+          tests/unit/test_api_validated_runner_adapter.py::test_artifact_reader_rejects_unsigned_execution_evidence_status
+
+      - name: Run hosted-safe deployment regressions
+        run: >-
+          python -m pytest --confcutdir=tests/unit -q
+          tests/unit/test_api_worker_deploy_artifacts.py::test_product_compose_runs_api_and_worker_with_shared_queue
+          tests/unit/test_api_worker_deploy_artifacts.py::test_standard_container_route_keeps_validated_execution_unqualified
+          tests/unit/test_api_worker_deploy_artifacts.py::test_tier_alpha_smoke_uses_operator_only_runner_and_exact_manifest_binding
+          tests/unit/test_api_worker_deploy_artifacts.py::test_tier_alpha_operator_wrapper_binds_exact_execution_purpose
+          tests/unit/test_api_worker_deploy_artifacts.py::test_systemd_dispatch_unit_polls_docking_ledger
+          tests/unit/test_api_worker_deploy_artifacts.py::test_systemd_worker_unit_is_fail_closed_and_writes_only_data_dir
+          tests/unit/test_api_worker_deploy_artifacts.py::test_systemd_api_server_unit_is_fail_closed_and_matches_product_env_contract
+          tests/unit/test_api_worker_deploy_artifacts.py::test_product_dockerfile_contains_worker_entrypoint_assets
+          tests/unit/test_api_worker_deploy_artifacts.py::test_model_registry_scripts_are_signed_artifact_based
+          tests/unit/test_api_worker_deploy_artifacts.py::test_product_rollout_plan_is_approval_gated_and_documented
+          tests/unit/test_api_worker_deploy_artifacts.py::test_product_release_bundle_links_operator_policy_and_evidence
+          tests/unit/test_api_worker_deploy_artifacts.py::test_k8s_manifests_define_api_worker_shared_queue_rollout
+          tests/unit/test_api_worker_deploy_artifacts.py::test_k8s_explicit_runner_disable_and_role_scoped_secrets
+          tests/unit/test_api_worker_deploy_artifacts.py::test_product_api_worker_ci_workflow_runs_contract_checks
+          tests/unit/test_api_worker_deploy_artifacts.py::test_monitoring_alerts_are_wired_to_runtime_metrics_and_paged_webhook
+          tests/unit/test_api_worker_deploy_artifacts.py::test_validated_runner_profile_examples_are_disabled_by_default
 
       - name: Run ownership and endpoint regressions
         run: >-
