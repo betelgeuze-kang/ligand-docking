@@ -5940,6 +5940,9 @@ def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
     image_preflight_dependencies = set(
         by_id["product_image_smoke_preflight"]["depends_on"]
     )
+    deployment_contract_dependencies = set(
+        by_id["product_security_deployment_contract"]["depends_on"]
+    )
 
     shared_execution_sources = {
         "api/artifact_access.py",
@@ -5981,6 +5984,24 @@ def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
         "requirements.txt",
     }
     assert image_verifier_sources <= image_preflight_dependencies
+
+    deployment_contract_sources = {
+        "tools/product/build_product_security_deployment_contract.py",
+        "tools/accounting/build_product_security_deployment_contract.py",
+        "tools/build_product_security_deployment_contract.py",
+        "api/config.py",
+        "api/security.py",
+        "api/main.py",
+        "Dockerfile.product",
+        "deploy/docker-compose.product.yml",
+        "deploy/docker-compose.product.env.example",
+        "deploy/product_rollback_runbook.md",
+        "docs/product_security_deployment_policy.md",
+        "requirements.txt",
+        "requirements-api.txt",
+        "requirements-deploy.txt",
+    }
+    assert deployment_contract_sources <= deployment_contract_dependencies
 
 
 def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:
