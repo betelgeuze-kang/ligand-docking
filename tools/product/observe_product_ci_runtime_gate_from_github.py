@@ -187,23 +187,23 @@ def collect_product_ci_runtime_observations(
     return {
         "product_api_worker": _select_observation(
             repo=repo,
-            workflow="product-api-worker.yml",
+            workflow="product-api-worker-trusted.yml",
             branch=branch,
-            job_name="api-worker-contract",
+            job_name="api-worker-contract-trusted",
             limit=limit,
             runner=runner,
         ),
         "product_image_build_smoke": _select_observation(
             repo=repo,
-            workflow="product-image-smoke.yml",
+            workflow="product-image-smoke-trusted.yml",
             branch=branch,
-            job_name="product-image-build-smoke",
+            job_name="product-image-build-smoke-trusted",
             limit=limit,
             runner=runner,
         ),
         "product_image_smoke": _select_observation(
             repo=repo,
-            workflow="product-image-smoke.yml",
+            workflow="product-image-smoke-trusted.yml",
             branch=branch,
             job_name="product-image-rocm-runtime-smoke",
             limit=limit,

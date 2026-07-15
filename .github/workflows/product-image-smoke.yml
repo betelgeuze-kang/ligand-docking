@@ -1,42 +1,6 @@
 name: product-image-smoke
 
 on:
-  push:
-    branches:
-      - codex/commercialization-accounting-closure
-      - main
-    tags:
-      - v*
-      - product-*
-    paths:
-      - Dockerfile.product
-      - pyproject.toml
-      - requirements-package.txt
-      - requirements-base.txt
-      - requirements.txt
-      - requirements-api.txt
-      - requirements-deploy.txt
-      - requirements-rocm.txt
-      - requirements-product-rocm.txt
-      - api/**
-      - core/**
-      - betelgeuze_engine/**
-      - betelgeuze_product/**
-      - rust_engine/**
-      - tools/product/build_ai_md_*.py
-      - tests/unit/test_build_ai_md_*.py
-      - tests/unit/test_betelgeuze_ai_md_*.py
-      - third_party/rocm_device_libs_pkg/**
-      - deploy/verify_product_image.sh
-      - scripts/normalize_product_image_smoke_artifact_ownership.sh
-      - tools/product/build_product_image_smoke_preflight.py
-      - tools/build_product_image_smoke_preflight.py
-      - tests/unit/test_build_product_image_smoke_preflight.py
-      - .github/workflows/product-image-smoke.yml
-      - tools/product/run_runtime_neighbor_release_scaling.py
-      - tests/unit/test_runtime_neighbor_release_scaling.py
-      - tools/product/run_rust_hip_neighbor_provider_parity.py
-      - tests/unit/test_rust_hip_neighbor_provider_parity.py
   pull_request:
     paths:
       - Dockerfile.product
@@ -63,257 +27,37 @@ on:
       - tools/build_product_image_smoke_preflight.py
       - tests/unit/test_build_product_image_smoke_preflight.py
       - .github/workflows/product-image-smoke.yml
+      - .github/workflows/product-image-smoke-trusted.yml
+      - .github/dependabot.yml
+      - tools/product/github_workflow_trust_boundaries.py
+      - tests/unit/test_github_workflow_trust_boundaries.py
       - tools/product/run_runtime_neighbor_release_scaling.py
       - tests/unit/test_runtime_neighbor_release_scaling.py
       - tools/product/run_rust_hip_neighbor_provider_parity.py
       - tests/unit/test_rust_hip_neighbor_provider_parity.py
-  schedule:
-    - cron: "0 6 * * 1"
-  workflow_dispatch:
-    inputs:
-      verify_mode:
-        description: "Product image smoke mode. build defaults to self-hosted Linux; rocm-runtime requires a self-hosted ROCm runner."
-        required: true
-        default: build
-        type: choice
-        options:
-          - build
-          - rocm-runtime
-      build_runner_labels_json:
-        description: "JSON array for build smoke runner labels. Default self-hosted avoids GitHub-hosted minutes; use [\"ubuntu-latest\"] only by explicit choice."
-        required: true
-        default: '["self-hosted","linux"]'
 
 permissions:
   contents: read
 
+concurrency:
+  group: product-image-smoke-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   product-image-build-smoke:
-    if: >-
-      ${{ github.event_name == 'pull_request'
-      || (github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/'))
-      || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'build') }}
-    runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Recover stale product image smoke workspace artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          runs_dir="${GITHUB_WORKSPACE}/runs"
-          smoke_dir="${runs_dir}/product_image_smoke_runner_artifacts"
-          receipt_path="${runs_dir}/product_image_smoke_receipt_current.json"
-          build_log_path="${runs_dir}/product_image_build_smoke.log"
-          rocm_log_path="${runs_dir}/product_image_rocm_runtime_smoke.log"
-          repair_path() {
-            local path="$1"
-            if [[ -e "${path}" ]]; then
-              chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || true
-              chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true
-            fi
-          }
-          if [[ -e "${runs_dir}" ]]; then
-            chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || sudo -n chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || true
-            chmod u+rwx "${runs_dir}" 2>/dev/null || sudo -n chmod u+rwx "${runs_dir}" 2>/dev/null || true
-          fi
-          repair_path "${receipt_path}"
-          repair_path "${build_log_path}"
-          repair_path "${rocm_log_path}"
-          if [[ -e "${smoke_dir}" ]]; then
-            repair_path "${smoke_dir}"
-            if ! rm -rf "${smoke_dir}"; then
-              echo "::warning::product_image_smoke_workspace_cleanup_failed path=${smoke_dir}; continuing so verify_product_image.sh can emit a fail-closed receipt" >&2
-            fi
-          fi
-      - uses: actions/checkout@v5
+      - name: Check out untrusted source on an ephemeral hosted runner
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          path: product-ci-checkout
-          clean: false
-      - uses: docker/setup-buildx-action@v3
-      - name: Verify product image build smoke
-        working-directory: product-ci-checkout
-        env:
-          PRODUCT_IMAGE_VERIFY_MODE: build
-          DOCKER_BUILDKIT: "1"
-          PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
-          PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
-          PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
-        shell: bash
-        run: |
-          mkdir -p runs
-          export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
-          set -o pipefail
-          bash deploy/verify_product_image.sh 2>&1 | tee runs/product_image_build_smoke.log
-      - name: Normalize product image smoke artifact ownership
-        if: always()
-        working-directory: product-ci-checkout
-        shell: bash
-        run: |
-          bash scripts/normalize_product_image_smoke_artifact_ownership.sh \
-            --log-path runs/product_image_build_smoke.log
-      - name: Upload product image build smoke artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: product-image-build-smoke-${{ github.run_id }}
-          if-no-files-found: warn
-          retention-days: 14
-          path: |
-            product-ci-checkout/runs/product_image_smoke_receipt_current.json
-            product-ci-checkout/runs/product_image_build_smoke.log
-            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**
-      - name: Summarize product image build boundary
-        if: always()
-        working-directory: product-ci-checkout
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
+          persist-credentials: false
+          clean: true
+          show-progress: false
 
-          receipt = Path("runs/product_image_smoke_receipt_current.json")
-          payload = {}
-          if receipt.is_file():
-              try:
-                  payload = json.loads(receipt.read_text(encoding="utf-8"))
-              except json.JSONDecodeError:
-                  payload = {"status": "receipt_json_invalid"}
-          lines = [
-              "## Product Image Build Smoke",
-              "",
-              f"- mode: `{payload.get('mode', 'build')}`",
-              f"- status: `{payload.get('status', 'missing_receipt')}`",
-              f"- product runtime claim: `false`",
-              f"- required runtime claim mode: `rocm-runtime on self-hosted ROCm runner`",
-              "",
-              payload.get(
-                  "claim_boundary",
-                  "Build smoke verifies image build/import scope only; product claim promotion requires a rocm-runtime receipt on a self-hosted ROCm runner.",
-              ),
-              "",
-          ]
-          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary_path:
-              Path(summary_path).write_text("\n".join(lines), encoding="utf-8")
-          else:
-              print("\n".join(lines))
-          PY
+      - name: Set up Buildx for Dockerfile validation
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-  product-image-rocm-runtime-smoke:
-    if: >-
-      ${{ github.event_name == 'schedule'
-      || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
-      || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/product-'))
-      || (github.event_name == 'workflow_dispatch' && github.event.inputs.verify_mode == 'rocm-runtime') }}
-    runs-on: [self-hosted, linux, rocm]
-    steps:
-      - name: Recover stale product image smoke workspace artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          runs_dir="${GITHUB_WORKSPACE}/runs"
-          smoke_dir="${runs_dir}/product_image_smoke_runner_artifacts"
-          receipt_path="${runs_dir}/product_image_smoke_receipt_current.json"
-          build_log_path="${runs_dir}/product_image_build_smoke.log"
-          rocm_log_path="${runs_dir}/product_image_rocm_runtime_smoke.log"
-          repair_path() {
-            local path="$1"
-            if [[ -e "${path}" ]]; then
-              chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || true
-              chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true
-            fi
-          }
-          if [[ -e "${runs_dir}" ]]; then
-            chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || sudo -n chown "$(id -u):$(id -g)" "${runs_dir}" 2>/dev/null || true
-            chmod u+rwx "${runs_dir}" 2>/dev/null || sudo -n chmod u+rwx "${runs_dir}" 2>/dev/null || true
-          fi
-          repair_path "${receipt_path}"
-          repair_path "${build_log_path}"
-          repair_path "${rocm_log_path}"
-          if [[ -e "${smoke_dir}" ]]; then
-            repair_path "${smoke_dir}"
-            if ! rm -rf "${smoke_dir}"; then
-              echo "::warning::product_image_smoke_workspace_cleanup_failed path=${smoke_dir}; continuing so verify_product_image.sh can emit a fail-closed receipt" >&2
-            fi
-          fi
-      - uses: actions/checkout@v5
-        with:
-          path: product-ci-checkout
-          clean: false
-      - uses: docker/setup-buildx-action@v3
-      - name: Verify product image ROCm/HIP/Rust runtime smoke
-        working-directory: product-ci-checkout
-        env:
-          PRODUCT_IMAGE_VERIFY_MODE: rocm-runtime
-          DOCKER_BUILDKIT: "1"
-          PRODUCT_IMAGE_REQUIRE_BUILDX: "1"
-          PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"
-          PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
-        shell: bash
-        run: |
-          mkdir -p runs
-          export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
-          set -o pipefail
-          bash deploy/verify_product_image.sh 2>&1 | tee runs/product_image_rocm_runtime_smoke.log
-      - name: Normalize product image smoke artifact ownership
-        if: always()
-        working-directory: product-ci-checkout
-        shell: bash
-        run: |
-          bash scripts/normalize_product_image_smoke_artifact_ownership.sh \
-            --log-path runs/product_image_rocm_runtime_smoke.log
-      - name: Upload product image ROCm runtime smoke artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: product-image-rocm-runtime-smoke-${{ github.run_id }}
-          if-no-files-found: warn
-          retention-days: 14
-          path: |
-            product-ci-checkout/runs/product_image_smoke_receipt_current.json
-            product-ci-checkout/runs/product_image_rocm_runtime_smoke.log
-            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**
-      - name: Summarize product image ROCm runtime boundary
-        if: always()
-        working-directory: product-ci-checkout
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          receipt = Path("runs/product_image_smoke_receipt_current.json")
-          payload = {}
-          if receipt.is_file():
-              try:
-                  payload = json.loads(receipt.read_text(encoding="utf-8"))
-              except json.JSONDecodeError:
-                  payload = {"status": "receipt_json_invalid"}
-          lines = [
-              "## Product Image ROCm Runtime Smoke",
-              "",
-              f"- mode: `{payload.get('mode', 'rocm-runtime')}`",
-              f"- status: `{payload.get('status', 'missing_receipt')}`",
-              f"- clean_container_smoke_ready: `{payload.get('clean_container_smoke_ready', False)}`",
-              f"- container_runtime_proof_ready: `{payload.get('container_runtime_proof_ready', False)}`",
-              f"- product_runner_claim_metadata_ready: `{payload.get('product_runner_claim_metadata_ready', False)}`",
-              f"- runtime_neighbor_release_scaling_status: `{payload.get('runtime_neighbor_release_scaling_status', 'missing_scaling_receipt')}`",
-              f"- runtime_neighbor_release_scaling_ready: `{payload.get('runtime_neighbor_release_scaling_ready', False)}`",
-              f"- runtime_neighbor_release_atom_counts_ready: `{payload.get('runtime_neighbor_release_atom_counts_ready', False)}`",
-              f"- runtime_neighbor_release_pair_count_slope: `{payload.get('runtime_neighbor_release_pair_count_slope', '')}`",
-              f"- rust_hip_neighbor_provider_parity_status: `{payload.get('rust_hip_neighbor_provider_parity_status', 'missing_parity_receipt')}`",
-              f"- rust_hip_neighbor_provider_parity_ready: `{payload.get('rust_hip_neighbor_provider_parity_ready', False)}`",
-              f"- rust_hip_neighbor_provider_parity_max_distance_abs_delta: `{payload.get('rust_hip_neighbor_provider_parity_max_distance_abs_delta', '')}`",
-              f"- rust_hip_neighbor_provider_parity_max_energy_abs_error: `{payload.get('rust_hip_neighbor_provider_parity_max_energy_abs_error', '')}`",
-              "",
-              payload.get(
-                  "claim_boundary",
-                  "ROCm runtime smoke must prove in-container ROCm/HIP/Rust runtime and signed runner claim metadata.",
-              ),
-              "",
-          ]
-          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary_path:
-              Path(summary_path).write_text("\n".join(lines), encoding="utf-8")
-          else:
-              print("\n".join(lines))
-          PY
+      - name: Validate the product image build graph without runtime execution
+        run: docker buildx build --check --file Dockerfile.product .

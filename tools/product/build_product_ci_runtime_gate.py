@@ -23,10 +23,10 @@ CLAIM_BOUNDARY = (
 BILLING_BLOCKER_CODE = "github_actions_billing_or_spending_limit"
 WORKSPACE_CLEANUP_BLOCKER_CODE = "github_actions_workspace_cleanup_permission_denied"
 SELF_HOSTED_API_WORKER_COMMAND = (
-    "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
+    "gh workflow run product-api-worker-trusted.yml --ref main"
 )
 SELF_HOSTED_ROCM_RUNTIME_COMMAND = (
-    "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+    "gh workflow run product-image-smoke-trusted.yml --ref main -f verify_mode=rocm-runtime"
 )
 SELF_HOSTED_LINUX_LABELS = ("self-hosted", "linux")
 SELF_HOSTED_ROCM_LABELS = ("self-hosted", "linux", "rocm")
@@ -686,12 +686,12 @@ def build_product_ci_runtime_gate(
     status = "product_ci_runtime_gate_ready" if runtime_gate_ready else "blocked_product_ci_runtime_gate"
     next_required_steps = (
         [
-            "Cost-free path: keep the hosted Actions spending hard stop in place and use self-hosted runners.",
-            "Register/start a repo self-hosted Linux runner with labels: self-hosted, linux.",
-            "Register/start a repo self-hosted ROCm runner with labels: self-hosted, linux, rocm.",
-            "If local host preflight is ready, only GitHub runner registration/service online remains before rerun.",
-            f"Run API worker contract on a local self-hosted Linux runner: {SELF_HOSTED_API_WORKER_COMMAND}",
-            f"Run ROCm runtime smoke on a local self-hosted ROCm runner: {SELF_HOSTED_ROCM_RUNTIME_COMMAND}",
+            "Keep the public personal-repository runner inventory empty while the previously exposed host is rebuilt or replaced and host-accessible credentials are reviewed and rotated.",
+            "Create a protected organization/private selected-workflow execution surface pinned to main for self-hosted runners, or use an isolated ephemeral runner; do not restore a persistent public repository runner.",
+            "After that boundary exists, configure Linux labels self-hosted, linux and ROCm labels self-hosted, linux, rocm.",
+            "After human verification of the protected boundary and remediated host, explicitly set repository variable TRUSTED_SELF_HOSTED_CI_ENABLED=true; never enable it automatically.",
+            f"Then run the trusted API worker contract: {SELF_HOSTED_API_WORKER_COMMAND}",
+            f"Then run the trusted ROCm runtime smoke: {SELF_HOSTED_ROCM_RUNTIME_COMMAND}",
             "Only raise GitHub-hosted Actions spending limits if intentionally choosing hosted CI.",
         ]
         if billing_blocked

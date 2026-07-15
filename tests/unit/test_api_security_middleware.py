@@ -220,6 +220,7 @@ def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(settings, "product_api_rate_limit_per_minute", 120)
     monkeypatch.setattr(settings, "product_api_tenant_daily_quota", 5000)
     monkeypatch.setattr(settings, "api_inline_worker_enabled", False)
+    monkeypatch.setattr(settings, "product_api_token_tenant_id", "tenant-secure-e2e")
 
     reset_configured_job_store_for_tests()
     monkeypatch.setattr(main, "job_store", None)
@@ -314,7 +315,9 @@ def test_secure_api_submission_e2e(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     blocked_rows = [row for row in audit_rows if row["path"] == "/simulate" and row["status_code"] == 401]
     assert len(blocked_rows) == 2
     for row in blocked_rows:
-        assert row["tenant_id"] == "tenant-secure-e2e"
+        # A caller-supplied tenant header is not trusted until authentication
+        # succeeds, so failed authentication is audited without tenant binding.
+        assert row["tenant_id"] == "unauthenticated"
         assert row["request_body_logged"] is False
         assert row["authorization_value_logged"] is False
 

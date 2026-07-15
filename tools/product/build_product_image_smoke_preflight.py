@@ -5,10 +5,15 @@ import argparse
 import csv
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
+
+from tools.product.github_workflow_trust_boundaries import (
+    audit_workflow_trust_boundaries,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/product_image_smoke_preflight_current.json"
@@ -37,7 +42,9 @@ RUNNER_HYGIENE_WORK_ORDER_SCHEMA_VERSION = "product_image_smoke_runner_hygiene_w
 RUNNER_HYGIENE_COMMAND_PACK_SCHEMA_VERSION = "product_image_smoke_runner_hygiene_command_pack_v1"
 WORKFLOW_SOURCES = {
     ".github/workflows/product-api-worker.yml",
+    ".github/workflows/product-api-worker-trusted.yml",
     ".github/workflows/product-image-smoke.yml",
+    ".github/workflows/product-image-smoke-trusted.yml",
 }
 PRODUCT_IMAGE_SMOKE_PR_TRIGGER_REQUIRED_PATHS = (
     "deploy/verify_product_image.sh",
@@ -45,6 +52,9 @@ PRODUCT_IMAGE_SMOKE_PR_TRIGGER_REQUIRED_PATHS = (
     "tools/product/build_product_image_smoke_preflight.py",
     "tools/build_product_image_smoke_preflight.py",
     "tests/unit/test_build_product_image_smoke_preflight.py",
+    ".github/workflows/product-image-smoke-trusted.yml",
+    "tools/product/github_workflow_trust_boundaries.py",
+    "tests/unit/test_github_workflow_trust_boundaries.py",
 )
 
 RUNNER_HYGIENE_WORK_ORDER_FIELDS = [
@@ -766,41 +776,6 @@ def _workflow_event_block(workflow: str, event_name: str) -> str:
     return "\n".join(lines)
 
 
-def _workflow_step_before_checkout(
-    workflow: str,
-    step_name: str,
-    *,
-    minimum_count: int,
-) -> bool:
-    lines = workflow.splitlines()
-    step_positions = [
-        index for index, line in enumerate(lines) if f"name: {step_name}" in line
-    ]
-    checkout_positions = [
-        index for index, line in enumerate(lines) if "actions/checkout@v5" in line
-    ]
-    if len(step_positions) < minimum_count or len(checkout_positions) < minimum_count:
-        return False
-    return all(
-        step_positions[index] < checkout_positions[index]
-        for index in range(minimum_count)
-    )
-
-
-def _workflow_checkout_clean_false_ready(workflow: str, *, minimum_count: int) -> bool:
-    lines = workflow.splitlines()
-    checkout_positions = [
-        index for index, line in enumerate(lines) if "actions/checkout@v5" in line
-    ]
-    if len(checkout_positions) < minimum_count:
-        return False
-    for checkout_index in checkout_positions[:minimum_count]:
-        checkout_window = "\n".join(lines[checkout_index : checkout_index + 6])
-        if "clean: false" not in checkout_window:
-            return False
-    return True
-
-
 def _workflow_checkout_subdir_ready(
     workflow: str,
     *,
@@ -809,35 +784,47 @@ def _workflow_checkout_subdir_ready(
 ) -> bool:
     lines = workflow.splitlines()
     checkout_positions = [
-        index for index, line in enumerate(lines) if "actions/checkout@v5" in line
+        index for index, line in enumerate(lines) if "actions/checkout@" in line
+    ]
+    matching_checkout_count = 0
+    for checkout_index in checkout_positions:
+        checkout_window = "\n".join(lines[checkout_index : checkout_index + 10])
+        if f"path: {checkout_path}" in checkout_window:
+            matching_checkout_count += 1
+    if matching_checkout_count < minimum_count:
+        return False
+    return True
+
+
+def _workflow_checkout_secure_ready(workflow: str, *, minimum_count: int) -> bool:
+    lines = workflow.splitlines()
+    checkout_positions = [
+        index for index, line in enumerate(lines) if "uses: actions/checkout@" in line
     ]
     if len(checkout_positions) < minimum_count:
         return False
-    for checkout_index in checkout_positions[:minimum_count]:
-        checkout_window = "\n".join(lines[checkout_index : checkout_index + 8])
-        if f"path: {checkout_path}" not in checkout_window:
+    for checkout_index in checkout_positions:
+        checkout_window = "\n".join(lines[checkout_index : checkout_index + 10])
+        if "persist-credentials: false" not in checkout_window:
+            return False
+        if "clean: true" not in checkout_window:
+            return False
+        action_ref = lines[checkout_index].split("@", 1)[-1].split()[0]
+        if re.fullmatch(r"[0-9a-f]{40}", action_ref) is None:
             return False
     return True
 
 
-def _workflow_workspace_recovery_shell_syntax_ready(
+def _workflow_uses_pinned_action(
     workflow: str,
+    action_name: str,
     *,
     minimum_count: int,
 ) -> bool:
-    recovery_function_to_runs_dir_check = "\n".join(
-        [
-            '          repair_path() {',
-            '            local path="$1"',
-            '            if [[ -e "${path}" ]]; then',
-            '              chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || sudo -n chown -R "$(id -u):$(id -g)" "${path}" 2>/dev/null || true',
-            '              chmod -R u+rwX "${path}" 2>/dev/null || sudo -n chmod -R u+rwX "${path}" 2>/dev/null || true',
-            '            fi',
-            '          }',
-            '          if [[ -e "${runs_dir}" ]]; then',
-        ]
+    pattern = re.compile(
+        rf"uses:\s+{re.escape(action_name)}@([0-9a-f]{{40}})(?:\s|$)"
     )
-    return workflow.count(recovery_function_to_runs_dir_check) >= minimum_count
+    return len(pattern.findall(workflow)) >= minimum_count
 
 
 def build_product_image_smoke_preflight(
@@ -880,8 +867,19 @@ def build_product_image_smoke_preflight(
         )
     verify_script = _read_text(root_path, "deploy/verify_product_image.sh")
     host_setup_script = _read_text(root_path, "scripts/prepare_product_docker_host.sh")
-    workflow = _read_text(root_path, ".github/workflows/product-image-smoke.yml")
-    api_worker_workflow = _read_text(root_path, ".github/workflows/product-api-worker.yml")
+    product_pr_workflow = _read_text(root_path, ".github/workflows/product-image-smoke.yml")
+    product_trusted_workflow = _read_text(
+        root_path,
+        ".github/workflows/product-image-smoke-trusted.yml",
+    )
+    workflow = "\n".join((product_pr_workflow, product_trusted_workflow))
+    api_pr_workflow = _read_text(root_path, ".github/workflows/product-api-worker.yml")
+    api_trusted_workflow = _read_text(
+        root_path,
+        ".github/workflows/product-api-worker-trusted.yml",
+    )
+    api_worker_workflow = "\n".join((api_pr_workflow, api_trusted_workflow))
+    workflow_trust_boundary_errors = audit_workflow_trust_boundaries(root_path)
     ownership_script = _read_text(root_path, "scripts/normalize_product_image_smoke_artifact_ownership.sh")
     dockerfile = _read_text(root_path, "Dockerfile.product")
     base_requirements = _read_text(root_path, "requirements-base.txt")
@@ -914,48 +912,55 @@ def build_product_image_smoke_preflight(
         for path in PRODUCT_IMAGE_SMOKE_PR_TRIGGER_REQUIRED_PATHS
         if f"- {path}" not in product_image_smoke_pr_trigger_block
     ]
-    product_workflow_pre_checkout_recovery_ready = _workflow_step_before_checkout(
-        workflow,
-        "Recover stale product image smoke workspace artifacts",
-        minimum_count=2,
+    product_workflow_pre_checkout_recovery_ready = bool(
+        "Recover stale product image smoke workspace artifacts" not in workflow
+        and "clean: false" not in workflow
+        and "sudo" not in workflow
+        and _workflow_checkout_secure_ready(workflow, minimum_count=3)
     )
-    product_workflow_checkout_clean_false_ready = _workflow_checkout_clean_false_ready(
+    product_workflow_checkout_secure_ready = _workflow_checkout_secure_ready(
         workflow,
-        minimum_count=2,
+        minimum_count=3,
     )
     product_workflow_checkout_subdir_ready = _workflow_checkout_subdir_ready(
         workflow,
         checkout_path="product-ci-checkout",
         minimum_count=2,
     )
-    product_workflow_recovery_shell_syntax_ready = (
-        _workflow_workspace_recovery_shell_syntax_ready(
-            workflow,
-            minimum_count=2,
-        )
+    product_workflow_recovery_shell_syntax_ready = bool(
+        product_workflow_pre_checkout_recovery_ready
+        and workflow.count("Prepare ephemeral") >= 2
+        and workflow.count("ln -s \"${artifact_root}\" product-ci-checkout/runs") >= 2
     )
-    api_worker_pre_checkout_recovery_ready = _workflow_step_before_checkout(
-        api_worker_workflow,
-        "Recover stale product image smoke workspace artifacts",
-        minimum_count=1,
+    api_worker_pre_checkout_recovery_ready = bool(
+        "Recover stale product image smoke workspace artifacts" not in api_worker_workflow
+        and "clean: false" not in api_worker_workflow
+        and "sudo" not in api_worker_workflow
+        and _workflow_checkout_secure_ready(api_worker_workflow, minimum_count=2)
     )
-    api_worker_checkout_clean_false_ready = _workflow_checkout_clean_false_ready(
+    api_worker_checkout_secure_ready = _workflow_checkout_secure_ready(
         api_worker_workflow,
-        minimum_count=1,
+        minimum_count=2,
     )
     api_worker_checkout_subdir_ready = _workflow_checkout_subdir_ready(
         api_worker_workflow,
         checkout_path="product-ci-checkout",
         minimum_count=1,
     )
-    api_worker_recovery_shell_syntax_ready = (
-        _workflow_workspace_recovery_shell_syntax_ready(
-            api_worker_workflow,
-            minimum_count=1,
-        )
+    api_worker_recovery_shell_syntax_ready = bool(
+        api_worker_pre_checkout_recovery_ready
+        and "Prepare ephemeral API artifact root" in api_worker_workflow
+        and "ln -s \"${artifact_root}\" product-ci-checkout/runs" in api_worker_workflow
     )
 
     rows = [
+        _contract_row(
+            "workflow_trust_boundary_policy_ready",
+            not workflow_trust_boundary_errors,
+            workflow_trust_boundary_errors or ["ready"],
+            "PR-only workflows contain hosted jobs only; trusted self-hosted workflows have exact event/ref conditions, literal runners, secure checkouts, pinned actions, and runner-temp artifacts",
+            ".github/workflows/product-image-smoke-trusted.yml",
+        ),
         _contract_row(
             "docker_missing_fail_closed",
             "docker_cli_missing" in verify_script
@@ -1200,67 +1205,54 @@ def build_product_image_smoke_preflight(
         _contract_row(
             "workflow_build_mode_declared",
             "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
-            and "docker/setup-buildx-action@v3" in workflow
+            and _workflow_uses_pinned_action(
+                workflow,
+                "docker/setup-buildx-action",
+                minimum_count=3,
+            )
             and 'DOCKER_BUILDKIT: "1"' in workflow
             and 'PRODUCT_IMAGE_REQUIRE_BUILDX: "1"' in workflow
             and 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow,
             "build mode in workflow" if "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow else "missing",
-            "self-hosted CI uses build contract mode explicitly with BuildKit and stale Docker cleanup",
+            "trusted self-hosted CI uses build contract mode explicitly and all Buildx actions are SHA-pinned",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
             "workflow_pre_checkout_workspace_artifact_recovery_declared",
-            "Recover stale product image smoke workspace artifacts" in workflow
-            and "runs_dir=" in workflow
-            and "product_image_smoke_runner_artifacts" in workflow
-            and workflow.count("receipt_path=") >= 2
-            and workflow.count("build_log_path=") >= 2
-            and workflow.count("rocm_log_path=") >= 2
-            and workflow.count("repair_path()") >= 2
-            and workflow.count('chown "$(id -u):$(id -g)" "${runs_dir}"') >= 2
-            and workflow.count('chmod u+rwx "${runs_dir}"') >= 2
-            and "sudo -n chown -R" in workflow
-            and "sudo -n chmod -R u+rwX" in workflow
-            and workflow.count('repair_path "${receipt_path}"') >= 2
-            and workflow.count('repair_path "${build_log_path}"') >= 2
-            and workflow.count('repair_path "${rocm_log_path}"') >= 2
-            and workflow.count('if ! rm -rf "${smoke_dir}"; then') >= 2
-            and workflow.count("product_image_smoke_workspace_cleanup_failed") >= 2
-            and workflow.count("continuing so verify_product_image.sh can emit a fail-closed receipt") >= 2
-            and product_workflow_pre_checkout_recovery_ready
-            and product_workflow_checkout_clean_false_ready
+            product_workflow_pre_checkout_recovery_ready
+            and product_workflow_checkout_secure_ready
             and product_workflow_recovery_shell_syntax_ready,
-            "pre-checkout product smoke artifact recovery present"
+            "pre-checkout workspace mutation absent; secure checkout precedes ephemeral artifact setup"
             if (
                 product_workflow_pre_checkout_recovery_ready
                 and product_workflow_recovery_shell_syntax_ready
             )
             else "missing",
-            "self-hosted jobs attempt stale runs directory and smoke artifact recovery before checkout, disable checkout's broad workspace clean, and continue to the verify script so cleanup failures still emit fail-closed receipts",
+            "no product-image job mutates persistent runner state before checkout; every checkout is clean, credential-free, and SHA-pinned before runner-temp setup",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
             "workflow_checkout_subdir_isolated_from_stale_workspace_runs",
             product_workflow_checkout_subdir_ready
             and workflow.count("working-directory: product-ci-checkout") >= 4
-            and "product-ci-checkout/runs/product_image_smoke_receipt_current.json" in workflow
-            and "product-ci-checkout/runs/product_image_build_smoke.log" in workflow
-            and "product-ci-checkout/runs/product_image_rocm_runtime_smoke.log" in workflow,
+            and workflow.count("ln -s \"${artifact_root}\" product-ci-checkout/runs") >= 2
+            and workflow.count("Prepare ephemeral") >= 2,
             "checkout path product-ci-checkout declared"
             if product_workflow_checkout_subdir_ready
             else "missing",
-            "product-image-smoke checks out the repository into a clean subdirectory and runs repo commands there so stale root-owned workspace runs artifacts cannot break actions/checkout",
+            "trusted product-image jobs use a clean checkout subdirectory and bind generated runs paths to per-run runner-temp roots",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
             "workflow_runner_temp_artifact_root_declared",
-            workflow.count("PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts") >= 2
-            and "runs/product_image_smoke_runner_artifacts/**" not in workflow
-            and workflow.count("${{ runner.temp }}/product_image_smoke_runner_artifacts/**") >= 2,
+            workflow.count("PRODUCT_IMAGE_RUNNER_SMOKE_DIR=${smoke_root}") >= 2
+            and workflow.count("smoke_root=\"${RUNNER_TEMP}/product-image-") >= 2
+            and workflow.count("${{ runner.temp }}/product-image-") >= 2
+            and workflow.count("ln -s \"${artifact_root}\" product-ci-checkout/runs") >= 2,
             "runner.temp smoke artifact root declared"
-            if "PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts" in workflow
+            if "PRODUCT_IMAGE_RUNNER_SMOKE_DIR=${smoke_root}" in workflow
             else "missing",
-            "build and ROCm workflow jobs set the smoke artifact root outside the checkout workspace; uploads collect runner-temp artifacts only",
+            "trusted build and ROCm jobs place receipts, logs, and smoke artifacts under unique runner-temp roots",
             ".github/workflows/product-image-smoke.yml",
         ),
         _contract_row(
@@ -1290,44 +1282,29 @@ def build_product_image_smoke_preflight(
         ),
         _contract_row(
             "api_worker_pre_checkout_workspace_artifact_recovery_declared",
-            "runs-on: ${{ fromJSON(inputs.runner_labels_json || '[\"self-hosted\",\"linux\"]') }}" in api_worker_workflow
-            and "Recover stale product image smoke workspace artifacts" in api_worker_workflow
-            and "runs_dir=" in api_worker_workflow
-            and "product_image_smoke_runner_artifacts" in api_worker_workflow
-            and "receipt_path=" in api_worker_workflow
-            and "build_log_path=" in api_worker_workflow
-            and "rocm_log_path=" in api_worker_workflow
-            and "repair_path()" in api_worker_workflow
-            and 'chown "$(id -u):$(id -g)" "${runs_dir}"' in api_worker_workflow
-            and 'chmod u+rwx "${runs_dir}"' in api_worker_workflow
-            and "sudo -n chown -R" in api_worker_workflow
-            and "sudo -n chmod -R u+rwX" in api_worker_workflow
-            and 'repair_path "${receipt_path}"' in api_worker_workflow
-            and 'repair_path "${build_log_path}"' in api_worker_workflow
-            and 'repair_path "${rocm_log_path}"' in api_worker_workflow
-            and 'if ! rm -rf "${smoke_dir}"; then' in api_worker_workflow
-            and "product_image_smoke_workspace_cleanup_failed" in api_worker_workflow
-            and "continuing because product-image-smoke owns the fail-closed hygiene receipt" in api_worker_workflow
+            "runs-on: [self-hosted, linux]" in api_worker_workflow
             and api_worker_pre_checkout_recovery_ready
-            and api_worker_checkout_clean_false_ready
+            and api_worker_checkout_secure_ready
             and api_worker_recovery_shell_syntax_ready,
-            "api worker pre-checkout product smoke artifact recovery present"
+            "API pre-checkout workspace mutation absent; secure checkout precedes ephemeral artifact setup"
             if (
                 api_worker_pre_checkout_recovery_ready
                 and api_worker_recovery_shell_syntax_ready
             )
             else "missing",
-            "self-hosted API worker workflow attempts stale product-image smoke workspace artifact recovery before checkout, disables checkout's broad workspace clean, and leaves fail-closed hygiene ownership to product-image-smoke",
+            "the trusted API job is event-gated and does not run recovery code before a clean credential-free checkout",
             ".github/workflows/product-api-worker.yml",
         ),
         _contract_row(
             "api_worker_checkout_subdir_isolated_from_stale_workspace_runs",
             api_worker_checkout_subdir_ready
-            and api_worker_workflow.count("working-directory: product-ci-checkout") >= 7,
+            and api_worker_workflow.count("working-directory: product-ci-checkout") >= 7
+            and "Prepare ephemeral API artifact root" in api_worker_workflow
+            and "ln -s \"${artifact_root}\" product-ci-checkout/runs" in api_worker_workflow,
             "checkout path product-ci-checkout declared"
             if api_worker_checkout_subdir_ready
             else "missing",
-            "product-api-worker checks out the repository into a clean subdirectory and runs repo commands there so stale root-owned workspace runs artifacts cannot break actions/checkout",
+            "the trusted API job uses a clean checkout subdirectory with generated runs redirected to runner temp",
             ".github/workflows/product-api-worker.yml",
         ),
         _contract_row(
@@ -1344,24 +1321,22 @@ def build_product_image_smoke_preflight(
             "workflow_manual_verify_mode_choice_declared",
             "workflow_dispatch:" in workflow
             and "verify_mode:" in workflow
-            and "build_runner_labels_json:" in workflow
             and "- build" in workflow
             and "- rocm-runtime" in workflow,
             "workflow_dispatch verify_mode choice present" if "verify_mode:" in workflow else "missing",
-            "manual workflow dispatch exposes build vs rocm-runtime mode and explicit build runner labels",
-            ".github/workflows/product-image-smoke.yml",
+            "manual trusted workflow dispatch exposes the build vs rocm-runtime mode without caller-controlled runner labels",
+            ".github/workflows/product-image-smoke-trusted.yml",
         ),
         _contract_row(
             "workflow_build_smoke_self_hosted_by_default",
-            "product-image-build-smoke" in workflow
-            and "inputs.build_runner_labels_json" in workflow
-            and "'[\"self-hosted\",\"linux\"]'" in workflow
-            and "Default self-hosted avoids GitHub-hosted minutes" in workflow,
-            "self-hosted build runner default present"
-            if "product-image-build-smoke" in workflow
+            "product-image-build-smoke-trusted" in workflow
+            and "runs-on: [self-hosted, linux]" in workflow
+            and "build_runner_labels_json" not in workflow,
+            "literal self-hosted build runner allowlist present"
+            if "product-image-build-smoke-trusted" in workflow
             else "missing",
-            "build smoke must default to self-hosted Linux to avoid private-repo GitHub-hosted minutes",
-            ".github/workflows/product-image-smoke.yml",
+            "only the trusted main/manual build smoke uses the literal self-hosted Linux selector",
+            ".github/workflows/product-image-smoke-trusted.yml",
         ),
         _contract_row(
             "workflow_rocm_runtime_self_hosted_runner_declared",
@@ -1390,8 +1365,12 @@ def build_product_image_smoke_preflight(
             and "product_image_build_smoke.log" in workflow
             and "product_image_rocm_runtime_smoke.log" in workflow
             and "runs/product_image_smoke_receipt_current.json" in workflow
-            and "runner.temp" in workflow
-            and workflow.count("${{ runner.temp }}/product_image_smoke_runner_artifacts/**") >= 2,
+            and workflow.count("${{ runner.temp }}/product-image-") >= 2
+            and _workflow_uses_pinned_action(
+                workflow,
+                "actions/upload-artifact",
+                minimum_count=2,
+            ),
             f"retention-days occurrences={workflow.count('retention-days: 14')}",
             "build and ROCm runtime artifact uploads retain logs, receipt artifacts, and runner-temp smoke artifacts for at least 14 days",
             ".github/workflows/product-image-smoke.yml",

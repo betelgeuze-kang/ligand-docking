@@ -33,8 +33,12 @@ SCHEMA_VERSION = "pr38_ci_runner_hygiene_child_pr_gate_v1"
 SLICE_ID = "ci_runner_hygiene"
 
 REQUIRED_PATCH_FILES = [
+    ".github/dependabot.yml",
     ".github/workflows/product-api-worker.yml",
+    ".github/workflows/product-api-worker-trusted.yml",
     ".github/workflows/product-image-smoke.yml",
+    ".github/workflows/product-image-smoke-trusted.yml",
+    "docs/roadmaps/2026-07-repository-recovery-and-engine-roadmap.md",
     "Dockerfile.product",
     "deploy/verify_product_image.sh",
     "scripts/ai-verify.sh",
@@ -45,6 +49,7 @@ REQUIRED_PATCH_FILES = [
     "tests/unit/test_build_product_ci_runtime_gate.py",
     "tests/unit/test_build_product_image_smoke_preflight.py",
     "tests/unit/test_build_release_ci_remote_green_receipt.py",
+    "tests/unit/test_github_workflow_trust_boundaries.py",
     "tests/unit/test_build_pr38_ci_runner_hygiene_child_pr_gate.py",
     "tests/unit/test_build_pr38_ci_runner_hygiene_remote_rerun_preflight.py",
     "tests/unit/test_build_pr38_child_pr_verification_matrix.py",
@@ -52,6 +57,7 @@ REQUIRED_PATCH_FILES = [
     "tests/unit/test_product_runtime_reality.py",
     "tests/unit/test_release_ci_remote_green_evidence_contract.py",
     "tools/product/build_pr38_ci_runner_hygiene_child_pr_gate.py",
+    "tools/product/github_workflow_trust_boundaries.py",
     "tools/product/build_pr38_ci_runner_hygiene_remote_rerun_preflight.py",
     "tools/product/build_pr38_child_pr_verification_matrix.py",
     "tools/product/build_github_self_hosted_runner_host_preflight.py",
@@ -69,6 +75,7 @@ REQUIRED_FOCUSED_TEST_TOKENS = [
     "tests/unit/test_build_product_ci_runtime_gate.py",
     "tests/unit/test_build_product_image_smoke_preflight.py",
     "tests/unit/test_build_release_ci_remote_green_receipt.py",
+    "tests/unit/test_github_workflow_trust_boundaries.py",
     "tests/unit/test_build_pr38_ci_runner_hygiene_child_pr_gate.py",
     "tests/unit/test_build_pr38_ci_runner_hygiene_remote_rerun_preflight.py",
     "tests/unit/test_build_pr38_child_pr_verification_matrix.py",
@@ -78,13 +85,16 @@ REQUIRED_FOCUSED_TEST_TOKENS = [
 ]
 
 REQUIRED_PATCH_TOKENS = {
-    "workspace_recovery_step": "Recover stale product image smoke workspace artifacts",
-    "checkout_clean_false": "clean: false",
+    "pull_request_hosted_runner": "runs-on: ubuntu-latest",
+    "trusted_product_image_job": "product-image-build-smoke-trusted",
+    "checkout_clean_true": "clean: true",
+    "checkout_credentials_disabled": "persist-credentials: false",
     "checkout_subdir_path": "path: product-ci-checkout",
     "checkout_subdir_working_directory": "working-directory: product-ci-checkout",
-    "checkout_subdir_artifact_upload_path": "product-ci-checkout/runs/product_image_build_smoke.log",
+    "runner_temp_artifact_upload_path": "${{ runner.temp }}/product-image-build-",
     "release_ci_checkout_subdir_contract": "checkout_subdir_isolated",
-    "runner_temp_output_dir": "${{ runner.temp }}/product_image_smoke_runner_artifacts",
+    "runner_temp_output_dir": "${{ runner.temp }}/product-image-",
+    "workflow_policy_test": "test_github_workflow_trust_boundaries.py",
     "container_uid_gid_export": 'PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"',
     "container_output_dirs_writable": "chmod -R a+rwX logs runs",
     "ownership_normalizer": "normalize_product_image_smoke_artifact_ownership.sh",
@@ -107,11 +117,11 @@ PROHIBITED_VERIFICATION_MATRIX_IMPORT_TOKENS = [
 ]
 
 RUNNER_TEMP_ARTIFACT_UPLOAD_GLOB = (
-    "${{ runner.temp }}/product_image_smoke_runner_artifacts/**"
+    "${{ runner.temp }}/product-image-"
 )
 WORKSPACE_ARTIFACT_UPLOAD_GLOB = "runs/product_image_smoke_runner_artifacts/**"
 RUNNER_TEMP_ARTIFACT_UPLOAD_COUNT_GUARD = (
-    'workflow.count("${{ runner.temp }}/product_image_smoke_runner_artifacts/**") >= 2'
+    'workflow.count("${{ runner.temp }}/product-image-") >= 2'
 )
 
 CLAIM_BOUNDARY = (
@@ -349,8 +359,7 @@ def build_pr38_ci_runner_hygiene_child_pr_gate(
         RUNNER_TEMP_ARTIFACT_UPLOAD_COUNT_GUARD in patch_text
     )
     build_runner_temp_artifact_upload_hunk_present = (
-        f"runs/product_image_build_smoke.log\n+            {RUNNER_TEMP_ARTIFACT_UPLOAD_GLOB}"
-        in patch_text
+        "path: ${{ runner.temp }}/product-image-build-" in patch_text
     )
     workspace_artifact_upload_glob_added = (
         f"+            {WORKSPACE_ARTIFACT_UPLOAD_GLOB}" in patch_text

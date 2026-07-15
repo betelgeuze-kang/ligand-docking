@@ -13,16 +13,19 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def _patch_text(*, include_uid_guard: bool = True) -> str:
     tokens = [
-        "Recover stale product image smoke workspace artifacts",
-        "clean: false",
+        "runs-on: ubuntu-latest",
+        "product-image-build-smoke-trusted",
+        "clean: true",
+        "persist-credentials: false",
         "path: product-ci-checkout",
         "working-directory: product-ci-checkout",
-        "product-ci-checkout/runs/product_image_build_smoke.log",
+        "${{ runner.temp }}/product-image-build-",
+        "path: ${{ runner.temp }}/product-image-build-",
         "checkout_subdir_isolated",
-        "${{ runner.temp }}/product_image_smoke_runner_artifacts",
-        "runs/product_image_build_smoke.log\n+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**",
-        "runs/product_image_rocm_runtime_smoke.log\n+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**",
-        'workflow.count("${{ runner.temp }}/product_image_smoke_runner_artifacts/**") >= 2',
+        "${{ runner.temp }}/product-image-build-",
+        "${{ runner.temp }}/product-image-rocm-",
+        'workflow.count("${{ runner.temp }}/product-image-") >= 2',
+        "tests/unit/test_github_workflow_trust_boundaries.py",
         'PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"',
         "chmod -R a+rwX logs runs",
         "mktemp .betelgeuze/ai_verify_kiro_design_prompt",
@@ -64,6 +67,7 @@ def _write_inputs(root: Path, *, include_uid_guard: bool = True) -> dict[str, Pa
         "tests/unit/test_build_github_self_hosted_runner_host_preflight.py "
         "tests/unit/test_build_product_ci_runtime_gate.py "
         "tests/unit/test_build_release_ci_remote_green_receipt.py "
+        "tests/unit/test_github_workflow_trust_boundaries.py "
         "tests/unit/test_release_ci_remote_green_evidence_contract.py "
         "tests/unit/test_build_pr38_ci_runner_hygiene_child_pr_gate.py "
         "tests/unit/test_build_pr38_ci_runner_hygiene_remote_rerun_preflight.py "
@@ -596,12 +600,12 @@ def test_ci_runner_hygiene_child_pr_gate_blocks_stale_runner_temp_upload_semanti
     )
     patch_text = patch_path.read_text(encoding="utf-8")
     patch_text = patch_text.replace(
-        'workflow.count("${{ runner.temp }}/product_image_smoke_runner_artifacts/**") >= 2',
-        '"${{ runner.temp }}/product_image_smoke_runner_artifacts/**" in workflow',
+        'workflow.count("${{ runner.temp }}/product-image-") >= 2',
+        '"${{ runner.temp }}/product-image-" in workflow',
     )
     patch_text = patch_text.replace(
-        "runs/product_image_build_smoke.log\n+            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**",
-        "runs/product_image_build_smoke.log",
+        "path: ${{ runner.temp }}/product-image-build-",
+        "${{ runner.temp }}/product-image-build-",
     )
     patch_path.write_text(patch_text, encoding="utf-8")
 

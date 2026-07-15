@@ -164,10 +164,10 @@ def test_product_ci_runtime_gate_blocks_github_billing_without_mutation(tmp_path
     assert summary["self_hosted_runner_host_github_registration_token_requested"] is False
     assert summary["self_hosted_runner_host_external_state_mutated"] is False
     assert summary["billing_free_self_hosted_api_worker_command"] == (
-        "gh workflow run product-api-worker.yml -f runner_labels_json='[\"self-hosted\",\"linux\"]'"
+        "gh workflow run product-api-worker-trusted.yml --ref main"
     )
     assert summary["billing_free_self_hosted_rocm_runtime_command"] == (
-        "gh workflow run product-image-smoke.yml -f verify_mode=rocm-runtime"
+        "gh workflow run product-image-smoke-trusted.yml --ref main -f verify_mode=rocm-runtime"
     )
     assert summary["local_rocm_clean_container_ready"] is True
     assert summary["local_product_image_receipt_runner_hygiene_ready"] is True
@@ -187,7 +187,12 @@ def test_product_ci_runtime_gate_blocks_github_billing_without_mutation(tmp_path
     assert any("self-hosted runners" in step for step in summary["next_required_steps"])
     assert any("self-hosted, linux" in step for step in summary["next_required_steps"])
     assert any("self-hosted, linux, rocm" in step for step in summary["next_required_steps"])
-    assert any("runner_labels_json" in step for step in summary["next_required_steps"])
+    assert any(
+        "TRUSTED_SELF_HOSTED_CI_ENABLED=true" in step
+        and "never enable it automatically" in step
+        for step in summary["next_required_steps"]
+    )
+    assert any("product-api-worker-trusted.yml" in step for step in summary["next_required_steps"])
     assert not any(step.startswith("Owner resolves GitHub Billing") for step in summary["next_required_steps"])
     assert all(row["external_state_mutated"] is False for row in payload["rows"])
     assert {row["created_at_kst_date"] for row in payload["rows"]} == {"2026-06-21"}

@@ -195,13 +195,32 @@ def test_k8s_manifests_define_api_worker_shared_queue_rollout() -> None:
 
 
 def test_product_api_worker_ci_workflow_runs_contract_checks() -> None:
-    workflow = Path(".github/workflows/product-api-worker.yml").read_text(encoding="utf-8")
+    pull_request_workflow = Path(".github/workflows/product-api-worker.yml").read_text(
+        encoding="utf-8"
+    )
+    trusted_workflow = Path(
+        ".github/workflows/product-api-worker-trusted.yml"
+    ).read_text(encoding="utf-8")
+    workflow = "\n".join((pull_request_workflow, trusted_workflow))
 
-    assert "api-worker-contract:" in workflow
-    assert "runner_labels_json:" in workflow
-    assert "self-hosted" in workflow
-    assert "Default self-hosted avoids GitHub-hosted minutes" in workflow
-    assert "fromJSON(inputs.runner_labels_json || '[\"self-hosted\",\"linux\"]')" in workflow
+    assert "api-worker-contract:" in pull_request_workflow
+    assert "api-worker-contract-trusted:" not in pull_request_workflow
+    assert "if: ${{ github.event_name == 'pull_request' }}" in pull_request_workflow
+    assert "runs-on: ubuntu-latest" in pull_request_workflow
+    assert "self-hosted" not in pull_request_workflow
+    assert "python -m pytest --confcutdir=tests/unit -q" in pull_request_workflow
+    assert "python -m pytest --confcutdir=tests/mobile -c pytest-mobile.ini -q" in pull_request_workflow
+    assert "pull_request:" not in trusted_workflow
+    assert "api-worker-contract-trusted:" in trusted_workflow
+    assert "runs-on: [self-hosted, linux]" in trusted_workflow
+    assert "runner_labels_json" not in trusted_workflow
+    assert "github.ref == 'refs/heads/main'" in trusted_workflow
+    assert "Recover stale product image smoke workspace artifacts" not in workflow
+    assert "sudo" not in workflow
+    assert "clean: false" not in workflow
+    assert workflow.count("persist-credentials: false") == 2
+    assert workflow.count("clean: true") == 2
+    assert "Prepare ephemeral API artifact root" in trusted_workflow
     assert "monitoring/**" in workflow
     assert "viewer/**" in workflow
     assert "tests/unit/test_deploy_model_registry.py" in workflow

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from tools.product.release_ci_remote_green_evidence_contract import (
@@ -10,6 +11,7 @@ from tools.product.release_ci_remote_green_evidence_contract import (
     build_release_ci_remote_green_placeholder_payload,
     build_release_ci_remote_green_evidence_collect_manifest,
     build_release_ci_remote_green_evidence_contract,
+    collect_workflow_runs_with_jobs,
     emit_release_ci_remote_green_collect_commands,
     emit_release_ci_remote_green_collect_shell_script,
     emit_release_ci_remote_green_placeholder_evidence,
@@ -38,7 +40,10 @@ def test_release_ci_evidence_contract_lists_all_receipt_inputs() -> None:
         "release_tag_runs_json",
     }
     for row in contract["inputs"]:
-        assert "gh api" in row["collect_command"]
+        assert (
+            "gh api" in row["collect_command"]
+            or "--collect-workflow-runs-with-jobs" in row["collect_command"]
+        )
         assert row["external_state_mutated"] is False
     assert "--emit-placeholders" in contract["placeholder_builder_command"]
 
@@ -51,8 +56,8 @@ def test_release_ci_evidence_collect_commands_include_failed_run_discovery() -> 
     assert any("actions/runners" in command for command in commands)
     assert any("protection/required_status_checks" in command for command in commands)
     assert any("required_status_checks_unavailable_or_branch_unprotected" in command for command in commands)
-    assert any("event=schedule" in command for command in commands)
-    assert any("event=push" in command for command in commands)
+    assert any("--collect-workflow-runs-with-jobs schedule" in command for command in commands)
+    assert any("--collect-workflow-runs-with-jobs push" in command for command in commands)
 
 
 def test_release_ci_evidence_shell_script_is_executable_bash_without_subprocess() -> None:
@@ -70,6 +75,55 @@ def test_release_ci_evidence_payload_validation_accepts_structured_inputs() -> N
     )
     assert valid["valid"] is True
     assert valid["present"] is True
+
+
+def test_release_ci_evidence_payload_validation_requires_jobs_for_observed_runs() -> None:
+    result = validate_release_ci_remote_green_evidence_payload(
+        "schedule_runs",
+        {"workflow_runs": [{"id": 101}], "total_count": 1},
+    )
+
+    assert result["valid"] is False
+    assert result["error"] == "workflow_run_job_evidence_missing"
+    assert result["run_ids"] == ["101"]
+
+
+def test_release_ci_workflow_run_collector_attaches_exact_job_evidence(
+    tmp_path: Path,
+) -> None:
+    def fake_runner(args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[-1].endswith("/jobs?per_page=100"):
+            payload = {
+                "jobs": [
+                    {
+                        "name": "product-image-rocm-runtime-smoke",
+                        "run_id": 101,
+                        "head_sha": "a" * 40,
+                        "status": "completed",
+                        "conclusion": "success",
+                    }
+                ]
+            }
+        else:
+            payload = {
+                "total_count": 1,
+                "workflow_runs": [{"id": 101, "head_sha": "a" * 40}],
+            }
+        return subprocess.CompletedProcess(args, 0, json.dumps(payload), "")
+
+    out_json = tmp_path / "schedule.json"
+    result = collect_workflow_runs_with_jobs(
+        event="schedule",
+        out_json=out_json,
+        root=tmp_path,
+        command_runner=fake_runner,
+    )
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+
+    assert result["workflow_run_count"] == 1
+    assert payload["job_evidence_enriched"] is True
+    assert payload["workflow_runs"][0]["jobs"][0]["run_id"] == 101
+    assert payload["external_state_mutated"] is False
 
 
 def test_release_ci_evidence_payload_validation_rejects_missing_or_malformed() -> None:
@@ -201,7 +255,12 @@ def test_release_ci_evidence_execute_uses_injected_runner_without_subprocess() -
     assert result["executed"] is True
     assert result["passed"] is True
     assert seen
-    assert all("gh api" in command or "RELEASE_CI_FAILED_RUN_ID" in command for command in seen)
+    assert all(
+        "gh api" in command
+        or "RELEASE_CI_FAILED_RUN_ID" in command
+        or "--collect-workflow-runs-with-jobs" in command
+        for command in seen
+    )
     failed_run_rows = [row for row in result["rows"] if row["input_id"] == "failed_run_artifacts"]
     assert len(failed_run_rows) == 1
     assert len(failed_run_rows[0]["commands"]) == 1

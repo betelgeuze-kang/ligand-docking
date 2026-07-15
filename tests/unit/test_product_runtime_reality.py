@@ -294,7 +294,13 @@ def test_product_rocm_hip_rust_requirements_are_installed_by_product_dockerfile(
 
 def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -> None:
     script = Path("deploy/verify_product_image.sh").read_text(encoding="utf-8")
-    workflow = Path(".github/workflows/product-image-smoke.yml").read_text(encoding="utf-8")
+    pull_request_workflow = Path(
+        ".github/workflows/product-image-smoke.yml"
+    ).read_text(encoding="utf-8")
+    trusted_workflow = Path(
+        ".github/workflows/product-image-smoke-trusted.yml"
+    ).read_text(encoding="utf-8")
+    workflow = "\n".join((pull_request_workflow, trusted_workflow))
 
     assert 'VERIFY_MODE="${PRODUCT_IMAGE_VERIFY_MODE:-build}"' in script
     assert "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON" in script
@@ -344,10 +350,14 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "backmapping_ligand_topology_receipt_ready" in script
     assert "product claim promotion requires mode=rocm-runtime" in script
     assert "product_runner_claim_metadata_ready=true" in script
-    assert "pull_request:" in workflow
-    assert "Recover stale product image smoke workspace artifacts" in workflow
-    assert "sudo -n chown -R" in workflow
-    assert "clean: false" in workflow
+    assert "pull_request:" in pull_request_workflow
+    assert "self-hosted" not in pull_request_workflow
+    assert "pull_request:" not in trusted_workflow
+    assert "Recover stale product image smoke workspace artifacts" not in workflow
+    assert "sudo" not in workflow
+    assert "clean: false" not in workflow
+    assert workflow.count("persist-credentials: false") == 3
+    assert workflow.count("clean: true") == 3
     assert "runner.temp" in workflow
     assert "schedule:" in workflow
     assert 'cron: "0 6 * * 1"' in workflow
@@ -358,13 +368,17 @@ def test_product_image_smoke_script_is_fail_closed_and_has_rocm_runtime_mode() -
     assert "startsWith(github.ref, 'refs/tags/v')" in workflow
     assert "startsWith(github.ref, 'refs/tags/product-')" in workflow
     assert "github.event_name == 'schedule'" in workflow
-    assert "github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')" in workflow
+    assert "github.event_name == 'pull_request'" in workflow
+    assert "github.event_name == 'push' && github.ref == 'refs/heads/main'" in workflow
+    assert "product-image-build-smoke-trusted" in workflow
+    assert "runs-on: [self-hosted, linux]" in trusted_workflow
+    assert "build_runner_labels_json" not in trusted_workflow
     assert "PRODUCT_IMAGE_VERIFY_MODE: build" in workflow
-    assert "docker/setup-buildx-action@v3" in workflow
+    assert "docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f" in workflow
     assert 'DOCKER_BUILDKIT: "1"' in workflow
     assert 'PRODUCT_IMAGE_REQUIRE_BUILDX: "1"' in workflow
     assert 'PRODUCT_IMAGE_PRUNE_BEFORE_BUILD: "1"' in workflow
-    assert "actions/upload-artifact@v4" in workflow
+    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in workflow
     assert "if: always()" in workflow
     assert "retention-days: 14" in workflow
     assert "product_image_build_smoke.log" in workflow

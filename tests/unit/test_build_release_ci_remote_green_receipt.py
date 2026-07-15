@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from tools.product.build_release_ci_remote_green_receipt import build_release_ci_remote_green_receipt
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> Path:
@@ -31,81 +35,23 @@ def _runner_inventory() -> dict[str, object]:
 
 
 def _workflow_source() -> str:
-    return """
-name: product-image-smoke
-on:
-  push:
-    tags:
-      - v*
-      - product-*
-  schedule:
-    - cron: "0 6 * * 1"
-jobs:
-  product-image-build-smoke:
-    runs-on: ${{ fromJSON(inputs.build_runner_labels_json || '["self-hosted","linux"]') }}
-    steps:
-      - name: Recover stale product image smoke workspace artifacts
-        run: |
-          sudo -n chown -R "$(id -u):$(id -g)" runs/product_image_smoke_runner_artifacts || true
-          rm -rf runs/product_image_smoke_runner_artifacts
-      - uses: actions/checkout@v5
-        with:
-          path: product-ci-checkout
-          clean: false
-      - name: Verify product image build smoke
-        working-directory: product-ci-checkout
-        env:
-          PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
-        run: |
-          export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
-          bash deploy/verify_product_image.sh
-      - name: Normalize product image smoke artifact ownership
-        if: always()
-        working-directory: product-ci-checkout
-        run: bash scripts/normalize_product_image_smoke_artifact_ownership.sh
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          path: |
-            product-ci-checkout/runs/product_image_smoke_receipt_current.json
-            product-ci-checkout/runs/product_image_build_smoke.log
-  product-image-rocm-runtime-smoke:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/product-') }}
-    runs-on: [self-hosted, linux, rocm]
-    steps:
-      - name: Recover stale product image smoke workspace artifacts
-        run: |
-          sudo -n chown -R "$(id -u):$(id -g)" runs/product_image_smoke_runner_artifacts || true
-          rm -rf runs/product_image_smoke_runner_artifacts
-      - uses: actions/checkout@v5
-        with:
-          path: product-ci-checkout
-          clean: false
-      - name: Verify product image ROCm/HIP/Rust runtime smoke
-        working-directory: product-ci-checkout
-        env:
-          PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts
-        run: |
-          export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"
-          bash deploy/verify_product_image.sh
-      - name: Normalize product image smoke artifact ownership
-        if: always()
-        working-directory: product-ci-checkout
-        run: bash scripts/normalize_product_image_smoke_artifact_ownership.sh
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          path: |
-            product-ci-checkout/runs/product_image_smoke_receipt_current.json
-            product-ci-checkout/runs/product_image_rocm_runtime_smoke.log
-            ${{ runner.temp }}/product_image_smoke_runner_artifacts/**
-"""
-
+    return (ROOT / ".github" / "workflows" / "product-image-smoke-trusted.yml").read_text(
+        encoding="utf-8"
+    )
 
 def _green_inputs(tmp_path: Path) -> dict[str, Path]:
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    for workflow_name in (
+        "product-api-worker.yml",
+        "product-api-worker-trusted.yml",
+        "product-image-smoke.yml",
+        "product-image-smoke-trusted.yml",
+    ):
+        shutil.copy2(ROOT / ".github" / "workflows" / workflow_name, workflow_dir)
     return {
         "runner_inventory_json": _write_json(tmp_path / "runners.json", _runner_inventory()),
-        "workflow_yml": (tmp_path / "product-image-smoke.yml"),
+        "workflow_yml": (workflow_dir / "product-image-smoke-trusted.yml"),
         "branch_json": _write_json(
             tmp_path / "branch.json",
             {
@@ -115,7 +61,6 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
                     "required_status_checks": {
                         "contexts": [
                             "product-image-build-smoke",
-                            "product-image-rocm-runtime-smoke",
                         ],
                     }
                 },
@@ -126,7 +71,6 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
             {
                 "contexts": [
                     "product-image-build-smoke",
-                    "product-image-rocm-runtime-smoke",
                 ],
                 "checks": [],
             },
@@ -138,11 +82,21 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
                 "workflow_runs": [
                     {
                         "id": 101,
+                        "head_sha": "a" * 40,
                         "event": "schedule",
                         "name": "product-image-smoke",
                         "display_title": "Product image ROCm runtime smoke",
                         "status": "completed",
                         "conclusion": "success",
+                        "jobs": [
+                            {
+                                "name": "product-image-rocm-runtime-smoke",
+                                "run_id": 101,
+                                "head_sha": "a" * 40,
+                                "status": "completed",
+                                "conclusion": "success",
+                            }
+                        ],
                         "html_url": "https://example.invalid/schedule",
                     }
                 ],
@@ -165,12 +119,22 @@ def _green_inputs(tmp_path: Path) -> dict[str, Path]:
                 "workflow_runs": [
                     {
                         "id": 202,
+                        "head_sha": "b" * 40,
                         "event": "push",
                         "head_branch": "refs/tags/v0.1.0",
                         "name": "product-image-smoke",
                         "display_title": "Product image ROCm runtime smoke",
                         "status": "completed",
                         "conclusion": "success",
+                        "jobs": [
+                            {
+                                "name": "product-image-rocm-runtime-smoke",
+                                "run_id": 202,
+                                "head_sha": "b" * 40,
+                                "status": "completed",
+                                "conclusion": "success",
+                            }
+                        ],
                         "html_url": "https://example.invalid/tag",
                     }
                 ],
@@ -236,6 +200,39 @@ def test_release_ci_remote_green_receipt_blocks_unprotected_main_and_missing_rem
     assert "release_tag_rocm_runtime_gate_green" in blocker_codes
     assert payload["summary"]["linux_self_hosted_runner_ready"] is True
     assert payload["summary"]["rocm_self_hosted_runner_ready"] is True
+
+
+def test_release_ci_remote_green_receipt_rejects_required_check_near_match(
+    tmp_path: Path,
+) -> None:
+    inputs = _green_inputs(tmp_path)
+    inputs["workflow_yml"].write_text(_workflow_source(), encoding="utf-8")
+    near_match = "legacy-product-image-build-smoke-disabled"
+    inputs["branch_json"] = _write_json(
+        tmp_path / "branch.json",
+        {
+            "name": "main",
+            "protected": True,
+            "protection": {
+                "required_status_checks": {
+                    "contexts": [near_match],
+                }
+            },
+        },
+    )
+    inputs["required_checks_json"] = _write_json(
+        tmp_path / "required_checks.json",
+        {"contexts": [near_match], "checks": []},
+    )
+
+    payload = build_release_ci_remote_green_receipt(root=tmp_path, **inputs)
+    row = {
+        item["check_id"]: item for item in payload["rows"]
+    }["main_branch_required_checks_configured"]
+
+    assert payload["summary"]["main_required_checks_ready"] is False
+    assert row["passed"] is False
+    assert row["observed"]["missing_checks"] == ["product-image-build-smoke"]
 
 
 def test_release_ci_remote_green_receipt_blocks_missing_local_workflow_contract(tmp_path: Path) -> None:
@@ -310,6 +307,45 @@ def test_release_ci_remote_green_receipt_does_not_accept_unrelated_scheduled_suc
                     "display_title": "Documentation refresh",
                     "status": "completed",
                     "conclusion": "success",
+                }
+            ],
+        },
+    )
+
+    payload = build_release_ci_remote_green_receipt(root=tmp_path, **inputs)
+    blocker_codes = {row["code"] for row in payload["blockers"]}
+
+    assert payload["summary"]["weekly_rocm_schedule_green"] is False
+    assert "weekly_rocm_runtime_schedule_green" in blocker_codes
+
+
+def test_release_ci_remote_green_receipt_rejects_all_skipped_trusted_jobs(
+    tmp_path: Path,
+) -> None:
+    inputs = _green_inputs(tmp_path)
+    inputs["workflow_yml"].write_text(_workflow_source(), encoding="utf-8")
+    inputs["schedule_runs_json"] = _write_json(
+        tmp_path / "schedule_runs.json",
+        {
+            "total_count": 1,
+            "workflow_runs": [
+                {
+                    "id": 404,
+                    "head_sha": "c" * 40,
+                    "event": "schedule",
+                    "name": "product-image-smoke-trusted",
+                    "display_title": "Product image ROCm runtime smoke",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "jobs": [
+                        {
+                            "name": "product-image-rocm-runtime-smoke",
+                            "run_id": 404,
+                            "head_sha": "c" * 40,
+                            "status": "completed",
+                            "conclusion": "skipped",
+                        }
+                    ],
                 }
             ],
         },

@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 REPO = "betelgeuze-kang/ligand-docking"
 DEFAULT_BRANCH = "main"
-WORKFLOW_FILE = "product-image-smoke.yml"
-CONTRACT_SCHEMA_VERSION = "release_ci_remote_green_evidence_contract_v1"
+WORKFLOW_FILE = "product-image-smoke-trusted.yml"
+CONTRACT_SCHEMA_VERSION = "release_ci_remote_green_evidence_contract_v2"
 DEFAULT_MANIFEST_JSON = "runs/release_ci_remote_green_evidence_collect_manifest_current.json"
 PLACEHOLDER_STATUS = "blocked_release_ci_remote_green_evidence_placeholder"
 
@@ -94,12 +94,17 @@ EVIDENCE_INPUTS: tuple[EvidenceInputSpec, ...] = (
         default_output_path="runs/release_ci_product_image_smoke_schedule_runs_current.json",
         gh_api_endpoint=_workflow_runs_endpoint(event="schedule"),
         collect_command=(
-            f"gh api '{_workflow_runs_endpoint(event='schedule')}' > "
+            "python3 tools/product/release_ci_remote_green_evidence_contract.py "
+            "--collect-workflow-runs-with-jobs schedule "
+            "--workflow-runs-out "
             "runs/release_ci_product_image_smoke_schedule_runs_current.json"
         ),
         discovery_command="",
         required_top_level_keys=("workflow_runs",),
-        description="Scheduled product-image-smoke workflow runs for weekly ROCm runtime evidence.",
+        description=(
+            "Scheduled trusted product-image workflow runs enriched with exact job status, "
+            "run ID, and head SHA for weekly ROCm runtime evidence."
+        ),
     ),
     EvidenceInputSpec(
         input_id="failed_run_artifacts",
@@ -133,13 +138,16 @@ EVIDENCE_INPUTS: tuple[EvidenceInputSpec, ...] = (
         default_output_path="runs/release_ci_product_image_smoke_push_runs_current.json",
         gh_api_endpoint=_workflow_runs_endpoint(event="push"),
         collect_command=(
-            f"gh api '{_workflow_runs_endpoint(event='push')}' > "
+            "python3 tools/product/release_ci_remote_green_evidence_contract.py "
+            "--collect-workflow-runs-with-jobs push "
+            "--workflow-runs-out "
             "runs/release_ci_product_image_smoke_push_runs_current.json"
         ),
         discovery_command="",
         required_top_level_keys=("workflow_runs",),
         description=(
-            "Push-triggered product-image-smoke runs; receipt filters v* and product-* tag refs."
+            "Push-triggered trusted product-image runs enriched with exact job status, run ID, "
+            "and head SHA; receipt filters v* and product-* tag refs."
         ),
     ),
 )
@@ -340,6 +348,32 @@ def validate_release_ci_remote_green_evidence_payload(
             "missing_keys": missing_keys,
             "required_top_level_keys": list(spec.required_top_level_keys),
         }
+    if input_id in {"schedule_runs", "release_tag_runs"}:
+        workflow_runs = payload.get("workflow_runs")
+        if not isinstance(workflow_runs, list):
+            return {
+                "input_id": input_id,
+                "receipt_arg": spec.receipt_arg,
+                "valid": False,
+                "present": True,
+                "error": "workflow_runs_not_array",
+                "required_top_level_keys": list(spec.required_top_level_keys),
+            }
+        missing_job_evidence = [
+            str(run.get("id") or index)
+            for index, run in enumerate(workflow_runs)
+            if not isinstance(run, dict) or not isinstance(run.get("jobs"), list)
+        ]
+        if missing_job_evidence:
+            return {
+                "input_id": input_id,
+                "receipt_arg": spec.receipt_arg,
+                "valid": False,
+                "present": True,
+                "error": "workflow_run_job_evidence_missing",
+                "run_ids": missing_job_evidence,
+                "required_top_level_keys": list(spec.required_top_level_keys),
+            }
     return {
         "input_id": input_id,
         "receipt_arg": spec.receipt_arg,
@@ -449,6 +483,74 @@ def execute_release_ci_remote_green_collect_commands(
     }
 
 
+def collect_workflow_runs_with_jobs(
+    *,
+    event: str,
+    out_json: str | Path,
+    root: str | Path = ROOT,
+    command_runner: Callable[[list[str]], subprocess.CompletedProcess[str]] | None = None,
+) -> dict[str, Any]:
+    if event not in {"schedule", "push"}:
+        raise ValueError("event must be schedule or push")
+    runner = command_runner or (
+        lambda args: subprocess.run(
+            args,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    )
+    runs_endpoint = _workflow_runs_endpoint(event=event)
+    runs_result = runner(["gh", "api", runs_endpoint])
+    if runs_result.returncode != 0:
+        raise RuntimeError((runs_result.stderr or runs_result.stdout or "gh api failed").strip())
+    runs_payload = json.loads(runs_result.stdout or "{}")
+    workflow_runs = runs_payload.get("workflow_runs")
+    if not isinstance(workflow_runs, list):
+        raise RuntimeError("workflow_runs payload missing")
+
+    enriched_runs = []
+    for run in workflow_runs:
+        if not isinstance(run, dict):
+            continue
+        run_id = str(run.get("id") or "")
+        if not run_id:
+            continue
+        jobs_result = runner(
+            ["gh", "api", f"repos/{REPO}/actions/runs/{run_id}/jobs?per_page=100"]
+        )
+        if jobs_result.returncode != 0:
+            raise RuntimeError(
+                (jobs_result.stderr or jobs_result.stdout or "gh api jobs failed").strip()
+            )
+        jobs_payload = json.loads(jobs_result.stdout or "{}")
+        jobs = jobs_payload.get("jobs")
+        if not isinstance(jobs, list):
+            raise RuntimeError(f"jobs payload missing for run {run_id}")
+        enriched = dict(run)
+        enriched["jobs"] = jobs
+        enriched_runs.append(enriched)
+
+    output_payload = dict(runs_payload)
+    output_payload["workflow_runs"] = enriched_runs
+    output_payload["job_evidence_enriched"] = True
+    output_payload["external_state_mutated"] = False
+    output_path = Path(out_json)
+    if not output_path.is_absolute():
+        output_path = Path(root) / output_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(output_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "event": event,
+        "out_json": str(output_path),
+        "workflow_run_count": len(enriched_runs),
+        "external_state_mutated": False,
+    }
+
+
 def _default_execute(command: str) -> int:
     return subprocess.run(["bash", "-lc", command], check=False).returncode
 
@@ -472,12 +574,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--print-commands", action="store_true", help="Print gh collect commands.")
     parser.add_argument("--validate", action="store_true", help="Validate default evidence JSON files.")
     parser.add_argument("--execute", action="store_true", help="Execute collect commands via bash.")
+    parser.add_argument(
+        "--collect-workflow-runs-with-jobs",
+        choices=("schedule", "push"),
+        help="Read workflow runs and exact jobs through gh api, then write enriched local JSON.",
+    )
+    parser.add_argument(
+        "--workflow-runs-out",
+        default="",
+        help="Output JSON for --collect-workflow-runs-with-jobs.",
+    )
     parser.add_argument("--out-json", default=DEFAULT_MANIFEST_JSON)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.collect_workflow_runs_with_jobs:
+        if not args.workflow_runs_out:
+            raise SystemExit("--workflow-runs-out is required")
+        result = collect_workflow_runs_with_jobs(
+            event=args.collect_workflow_runs_with_jobs,
+            out_json=args.workflow_runs_out,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
     if args.print_commands:
         for command in emit_release_ci_remote_green_collect_commands():
             print(command)

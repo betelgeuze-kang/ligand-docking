@@ -4,13 +4,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+from tools.product.github_workflow_trust_boundaries import (
+    audit_workflow_trust_boundaries,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_JSON = "runs/release_ci_remote_green_receipt_current.json"
 DEFAULT_OUT_MD = "runs/release_ci_remote_green_receipt_current.md"
-DEFAULT_WORKFLOW_YML = ".github/workflows/product-image-smoke.yml"
+DEFAULT_WORKFLOW_YML = ".github/workflows/product-image-smoke-trusted.yml"
 
 CLAIM_BOUNDARY = (
     "Release CI remote-green receipt only evaluates read-only GitHub/API evidence supplied as JSON files plus "
@@ -20,7 +25,6 @@ CLAIM_BOUNDARY = (
 
 REQUIRED_MAIN_CHECKS = (
     "product-image-build-smoke",
-    "product-image-rocm-runtime-smoke",
 )
 
 
@@ -147,12 +151,24 @@ def _run_matches_rocm_success(run: dict[str, Any], *, event: str | None = None, 
         for key in ("name", "display_title", "workflow_name", "path")
     ).lower()
     product_image_workflow = "product-image" in name_text or "product image" in name_text
-    rocm_runtime_scope = "rocm" in name_text and "runtime" in name_text
+    run_id = str(run.get("id") or "")
+    head_sha = str(run.get("head_sha") or "")
+    rocm_job_succeeded = any(
+        isinstance(job, dict)
+        and str(job.get("name") or "") == "product-image-rocm-runtime-smoke"
+        and str(job.get("status") or "").lower() == "completed"
+        and str(job.get("conclusion") or "").lower() == "success"
+        and str(job.get("run_id") or "") == run_id
+        and str(job.get("head_sha") or "") == head_sha
+        for job in run.get("jobs") or []
+    )
     return (
-        str(run.get("status") or "").lower() == "completed"
+        bool(run_id)
+        and bool(head_sha)
+        and str(run.get("status") or "").lower() == "completed"
         and str(run.get("conclusion") or "").lower() == "success"
         and product_image_workflow
-        and rocm_runtime_scope
+        and rocm_job_succeeded
     )
 
 
@@ -177,40 +193,64 @@ def _failure_artifacts_ready(failed_run_artifacts_payload: Any) -> tuple[bool, l
     return ready, active_names
 
 
-def _workflow_source_contract(workflow_text: str, *, workflow_path: str) -> tuple[bool, dict[str, Any]]:
+def _workflow_source_contract(
+    workflow_text: str,
+    *,
+    workflow_path: str,
+    root: str | Path,
+) -> tuple[bool, dict[str, Any]]:
     text = str(workflow_text or "")
+    trust_boundary_errors = audit_workflow_trust_boundaries(root)
+    upload_action_pinned = bool(
+        re.search(r"actions/upload-artifact@[0-9a-f]{40}(?:\s|$)", text)
+    )
     checks = {
         "workflow_path": str(workflow_path or ""),
         "workflow_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest() if text else "",
         "workflow_present": bool(text.strip()),
-        "build_job_present": "product-image-build-smoke:" in text,
+        "workflow_trust_boundaries": not trust_boundary_errors,
+        "workflow_trust_boundary_errors": trust_boundary_errors,
+        "build_job_present": "product-image-build-smoke-trusted:" in text,
         "build_self_hosted_linux_default": '"self-hosted","linux"' in text or "self-hosted, linux" in text,
         "rocm_runtime_job_present": "product-image-rocm-runtime-smoke:" in text,
         "rocm_runner_labels": "runs-on: [self-hosted, linux, rocm]" in text,
         "weekly_schedule": "schedule:" in text and "cron:" in text,
         "release_tag_triggers": "refs/tags/v" in text and "refs/tags/product-" in text,
         "workflow_tag_filters": "tags:" in text and "v*" in text and "product-*" in text,
-        "artifact_upload_action": "actions/upload-artifact@v4" in text,
+        "artifact_upload_action": upload_action_pinned,
         "artifact_upload_always": "if: always()" in text,
         "checkout_subdir_isolated": text.count("path: product-ci-checkout") >= 2
         and text.count("working-directory: product-ci-checkout") >= 4,
-        "receipt_artifact_path": "product-ci-checkout/runs/product_image_smoke_receipt_current.json" in text,
-        "build_log_artifact_path": "product-ci-checkout/runs/product_image_build_smoke.log" in text,
-        "rocm_log_artifact_path": "product-ci-checkout/runs/product_image_rocm_runtime_smoke.log" in text,
-        "pre_checkout_workspace_artifact_recovery": "Recover stale product image smoke workspace artifacts" in text
-        and "sudo -n chown -R" in text
-        and "rm -rf" in text
-        and "clean: false" in text,
+        "receipt_artifact_path": "runs/product_image_smoke_receipt_current.json" in text
+        and text.count('ln -s "${artifact_root}" product-ci-checkout/runs') >= 2,
+        "build_log_artifact_path": "runs/product_image_build_smoke.log" in text
+        and "${{ runner.temp }}/product-image-build-" in text,
+        "rocm_log_artifact_path": "runs/product_image_rocm_runtime_smoke.log" in text
+        and "${{ runner.temp }}/product-image-rocm-" in text,
+        "pre_checkout_workspace_artifact_recovery": "Recover stale product image smoke workspace artifacts" not in text
+        and "sudo" not in text
+        and "clean: false" not in text
+        and text.count("persist-credentials: false") >= 2
+        and text.count("clean: true") >= 2,
         "runner_temp_rocm_artifacts_path": "runner.temp" in text
-        and "PRODUCT_IMAGE_RUNNER_SMOKE_DIR: ${{ runner.temp }}/product_image_smoke_runner_artifacts" in text
-        and "product_image_smoke_runner_artifacts/**" in text,
+        and text.count("PRODUCT_IMAGE_RUNNER_SMOKE_DIR=${smoke_root}") >= 2
+        and text.count('smoke_root="${RUNNER_TEMP}/product-image-') >= 2
+        and text.count("${{ runner.temp }}/product-image-") >= 2,
         "container_output_uid_gid_pinned": text.count(
             'export PRODUCT_IMAGE_CONTAINER_UID_GID="$(id -u):$(id -g)"'
         )
         >= 2
         and "PRODUCT_IMAGE_CONTAINER_UID_GID" in text,
     }
-    pass_values = [value for key, value in checks.items() if key not in {"workflow_path", "workflow_sha256"}]
+    pass_values = [
+        value
+        for key, value in checks.items()
+        if key not in {
+            "workflow_path",
+            "workflow_sha256",
+            "workflow_trust_boundary_errors",
+        }
+    ]
     return all(bool(value) for value in pass_values), checks
 
 
@@ -250,7 +290,7 @@ def build_release_ci_remote_green_receipt(
     rocm_ready, rocm_runners = _runner_ready(runners_payload, {"self-hosted", "linux", "rocm"})
     branch_protected = bool(isinstance(branch_payload, dict) and branch_payload.get("protected") is True)
     checks = _required_checks(required_checks_payload, branch_payload)
-    missing_checks = [check for check in REQUIRED_MAIN_CHECKS if not any(check in observed for observed in checks)]
+    missing_checks = [check for check in REQUIRED_MAIN_CHECKS if check not in checks]
     main_required_checks_ready = bool(branch_protected and not missing_checks)
     weekly_rocm_schedule_green, weekly_url = _successful_rocm_run(schedule_runs_payload, event="schedule")
     failure_artifacts_preserved, artifact_names = _failure_artifacts_ready(failed_artifacts_payload)
@@ -262,6 +302,7 @@ def build_release_ci_remote_green_receipt(
     workflow_contract_ready, workflow_contract_observed = _workflow_source_contract(
         workflow_text,
         workflow_path=str(workflow_yml or ""),
+        root=root_path,
     )
 
     rows = [
