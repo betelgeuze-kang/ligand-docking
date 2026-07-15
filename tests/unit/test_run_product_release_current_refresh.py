@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import json
-import threading
-import time
 from pathlib import Path
 
+from api.result_manifest import write_result_manifest
+from api.validated_runner_execution_evidence import (
+    EXECUTION_EVIDENCE_PROVENANCE_KEY,
+    tier_alpha_adrb2_execution_evidence,
+)
+from api.validated_runner_runtime_qualification import RECEIPT_SCHEMA_VERSION
+from tools.product import build_product_release_source_of_truth_gate as source_gate
 from tools.product import run_product_release_current_refresh as mod
 
 
@@ -680,10 +686,17 @@ def test_refresh_final_gate_blocks_stale_action_board_release_decision_echo(
 def test_run_command_routes_tier_alpha_smoke_in_process(tmp_path: Path, monkeypatch) -> None:
     observed: dict[str, object] = {}
 
-    def fake_tier_alpha(command: str, *, cwd: Path, timeout_seconds: int) -> dict:
+    def fake_tier_alpha(
+        command: str,
+        *,
+        cwd: Path,
+        timeout_seconds: int,
+        env: dict[str, str] | None = None,
+    ) -> dict:
         observed["command"] = command
         observed["cwd"] = cwd
         observed["timeout_seconds"] = timeout_seconds
+        observed["env"] = env
         return {"returncode": 0, "timed_out": False}
 
     monkeypatch.setattr(mod, "_run_tier_alpha_smoke_in_process", fake_tier_alpha)
@@ -697,7 +710,77 @@ def test_run_command_routes_tier_alpha_smoke_in_process(tmp_path: Path, monkeypa
     assert result == {"returncode": 0, "timed_out": False}
     assert observed["cwd"] == tmp_path
     assert observed["timeout_seconds"] == 450
+    assert observed["env"] is None
     assert str(observed["command"]).endswith("--timeout-seconds 420")
+
+
+def test_release_refresh_propagates_smoke_result_root_to_following_builders(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    observed_environments: list[dict[str, str]] = []
+
+    def fake_run_command(
+        command: str,
+        *,
+        cwd: Path,
+        timeout_seconds: int,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, object]:
+        del command, cwd, timeout_seconds
+        observed_environments.append(dict(env or {}))
+        return {"returncode": 0, "timed_out": False}
+
+    monkeypatch.delenv("RESULTS_STORAGE_PATH", raising=False)
+    monkeypatch.setenv(
+        "API_VALIDATED_RUNNER_NAMESPACE_RECEIPT_PATH",
+        "/operator/runtime-receipt.json",
+    )
+    monkeypatch.setattr(mod, "_run_command", fake_run_command)
+    workspace = "runs/tier-alpha-custom"
+
+    mod.run_product_release_current_refresh(
+        execute=True,
+        root=tmp_path,
+        commands=[
+            (
+                "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py "
+                f"--workspace {workspace}"
+            ),
+            "python3 tools/product/build_restricted_unattended_execution_readiness.py",
+        ],
+    )
+
+    assert "RESULTS_STORAGE_PATH" not in observed_environments[0]
+    assert observed_environments[1]["RESULTS_STORAGE_PATH"] == str(
+        tmp_path / workspace / "results"
+    )
+    assert observed_environments[1][
+        "API_VALIDATED_RUNNER_NAMESPACE_RECEIPT_PATH"
+    ] == "/operator/runtime-receipt.json"
+
+
+def test_release_refresh_builds_current_image_preflight_before_restricted_evidence() -> None:
+    commands = source_gate.RELEASE_REFRESH_COMMANDS
+    image_preflight = "python3 tools/build_product_image_smoke_preflight.py"
+    restricted = (
+        "python3 tools/product/build_restricted_unattended_execution_readiness.py"
+    )
+
+    assert commands.index(
+        "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py --timeout-seconds 420"
+    ) < commands.index(image_preflight)
+    assert commands.index(image_preflight) < commands.index(restricted)
+
+    restricted_spec = next(
+        spec
+        for spec in source_gate.DEFAULT_ARTIFACT_SPECS
+        if spec["artifact_id"] == "restricted_unattended_execution_readiness"
+    )
+    assert (
+        "runs/product_image_smoke_preflight_current.json"
+        in restricted_spec["depends_on"]
+    )
 
 
 def test_tier_alpha_smoke_in_process_enforces_parent_timeout(tmp_path: Path) -> None:
@@ -711,54 +794,126 @@ def test_tier_alpha_smoke_in_process_enforces_parent_timeout(tmp_path: Path) -> 
     assert result["timed_out"] is True
 
 
-def test_tier_alpha_smoke_in_process_recovers_completed_artifacts(tmp_path: Path) -> None:
+def test_tier_alpha_smoke_in_process_recovers_completed_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     workspace = tmp_path / "runs/tier_alpha_dispatch_smoke/current"
     job_id = "tier_alpha_adrb2_smoke_20260613T000000Z_recovered"
-    job_dir = workspace / "results" / job_id
-    ledger_dir = workspace / "results" / "product_docking_jobs"
     out_json = tmp_path / "runs/tier_alpha_adrb2_dispatch_smoke_current.json"
-
-    def write_completed_artifacts() -> None:
-        time.sleep(0.2)
-        job_dir.mkdir(parents=True, exist_ok=True)
-        ledger_dir.mkdir(parents=True, exist_ok=True)
-        result_file = job_dir / "htvs_summary.json"
-        runner_execution = job_dir / "runner_execution.json"
-        result_manifest = job_dir / "result_manifest.json"
-        result_file.write_text('{"status":"completed"}\n', encoding="utf-8")
-        runner_execution.write_text('{"timeout_seconds":60}\n', encoding="utf-8")
-        result_manifest.write_text('{"status":"completed","signature_key_id":"tier-alpha-local"}\n', encoding="utf-8")
-        (job_dir / "status.json").write_text(
-            json.dumps(
-                {
-                    "job_id": job_id,
-                    "status": "completed",
-                    "result_file": str(result_file),
-                    "runner_execution": str(runner_execution),
-                    "result_manifest": str(result_manifest),
-                }
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        (ledger_dir / f"{job_id}.json").write_text(
-            '{"worker_state":"completed_fail_closed","simulation_sync_status":"completed"}\n',
-            encoding="utf-8",
-        )
-
-    writer = threading.Thread(target=write_completed_artifacts)
-    writer.start()
-    try:
-        result = mod._run_tier_alpha_smoke_in_process(
-            (
-                "python3 tools/product/run_tier_alpha_adrb2_dispatch_smoke.py "
-                f"--workspace {workspace} --out-json {out_json}"
+    signing_key = "unit-test-operator-managed-recovery-signing-key"
+    key_id = "unit-test-recovery-key-2026"
+    attempt_dir = (
+        workspace
+        / "results"
+        / job_id
+        / ".attempts"
+        / f"attempt-000001-{'a' * 64}-{'b' * 64}"
+    )
+    attempt_dir.mkdir(parents=True)
+    result_file = attempt_dir / "htvs_summary.json"
+    runner_execution = attempt_dir / "runner_execution.json"
+    result_manifest = attempt_dir / "result_manifest.json"
+    published_status = attempt_dir / "published_status.json"
+    result_file.write_text('{"status":"completed"}\n', encoding="utf-8")
+    runner_execution.write_text(
+        '{"ok":true,"returncode":0,"timed_out":false,"timeout_seconds":60}\n',
+        encoding="utf-8",
+    )
+    runtime_qualification = {
+        "validated_runner_namespace_runtime_qualified": True,
+        "validated_runner_namespace_runtime_receipt_schema_version": (
+            RECEIPT_SCHEMA_VERSION
+        ),
+        "validated_runner_namespace_runtime_receipt_sha256": "c" * 64,
+        "validated_runner_namespace_runtime_receipt_issued_at_utc": (
+            "2026-07-16T00:00:00Z"
+        ),
+        "validated_runner_namespace_runtime_receipt_expires_at_utc": (
+            "2026-07-16T01:00:00Z"
+        ),
+    }
+    manifest_payload = write_result_manifest(
+        result_manifest,
+        job_id=job_id,
+        request={"runner_profile_id": "ligand_htvs_pipeline_default"},
+        status="completed",
+        result_file=str(result_file),
+        signing_key=signing_key,
+        key_id=key_id,
+        worker_provenance={
+            "worker_id": "tier-alpha-recovery-worker",
+            "attempt_count": 1,
+            "attempt_token_sha256": "b" * 64,
+            "validated_runner_runtime_qualification": runtime_qualification,
+            EXECUTION_EVIDENCE_PROVENANCE_KEY: (
+                tier_alpha_adrb2_execution_evidence(job_id)
             ),
-            cwd=Path.cwd(),
-            timeout_seconds=10,
-        )
-    finally:
-        writer.join(timeout=5)
+        },
+    )
+    status_payload = {
+        "job_id": job_id,
+        "status": "completed",
+        "result_file": str(result_file),
+        "runner_execution": str(runner_execution),
+        "result_manifest": str(result_manifest),
+        **runtime_qualification,
+    }
+    published_status.write_text(
+        json.dumps(status_payload) + "\n",
+        encoding="utf-8",
+    )
+    evidence = {
+        "job_id": job_id,
+        "status_path": published_status,
+        "status_payload": status_payload,
+        "result_file": result_file,
+        "runner_execution": runner_execution,
+        "runner_payload": {
+            "ok": True,
+            "returncode": 0,
+            "timed_out": False,
+            "timeout_seconds": 60,
+        },
+        "result_manifest": result_manifest,
+        "result_manifest_sha256": hashlib.sha256(
+            result_manifest.read_bytes()
+        ).hexdigest(),
+        "manifest_payload": manifest_payload,
+        "ledger_payload": {
+            "worker_dispatch_enqueued": True,
+            "worker_state": "completed_fail_closed",
+            "simulation_sync_status": "completed",
+            "simulation_result_file": str(result_file),
+            "progress_state": "worker_dispatch_completed",
+            "current_step": "worker_dispatch_completed",
+        },
+    }
+
+    def _verified_scanner(
+        observed_workspace: Path,
+        *,
+        started_at: float,
+    ) -> dict:
+        assert observed_workspace == workspace
+        assert started_at > 0
+        return evidence
+
+    monkeypatch.setenv("API_RESULT_MANIFEST_SIGNING_KEY", signing_key)
+    monkeypatch.setenv("API_RESULT_MANIFEST_KEY_ID", key_id)
+    monkeypatch.setattr(
+        mod,
+        "_latest_completed_tier_alpha_evidence",
+        _verified_scanner,
+    )
+    result = mod._run_tier_alpha_smoke_in_process(
+        (
+            "python3 -c 'import time; time.sleep(30)' "
+            f"--workspace {workspace} --out-json {out_json}"
+        ),
+        cwd=Path.cwd(),
+        timeout_seconds=10,
+    )
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert result["returncode"] == 0
@@ -768,3 +923,51 @@ def test_tier_alpha_smoke_in_process_recovers_completed_artifacts(tmp_path: Path
     assert payload["job_id"] == job_id
     assert payload["ledger_worker_state"] == "completed_fail_closed"
     assert payload["simulation_sync_status"] == "completed"
+    assert payload["summary"]["validated_result_artifacts_verified"] is True
+    assert payload["summary"]["ledger_result_binding_verified"] is True
+    assert payload["result_manifest_signature_verified"] is True
+    assert payload["result_manifest_status_verified"] is True
+    assert payload["result_manifest_sha256"] == evidence[
+        "result_manifest_sha256"
+    ]
+
+
+def test_tier_alpha_recovery_rejects_public_default_manifest_key(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    workspace = tmp_path / "tier-alpha-default-key"
+    results_dir = workspace / "results"
+    results_dir.mkdir(parents=True)
+    job_id = "tier_alpha_adrb2_smoke_default_key"
+    result_file = tmp_path / "default-key-result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    manifest_payload = write_result_manifest(
+        tmp_path / "default-key-manifest.json",
+        job_id=job_id,
+        request={"runner_profile_id": "ligand_htvs_pipeline_default"},
+        status="completed",
+        result_file=str(result_file),
+        signing_key="tier-alpha-local-smoke-signing-key",
+        key_id="tier-alpha-local",
+    )
+    monkeypatch.setenv(
+        "API_RESULT_MANIFEST_SIGNING_KEY",
+        "tier-alpha-local-smoke-signing-key",
+    )
+    monkeypatch.setenv("API_RESULT_MANIFEST_KEY_ID", "tier-alpha-local")
+
+    assert (
+        mod._verify_tier_alpha_manifest(
+            manifest_payload,
+            expected_job_id=job_id,
+        )
+        is False
+    )
+    assert (
+        mod._latest_completed_tier_alpha_evidence(
+            workspace,
+            started_at=0,
+        )
+        == {}
+    )

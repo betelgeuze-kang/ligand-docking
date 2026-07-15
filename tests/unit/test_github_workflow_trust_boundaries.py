@@ -44,6 +44,37 @@ def test_pull_request_workflow_files_are_hosted_only(workflow_name: str) -> None
     assert all(job["runs-on"] == "ubuntu-latest" for job in workflow["jobs"].values())
 
 
+def test_h4_hosted_workflow_covers_tier_alpha_runtime_binding_contract() -> None:
+    workflow = yaml.load(
+        (WORKFLOW_DIR / "ci-api-h4-hosted.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+
+    pull_request_paths = set(workflow["on"]["pull_request"]["paths"])
+    adjacent_test_command = next(
+        step["run"]
+        for step in workflow["jobs"]["api-security"]["steps"]
+        if step["name"] == "Run adjacent API regressions"
+    )
+
+    for required_source in (
+        "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py",
+        "tools/product/build_api_customer_flow_release_evidence.py",
+        "tools/product/build_product_release_source_of_truth_gate.py",
+        "tools/product/run_product_release_current_refresh.py",
+        "scripts/normalize_product_image_smoke_artifact_ownership.sh",
+    ):
+        assert required_source in pull_request_paths
+    for required_test in (
+        "tests/unit/test_api_worker_deploy_artifacts.py",
+        "tests/unit/test_build_api_customer_flow_release_evidence.py",
+        "tests/unit/test_build_product_release_source_of_truth_gate.py",
+        "tests/unit/test_run_product_release_current_refresh.py",
+    ):
+        assert required_test in pull_request_paths
+        assert required_test in adjacent_test_command
+
+
 @pytest.mark.parametrize("workflow_name", sorted(TRUSTED_WORKFLOWS))
 def test_trusted_workflow_files_have_no_pull_request_trigger(workflow_name: str) -> None:
     workflow = yaml.load(

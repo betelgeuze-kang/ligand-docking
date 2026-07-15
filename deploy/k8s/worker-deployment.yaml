@@ -13,6 +13,9 @@ spec:
       labels:
         app: micf-api-worker
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api-worker
           image: micf-api:product
@@ -28,8 +31,18 @@ spec:
           envFrom:
             - configMapRef:
                 name: micf-api-config
-            - secretRef:
-                name: micf-api-secrets
+          env:
+            - name: API_RESULT_MANIFEST_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: micf-api-secrets
+                  key: API_RESULT_MANIFEST_SIGNING_KEY
+            - name: API_VALIDATED_RUNNER_ENABLED
+              value: "0"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: results
               mountPath: /data

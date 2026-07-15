@@ -147,6 +147,20 @@ def test_product_launch_r4_preflight_blocks_if_rollout_was_already_mutated() -> 
     assert payload["summary"]["authorized_for_external_mutation"] is False
 
 
+def test_product_launch_r4_preflight_blocks_forged_api_flow_readiness() -> None:
+    api_flow = _api_flow()
+    api_flow["summary"]["formal_release_evidence_ready"] = False
+    api_flow["summary"]["result_manifest_signature_verified"] = False
+
+    payload = _build(api_flow_packet=api_flow)
+
+    assert payload["summary"]["authorized_for_r4_confirmation"] is False
+    assert payload["summary"]["status"] == "blocked_product_launch_r4_preflight"
+    assert "api_customer_flow_release_evidence_ready" in {
+        row["check_id"] for row in payload["blockers"]
+    }
+
+
 def test_product_launch_r4_preflight_blocks_missing_release_policy_field() -> None:
     release = _release_bundle()
     release["operator_promotion_policy"]["must_review_fields"] = ["target", "action"]

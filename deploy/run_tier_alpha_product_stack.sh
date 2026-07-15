@@ -12,9 +12,11 @@ fi
 
 # shellcheck disable=SC1090
 source "$ENV_FILE"
-if [[ "${API_VALIDATED_RUNNER_ENABLED:-0}" != "1" ]]; then
-  echo "WARN: API_VALIDATED_RUNNER_ENABLED is not 1 in $ENV_FILE (Tier α dispatch will stay fail-closed)." >&2
+if [[ "${API_VALIDATED_RUNNER_ENABLED:-0}" == "1" ]]; then
+  echo "Standard Docker/Compose is not validated-runner namespace-qualified; use a separately audited host runtime." >&2
+  exit 1
 fi
+echo "Validated execution remains disabled; starting the fail-closed Tier α wiring surface." >&2
 
 cd "$ROOT"
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build

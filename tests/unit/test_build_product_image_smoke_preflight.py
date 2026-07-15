@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import datetime as dt
+import hashlib
 import json
 import os
 import subprocess
 from pathlib import Path
 
+from api.validated_runner_runtime_qualification import (
+    RECEIPT_PATH_ENV,
+    RECEIPT_SHA256_ENV,
+    validated_runner_namespace_runtime_receipt_template,
+)
 from tools.product import build_product_image_smoke_preflight as mod
 
 
@@ -47,6 +54,58 @@ def _runner_hygiene_fields() -> dict[str, object]:
     }
 
 
+NAMESPACE_RUNTIME_NOW = dt.datetime(
+    2026,
+    7,
+    16,
+    tzinfo=dt.timezone.utc,
+)
+
+
+def _namespace_runtime_receipt_payload() -> dict[str, object]:
+    return validated_runner_namespace_runtime_receipt_template(
+        issued_at=NAMESPACE_RUNTIME_NOW - dt.timedelta(minutes=1),
+        expires_at=NAMESPACE_RUNTIME_NOW + dt.timedelta(hours=1),
+    )
+
+
+def _namespace_runtime_receipt_raw() -> bytes:
+    return (
+        json.dumps(_namespace_runtime_receipt_payload(), sort_keys=True) + "\n"
+    ).encode()
+
+
+def _namespace_runtime_qualification_args(root: Path) -> dict[str, object]:
+    receipt_path = root / "namespace-runtime-receipt.json"
+    raw = _namespace_runtime_receipt_raw()
+    receipt_path.write_bytes(raw)
+    receipt_path.chmod(0o600)
+    return {
+        "namespace_runtime_receipt_json": receipt_path,
+        "namespace_runtime_receipt_sha256": hashlib.sha256(raw).hexdigest(),
+        "namespace_runtime_now": NAMESPACE_RUNTIME_NOW,
+    }
+
+
+def _product_receipt_namespace_binding_fields() -> dict[str, object]:
+    payload = _namespace_runtime_receipt_payload()
+    return {
+        "validated_runner_namespace_runtime_qualified": True,
+        "validated_runner_namespace_runtime_receipt_schema_version": payload[
+            "schema_version"
+        ],
+        "validated_runner_namespace_runtime_receipt_sha256": hashlib.sha256(
+            _namespace_runtime_receipt_raw()
+        ).hexdigest(),
+        "validated_runner_namespace_runtime_receipt_issued_at_utc": payload[
+            "issued_at_utc"
+        ],
+        "validated_runner_namespace_runtime_receipt_expires_at_utc": payload[
+            "expires_at_utc"
+        ],
+    }
+
+
 def _copy_product_image_preflight_fixture(root: Path) -> None:
     repo_root = Path(__file__).resolve().parents[2]
     for rel_path in (
@@ -57,6 +116,8 @@ def _copy_product_image_preflight_fixture(root: Path) -> None:
         ".github/workflows/product-image-smoke-trusted.yml",
         ".github/workflows/product-api-worker.yml",
         ".github/workflows/product-api-worker-trusted.yml",
+        ".github/workflows/ci-api-h4-hosted.yml",
+        "api/validated_runner_runtime_qualification.py",
         "Dockerfile.product",
         "requirements-base.txt",
         "requirements.txt",
@@ -66,6 +127,24 @@ def _copy_product_image_preflight_fixture(root: Path) -> None:
         destination = root / rel_path
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text((repo_root / rel_path).read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def _designated_verify_paths(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    runner_temp = tmp_path / "runner-temp"
+    artifact_root = runner_temp / "product-image-test-artifacts"
+    artifact_root.mkdir(parents=True)
+    receipt = artifact_root / "product_image_smoke_receipt_current.json"
+    return receipt, {
+        "RUNNER_TEMP": str(runner_temp),
+        "PRODUCT_IMAGE_WORKSPACE_ARTIFACT_ROOT": str(artifact_root),
+        "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
+        "PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR": str(
+            artifact_root / "product_image_smoke_runner_artifacts"
+        ),
+        "PRODUCT_IMAGE_RUNNER_SMOKE_DIR": str(
+            runner_temp / "product-image-test-smoke"
+        ),
+    }
 
 
 def test_product_image_smoke_preflight_contract_ready_with_docker_path(tmp_path: Path) -> None:
@@ -397,11 +476,14 @@ def test_post_smoke_ownership_script_normalizes_existing_artifacts(tmp_path: Pat
     log = runs / "product_image_build_smoke.log"
     workspace_smoke_artifact = workspace_smoke_dir / "stale-artifact.txt"
     smoke_artifact = smoke_dir / "artifact.txt"
+    unrelated_sibling = runs / "unrelated-sensitive-evidence.json"
     receipt.write_text("{}", encoding="utf-8")
     log.write_text("log", encoding="utf-8")
     workspace_smoke_artifact.write_text("stale", encoding="utf-8")
     smoke_artifact.write_text("artifact", encoding="utf-8")
+    unrelated_sibling.write_text("preserve-sensitive-evidence\n", encoding="utf-8")
     smoke_artifact.chmod(0o400)
+    unrelated_sibling.chmod(0o400)
 
     result = subprocess.run(
         [
@@ -429,6 +511,59 @@ def test_post_smoke_ownership_script_normalizes_existing_artifacts(tmp_path: Pat
     assert workspace_smoke_artifact.is_file()
     assert smoke_artifact.is_file()
     assert smoke_artifact.stat().st_mode & 0o200
+    assert unrelated_sibling.read_text(encoding="utf-8") == (
+        "preserve-sensitive-evidence\n"
+    )
+    assert unrelated_sibling.stat().st_mode & 0o777 == 0o400
+
+
+def test_post_smoke_ownership_script_rejects_unrelated_temp_paths_before_repair(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "workspace"
+    runner_temp = tmp_path / "runner-temp"
+    artifact_root = workspace / "runs"
+    artifact_root.mkdir(parents=True)
+    runner_temp.mkdir()
+    valid_log = artifact_root / "product_image_build_smoke.log"
+    valid_log.write_text("log\n", encoding="utf-8")
+    victim = runner_temp / "unrelated-victim"
+    victim.mkdir()
+    sentinel = victim / "must-survive.txt"
+    sentinel.write_text("preserve-me\n", encoding="utf-8")
+
+    base_env = {
+        "PATH": "/usr/bin:/bin",
+        "GITHUB_WORKSPACE": str(workspace),
+        "RUNNER_TEMP": str(runner_temp),
+        "PRODUCT_IMAGE_OWNERSHIP_REPAIR_DOCKER_CMD": str(
+            tmp_path / "missing-docker"
+        ),
+    }
+    for log_path, smoke_path in (
+        (valid_log, victim),
+        (sentinel, runner_temp / "product-image-test-smoke"),
+    ):
+        result = subprocess.run(
+            [
+                "bash",
+                "scripts/normalize_product_image_smoke_artifact_ownership.sh",
+                "--log-path",
+                str(log_path),
+            ],
+            check=False,
+            cwd=Path(__file__).resolve().parents[2],
+            env={
+                **base_env,
+                "PRODUCT_IMAGE_RUNNER_SMOKE_DIR": str(smoke_path),
+            },
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode != 0
+        assert "product_image_smoke_artifact_path_guard_failed" in result.stderr
+        assert sentinel.read_text(encoding="utf-8") == "preserve-me\n"
 
 
 def test_product_image_smoke_preflight_reports_current_workspace_artifact_cleanup_state(
@@ -512,7 +647,7 @@ def test_product_image_smoke_preflight_blocks_without_docker_cli(tmp_path: Path)
 
 
 def test_verify_product_image_writes_blocked_receipt_when_docker_cli_missing(tmp_path: Path) -> None:
-    receipt = tmp_path / "blocked_receipt.json"
+    receipt, safe_env = _designated_verify_paths(tmp_path)
     result = subprocess.run(
         ["bash", "deploy/verify_product_image.sh"],
         check=False,
@@ -520,10 +655,7 @@ def test_verify_product_image_writes_blocked_receipt_when_docker_cli_missing(tmp
         env={
             "PATH": "/usr/bin:/bin",
             "DOCKER_CMD": str(tmp_path / "missing-docker"),
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
-            "PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR": str(
-                tmp_path / "workspace-smoke"
-            ),
+            **safe_env,
         },
         capture_output=True,
         text=True,
@@ -542,7 +674,10 @@ def test_verify_product_image_writes_blocked_receipt_when_docker_cli_missing(tmp
 
 
 def test_verify_product_image_blocks_invalid_container_uid_gid_before_docker(tmp_path: Path) -> None:
-    receipt = tmp_path / "blocked_receipt.json"
+    receipt, safe_env = _designated_verify_paths(tmp_path)
+    sibling = receipt.parent / "unrelated-sensitive-evidence.json"
+    sibling.write_text("preserve-sensitive-evidence\n", encoding="utf-8")
+    sibling.chmod(0o400)
     result = subprocess.run(
         ["bash", "deploy/verify_product_image.sh"],
         check=False,
@@ -551,7 +686,7 @@ def test_verify_product_image_blocks_invalid_container_uid_gid_before_docker(tmp
             "PATH": "/usr/bin:/bin",
             "DOCKER_CMD": str(tmp_path / "missing-docker"),
             "PRODUCT_IMAGE_CONTAINER_UID_GID": "root:root",
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
+            **safe_env,
         },
         capture_output=True,
         text=True,
@@ -564,10 +699,12 @@ def test_verify_product_image_blocks_invalid_container_uid_gid_before_docker(tmp
     assert payload["reason"] == "container_uid_gid_invalid"
     assert payload["container_uid_gid"] == "root:root"
     assert payload["container_output_uid_gid_pinned"] is False
+    assert sibling.read_text(encoding="utf-8") == "preserve-sensitive-evidence\n"
+    assert sibling.stat().st_mode & 0o777 == 0o400
 
 
 def test_verify_product_image_blocks_root_container_uid_gid_before_docker(tmp_path: Path) -> None:
-    receipt = tmp_path / "blocked_receipt.json"
+    receipt, safe_env = _designated_verify_paths(tmp_path)
     result = subprocess.run(
         ["bash", "deploy/verify_product_image.sh"],
         check=False,
@@ -576,7 +713,7 @@ def test_verify_product_image_blocks_root_container_uid_gid_before_docker(tmp_pa
             "PATH": "/usr/bin:/bin",
             "DOCKER_CMD": str(tmp_path / "missing-docker"),
             "PRODUCT_IMAGE_CONTAINER_UID_GID": "0:0",
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
+            **safe_env,
         },
         capture_output=True,
         text=True,
@@ -595,7 +732,7 @@ def test_verify_product_image_blocks_root_container_uid_gid_before_docker(tmp_pa
 def test_verify_product_image_blocks_other_user_container_uid_gid_before_docker(
     tmp_path: Path,
 ) -> None:
-    receipt = tmp_path / "blocked_receipt.json"
+    receipt, safe_env = _designated_verify_paths(tmp_path)
     other_uid = os.getuid() + 1
     other_gid = os.getgid() + 1
     result = subprocess.run(
@@ -606,7 +743,7 @@ def test_verify_product_image_blocks_other_user_container_uid_gid_before_docker(
             "PATH": "/usr/bin:/bin",
             "DOCKER_CMD": str(tmp_path / "missing-docker"),
             "PRODUCT_IMAGE_CONTAINER_UID_GID": f"{other_uid}:{other_gid}",
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
+            **safe_env,
         },
         capture_output=True,
         text=True,
@@ -623,9 +760,7 @@ def test_verify_product_image_blocks_other_user_container_uid_gid_before_docker(
 
 
 def test_verify_product_image_blocks_github_actions_workspace_smoke_dir(tmp_path: Path) -> None:
-    receipt = tmp_path / "blocked_receipt.json"
-    runner_temp = tmp_path / "runner-temp"
-    runner_temp.mkdir()
+    receipt, safe_env = _designated_verify_paths(tmp_path)
     result = subprocess.run(
         ["bash", "deploy/verify_product_image.sh"],
         check=False,
@@ -634,9 +769,8 @@ def test_verify_product_image_blocks_github_actions_workspace_smoke_dir(tmp_path
             "PATH": "/usr/bin:/bin",
             "DOCKER_CMD": str(tmp_path / "missing-docker"),
             "GITHUB_ACTIONS": "true",
-            "RUNNER_TEMP": str(runner_temp),
+            **safe_env,
             "PRODUCT_IMAGE_RUNNER_SMOKE_DIR": "runs/product_image_smoke_runner_artifacts",
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
         },
         capture_output=True,
         text=True,
@@ -644,20 +778,96 @@ def test_verify_product_image_blocks_github_actions_workspace_smoke_dir(tmp_path
     )
 
     assert result.returncode == 2
-    payload = json.loads(receipt.read_text(encoding="utf-8"))
+    assert not receipt.exists()
+    payload = json.loads(result.stdout)
     assert payload["status"] == "blocked_product_image_smoke"
-    assert payload["reason"] == "runner_smoke_dir_inside_workspace"
-    assert payload["runner_hygiene_schema_version"] == "product_image_runner_hygiene_v1"
-    assert payload["runner_smoke_dir"].endswith("runs/product_image_smoke_runner_artifacts")
-    assert payload["workspace_runner_smoke_dir"].endswith("runs/product_image_smoke_runner_artifacts")
-    assert payload["runner_smoke_dir_outside_workspace"] is False
-    assert payload["workspace_runner_smoke_dir_cleanup_ready"] is False
+    assert payload["reason"] == "unsafe_mutation_path"
+    assert payload["path_guard_error"] == "runner_smoke_path_not_designated"
+    assert payload["external_state_mutated"] is False
+
+
+def test_verify_product_image_rejects_unsafe_mutation_paths_before_cleanup(
+    tmp_path: Path,
+) -> None:
+    root = Path(__file__).resolve().parents[2]
+
+    for path_kind in ("receipt", "workspace", "runner"):
+        case_root = tmp_path / path_kind
+        safe_receipt, safe_env = _designated_verify_paths(case_root)
+        safe_temp = Path(safe_env["RUNNER_TEMP"])
+        victim = safe_temp / "unrelated-victim"
+        victim.mkdir()
+        sentinel = victim / "must-survive.txt"
+        sentinel.write_text("preserve-me\n", encoding="utf-8")
+        env = {
+            "PATH": "/usr/bin:/bin",
+            "DOCKER_CMD": str(case_root / "missing-docker"),
+            **safe_env,
+        }
+        if path_kind == "receipt":
+            unsafe_receipt = victim / "existing-receipt.json"
+            unsafe_receipt.write_text("preserve-receipt\n", encoding="utf-8")
+            env["PRODUCT_IMAGE_SMOKE_RECEIPT_JSON"] = str(unsafe_receipt)
+        elif path_kind == "workspace":
+            env["PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR"] = str(victim)
+        else:
+            env["PRODUCT_IMAGE_RUNNER_SMOKE_DIR"] = str(victim)
+
+        result = subprocess.run(
+            ["bash", "deploy/verify_product_image.sh"],
+            check=False,
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        assert result.returncode == 2, path_kind
+        guard_payload = json.loads(result.stdout)
+        assert guard_payload["reason"] == "unsafe_mutation_path", path_kind
+        assert guard_payload["external_state_mutated"] is False, path_kind
+        assert sentinel.read_text(encoding="utf-8") == "preserve-me\n", path_kind
+        if path_kind == "receipt":
+            assert (victim / "existing-receipt.json").read_text(
+                encoding="utf-8"
+            ) == "preserve-receipt\n"
+
+
+def test_verify_product_image_rejects_hardlinked_receipt_before_metadata_repair(
+    tmp_path: Path,
+) -> None:
+    receipt, safe_env = _designated_verify_paths(tmp_path)
+    original = receipt.parent / "original.json"
+    original.write_text("preserve-hardlink\n", encoding="utf-8")
+    os.link(original, receipt)
+
+    result = subprocess.run(
+        ["bash", "deploy/verify_product_image.sh"],
+        check=False,
+        cwd=Path(__file__).resolve().parents[2],
+        env={
+            "PATH": "/usr/bin:/bin",
+            "DOCKER_CMD": str(tmp_path / "missing-docker"),
+            **safe_env,
+        },
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+
+    assert result.returncode == 2
+    guard_payload = json.loads(result.stdout)
+    assert guard_payload["reason"] == "unsafe_mutation_path"
+    assert guard_payload["path_guard_error"] == "receipt_path_hardlinked"
+    assert original.read_text(encoding="utf-8") == "preserve-hardlink\n"
+    assert receipt.read_text(encoding="utf-8") == "preserve-hardlink\n"
 
 
 def test_verify_product_image_blocks_when_local_workspace_cleanup_fails(
     tmp_path: Path,
 ) -> None:
-    receipt = tmp_path / "blocked_receipt.json"
+    receipt, safe_env = _designated_verify_paths(tmp_path)
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     fake_rm = fake_bin / "rm"
@@ -671,7 +881,9 @@ exec /usr/bin/rm "$@"
         encoding="utf-8",
     )
     fake_rm.chmod(0o755)
-    workspace_smoke = tmp_path / "workspace" / "product_image_smoke_runner_artifacts"
+    workspace_smoke = Path(
+        safe_env["PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR"]
+    )
     workspace_smoke.mkdir(parents=True)
     result = subprocess.run(
         ["bash", "deploy/verify_product_image.sh"],
@@ -680,13 +892,7 @@ exec /usr/bin/rm "$@"
         env={
             "PATH": f"{fake_bin}:/usr/bin:/bin",
             "DOCKER_CMD": str(tmp_path / "missing-docker"),
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
-            "PRODUCT_IMAGE_RUNNER_SMOKE_DIR": str(
-                tmp_path / "runner-smoke"
-            ),
-            "PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR": str(
-                workspace_smoke
-            ),
+            **safe_env,
         },
         capture_output=True,
         text=True,
@@ -707,6 +913,7 @@ exec /usr/bin/rm "$@"
 
 
 def test_verify_product_image_writes_blocked_receipt_after_container_start_failure(tmp_path: Path) -> None:
+    receipt, safe_env = _designated_verify_paths(tmp_path)
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     fake_docker = fake_bin / "docker"
@@ -744,7 +951,6 @@ exit 0
         encoding="utf-8",
     )
     fake_curl.chmod(0o755)
-    receipt = tmp_path / "post_container_blocked_receipt.json"
     receipt.write_text(
         json.dumps(
             {
@@ -764,10 +970,7 @@ exit 0
         env={
             "PATH": f"{fake_bin}:/usr/bin:/bin",
             "DOCKER_CMD": "docker",
-            "PRODUCT_IMAGE_SMOKE_RECEIPT_JSON": str(receipt),
-            "PRODUCT_IMAGE_WORKSPACE_RUNNER_SMOKE_DIR": str(
-                tmp_path / "workspace-smoke"
-            ),
+            **safe_env,
         },
         capture_output=True,
         text=True,
@@ -960,6 +1163,7 @@ def test_product_image_smoke_preflight_blocks_rocm_requirements_that_include_cpu
 
 def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Path) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
+    namespace_qualification = _namespace_runtime_qualification_args(tmp_path)
     receipt_json = tmp_path / "receipt.json"
     receipt_json.write_text(
         json.dumps(
@@ -970,6 +1174,7 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1008,6 +1213,7 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **namespace_qualification,
     )
     summary = payload["summary"]
 
@@ -1045,6 +1251,43 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
     assert summary["runtime_neighbor_release_pair_count_slope"] == 1.0
     assert summary["runtime_neighbor_release_pair_count_r2"] == 1.0
     assert summary["runtime_neighbor_release_nxn_allocation_observed"] is False
+    assert summary["receipt_product_runner_smoke_ready"] is True
+    assert summary["product_receipt_namespace_binding_matches"] is True
+    assert summary["product_receipt_namespace_binding_reason"] == "qualified"
+    assert summary["product_receipt_namespace_runtime_qualified"] is True
+    assert (
+        summary[
+            "product_receipt_namespace_runtime_receipt_schema_version"
+        ]
+        == "validated_runner_namespace_runtime_receipt_v1"
+    )
+    assert summary["product_receipt_namespace_runtime_receipt_sha256"] == (
+        namespace_qualification["namespace_runtime_receipt_sha256"]
+    )
+    assert (
+        summary["product_receipt_namespace_runtime_receipt_issued_at_utc"]
+        == summary[
+            "validated_runner_namespace_runtime_receipt_issued_at_utc"
+        ]
+    )
+    assert (
+        summary["product_receipt_namespace_runtime_receipt_expires_at_utc"]
+        == summary[
+            "validated_runner_namespace_runtime_receipt_expires_at_utc"
+        ]
+    )
+    assert summary["validated_runner_namespace_runtime_qualified"] is True
+    assert (
+        summary["validated_runner_namespace_runtime_receipt_schema_version"]
+        == "validated_runner_namespace_runtime_receipt_v1"
+    )
+    assert summary["validated_runner_namespace_runtime_receipt_sha256"] == (
+        namespace_qualification["namespace_runtime_receipt_sha256"]
+    )
+    assert summary["validated_runner_namespace_runtime_receipt_verification_reason"] == (
+        "qualified"
+    )
+    assert summary["customer_execution_enabled"] is False
     assert summary["product_runner_smoke_ready"] is True
     assert summary["product_runner_claim_metadata_ready"] is True
     assert summary["tier_alpha_result_manifest_signature_verified"] is True
@@ -1055,6 +1298,7 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=False,
         receipt_json=receipt_json,
+        **namespace_qualification,
     )
     summary_without_live_docker = payload_without_live_docker["summary"]
 
@@ -1082,6 +1326,152 @@ def test_product_image_smoke_preflight_accepts_rocm_runtime_receipt(tmp_path: Pa
     assert payload["blockers"] == []
 
 
+def test_product_image_smoke_preflight_rejects_stale_runner_receipt_without_namespace_qualification(
+    tmp_path: Path,
+) -> None:
+    _copy_product_image_preflight_fixture(tmp_path)
+    receipt_json = tmp_path / "stale_receipt.json"
+    receipt_json.write_text(
+        json.dumps(
+            {
+                "status": "product_image_smoke_ready",
+                "mode": "rocm-runtime",
+                "simulate_missing_profile_http": 422,
+                "clean_container_smoke_ready": True,
+                "product_runner_smoke_ready": True,
+                "validated_runner_namespace_runtime_qualified": True,
+                "validated_runner_namespace_runtime_receipt_schema_version": (
+                    "validated_runner_namespace_runtime_receipt_v1"
+                ),
+                "validated_runner_namespace_runtime_receipt_sha256": "a" * 64,
+                **_runner_hygiene_fields(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = mod.build_product_image_smoke_preflight(
+        root=tmp_path,
+        docker_cli_path="/usr/bin/docker",
+        docker_daemon_ready=True,
+        receipt_json=receipt_json,
+    )
+    summary = payload["summary"]
+
+    assert summary["status"] == "blocked_product_image_smoke_preflight"
+    assert summary["preflight_ready"] is False
+    assert summary["receipt_product_runner_smoke_ready"] is True
+    assert summary["product_runner_smoke_ready"] is False
+    assert summary["product_receipt_namespace_binding_matches"] is False
+    assert summary["product_receipt_namespace_binding_reason"] == (
+        "product_receipt_namespace_binding_mismatch"
+    )
+    assert summary["validated_runner_namespace_runtime_qualified"] is False
+    assert {
+        "code": "validated_runner_namespace_runtime_unqualified"
+    } in payload["blockers"]
+    assert {
+        "code": "product_receipt_namespace_binding_mismatch"
+    } in payload["blockers"]
+
+
+def test_product_image_smoke_preflight_rejects_replayed_product_receipt_binding(
+    tmp_path: Path,
+) -> None:
+    _copy_product_image_preflight_fixture(tmp_path)
+    namespace_qualification = _namespace_runtime_qualification_args(tmp_path)
+    receipt_json = tmp_path / "replayed-product-receipt.json"
+    mismatches: tuple[tuple[str, object], ...] = (
+        ("validated_runner_namespace_runtime_qualified", False),
+        (
+            "validated_runner_namespace_runtime_receipt_schema_version",
+            "validated_runner_namespace_runtime_receipt_v0",
+        ),
+        ("validated_runner_namespace_runtime_receipt_sha256", "a" * 64),
+        (
+            "validated_runner_namespace_runtime_receipt_issued_at_utc",
+            "2026-07-15T23:58:00Z",
+        ),
+        (
+            "validated_runner_namespace_runtime_receipt_expires_at_utc",
+            "2026-07-16T02:01:00Z",
+        ),
+    )
+
+    for field, replayed_value in mismatches:
+        binding = _product_receipt_namespace_binding_fields()
+        binding[field] = replayed_value
+        receipt_json.write_text(
+            json.dumps(
+                {
+                    "status": "product_image_smoke_ready",
+                    "mode": "rocm-runtime",
+                    "product_runner_smoke_ready": True,
+                    **binding,
+                    **_runner_hygiene_fields(),
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        payload = mod.build_product_image_smoke_preflight(
+            root=tmp_path,
+            docker_cli_path="/usr/bin/docker",
+            docker_daemon_ready=True,
+            receipt_json=receipt_json,
+            **namespace_qualification,
+        )
+        summary = payload["summary"]
+
+        assert summary["validated_runner_namespace_runtime_qualified"] is True, field
+        assert summary["product_receipt_namespace_binding_matches"] is False, field
+        assert summary["product_receipt_namespace_binding_reason"] == (
+            "product_receipt_namespace_binding_mismatch"
+        ), field
+        assert summary["product_runner_smoke_ready"] is False, field
+        assert summary["preflight_ready"] is False, field
+        assert summary["status"] == "blocked_product_image_smoke_preflight", field
+        assert {
+            "code": "product_receipt_namespace_binding_mismatch"
+        } in payload["blockers"], field
+        assert {
+            "code": "validated_runner_namespace_runtime_unqualified"
+        } not in payload["blockers"], field
+
+
+def test_product_image_smoke_preflight_uses_pinned_namespace_receipt_from_environment(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _copy_product_image_preflight_fixture(tmp_path)
+    qualification = _namespace_runtime_qualification_args(tmp_path)
+    monkeypatch.setenv(
+        RECEIPT_PATH_ENV,
+        str(qualification["namespace_runtime_receipt_json"]),
+    )
+    monkeypatch.setenv(
+        RECEIPT_SHA256_ENV,
+        str(qualification["namespace_runtime_receipt_sha256"]),
+    )
+
+    payload = mod.build_product_image_smoke_preflight(
+        root=tmp_path,
+        docker_cli_path="/usr/bin/docker",
+        docker_daemon_ready=True,
+        receipt_json=tmp_path / "missing-product-receipt.json",
+        namespace_runtime_now=NAMESPACE_RUNTIME_NOW,
+    )
+
+    assert payload["summary"]["validated_runner_namespace_runtime_qualified"] is True
+    assert payload["summary"][
+        "validated_runner_namespace_runtime_receipt_verification_reason"
+    ] == "qualified"
+    assert payload["summary"][
+        "validated_runner_namespace_runtime_receipt_sha256"
+    ] == qualification["namespace_runtime_receipt_sha256"]
+    assert payload["summary"]["customer_execution_enabled"] is False
+
+
 def test_product_image_smoke_preflight_rejects_rocm_receipt_without_container_runtime_proof(tmp_path: Path) -> None:
     _copy_product_image_preflight_fixture(tmp_path)
     receipt_json = tmp_path / "receipt.json"
@@ -1094,6 +1484,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_container_ru
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1119,6 +1510,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_container_ru
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 
@@ -1140,6 +1532,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_runner_claim
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": False,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "backmapping_runner_claim_metadata_ready": False,
@@ -1155,6 +1548,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_runner_claim
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
 
     assert payload["summary"]["preflight_ready"] is True
@@ -1175,6 +1569,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_backmapping_
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1200,6 +1595,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_backmapping_
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 
@@ -1222,6 +1618,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_ligand_topol
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1246,6 +1643,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_ligand_topol
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 
@@ -1268,6 +1666,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_ligand_topol
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1294,6 +1693,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_ligand_topol
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 
@@ -1345,6 +1745,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_with_workspace_artif
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1393,6 +1794,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_with_workspace_artif
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 
@@ -1427,6 +1829,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_uid_pinning(
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1470,6 +1873,7 @@ def test_product_image_smoke_preflight_rejects_rocm_receipt_without_uid_pinning(
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 
@@ -1500,6 +1904,7 @@ def test_product_image_smoke_preflight_marks_legacy_rocm_receipt_for_runner_hygi
                 "simulate_missing_profile_http": 422,
                 "clean_container_smoke_ready": True,
                 "product_runner_smoke_ready": True,
+                **_product_receipt_namespace_binding_fields(),
                 "product_runner_claim_metadata_ready": True,
                 "tier_alpha_result_manifest_signature_verified": True,
                 "tier_alpha_result_manifest_status": "completed",
@@ -1534,6 +1939,7 @@ def test_product_image_smoke_preflight_marks_legacy_rocm_receipt_for_runner_hygi
         docker_cli_path="/usr/bin/docker",
         docker_daemon_ready=True,
         receipt_json=receipt_json,
+        **_namespace_runtime_qualification_args(tmp_path),
     )
     summary = payload["summary"]
 

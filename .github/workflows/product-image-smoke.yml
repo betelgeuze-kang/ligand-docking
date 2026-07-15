@@ -25,7 +25,9 @@ on:
       - scripts/normalize_product_image_smoke_artifact_ownership.sh
       - tools/product/build_product_image_smoke_preflight.py
       - tools/build_product_image_smoke_preflight.py
+      - api/validated_runner_runtime_qualification.py
       - tests/unit/test_build_product_image_smoke_preflight.py
+      - tests/unit/test_validated_runner_runtime_qualification.py
       - .github/workflows/product-image-smoke.yml
       - .github/workflows/product-image-smoke-trusted.yml
       - .github/dependabot.yml

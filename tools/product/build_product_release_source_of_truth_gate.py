@@ -121,6 +121,7 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_api_docking_dispatch_e2e_evidence.py",
     "python3 tools/build_product_job_orchestration_contract.py",
     "python3 tools/build_architecture_validation_package_report.py",
+    "python3 tools/build_product_image_smoke_preflight.py",
     "python3 tools/product/build_restricted_unattended_execution_readiness.py",
     "python3 tools/build_product_security_deployment_contract.py",
     "python3 tools/build_product_execution_work_order.py",
@@ -135,7 +136,6 @@ RELEASE_REFRESH_COMMANDS = [
     "python3 tools/build_product_service_boundary_contract.py",
     "python3 tools/build_product_capability_surface_contract.py",
     "python3 tools/build_product_commercial_independence_gate.py",
-    "python3 tools/build_product_image_smoke_preflight.py",
     "python3 tools/build_product_end_to_end_rocm_benchmark.py",
     "python3 tools/build_ai_md_engine_kpi_report.py",
     "python3 tools/build_ai_md_product_evidence_bundle.py",
@@ -549,6 +549,7 @@ DEFAULT_ARTIFACT_SPECS: list[dict[str, Any]] = [
             "runs/api_runner_profile_promotion_readiness_current.json",
             "runs/tier_alpha_adrb2_dispatch_smoke_current.json",
             "runs/architecture_validation_package_report_current.json",
+            "runs/product_image_smoke_preflight_current.json",
         ],
     },
     {

@@ -66,10 +66,21 @@ def test_write_restricted_self_hosted_commercial_packets_restores_readiness_fiel
     assert pilot["summary"]["bundle_assembled"] is True
     assert pilot["summary"]["bundle_validation_present"] is True
     assert pilot["summary"]["bundle_dir_exists"] is True
-    assert image_smoke["summary"]["status"] == "product_image_smoke_preflight_ready"
-    assert image_smoke["summary"]["clean_container_smoke_ready"] is True
-    assert image_smoke["summary"]["receipt_status"] == "product_image_smoke_ready"
+    assert image_smoke["summary"]["status"] == "blocked_product_image_smoke_preflight"
+    assert image_smoke["summary"]["clean_container_smoke_ready"] is False
+    assert image_smoke["summary"]["receipt_status"] == (
+        "blocked_product_image_rocm_runtime_smoke"
+    )
     assert image_smoke["summary"]["receipt_mode"] == "rocm-runtime"
+    assert image_smoke["summary"]["product_runner_smoke_ready"] is False
+    assert image_smoke["summary"]["validated_runner_namespace_runtime_qualified"] is False
+    assert image_smoke["summary"]["customer_execution_enabled"] is False
+    assert image_smoke["summary"][
+        "validated_runner_namespace_runtime_receipt_verification_reason"
+    ] == "receipt_path_missing"
+    assert image_smoke["summary"]["blockers"] == [
+        "validated_runner_namespace_runtime_unqualified"
+    ]
     assert image_smoke["summary"]["container_runtime_rust_hip_backend_enabled"] is True
     assert image_smoke["summary"]["receipt_simulate_missing_profile_http"] == 422
     assert trajectory_sla["summary"]["required_families"] == ["gpcr", "ion_channel", "kinase"]

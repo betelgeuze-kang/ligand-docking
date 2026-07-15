@@ -5,7 +5,8 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - configmap.yaml
-  - secret.example.yaml
+  # Provision micf-api-secrets separately from an operator-managed secret store.
+  # secret.example.yaml is a template and must never be applied by kustomize.
   - api-deployment.yaml
   - worker-deployment.yaml
   - dispatch-deployment.yaml

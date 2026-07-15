@@ -43,7 +43,14 @@ HOST_UID_GID="${HOST_UID}:${HOST_GID}"
 DOCKER_CMD="${PRODUCT_IMAGE_OWNERSHIP_REPAIR_DOCKER_CMD:-${DOCKER_CMD:-docker}}"
 read -r -a DOCKER_BIN <<< "${DOCKER_CMD}"
 OWNERSHIP_REPAIR_IMAGE="${PRODUCT_IMAGE_OWNERSHIP_REPAIR_IMAGE:-busybox:1.36.1}"
-RUNS_DIR="${WORKSPACE}/runs"
+WORKSPACE_ARTIFACT_ROOT_EXPLICIT=false
+if [[ -n "${PRODUCT_IMAGE_WORKSPACE_ARTIFACT_ROOT:-}" ]]; then
+  WORKSPACE_ARTIFACT_ROOT_EXPLICIT=true
+fi
+RUNS_DIR="${PRODUCT_IMAGE_WORKSPACE_ARTIFACT_ROOT:-${WORKSPACE}/runs}"
+if [[ "${RUNS_DIR}" != /* ]]; then
+  RUNS_DIR="${WORKSPACE}/${RUNS_DIR}"
+fi
 RECEIPT_PATH="${RUNS_DIR}/product_image_smoke_receipt_current.json"
 WORKSPACE_SMOKE_DIR="${RUNS_DIR}/product_image_smoke_runner_artifacts"
 SMOKE_DIR="${PRODUCT_IMAGE_RUNNER_SMOKE_DIR:-}"
@@ -115,10 +122,139 @@ verify_ownership() {
   fi
 }
 
+canonical_path() {
+  realpath -m -- "$1" 2>/dev/null
+}
+
+path_guard_error() {
+  echo "::error::product_image_smoke_artifact_path_guard_failed reason=$1" >&2
+  return 1
+}
+
+validate_normalization_paths() {
+  local canonical_workspace=""
+  local canonical_temp=""
+  local canonical_artifact_root=""
+  local artifact_parent=""
+  local artifact_basename=""
+  local canonical_receipt=""
+  local canonical_workspace_smoke=""
+  local canonical_smoke=""
+  local smoke_parent=""
+  local smoke_basename=""
+  local canonical_log=""
+
+  if ! command -v realpath >/dev/null 2>&1; then
+    path_guard_error "realpath_unavailable"
+    return 1
+  fi
+  canonical_workspace="$(canonical_path "${WORKSPACE}")" || {
+    path_guard_error "workspace_invalid"
+    return 1
+  }
+  canonical_artifact_root="$(canonical_path "${RUNS_DIR}")" || {
+    path_guard_error "artifact_root_invalid"
+    return 1
+  }
+  if [[ -n "${TEMP_ROOT}" ]]; then
+    canonical_temp="$(canonical_path "${TEMP_ROOT}")" || {
+      path_guard_error "runner_temp_invalid"
+      return 1
+    }
+    case "${canonical_temp}" in
+      ""|/|"${canonical_workspace}"|"${HOME:-/nonexistent-product-image-home}")
+        path_guard_error "runner_temp_unsafe"
+        return 1
+        ;;
+    esac
+  fi
+
+  artifact_parent="$(dirname "${canonical_artifact_root}")"
+  artifact_basename="$(basename "${canonical_artifact_root}")"
+  if [[ "${WORKSPACE_ARTIFACT_ROOT_EXPLICIT}" == "true" ]]; then
+    if [[ -z "${canonical_temp}" || "${artifact_parent}" != "${canonical_temp}" ]] \
+      || [[ ! "${artifact_basename}" =~ ^product-image-[A-Za-z0-9._-]+$ ]]; then
+      path_guard_error "artifact_root_not_designated"
+      return 1
+    fi
+  elif [[ "${canonical_artifact_root}" != "${canonical_workspace}/runs" ]]; then
+    if [[ -z "${canonical_temp}" || "${artifact_parent}" != "${canonical_temp}" ]] \
+      || [[ ! "${artifact_basename}" =~ ^product-image-(build|rocm)-[0-9]+-[0-9]+$ ]]; then
+      path_guard_error "artifact_root_not_designated"
+      return 1
+    fi
+  fi
+
+  canonical_receipt="$(canonical_path "${RECEIPT_PATH}")" || {
+    path_guard_error "receipt_invalid"
+    return 1
+  }
+  canonical_workspace_smoke="$(canonical_path "${WORKSPACE_SMOKE_DIR}")" || {
+    path_guard_error "workspace_smoke_invalid"
+    return 1
+  }
+  if [[ "${canonical_receipt}" != "${canonical_artifact_root}/product_image_smoke_receipt_current.json" ]] \
+    || [[ "${canonical_workspace_smoke}" != "${canonical_artifact_root}/product_image_smoke_runner_artifacts" ]]; then
+    path_guard_error "workspace_artifact_not_designated"
+    return 1
+  fi
+  if [[ -L "${RECEIPT_PATH}" ]] \
+    || { [[ -e "${RECEIPT_PATH}" ]] && [[ ! -f "${RECEIPT_PATH}" ]]; } \
+    || [[ -L "${WORKSPACE_SMOKE_DIR}" ]] \
+    || { [[ -e "${WORKSPACE_SMOKE_DIR}" ]] && [[ ! -d "${WORKSPACE_SMOKE_DIR}" ]]; }; then
+    path_guard_error "workspace_artifact_type_invalid"
+    return 1
+  fi
+  if [[ -e "${RECEIPT_PATH}" ]] \
+    && [[ "$(stat -c '%h' -- "${RECEIPT_PATH}" 2>/dev/null || true)" != "1" ]]; then
+    path_guard_error "receipt_hardlinked"
+    return 1
+  fi
+
+  if [[ -n "${LOG_PATH}" ]]; then
+    canonical_log="$(canonical_path "${LOG_PATH}")" || {
+      path_guard_error "log_path_invalid"
+      return 1
+    }
+    if [[ "${canonical_log}" != "${canonical_artifact_root}/product_image_build_smoke.log" ]] \
+      && [[ "${canonical_log}" != "${canonical_artifact_root}/product_image_rocm_runtime_smoke.log" ]]; then
+      path_guard_error "log_path_not_designated"
+      return 1
+    fi
+    if [[ -L "${LOG_PATH}" ]] \
+      || { [[ -e "${LOG_PATH}" ]] && [[ ! -f "${LOG_PATH}" ]]; }; then
+      path_guard_error "log_path_type_invalid"
+      return 1
+    fi
+  fi
+
+  if [[ -n "${SMOKE_DIR}" ]]; then
+    canonical_smoke="$(canonical_path "${SMOKE_DIR}")" || {
+      path_guard_error "runner_smoke_invalid"
+      return 1
+    }
+    smoke_parent="$(dirname "${canonical_smoke}")"
+    smoke_basename="$(basename "${canonical_smoke}")"
+    if [[ -z "${canonical_temp}" || "${smoke_parent}" != "${canonical_temp}" ]] \
+      || { [[ "${smoke_basename}" != "product_image_smoke_runner_artifacts" ]] \
+        && [[ ! "${smoke_basename}" =~ ^product-image-(build|rocm)-smoke-[0-9]+-[0-9]+$ ]] \
+        && [[ "${smoke_basename}" != "product-image-test-smoke" ]]; }; then
+      path_guard_error "runner_smoke_not_designated"
+      return 1
+    fi
+    if [[ -L "${SMOKE_DIR}" ]] \
+      || { [[ -e "${SMOKE_DIR}" ]] && [[ ! -d "${SMOKE_DIR}" ]]; }; then
+      path_guard_error "runner_smoke_type_invalid"
+      return 1
+    fi
+  fi
+}
+
+validate_normalization_paths
+
 if [[ -e "${RUNS_DIR}" ]]; then
   chown "${HOST_UID_GID}" "${RUNS_DIR}" 2>/dev/null || sudo -n chown "${HOST_UID_GID}" "${RUNS_DIR}" 2>/dev/null || true
   chmod u+rwx "${RUNS_DIR}" 2>/dev/null || sudo -n chmod u+rwx "${RUNS_DIR}" 2>/dev/null || true
-  docker_repair_ownership "${RUNS_DIR}"
 fi
 
 repair_ownership "${RECEIPT_PATH}"

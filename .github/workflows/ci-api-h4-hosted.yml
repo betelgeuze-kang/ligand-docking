@@ -9,12 +9,38 @@ on:
       - "tests/unit/test_api_job_store.py"
       - "tests/unit/test_api_security_middleware.py"
       - "tests/unit/test_api_validated_runner_adapter.py"
+      - "tests/unit/test_api_worker_deploy_artifacts.py"
+      - "tests/unit/test_build_api_docking_dispatch_e2e_evidence.py"
+      - "tests/unit/test_build_api_customer_flow_release_evidence.py"
+      - "tests/unit/test_build_product_image_smoke_preflight.py"
+      - "tests/unit/test_build_product_launch_r4_preflight.py"
+      - "tests/unit/test_build_product_release_source_of_truth_gate.py"
+      - "tests/unit/test_build_restricted_unattended_execution_readiness.py"
+      - "tests/unit/test_ci_contract_fixture_packets.py"
+      - "tests/unit/test_validated_runner_runtime_qualification.py"
+      - "tests/unit/test_run_product_release_current_refresh.py"
       - "tests/mobile/test_simulation_job_ownership.py"
       - "tests/mobile/test_simulation_endpoint_access.py"
       - "requirements-mobile.txt"
       - "pytest.ini"
       - "pytest-mobile.ini"
       - "tools/product/github_workflow_trust_boundaries.py"
+      - "tools/product/build_product_image_smoke_preflight.py"
+      - "tools/product/build_product_release_source_of_truth_gate.py"
+      - "tools/product/build_api_docking_dispatch_e2e_evidence.py"
+      - "tools/product/build_api_customer_flow_release_evidence.py"
+      - "tools/product/build_restricted_unattended_execution_readiness.py"
+      - "tools/product/ci_contract_fixture_packets.py"
+      - "tools/product/run_tier_alpha_adrb2_dispatch_smoke.py"
+      - "tools/product/run_product_release_current_refresh.py"
+      - "deploy/docker-compose.product.yml"
+      - "deploy/docker-compose.product.env.example"
+      - "deploy/run_tier_alpha_product_stack.sh"
+      - "deploy/verify_product_image.sh"
+      - "scripts/normalize_product_image_smoke_artifact_ownership.sh"
+      - "deploy/k8s/**"
+      - "deploy/systemd/**"
+      - "config/api_validated_runner_profiles/README.md"
       - ".github/workflows/ci-api-h4-hosted.yml"
 
 permissions:
@@ -63,13 +89,18 @@ jobs:
           api/simulation_endpoint_access.py
           api/security.py
           api/result_manifest.py
+          api/deployment_secret_policy.py
+          api/startup_preflight.py
           api/linux_runner_supervisor.py
+          api/validated_runner_execution_evidence.py
+          api/validated_runner_runtime_qualification.py
           api/validated_runner.py
           api/worker.py
           betelgeuze_ai_md/contracts/api_adapter.py
           betelgeuze_ai_md/contracts/manifest.py
           api/models.py
           api/main.py
+          tools/product/build_product_release_source_of_truth_gate.py
 
       - name: Import the product API
         run: python -c "import api.main"
@@ -85,7 +116,17 @@ jobs:
           python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_api_job_store.py
           tests/unit/test_api_security_middleware.py
-          tests/unit/test_api_validated_runner_adapter.py::test_validated_runner_child_environment_excludes_service_secrets
+          tests/unit/test_api_validated_runner_adapter.py
+          tests/unit/test_api_worker_deploy_artifacts.py
+          tests/unit/test_build_api_docking_dispatch_e2e_evidence.py
+          tests/unit/test_build_api_customer_flow_release_evidence.py
+          tests/unit/test_build_product_image_smoke_preflight.py
+          tests/unit/test_build_product_launch_r4_preflight.py
+          tests/unit/test_build_product_release_source_of_truth_gate.py
+          tests/unit/test_build_restricted_unattended_execution_readiness.py
+          tests/unit/test_ci_contract_fixture_packets.py
+          tests/unit/test_run_product_release_current_refresh.py
+          tests/unit/test_validated_runner_runtime_qualification.py
 
       - name: Run ownership and endpoint regressions
         run: >-

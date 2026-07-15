@@ -2,13 +2,20 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+import datetime as dt
 import json
-import os
 from pathlib import Path
 from typing import Any
 
+from api.validated_runner_runtime_qualification import (
+    NamespaceRuntimeQualification,
+    verify_validated_runner_namespace_runtime,
+)
 from tools.builder_table_utils import write_csv_rows
+from tools.product.build_restricted_unattended_execution_readiness import (
+    namespace_runtime_binding_mismatches,
+    verify_tier_alpha_smoke_result_manifest,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_E2E_JSON = "runs/api_docking_dispatch_e2e_evidence_current.json"
@@ -60,78 +67,40 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _int(value: Any) -> int:
-    try:
-        return int(float(value or 0))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _sha256_file(path_like: str | Path) -> str:
-    path = _resolve(path_like)
-    if not path.is_file():
-        return ""
-    h = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _manifest_path_from_smoke(smoke: dict[str, Any]) -> Path:
-    manifest = _text(smoke.get("result_manifest") or smoke.get("result_manifest_path"))
-    if manifest:
-        return _resolve(manifest)
-    result_file = _text(smoke.get("result_file"))
-    if result_file:
-        return Path(result_file).parent / "result_manifest.json"
-    return Path("")
-
-
-def _verify_manifest_from_smoke(smoke: dict[str, Any]) -> tuple[bool, str, str]:
-    if smoke.get("result_manifest_signature_verified") is True:
-        return True, _text(smoke.get("result_manifest")), _text(smoke.get("result_manifest_key_id"))
-    manifest_path = _manifest_path_from_smoke(smoke)
-    if not manifest_path.is_file():
-        return False, str(manifest_path) if str(manifest_path) != "." else "", ""
-    try:
-        from api.result_manifest import verify_result_manifest
-
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False, str(manifest_path), ""
-    if not isinstance(manifest, dict):
-        return False, str(manifest_path), ""
-    signing_key = os.environ.get("API_RESULT_MANIFEST_SIGNING_KEY", "tier-alpha-local-smoke-signing-key")
-    return verify_result_manifest(manifest, signing_key=signing_key), str(manifest_path), _text(
-        manifest.get("signature_key_id")
+def _verify_manifest_from_smoke(
+    smoke: dict[str, Any],
+    *,
+    namespace_runtime_receipt_json: str | Path | None,
+    namespace_runtime_receipt_sha256: str | None,
+    namespace_runtime_now: dt.datetime | None,
+    result_manifest_root: str | Path | None,
+    result_manifest_signing_key: str | None,
+    result_manifest_expected_key_id: str | None,
+) -> tuple[bool, str, str, str, NamespaceRuntimeQualification]:
+    resolved_receipt: str | Path | None = namespace_runtime_receipt_json
+    if resolved_receipt is not None:
+        receipt_path = Path(resolved_receipt)
+        resolved_receipt = receipt_path if receipt_path.is_absolute() else _resolve(receipt_path)
+    runtime_verification = verify_validated_runner_namespace_runtime(
+        receipt_path=resolved_receipt,
+        expected_sha256=namespace_runtime_receipt_sha256,
+        now=namespace_runtime_now,
     )
-
-
-def _ledger_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
-    direct = smoke.get("ledger_payload")
-    if isinstance(direct, dict):
-        return direct
-    jobs_dir = _text(smoke.get("jobs_dir"))
-    job_id = _text(smoke.get("job_id"))
-    if not jobs_dir or not job_id:
-        return {}
-    return _read_json_if_present(_resolve(jobs_dir) / f"{job_id}.json")
-
-
-def _status_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
-    status_json = _text(smoke.get("status_json"))
-    return _read_json_if_present(status_json) if status_json else {}
-
-
-def _runner_execution_from_smoke(smoke: dict[str, Any]) -> dict[str, Any]:
-    direct = smoke.get("runner_execution_payload")
-    if isinstance(direct, dict):
-        return direct
-    runner_execution = _text(smoke.get("runner_execution"))
-    if not runner_execution:
-        runner_execution = _text(_status_from_smoke(smoke).get("runner_execution"))
-    return _read_json_if_present(runner_execution) if runner_execution else {}
+    verified, reason, manifest_sha256 = verify_tier_alpha_smoke_result_manifest(
+        smoke=smoke,
+        verification=runtime_verification,
+        result_manifest_root=result_manifest_root,
+        signing_key=result_manifest_signing_key,
+        expected_key_id=result_manifest_expected_key_id,
+        now=namespace_runtime_now,
+    )
+    return (
+        verified,
+        reason,
+        manifest_sha256,
+        _text(smoke.get("result_manifest")),
+        runtime_verification,
+    )
 
 
 def _row(check_id: str, passed: bool, observed: str, required: str, reason: str, artifact_path: str) -> dict[str, Any]:
@@ -162,6 +131,12 @@ def build_api_customer_flow_release_evidence(
     product_bundle_path: str = DEFAULT_PRODUCT_BUNDLE_JSON,
     delivery_evidence_path: str = DEFAULT_DELIVERY_EVIDENCE_JSON,
     pilot_path: str = DEFAULT_PILOT_JSON,
+    namespace_runtime_receipt_json: str | Path | None = None,
+    namespace_runtime_receipt_sha256: str | None = None,
+    namespace_runtime_now: dt.datetime | None = None,
+    result_manifest_root: str | Path | None = None,
+    result_manifest_signing_key: str | None = None,
+    result_manifest_expected_key_id: str | None = None,
 ) -> dict[str, Any]:
     e2e = _summary(e2e_packet)
     restricted = _summary(restricted_packet)
@@ -170,27 +145,64 @@ def build_api_customer_flow_release_evidence(
     delivery = _summary(delivery_evidence_packet)
     pilot = _summary(pilot_packet)
     dispatch = smoke_packet.get("dispatch_outcome") if isinstance(smoke_packet.get("dispatch_outcome"), dict) else {}
-    smoke_ledger = _ledger_from_smoke(smoke_packet)
-    runner_execution = _runner_execution_from_smoke(smoke_packet)
-    manifest_verified, manifest_path, manifest_key_id = _verify_manifest_from_smoke(smoke_packet)
+    (
+        manifest_independently_verified,
+        manifest_verification_reason,
+        manifest_sha256,
+        manifest_path,
+        namespace_runtime_verification,
+    ) = _verify_manifest_from_smoke(
+        smoke_packet,
+        namespace_runtime_receipt_json=namespace_runtime_receipt_json,
+        namespace_runtime_receipt_sha256=namespace_runtime_receipt_sha256,
+        namespace_runtime_now=namespace_runtime_now,
+        result_manifest_root=result_manifest_root,
+        result_manifest_signing_key=result_manifest_signing_key,
+        result_manifest_expected_key_id=result_manifest_expected_key_id,
+    )
+    smoke_receipt_binding_mismatches = namespace_runtime_binding_mismatches(
+        smoke,
+        namespace_runtime_verification,
+    )
+    restricted_receipt_binding_mismatches = namespace_runtime_binding_mismatches(
+        restricted,
+        namespace_runtime_verification,
+    )
+    receipt_binding_verified = bool(
+        namespace_runtime_verification.qualified
+        and not smoke_receipt_binding_mismatches
+        and not restricted_receipt_binding_mismatches
+    )
+    restricted_manifest_binding_verified = bool(
+        restricted.get("tier_alpha_smoke_manifest_binding_verified") is True
+        and restricted.get("tier_alpha_smoke_manifest_independently_verified")
+        is True
+        and restricted.get("tier_alpha_smoke_manifest_verification_reason")
+        == "verified"
+        and restricted.get("tier_alpha_smoke_manifest_sha256") == manifest_sha256
+        and restricted.get("tier_alpha_smoke_receipt_binding_matches") is True
+        and restricted.get("tier_alpha_smoke_runtime_verified") is True
+    )
+    manifest_verified = bool(
+        manifest_independently_verified
+        and receipt_binding_verified
+        and restricted_manifest_binding_verified
+    )
+    manifest_key_id = _text(
+        result_manifest_expected_key_id or smoke_packet.get("result_manifest_key_id")
+    )
     smoke_evidence_mode = _text(smoke.get("evidence_mode"))
     recovered_live_job = (
         smoke_evidence_mode == "live_job_recovered_from_completed_artifacts"
         and smoke_packet.get("recovered_from_completed_artifacts") is True
     )
-    runner_execution_ok = (
-        smoke_packet.get("runner_execution_ok") is True
-        or (
-            runner_execution.get("ok") is True
-            and _int(runner_execution.get("returncode")) == 0
-            and runner_execution.get("timed_out") is not True
-        )
+    runner_execution_ok = smoke_packet.get("runner_execution_ok") is True
+    worker_dispatch_enqueued = (
+        smoke_packet.get("worker_dispatch_enqueued") is True
     )
-    worker_dispatch_enqueued = smoke_packet.get("worker_dispatch_enqueued") is True or smoke_ledger.get(
-        "worker_dispatch_enqueued"
-    ) is True
     ledger_progress_state = _text(
-        smoke_packet.get("ledger_progress_state") or smoke_ledger.get("progress_state") or smoke_ledger.get("current_step")
+        smoke_packet.get("ledger_progress_state")
+        or smoke_packet.get("ledger_current_step")
     )
     recovered_live_artifacts_ready = (
         recovered_live_job
@@ -233,8 +245,7 @@ def build_api_customer_flow_release_evidence(
     signed_manifest_ready = (
         manifest_verified
         and bool(manifest_path)
-        and _resolve(manifest_path).is_file()
-        and bool(_sha256_file(manifest_path))
+        and bool(manifest_sha256)
         and _text(smoke_packet.get("result_file"))
         and smoke_packet.get("htvs_summary_exists") is True
     )
@@ -253,6 +264,8 @@ def build_api_customer_flow_release_evidence(
         and restricted.get("restricted_unattended_execution_ready") is True
         and restricted.get("restricted_unattended_execution_runtime_ready") is True
         and restricted.get("general_platform_claim_allowed") is False
+        and receipt_binding_verified
+        and restricted_manifest_binding_verified
     )
     rows = [
         _row(
@@ -298,11 +311,14 @@ def build_api_customer_flow_release_evidence(
             signed_manifest_ready,
             (
                 f"manifest={manifest_path or 'missing'};signature_verified={manifest_verified};"
+                f"independent_verification={manifest_verification_reason};"
                 f"key_id={manifest_key_id or 'missing'};result_file={_text(smoke_packet.get('result_file')) or 'missing'};"
-                f"htvs_summary_exists={smoke_packet.get('htvs_summary_exists')}"
+                f"htvs_summary_exists={smoke_packet.get('htvs_summary_exists')};"
+                f"receipt_binding_verified={receipt_binding_verified};"
+                f"restricted_manifest_binding_verified={restricted_manifest_binding_verified}"
             ),
-            "signed result_manifest.json present and signature verified; HTVS summary result file present",
-            "Release evidence must bind the worker result to a signed manifest instead of an unsigned local file path.",
+            "independently opened operator-signed result_manifest.json and HTVS result bound to the current namespace receipt and restricted-runtime packet",
+            "Release evidence must bind the worker result to the current qualified runtime instead of trusting packet booleans or local file paths.",
             smoke_path,
         ),
         _row(
@@ -349,8 +365,26 @@ def build_api_customer_flow_release_evidence(
         "tier_alpha_runner_execution_ok": runner_execution_ok,
         "tier_alpha_worker_dispatch_enqueued": worker_dispatch_enqueued,
         "result_manifest": manifest_path,
-        "result_manifest_sha256": _sha256_file(manifest_path) if manifest_path else "",
+        "result_manifest_sha256": manifest_sha256,
         "result_manifest_signature_verified": manifest_verified,
+        "result_manifest_independently_verified": (
+            manifest_independently_verified
+        ),
+        "result_manifest_verification_reason": manifest_verification_reason,
+        "namespace_runtime_receipt_verified": (
+            namespace_runtime_verification.qualified
+        ),
+        "namespace_runtime_receipt_verification_reason": (
+            namespace_runtime_verification.reason
+        ),
+        "namespace_runtime_receipt_binding_verified": receipt_binding_verified,
+        "smoke_receipt_binding_mismatches": smoke_receipt_binding_mismatches,
+        "restricted_receipt_binding_mismatches": (
+            restricted_receipt_binding_mismatches
+        ),
+        "restricted_manifest_binding_verified": (
+            restricted_manifest_binding_verified
+        ),
         "bundle_validation_ready": bundle_validation_ready,
         "restricted_unattended_runtime_ready": restricted_runtime_ready,
         "allowed_scope_families": list(restricted.get("allowed_scope_families") or ["gpcr", "ion_channel", "kinase"]),
@@ -403,6 +437,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--product-bundle-json", default=DEFAULT_PRODUCT_BUNDLE_JSON)
     parser.add_argument("--delivery-evidence-json", default=DEFAULT_DELIVERY_EVIDENCE_JSON)
     parser.add_argument("--pilot-json", default=DEFAULT_PILOT_JSON)
+    parser.add_argument("--namespace-runtime-receipt-json", default=None)
+    parser.add_argument("--namespace-runtime-receipt-sha256", default=None)
+    parser.add_argument(
+        "--result-manifest-root",
+        default=None,
+        help=(
+            "Trusted results-storage root containing the Tier alpha result; "
+            "defaults to RESULTS_STORAGE_PATH and fails closed when unset"
+        ),
+    )
     parser.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     parser.add_argument("--out-csv", default=DEFAULT_OUT_CSV)
     parser.add_argument("--out-md", default=DEFAULT_OUT_MD)
@@ -424,6 +468,11 @@ def main(argv: list[str] | None = None) -> None:
         product_bundle_path=args.product_bundle_json,
         delivery_evidence_path=args.delivery_evidence_json,
         pilot_path=args.pilot_json,
+        namespace_runtime_receipt_json=args.namespace_runtime_receipt_json,
+        namespace_runtime_receipt_sha256=(
+            args.namespace_runtime_receipt_sha256
+        ),
+        result_manifest_root=args.result_manifest_root,
     )
     _write_json(args.out_json, payload)
     write_csv_rows(_resolve(args.out_csv), payload["rows"])

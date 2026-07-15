@@ -796,7 +796,10 @@ def test_product_release_current_refresh_blocks_if_final_gate_is_blocked(tmp_pat
     monkeypatch.setattr(
         refresh_mod,
         "_run_command",
-        lambda command, *, cwd, timeout_seconds: {"returncode": 0, "timed_out": False},
+        lambda command, *, cwd, timeout_seconds, env=None: {
+            "returncode": 0,
+            "timed_out": False,
+        },
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -847,7 +850,10 @@ def test_product_release_current_refresh_verifies_final_gates_after_execute(tmp_
     monkeypatch.setattr(
         refresh_mod,
         "_run_command",
-        lambda command, *, cwd, timeout_seconds: {"returncode": 0, "timed_out": False},
+        lambda command, *, cwd, timeout_seconds, env=None: {
+            "returncode": 0,
+            "timed_out": False,
+        },
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -1265,7 +1271,10 @@ def test_product_release_current_refresh_blocks_timed_out_command(tmp_path: Path
     monkeypatch.setattr(
         refresh_mod,
         "_run_command",
-        lambda command, *, cwd, timeout_seconds: {"returncode": -9, "timed_out": True},
+        lambda command, *, cwd, timeout_seconds, env=None: {
+            "returncode": -9,
+            "timed_out": True,
+        },
     )
 
     payload = refresh_mod.run_product_release_current_refresh(
@@ -1291,7 +1300,14 @@ def test_product_release_current_refresh_uses_command_timeout_hint(tmp_path: Pat
         if spec["gate_id"] == "product_release_source_of_truth_gate"
     )
 
-    def fake_run(command: str, *, cwd: Path, timeout_seconds: int) -> dict:
+    def fake_run(
+        command: str,
+        *,
+        cwd: Path,
+        timeout_seconds: int,
+        env: dict[str, str] | None = None,
+    ) -> dict:
+        del command, cwd, env
         observed.append(timeout_seconds)
         return {"returncode": 0, "timed_out": False}
 
