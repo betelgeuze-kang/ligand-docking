@@ -32,7 +32,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  release-candidate:
+  static-analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONHASHSEED: "0"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            packaging/engine-v2
+            tools/build_engine_v2_wheel.py
+            tools/build_engine_v2_sbom.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned static-analysis tools
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install ruff==0.12.4 pyright==1.1.403
+
+      - name: Run focused static analysis
+        shell: bash
+        run: |
+          set +e
+          ruff check \
+            betelgeuze_engine_v2/contracts \
+            betelgeuze_engine_v2/molecular \
+            betelgeuze_engine_v2/physics/reference_parameters.py \
+            betelgeuze_engine_v2/physics/reference_forcefield.py \
+            tools/build_engine_v2_wheel.py \
+            tools/build_engine_v2_sbom.py \
+            --config packaging/engine-v2/pyproject.toml > static-analysis.log 2>&1
+          ruff_status=$?
+          pyright --project packaging/engine-v2/pyrightconfig.json >> static-analysis.log 2>&1
+          pyright_status=$?
+          cat static-analysis.log
+          if [ "$ruff_status" -ne 0 ] || [ "$pyright_status" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload static-analysis diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: engine-v2-static-analysis-${{ github.run_id }}
+          path: static-analysis.log
+          if-no-files-found: error
+          retention-days: 7
+
+  release-matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -48,8 +106,11 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
           sparse-checkout: |
             betelgeuze_engine_v2
             packaging/engine-v2
@@ -60,31 +121,24 @@ jobs:
             tests/unit/test_engine_v2_packaging_guards.py
             CHANGELOG.md
             docs/engine_v2_0_2_0rc1.md
-            docs/engine_v2_pr_overlap_matrix.md
           sparse-checkout-cone-mode: false
           show-progress: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install release tooling and CPU dependencies
+      - name: Install pinned release tooling and CPU dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install "build>=1.2,<2" "setuptools>=68" wheel pytest==8.3.5 ruff==0.12.4 pyright==1.1.403 numpy==1.26.4
+          python -m pip install pip==25.0.1
+          python -m pip install \
+            build==1.2.2.post1 \
+            setuptools==75.8.2 \
+            wheel==0.45.1 \
+            pytest==8.3.5 \
+            numpy==1.26.4 \
+            "tomli==2.2.1; python_version < '3.11'"
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
-
-      - name: Run focused static analysis
-        run: |
-          ruff check \
-            betelgeuze_engine_v2/contracts \
-            betelgeuze_engine_v2/molecular \
-            betelgeuze_engine_v2/physics/reference_parameters.py \
-            betelgeuze_engine_v2/physics/reference_forcefield.py \
-            tools/build_engine_v2_wheel.py \
-            tools/build_engine_v2_sbom.py \
-            --config packaging/engine-v2/pyproject.toml
-          pyright --project packaging/engine-v2/pyrightconfig.json
 
       - name: Run release and architecture contracts
         run: |
@@ -124,7 +178,8 @@ jobs:
           observed = next(item["checksumValue"] for item in root["checksums"] if item["algorithm"] == "SHA256")
           expected = hashlib.sha256(wheel.read_bytes()).hexdigest()
           assert observed == expected
-          assert {package["name"] for package in sbom["packages"]} >= {"betelgeuze-engine-v2", "numpy", "torch"}
+          dependencies = {package["name"] for package in sbom["packages"]}
+          assert dependencies >= {"betelgeuze-engine-v2", "numpy", "torch"}
           PY
 
       - name: Clean install, pip check, and outside-checkout import
@@ -136,7 +191,7 @@ jobs:
           rm -rf "$venv" "$outside"
           python -m venv "$venv"
           grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
-          "$venv/bin/python" -m pip install --upgrade pip
+          "$venv/bin/python" -m pip install pip==25.0.1
           "$venv/bin/python" -m pip install numpy==1.26.4
           "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           "$venv/bin/python" -m pip install --no-deps dist-a/*.whl
@@ -150,6 +205,7 @@ jobs:
 
           assert metadata.version("betelgeuze-engine-v2") == "0.2.0rc1"
           assert engine.DISTRIBUTION_VERSION == "0.2.0rc1"
+          assert engine.ENGINE_API_VERSION == "2.0.0"
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
@@ -157,7 +213,7 @@ jobs:
 
       - name: Upload reproducible wheel and SBOM
         if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: engine-v2-0.2.0rc1-${{ github.run_id }}
           path: |
