@@ -5929,6 +5929,43 @@ def test_release_source_of_truth_tracks_capability_surface_builder_sources() -> 
     assert "python3 tools/build_product_capability_surface_contract.py" in mod.RELEASE_REFRESH_COMMANDS
 
 
+def test_release_source_of_truth_tracks_h4_security_verifier_sources() -> None:
+    by_id = {spec["artifact_id"]: spec for spec in mod.DEFAULT_ARTIFACT_SPECS}
+    tier_alpha_dependencies = set(
+        by_id["tier_alpha_adrb2_dispatch_smoke"]["depends_on"]
+    )
+    restricted_dependencies = set(
+        by_id["restricted_unattended_execution_readiness"]["depends_on"]
+    )
+    image_preflight_dependencies = set(
+        by_id["product_image_smoke_preflight"]["depends_on"]
+    )
+
+    shared_execution_sources = {
+        "api/artifact_access.py",
+        "api/deployment_secret_policy.py",
+        "api/job_store.py",
+        "api/validated_runner_execution_evidence.py",
+        "api/validated_runner_runtime_qualification.py",
+        "api/worker.py",
+        "betelgeuze_product/job_orchestration.py",
+        "betelgeuze_product/job_terminal_state.py",
+    }
+    assert shared_execution_sources <= tier_alpha_dependencies
+    assert shared_execution_sources <= restricted_dependencies
+
+    image_verifier_sources = {
+        "api/validated_runner_runtime_qualification.py",
+        "tools/product/github_workflow_trust_boundaries.py",
+        "scripts/normalize_product_image_smoke_artifact_ownership.sh",
+        ".github/workflows/product-api-worker.yml",
+        ".github/workflows/product-api-worker-trusted.yml",
+        ".github/workflows/product-image-smoke.yml",
+        ".github/workflows/product-image-smoke-trusted.yml",
+    }
+    assert image_verifier_sources <= image_preflight_dependencies
+
+
 def test_release_source_of_truth_tracks_commercial_readiness_spec_builder_sources() -> None:
     """Follow-up to the capability-surface fix: clear commercial-readiness and
     scope-breadth specs must track their builder sources in depends_on, so a
