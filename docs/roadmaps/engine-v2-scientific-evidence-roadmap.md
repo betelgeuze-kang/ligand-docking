@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@044638ef0cb058ca0946f69869a4fa04031ab903`
+Observed baseline: `main@7860e36b489de42b3a22c2b5fa59448e1d0c2fb2`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -70,9 +70,10 @@ claim status without revalidating the dependency and freshness chain.
 
 ## Near-term work queue
 
-- Continue V2-1 from current `main`: interpret selected `_atom_site.Cartn_x/y/z`
-  as finite binary64 values while binding exact source spelling and keeping
-  geometry quality, chemistry, and topology unassessed.
+- Continue V2-1 from current `main`: keep the bounded finite-binary64 coordinate
+  value and exact source-spelling binding executable, then interpret occupancy,
+  B-factor, and formal-charge known/unknown and numeric states as a separate
+  capability. Geometry quality, chemistry, and topology remain unassessed.
 - Define the first executable supported-chemistry and preparation coverage table
   before starting production parameter fitting.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
