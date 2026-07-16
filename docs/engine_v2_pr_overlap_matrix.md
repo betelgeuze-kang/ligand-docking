@@ -2,9 +2,10 @@
 
 역사적 분해 기준: `main@29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
 
-현재 기준: core-recovery endpoint `main@3f9ede19bb158a02eb3d06e0ed42dea6952db680`
+현재 기준: donor-cleanup endpoint `main@7dc025ed5a1f6f53e33d09bd457e9d6afa825808`
 
-상태: #43/#49 초기 분해 결정은 유지되며, #49 대체 스택과 2026-07 복구 스택은 병합 완료됐다. #43과 #66은 여전히 donor이며 통째 병합 금지다.
+상태: #43과 #49는 bounded replacements 뒤 superseded로 닫혔다. #66만
+남은 open donor이며 통째 병합 금지다.
 
 이 문서는 대형 draft PR #43과 #49를 통째로 병합하지 않고, 보안 스택과
 독립 Engine v2 스택을 분리해 검토하기 위한 파일 단위 기준선이다.
@@ -13,7 +14,7 @@
 
 | PR | 역할 | 현재 권장 처리 |
 | --- | --- | --- |
-| #43 | API 보안, validated runner, scientific proxy, legacy CPU physics가 혼합된 open donor PR | 보안 부분은 #44~#48, #67, #62가 대체했다. 나머지는 proxy·legacy physics·advanced-method child로만 추출 |
+| #43 | API 보안, validated runner, scientific proxy, legacy CPU physics가 혼합된 donor PR | 보안은 #44~#48/#62, scientific-input은 #77~#79, pose/RMSD는 #82, legacy retained scope는 #96/#97로 대체되어 closed/superseded |
 | #44 | mobile-lite 의존성·CI 기준선 | `c48feab1`로 병합 완료 |
 | #45 | 서버 고정 tenant identity | `2f5b6589`로 병합 완료 |
 | #46 | product docking JSON ledger tenant isolation | `e997756c`로 병합 완료 |
@@ -83,10 +84,10 @@ security 파일을 다시 가져오지 않는다.
 
 ## 5. 개념 중복과 비중복
 
-- #43의 FEP, explicit solvent, MM-GBSA 변경은 legacy proxy 명칭·주장 제한 작업이다.
-  V2-A~F의 독립 에너지/힘 계약과 같은 구현이 아니므로 자동 병합하지 않는다.
-- #43의 legacy neighbor/cache와 V2-B compact radius graph는 목적이 다르다. 전자는
-  기존 제품 경로 hardening, 후자는 독립 Engine v2 소유 구현이다.
+- #43의 FEP, explicit solvent, MM-GBSA 명칭·주장 제한은 #97의 claim-honest
+  legacy proxy 계약으로만 추출됐다. V2-A~F의 독립 에너지/힘 계약과 합산하지 않는다.
+- #43의 legacy neighbor/cache와 pocket working-set 경계는 #96으로 추출됐다.
+  V2-B compact radius graph와 목적 및 소유권이 다르다.
 - #44~#48과 #62는 제품 API security lane이며 V2-A~F에는 API route나 tenant code를 넣지 않는다.
 - V2-A~F green은 제품 API readiness나 legacy restricted delivery green으로 합산하지 않는다.
 
@@ -98,8 +99,8 @@ Engine lane:   #50 -> #51 -> #52 -> #53 -> #54 -> V2-F
 ```
 
 두 lane은 위 순서로 `main`에 병합됐다. #49는 필요한 child PR로 대체되어 닫혔다.
-#43은 보안 부분이 현재 `main`에서 대체됐지만, 아직 분류되지 않은 proxy·legacy
-physics·advanced-method material 때문에 open donor로 남는다.
+#43은 retained legacy scope를 #96/#97로 분리한 뒤 superseded로 닫혔다. 오래된
+API/security/dependency/Tier-beta material은 current-main 소유권과 충돌하므로 폐기됐다.
 
 ## 7. 금지 사항
 
@@ -127,10 +128,10 @@ H3 donor #61은 #72 병합 후 superseded로 닫혔다. H4는 위 Engine 계층�
 
 ## 9. 현재 donor 경계
 
-- #43은 통째 병합 금지이며, 현재 API security 파일을 다시 가져오지 않는다.
-- #66은 stale mixed ancestry의 open donor다. 첫 child #73만 병합됐고, mmCIF
-  identity/assembly, peptide preparation, alkane physics, SPICE evidence, CI bucket은
-  각각 새 current-main child와 독립 검토가 필요하다.
-- #73의 syntax 테스트 성공은 semantic mmCIF conformance, molecular preparation,
+- #43은 closed/superseded이며 어떤 donor commit도 다시 가져오지 않는다.
+- #66은 stale mixed ancestry의 유일한 open donor다. #73/#89/#90/#91/#94/#95가
+  병합됐고, selected `_struct_conn`, polymer topology, peptide preparation,
+  PDB/SDF/SMILES, alkane physics, SPICE evidence는 각각 독립 검토가 필요하다.
+- 추출된 syntax/identity/declaration 테스트 성공은 semantic mmCIF conformance, molecular preparation,
   scientific validation, public benchmark validation, GPU parity, customer execution,
   또는 commercial readiness를 확립하지 않는다.

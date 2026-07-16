@@ -5,6 +5,7 @@ Status: core recovery complete; donor extraction and governance follow-up active
 Observed at: 2026-07-15
 Starting `main`: `de83e282d4e69b0e5233ea3306ca2ab929fc823e`
 Core-recovery endpoint `main`: `3f9ede19bb158a02eb3d06e0ed42dea6952db680`
+Current donor-cleanup endpoint `main`: `7dc025ed5a1f6f53e33d09bd457e9d6afa825808`
 
 This is the living decision record for recovering the open pull-request stack. It records code ownership and merge order; it is not scientific evidence and does not promote any product or execution claim.
 
@@ -92,7 +93,7 @@ H4 #62 was eligible to proceed after P0 in parallel with H2/H3 because it was AP
 - The former runner host must be treated as untrusted. Re-registration is blocked pending clean rebuild/reimage, review and rotation of host-accessible credentials, and an execution design that does not expose a persistent repository runner to public PR workflows.
 - PR-only and trusted self-hosted workflows are now separate files, with exact semantic policy tests. Those tests detect repository regressions but do not replace the external runner-access boundary.
 - The #61 ancestry break was resolved by reconstructing and merging replacement #72; #63/#64/#65 were then restacked and merged on the repaired line.
-- #66 is now 220 commits behind current `main` and 12 donor commits ahead, and still combines unrelated ownership buckets.
+- #66 is now 249 commits behind current `main` and 12 donor commits ahead, and still combines unrelated ownership buckets.
 - The unsafe `clean:false`/pre-checkout recovery assumptions in product preflight tests and status builders were removed with P0 instead of being preserved as compatibility tokens.
 - No promotion flag may be changed as a shortcut for a failing test or missing runtime receipt.
 
@@ -113,43 +114,44 @@ Observed after remediation on 2026-07-15:
 
 | Donor | Replacement status | Remaining action |
 |---|---|---|
-| #38 | open donor; not bulk-merged | Identify current-main-unique benchmark/product deltas and extract only bounded reviewed children. |
+| #38 | closed and superseded without merge | Current benchmark/GPCR/PocketMD owners were retained; stale generated-current work orders, machine-bound recovery paths, contradictory claim-grade proxy output, and mixed cockpit/API code were explicitly discarded. |
 | #40 | closed and superseded without merge | It contained only an obsolete task scaffold and no implementation delta; current release source-of-truth code and freshness contracts were merged through #62. |
-| #41 | open mixed donor; CI-isolation portion superseded by #67 | Split any still-unique product-safety contracts; do not inherit stale ancestry or promote readiness flags. |
-| #42 | open API-operations donor; partially overlapped by #62 | Compare changed files against current H4 and preserve only still-unique operations changes in a bounded child. |
-| #43 | open donor-only PR; security portions superseded by #44–#48, #67, and #62 | Separately audit naming, legacy physics, and advanced-method material; never bulk merge. |
+| #41 | closed and superseded without merge | Scientific-input provenance/enforcement/materialization was replaced by #77–#79; no stale promotion state was inherited. |
+| #42 | closed and superseded without merge | Current H4 operations and artifact handling superseded the stale API branch. |
+| #43 | closed and superseded without merge | #96 retained neighbor/pocket working-set correctness and #97 retained claim-honest legacy proxy semantics; all old API/security/dependency/Tier-beta material was discarded. |
 | #49 | closed and superseded | Engine v2 scope was decomposed into merged #50–#54, #56, and #57; no donor branch merge remains. |
 | #61 | closed and superseded | Replacement #72 was reconstructed on merged H2 and merged cleanly. No donor branch merge remains. |
-| #66 | open donor; first child #73 merged | Continue the extraction matrix by dependency bucket. Close only after every retained bucket has a linked child or an explicit discard decision. |
+| #66 | open donor; six bounded children merged | #73, #89, #90, #91, #94, and #95 are merged. Continue with selected `_struct_conn` identity declarations; close only after every retained family is linked or explicitly discarded. |
 
-## Open PR snapshot after core recovery
+## Open PR snapshot after donor cleanup
 
-Observed after `main@3f9ede19` on 2026-07-15:
+Observed after `main@7dc025ed` on 2026-07-16:
 
 | PR | State | Recovery decision | Next action |
 |---|---|---|---|
-| #38 | draft; conflicting | donor only | Build a current-main changed-file matrix, then extract or discard bounded deltas. |
-| #41 | draft; conflicting | mixed donor only | Extract still-unique safety contracts without promotion changes. |
-| #42 | draft; conflicting | API-operations donor only | Compare against merged H4 and replace only unique operations scope. |
-| #43 | draft; conflicting | explicitly donor only | Split API, naming, legacy physics, and advanced-method ownership. |
-| #66 | draft on stale donor base | bounded extraction donor | Continue after merged child #73; never bulk merge. |
-| #68–#71 | open Dependabot updates | outside the recovery merge sequence | Review immutable action updates and run the complete workflow-policy/check matrix independently. |
+| #66 | draft on stale donor base | bounded extraction donor | Continue after merged child #95 with selected `_struct_conn` source identity; never bulk merge. |
 
-## Deferred governance follow-up
+## Governance follow-up resolution
 
-These items require separate reviewable PRs and were not folded into the
-ancestry/security recovery:
+These items were kept out of the ancestry/security recovery and later handled
+as separate reviewable PRs:
 
-- audit the tracked `.betelgeuze/state.md`, `.betelgeuze/run_log.md`, and local
-  audit document; retain only sanitized templates or move mutable state out of
-  the source tree without rewriting history;
-- add a hygiene gate for generated state, large binaries, checkpoints,
-  trajectories, archives, secret-like filenames, and Python build/cache files;
-- add reviewed `SECURITY.md`, `CONTRIBUTING.md`, and `.github/CODEOWNERS`
-  ownership for workflows, API, deployment, Engine v2, packaging, and capability
-  configuration;
-- document dependency pinning/constraints policy and review Dependabot PRs
-  independently from functional recovery.
+- #76 added `SECURITY.md`, `CONTRIBUTING.md`, and `.github/CODEOWNERS`.
+- #84 removed tracked local harness state and added the repository hygiene gate.
+- #68, #69, #71, #85, #86, #88, and #92 upgraded and immutably pinned Actions
+  while preserving hosted/untrusted and qualified/self-hosted separation.
+
+## Post-recovery donor extraction results
+
+| PR | Merge SHA | Donor | Retained bounded scope |
+|---|---|---|---|
+| #89 | `eeed0433` | #66 | mmCIF identity and polymer-sequence projection |
+| #90 | `57f61a64` | #66 | zero-occupancy source declarations |
+| #91 | `41f78162` | #66 | alternate-location source declarations |
+| #94 | `7dc4e5de` | #66 | nonpoly component/entity/asym/instance identity carrier |
+| #95 | `e570cd70` | #66 | selected component atom and optional bond source declarations |
+| #97 | `7f7c07ab` | #43 | claim-honest legacy scientific proxy semantics |
+| #96 | `7dc025ed` | #43 | neighbor-cache geometry and bounded pocket working sets |
 
 ## H4 final acceptance snapshot
 
