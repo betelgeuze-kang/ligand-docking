@@ -2,7 +2,7 @@ name: apply-strict-pose-rmsd-patch
 
 on:
   push:
-    branches: ["codex/strict-pose-rmsd"]
+    branches: ["codex/strict-pose-rmsd-clean"]
     paths:
       - "tools/patches/strict_pose_rmsd.patch*"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-strict-pose-rmsd-push-${{ github.ref }}
+  group: apply-strict-pose-rmsd-clean-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -19,14 +19,14 @@ jobs:
     if: >-
       github.repository == 'betelgeuze-kang/ligand-docking' &&
       github.actor == 'betelgeuze-kang' &&
-      github.ref == 'refs/heads/codex/strict-pose-rmsd'
+      github.ref == 'refs/heads/codex/strict-pose-rmsd-clean'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out the controlled feature branch
+      - name: Check out the controlled clean feature branch
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: codex/strict-pose-rmsd
+          ref: codex/strict-pose-rmsd-clean
           fetch-depth: 0
           persist-credentials: true
           clean: true
@@ -38,14 +38,14 @@ jobs:
           shopt -s nullglob
           parts=(tools/patches/strict_pose_rmsd.patch.b64.*)
           if (( ${#parts[@]} == 0 )); then
-            echo "reviewed patch parts already consumed"
-            exit 0
+            echo "reviewed patch parts missing"
+            exit 1
           fi
           cat "${parts[@]}" | base64 --decode > /tmp/strict-pose-rmsd.patch
           echo "06321e5955819f8a49f05fb10d4bfcb11c8c9d1f916381a196741c834eba6348  /tmp/strict-pose-rmsd.patch" | sha256sum --check -
           git apply --check /tmp/strict-pose-rmsd.patch
           git apply /tmp/strict-pose-rmsd.patch
-          rm -f tools/patches/strict_pose_rmsd.patch*
+          rm -rf tools/patches/strict_pose_rmsd.patch* .github/patches/strict-pose-rmsd
           python -m py_compile \
             betelgeuze_engine/biodiscovery/pose.py \
             betelgeuze_engine/biodiscovery/screening.py \
@@ -65,15 +65,12 @@ jobs:
               betelgeuze_engine/biodiscovery/screening.py \
               tests/unit/test_biodiscovery_screening.py \
               tests/unit/test_tier_beta_vertical_slice.py \
-              tools/patches
+              tools/patches \
+              .github/patches/strict-pose-rmsd
             git diff --cached --check
             git diff --cached --stat
-            if git diff --cached --quiet; then
-              echo "no patch changes remain"
-              exit 0
-            fi
             git commit -m "fix(biodiscovery): enforce strict state-aware pose RMSD"
-            git push origin HEAD:codex/strict-pose-rmsd
+            git push origin HEAD:codex/strict-pose-rmsd-clean
           } > strict-pose-apply.log 2>&1
           status=$?
           cat strict-pose-apply.log
@@ -83,7 +80,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: strict-pose-apply-${{ github.run_id }}-${{ github.run_attempt }}
+          name: strict-pose-clean-apply-${{ github.run_id }}-${{ github.run_attempt }}
           path: strict-pose-apply.log
           if-no-files-found: warn
           retention-days: 1
