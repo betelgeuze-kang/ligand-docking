@@ -14,6 +14,7 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_struct_conn_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_observations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_coordinate_values.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_scalar_values.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_canonical_topology.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
@@ -22,6 +23,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
       - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
       - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
       - "tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py"
@@ -29,6 +31,7 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
       - ".github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml"
@@ -48,6 +51,7 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_struct_conn_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_observations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_coordinate_values.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_scalar_values.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_canonical_topology.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
@@ -56,6 +60,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
       - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
       - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
       - "tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py"
@@ -63,6 +68,7 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
       - ".github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml"
@@ -112,6 +118,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -124,6 +131,7 @@ jobs:
             README.ko.md
             .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
             .github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml
             .github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml
@@ -171,6 +179,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \

@@ -85,6 +85,20 @@ def test_supported_graphs_water_and_source_hydrogen_match_exactly(
     assert source_h["formula"] == {"C": 1, "H": 4, "O": 1}
     assert source_h["added_hydrogen_count"] == 3
 
+    hydrogen_summary = carbonyl.hydrogen_coordinate_summary
+    assert len(carbonyl.hydrogen_coordinate_snapshot_sha256) == 64
+    assert hydrogen_summary["generated_instance_count"] == 2
+    assert hydrogen_summary["added_hydrogen_coordinate_count"] == 4
+    assert hydrogen_summary["all_prepared_graphs_coordinate_bearing"] is True
+    assert {
+        row["coordinate_status"]
+        for row in hydrogen_summary["instance_reports"]
+    } == {"coordinate_bearing_prepared_graph"}
+    assert (
+        "hydrogen_coordinate_status:coordinate_bearing_prepared_graph"
+        in carbonyl.signals
+    )
+
 
 def test_known_nonpoly_insertion_code_is_exactly_joined_and_prepared(
     corpus_snapshot,
@@ -426,8 +440,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 7,
-        "supported": 17,
+        "not_implemented": 6,
+        "supported": 18,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -453,7 +467,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "upstream.insertion_semantics" not in missing
     assert "upstream.missing_atom_residue_policy" not in missing
     assert "upstream.multimodel_policy" not in missing
-    assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
+    assert "hydrogen.coordinates" not in missing
     assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
     assert missing["all_atom_system.creation"] == (
         "prepared_all_atom_system_not_created"
@@ -548,6 +562,8 @@ def test_dedicated_corpus_workflow_covers_supported_python_matrix() -> None:
     assert "test_engine_v2_mmcif_missing_atom_residue_policy.py" in source
     assert "mmcif_biological_assembly_policy.py" in source
     assert "test_engine_v2_mmcif_biological_assembly_policy.py" in source
+    assert "mmcif_nonpoly_hydrogen_coordinates.py" in source
+    assert "test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py" in source
     assert "test_engine_v2_mmcif_modified_residue_declarations.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
     assert "test_engine_v2_post_merge_state.py" in source

@@ -48,10 +48,14 @@ The current `main` branch contains:
   fail-closed component-bond/identity-symmetry connection topology that keeps
   metal coordination edges separate from canonical bonds, plus bounded neutral
   acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
-  failure-complete per-instance parameterability report, plus a frozen 30-case
+  failure-complete per-instance parameterability report, plus a graph-bound
+  coordinate scaffold that preserves source Cartesian angstrom coordinates and
+  assigns added hydrogens deterministic 1.0-angstrom fixed parent offsets while
+  explicitly leaving neighbor geometry, stereo, clashes, calibration, and
+  minimization uninterpreted, plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
   2 invalid-source cases, plus a 51-axis executable coverage ledger classifying
-  17 supported, 27 explicitly unsupported, and 7 not-implemented rows,
+  18 supported, 27 explicitly unsupported, and 6 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -70,8 +74,9 @@ not currently establish:
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
   model selection, ensemble/trajectory/averaging semantics, multi-model execution,
-  coordinates, reviewed parameters, general ligand/cofactor or non-source-declared
-  modified-residue role interpretation, metal/ion/modified-residue preparation,
+  validated hydrogen geometry, reviewed parameters, general ligand/cofactor or
+  non-source-declared modified-residue role interpretation,
+  metal/ion/modified-residue preparation,
   or a prepared `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;

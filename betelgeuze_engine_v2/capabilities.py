@@ -60,6 +60,9 @@ MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID = (
 MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_neutral_coh_preparation"
 )
+MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_hydrogen_coordinates"
+)
 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_preparation_corpus"
 )
@@ -223,7 +226,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID: (
         "source_declared_biological_assembly_preparation_not_supported",
         "source_declared_observation_gap_preparation_not_supported",
-        "hydrogen_coordinates_not_generated",
+        "hydrogen_coordinate_geometry_not_validated",
         "reviewed_parameter_source_missing",
         "aromatic_charged_stereo_and_extended_elements_not_supported",
         "ph_tautomer_and_intercomponent_connections_not_prepared",
@@ -231,9 +234,21 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
+    MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID: (
+        "fixed_parent_offset_does_not_interpret_neighbor_geometry",
+        "hydrogen_bond_length_not_calibrated",
+        "stereochemistry_protonation_and_tautomer_not_interpreted",
+        "steric_clash_and_coordinate_quality_not_assessed",
+        "coordinate_minimization_not_performed",
+        "reviewed_parameter_source_missing",
+        "partial_charge_assignment_not_performed",
+        "prepared_all_atom_system_not_created",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "seven_classified_implementation_gaps_remain",
+        "six_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -447,6 +462,14 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID,
+                current_state=(
+                    "bounded_graph_bound_fixed_parent_offset_angstrom_coordinates"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
                 current_state=(
@@ -539,6 +562,7 @@ __all__ = [
     "MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID",
     "MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID",
     "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
+    "MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",

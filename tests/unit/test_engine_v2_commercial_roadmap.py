@@ -19,6 +19,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_atom_site_scalar_values" in roadmap
     assert "v2_bounded_mmcif_nonpoly_canonical_topology" in roadmap
     assert "v2_bounded_mmcif_nonpoly_neutral_coh_preparation" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_hydrogen_coordinates" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
     assert "exact bit pattern" in roadmap
@@ -28,7 +29,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "7개 `not_implemented`" in roadmap
+    assert "6개 `not_implemented`" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap
@@ -43,6 +44,9 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "0=`zero_occupancy`, 1=`unobserved`" in roadmap
     assert "그 부재가 구조가 완전하거나 missing atom/residue가 없다는 증거는" in roadmap
     assert "source-declared zero-occupancy 또는 unobserved atom/residue" in roadmap
+    assert "Cartesian Å source\n좌표를 preparation graph와 결속" in roadmap
+    assert "added hydrogen은 parent 중심의 고정된 네 방향과 1.0 Å offset" in roadmap
+    assert "neighbor bond geometry, stereo, protonation·tautomer" in roadmap
     assert "explicit `label_alt_id` 입력" in roadmap
     assert "chemistry preparation 전에 fail-closed" in roadmap
     assert "known insertion code의 scheme·atom-site·connection exact identity" in roadmap

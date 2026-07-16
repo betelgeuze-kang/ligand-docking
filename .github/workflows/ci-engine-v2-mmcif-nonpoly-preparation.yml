@@ -14,6 +14,7 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_scalar_values.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_canonical_topology.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
       - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
@@ -26,7 +27,9 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   push:
@@ -43,6 +46,7 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_scalar_values.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_canonical_topology.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
       - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
@@ -55,7 +59,9 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   workflow_dispatch:
@@ -101,8 +107,10 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py
             .github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml
             .github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -145,6 +153,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py \
             >> mmcif-nonpoly-preparation.log 2>&1
           status=$?
           cat mmcif-nonpoly-preparation.log

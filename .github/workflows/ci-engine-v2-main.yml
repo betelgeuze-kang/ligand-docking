@@ -18,6 +18,7 @@ on:
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
@@ -41,6 +42,7 @@ on:
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
@@ -106,6 +108,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -134,6 +137,7 @@ jobs:
             README.ko.md
             .github/workflows/ci-engine-v2-external-baseline.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
             .github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml
@@ -185,6 +189,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
@@ -260,6 +265,7 @@ jobs:
               CANONICAL_SYSTEM_JSON_SCHEMA_ID,
               MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID,
               MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID,
+              MMCIF_NONPOLY_HYDROGEN_COORDINATE_DOCUMENT_SCHEMA_ID,
               MMCIF_MODIFIED_RESIDUE_DECLARATION_DOCUMENT_SCHEMA_ID,
               MMCIF_ATOM_SITE_MODEL_POLICY_DOCUMENT_SCHEMA_ID,
               MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_DOCUMENT_SCHEMA_ID,
@@ -309,6 +315,7 @@ jobs:
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
+          assert MMCIF_NONPOLY_HYDROGEN_COORDINATE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_MODIFIED_RESIDUE_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_ATOM_SITE_MODEL_POLICY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")

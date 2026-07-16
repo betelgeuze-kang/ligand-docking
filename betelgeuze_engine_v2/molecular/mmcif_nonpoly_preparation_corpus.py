@@ -63,6 +63,11 @@ from .mmcif_nonpoly_preparation import (
     MmcifNonpolyPreparationError,
     parse_mmcif_nonpoly_preparation,
 )
+from .mmcif_nonpoly_hydrogen_coordinates import (
+    MMCIF_NONPOLY_HYDROGEN_COORDINATE_GENERATOR_VERSION,
+    MMCIF_NONPOLY_HYDROGEN_COORDINATE_PROFILE_ID,
+    parse_mmcif_nonpoly_hydrogen_coordinates,
+)
 from .mmcif_struct_conn_declarations import MMCIF_STRUCT_CONN_HEADERS
 from .mmcif_zero_occupancy import (
     MMCIF_ZERO_OCCUPANCY_ATOM_HEADERS,
@@ -84,7 +89,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "2a96767e2b6014beab0359110d8cf8e2434c14d8812593ca83717c490853c1fe"
+    "315da1d7142f3b6df0ab64f8168ec16a0252c218326e1eab8caf0a4cce2eacda"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -234,6 +239,7 @@ class MmcifPreparationCorpusCaseResult:
     atom_site_model_policy_snapshot_sha256: str
     biological_assembly_policy_snapshot_sha256: str
     missing_atom_residue_policy_snapshot_sha256: str
+    hydrogen_coordinate_snapshot_sha256: str
     component_role_snapshot_sha256: str
     modified_residue_declaration_snapshot_sha256: str
     error_code: str
@@ -241,6 +247,7 @@ class MmcifPreparationCorpusCaseResult:
     atom_site_model_policy: Mapping[str, Any]
     biological_assembly_policy: Mapping[str, Any]
     missing_atom_residue_policy: Mapping[str, Any]
+    hydrogen_coordinate_summary: Mapping[str, Any]
     component_roles: tuple[Mapping[str, Any], ...]
     modified_residue_declarations: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
@@ -262,6 +269,9 @@ class MmcifPreparationCorpusCaseResult:
             "missing_atom_residue_policy_snapshot_sha256": (
                 self.missing_atom_residue_policy_snapshot_sha256
             ),
+            "hydrogen_coordinate_snapshot_sha256": (
+                self.hydrogen_coordinate_snapshot_sha256
+            ),
             "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
             "modified_residue_declaration_snapshot_sha256": (
                 self.modified_residue_declaration_snapshot_sha256
@@ -273,6 +283,7 @@ class MmcifPreparationCorpusCaseResult:
             "missing_atom_residue_policy": dict(
                 self.missing_atom_residue_policy
             ),
+            "hydrogen_coordinate_summary": dict(self.hydrogen_coordinate_summary),
             "component_roles": [dict(row) for row in self.component_roles],
             "modified_residue_declarations": [
                 dict(row) for row in self.modified_residue_declarations
@@ -1749,10 +1760,9 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "hydrogen.coordinates",
             "preparation",
-            missing,
-            "",
-            (),
-            "hydrogen_coordinates_not_generated",
+            supported,
+            "hydrogen_coordinate_status:coordinate_bearing_prepared_graph",
+            ("supported_carbonyl", "supported_source_hydrogen"),
         ),
         _coverage(
             "parameter_source.reviewed",
@@ -1879,6 +1889,7 @@ def _signals_for_reports(
     atom_site_model_policy: Mapping[str, Any],
     biological_assembly_policy: Mapping[str, Any],
     missing_atom_residue_policy: Mapping[str, Any],
+    hydrogen_coordinate_summary: Mapping[str, Any],
     component_roles: tuple[Mapping[str, Any], ...],
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
@@ -1918,6 +1929,20 @@ def _signals_for_reports(
     signals.extend(
         f"missing_atom_residue_policy_blocker:{value}"
         for value in missing_atom_residue_policy["execution_blockers"]
+    )
+    signals.extend(
+        (
+            "hydrogen_coordinate_generated_instance_count:"
+            f"{hydrogen_coordinate_summary['generated_instance_count']}",
+            "hydrogen_coordinate_added_count:"
+            f"{hydrogen_coordinate_summary['added_hydrogen_coordinate_count']}",
+            "hydrogen_coordinate_all_prepared_graphs_coordinate_bearing:"
+            f"{str(hydrogen_coordinate_summary['all_prepared_graphs_coordinate_bearing']).lower()}",
+        )
+    )
+    signals.extend(
+        f"hydrogen_coordinate_status:{row['coordinate_status']}"
+        for row in hydrogen_coordinate_summary["instance_reports"]
     )
     for report in reports:
         component = str(report["component_id"])
@@ -2003,6 +2028,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             missing_atom_residue_policy_snapshot_sha256=(
                 missing_policy_snapshot.snapshot_sha256
             ),
+            hydrogen_coordinate_snapshot_sha256="",
             component_role_snapshot_sha256="",
             modified_residue_declaration_snapshot_sha256="",
             error_code=exc.code,
@@ -2010,6 +2036,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             atom_site_model_policy=model_policy,
             biological_assembly_policy=assembly_policy,
             missing_atom_residue_policy=missing_policy,
+            hydrogen_coordinate_summary={},
             component_roles=(),
             modified_residue_declarations=(),
             signals=tuple(
@@ -2048,6 +2075,15 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         raise MmcifNonpolyPreparationCorpusError(
             f"corpus case {case.case_id} accepted an invalid source"
         )
+    hydrogen_coordinate_snapshot = parse_mmcif_nonpoly_hydrogen_coordinates(
+        case.source_text
+    )
+    hydrogen_coordinate_summary = {
+        **hydrogen_coordinate_snapshot.to_dict(),
+        "instance_reports": [
+            row.to_dict() for row in hydrogen_coordinate_snapshot.instance_reports
+        ],
+    }
     role_snapshot = parse_mmcif_nonpoly_component_roles(case.source_text)
     modified_residue_snapshot = (
         parse_mmcif_modified_residue_declarations(case.source_text)
@@ -2091,6 +2127,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         missing_atom_residue_policy_snapshot_sha256=(
             missing_policy_snapshot.snapshot_sha256
         ),
+        hydrogen_coordinate_snapshot_sha256=(
+            hydrogen_coordinate_snapshot.snapshot_sha256
+        ),
         component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
         modified_residue_declaration_snapshot_sha256=(
             modified_residue_snapshot.snapshot_sha256
@@ -2102,6 +2141,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         atom_site_model_policy=model_policy,
         biological_assembly_policy=assembly_policy,
         missing_atom_residue_policy=missing_policy,
+        hydrogen_coordinate_summary=hydrogen_coordinate_summary,
         component_roles=component_roles,
         modified_residue_declarations=modified_residue_declarations,
         signals=_signals_for_reports(
@@ -2110,6 +2150,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             model_policy,
             assembly_policy,
             missing_policy,
+            hydrogen_coordinate_summary,
             component_roles,
             modified_residue_declarations,
             snapshot.to_dict(),
@@ -2224,6 +2265,12 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         ),
         "missing_atom_residue_policy_parser_version": (
             MMCIF_MISSING_ATOM_RESIDUE_POLICY_PARSER_VERSION
+        ),
+        "hydrogen_coordinate_profile_id": (
+            MMCIF_NONPOLY_HYDROGEN_COORDINATE_PROFILE_ID
+        ),
+        "hydrogen_coordinate_generator_version": (
+            MMCIF_NONPOLY_HYDROGEN_COORDINATE_GENERATOR_VERSION
         ),
         "component_role_profile_id": MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
         "component_role_parser_version": MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,
