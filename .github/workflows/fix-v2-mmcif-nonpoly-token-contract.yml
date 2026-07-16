@@ -1,0 +1,60 @@
+name: fix-v2-mmcif-nonpoly-token-contract
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/fix-v2-mmcif-nonpoly-token-contract.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-v2-mmcif-nonpoly-token-contract
+  cancel-in-progress: false
+
+jobs:
+  correct-contract:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/v2-mmcif-nonpoly-identity'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-nonpoly-identity
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+
+      - name: Align token-bound test with source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/unit/test_engine_v2_mmcif_nonpoly_identity.py")
+          source = path.read_text(encoding="utf-8")
+          old = '_error(source, "semantic_token_out_of_bounds")'
+          new = '_error(source, "source_token_out_of_bounds")'
+          if source.count(old) != 1:
+              raise SystemExit("unexpected token-contract fixture count")
+          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          Path(".github/workflows/fix-v2-mmcif-nonpoly-token-contract.yml").unlink()
+          PY
+          python -m py_compile tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
+          git diff --check
+
+      - name: Commit corrected test and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "test(v2): align nonpoly source token error contract"
+          git push origin HEAD:codex/v2-mmcif-nonpoly-identity
