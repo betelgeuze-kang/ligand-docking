@@ -21,6 +21,8 @@ on:
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -45,6 +47,8 @@ on:
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -96,6 +100,8 @@ jobs:
             README.ko.md
             .github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
             .github/workflows/ci-engine-v2-main.yml
