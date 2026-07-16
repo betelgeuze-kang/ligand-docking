@@ -1,0 +1,145 @@
+om_count = int(conformers.shape[1])
++    if count > 0 and atom_count <= 0:
++        raise ValueError("conformers must contain at least one atom")
++    if not np.isfinite(conformers).all():
++        raise ValueError("conformer coordinates contain non-finite values")
++    mappings = ligand_symmetry_mappings(smiles) if smiles else []
+     rmsd_values: list[float] = []
+     for i in range(count):
+         for j in range(i + 1, count):
+-            rmsd_values.append(pose_rmsd(conformers[i], conformers[j]))
++            rmsd_values.append(
++                aligned_symmetry_aware_pose_rmsd(
++                    conformers[i],
++                    conformers[j],
++                    mappings,
++                )
++            )
+     finite = [float(value) for value in rmsd_values if math.isfinite(float(value))]
+     if count <= 1:
+         status = "single_conformer_no_pairwise_diversity"
+@@ -95,10 +225,20 @@
+         status = "rotatable_conformer_diversity_measured"
+     else:
+         status = "low_conformer_diversity_measured"
++    mapping_count = len(
++        _validated_symmetry_mappings(
++            mappings,
++            atom_count=atom_count,
++        )
++    ) if atom_count > 0 else 0
+     return {
+-        "schema_version": "tier_beta_conformer_diversity_v1",
++        "schema_version": "tier_beta_conformer_diversity_v2",
+         "status": status,
+-        "method": "atom_order_pairwise_heavy_atom_rmsd",
++        "method": "kabsch_aligned_symmetry_aware_heavy_atom_rmsd",
++        "alignment": "centroid_translation_removed_proper_rotation_kabsch",
++        "coordinate_scope": "isolated_conformer_internal_geometry",
++        "symmetry_mapping_count": int(mapping_count),
++        "atom_count": atom_count,
+         "rotatable_bond_count": rotatable_bond_count(smiles) if smiles else 0,
+         "conformer_count": count,
+         "pairwise_rmsd_count": int(len(finite)),
+@@ -108,8 +248,8 @@
+         "diversity_threshold_a": float(diversity_threshold_a),
+         "diverse_pair_count": int(sum(1 for value in finite if value >= float(diversity_threshold_a))),
+         "claim_boundary": (
+-            "Diagnostic generated-conformer spread only; not an exhaustive rotamer search or benchmarked "
+-            "pose-diversity guarantee."
++            "Diagnostic generated-conformer internal spread only after proper rigid alignment and complete atom mapping; "
++            "not an exhaustive rotamer search or benchmarked pose-diversity guarantee."
+         ),
+     }
+ 
+@@ -130,7 +270,11 @@
+     seen = {identity}
+     for match in matches:
+         mapping = tuple(int(idx) for idx in match)
+-        if len(mapping) != atom_count or mapping in seen:
++        if (
++            len(mapping) != atom_count
++            or set(mapping) != set(identity)
++            or mapping in seen
++        ):
+             continue
+         seen.add(mapping)
+         mappings.append(mapping)
+@@ -142,23 +286,30 @@
+     b: np.ndarray,
+     symmetry_mappings: list[tuple[int, ...]] | None = None,
+ ) -> float:
+-    left = np.asarray(a, dtype=np.float64)
+-    right = np.asarray(b, dtype=np.float64)
+-    n = min(int(left.shape[0]), int(right.shape[0]))
+-    if n <= 0:
+-        return float("inf")
+-    candidates = symmetry_mappings or [tuple(range(n))]
+-    best = pose_rmsd(left[:n], right[:n])
+-    for mapping in candidates:
+-        if len(mapping) < n:
+-            continue
+-        indices = [int(idx) for idx in mapping[:n]]
+-        if any(idx < 0 or idx >= int(right.shape[0]) for idx in indices):
+-            continue
+-        candidate = pose_rmsd(left[:n], right[indices])
+-        if candidate < best:
+-            best = candidate
+-    return float(best)
++    """Return receptor-frame RMSD over complete atom-index bijections.
++
++    No rigid alignment is performed because docked poses are compared in one
++    receptor coordinate frame.
++    """
++
++    left, right = _paired_pose_coordinates(a, b)
++    mappings = _validated_symmetry_mappings(
++        symmetry_mappings,
++        atom_count=int(left.shape[0]),
++    )
++    return float(
++        min(
++            np.sqrt(
++                np.mean(
++                    np.sum(
++                        (left - right[np.asarray(mapping, dtype=np.int64)]) ** 2,
++                        axis=1,
++                    )
++                )
++            )
++            for mapping in mappings
++        )
++    )
+ 
+ 
+ def cluster_poses_by_symmetry(
+@@ -196,8 +347,12 @@
+         row["pose_cluster_id"] = int(assigned_cluster)
+         row["symmetry_aware_pose_rmsd_to_cluster_representative_a"] = float(assigned_rmsd)
+         row["pose_rmsd_clustering"] = {
+-            "schema_version": "tier_beta_pose_rmsd_clustering_v1",
+-            "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
++            "schema_version": "tier_beta_pose_rmsd_clustering_v2",
++            "method": (
++                "rdkit_automorphism_min_receptor_frame_rmsd"
++                if symmetry_mappings
++                else "identity_atom_order_receptor_frame_rmsd"
++            ),
+             "threshold_a": float(threshold_a),
+             "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+             "cluster_id": int(assigned_cluster),
+@@ -207,7 +362,12 @@
+         cluster["member_count"] = int(len(cluster["member_pose_indices"]))
+     return {
+         "status": "symmetry_aware_rmsd_clustered",
+-        "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
++        "method": (
++            "rdkit_automorphism_min_receptor_frame_rmsd"
++            if symmetry_mappings
++            else "identity_atom_order_receptor_frame_rmsd"
++        ),
++        "coordinate_scope": "receptor_frame_same_ligand_state",
+         "threshold_a": float(threshold_a),
+         "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+         "cluster_count": int(len(clusters)),
+--- a/betelgeuze_engine
