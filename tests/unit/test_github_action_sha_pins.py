@@ -41,13 +41,12 @@ def test_mutable_reusable_workflow_reference_is_rejected(tmp_path: Path) -> None
     root = _copy_workflows(tmp_path)
     path = root / ".github" / "workflows" / "mutable-reusable.yml"
     path.write_text(
-        """name: mutable-reusable\n"
+        "name: mutable-reusable\n"
         "on:\n"
         "  pull_request:\n"
         "jobs:\n"
         "  delegated:\n"
-        "    uses: example/example/.github/workflows/ci.yml@v1\n"
-        """,
+        "    uses: example/example/.github/workflows/ci.yml@v1\n",
         encoding="utf-8",
     )
 
@@ -64,7 +63,7 @@ def test_local_and_container_actions_are_outside_commit_pin_policy(tmp_path: Pat
     workflow_dir = root / ".github" / "workflows"
     workflow_dir.mkdir(parents=True)
     (workflow_dir / "local.yml").write_text(
-        """name: local\n"
+        "name: local\n"
         "on:\n"
         "  workflow_dispatch:\n"
         "jobs:\n"
@@ -72,8 +71,7 @@ def test_local_and_container_actions_are_outside_commit_pin_policy(tmp_path: Pat
         "    runs-on: ubuntu-latest\n"
         "    steps:\n"
         "      - uses: ./actions/local\n"
-        "      - uses: docker://python:3.11\n"
-        """,
+        "      - uses: docker://python:3.11\n",
         encoding="utf-8",
     )
 
