@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_modified_residue_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_roles.py"
@@ -18,14 +19,17 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
   push:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_modified_residue_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_roles.py"
@@ -40,10 +44,12 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
   workflow_dispatch:
 
 permissions:
@@ -78,6 +84,7 @@ jobs:
             config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_mmcif_syntax.py
+            tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
             tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py
@@ -97,6 +104,7 @@ jobs:
             .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
+            .github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -129,6 +137,7 @@ jobs:
           set +e
           python -m pytest -vv -x \
             tests/unit/test_engine_v2_mmcif_syntax.py \
+            tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py \

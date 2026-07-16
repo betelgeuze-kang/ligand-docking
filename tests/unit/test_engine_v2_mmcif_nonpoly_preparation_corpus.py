@@ -33,7 +33,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 23
+    assert len(cases) == 24
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -159,6 +159,31 @@ def test_interpreted_monoatomic_roles_remain_explicitly_unsupported(
     ]
 
 
+def test_source_declared_modified_residue_is_retained_as_unsupported_preparation(
+    corpus_snapshot,
+) -> None:
+    result = {
+        row.case_id: row for row in corpus_snapshot.case_results
+    }["unsupported_source_declared_modified_residue"]
+
+    assert result.cohort == "unsupported_chemistry"
+    assert len(result.modified_residue_declaration_snapshot_sha256) == 64
+    assert len(result.modified_residue_declarations) == 1
+    declaration = result.modified_residue_declarations[0]
+    assert declaration["label_asym_id"] == "P"
+    assert declaration["label_seq_id"] == 1
+    assert declaration["label_comp_id"] == "MSE"
+    assert declaration["parent_comp_id"] == "MET"
+    assert declaration["modified_residue_role"] == (
+        "source_declared_modified_polymer_component"
+    )
+    assert declaration["preparation_disposition"] == "explicitly_unsupported"
+    assert declaration["role_blockers"][-1] == (
+        "modified_residue_preparation_not_supported"
+    )
+    assert result.reports[0]["preparation_status"] == "prepared_component_graph"
+
+
 def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
     corpus_snapshot,
 ) -> None:
@@ -212,8 +237,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 21,
-        "not_implemented": 14,
+        "explicitly_unsupported": 22,
+        "not_implemented": 13,
         "supported": 16,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -234,7 +259,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "role.ion" not in missing
     assert "role.metal" not in missing
     assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
-    assert missing["role.modified_residue"] == ("modified_residue_role_not_interpreted")
+    assert "role.modified_residue" not in missing
     assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
     assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
     assert missing["all_atom_system.creation"] == (
@@ -323,6 +348,8 @@ def test_dedicated_corpus_workflow_covers_supported_python_matrix() -> None:
     assert 'branches: ["main"]' in source
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
     assert "mmcif_nonpoly_preparation_corpus.py" in source
+    assert "mmcif_modified_residue_declarations.py" in source
+    assert "test_engine_v2_mmcif_modified_residue_declarations.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
     assert "test_engine_v2_post_merge_state.py" in source
     assert "permissions:\n  contents: read" in source

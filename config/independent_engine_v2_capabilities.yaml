@@ -147,6 +147,29 @@ capabilities:
       - mmcif_chemistry_topology_and_preparation_not_interpreted
       - product_integration_not_qualified
 
+  v2_bounded_mmcif_modified_residue_declarations:
+    current_state: bounded_source_declared_modified_polymer_residue_identity
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - source_authentication_missing
+      - atom_site_label_identity_not_crosschecked
+      - parent_component_chemistry_not_interpreted
+      - modification_nature_not_interpreted
+      - model_insertion_and_auth_semantics_not_interpreted
+      - modified_residue_preparation_not_supported
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
   v2_bounded_mmcif_nonpoly_identity:
     current_state: bounded_nonpoly_component_instance_identity
     implemented: true
@@ -345,7 +368,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_bounded_mmcif_nonpoly_preparation_corpus:
-    current_state: frozen_23_case_failure_complete_corpus_and_51_axis_coverage_ledger
+    current_state: frozen_24_case_failure_complete_corpus_and_51_axis_coverage_ledger
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
@@ -359,7 +382,7 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - synthetic_contract_corpus_only
-      - fourteen_classified_implementation_gaps_remain
+      - thirteen_classified_implementation_gaps_remain
       - real_world_supported_corpus_missing
       - parameter_fitting_not_authorized
       - scientific_validation_missing
