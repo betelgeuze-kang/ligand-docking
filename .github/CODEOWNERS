@@ -1,0 +1,33 @@
+# Default owner for the proprietary repository.
+* @betelgeuze-kang
+
+# Supply-chain and CI trust boundaries.
+/.github/ @betelgeuze-kang
+/.github/workflows/ @betelgeuze-kang
+/Dockerfile* @betelgeuze-kang
+/requirements*.txt @betelgeuze-kang
+/pyproject.toml @betelgeuze-kang
+
+# Product API, worker, validated runner, and deployment security boundaries.
+/api/ @betelgeuze-kang
+/deploy/ @betelgeuze-kang
+/config/api_validated_runner_profiles/ @betelgeuze-kang
+/betelgeuze_product/ @betelgeuze-kang
+
+# Independent Engine v2 architecture, packaging, and machine-readable claims.
+/betelgeuze_engine_v2/ @betelgeuze-kang
+/packaging/engine-v2/ @betelgeuze-kang
+/config/independent_engine_v2_capabilities.yaml @betelgeuze-kang
+/tools/check_engine_v2_architecture.py @betelgeuze-kang
+/tools/build_engine_v2_wheel.py @betelgeuze-kang
+/docs/engine_v2_*.md @betelgeuze-kang
+
+# Legacy scientific/runtime surfaces and training/checkpoint contracts.
+/betelgeuze_engine/ @betelgeuze-kang
+/core/ @betelgeuze-kang
+/train/ @betelgeuze-kang
+
+# Repository policy and legal boundaries.
+/SECURITY.md @betelgeuze-kang
+/CONTRIBUTING.md @betelgeuze-kang
+/LICENSE* @betelgeuze-kang
