@@ -1,71 +1,95 @@
-name: apply-strict-pose-rmsd-patch
+name: ci-strict-pose-rmsd
 
 on:
   pull_request:
     paths:
-      - ".github/patches/strict-pose-rmsd/**"
+      - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/screening.py"
+      - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_tier_beta_vertical_slice.py"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/screening.py"
+      - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_tier_beta_vertical_slice.py"
+      - ".github/workflows/ci-strict-pose-rmsd.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: apply-strict-pose-rmsd-final
-  cancel-in-progress: false
+  group: ci-strict-pose-rmsd-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  apply-patch:
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor == 'betelgeuze-kang' &&
-      github.head_ref == 'codex/strict-pose-rmsd-final'
+  strict-pose-rmsd:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
     steps:
-      - name: Check out the controlled final feature branch
+      - name: Check out focused BioDiscovery surface
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: codex/strict-pose-rmsd-final
-          fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
           clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            api/__init__.py
+            api/result_manifest.py
+            betelgeuze_engine
+            betelgeuze_product
+            core
+            tests/__init__.py
+            tests/fixtures/tier_beta
+            tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_tier_beta_vertical_slice.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
 
-      - name: Apply the locally and Git-verified source patch
-        shell: bash
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install focused CPU dependencies
         run: |
-          set -euo pipefail
-          cat \
-            .github/patches/strict-pose-rmsd/part-00.patch \
-            .github/patches/strict-pose-rmsd/part-01.patch \
-            .github/patches/strict-pose-rmsd/part-02.patch \
-            .github/patches/strict-pose-rmsd/part-03.patch \
-            .github/patches/strict-pose-rmsd/part-04a.patch \
-            .github/patches/strict-pose-rmsd/part-04b.patch \
-            .github/patches/strict-pose-rmsd/part-05.patch \
-            .github/patches/strict-pose-rmsd/part-06.patch \
-            > /tmp/strict-pose-rmsd.patch
-          echo "4c618a83fda8d2b73da0f849878376e9489d507a661ec092e61eef5e185e4f58  /tmp/strict-pose-rmsd.patch" | sha256sum --check -
-          git apply --check --verbose /tmp/strict-pose-rmsd.patch
-          git apply --verbose /tmp/strict-pose-rmsd.patch
-          rm -rf .github/patches/strict-pose-rmsd
-          python -m py_compile \
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 numpy==1.26.4 rdkit-pypi==2022.9.5
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile strict pose and screening surfaces
+        run: |
+          python -m compileall -q \
             betelgeuze_engine/biodiscovery/pose.py \
             betelgeuze_engine/biodiscovery/screening.py \
             tests/unit/test_biodiscovery_screening.py
-          git diff --check
 
-      - name: Commit source and test changes without modifying workflow files
+      - name: Run strict RMSD, conformer, clustering, and screening contracts
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- \
-            betelgeuze_engine/biodiscovery/pose.py \
-            betelgeuze_engine/biodiscovery/screening.py \
+          set +e
+          python -m pytest --confcutdir=tests/unit -vv -x \
             tests/unit/test_biodiscovery_screening.py \
-            .github/patches/strict-pose-rmsd
-          git diff --cached --check
-          git diff --cached --stat
-          git commit -m "fix(biodiscovery): enforce strict state-aware pose RMSD"
-          git push origin HEAD:codex/strict-pose-rmsd-final
+            tests/unit/test_tier_beta_vertical_slice.py::test_service_pdb_smiles_success_signed_manifest_and_claim_limits \
+            > strict-pose-rmsd.log 2>&1
+          status=$?
+          cat strict-pose-rmsd.log
+          exit "$status"
+
+      - name: Upload strict pose RMSD diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-pose-rmsd-${{ github.run_id }}-${{ github.run_attempt }}
+          path: strict-pose-rmsd.log
+          if-no-files-found: error
+          retention-days: 7
