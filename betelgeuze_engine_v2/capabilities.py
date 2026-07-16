@@ -27,6 +27,7 @@ MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = (
     "v2_bounded_mmcif_zero_occupancy_declarations"
 )
 MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_altloc_declarations"
+MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID = "v2_bounded_mmcif_atom_site_model_policy"
 MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID = (
     "v2_bounded_mmcif_modified_residue_declarations"
 )
@@ -100,6 +101,15 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "coordinate_and_occupancy_values_not_interpreted",
         "altloc_population_and_missingness_not_inferred",
         "mmcif_chemistry_topology_and_preparation_not_interpreted",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID: (
+        "multimodel_execution_not_supported",
+        "single_model_non_1_execution_not_supported",
+        "cross_category_model_references_not_reconciled",
+        "model_selection_ensemble_and_trajectory_semantics_not_interpreted",
+        "coordinate_identity_and_chemistry_not_interpreted",
+        "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
     MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID: (
@@ -194,7 +204,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "thirteen_classified_implementation_gaps_remain",
+        "twelve_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -315,6 +325,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID: _row(
+                MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID,
+                current_state=(
+                    "bounded_complete_atom_site_model_set_and_single_model_1_"
+                    "execution_policy"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID: _row(
                 MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID,
                 current_state=(
@@ -385,7 +404,7 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
                 current_state=(
-                    "frozen_24_case_failure_complete_corpus_and_51_axis_coverage_ledger"
+                    "frozen_25_case_failure_complete_corpus_and_51_axis_coverage_ledger"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -461,6 +480,7 @@ __all__ = [
     "EXTERNAL_BASELINE_CAPABILITY_ID",
     "IMPLEMENTATION_STAGE",
     "MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID",
+    "MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID",
     "MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID",

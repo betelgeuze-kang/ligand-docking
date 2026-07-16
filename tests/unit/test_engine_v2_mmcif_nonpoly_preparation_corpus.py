@@ -33,7 +33,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 24
+    assert len(cases) == 25
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -41,6 +41,7 @@ def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
         "supported_graph",
         "unprepared_integration",
         "unsupported_chemistry",
+        "unsupported_upstream_policy",
         "invalid_source",
     }
     assert all(row.source_text.encode("ascii") for row in cases)
@@ -184,6 +185,30 @@ def test_source_declared_modified_residue_is_retained_as_unsupported_preparation
     assert result.reports[0]["preparation_status"] == "prepared_component_graph"
 
 
+def test_multimodel_source_is_classified_before_preparation_rejects_it(
+    corpus_snapshot,
+) -> None:
+    result = {
+        row.case_id: row for row in corpus_snapshot.case_results
+    }["unsupported_multimodel_input"]
+
+    assert result.cohort == "unsupported_upstream_policy"
+    assert result.observed_outcome == "expected_error"
+    assert result.error_code == "selected_model_not_supported"
+    assert result.preparation_snapshot_sha256 == ""
+    assert len(result.atom_site_model_policy_snapshot_sha256) == 64
+    policy = result.atom_site_model_policy
+    assert policy["model_numbers"] == [1, 2]
+    assert policy["multi_model_input"] is True
+    assert policy["execution_policy_status"] == (
+        "explicitly_unsupported_multimodel"
+    )
+    assert policy["execution_allowed"] is False
+    assert policy["execution_blockers"] == [
+        "multimodel_execution_not_supported"
+    ]
+
+
 def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
     corpus_snapshot,
 ) -> None:
@@ -237,8 +262,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 22,
-        "not_implemented": 13,
+        "explicitly_unsupported": 23,
+        "not_implemented": 12,
         "supported": 16,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -260,6 +285,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "role.metal" not in missing
     assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
     assert "role.modified_residue" not in missing
+    assert "upstream.multimodel_policy" not in missing
     assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
     assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
     assert missing["all_atom_system.creation"] == (
@@ -349,6 +375,8 @@ def test_dedicated_corpus_workflow_covers_supported_python_matrix() -> None:
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
     assert "mmcif_nonpoly_preparation_corpus.py" in source
     assert "mmcif_modified_residue_declarations.py" in source
+    assert "mmcif_atom_site_model_policy.py" in source
+    assert "test_engine_v2_mmcif_atom_site_model_policy.py" in source
     assert "test_engine_v2_mmcif_modified_residue_declarations.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
     assert "test_engine_v2_post_merge_state.py" in source

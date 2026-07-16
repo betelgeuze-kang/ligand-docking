@@ -27,6 +27,9 @@ The current `main` branch contains:
   `_atom_site` observation-to-identity join and finite-binary64 coordinate-value
   binding that retains each raw token spelling and exact 64-bit pattern, plus
   bounded occupancy/B-factor/formal-charge marker and numeric semantics and a
+  complete atom-site model-number classification that permits only model set
+  `{1}` for bounded execution and explicitly blocks multi-model or singleton
+  non-1 execution without automatic selection, plus a
   bounded source-water/monoatomic-metal/monoatomic-nonmetal-ion composition-role
   projection that does not infer general ligand, cofactor, or biological roles,
   plus source-declared modified polymer residue identity joined to the bounded
@@ -35,7 +38,7 @@ The current `main` branch contains:
   fail-closed component-bond/identity-symmetry connection topology that keeps
   metal coordination edges separate from canonical bonds, plus bounded neutral
   acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
-  failure-complete per-instance parameterability report, plus a frozen 24-case
+  failure-complete per-instance parameterability report, plus a frozen 25-case
   synthetic contract corpus and 51-axis executable coverage ledger that retains
   supported, explicitly unsupported, invalid-source, and not-implemented rows;
 - an independent physics-term registry contract;
@@ -52,6 +55,7 @@ not currently establish:
   to fit parameters from the synthetic contract corpus;
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
+  model selection, ensemble/trajectory/averaging semantics, multi-model execution,
   coordinates, reviewed parameters, general ligand/cofactor or non-source-declared
   modified-residue role interpretation, metal/ion/modified-residue preparation,
   or a prepared `AllAtomSystem`;

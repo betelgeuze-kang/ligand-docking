@@ -9,6 +9,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "current-main canonical planning reference" in roadmap
     assert "v2_bounded_mmcif_nonpoly_component_declarations" in roadmap
     assert "v2_bounded_mmcif_nonpoly_component_roles" in roadmap
+    assert "v2_bounded_mmcif_atom_site_model_policy" in roadmap
     assert "v2_bounded_mmcif_modified_residue_declarations" in roadmap
     assert "v2_bounded_mmcif_struct_conn_declarations" in roadmap
     assert "v2_bounded_mmcif_nonpoly_atom_site_observations" in roadmap
@@ -23,9 +24,9 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "coordination edge" in roadmap
     assert "neutral acyclic C/O/H" in roadmap
     assert "parameterable=false" in roadmap
-    assert "exact ASCII 24-case" in roadmap
+    assert "exact ASCII 25-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "13개 `not_implemented`" in roadmap
+    assert "12개 `not_implemented`" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap
@@ -33,6 +34,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "preparation과 parameterization은 명시적으로 미지원" in roadmap
     assert "`_pdbx_struct_mod_residue` category" in roadmap
     assert "atom-site\nobservation, parent chemistry" in roadmap
+    assert "model set이 정확히 `{1}`" in roadmap
+    assert "첫 model로 자동 선택하지 않고 명시적으로" in roadmap
     assert "parameter_fitting_allowed=false" in roadmap
     assert "v2_1_exit_ready=false" in roadmap
     assert "atom_site_identity_joined" in roadmap
