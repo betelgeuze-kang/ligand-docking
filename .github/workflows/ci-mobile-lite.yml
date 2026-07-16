@@ -148,7 +148,24 @@ jobs:
         run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_product_docking_tenant_isolation.py
 
       - name: Run scientific input provenance contracts
-        run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_scientific_input_provenance.py
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -c pytest-mobile.ini -vv -x \
+            tests/mobile/test_scientific_input_provenance.py \
+            > scientific-input-provenance.log 2>&1
+          status=$?
+          cat scientific-input-provenance.log
+          exit "$status"
+
+      - name: Upload scientific input provenance diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scientific-input-provenance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: scientific-input-provenance.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Run SQLite simulation ownership contracts
         run: python -m pytest -c pytest-mobile.ini -q tests/mobile/test_simulation_job_ownership.py
