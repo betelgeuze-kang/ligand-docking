@@ -20,6 +20,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_canonical_topology" in roadmap
     assert "v2_bounded_mmcif_nonpoly_neutral_coh_preparation" in roadmap
     assert "v2_bounded_mmcif_nonpoly_hydrogen_coordinates" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_all_atom_systems" in roadmap
     assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
@@ -30,7 +31,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "5개 `not_implemented`" in roadmap
+    assert "4개 `not_implemented`" in roadmap
     assert "Sage 2.2.1 unconstrained artifact" in roadmap
     assert "OFFXML을\n해석하거나" in roadmap
     assert "partial charge" in roadmap
@@ -52,6 +53,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "Cartesian Å source\n좌표를 preparation graph와 결속" in roadmap
     assert "added hydrogen은 parent 중심의 고정된 네 방향과 1.0 Å offset" in roadmap
     assert "neighbor bond geometry, stereo, protonation·tautomer" in roadmap
+    assert "intercomponent covalence가 있으면 affected instance를 모두" in roadmap
+    assert "partial charge·mass·parameter가\n없고" in roadmap
     assert "explicit `label_alt_id` 입력" in roadmap
     assert "chemistry preparation 전에 fail-closed" in roadmap
     assert "known insertion code의 scheme·atom-site·connection exact identity" in roadmap

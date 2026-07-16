@@ -63,6 +63,9 @@ MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID = (
 MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_hydrogen_coordinates"
 )
+MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_all_atom_systems"
+)
 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = (
     "v2_reviewed_parameter_source_provenance"
 )
@@ -233,7 +236,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "reviewed_parameter_source_not_bound_to_preparation",
         "aromatic_charged_stereo_and_extended_elements_not_supported",
         "ph_tautomer_and_intercomponent_connections_not_prepared",
-        "prepared_all_atom_system_not_created",
+        "canonical_all_atom_system_not_bound_to_preparation_report",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -245,7 +248,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "coordinate_minimization_not_performed",
         "reviewed_parameter_source_not_bound_to_preparation",
         "partial_charge_assignment_not_performed",
-        "prepared_all_atom_system_not_created",
+        "canonical_all_atom_system_adapter_is_separate",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -259,13 +262,27 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "parameter_value_calibration_missing",
         "force_energy_validation_missing",
         "legal_compliance_determination_not_provided",
-        "prepared_all_atom_system_not_created",
+        "canonical_all_atom_system_not_bound_to_parameter_source",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID: (
+        "intercomponent_covalent_connections_not_materialized",
+        "intercomponent_coordination_preserved_as_metadata_only",
+        "fixed_parent_offset_geometry_not_validated",
+        "source_authentication_missing",
+        "parameter_source_not_bound_to_system",
+        "parameter_assignment_not_implemented",
+        "partial_charge_assignment_not_implemented",
+        "atom_masses_not_assigned",
+        "source_format_round_trip_not_implemented",
+        "chemistry_validation_missing",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "five_classified_implementation_gaps_remain",
+        "four_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -487,6 +504,14 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID,
+                current_state=(
+                    "bounded_instance_canonical_all_atom_system_materialization"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID: _row(
                 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
                 current_state=(
@@ -588,6 +613,7 @@ __all__ = [
     "MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID",
     "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
     "MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID",
+    "MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",

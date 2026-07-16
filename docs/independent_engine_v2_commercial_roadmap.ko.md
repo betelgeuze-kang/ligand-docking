@@ -127,10 +127,11 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_coordinate_values` | selected `Cartn_x/y/z` 원문 spelling·finite binary64 값·exact bit pattern 결속 | coordinate unit·geometry quality·distance·clash·occupancy·B-factor·formal charge·topology |
 | `v2_bounded_mmcif_nonpoly_atom_site_scalar_values` | occupancy·B-factor·formal charge의 known/unknown/not-applicable 상태와 bounded numeric value 결속 | occupancy population·B-factor quality·charge chemistry·altloc·topology |
 | `v2_bounded_mmcif_nonpoly_canonical_topology` | component SING/DOUB/TRIP/QUAD/AROM bond와 identity-symmetry `covale` Bond, 별도 `metalc` coordination edge | 비identity symmetry·hydrog·disulf·DELO/PI/POLY·원소/charge/aromaticity chemistry |
-| `v2_bounded_mmcif_nonpoly_neutral_coh_preparation` | neutral acyclic C/O/H component의 single/double bond graph, 명시적 0 formal charge, fixed-valence hydrogen completion과 instance별 failure-complete parameterability report | hydrogen 좌표·reviewed parameter source의 graph binding·parameter assignment·`AllAtomSystem`·charged/aromatic/stereo/extended-element/cyclic/pH/tautomer/intercomponent preparation |
+| `v2_bounded_mmcif_nonpoly_neutral_coh_preparation` | neutral acyclic C/O/H component의 single/double bond graph, 명시적 0 formal charge, fixed-valence hydrogen completion과 instance별 failure-complete parameterability report | hydrogen 좌표·reviewed parameter source의 graph binding·parameter assignment·canonical `AllAtomSystem` binding·charged/aromatic/stereo/extended-element/cyclic/pH/tautomer/intercomponent preparation |
 | `v2_bounded_mmcif_nonpoly_hydrogen_coordinates` | prepared graph와 source Cartesian Å 좌표를 결속하고 source atom 좌표를 보존하며 added H에 deterministic 1.0 Å fixed parent-offset table 적용 | neighbor geometry·stereo·protonation·tautomer 해석, bond-length calibration, clash·coordinate quality, minimization, parameterability |
+| `v2_bounded_mmcif_nonpoly_all_atom_systems` | eligible instance의 prepared atom/bond identity, source scalar state, exact coordinate bit, residue/chain source identity를 기존 canonical `AllAtomSystem`과 SHA-256에 결속; coordination edge는 metadata로 보존하고 intercomponent covalence는 fail-closed | parameter source·parameter/partial-charge/mass assignment, geometry·chemistry validation, coordination의 canonical Bond 승격, source-format round trip, parameterability |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 51-axis executable coverage ledger; supported 19·explicitly unsupported 27·not implemented 5 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 51-axis executable coverage ledger; supported 20·explicitly unsupported 27·not implemented 4 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -209,8 +210,8 @@ bond로 범위를 고정한다. source element·formal charge·nonaromatic·ster
 source-declared zero-occupancy 또는 unobserved atom/residue가 있으면 chemistry 전에
 fail-closed한다.
 모든 instance는 실패 원인을 보존하는 parameterability report를 가지며,
-base graph snapshot에는 hydrogen 좌표가 없고 reviewed parameter source가 graph에
-결속되지 않았으며 `AllAtomSystem`도 없으므로 항상 `parameterable=false`다. 별도 bounded hydrogen-
+base graph snapshot에는 hydrogen 좌표가 없고 reviewed parameter source와 canonical
+`AllAtomSystem` adapter가 직접 결속되지 않으므로 항상 `parameterable=false`다. 별도 bounded hydrogen-
 coordinate capability가 좌표 projection을 제공하더라도 geometry validation이 없어
 이 gate는 열리지 않는다. 이는 pH-dependent protonation, tautomer selection,
 과학적 chemistry validation 또는 실행 가능한 all-atom preparation이 아니다.
@@ -221,6 +222,16 @@ bounded hydrogen-coordinate capability는 공식 PDBx/mmCIF Cartesian Å source
 결정론적으로 배치한다. 이 table은 coordinate-bearing contract fixture일 뿐
 neighbor bond geometry, stereo, protonation·tautomer, calibrated bond length,
 steric clash 또는 coordinate quality를 해석하지 않고 minimization도 수행하지 않는다.
+
+bounded all-atom materializer는 preparation graph와 hydrogen-coordinate snapshot이
+정확히 일치하고 intercomponent covalence를 누락하지 않는 instance만 기존 versioned
+`AllAtomSystem`으로 만든다. prepared atom·bond identity, source atom scalar state와
+coordinate binary64 bit, nonpoly residue·chain source identity 및 parent snapshot hash를
+보존한다. metal coordination edge는 canonical covalent `Bond`로 승격하지 않고 exact
+identity metadata로 남긴다. intercomponent covalence가 있으면 affected instance를 모두
+명시적으로 차단한다. 생성된 system은 contract-valid이지만 partial charge·mass·parameter가
+없고 fixed-offset geometry도 검증되지 않았으므로 parameterable·chemistry/scientific
+valid·source-format round-trip 또는 customer-ready system이 아니다.
 
 reviewed parameter-source provenance capability는 OpenFF 공식 force-field repository의
 Sage 2.2.1 unconstrained artifact를 release tag `2024.09.0`과 exact commit에 고정하고,
@@ -234,8 +245,8 @@ molecule coverage, applicability domain, parameter calibration, force/energy 정
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
-denominator에서 제거하지 않는다. 51-axis coverage ledger는 19개 supported,
-27개 explicitly unsupported, 5개 `not_implemented`로 분류하며 unclassified
+denominator에서 제거하지 않는다. 51-axis coverage ledger는 20개 supported,
+27개 explicitly unsupported, 4개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -297,9 +308,9 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 6. 완료된 첫 contract layer로 exact ASCII 30-case synthetic supported/failure
    corpus와 51-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 다음으로 5개 `not_implemented` row를 작은 capability별로 닫고,
+7. 다음으로 4개 `not_implemented` row를 작은 capability별로 닫고,
    licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
-   우선순위는 canonical `AllAtomSystem`과 source-to-graph parameter binding이다.
+   우선순위는 source-to-system parameter binding과 partial-charge assignment다.
 8. 위 gap과 real-world corpus가 닫히기 전에는 V2-2 parameter fitting·validation을
    시작하지 않는다.
 9. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과

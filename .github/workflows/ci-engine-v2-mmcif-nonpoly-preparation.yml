@@ -3,6 +3,7 @@ name: ci-engine-v2-mmcif-nonpoly-preparation
 on:
   pull_request:
     paths:
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
       - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
       - "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py"
@@ -29,15 +30,18 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
       - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   push:
     branches: ["main"]
     paths:
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
       - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
       - "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py"
@@ -64,9 +68,11 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
       - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
@@ -114,6 +120,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
             tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py
             tests/unit/test_engine_v2_parameter_source_provenance.py
             .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
@@ -121,6 +128,7 @@ jobs:
             .github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml
             .github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -165,6 +173,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py \
             tests/unit/test_engine_v2_parameter_source_provenance.py \
             >> mmcif-nonpoly-preparation.log 2>&1
           status=$?
