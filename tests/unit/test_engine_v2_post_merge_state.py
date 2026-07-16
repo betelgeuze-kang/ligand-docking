@@ -23,6 +23,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID,
     MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID,
+    MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID,
     MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
@@ -42,7 +43,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 26
+    assert len(loaded["capabilities"]) == 27
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -69,6 +70,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
@@ -244,9 +246,24 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "source_declared_observation_gap_preparation_not_supported" in (
         preparation["blockers"]
     )
-    assert "hydrogen_coordinates_not_generated" in preparation["blockers"]
+    assert "hydrogen_coordinate_geometry_not_validated" in preparation["blockers"]
     assert "reviewed_parameter_source_missing" in preparation["blockers"]
     assert "prepared_all_atom_system_not_created" in preparation["blockers"]
+
+    hydrogen_coordinates = rows[MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID]
+    assert hydrogen_coordinates["current_state"] == (
+        "bounded_graph_bound_fixed_parent_offset_angstrom_coordinates"
+    )
+    assert hydrogen_coordinates["internal_reference_execution_enabled"] is True
+    assert "fixed_parent_offset_does_not_interpret_neighbor_geometry" in (
+        hydrogen_coordinates["blockers"]
+    )
+    assert "hydrogen_bond_length_not_calibrated" in (
+        hydrogen_coordinates["blockers"]
+    )
+    assert "partial_charge_assignment_not_performed" in (
+        hydrogen_coordinates["blockers"]
+    )
 
     preparation_corpus = rows[MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID]
     assert preparation_corpus["current_state"] == (
@@ -254,7 +271,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
     assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "seven_classified_implementation_gaps_remain" in (
+    assert "six_classified_implementation_gaps_remain" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]
@@ -315,6 +332,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_struct_conn_declarations.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_observations.py",
         "test_engine_v2_mmcif_nonpoly_coordinate_values.py",
+        "test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",

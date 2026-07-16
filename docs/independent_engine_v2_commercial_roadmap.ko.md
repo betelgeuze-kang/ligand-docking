@@ -128,7 +128,8 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_atom_site_scalar_values` | occupancy·B-factor·formal charge의 known/unknown/not-applicable 상태와 bounded numeric value 결속 | occupancy population·B-factor quality·charge chemistry·altloc·topology |
 | `v2_bounded_mmcif_nonpoly_canonical_topology` | component SING/DOUB/TRIP/QUAD/AROM bond와 identity-symmetry `covale` Bond, 별도 `metalc` coordination edge | 비identity symmetry·hydrog·disulf·DELO/PI/POLY·원소/charge/aromaticity chemistry |
 | `v2_bounded_mmcif_nonpoly_neutral_coh_preparation` | neutral acyclic C/O/H component의 single/double bond graph, 명시적 0 formal charge, fixed-valence hydrogen completion과 instance별 failure-complete parameterability report | hydrogen 좌표·reviewed parameter·`AllAtomSystem`·charged/aromatic/stereo/extended-element/cyclic/pH/tautomer/intercomponent preparation |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 51-axis executable coverage ledger; supported 17·explicitly unsupported 27·not implemented 7 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_hydrogen_coordinates` | prepared graph와 source Cartesian Å 좌표를 결속하고 source atom 좌표를 보존하며 added H에 deterministic 1.0 Å fixed parent-offset table 적용 | neighbor geometry·stereo·protonation·tautomer 해석, bond-length calibration, clash·coordinate quality, minimization, parameterability |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 51-axis executable coverage ledger; supported 18·explicitly unsupported 27·not implemented 6 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -207,15 +208,24 @@ bond로 범위를 고정한다. source element·formal charge·nonaromatic·ster
 source-declared zero-occupancy 또는 unobserved atom/residue가 있으면 chemistry 전에
 fail-closed한다.
 모든 instance는 실패 원인을 보존하는 parameterability report를 가지며,
-hydrogen 좌표·reviewed parameter source·`AllAtomSystem`이 없으므로 항상
-`parameterable=false`다. 이는 pH-dependent protonation, tautomer selection,
+base graph snapshot에는 hydrogen 좌표가 없고 reviewed parameter source·
+`AllAtomSystem`도 없으므로 항상 `parameterable=false`다. 별도 bounded hydrogen-
+coordinate capability가 좌표 projection을 제공하더라도 geometry validation이 없어
+이 gate는 열리지 않는다. 이는 pH-dependent protonation, tautomer selection,
 과학적 chemistry validation 또는 실행 가능한 all-atom preparation이 아니다.
+
+bounded hydrogen-coordinate capability는 공식 PDBx/mmCIF Cartesian Å source
+좌표를 preparation graph와 결속한다. source atom의 finite binary64 좌표와 identity를
+그대로 보존하고, added hydrogen은 parent 중심의 고정된 네 방향과 1.0 Å offset으로
+결정론적으로 배치한다. 이 table은 coordinate-bearing contract fixture일 뿐
+neighbor bond geometry, stereo, protonation·tautomer, calibrated bond length,
+steric clash 또는 coordinate quality를 해석하지 않고 minimization도 수행하지 않는다.
 
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
-denominator에서 제거하지 않는다. 51-axis coverage ledger는 17개 supported,
-27개 explicitly unsupported, 7개 `not_implemented`로 분류하며 unclassified
+denominator에서 제거하지 않는다. 51-axis coverage ledger는 18개 supported,
+27개 explicitly unsupported, 6개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -229,8 +239,8 @@ PDB·SDF V2000 bounded ingest도 존재하지만 general PDB/mmCIF/SDF/SMILES,
 biological assembly generation·coordinate expansion, multimodel execution·ensemble
 semantics, source declaration을
 넘는 general missingness·repair,
-coordinate-bearing hydrogen
-completion, general protonation, tautomer, aromaticity, general ligand/cofactor와
+neighbor-aware·stereo-aware hydrogen geometry와 general protonation, tautomer,
+aromaticity, general ligand/cofactor와
 non-source-declared modified residue 역할, metal/ion/cofactor/modified-residue
 preparation은 완료되지 않았다.
 
@@ -270,15 +280,16 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    규칙을 유지한다. 해석되지 않은 연결에서는 `Bond`를 생성하지 않는다.
 5. 완료된 bounded layer로 최초 chemistry 범위를 neutral acyclic C/O/H와
    single/double bond로 고정하고, fixed-valence hydrogen-completed graph 및
-   failure-complete parameterability report를 유지한다. 좌표·parameter·
-   `AllAtomSystem`, pH·tautomer·aromatic/charged chemistry는 계속 분리한다.
+   failure-complete parameterability report를 유지한다. 별도 deterministic
+   coordinate-bearing hydrogen projection은 geometry validation과 분리하며
+   parameter·`AllAtomSystem`, pH·tautomer·aromatic/charged chemistry도 계속
+   분리한다.
 6. 완료된 첫 contract layer로 exact ASCII 30-case synthetic supported/failure
    corpus와 51-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 다음으로 7개 `not_implemented` row를 작은 capability별로 닫고,
+7. 다음으로 6개 `not_implemented` row를 작은 capability별로 닫고,
    licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
-   우선순위는 coordinate-bearing hydrogen, parameter provenance와 canonical
-   `AllAtomSystem`이다.
+   우선순위는 parameter provenance와 canonical `AllAtomSystem`이다.
 8. 위 gap과 real-world corpus가 닫히기 전에는 V2-2 parameter fitting·validation을
    시작하지 않는다.
 9. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
