@@ -12,6 +12,8 @@ import pandas as pd
 from betelgeuze_product.docking_materialization_errors import DockingMaterializationError
 from betelgeuze_product.job_orchestration import read_job_record
 from betelgeuze_product.scientific_input_materialization import (
+    explicit_pocket_materialization,
+    materialize_verified_pdb_structure,
     recheck_scientific_input_for_materialization,
 )
 
@@ -126,7 +128,7 @@ def _resolve_materialization_inputs(
     docking_job_id: str,
     target: str,
     family: str,
-) -> tuple[list[dict[str, Any]], str, str, int, bool]:
+) -> tuple[list[dict[str, Any]], str, str, int, bool, dict[str, Any] | None]:
     ledger: dict[str, Any] = {}
     candidate_lists: list[list[dict[str, Any]]] = []
     if docking_job_id:
@@ -154,6 +156,11 @@ def _resolve_materialization_inputs(
         root=ROOT,
     )
     params["_scientific_input_provenance_recheck"] = provenance_recheck
+    receipt = params.get("scientific_input_provenance")
+    if not isinstance(receipt, dict):
+        receipt = ledger.get("scientific_input_provenance")
+    if isinstance(receipt, dict):
+        params["_scientific_input_receipt"] = dict(receipt)
     if isinstance(recovered_request, dict):
         recovered_ligands = recovered_request.get("ligands")
         if isinstance(recovered_ligands, list) and recovered_ligands:
@@ -210,7 +217,7 @@ def _resolve_materialization_inputs(
             "materialized_ligand_count_mismatch",
             f"expected={expected_count}:observed={len(ligands)}",
         )
-    return ligands, target, family, expected_count, synthetic_used
+    return ligands, target, family, expected_count, synthetic_used, recovered_request
 
 
 def _resolve_native_pdb_path(target: str) -> str:
@@ -271,7 +278,14 @@ def _ligand_row_from_intake(ligand: dict[str, Any], *, target: str, replica_idx:
 def _pocket_metadata_from_native_pdb(native_pdb_path: str) -> dict[str, Any]:
     path = Path(native_pdb_path)
     if not path.is_file():
-        return {"pocket_status": "native_pdb_missing"}
+        return {
+            "pocket_status": "native_pdb_missing",
+            "pocket_x": 0.0,
+            "pocket_y": 0.0,
+            "pocket_z": 0.0,
+            "materialization_supported": False,
+            "claim_safe": False,
+        }
     try:
         import numpy as np
 
@@ -288,19 +302,41 @@ def _pocket_metadata_from_native_pdb(native_pdb_path: str) -> dict[str, Any]:
             except ValueError:
                 continue
         if not coords:
-            return {"pocket_status": "native_pdb_no_coords"}
+            return {
+                "pocket_status": "native_pdb_no_coords",
+                "pocket_x": 0.0,
+                "pocket_y": 0.0,
+                "pocket_z": 0.0,
+                "materialization_supported": False,
+                "claim_safe": False,
+            }
         pocket = detect_pocket_geometric(np.asarray(coords, dtype=np.float64))
         center = pocket.get("pocket_center") or [0.0, 0.0, 0.0]
         return {
             "pocket_status": pocket.get("status"),
+            "pocket_definition_kind": "inferred_native_geometric",
+            "pocket_definition_sha256": "",
+            "pocket_x": float(center[0]),
+            "pocket_y": float(center[1]),
+            "pocket_z": float(center[2]),
             "pocket_center_x": float(center[0]),
             "pocket_center_y": float(center[1]),
             "pocket_center_z": float(center[2]),
             "pocket_radius_a": float(pocket.get("pocket_radius_a") or 0.0),
             "pocket_method": pocket.get("method", "geometric"),
+            "materialization_supported": True,
+            "claim_safe": False,
         }
     except Exception as exc:
-        return {"pocket_status": "pocket_detection_failed", "pocket_error": str(exc)}
+        return {
+            "pocket_status": "pocket_detection_failed",
+            "pocket_error": str(exc),
+            "pocket_x": 0.0,
+            "pocket_y": 0.0,
+            "pocket_z": 0.0,
+            "materialization_supported": False,
+            "claim_safe": False,
+        }
 
 
 def materialize_from_docking_request(
@@ -315,13 +351,15 @@ def materialize_from_docking_request(
     docking_job_id = _text(params.get("docking_job_id") or payload.get("job_id"))
     target = _text(payload.get("target_name") or params.get("target_id")) or "target"
     family = _text(params.get("family"))
-    ligands, target, family, expected_count, synthetic_used = _resolve_materialization_inputs(
+    ligands, target, family, expected_count, synthetic_used, recovered_request = _resolve_materialization_inputs(
         payload,
         params,
         docking_job_id=docking_job_id,
         target=target,
         family=family,
     )
+
+    os.makedirs(out_dir, exist_ok=True)
     rows = [
         _ligand_row_from_intake(ligand, target=target, replica_idx=index)
         for index, ligand in enumerate(ligands)
@@ -329,10 +367,34 @@ def materialize_from_docking_request(
     for row in rows:
         row["family"] = family
         row["target_family"] = family
-    pocket_meta = _pocket_metadata_from_native_pdb(_text(rows[0].get("native_pdb_path")))
+
+    provenance_recheck = dict(params.get("_scientific_input_provenance_recheck") or {})
+    receptor_snapshot: dict[str, Any] = {}
+    if provenance_recheck.get("verified") is True:
+        if not isinstance(recovered_request, dict):
+            raise DockingMaterializationError("scientific_input_private_payload_unavailable")
+        receipt = params.get("_scientific_input_receipt")
+        if not isinstance(receipt, dict):
+            raise DockingMaterializationError("scientific_input_provenance_missing")
+        receptor_snapshot = materialize_verified_pdb_structure(
+            recovered_request,
+            receipt,
+            destination=Path(out_dir) / "scientific_input_receptor.pdb",
+            root=ROOT,
+        )
+        pocket_meta = explicit_pocket_materialization(recovered_request, receipt)
+        if pocket_meta.get("materialization_supported") is not True:
+            raise DockingMaterializationError(
+                "scientific_input_pocket_definition_not_materializable",
+                _text(pocket_meta.get("pocket_definition_kind")),
+            )
+        for row in rows:
+            row["native_pdb_path"] = receptor_snapshot["path"]
+    else:
+        pocket_meta = _pocket_metadata_from_native_pdb(_text(rows[0].get("native_pdb_path")))
+
     for row in rows:
         row.update(pocket_meta)
-    os.makedirs(out_dir, exist_ok=True)
     queue_csv = os.path.join(out_dir, "docking_queue.csv")
     pd.DataFrame(rows).to_csv(queue_csv, index=False)
     materialized = {
@@ -350,10 +412,9 @@ def materialize_from_docking_request(
         "synthetic_input_used": synthetic_used,
         "docking_job_id": docking_job_id,
         "request_json_path": str(request_json_path),
+        "receptor_snapshot": receptor_snapshot,
         "pocket_metadata": pocket_meta,
-        "scientific_input_provenance_recheck": dict(
-            params.get("_scientific_input_provenance_recheck") or {}
-        ),
+        "scientific_input_provenance_recheck": provenance_recheck,
     }
     meta_path = os.path.join(out_dir, "docking_htvs_materialized.json")
     Path(meta_path).write_text(
