@@ -1,0 +1,45 @@
++            row["pose_rmsd_atom_count"] = int(coords.shape[0])
++            row["pose_rmsd_symmetry_mapping"] = [int(index) for index in mapping]
++            row["pose_search"]["symmetry_ligand_smiles"] = state_smiles
++            row["pose_search"]["symmetry_ligand_state_id"] = state_id
++
++    return {
++        "status": "symmetry_aware_rmsd_clustered",
++        "method": "rdkit_automorphism_min_rmsd",
++        "threshold_a": float(cluster_threshold_a),
++        "symmetry_mapping_count": int(max_mapping_count),
++        "cluster_count": int(total_cluster_count),
++        "state_cluster_count": int(len(state_diagnostics)),
++        "state_scoped": True,
++        "cross_state_rmsd_computed": False,
++        "atom_mapping_contract": "strict_full_atom_bijection",
++        "coordinate_frame": "receptor_frame_no_alignment",
++        "state_clusters": state_diagnostics,
++    }
++
+ class TierBetaScreening:
+     def __init__(
+         self,
+@@ -675,61 +773,26 @@
+         for rank, row in enumerate(pose_scores, start=1):
+             row["pose_rank"] = rank
+ 
+-        state_groups: dict[str, list[dict[str, Any]]] = {}
+-        for row in pose_scores:
+-            state_smiles = str(row.get("ligand_state", {}).get("smiles") or ligand_smiles)
+-            state_groups.setdefault(state_smiles, []).append(row)
+-        state_cluster_diagnostics: list[dict[str, Any]] = []
+-        for state_smiles, state_rows in state_groups.items():
+-            state_mappings = _ligand_symmetry_mappings(state_smiles)
+-            state_diag = _cluster_poses_by_symmetry(
+-                state_rows,
+-                placed_pose_coords,
+-                state_mappings,
+-                threshold_a=2.0,
+-            )
+-            state_diag["ligand_state_smiles"] = state_smiles
+-            state_cluster_diagnostics.append(state_diag)
+-            for row in state_rows:
+-                row["pose_search"]["symmetry_ligand_smiles"] = state_smiles
+-        clustering_diagnostics = {
+-            "status": "symmetry_aware_rmsd_clustered",
