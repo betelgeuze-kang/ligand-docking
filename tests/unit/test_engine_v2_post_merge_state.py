@@ -13,6 +13,7 @@ from betelgeuze_engine_v2.capabilities import (
     CIF_SYNTAX_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
+    MMCIF_ALTLOC_SOURCE_CAPABILITY_ID,
     MMCIF_SEMANTICS_CAPABILITY_ID,
     MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
@@ -27,7 +28,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 11
+    assert len(loaded["capabilities"]) == 12
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -43,6 +44,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert CIF_SYNTAX_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
     assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
+    assert MMCIF_ALTLOC_SOURCE_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
     assert rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"] is False
 
@@ -58,6 +60,14 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "coordinate_observation_and_missingness_not_inferred" in zero_occupancy["blockers"]
     assert "alternate_location_population_not_interpreted" in zero_occupancy["blockers"]
     assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in zero_occupancy["blockers"]
+
+    altloc_source = rows[MMCIF_ALTLOC_SOURCE_CAPABILITY_ID]
+    assert altloc_source["current_state"] == "bounded_atom_site_altloc_source_preservation"
+    assert altloc_source["internal_reference_execution_enabled"] is True
+    assert "alternate_location_selection_not_performed" in altloc_source["blockers"]
+    assert "coordinate_and_occupancy_values_not_interpreted" in altloc_source["blockers"]
+    assert "coordinate_observation_and_missingness_not_inferred" in altloc_source["blockers"]
+    assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in altloc_source["blockers"]
 
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
@@ -104,6 +114,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_syntax.py",
         "test_engine_v2_mmcif_semantics.py",
         "test_engine_v2_mmcif_zero_occupancy.py",
+        "test_engine_v2_mmcif_altloc_source.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
         "test_engine_v2_periodic_energy.py",
