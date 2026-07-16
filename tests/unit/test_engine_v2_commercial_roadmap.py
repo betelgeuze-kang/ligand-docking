@@ -26,7 +26,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 27-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "10개 `not_implemented`" in roadmap
+    assert "9개 `not_implemented`" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap
@@ -40,6 +40,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "chemistry preparation 전에 fail-closed" in roadmap
     assert "known insertion code의 scheme·atom-site·connection exact identity" in roadmap
     assert "polymer insertion/deletion" in roadmap
+    assert "cofactor 역할을 추정하지 않는 명시적 미지원 경계" in roadmap
+    assert "cofactor가 아니라고 판정하는 것이 아니다" in roadmap
     assert "parameter_fitting_allowed=false" in roadmap
     assert "v2_1_exit_ready=false" in roadmap
     assert "atom_site_identity_joined" in roadmap

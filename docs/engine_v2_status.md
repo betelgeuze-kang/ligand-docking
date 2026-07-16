@@ -42,7 +42,8 @@ The current `main` branch contains:
   synthetic contract corpus and 51-axis executable coverage ledger that retains
   supported, explicitly unsupported, invalid-source, and not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
-  insertion-code exact identity join across scheme, atom-site, and connection rows;
+  insertion-code exact identity join across scheme, atom-site, and connection rows,
+  while unresolved nonpoly components are never guessed to be cofactors;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.

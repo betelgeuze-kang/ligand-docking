@@ -207,6 +207,24 @@ def test_interpreted_monoatomic_roles_remain_explicitly_unsupported(
     ]
 
 
+def test_unresolved_nonpoly_role_does_not_guess_a_cofactor(corpus_snapshot) -> None:
+    result = {
+        row.case_id: row for row in corpus_snapshot.case_results
+    }["supported_carbonyl"]
+    ligand_role = result.component_roles[0]
+
+    assert ligand_role["component_id"] == "LIG"
+    assert ligand_role["composition_role"] == "unresolved_nonpoly_component"
+    assert ligand_role["role_status"] == "unresolved"
+    assert ligand_role["role_blockers"] == [
+        "ligand_cofactor_and_other_nonpoly_roles_not_interpreted"
+    ]
+    assert (
+        "role_blocker:LIG:ligand_cofactor_and_other_nonpoly_roles_not_interpreted"
+        in result.signals
+    )
+
+
 def test_source_declared_modified_residue_is_retained_as_unsupported_preparation(
     corpus_snapshot,
 ) -> None:
@@ -325,8 +343,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 24,
-        "not_implemented": 10,
+        "explicitly_unsupported": 25,
+        "not_implemented": 9,
         "supported": 17,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -346,7 +364,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     }
     assert "role.ion" not in missing
     assert "role.metal" not in missing
-    assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
+    assert "role.cofactor" not in missing
     assert "role.modified_residue" not in missing
     assert "upstream.altloc_selection" not in missing
     assert "upstream.insertion_semantics" not in missing

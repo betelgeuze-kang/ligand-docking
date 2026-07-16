@@ -404,7 +404,7 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - synthetic_contract_corpus_only
-      - ten_classified_implementation_gaps_remain
+      - nine_classified_implementation_gaps_remain
       - real_world_supported_corpus_missing
       - parameter_fitting_not_authorized
       - scientific_validation_missing

@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@aa4422ae79cd2d7dbfe92c9f0ec8304fa000eb8a`
+Observed baseline: `main@70cda6479c7484e4466b5a2f3bff45f4c0acd7a8`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -75,12 +75,15 @@ claim status without revalidating the dependency and freshness chain.
   generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
 - Keep the exact-input 27-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 17 axes as supported, 24 as
-  explicitly unsupported, and 10 as not implemented; it is not parameter-fitting
+  51-axis coverage ledger executable. It classifies 17 axes as supported, 25 as
+  explicitly unsupported, and 9 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep source water and bounded monoatomic metal/nonmetal-ion composition roles
   executable without inferring general ligand, cofactor, modified-residue, or
   biological function. Metal/ion preparation remains explicitly unsupported.
+- Keep unresolved general nonpoly components from being guessed as cofactors. The
+  explicit unsupported boundary is not evidence that a component is biologically
+  not a cofactor.
 - Keep `_pdbx_struct_mod_residue` source declarations joined to bounded polymer
   label identity while atom-site observation, parent chemistry, modification
   nature, auth/model/insertion semantics, and preparation remain blocked.
@@ -94,7 +97,7 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the 10 implementation-gap rows by independent capability slices and
+- Next, close the 9 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive

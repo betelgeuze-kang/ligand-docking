@@ -214,7 +214,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
     assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "ten_classified_implementation_gaps_remain" in (
+    assert "nine_classified_implementation_gaps_remain" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]
