@@ -122,6 +122,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_coordinate_values` | selected `Cartn_x/y/z` 원문 spelling·finite binary64 값·exact bit pattern 결속 | coordinate unit·geometry quality·distance·clash·occupancy·B-factor·formal charge·topology |
 | `v2_bounded_mmcif_nonpoly_atom_site_scalar_values` | occupancy·B-factor·formal charge의 known/unknown/not-applicable 상태와 bounded numeric value 결속 | occupancy population·B-factor quality·charge chemistry·altloc·topology |
 | `v2_bounded_mmcif_nonpoly_canonical_topology` | component SING/DOUB/TRIP/QUAD/AROM bond와 identity-symmetry `covale` Bond, 별도 `metalc` coordination edge | 비identity symmetry·hydrog·disulf·DELO/PI/POLY·원소/charge/aromaticity chemistry |
+| `v2_bounded_mmcif_nonpoly_neutral_coh_preparation` | neutral acyclic C/O/H component의 single/double bond graph, 명시적 0 formal charge, fixed-valence hydrogen completion과 instance별 failure-complete parameterability report | hydrogen 좌표·reviewed parameter·`AllAtomSystem`·charged/aromatic/stereo/extended-element/cyclic/pH/tautomer/intercomponent preparation |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -139,10 +140,18 @@ bounded topology capability는 component bond order·aromatic flag·E/Z stereo�
 order로 canonical Bond를 만들고 `metalc`는 Bond가 아닌 coordination edge로
 남긴다. 비identity symmetry, `hydrog`, `disulf`, DELO/PI/POLY는 fail-closed다.
 
+bounded preparation capability는 neutral acyclic C/O/H와 single/double component
+bond로 범위를 고정한다. source element·formal charge·nonaromatic·stereo 상태를
+교차검증하고 fixed neutral valence로 hydrogen-completed chemical graph만 만든다.
+모든 instance는 실패 원인을 보존하는 parameterability report를 가지며,
+hydrogen 좌표·reviewed parameter source·`AllAtomSystem`이 없으므로 항상
+`parameterable=false`다. 이는 pH-dependent protonation, tautomer selection,
+과학적 chemistry validation 또는 실행 가능한 all-atom preparation이 아니다.
+
 PDB·SDF V2000 bounded ingest도 존재하지만 general PDB/mmCIF/SDF/SMILES,
-biological assembly, multimodel, general missingness, hydrogen completion,
-protonation, tautomer, aromaticity, metal/cofactor와 modified residue preparation은
-완료되지 않았다.
+biological assembly, multimodel, general missingness, coordinate-bearing hydrogen
+completion, general protonation, tautomer, aromaticity, metal/cofactor와 modified
+residue preparation은 완료되지 않았다.
 
 ### V2-1 종료 기준
 
@@ -178,9 +187,11 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 4. 완료된 bounded layer로 source declaration에서 canonical topology로 넘어가는
    connection type, identity symmetry, bond order, covalence와 coordination
    규칙을 유지한다. 해석되지 않은 연결에서는 `Bond`를 생성하지 않는다.
-5. 다음으로 최초 commercial chemistry 범위를 작게 명시하고 hydrogen·formal charge·
-   protonation·aromaticity preparation과 parameterability report를 구현한다.
-6. V2-1 supported/failure corpus와 coverage 표를 먼저 닫은 뒤에만 V2-2의
+5. 완료된 bounded layer로 최초 chemistry 범위를 neutral acyclic C/O/H와
+   single/double bond로 고정하고, fixed-valence hydrogen-completed graph 및
+   failure-complete parameterability report를 유지한다. 좌표·parameter·
+   `AllAtomSystem`, pH·tautomer·aromatic/charged chemistry는 계속 분리한다.
+6. 다음으로 V2-1 supported/failure corpus와 coverage 표를 먼저 닫은 뒤에만 V2-2의
    실제 parameter fitting·validation을 시작한다.
 7. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
@@ -263,8 +274,9 @@ threshold, uncertainty, reviewer와 supersession/revocation 상태를 포함해�
 - `customer_execution`
 - `commercial_readiness`
 
-source declaration test green은 chemistry, topology, parameterability, scientific
-validity, docking accuracy, MD, GPU parity 또는 commercial readiness가 아니다.
+bounded source·topology·preparation graph test green은 parameterability,
+scientific validity, docking accuracy, MD, GPU parity 또는 commercial readiness가
+아니다.
 
 ## 9. 제품 성숙도
 

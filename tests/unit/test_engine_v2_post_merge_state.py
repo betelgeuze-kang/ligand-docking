@@ -19,6 +19,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID,
     MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID,
     MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
+    MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID,
     MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,
     MMCIF_SEMANTICS_CAPABILITY_ID,
     MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID,
@@ -35,7 +36,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 19
+    assert len(loaded["capabilities"]) == 20
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -54,6 +55,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
@@ -148,6 +150,15 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         in topology["blockers"]
     )
 
+    preparation = rows[MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID]
+    assert preparation["current_state"] == (
+        "bounded_neutral_acyclic_coh_graph_preparation_and_parameterability_report"
+    )
+    assert preparation["internal_reference_execution_enabled"] is True
+    assert "hydrogen_coordinates_not_generated" in preparation["blockers"]
+    assert "reviewed_parameter_source_missing" in preparation["blockers"]
+    assert "prepared_all_atom_system_not_created" in preparation["blockers"]
+
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
     assert "validated_independent_physics_terms_missing" not in physics_blockers
@@ -186,8 +197,14 @@ def test_readmes_describe_conditional_complexity_and_v2_quick_start() -> None:
 
 def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     source = Path(".github/workflows/ci-engine-v2-main.yml").read_text(encoding="utf-8")
+    preparation_source = Path(
+        ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+    ).read_text(encoding="utf-8")
     assert 'branches: ["main"]' in source
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
+    assert 'python-version: ["3.10", "3.11", "3.12"]' in preparation_source
+    assert "mmcif_nonpoly_preparation.py" in preparation_source
+    assert "test_engine_v2_mmcif_nonpoly_preparation.py" in preparation_source
     for test_file in (
         "test_engine_v2_contracts_molecular.py",
         "test_engine_v2_mmcif_syntax.py",
@@ -201,6 +218,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_coordinate_values.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
+        "test_engine_v2_mmcif_nonpoly_preparation.py",
         "test_engine_v2_commercial_roadmap.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",

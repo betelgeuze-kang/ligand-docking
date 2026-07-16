@@ -12,10 +12,12 @@ on:
       - "tests/unit/test_engine_v2_*.py"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
+      - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
       - "docs/entrypoints.md"
       - "README.md"
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   pull_request:
     paths:
@@ -27,10 +29,12 @@ on:
       - "tests/unit/test_engine_v2_*.py"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
+      - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
       - "docs/entrypoints.md"
       - "README.md"
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   workflow_dispatch:
 
@@ -87,6 +91,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
             tests/unit/test_engine_v2_commercial_roadmap.py
             tests/unit/test_engine_v2_sparse_geometry_features.py
             tests/unit/test_engine_v2_ai_core.py
@@ -105,10 +110,12 @@ jobs:
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
             docs/independent_engine_v2_commercial_roadmap.ko.md
+            docs/roadmaps/engine-v2-scientific-evidence-roadmap.md
             docs/entrypoints.md
             README.md
             README.ko.md
             .github/workflows/ci-engine-v2-external-baseline.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -151,6 +158,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
             tests/unit/test_engine_v2_commercial_roadmap.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \
