@@ -70,9 +70,9 @@ claim status without revalidating the dependency and freshness chain.
 
 ## Near-term work queue
 
-- Continue V2-1 from current `main`: bind bounded `_atom_site` observations to
-  the accepted nonpoly instance, component atom, and `_struct_conn` declaration
-  identities without inferring chemistry or topology.
+- Continue V2-1 from current `main`: interpret selected `_atom_site.Cartn_x/y/z`
+  as finite binary64 values while binding exact source spelling and keeping
+  geometry quality, chemistry, and topology unassessed.
 - Define the first executable supported-chemistry and preparation coverage table
   before starting production parameter fitting.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive

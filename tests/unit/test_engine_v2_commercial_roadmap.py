@@ -9,6 +9,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "current-main canonical planning reference" in roadmap
     assert "v2_bounded_mmcif_nonpoly_component_declarations" in roadmap
     assert "v2_bounded_mmcif_struct_conn_declarations" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_atom_site_observations" in roadmap
     assert "atom_site_identity_joined" in roadmap
     assert "connection type·symmetry·order·covalence·coordination·topology" in roadmap
     assert "scientifically_validated" in roadmap

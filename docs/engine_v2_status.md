@@ -23,7 +23,8 @@ The current `main` branch contains:
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
 - bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected
-  `_struct_conn` source-declaration contracts;
+  `_struct_conn` source-declaration contracts, plus a bounded selected nonpoly
+  `_atom_site` observation-to-identity join;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.
