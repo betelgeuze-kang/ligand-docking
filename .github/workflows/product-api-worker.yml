@@ -51,6 +51,7 @@ on:
       - "viewer/**"
       - "tests/unit/test_docking_pipeline_hardening.py"
       - "tests/unit/test_scientific_input_dispatch_enforcement.py"
+      - "tests/unit/test_scientific_input_dispatch_regression.py"
       - "tests/unit/test_ci_contract_fixture_packets.py"
       - "tests/unit/test_deploy_model_registry.py"
       - "tests/unit/test_product_release_bundle.py"
@@ -135,7 +136,8 @@ jobs:
             betelgeuze_product/tier_beta_vertical_slice.py \
             core/claim_boundary.py \
             tests/mobile \
-            tests/unit/test_scientific_input_dispatch_enforcement.py
+            tests/unit/test_scientific_input_dispatch_enforcement.py \
+            tests/unit/test_scientific_input_dispatch_regression.py
 
       - name: Enforce workflow trust boundaries
         run: >-
@@ -148,7 +150,7 @@ jobs:
           set +e
           python -m pytest --confcutdir=tests/unit -vv -x \
             tests/unit/test_scientific_input_dispatch_enforcement.py \
-            tests/unit/test_docking_pipeline_hardening.py \
+            tests/unit/test_scientific_input_dispatch_regression.py \
             > scientific-input-dispatch.log 2>&1
           status=$?
           cat scientific-input-dispatch.log
