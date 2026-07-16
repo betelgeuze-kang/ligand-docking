@@ -12,16 +12,30 @@ POCKET_CLAIM_BOUNDARY = (
 )
 
 
-def _grid_centers(bounds_min: np.ndarray, bounds_max: np.ndarray, spacing: float) -> np.ndarray:
+def _grid_centers(
+    bounds_min: np.ndarray,
+    bounds_max: np.ndarray,
+    spacing: float,
+    *,
+    max_grid_points: int = 20_000,
+) -> tuple[np.ndarray, float]:
     span = np.maximum(bounds_max - bounds_min, spacing)
-    nx = max(int(np.ceil(span[0] / spacing)) + 1, 2)
-    ny = max(int(np.ceil(span[1] / spacing)) + 1, 2)
-    nz = max(int(np.ceil(span[2] / spacing)) + 1, 2)
+    effective_spacing = max(float(spacing), 0.1)
+
+    def grid_shape(value: float) -> tuple[int, int, int]:
+        return tuple(max(int(np.ceil(axis / value)) + 1, 2) for axis in span)  # type: ignore[return-value]
+
+    nx, ny, nz = grid_shape(effective_spacing)
+    limit = max(int(max_grid_points), 8)
+    while nx * ny * nz > limit:
+        scale = max((nx * ny * nz / limit) ** (1.0 / 3.0), 1.01)
+        effective_spacing *= scale * 1.01
+        nx, ny, nz = grid_shape(effective_spacing)
     xs = np.linspace(bounds_min[0], bounds_max[0], nx)
     ys = np.linspace(bounds_min[1], bounds_max[1], ny)
     zs = np.linspace(bounds_min[2], bounds_max[2], nz)
     grid = np.stack(np.meshgrid(xs, ys, zs, indexing="ij"), axis=-1).reshape(-1, 3)
-    return grid.astype(np.float64)
+    return grid.astype(np.float64), effective_spacing
 
 
 def detect_pocket_from_ligand(
@@ -36,6 +50,10 @@ def detect_pocket_from_ligand(
     lig = np.asarray(ligand_xyz, dtype=np.float64)
     if prot.size == 0:
         return {"status": "blocked_empty_protein", "pocket_center": [0.0, 0.0, 0.0], "pocket_radius_a": 0.0}
+    if prot.ndim != 2 or prot.shape[1] != 3 or not np.isfinite(prot).all():
+        return {"status": "blocked_invalid_protein_coordinates", "pocket_center": [0.0, 0.0, 0.0], "pocket_radius_a": 0.0}
+    if lig.size and (lig.ndim != 2 or lig.shape[1] != 3 or not np.isfinite(lig).all()):
+        return {"status": "blocked_invalid_ligand_coordinates", "pocket_center": [0.0, 0.0, 0.0], "pocket_radius_a": 0.0}
     if lig.size == 0:
         return detect_pocket_geometric(prot)
 
@@ -61,20 +79,38 @@ def detect_pocket_geometric(
     *,
     grid_spacing_a: float = 2.5,
     min_shell_atoms: int = 8,
+    max_grid_points: int = 20_000,
+    distance_batch_size: int = 128,
 ) -> dict[str, Any]:
     """Grid cavity search: prefer points with nearby protein shell but low core density."""
     prot = np.asarray(protein_xyz, dtype=np.float64)
     if prot.size == 0:
         return {"status": "blocked_empty_protein", "pocket_center": [0.0, 0.0, 0.0], "pocket_radius_a": 0.0}
+    if prot.ndim != 2 or prot.shape[1] != 3 or not np.isfinite(prot).all():
+        return {"status": "blocked_invalid_protein_coordinates", "pocket_center": [0.0, 0.0, 0.0], "pocket_radius_a": 0.0}
 
     pad = 4.0
     bounds_min = prot.min(axis=0) - pad
     bounds_max = prot.max(axis=0) + pad
-    grid = _grid_centers(bounds_min, bounds_max, float(grid_spacing_a))
+    grid, effective_spacing = _grid_centers(
+        bounds_min,
+        bounds_max,
+        float(grid_spacing_a),
+        max_grid_points=max_grid_points,
+    )
 
-    dist = np.linalg.norm(grid[:, None, :] - prot[None, :, :], axis=-1)
-    core = np.sum(dist < 3.5, axis=1)
-    shell = np.sum((dist >= 3.5) & (dist <= 7.0), axis=1)
+    core = np.zeros(grid.shape[0], dtype=np.int32)
+    shell = np.zeros(grid.shape[0], dtype=np.int32)
+    batch_size = max(1, int(distance_batch_size))
+    for start in range(0, int(grid.shape[0]), batch_size):
+        stop = min(start + batch_size, int(grid.shape[0]))
+        delta = grid[start:stop, None, :] - prot[None, :, :]
+        distance_sq = np.sum(delta * delta, axis=-1)
+        core[start:stop] = np.sum(distance_sq < 3.5**2, axis=1)
+        shell[start:stop] = np.sum(
+            (distance_sq >= 3.5**2) & (distance_sq <= 7.0**2),
+            axis=1,
+        )
     score = shell.astype(np.float64) - 2.0 * core.astype(np.float64)
     score[core > 2] = -np.inf
     if not np.any(np.isfinite(score)):
@@ -88,6 +124,10 @@ def detect_pocket_geometric(
             "shell_atom_count": int(prot.shape[0]),
             "contact_atom_count": 0,
             "contact_atom_indices": [],
+            "grid_point_count": int(grid.shape[0]),
+            "requested_grid_spacing_a": float(grid_spacing_a),
+            "effective_grid_spacing_a": float(effective_spacing),
+            "distance_batch_size": batch_size,
             "claim_boundary": POCKET_CLAIM_BOUNDARY,
         }
 
@@ -111,6 +151,10 @@ def detect_pocket_geometric(
         "contact_atom_count": int(np.sum(contact_mask)),
         "contact_atom_indices": np.where(contact_mask)[0].astype(int).tolist(),
         "cavity_score": float(score[best_idx]) if method == "grid_cavity" else 0.0,
+        "grid_point_count": int(grid.shape[0]),
+        "requested_grid_spacing_a": float(grid_spacing_a),
+        "effective_grid_spacing_a": float(effective_spacing),
+        "distance_batch_size": batch_size,
         "claim_boundary": POCKET_CLAIM_BOUNDARY,
     }
 
