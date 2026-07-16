@@ -43,6 +43,9 @@ MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID = (
 MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_atom_site_scalar_values"
 )
+MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_canonical_topology"
+)
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -138,6 +141,15 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "type_symbol_and_component_chemistry_not_crosschecked",
         "connection_chemistry_and_topology_not_interpreted",
         "preparation_and_parameterability_not_assessed",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID: (
+        "source_authentication_missing",
+        "non_identity_symmetry_not_supported",
+        "hydrogen_disulfide_and_extended_bond_orders_not_supported",
+        "atom_element_charge_and_aromaticity_not_crosschecked",
+        "coordinate_geometry_and_bond_distances_not_assessed",
+        "chemistry_preparation_and_parameterability_not_assessed",
         "product_integration_not_qualified",
     ),
     PHYSICS_REGISTRY_CAPABILITY_ID: (
@@ -291,6 +303,12 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
+                current_state="bounded_component_bonds_and_identity_connection_topology",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PHYSICS_REGISTRY_CAPABILITY_ID: _row(
                 PHYSICS_REGISTRY_CAPABILITY_ID,
                 current_state="reference_terms_implemented_unvalidated",
@@ -366,6 +384,7 @@ __all__ = [
     "MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID",
     "MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID",
     "MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID",
+    "MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID",
     "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
