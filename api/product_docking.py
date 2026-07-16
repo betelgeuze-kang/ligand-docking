@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -53,6 +54,10 @@ class DockingJobRequest(BaseModel):
     mmcif_path: str | None = None
     mmcif_content: str | None = None
     ligands: list[LigandInput] = Field(default_factory=list)
+    pocket_residue_indices: list[int] = Field(default_factory=list)
+    pocket_center: list[float] | None = None
+    pocket_box_size: list[float] | None = None
+    pocket_radius_a: float | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -107,6 +112,25 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _scientific_input_summary(record: dict[str, Any]) -> dict[str, Any]:
+    receipt = record.get("scientific_input_provenance")
+    if not isinstance(receipt, dict):
+        receipt = {}
+    pocket = receipt.get("pocket") if isinstance(receipt.get("pocket"), dict) else {}
+    return {
+        "schema_version": str(receipt.get("schema_version") or ""),
+        "receipt_sha256": str(receipt.get("receipt_sha256") or ""),
+        "content_identity_ready": receipt.get("content_identity_ready") is True,
+        "execution_input_ready": receipt.get("execution_input_ready") is True,
+        "explicit_pocket": pocket.get("explicit") is True,
+        "pocket_definition_kind": str(pocket.get("definition_kind") or ""),
+        "ligand_count": int(receipt.get("ligand_count") or 0),
+        "private_payload_stored": record.get("private_payload_stored") is True,
+        "blockers": list(receipt.get("blockers") or []),
+        "claim_safe": False,
+    }
+
+
 @router.post("/docking/jobs")
 async def submit_docking_job(
     payload: DockingJobRequest,
@@ -159,6 +183,9 @@ async def submit_docking_job(
         docking_structure_summary,
         docking_validation_summary,
     )
+    from betelgeuze_product.scientific_input_provenance import (
+        build_scientific_input_provenance,
+    )
 
     record = build_docking_job_record(
         raw_payload,
@@ -166,13 +193,32 @@ async def submit_docking_job(
         residual_registry_packet=_read_json_object(RESIDUAL_MODEL_REGISTRY_ARTIFACT),
         scope_claim_guard_packet=_read_json_object(PRODUCT_SCOPE_CLAIM_GUARD_ARTIFACT),
     )
-    persist_docking_job_record(record, _jobs_dir())
-    store_docking_request(
+    receipt = build_scientific_input_provenance(
+        raw_payload,
+        request_sha256=str(record.get("request_sha256") or ""),
+        dispatch_manifest=record.get("engine_dispatch_manifest", {}),
+        root=ROOT,
+    )
+    record["scientific_input_provenance"] = receipt
+    record["scientific_input_provenance_sha256"] = receipt["receipt_sha256"]
+    record["scientific_input_provenance_ready"] = receipt["execution_input_ready"] is True
+    record["scientific_input_explicit_pocket"] = receipt["pocket"]["explicit"] is True
+    record["scientific_input_blockers"] = list(receipt["blockers"])
+
+    private_payload_ref = store_docking_request(
         configured_store(),
         job_id=record["job_id"],
         request_sha256=record["request_sha256"],
         request=raw_payload,
     )
+    record["private_payload_stored"] = bool(private_payload_ref)
+    record["private_payload_ref_sha256"] = (
+        hashlib.sha256(private_payload_ref.encode("utf-8")).hexdigest()
+        if private_payload_ref
+        else ""
+    )
+    persist_docking_job_record(record, _jobs_dir())
+
     dispatch_outcome = dispatch_docking_job_if_eligible(
         record,
         jobs_dir=_jobs_dir(),
@@ -191,6 +237,7 @@ async def submit_docking_job(
         "docking_results_emitted": record["docking_results_emitted"],
         "validation": docking_validation_summary(record),
         "structure": docking_structure_summary(record),
+        "scientific_input": _scientific_input_summary(record),
         "progress": docking_progress_summary(record),
         "dispatch": docking_dispatch_summary(record, dispatch_outcome),
         "claim": docking_claim_summary(record),
