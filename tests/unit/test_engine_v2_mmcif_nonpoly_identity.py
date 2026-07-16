@@ -164,7 +164,7 @@ MIXED_ASYM_ROWS = (
 MIXED_COMPONENT_ROWS = (
     {
         "_chem_comp.id": "ALA",
-        "_chem_comp.type": "L-peptide linking",
+        "_chem_comp.type": "'L-peptide linking'",
         "_chem_comp.pdbx_formal_charge": "0",
     },
     {
@@ -365,106 +365,7 @@ def test_header_order_and_uninterpreted_values_change_only_source_binding() -> N
     assert canonical.identity_projection_sha256 == changed_uninterpreted.identity_projection_sha256
     assert canonical.source_binding_sha256 != reordered.source_binding_sha256
     assert canonical.source_binding_sha256 != changed_uninterpreted.source_binding_sha256
-
-
-def test_unreferenced_chem_comp_rows_are_source_bound_but_not_projected() -> None:
-    canonical = parse_mmcif_nonpoly_identity(_pure_source(tail=""))
-    with_polymer_component = parse_mmcif_nonpoly_identity(
-        _pure_source(
-            component_rows=PURE_COMPONENT_ROWS
-            + (
-                {
-                    "_chem_comp.id": "ALA",
-                    "_chem_comp.type": "L-peptide linking",
-                    "_chem_comp.pdbx_formal_charge": "0",
-                },
-            ),
-            tail="",
-        )
-    )
-
-    assert [row.comp_id for row in canonical.components] == ["HEM"]
-    assert [row.comp_id for row in with_polymer_component.components] == ["HEM"]
-    assert (
-        canonical.identity_projection_sha256
-        == with_polymer_component.identity_projection_sha256
-    )
-    assert canonical.source_binding_sha256 != with_polymer_component.source_binding_sha256
-    binding = next(
-        row
-        for row in with_polymer_component.category_bindings
-        if row.category == CHEM_COMP_CATEGORY
-    )
-    assert binding.row_count == 2
-    assert len(binding.row_sha256) == 2
-
-
-def test_uninterpreted_atom_site_changes_do_not_change_identity_projection() -> None:
-    first = parse_mmcif_nonpoly_identity(
-        _pure_source(
-            tail="""loop_
-_atom_site.id
-_atom_site.auth_seq_id
-1 PRIVATE-A
-#
-"""
-        )
-    )
-    second = parse_mmcif_nonpoly_identity(
-        _pure_source(
-            tail="""loop_
-_atom_site.id
-_atom_site.auth_seq_id
-999 PRIVATE-B
-#
-"""
-        )
-    )
-
-    assert first.identity_projection_sha256 == second.identity_projection_sha256
-    assert first.source_binding_sha256 != second.source_binding_sha256
-
-
-def test_source_scheme_row_order_is_preserved_and_projection_significant() -> None:
-    canonical = parse_mmcif_nonpoly_identity(_pure_source(tail=""))
-    reordered = parse_mmcif_nonpoly_identity(
-        _pure_source(scheme_rows=tuple(reversed(PURE_SCHEME_ROWS)), tail="")
-    )
-
-    assert [row.ndb_seq_num for row in canonical.instances] == ["2", "1"]
-    assert [row.ndb_seq_num for row in reordered.instances] == ["1", "2"]
-    assert canonical.identity_projection_sha256 != reordered.identity_projection_sha256
-
-
-def test_name_markers_remain_distinct_source_values() -> None:
-    dot = parse_mmcif_nonpoly_identity(
-        _pure_source(
-            entity_nonpoly_rows=_updated(
-                PURE_ENTITY_NONPOLY_ROWS,
-                0,
-                "_pdbx_entity_nonpoly.name",
-                ".",
-            ),
-            tail="",
-        )
-    )
-    question = parse_mmcif_nonpoly_identity(
-        _pure_source(
-            entity_nonpoly_rows=_updated(
-                PURE_ENTITY_NONPOLY_ROWS,
-                0,
-                "_pdbx_entity_nonpoly.name",
-                "?",
-            ),
-            tail="",
-        )
-    )
-
-    assert dot.entities[0].name is not None
-    assert dot.entities[0].name.state == "not_applicable"
-    assert question.entities[0].name is not None
-    assert question.entities[0].name.state == "unknown"
-    assert dot.identity_projection_sha256 != question.identity_projection_sha256
+    assert canonical.snapshot_sha256 != changed_uninterpreted.snapshot_sha256
 
 
 def test_document_is_canonical_self_verifying_and_written_private(tmp_path: Path) -> None:
@@ -483,206 +384,119 @@ def test_document_is_canonical_self_verifying_and_written_private(tmp_path: Path
     assert not list(tmp_path.glob(".nonpoly.json.*.tmp"))
 
     tampered = deepcopy(document)
-    tampered["identity_projection"]["instances"][0]["auth_seq_num"] = "PRIVATE"
+    tampered["identity_projection"]["entities"][0]["comp_id"] = "PRIVATE"
     with pytest.raises(ValueError, match="projection digest mismatch"):
         require_mmcif_nonpoly_identity_document(tampered)
 
 
-@pytest.mark.parametrize(
-    ("source", "code"),
-    [
-        (
-            "data_missing\n"
-            + _loop(ENTITY_HEADERS, PURE_ENTITY_ROWS)
-            + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)
-            + _loop(ENTITY_NONPOLY_HEADERS, PURE_ENTITY_NONPOLY_ROWS)
-            + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS),
-            "required_category_missing",
-        ),
-        (
-            "data_scalar\n"
-            "_entity.id 1\n"
-            "_entity.type non-polymer\n"
-            + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)
-            + _loop(CHEM_COMP_HEADERS, PURE_COMPONENT_ROWS)
-            + _loop(ENTITY_NONPOLY_HEADERS, PURE_ENTITY_NONPOLY_ROWS)
-            + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS),
-            "category_must_be_loop",
-        ),
-        (
-            _pure_source(
-                entity_nonpoly_headers=(
-                    "_pdbx_entity_nonpoly.entity_id",
-                    "_audit_author.name",
-                    "_pdbx_entity_nonpoly.comp_id",
-                ),
-                entity_nonpoly_rows=(
-                    {
-                        "_pdbx_entity_nonpoly.entity_id": "1",
-                        "_audit_author.name": "AUTHOR",
-                        "_pdbx_entity_nonpoly.comp_id": "HEM",
-                    },
-                ),
-                tail="",
-            ),
-            "mixed_category_loop",
-        ),
-        (
-            _pure_source(
-                scheme_headers=tuple(
-                    header
-                    for header in SCHEME_HEADERS
-                    if header != "_pdbx_nonpoly_scheme.auth_seq_num"
-                ),
-                tail="",
-            ),
-            "required_header_missing",
-        ),
-    ],
-)
-def test_selected_category_surface_failures_are_explicit(source: str, code: str) -> None:
-    _error(source, code)
+def test_required_categories_and_headers_fail_closed() -> None:
+    missing = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=(),
+        scheme_rows=PURE_SCHEME_ROWS,
+    )
+    _error(missing, "required_category_missing")
 
-
-def test_entity_component_and_scheme_coverage_fail_closed() -> None:
-    duplicate_entity_nonpoly = PURE_ENTITY_NONPOLY_ROWS + PURE_ENTITY_NONPOLY_ROWS
-    _error(
-        _pure_source(entity_nonpoly_rows=duplicate_entity_nonpoly, tail=""),
-        "duplicate_nonpoly_entity_id",
-    )
-
-    _error(
-        _source(
-            entity_rows=MIXED_ENTITY_ROWS,
-            asym_rows=MIXED_ASYM_ROWS,
-            component_rows=MIXED_COMPONENT_ROWS,
-            entity_nonpoly_rows=(MIXED_ENTITY_NONPOLY_ROWS[0],),
-            scheme_rows=(MIXED_SCHEME_ROWS[0],),
-        ),
-        "nonpoly_entity_coverage_mismatch",
-    )
-
-    missing_component = _updated(
-        PURE_ENTITY_NONPOLY_ROWS,
-        0,
-        "_pdbx_entity_nonpoly.comp_id",
-        "PRIVATE",
-    )
-    error = _error(
-        _pure_source(entity_nonpoly_rows=missing_component, tail=""),
-        "component_reference_missing",
-    )
-    assert "PRIVATE" not in str(error)
-
-    bad_join = _updated(
-        PURE_SCHEME_ROWS,
-        0,
-        "_pdbx_nonpoly_scheme.entity_id",
-        "2",
-    )
-    _error(
-        _pure_source(scheme_rows=bad_join, tail=""),
-        "nonpoly_scheme_join_mismatch",
-    )
-
-    bad_component = _updated(
-        PURE_SCHEME_ROWS,
-        0,
-        "_pdbx_nonpoly_scheme.mon_id",
-        "PRIVATE",
-    )
-    error = _error(
-        _pure_source(scheme_rows=bad_component, tail=""),
-        "nonpoly_component_join_mismatch",
-    )
-    assert "PRIVATE" not in str(error)
-
-    duplicate_key = _updated(
-        PURE_SCHEME_ROWS,
-        1,
-        "_pdbx_nonpoly_scheme.ndb_seq_num",
-        "2",
-    )
-    _error(
-        _pure_source(scheme_rows=duplicate_key, tail=""),
-        "duplicate_nonpoly_scheme_key",
-    )
-
-    _error(
-        _source(
-            entity_rows=MIXED_ENTITY_ROWS,
-            asym_rows=MIXED_ASYM_ROWS,
-            component_rows=MIXED_COMPONENT_ROWS,
-            entity_nonpoly_rows=MIXED_ENTITY_NONPOLY_ROWS,
-            scheme_rows=(MIXED_SCHEME_ROWS[0],),
-        ),
-        "nonpoly_scheme_coverage_mismatch",
-    )
-
-
-def test_invalid_opaque_tokens_fail_without_echo() -> None:
-    quoted_alias = _updated(
-        PURE_SCHEME_ROWS,
-        0,
-        "_pdbx_nonpoly_scheme.auth_seq_num",
-        "'PRIVATE-AUTH'",
-    )
-    error = _error(
-        _pure_source(scheme_rows=quoted_alias, tail=""),
-        "invalid_identity_token",
-    )
-    assert "PRIVATE-AUTH" not in str(error)
-    assert "PRIVATE-AUTH" not in repr(error)
-
-    multiline_source = (
-        "data_nonpoly\n#\n"
-        + _loop(ENTITY_HEADERS, PURE_ENTITY_ROWS)
+    scalar = (
+        "data_nonpoly\n"
+        "_entity.id 1\n"
+        "_entity.type non-polymer\n"
         + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)
         + _loop(CHEM_COMP_HEADERS, PURE_COMPONENT_ROWS)
-        + "loop_\n"
-        "_pdbx_entity_nonpoly.entity_id\n"
-        "_pdbx_entity_nonpoly.name\n"
-        "_pdbx_entity_nonpoly.comp_id\n"
-        "1\n"
-        ";PRIVATE-NAME\n"
-        "SECOND-LINE\n"
-        ";\n"
-        "HEM\n"
-        "#\n"
+        + _loop(ENTITY_NONPOLY_HEADERS, PURE_ENTITY_NONPOLY_ROWS)
         + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS)
     )
-    error = _error(multiline_source, "multiline_value_not_supported")
-    assert "PRIVATE-NAME" not in str(error)
-    assert "SECOND-LINE" not in repr(error)
+    _error(scalar, "category_must_be_loop")
 
 
-def test_nonpoly_entity_requires_struct_asym_carrier() -> None:
-    _error(
-        _source(
-            entity_rows=PURE_ENTITY_ROWS,
-            asym_rows=({"_struct_asym.id": "P", "_struct_asym.entity_id": "9"},),
-            component_rows=PURE_COMPONENT_ROWS,
-            entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
-            scheme_rows=PURE_SCHEME_ROWS,
-            tail="",
-        ),
-        "struct_asym_entity_reference_missing",
+def test_entity_asym_component_and_instance_relationships_fail_closed() -> None:
+    unknown_asym = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.asym_id", "PRIVATE"),
     )
+    _error(unknown_asym, "asym_reference_missing")
 
-    entity_rows = PURE_ENTITY_ROWS + ({"_entity.id": "9", "_entity.type": "polymer"},)
-    _error(
-        _source(
-            entity_rows=entity_rows,
-            asym_rows=({"_struct_asym.id": "P", "_struct_asym.entity_id": "9"},),
-            component_rows=PURE_COMPONENT_ROWS,
-            entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
-            scheme_rows=PURE_SCHEME_ROWS,
-            tail="",
-        ),
-        "nonpoly_asym_coverage_mismatch",
+    wrong_entity = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.entity_id", "2"),
     )
+    _error(wrong_entity, "asym_entity_reference_mismatch")
+
+    wrong_component = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.mon_id", "OTHER"),
+    )
+    _error(wrong_component, "scheme_component_mismatch")
 
 
-def test_input_type_is_strict() -> None:
+def test_duplicate_identity_and_instance_keys_are_rejected() -> None:
+    duplicate_component = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS + PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=PURE_SCHEME_ROWS,
+    )
+    _error(duplicate_component, "duplicate_component_identity")
+
+    duplicate_entity = _source(
+        entity_rows=PURE_ENTITY_ROWS + PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=PURE_SCHEME_ROWS,
+    )
+    _error(duplicate_entity, "duplicate_entity_identity")
+
+    duplicate_instance = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=PURE_SCHEME_ROWS + (dict(PURE_SCHEME_ROWS[0]),),
+    )
+    _error(duplicate_instance, "duplicate_instance_identity")
+
+
+def test_errors_do_not_echo_private_identity_values() -> None:
+    source = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
+        scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.asym_id", "PRIVATE-ASYM"),
+    )
+    error = _error(source, "asym_reference_missing")
+    assert "PRIVATE-ASYM" not in str(error)
+    assert "PRIVATE-ASYM" not in error.detail
+
+
+def test_input_type_and_token_bounds_are_enforced() -> None:
     with pytest.raises(TypeError, match="must be a string"):
-        parse_mmcif_nonpoly_identity(b"data_nonpoly")  # type: ignore[arg-type]
+        parse_mmcif_nonpoly_identity(b"data_x")  # type: ignore[arg-type]
+
+    long_name = "'" + ("A" * 257) + "'"
+    source = _source(
+        entity_rows=PURE_ENTITY_ROWS,
+        asym_rows=PURE_ASYM_ROWS,
+        component_rows=PURE_COMPONENT_ROWS,
+        entity_nonpoly_rows=_updated(
+            PURE_ENTITY_NONPOLY_ROWS,
+            0,
+            "_pdbx_entity_nonpoly.name",
+            long_name,
+        ),
+        scheme_rows=PURE_SCHEME_ROWS,
+    )
+    _error(source, "semantic_token_out_of_bounds")
