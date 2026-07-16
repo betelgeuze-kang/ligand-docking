@@ -20,6 +20,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_canonical_topology" in roadmap
     assert "v2_bounded_mmcif_nonpoly_neutral_coh_preparation" in roadmap
     assert "v2_bounded_mmcif_nonpoly_hydrogen_coordinates" in roadmap
+    assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
     assert "exact bit pattern" in roadmap
@@ -29,7 +30,11 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "6개 `not_implemented`" in roadmap
+    assert "5개 `not_implemented`" in roadmap
+    assert "Sage 2.2.1 unconstrained artifact" in roadmap
+    assert "OFFXML을\n해석하거나" in roadmap
+    assert "partial charge" in roadmap
+    assert "과학·benchmark 타당성 또는 법률 준수를 승인하지 않는다" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap

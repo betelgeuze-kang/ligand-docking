@@ -52,10 +52,15 @@ The current `main` branch contains:
   coordinate scaffold that preserves source Cartesian angstrom coordinates and
   assigns added hydrogens deterministic 1.0-angstrom fixed parent offsets while
   explicitly leaving neighbor geometry, stereo, clashes, calibration, and
-  minimization uninterpreted, plus a frozen 30-case
+  minimization uninterpreted, plus an offline reviewed parameter-source
+  provenance contract that freezes the OpenFF Sage 2.2.1 unconstrained release,
+  commit, artifact SHA-256, CC-BY-4.0 license identity and license-text SHA-256
+  while explicitly excluding OFFXML parsing, parameter or partial-charge
+  assignment, coverage, applicability, calibration, and scientific validation,
+  plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
   2 invalid-source cases, plus a 51-axis executable coverage ledger classifying
-  18 supported, 27 explicitly unsupported, and 6 not-implemented rows,
+  19 supported, 27 explicitly unsupported, and 5 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -74,7 +79,8 @@ not currently establish:
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
   model selection, ensemble/trajectory/averaging semantics, multi-model execution,
-  validated hydrogen geometry, reviewed parameters, general ligand/cofactor or
+  validated hydrogen geometry, source-to-graph parameter binding or assigned
+  parameters, general ligand/cofactor or
   non-source-declared modified-residue role interpretation,
   metal/ion/modified-residue preparation,
   or a prepared `AllAtomSystem`;

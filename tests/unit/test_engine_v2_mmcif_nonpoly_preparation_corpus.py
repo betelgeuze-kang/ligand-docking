@@ -440,8 +440,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 6,
-        "supported": 18,
+        "not_implemented": 5,
+        "supported": 19,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -468,10 +468,21 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "upstream.missing_atom_residue_policy" not in missing
     assert "upstream.multimodel_policy" not in missing
     assert "hydrogen.coordinates" not in missing
-    assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
+    assert "parameter_source.reviewed" not in missing
     assert missing["all_atom_system.creation"] == (
         "prepared_all_atom_system_not_created"
     )
+
+    parameter_source = next(
+        row for row in rows if row.coverage_id == "parameter_source.reviewed"
+    )
+    assert parameter_source.policy_status == "supported"
+    assert parameter_source.blocker == ""
+    assert parameter_source.expected_signal == (
+        "parameter_source_provenance_status:"
+        "reviewed_identity_license_and_scope_only"
+    )
+    assert payload["reviewed_parameter_source_provenance_bound"] is True
 
 
 def test_document_is_deterministic_self_verifying_and_written_private(
