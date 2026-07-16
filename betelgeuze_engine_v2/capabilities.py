@@ -1,8 +1,9 @@
 """Machine-readable capability state derived from executable Engine v2 contracts.
 
-The capability snapshot separates implementation from scientific validation and
-customer enablement.  A component can exist and be tested while remaining
-claim-blocked and unavailable to product routes.
+The capability snapshot separates implementation from calibration, public evidence,
+scientific validation, product qualification, and customer enablement. A component
+can exist and be tested while remaining claim-blocked and unavailable to product
+routes.
 """
 
 from __future__ import annotations
@@ -13,16 +14,18 @@ from typing import Any
 
 from .engine import REFERENCE_CLAIM_BLOCKERS
 
-CAPABILITY_SCHEMA_VERSION = 3
+CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
 IMPLEMENTATION_STAGE = "v2_g_bounded_scientific_scaffolds"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
 SDF_INGEST_CAPABILITY_ID = "v2_bounded_sdf_v2000_ingest"
+CIF_SYNTAX_CAPABILITY_ID = "v2_bounded_cif_syntax"
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
+EXTERNAL_BASELINE_CAPABILITY_ID = "v2_external_baseline_receipts"
 DISTRIBUTION_CAPABILITY_ID = "v2_independent_distribution"
 
 CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
@@ -39,8 +42,14 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "multi_record_ingest_not_supported",
         "product_integration_not_qualified",
     ),
+    CIF_SYNTAX_CAPABILITY_ID: (
+        "semantic_mmcif_identity_and_topology_missing",
+        "dictionary_conformance_not_established",
+        "assembly_missingness_and_altloc_semantics_missing",
+        "product_integration_not_qualified",
+    ),
     PHYSICS_REGISTRY_CAPABILITY_ID: (
-        "validated_independent_physics_terms_missing",
+        "reference_physics_scientific_validation_missing",
         "applicability_domain_evidence_missing",
         "public_force_energy_validation_missing",
     ),
@@ -51,9 +60,14 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "product_integration_not_qualified",
     ),
     BENCHMARK_CAPABILITY_ID: (
-        "benchmark_scaffold_not_publicly_validated",
+        "benchmark_protocol_not_publicly_validated",
         "public_holdout_results_missing",
-        "artifact_signature_verification_missing",
+        "public_asymmetric_attestation_and_transparency_missing",
+    ),
+    EXTERNAL_BASELINE_CAPABILITY_ID: (
+        "reviewed_external_engine_results_missing",
+        "public_comparison_evidence_missing",
+        "operator_execution_not_authorized",
     ),
     DISTRIBUTION_CAPABILITY_ID: (
         "release_candidate_not_published",
@@ -73,9 +87,13 @@ def _row(
     return {
         "current_state": current_state,
         "implemented": True,
+        "reference_contract_ready": True,
         "internal_reference_execution_enabled": bool(internal_execution_enabled),
+        "calibrated": False,
         "scientifically_validated": False,
+        "public_evidence_ready": False,
         "benchmark_validated": False,
+        "product_qualified": False,
         "customer_execution_enabled": False,
         "claim_safe": False,
         "blocker_source": blocker_source,
@@ -84,7 +102,7 @@ def _row(
 
 
 def capability_snapshot() -> dict[str, Any]:
-    """Return the canonical V2-G capability snapshot.
+    """Return the canonical capability snapshot for the bounded Engine v2 surface.
 
     The returned object is newly allocated so callers cannot mutate module-level
     policy state through a previously returned dictionary.
@@ -121,9 +139,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            CIF_SYNTAX_CAPABILITY_ID: _row(
+                CIF_SYNTAX_CAPABILITY_ID,
+                current_state="bounded_single_block_lexical_structural_subset",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PHYSICS_REGISTRY_CAPABILITY_ID: _row(
                 PHYSICS_REGISTRY_CAPABILITY_ID,
-                current_state="registry_contract_ready_terms_unvalidated",
+                current_state="reference_terms_implemented_unvalidated",
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -135,13 +159,19 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             BENCHMARK_CAPABILITY_ID: _row(
                 BENCHMARK_CAPABILITY_ID,
-                current_state="failure_complete_ledger_scaffold",
+                current_state="failure_complete_hmac_signed_internal_ledger",
                 internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            EXTERNAL_BASELINE_CAPABILITY_ID: _row(
+                EXTERNAL_BASELINE_CAPABILITY_ID,
+                current_state="offline_work_order_and_verified_receipt_contract_ready",
+                internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             DISTRIBUTION_CAPABILITY_ID: _row(
                 DISTRIBUTION_CAPABILITY_ID,
-                current_state="clean_install_cpu_reference_wheel",
+                current_state="reproducible_rc_wheel_with_spdx_sbom",
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -153,6 +183,8 @@ def capability_snapshot() -> dict[str, Any]:
             "require_non_empty_row_level_evidence": True,
             "require_failure_rows": True,
             "require_public_holdout_evidence": True,
+            "require_public_evidence_attestation": True,
+            "require_reviewed_external_baseline_results": True,
             "require_validated_independent_physics": True,
             "require_gpu_parity_before_acceleration_claim": True,
             "external_state_mutated": False,
@@ -176,10 +208,12 @@ __all__ = [
     "BENCHMARK_CAPABILITY_ID",
     "CAPABILITY_BLOCKERS",
     "CAPABILITY_SCHEMA_VERSION",
+    "CIF_SYNTAX_CAPABILITY_ID",
     "CPU_REFERENCE_CAPABILITY_ID",
     "DISTRIBUTION_CAPABILITY_ID",
     "DOCKING_CAPABILITY_ID",
     "ENGINE_ID",
+    "EXTERNAL_BASELINE_CAPABILITY_ID",
     "IMPLEMENTATION_STAGE",
     "PDB_INGEST_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",
