@@ -5,6 +5,7 @@ on:
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
       - "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_missing_atom_residue_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_modified_residue_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
@@ -22,6 +23,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
+      - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
       - "tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py"
       - "tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
@@ -30,12 +32,14 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
       - ".github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   push:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
       - "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_missing_atom_residue_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_modified_residue_declarations.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
@@ -53,6 +57,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
       - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
+      - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
       - "tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py"
       - "tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
@@ -61,6 +66,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
       - ".github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   workflow_dispatch:
 
@@ -97,6 +103,7 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py
+            tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py
             tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py
             tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
@@ -120,6 +127,7 @@ jobs:
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
             .github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml
             .github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml
+            .github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml
             .github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -154,6 +162,7 @@ jobs:
           python -m pytest -vv -x \
             tests/unit/test_engine_v2_mmcif_syntax.py \
             tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py \
+            tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py \
             tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py \
             tests/unit/test_engine_v2_mmcif_modified_residue_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py \

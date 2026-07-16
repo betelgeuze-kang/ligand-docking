@@ -25,6 +25,9 @@ import tempfile
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from .mmcif_biological_assembly_policy import (
+    parse_mmcif_biological_assembly_policy,
+)
 from .mmcif_missing_atom_residue_policy import (
     parse_mmcif_missing_atom_residue_policy,
 )
@@ -235,6 +238,9 @@ class MmcifNonpolyInstancePreparationReport:
 @dataclass(frozen=True, slots=True, repr=False)
 class MmcifNonpolyPreparationSnapshot:
     source_sha256: str
+    biological_assembly_policy_snapshot_sha256: str
+    biological_assembly_policy_projection_sha256: str
+    biological_assembly_policy_source_binding_sha256: str
     missing_atom_residue_policy_snapshot_sha256: str
     missing_atom_residue_policy_projection_sha256: str
     missing_atom_residue_policy_source_binding_sha256: str
@@ -290,6 +296,9 @@ class MmcifNonpolyPreparationSnapshot:
             "profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
             "parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
             "source_sha256": self.source_sha256,
+            "biological_assembly_policy_snapshot_sha256": (
+                self.biological_assembly_policy_snapshot_sha256
+            ),
             "missing_atom_residue_policy_snapshot_sha256": (
                 self.missing_atom_residue_policy_snapshot_sha256
             ),
@@ -342,6 +351,7 @@ def _claim_policy() -> dict[str, bool]:
         "hydrogen_completion_graph_created": True,
         "parameterability_assessed": True,
         "failure_complete_instance_reports": True,
+        "biological_assembly_admission_checked": True,
         "missing_atom_residue_admission_checked": True,
         "source_authenticated": False,
         "charged_chemistry_supported": False,
@@ -791,6 +801,12 @@ def parse_mmcif_nonpoly_preparation(text: str) -> MmcifNonpolyPreparationSnapsho
 
     if type(text) is not str:
         raise TypeError("mmCIF nonpoly preparation input must be a string")
+    biological_assembly_policy = parse_mmcif_biological_assembly_policy(text)
+    if not biological_assembly_policy.execution_allowed:
+        raise MmcifNonpolyPreparationError(
+            "source_declared_biological_assembly_not_supported",
+            "source-declared biological-assembly rows block preparation",
+        )
     missing_atom_residue_policy = parse_mmcif_missing_atom_residue_policy(text)
     if not missing_atom_residue_policy.execution_allowed:
         raise MmcifNonpolyPreparationError(
@@ -802,7 +818,8 @@ def parse_mmcif_nonpoly_preparation(text: str) -> MmcifNonpolyPreparationSnapsho
     components = parse_mmcif_nonpoly_component_declarations(text)
     topology = parse_mmcif_nonpoly_canonical_topology(text)
     if not (
-        missing_atom_residue_policy.source_sha256
+        biological_assembly_policy.source_sha256
+        == missing_atom_residue_policy.source_sha256
         == observation.source_sha256
         == scalar.source_sha256
         == components.source_sha256
@@ -847,6 +864,15 @@ def parse_mmcif_nonpoly_preparation(text: str) -> MmcifNonpolyPreparationSnapsho
         global_blockers.append("intercomponent_coordination_not_prepared")
     return MmcifNonpolyPreparationSnapshot(
         source_sha256=observation.source_sha256,
+        biological_assembly_policy_snapshot_sha256=(
+            biological_assembly_policy.snapshot_sha256
+        ),
+        biological_assembly_policy_projection_sha256=(
+            biological_assembly_policy.policy_projection_sha256
+        ),
+        biological_assembly_policy_source_binding_sha256=(
+            biological_assembly_policy.source_binding_sha256
+        ),
         missing_atom_residue_policy_snapshot_sha256=(
             missing_atom_residue_policy.snapshot_sha256
         ),
@@ -878,6 +904,9 @@ def mmcif_nonpoly_preparation_projection(
         "schema_id": MMCIF_NONPOLY_PREPARATION_PROJECTION_SCHEMA_ID,
         "profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
         "parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
+        "biological_assembly_policy_projection_sha256": (
+            snapshot.biological_assembly_policy_projection_sha256
+        ),
         "missing_atom_residue_policy_projection_sha256": (
             snapshot.missing_atom_residue_policy_projection_sha256
         ),
@@ -899,6 +928,12 @@ def mmcif_nonpoly_preparation_source_binding(
     return {
         "schema_id": MMCIF_NONPOLY_PREPARATION_SOURCE_BINDING_SCHEMA_ID,
         "source_sha256": snapshot.source_sha256,
+        "biological_assembly_policy_snapshot_sha256": (
+            snapshot.biological_assembly_policy_snapshot_sha256
+        ),
+        "biological_assembly_policy_source_binding_sha256": (
+            snapshot.biological_assembly_policy_source_binding_sha256
+        ),
         "missing_atom_residue_policy_snapshot_sha256": (
             snapshot.missing_atom_residue_policy_snapshot_sha256
         ),
@@ -1239,6 +1274,7 @@ def require_mmcif_nonpoly_preparation_document(
     if document.get("source_sha256") != source_sha:
         raise ValueError("nonpoly preparation source digest mismatch")
     for key in (
+        "biological_assembly_policy_snapshot_sha256",
         "missing_atom_residue_policy_snapshot_sha256",
         "observation_snapshot_sha256",
         "scalar_snapshot_sha256",
@@ -1249,6 +1285,7 @@ def require_mmcif_nonpoly_preparation_document(
         if document.get(key) != digest:
             raise ValueError(f"nonpoly preparation {key} mismatch")
     for key in (
+        "biological_assembly_policy_projection_sha256",
         "missing_atom_residue_policy_projection_sha256",
         "scalar_projection_sha256",
         "component_projection_sha256",
@@ -1256,6 +1293,7 @@ def require_mmcif_nonpoly_preparation_document(
     ):
         _require_digest(projection.get(key), key)
     for key in (
+        "biological_assembly_policy_source_binding_sha256",
         "missing_atom_residue_policy_source_binding_sha256",
         "scalar_source_binding_sha256",
         "component_source_binding_sha256",

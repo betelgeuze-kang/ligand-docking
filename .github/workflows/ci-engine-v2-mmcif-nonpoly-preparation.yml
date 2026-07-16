@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_missing_atom_residue_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_declarations.py"
@@ -15,6 +16,7 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
+      - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
       - "tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py"
@@ -25,11 +27,13 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   push:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_biological_assembly_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_missing_atom_residue_policy.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_component_declarations.py"
@@ -41,6 +45,7 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
+      - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
       - "tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py"
@@ -51,6 +56,7 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml"
       - ".github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml"
   workflow_dispatch:
 
@@ -85,6 +91,7 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_mmcif_syntax.py
+            tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py
             tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
             tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py
@@ -95,6 +102,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
             .github/workflows/ci-engine-v2-mmcif-missing-atom-residue-policy.yml
+            .github/workflows/ci-engine-v2-mmcif-biological-assembly-policy.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -127,6 +135,7 @@ jobs:
           set +e
           python -m pytest -vv -x \
             tests/unit/test_engine_v2_mmcif_syntax.py \
+            tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py \
             tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py \

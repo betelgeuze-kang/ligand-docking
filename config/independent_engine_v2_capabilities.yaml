@@ -169,6 +169,29 @@ capabilities:
       - scientific_validation_missing
       - product_integration_not_qualified
 
+  v2_bounded_mmcif_biological_assembly_policy:
+    current_state: bounded_source_declared_biological_assembly_preparation_admission
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - source_declared_biological_assembly_expansion_not_supported
+      - assembly_id_generation_expression_and_asym_list_not_interpreted
+      - operation_matrix_vector_and_composition_not_interpreted
+      - absence_does_not_prove_asymmetric_unit_is_biological_assembly
+      - biological_assembly_correctness_not_assessed
+      - coordinates_not_expanded
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
   v2_bounded_mmcif_missing_atom_residue_policy:
     current_state: bounded_source_declared_observation_gap_preparation_admission
     implemented: true
@@ -405,6 +428,7 @@ capabilities:
     claim_safe: false
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
+      - source_declared_biological_assembly_preparation_not_supported
       - source_declared_observation_gap_preparation_not_supported
       - hydrogen_coordinates_not_generated
       - reviewed_parameter_source_missing
@@ -415,7 +439,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_bounded_mmcif_nonpoly_preparation_corpus:
-    current_state: frozen_29_case_failure_complete_corpus_and_51_axis_coverage_ledger
+    current_state: frozen_30_case_failure_complete_corpus_and_51_axis_coverage_ledger
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
@@ -429,7 +453,7 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - synthetic_contract_corpus_only
-      - eight_classified_implementation_gaps_remain
+      - seven_classified_implementation_gaps_remain
       - real_world_supported_corpus_missing
       - parameter_fitting_not_authorized
       - scientific_validation_missing

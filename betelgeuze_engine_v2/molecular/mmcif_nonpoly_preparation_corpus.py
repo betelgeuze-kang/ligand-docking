@@ -24,6 +24,14 @@ from .mmcif_atom_site_model_policy import (
     MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
     parse_mmcif_atom_site_model_policy,
 )
+from .mmcif_biological_assembly_policy import (
+    MMCIF_BIOLOGICAL_ASSEMBLY_DEFINITION_HEADERS,
+    MMCIF_BIOLOGICAL_ASSEMBLY_GENERATOR_HEADERS,
+    MMCIF_BIOLOGICAL_ASSEMBLY_OPERATOR_HEADERS,
+    MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_PARSER_VERSION,
+    MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_PROFILE_ID,
+    parse_mmcif_biological_assembly_policy,
+)
 from .mmcif_missing_atom_residue_policy import (
     MMCIF_MISSING_ATOM_RESIDUE_POLICY_PARSER_VERSION,
     MMCIF_MISSING_ATOM_RESIDUE_POLICY_PROFILE_ID,
@@ -76,7 +84,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "4cb19ae131728b9df264da4bb8c801c0b6b5737404e7e6aedab4e21081d70255"
+    "2a96767e2b6014beab0359110d8cf8e2434c14d8812593ca83717c490853c1fe"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -224,12 +232,14 @@ class MmcifPreparationCorpusCaseResult:
     observed_outcome: str
     preparation_snapshot_sha256: str
     atom_site_model_policy_snapshot_sha256: str
+    biological_assembly_policy_snapshot_sha256: str
     missing_atom_residue_policy_snapshot_sha256: str
     component_role_snapshot_sha256: str
     modified_residue_declaration_snapshot_sha256: str
     error_code: str
     reports: tuple[Mapping[str, Any], ...]
     atom_site_model_policy: Mapping[str, Any]
+    biological_assembly_policy: Mapping[str, Any]
     missing_atom_residue_policy: Mapping[str, Any]
     component_roles: tuple[Mapping[str, Any], ...]
     modified_residue_declarations: tuple[Mapping[str, Any], ...]
@@ -246,6 +256,9 @@ class MmcifPreparationCorpusCaseResult:
             "atom_site_model_policy_snapshot_sha256": (
                 self.atom_site_model_policy_snapshot_sha256
             ),
+            "biological_assembly_policy_snapshot_sha256": (
+                self.biological_assembly_policy_snapshot_sha256
+            ),
             "missing_atom_residue_policy_snapshot_sha256": (
                 self.missing_atom_residue_policy_snapshot_sha256
             ),
@@ -256,6 +269,7 @@ class MmcifPreparationCorpusCaseResult:
             "error_code": self.error_code,
             "reports": [dict(row) for row in self.reports],
             "atom_site_model_policy": dict(self.atom_site_model_policy),
+            "biological_assembly_policy": dict(self.biological_assembly_policy),
             "missing_atom_residue_policy": dict(
                 self.missing_atom_residue_policy
             ),
@@ -477,6 +491,7 @@ def _corpus_source(
     ligand_alt_id: str = ".",
     ligand_insertion_code: str = ".",
     observation_gap: str = "",
+    biological_assembly: bool = False,
 ) -> str:
     if not atoms:
         raise MmcifNonpolyPreparationCorpusError(
@@ -710,6 +725,41 @@ def _corpus_source(
         raise MmcifNonpolyPreparationCorpusError(
             "corpus observation-gap fixture is unsupported"
         )
+    if biological_assembly:
+        source += _loop(
+            MMCIF_BIOLOGICAL_ASSEMBLY_DEFINITION_HEADERS,
+            ({"_pdbx_struct_assembly.id": "1"},),
+        )
+        source += _loop(
+            MMCIF_BIOLOGICAL_ASSEMBLY_GENERATOR_HEADERS,
+            (
+                {
+                    "_pdbx_struct_assembly_gen.assembly_id": "1",
+                    "_pdbx_struct_assembly_gen.oper_expression": "1",
+                    "_pdbx_struct_assembly_gen.asym_id_list": "L",
+                },
+            ),
+        )
+        source += _loop(
+            MMCIF_BIOLOGICAL_ASSEMBLY_OPERATOR_HEADERS,
+            (
+                {
+                    "_pdbx_struct_oper_list.id": "1",
+                    "_pdbx_struct_oper_list.matrix[1][1]": "1",
+                    "_pdbx_struct_oper_list.matrix[1][2]": "0",
+                    "_pdbx_struct_oper_list.matrix[1][3]": "0",
+                    "_pdbx_struct_oper_list.matrix[2][1]": "0",
+                    "_pdbx_struct_oper_list.matrix[2][2]": "1",
+                    "_pdbx_struct_oper_list.matrix[2][3]": "0",
+                    "_pdbx_struct_oper_list.matrix[3][1]": "0",
+                    "_pdbx_struct_oper_list.matrix[3][2]": "0",
+                    "_pdbx_struct_oper_list.matrix[3][3]": "1",
+                    "_pdbx_struct_oper_list.vector[1]": "0",
+                    "_pdbx_struct_oper_list.vector[2]": "0",
+                    "_pdbx_struct_oper_list.vector[3]": "0",
+                },
+            ),
+        )
     source += _loop(MMCIF_NONPOLY_COMPONENT_ATOM_HEADERS, atom_rows)
     if bond_rows:
         source += _loop(MMCIF_NONPOLY_COMPONENT_BOND_HEADERS, bond_rows)
@@ -752,6 +802,7 @@ FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
             "unsupported_altloc_input": "3c76390e49d672ab9d3a4aff02590382096550e7c762451ea201e10456796673",
             "unsupported_zero_occupancy_residue_input": "4fda53fbe92eb89adb8a27e67749a84672a5c930c8e6a5aa747bf3d951ee0df0",
             "unsupported_unobserved_atom_input": "1b35f9b45192f46565b88be9d3e9d7a8abd81081c2f63233e9c95e718bd2eb42",
+            "unsupported_biological_assembly_input": "70b49622c1b2c3597e94ad4342553292fab01a6009e6cd72615a77c48246eaf3",
             "invalid_component_charge_grammar": "43f64cf79729dbbf92a858cb315421067393e5796466e0614a65f6db937c5ed5",
             "invalid_component_charge_range": "a7a25d9fa84a602b3221faf553918e54bfbad06d443355fca8b3eb67df81438d",
         }
@@ -832,6 +883,7 @@ def _case(
     ligand_alt_id: str = ".",
     ligand_insertion_code: str = ".",
     observation_gap: str = "",
+    biological_assembly: bool = False,
 ) -> MmcifPreparationCorpusCase:
     source = _corpus_source(
         atoms,
@@ -843,6 +895,7 @@ def _case(
         ligand_alt_id=ligand_alt_id,
         ligand_insertion_code=ligand_insertion_code,
         observation_gap=observation_gap,
+        biological_assembly=biological_assembly,
     )
     digest = hashlib.sha256(source.encode("ascii")).hexdigest()
     frozen = FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256.get(case_id, "")
@@ -1252,6 +1305,15 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
             ("source_declared_observation_gap:unobserved_atom",),
             expected_error_code="source_declared_observation_gap_not_supported",
             observation_gap="unobserved_atom",
+        ),
+        _case(
+            "unsupported_biological_assembly_input",
+            "unsupported_upstream_policy",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("source_declared_biological_assembly",),
+            expected_error_code="source_declared_biological_assembly_not_supported",
+            biological_assembly=True,
         ),
         _case(
             "invalid_component_charge_grammar",
@@ -1727,10 +1789,13 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "upstream.biological_assembly",
             "upstream_ingest",
-            missing,
-            "",
-            (),
-            "biological_assembly_not_interpreted",
+            unsupported,
+            (
+                "biological_assembly_policy_status:"
+                "explicitly_unsupported_source_declared_biological_assembly"
+            ),
+            ("unsupported_biological_assembly_input",),
+            "source_declared_biological_assembly_preparation_not_supported",
         ),
         _coverage(
             "upstream.insertion_semantics",
@@ -1812,6 +1877,7 @@ def _signals_for_reports(
     case: MmcifPreparationCorpusCase,
     reports: tuple[Mapping[str, Any], ...],
     atom_site_model_policy: Mapping[str, Any],
+    biological_assembly_policy: Mapping[str, Any],
     missing_atom_residue_policy: Mapping[str, Any],
     component_roles: tuple[Mapping[str, Any], ...],
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
@@ -1828,6 +1894,18 @@ def _signals_for_reports(
     signals.extend(
         f"model_policy_blocker:{value}"
         for value in atom_site_model_policy["execution_blockers"]
+    )
+    signals.extend(
+        (
+            "biological_assembly_policy_status:"
+            f"{biological_assembly_policy['execution_policy_status']}",
+            "biological_assembly_policy_execution_allowed:"
+            f"{str(biological_assembly_policy['execution_allowed']).lower()}",
+        )
+    )
+    signals.extend(
+        f"biological_assembly_policy_blocker:{value}"
+        for value in biological_assembly_policy["execution_blockers"]
     )
     signals.extend(
         (
@@ -1895,6 +1973,10 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         raise MmcifNonpolyPreparationCorpusError("corpus input digest is invalid")
     model_policy_snapshot = parse_mmcif_atom_site_model_policy(case.source_text)
     model_policy = model_policy_snapshot.to_dict()
+    assembly_policy_snapshot = parse_mmcif_biological_assembly_policy(
+        case.source_text
+    )
+    assembly_policy = assembly_policy_snapshot.to_dict()
     missing_policy_snapshot = parse_mmcif_missing_atom_residue_policy(
         case.source_text
     )
@@ -1915,6 +1997,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             atom_site_model_policy_snapshot_sha256=(
                 model_policy_snapshot.snapshot_sha256
             ),
+            biological_assembly_policy_snapshot_sha256=(
+                assembly_policy_snapshot.snapshot_sha256
+            ),
             missing_atom_residue_policy_snapshot_sha256=(
                 missing_policy_snapshot.snapshot_sha256
             ),
@@ -1923,6 +2008,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             error_code=exc.code,
             reports=(),
             atom_site_model_policy=model_policy,
+            biological_assembly_policy=assembly_policy,
             missing_atom_residue_policy=missing_policy,
             component_roles=(),
             modified_residue_declarations=(),
@@ -1936,6 +2022,14 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
                         *(
                             f"model_policy_blocker:{value}"
                             for value in model_policy["execution_blockers"]
+                        ),
+                        "biological_assembly_policy_status:"
+                        f"{assembly_policy['execution_policy_status']}",
+                        "biological_assembly_policy_execution_allowed:"
+                        f"{str(assembly_policy['execution_allowed']).lower()}",
+                        *(
+                            f"biological_assembly_policy_blocker:{value}"
+                            for value in assembly_policy["execution_blockers"]
                         ),
                         "missing_atom_residue_policy_status:"
                         f"{missing_policy['execution_policy_status']}",
@@ -1991,6 +2085,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         atom_site_model_policy_snapshot_sha256=(
             model_policy_snapshot.snapshot_sha256
         ),
+        biological_assembly_policy_snapshot_sha256=(
+            assembly_policy_snapshot.snapshot_sha256
+        ),
         missing_atom_residue_policy_snapshot_sha256=(
             missing_policy_snapshot.snapshot_sha256
         ),
@@ -2003,6 +2100,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         error_code="",
         reports=reports,
         atom_site_model_policy=model_policy,
+        biological_assembly_policy=assembly_policy,
         missing_atom_residue_policy=missing_policy,
         component_roles=component_roles,
         modified_residue_declarations=modified_residue_declarations,
@@ -2010,6 +2108,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             case,
             reports,
             model_policy,
+            assembly_policy,
             missing_policy,
             component_roles,
             modified_residue_declarations,
@@ -2113,6 +2212,12 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         "atom_site_model_policy_profile_id": MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
         "atom_site_model_policy_parser_version": (
             MMCIF_ATOM_SITE_MODEL_POLICY_PARSER_VERSION
+        ),
+        "biological_assembly_policy_profile_id": (
+            MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_PROFILE_ID
+        ),
+        "biological_assembly_policy_parser_version": (
+            MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_PARSER_VERSION
         ),
         "missing_atom_residue_policy_profile_id": (
             MMCIF_MISSING_ATOM_RESIDUE_POLICY_PROFILE_ID
