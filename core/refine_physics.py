@@ -1,4 +1,4 @@
-"""Refine-tier physics primitives: united-atom LJ + implicit GB/SA (independent engine)."""
+"""CPU reference primitives for an explicitly claim-limited interaction proxy."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from typing import Any
 import numpy as np
 
 REFINE_TIER_CLAIM_BOUNDARY = (
-    "Refine-tier implicit-solvent MM-GBSA proxy using internal united-atom parameters. "
-    "Not an OpenMM/Schrödinger-grade all-atom free-energy claim."
+    "Internal topology-aware interaction and implicit-solvent proxy. It is not calibrated MM-GBSA, "
+    "binding free energy, affinity, or OpenMM/Schrödinger parity."
 )
 
 # United-atom-ish VdW parameters (sigma in Å, epsilon in kcal/mol).
@@ -20,17 +20,41 @@ _VDW_PARAMS: dict[str, tuple[float, float]] = {
     "S": (3.50, 0.250),
     "P": (3.74, 0.200),
     "H": (2.50, 0.030),
+    "F": (2.95, 0.061),
+    "CL": (3.47, 0.150),
+    "BR": (3.73, 0.200),
+    "I": (4.00, 0.250),
     "DEFAULT": (3.50, 0.080),
 }
 
 _DIELECTRIC_SOLVENT = 80.0
 _DIELECTRIC_Solute = 1.0
 _SA_GAMMA = 0.005  # kcal/mol/Å² surface tension proxy
-_MIN_DISTANCE_A = 1.5
+_MIN_DISTANCE_A = 0.5
+_COULOMB_PREF = 332.0636
+_VDW_RADII_A = {
+    "H": 1.20,
+    "C": 1.70,
+    "N": 1.55,
+    "O": 1.52,
+    "S": 1.80,
+    "P": 1.80,
+    "F": 1.47,
+    "CL": 1.75,
+    "BR": 1.85,
+    "I": 1.98,
+}
+
+
+def normalize_element(element: str) -> str:
+    raw = str(element or "").strip().upper()
+    if raw[:2] in {"CL", "BR"}:
+        return raw[:2]
+    return raw[:1] or "DEFAULT"
 
 
 def vdw_params_for_element(element: str) -> tuple[float, float]:
-    key = str(element or "").strip().upper()[:1]
+    key = normalize_element(element)
     return _VDW_PARAMS.get(key, _VDW_PARAMS["DEFAULT"])
 
 
@@ -76,6 +100,7 @@ def gb_solvation_energy(
     charges: np.ndarray,
     born_radii: np.ndarray,
     *,
+    coords: np.ndarray | None = None,
     dielectric_solvent: float = _DIELECTRIC_SOLVENT,
     dielectric_solute: float = _DIELECTRIC_Solute,
 ) -> float:
@@ -84,27 +109,62 @@ def gb_solvation_energy(
     rb = np.maximum(np.asarray(born_radii, dtype=np.float64).reshape(-1), 0.5)
     if q.size == 0:
         return 0.0
-    pref = -0.5 * (1.0 / float(dielectric_solute) - 1.0 / float(dielectric_solvent))
-    self_term = pref * np.sum(q * q / rb)
-    if q.size <= 1:
-        return float(self_term)
-    diff = 1.0 / rb[:, None] + 1.0 / rb[None, :] - 1.0 / np.maximum(rb[:, None] + rb[None, :], 1e-6)
-    pair = pref * np.outer(q, q) * diff
-    np.fill_diagonal(pair, 0.0)
-    return float(self_term + np.sum(pair))
+    if q.size != rb.size:
+        raise ValueError("charges and born_radii must have the same length")
+    dielectric_factor = 1.0 / float(dielectric_solute) - 1.0 / float(dielectric_solvent)
+    if coords is None or q.size <= 1:
+        return float(-0.5 * _COULOMB_PREF * dielectric_factor * np.sum(q * q / rb))
+    pts = np.asarray(coords, dtype=np.float64)
+    if pts.shape != (q.size, 3):
+        raise ValueError("coords must have shape [charge_count, 3]")
+    delta = pts[:, None, :] - pts[None, :, :]
+    r2 = np.sum(delta * delta, axis=-1)
+    radii_product = np.maximum(rb[:, None] * rb[None, :], 1e-8)
+    f_gb = np.sqrt(r2 + radii_product * np.exp(-r2 / (4.0 * radii_product)))
+    pair_sum = np.sum(np.outer(q, q) / np.maximum(f_gb, 1e-8))
+    return float(-0.5 * _COULOMB_PREF * dielectric_factor * pair_sum)
 
 
-def sa_surface_energy(coords: np.ndarray, *, probe_radius_a: float = 1.4) -> float:
-    """Surface-area proxy from solvent-accessible count (kcal/mol)."""
+def _fibonacci_sphere(point_count: int) -> np.ndarray:
+    count = max(int(point_count), 12)
+    indices = np.arange(count, dtype=np.float64)
+    z = 1.0 - 2.0 * (indices + 0.5) / count
+    radius = np.sqrt(np.maximum(1.0 - z * z, 0.0))
+    phi = indices * (math.pi * (3.0 - math.sqrt(5.0)))
+    return np.stack([radius * np.cos(phi), radius * np.sin(phi), z], axis=1)
+
+
+def sa_surface_energy(
+    coords: np.ndarray,
+    *,
+    elements: list[str] | None = None,
+    probe_radius_a: float = 1.4,
+    sphere_point_count: int = 48,
+) -> float:
+    """Deterministic Shrake-Rupley-like solvent-accessible surface proxy."""
     pts = np.asarray(coords, dtype=np.float64)
     if pts.size == 0:
         return 0.0
-    diff = pts[:, None, :] - pts[None, :, :]
-    dist = np.linalg.norm(diff, axis=-1)
-    np.fill_diagonal(dist, np.inf)
-    exposed = np.sum(np.min(dist, axis=1) > float(probe_radius_a) + 1.8)
-    area_proxy = float(exposed) * 4.0 * math.pi * (float(probe_radius_a) + 1.5) ** 2
-    return float(_SA_GAMMA * area_proxy)
+    if pts.ndim != 2 or pts.shape[1] != 3:
+        raise ValueError("coords must have shape [N, 3]")
+    if elements is not None and len(elements) != len(pts):
+        raise ValueError("elements must match coordinate count")
+    element_list = list(elements) if elements is not None else ["C"] * len(pts)
+    radii = np.asarray(
+        [_VDW_RADII_A.get(normalize_element(element), 1.70) + float(probe_radius_a) for element in element_list],
+        dtype=np.float64,
+    )
+    unit_points = _fibonacci_sphere(sphere_point_count)
+    area = 0.0
+    for atom_index, center in enumerate(pts):
+        samples = center.reshape(1, 3) + radii[atom_index] * unit_points
+        delta = samples[:, None, :] - pts[None, :, :]
+        distances = np.linalg.norm(delta, axis=-1)
+        distances[:, atom_index] = np.inf
+        occluded = np.any(distances < radii.reshape(1, -1), axis=1)
+        accessible_fraction = float(np.mean(~occluded))
+        area += accessible_fraction * 4.0 * math.pi * radii[atom_index] ** 2
+    return float(_SA_GAMMA * area)
 
 
 def pairwise_min_distances(a: np.ndarray, b: np.ndarray) -> np.ndarray:

@@ -1,0 +1,76 @@
+name: ci-legacy-scientific-proxy-boundaries
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine/physics/mm_gbsa.py"
+      - "core/allatom_forcefield.py"
+      - "core/explicit_solvent.py"
+      - "core/fep.py"
+      - "core/refine_physics.py"
+      - "tests/unit/test_scientific_proxy_contracts.py"
+      - ".github/workflows/ci-legacy-scientific-proxy-boundaries.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine/physics/mm_gbsa.py"
+      - "core/allatom_forcefield.py"
+      - "core/explicit_solvent.py"
+      - "core/fep.py"
+      - "core/refine_physics.py"
+      - "tests/unit/test_scientific_proxy_contracts.py"
+      - ".github/workflows/ci-legacy-scientific-proxy-boundaries.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-legacy-scientific-proxy-boundaries-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proxy-boundaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out bounded legacy proxy surface
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            betelgeuze_engine/physics/mm_gbsa.py
+            core
+            tests/unit/test_scientific_proxy_contracts.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 numpy==1.26.4
+
+      - name: Compile bounded proxy surfaces
+        run: >-
+          python -m py_compile
+          betelgeuze_engine/physics/mm_gbsa.py
+          core/allatom_forcefield.py
+          core/explicit_solvent.py
+          core/fep.py
+          core/refine_physics.py
+
+      - name: Run scientific proxy boundary contracts
+        run: python -m pytest -q tests/unit/test_scientific_proxy_contracts.py
