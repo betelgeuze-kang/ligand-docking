@@ -1,0 +1,248 @@
+name: apply-hosted-setup-python-v6
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-setup-python-v6-hosted.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-hosted-setup-python-v6
+  cancel-in-progress: false
+
+jobs:
+  apply-migration:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/setup-python-v6-hosted'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/setup-python-v6-hosted
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+
+      - name: Migrate hosted setup-python references and exact contract assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          new_ref = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+          new_line = new_ref + " # v6.3.0"
+          old_ref = "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+          trusted = Path(".github/workflows/product-api-worker-trusted.yml")
+          targets = [
+              Path(".github/workflows/ci-api-h4-hosted.yml"),
+              Path(".github/workflows/ci-engine-v2-ai.yml"),
+              Path(".github/workflows/ci-engine-v2-benchmark.yml"),
+              Path(".github/workflows/ci-engine-v2-contracts.yml"),
+              Path(".github/workflows/ci-engine-v2-docking-semantics.yml"),
+              Path(".github/workflows/ci-engine-v2-external-baseline.yml"),
+              Path(".github/workflows/ci-engine-v2-identity.yml"),
+              Path(".github/workflows/ci-engine-v2-main.yml"),
+              Path(".github/workflows/ci-engine-v2-orchestrator.yml"),
+              Path(".github/workflows/ci-engine-v2-package.yml"),
+              Path(".github/workflows/ci-engine-v2-reference-physics.yml"),
+              Path(".github/workflows/ci-engine-v2-release-candidate.yml"),
+              Path(".github/workflows/ci-engine-v2-runtime.yml"),
+              Path(".github/workflows/ci-engine-v2-scaffolds.yml"),
+              Path(".github/workflows/ci-engine-v2-sparse.yml"),
+              Path(".github/workflows/ci-mobile-lite.yml"),
+              Path(".github/workflows/ci-scientific-input-materialization.yml"),
+              Path(".github/workflows/ci-strict-pose-rmsd.yml"),
+              Path(".github/workflows/product-api-worker.yml"),
+              Path(".github/workflows/release-response-benchmark-contracts.yml"),
+          ]
+          setup_pattern = re.compile(
+              r"(?m)^(?P<prefix>\s*(?:-\s*)?uses:\s*)actions/setup-python@[^\s#]+(?:\s+#\s*[^\n]+)?$"
+          )
+          discovered = sorted(
+              path
+              for path in Path(".github/workflows").glob("*.y*ml")
+              if "actions/setup-python@" in path.read_text(encoding="utf-8")
+          )
+          expected = sorted([*targets, trusted])
+          if discovered != expected:
+              raise SystemExit(
+                  "setup-python workflow inventory drifted:\n"
+                  f"expected={[str(path) for path in expected]}\n"
+                  f"observed={[str(path) for path in discovered]}"
+              )
+
+          replacement_counts: dict[str, int] = {}
+          for path in targets:
+              source = path.read_text(encoding="utf-8")
+              updated, count = setup_pattern.subn(
+                  lambda match: match.group("prefix") + new_line,
+                  source,
+              )
+              if count < 1:
+                  raise SystemExit(f"no setup-python reference found in {path}")
+              remaining = setup_pattern.findall(updated)
+              refs = re.findall(r"actions/setup-python@[^\s#]+", updated)
+              if not refs or any(ref != new_ref for ref in refs):
+                  raise SystemExit(f"non-v6 setup-python reference remains in {path}: {refs}")
+              path.write_text(updated, encoding="utf-8")
+              replacement_counts[str(path)] = count
+
+          trusted_source = trusted.read_text(encoding="utf-8")
+          trusted_refs = re.findall(r"actions/setup-python@[^\s#]+", trusted_source)
+          if trusted_refs != [old_ref]:
+              raise SystemExit(
+                  "trusted self-hosted setup-python exception drifted: "
+                  f"{trusted_refs}"
+              )
+
+          contract_path = Path("tests/unit/test_engine_v2_external_baseline.py")
+          contract_source = contract_path.read_text(encoding="utf-8")
+          if contract_source.count(old_ref) != 1:
+              raise SystemExit("external-baseline setup-python assertion count drifted")
+          contract_source = contract_source.replace(old_ref, new_ref)
+          contract_path.write_text(contract_source, encoding="utf-8")
+
+          final_workflow = '''name: ci-setup-python-v6-hosted
+
+          on:
+            pull_request:
+              paths:
+                - ".github/workflows/**"
+                - "tests/unit/test_engine_v2_external_baseline.py"
+            push:
+              branches: ["main"]
+              paths:
+                - ".github/workflows/**"
+                - "tests/unit/test_engine_v2_external_baseline.py"
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+
+          concurrency:
+            group: ci-setup-python-v6-hosted-${{ github.ref }}
+            cancel-in-progress: true
+
+          jobs:
+            setup-python-policy:
+              runs-on: ubuntu-latest
+              timeout-minutes: 20
+              env:
+                PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+                CUDA_VISIBLE_DEVICES: ""
+                HIP_VISIBLE_DEVICES: ""
+                ROCR_VISIBLE_DEVICES: ""
+              steps:
+                - name: Check out workflow and external-baseline contract surfaces
+                  uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+                  with:
+                    persist-credentials: false
+                    clean: true
+                    fetch-depth: 1
+                    sparse-checkout: |
+                      .github/workflows
+                      betelgeuze_engine_v2
+                      tools/check_engine_v2_architecture.py
+                      tests/unit/test_engine_v2_external_baseline.py
+                    sparse-checkout-cone-mode: false
+                    show-progress: false
+
+                - name: Set up Python 3.11 with Node 24 action runtime
+                  uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+                  with:
+                    python-version: "3.11"
+
+                - name: Install focused CPU dependencies
+                  run: |
+                    python -m pip install pip==25.0.1
+                    python -m pip install pytest==8.3.5 numpy==1.26.4
+                    python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+                - name: Enforce hosted v6 and trusted self-hosted v5 inventory
+                  run: |
+                    python - <<'PY'
+                    from pathlib import Path
+                    import re
+
+                    hosted = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+                    trusted_v5 = "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+                    trusted_path = Path(".github/workflows/product-api-worker-trusted.yml")
+                    observed = {}
+                    for path in sorted(Path(".github/workflows").glob("*.y*ml")):
+                        refs = re.findall(
+                            r"actions/setup-python@[^\\s#]+",
+                            path.read_text(encoding="utf-8"),
+                        )
+                        if refs:
+                            observed[str(path)] = refs
+                            expected = trusted_v5 if path == trusted_path else hosted
+                            if any(ref != expected for ref in refs):
+                                raise SystemExit(f"unapproved setup-python reference in {path}: {refs}")
+                    if str(trusted_path) not in observed:
+                        raise SystemExit("trusted self-hosted setup-python exception missing")
+                    if len(observed) != 22:
+                        raise SystemExit(f"setup-python workflow inventory changed: {len(observed)}")
+                    print(observed)
+                    PY
+
+                - name: Compile and enforce Engine v2 architecture boundary
+                  run: |
+                    python -m compileall -q betelgeuze_engine_v2
+                    python tools/check_engine_v2_architecture.py
+
+                - name: Run external baseline receipt and exact workflow identity contracts
+                  shell: bash
+                  run: |
+                    set +e
+                    python -m pytest -vv -x tests/unit/test_engine_v2_external_baseline.py \
+                      > setup-python-v6-hosted.log 2>&1
+                    status=$?
+                    cat setup-python-v6-hosted.log
+                    exit "$status"
+
+                - name: Upload setup-python migration diagnostics
+                  if: always()
+                  uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+                  with:
+                    name: setup-python-v6-hosted-${{ github.run_id }}-${{ github.run_attempt }}
+                    path: setup-python-v6-hosted.log
+                    if-no-files-found: warn
+                    retention-days: 7
+          '''
+          # Remove the indentation introduced by this applicator's Python heredoc.
+          lines = final_workflow.splitlines()
+          normalized = "\n".join(
+              line[10:] if line.startswith("          ") else line
+              for line in lines
+          ).lstrip() + "\n"
+          Path(".github/workflows/ci-setup-python-v6-hosted.yml").write_text(
+              normalized,
+              encoding="utf-8",
+          )
+          print(replacement_counts)
+          PY
+
+          python -m py_compile tests/unit/test_engine_v2_external_baseline.py
+          git diff --check
+
+      - name: Commit the reviewed migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            .github/workflows \
+            tests/unit/test_engine_v2_external_baseline.py
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "ci: upgrade hosted setup-python to v6.3.0"
+          git push origin HEAD:codex/setup-python-v6-hosted
