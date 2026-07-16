@@ -8,9 +8,6 @@ deploy/docker-compose.product.env.local
 # Local tooling / agent metadata
 .agents/
 .betelgeuze/
-!.betelgeuze/cameo_transition_doc_audit_*.md
-!.betelgeuze/state.md
-!.betelgeuze/run_log.md
 
 # Generated accounting/status packets (source builders live under tools/accounting/)
 runs/*_current.json
