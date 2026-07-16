@@ -35,7 +35,7 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
     steps:
       - name: Check out bounded Engine v2 surface
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           sparse-checkout: |
             betelgeuze_engine_v2
