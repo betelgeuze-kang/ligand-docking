@@ -1,0 +1,14 @@
+--- a/betelgeuze_engine_v2/molecular/mmcif_semantics.py
++++ b/betelgeuze_engine_v2/molecular/mmcif_semantics.py
+@@ -78,12 +78,9 @@ class MmcifSemanticValue:
+ 
+     def to_dict(self) -> dict[str, Any]:
+         return {
+             "state": self.state,
+             "value": self.value,
+             "quoted": self.quoted,
+-            "line_number": self.line_number,
+-            "column_number": self.column_number,
+         }
+ 
+ 
