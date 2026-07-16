@@ -120,16 +120,18 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_struct_conn_declarations` | selected 23-field `_struct_conn` row의 nonpoly instance·component atom identity join | connection type·symmetry·order·covalence·coordination·topology |
 | `v2_bounded_mmcif_nonpoly_atom_site_observations` | exact 21-field `_atom_site`에서 selected nonpoly instance·component atom과 `_struct_conn` endpoint observation join | coordinate numeric value·geometry·occupancy·B-factor·formal charge·topology |
 | `v2_bounded_mmcif_nonpoly_coordinate_values` | selected `Cartn_x/y/z` 원문 spelling·finite binary64 값·exact bit pattern 결속 | coordinate unit·geometry quality·distance·clash·occupancy·B-factor·formal charge·topology |
+| `v2_bounded_mmcif_nonpoly_atom_site_scalar_values` | occupancy·B-factor·formal charge의 known/unknown/not-applicable 상태와 bounded numeric value 결속 | occupancy population·B-factor quality·charge chemistry·altloc·topology |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
 결합하고 instance별 component-atom coverage를 검증한다. 셋 모두 canonical
 `Bond`를 만들지 않는다. `_struct_conn`의 `covale`, `metalc`, symmetry와
-`pdbx_value_order`, 그리고 `_atom_site` occupancy·B-factor·charge token은
-보존될 뿐 수치·화학·topology 의미로 해석되지 않는다. 별도 coordinate-value
-capability만 selected `Cartn_x/y/z`를 finite binary64로 해석해 원문 spelling과
-exact bit pattern을 함께 결속한다. 이 값 해석은 coordinate unit, geometry
-quality, distance, clash 또는 구조의 과학적 타당성 판정이 아니다.
+`pdbx_value_order`는 보존될 뿐 topology 의미로 해석되지 않는다. 별도
+coordinate-value capability는 selected `Cartn_x/y/z`를 finite binary64로,
+scalar-value capability는 occupancy·B-factor를 finite binary64로, formal charge를
+PDBx/mmCIF 범위의 정수로 해석한다. marker에는 기본값을 추론하지 않는다.
+이 값 해석은 coordinate geometry, occupancy population, B-factor quality,
+charge chemistry 또는 구조의 과학적 타당성 판정이 아니다.
 
 PDB·SDF V2000 bounded ingest도 존재하지만 general PDB/mmCIF/SDF/SMILES,
 biological assembly, multimodel, general missingness, hydrogen completion,
@@ -164,9 +166,10 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 2. 완료된 bounded layer로 selected `Cartn_x/y/z`의 finite binary64 값, raw
    token spelling과 exact bit pattern 결속을 유지한다. 좌표 identity·numeric
    value와 과학적 geometry quality는 계속 분리한다.
-3. 다음으로 occupancy, B-factor와 formal charge의 known/unknown·numeric semantics를
-   coordinate value와 별도 capability로 닫는다.
-4. source declaration에서 canonical topology로 넘어가는 별도 capability를
+3. 완료된 bounded layer로 occupancy, B-factor와 formal charge의
+   known/unknown/not-applicable·numeric semantics를 coordinate value와 분리해
+   유지한다. missing marker에는 dictionary default를 자동 적용하지 않는다.
+4. 다음으로 source declaration에서 canonical topology로 넘어가는 별도 capability를
    설계한다. connection type, symmetry, bond order, covalence와 coordination을
    해석하지 않은 채 `Bond`를 생성하지 않는다.
 5. 최초 commercial chemistry 범위를 작게 명시하고 hydrogen·formal charge·
