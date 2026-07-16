@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@3f9ede19bb158a02eb3d06e0ed42dea6952db680`
+Observed baseline: `main@044638ef0cb058ca0946f69869a4fa04031ab903`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -70,7 +70,11 @@ claim status without revalidating the dependency and freshness chain.
 
 ## Near-term work queue
 
-- Finish bounded #66 extraction without inheriting stale donor ancestry.
+- Continue V2-1 from current `main`: bind bounded `_atom_site` observations to
+  the accepted nonpoly instance, component atom, and `_struct_conn` declaration
+  identities without inferring chemistry or topology.
+- Define the first executable supported-chemistry and preparation coverage table
+  before starting production parameter fitting.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.

@@ -30,6 +30,7 @@ The following V2-G modules are intentionally importable but provisional:
 
 ```text
 betelgeuze_engine_v2.io
+betelgeuze_engine_v2.molecular.mmcif_*
 betelgeuze_engine_v2.docking
 betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.physics.registry

@@ -21,6 +21,9 @@ The current `main` branch contains:
 - a fail-closed CPU reference orchestrator and strict checkpoint contracts;
 - an independent `betelgeuze-engine-v2` wheel for Python 3.10–3.12;
 - bounded single-model PDB and single-molecule SDF V2000 ingestion;
+- bounded single-block CIF syntax plus mmCIF entity/asym/polymer identity,
+  zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected
+  `_struct_conn` source-declaration contracts;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.
@@ -31,6 +34,7 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
+- general mmCIF coordinate/topology interpretation or all-atom preparation;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;

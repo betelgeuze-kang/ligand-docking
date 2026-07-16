@@ -7,15 +7,17 @@ import pytest
 
 yaml = pytest.importorskip("yaml")
 
-from betelgeuze_engine_v2.capabilities import (
+from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     BENCHMARK_CAPABILITY_ID,
     CAPABILITY_SCHEMA_VERSION,
     CIF_SYNTAX_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
     MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID,
+    MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,
     MMCIF_SEMANTICS_CAPABILITY_ID,
+    MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID,
     MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
     capability_snapshot,
@@ -29,7 +31,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 13
+    assert len(loaded["capabilities"]) == 15
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -44,7 +46,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     assert CIF_SYNTAX_CAPABILITY_ID in rows
     assert MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
+    assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
     assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
@@ -79,6 +83,22 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "component_chemistry_and_roles_not_interpreted" in nonpoly["blockers"]
     assert "bond_topology_and_preparation_not_interpreted" in nonpoly["blockers"]
 
+    component_declarations = rows[MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID]
+    assert component_declarations["current_state"] == (
+        "bounded_component_atom_and_bond_source_declarations"
+    )
+    assert component_declarations["internal_reference_execution_enabled"] is True
+    assert "component_chemistry_not_interpreted" in component_declarations["blockers"]
+    assert "bond_order_and_topology_not_interpreted" in component_declarations["blockers"]
+
+    struct_conn = rows[MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID]
+    assert struct_conn["current_state"] == (
+        "bounded_nonpoly_struct_conn_identity_declarations"
+    )
+    assert struct_conn["internal_reference_execution_enabled"] is True
+    assert "connection_type_symmetry_and_order_not_interpreted" in struct_conn["blockers"]
+    assert "covalence_coordination_and_topology_not_interpreted" in struct_conn["blockers"]
+
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
     assert "validated_independent_physics_terms_missing" not in physics_blockers
@@ -101,6 +121,21 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "Stable within an Engine API major version" in policy
     assert "Provisional submodule APIs" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
+
+
+def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None:
+    roadmap = Path("docs/independent_engine_v2_commercial_roadmap.ko.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "current-main canonical planning reference" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_component_declarations" in roadmap
+    assert "v2_bounded_mmcif_struct_conn_declarations" in roadmap
+    assert "atom_site_identity_joined" in roadmap
+    assert "connection type·symmetry·order·covalence·coordination·topology" in roadmap
+    assert "scientifically_validated" in roadmap
+    assert "commercial_readiness" in roadmap
+    assert "현재 상태는 위 종료 기준을 충족하지 않는다" in roadmap
 
 
 def test_readmes_describe_conditional_complexity_and_v2_quick_start() -> None:
@@ -126,6 +161,8 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_zero_occupancy.py",
         "test_engine_v2_mmcif_altloc_declarations.py",
         "test_engine_v2_mmcif_nonpoly_identity.py",
+        "test_engine_v2_mmcif_nonpoly_component_declarations.py",
+        "test_engine_v2_mmcif_struct_conn_declarations.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
         "test_engine_v2_periodic_energy.py",
@@ -143,3 +180,4 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         assert test_file in source
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
+    assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source

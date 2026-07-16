@@ -76,11 +76,14 @@ security 파일을 다시 가져오지 않는다.
 - `README.md`, `README.ko.md`
 - `docs/independent_engine_v2_architecture.md`
 - `docs/independent_engine_v2_migration_matrix.md`
-- `docs/independent_engine_v2_commercial_roadmap.ko.md`
 
 이 파일들은 각각 training consumer migration, benchmark harness, export contract,
 상위 문서 PR로 나눈다. 문서의 capability 표현은 executable blocker와 CI 결과보다
 우선할 수 없다.
+
+`docs/independent_engine_v2_commercial_roadmap.ko.md`는 donor 문서를 승계하지
+않고 current-main capability 원장과 검증된 source contract만 사용해 2026-07-16에
+새로 재구성했다.
 
 ## 5. 개념 중복과 비중복
 
