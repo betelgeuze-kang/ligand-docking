@@ -83,9 +83,28 @@ capabilities:
     claim_safe: false
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
-      - semantic_mmcif_identity_and_topology_missing
+      - semantic_mmcif_projection_is_separate_capability
       - dictionary_conformance_not_established
       - assembly_missingness_and_altloc_semantics_missing
+      - product_integration_not_qualified
+
+  v2_bounded_mmcif_semantic_projection:
+    current_state: bounded_entity_asym_polymer_sequence_projection
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - atom_site_coordinate_observation_not_interpreted
+      - mmcif_missingness_altloc_and_assembly_not_interpreted
+      - mmcif_chemistry_and_topology_not_interpreted
       - product_integration_not_qualified
 
   v2_independent_physics_registry:
