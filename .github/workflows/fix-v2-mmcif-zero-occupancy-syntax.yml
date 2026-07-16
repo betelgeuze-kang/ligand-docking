@@ -1,0 +1,67 @@
+name: fix-v2-mmcif-zero-occupancy-syntax
+
+on:
+  push:
+    branches: ["codex/v2-mmcif-zero-occupancy-declarations"]
+    paths:
+      - ".github/workflows/fix-v2-mmcif-zero-occupancy-syntax.yml"
+      - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-v2-mmcif-zero-occupancy-syntax
+  cancel-in-progress: false
+
+jobs:
+  fix-source:
+    if: >-
+      github.actor == 'betelgeuze-kang' &&
+      github.ref == 'refs/heads/codex/v2-mmcif-zero-occupancy-declarations' &&
+      !contains(github.event.head_commit.message, '[zero-syntax-fixed]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-zero-occupancy-declarations
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+
+      - name: Apply the exact two bracket corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py")
+          source = path.read_text(encoding="utf-8")
+          replacements = {
+              'label_asym_token = row[index[f"{RESIDUE_CATEGORY}.label_asym_id"]':
+                  'label_asym_token = row[index[f"{RESIDUE_CATEGORY}.label_asym_id"]]',
+              'label_asym_token = row[index[f"{ATOM_CATEGORY}.label_asym_id"]':
+                  'label_asym_token = row[index[f"{ATOM_CATEGORY}.label_asym_id"]]',
+          }
+          for old, new in replacements.items():
+              if source.count(old) != 1:
+                  raise SystemExit(f"unexpected correction count for: {old}")
+              source = source.replace(old, new, 1)
+          path.write_text(source, encoding="utf-8")
+          PY
+          python -m py_compile betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py
+          git diff --check
+
+      - name: Commit corrected source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py
+          git diff --cached --check
+          git commit -m "fix(v2): close mmCIF zero-occupancy row lookups [zero-syntax-fixed]"
+          git push origin HEAD:codex/v2-mmcif-zero-occupancy-declarations
