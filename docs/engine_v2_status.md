@@ -61,10 +61,13 @@ The current `main` branch contains:
   commit, artifact SHA-256, CC-BY-4.0 license identity and license-text SHA-256
   while explicitly excluding OFFXML parsing, parameter or partial-charge
   assignment, coverage, applicability, calibration, and scientific validation,
+  plus a separate source-to-system binding carrier that attaches that reviewed
+  source identity, immutable artifact digest, license identity, and candidate
+  scope to eligible canonical system hashes without assigning any values,
   plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
-  2 invalid-source cases, plus a 51-axis executable coverage ledger classifying
-  20 supported, 27 explicitly unsupported, and 4 not-implemented rows,
+  2 invalid-source cases, plus a 52-axis executable coverage ledger classifying
+  21 supported, 27 explicitly unsupported, and 4 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -83,10 +86,10 @@ not currently establish:
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
   model selection, ensemble/trajectory/averaging semantics, multi-model execution,
-  validated hydrogen geometry, source-to-graph parameter binding or assigned
-  parameters, general ligand/cofactor or
+  validated hydrogen geometry, source-to-graph parameter assignment, parsed
+  parameter values or assigned parameters, general ligand/cofactor or
   non-source-declared modified-residue role interpretation,
-  metal/ion/modified-residue preparation, source-to-system parameter or
+  metal/ion/modified-residue preparation, source-to-system parameter-value or
   partial-charge assignment, source-format all-atom round trip, or a
   parameterable `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;

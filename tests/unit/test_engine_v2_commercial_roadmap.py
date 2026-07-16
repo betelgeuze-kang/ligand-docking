@@ -21,6 +21,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_neutral_coh_preparation" in roadmap
     assert "v2_bounded_mmcif_nonpoly_hydrogen_coordinates" in roadmap
     assert "v2_bounded_mmcif_nonpoly_all_atom_systems" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_parameter_source_binding" in roadmap
     assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
@@ -30,7 +31,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "neutral acyclic C/O/H" in roadmap
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
-    assert "51-axis coverage ledger" in roadmap
+    assert "52-axis coverage ledger" in roadmap
     assert "4개 `not_implemented`" in roadmap
     assert "Sage 2.2.1 unconstrained artifact" in roadmap
     assert "OFFXML을\n해석하거나" in roadmap
@@ -55,6 +56,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "neighbor bond geometry, stereo, protonation·tautomer" in roadmap
     assert "intercomponent covalence가 있으면 affected instance를 모두" in roadmap
     assert "partial charge·mass·parameter가\n없고" in roadmap
+    assert "binding metadata 외 topology·coordinate·atom state가 동일함" in roadmap
+    assert "artifact를 bundle하거나 OFFXML을 해석하지 않으며" in roadmap
     assert "explicit `label_alt_id` 입력" in roadmap
     assert "chemistry preparation 전에 fail-closed" in roadmap
     assert "known insertion code의 scheme·atom-site·connection exact identity" in roadmap

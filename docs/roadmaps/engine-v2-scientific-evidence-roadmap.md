@@ -95,8 +95,14 @@ claim status without revalidating the dependency and freshness chain.
   fetches the artifact, parses OFFXML, assigns parameters or partial charges,
   establishes molecule coverage or applicability, calibrates values, approves
   legal compliance, nor promotes scientific or product claims.
+- Keep the separate source-to-system binding carrier executable. It binds the
+  reviewed source identity, immutable artifact digest, license identity, and
+  declared candidate scope to eligible canonical system hashes while proving
+  that binding metadata is the only system change. It does not bundle or parse
+  OFFXML, establish parameter coverage/applicability, assign parameters, charges,
+  or masses, validate geometry/physics, or make a system parameterable.
 - Keep the exact-input 30-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 20 axes as supported, 27 as
+  52-axis coverage ledger executable. It classifies 21 axes as supported, 27 as
   explicitly unsupported, and 4 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep exact selected source assembly metadata, generation, and Cartesian-
@@ -132,8 +138,8 @@ claim status without revalidating the dependency and freshness chain.
 - Next, close the 4 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open;
-  source-to-system parameter binding and partial-charge assignment are the next
-  preparation priorities.
+  bounded partial-charge assignment and source-format all-atom round trip are the
+  next preparation priorities after source-to-system identity binding.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.
