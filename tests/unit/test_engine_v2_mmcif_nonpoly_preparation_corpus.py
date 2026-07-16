@@ -33,7 +33,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 21
+    assert len(cases) == 23
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -122,6 +122,43 @@ def test_expected_failure_rows_retain_exact_chemistry_blocker(
     assert ligand["prepared_bond_count"] == 0
 
 
+@pytest.mark.parametrize(
+    ("case_id", "composition_role", "role_blocker"),
+    (
+        (
+            "unsupported_monoatomic_metal",
+            "monoatomic_metal_component",
+            "monoatomic_metal_preparation_not_supported",
+        ),
+        (
+            "unsupported_monoatomic_nonmetal_ion",
+            "monoatomic_nonmetal_ion",
+            "monoatomic_nonmetal_ion_preparation_not_supported",
+        ),
+    ),
+)
+def test_interpreted_monoatomic_roles_remain_explicitly_unsupported(
+    case_id: str,
+    composition_role: str,
+    role_blocker: str,
+    corpus_snapshot,
+) -> None:
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[case_id]
+    ligand_report = result.reports[0]
+    ligand_role = result.component_roles[0]
+
+    assert result.cohort == "unsupported_chemistry"
+    assert len(result.component_role_snapshot_sha256) == 64
+    assert ligand_role["composition_role"] == composition_role
+    assert ligand_role["preparation_disposition"] == "explicitly_unsupported"
+    assert ligand_role["role_blockers"] == [role_blocker]
+    assert ligand_report["preparation_status"] == "unsupported_chemistry"
+    assert ligand_report["chemistry_blockers"] == [
+        "element_outside_neutral_coh_scope",
+        "charged_chemistry_not_supported",
+    ]
+
+
 def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
     corpus_snapshot,
 ) -> None:
@@ -175,8 +212,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 19,
-        "not_implemented": 16,
+        "explicitly_unsupported": 21,
+        "not_implemented": 14,
         "supported": 16,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -194,8 +231,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
         for row in rows
         if row.policy_status == "not_implemented"
     }
-    assert missing["role.ion"] == "ion_role_not_interpreted"
-    assert missing["role.metal"] == "metal_role_not_interpreted"
+    assert "role.ion" not in missing
+    assert "role.metal" not in missing
     assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
     assert missing["role.modified_residue"] == ("modified_residue_role_not_interpreted")
     assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"

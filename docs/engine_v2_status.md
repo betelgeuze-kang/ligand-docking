@@ -27,10 +27,13 @@ The current `main` branch contains:
   `_atom_site` observation-to-identity join and finite-binary64 coordinate-value
   binding that retains each raw token spelling and exact 64-bit pattern, plus
   bounded occupancy/B-factor/formal-charge marker and numeric semantics and a
+  bounded source-water/monoatomic-metal/monoatomic-nonmetal-ion composition-role
+  projection that does not infer general ligand, cofactor, or biological roles,
+  plus a
   fail-closed component-bond/identity-symmetry connection topology that keeps
   metal coordination edges separate from canonical bonds, plus bounded neutral
   acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
-  failure-complete per-instance parameterability report, plus a frozen 21-case
+  failure-complete per-instance parameterability report, plus a frozen 23-case
   synthetic contract corpus and 51-axis executable coverage ledger that retains
   supported, explicitly unsupported, invalid-source, and not-implemented rows;
 - an independent physics-term registry contract;
@@ -47,7 +50,8 @@ not currently establish:
   to fit parameters from the synthetic contract corpus;
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
-  coordinates, reviewed parameters, or a prepared `AllAtomSystem`;
+  coordinates, reviewed parameters, general ligand/cofactor/modified-residue
+  role interpretation, metal/ion preparation, or a prepared `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;

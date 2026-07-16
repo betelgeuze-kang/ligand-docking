@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@f92b3974f5223763ab1c8ddf84b7339c4c2ea973`
+Observed baseline: `main@d1c1d766ff3e639ef3a2596752f731298bdc357e`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -74,11 +74,14 @@ claim status without revalidating the dependency and freshness chain.
   acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
   generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
-- Keep the exact-input 21-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 16 axes as supported, 19 as
-  explicitly unsupported, and 16 as not implemented; it is not parameter-fitting
+- Keep the exact-input 23-case synthetic supported/failure contract corpus and
+  51-axis coverage ledger executable. It classifies 16 axes as supported, 21 as
+  explicitly unsupported, and 14 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
-- Next, close the 16 implementation-gap rows by independent capability slices and
+- Keep source water and bounded monoatomic metal/nonmetal-ion composition roles
+  executable without inferring general ligand, cofactor, modified-residue, or
+  biological function. Metal/ion preparation remains explicitly unsupported.
+- Next, close the 14 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
