@@ -118,11 +118,14 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_identity` | nonpoly component/entity/asym/instance alias identity | atom-site join·role·chemistry·topology |
 | `v2_bounded_mmcif_nonpoly_component_declarations` | selected component atom과 optional component bond source row | element·charge·aromaticity·stereo·bond order·topology |
 | `v2_bounded_mmcif_struct_conn_declarations` | selected 23-field `_struct_conn` row의 nonpoly instance·component atom identity join | connection type·symmetry·order·covalence·coordination·topology |
+| `v2_bounded_mmcif_nonpoly_atom_site_observations` | exact 21-field `_atom_site`에서 selected nonpoly instance·component atom과 `_struct_conn` endpoint observation join | coordinate numeric value·geometry·occupancy·B-factor·formal charge·topology |
 
-마지막 두 declaration capability는 source row의 identity와 tamper/crosswire
-경계를 닫지만 canonical `Bond`를 만들지 않는다. `_struct_conn`의 `covale`,
-`metalc`, symmetry와 `pdbx_value_order` token은 보존될 뿐 해석되지 않는다.
-`_atom_site` coordinate identity도 아직 결합하지 않는다.
+두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
+닫는다. observation capability는 그 identity를 selected source atom row와
+결합하고 instance별 component-atom coverage를 검증한다. 셋 모두 canonical
+`Bond`를 만들지 않는다. `_struct_conn`의 `covale`, `metalc`, symmetry와
+`pdbx_value_order`, 그리고 `_atom_site` coordinate·occupancy·B-factor·charge
+token은 보존될 뿐 수치·화학·topology 의미로 해석되지 않는다.
 
 PDB·SDF V2000 bounded ingest도 존재하지만 general PDB/mmCIF/SDF/SMILES,
 biological assembly, multimodel, general missingness, hydrogen completion,
@@ -152,21 +155,23 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 
 작업 순서는 다음과 같이 고정한다.
 
-1. component 및 `_struct_conn` declaration capability를 executable registry,
-   canonical main CI와 clean-wheel import에 등록한다.
-2. exact bounded `_atom_site` observation을 nonpoly instance와 component atom
-   identity에 결속한다. 좌표·occupancy/B-factor token 보존과 과학적 geometry
-   해석은 분리한다.
-3. source declaration에서 canonical topology로 넘어가는 별도 capability를
+1. 현재 declaration과 atom-site observation identity contract를 executable
+   registry, canonical main CI와 clean-wheel import에서 유지한다.
+2. selected `Cartn_x/y/z`를 finite binary64로 해석하고 raw token spelling과
+   exact bit pattern을 함께 결속한다. 좌표 identity·numeric value와 과학적
+   geometry quality를 분리한다.
+3. occupancy, B-factor와 formal charge의 known/unknown·numeric semantics를
+   coordinate value와 별도 capability로 닫는다.
+4. source declaration에서 canonical topology로 넘어가는 별도 capability를
    설계한다. connection type, symmetry, bond order, covalence와 coordination을
    해석하지 않은 채 `Bond`를 생성하지 않는다.
-4. 최초 commercial chemistry 범위를 작게 명시하고 hydrogen·formal charge·
+5. 최초 commercial chemistry 범위를 작게 명시하고 hydrogen·formal charge·
    protonation·aromaticity preparation과 parameterability report를 구현한다.
-5. V2-1 supported/failure corpus와 coverage 표를 먼저 닫은 뒤에만 V2-2의
+6. V2-1 supported/failure corpus와 coverage 표를 먼저 닫은 뒤에만 V2-2의
    실제 parameter fitting·validation을 시작한다.
-6. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
+7. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
-7. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
+8. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
    gate가 닫힌 뒤 독립 capability로 진행한다.
 
 ## 6. V2-2 이후 요구사항
@@ -234,7 +239,8 @@ threshold, uncertainty, reviewer와 supersession/revocation 상태를 포함해�
 다음은 별도 reviewed evidence가 생기기 전까지 모두 false다.
 
 - `claim_safe`
-- `atom_site_identity_joined` (현재 declaration profile)
+- `atom_site_identity_joined`는 declaration-only profile에서 false이며, bounded
+  observation profile의 selected source identity join에서만 true
 - `scientifically_validated`
 - `benchmark_validated`
 - `customer_execution_enabled`
