@@ -1,0 +1,195 @@
+name: apply-v2-mmcif-nonpoly-registration-v3
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/apply-v2-mmcif-nonpoly-registration-v3.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-v2-mmcif-nonpoly-registration-v3
+  cancel-in-progress: false
+
+jobs:
+  apply-registration:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'codex/v2-mmcif-nonpoly-identity'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-nonpoly-identity
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+          show-progress: false
+
+      - name: Register public API capability and canonical matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def insert_before(path: Path, marker: str, addition: str) -> None:
+              source = path.read_text(encoding='utf-8')
+              if addition.strip() in source:
+                  return
+              if source.count(marker) != 1:
+                  raise SystemExit(f'{path}: insertion marker count drifted: {marker!r}')
+              path.write_text(source.replace(marker, addition + marker, 1), encoding='utf-8')
+
+          def replace_once(path: Path, old: str, new: str) -> None:
+              source = path.read_text(encoding='utf-8')
+              if new in source and old not in source:
+                  return
+              if source.count(old) != 1:
+                  raise SystemExit(f'{path}: replacement marker count drifted: {old!r}')
+              path.write_text(source.replace(old, new, 1), encoding='utf-8')
+
+          molecular = Path('betelgeuze_engine_v2/molecular/__init__.py')
+          import_block = '''from .mmcif_nonpoly_identity import (\n    CHEM_COMP_CATEGORY,\n    ENTITY_CATEGORY,\n    ENTITY_NONPOLY_CATEGORY,\n    MAX_MMCIF_NONPOLY_ENTITY_ROWS,\n    MAX_MMCIF_NONPOLY_IDENTITY_INPUT_CHARS,\n    MAX_MMCIF_NONPOLY_IDENTITY_TOKEN_CHARS,\n    MAX_MMCIF_NONPOLY_SCHEME_ROWS,\n    MMCIF_NONPOLY_IDENTITY_CHEM_COMP_HEADERS,\n    MMCIF_NONPOLY_IDENTITY_DOCUMENT_SCHEMA_ID,\n    MMCIF_NONPOLY_IDENTITY_ENTITY_HEADERS,\n    MMCIF_NONPOLY_IDENTITY_ENTITY_NONPOLY_HEADERS,\n    MMCIF_NONPOLY_IDENTITY_ENTITY_NONPOLY_NAME_HEADER,\n    MMCIF_NONPOLY_IDENTITY_PARSER_VERSION,\n    MMCIF_NONPOLY_IDENTITY_PROFILE_ID,\n    MMCIF_NONPOLY_IDENTITY_PROJECTION_SCHEMA_ID,\n    MMCIF_NONPOLY_IDENTITY_SCHEME_HEADERS,\n    MMCIF_NONPOLY_IDENTITY_SOURCE_BINDING_SCHEMA_ID,\n    MMCIF_NONPOLY_IDENTITY_STRUCT_ASYM_HEADERS,\n    MmcifNonpolyCategoryBinding,\n    MmcifNonpolyComponentIdentity,\n    MmcifNonpolyEntityIdentity,\n    MmcifNonpolyIdentityError,\n    MmcifNonpolyIdentitySnapshot,\n    MmcifNonpolyInstanceIdentity,\n    NONPOLY_SCHEME_CATEGORY,\n    STRUCT_ASYM_CATEGORY,\n    mmcif_nonpoly_identity_document,\n    mmcif_nonpoly_identity_json_bytes,\n    mmcif_nonpoly_identity_projection,\n    mmcif_nonpoly_identity_source_binding,\n    parse_mmcif_nonpoly_identity,\n    require_mmcif_nonpoly_identity_document,\n    write_mmcif_nonpoly_identity_json,\n)\n'''
+          insert_before(molecular, 'from .mmcif_semantics import (\n', import_block)
+          all_names = (
+              '    "CHEM_COMP_CATEGORY",\n'
+              '    "ENTITY_CATEGORY",\n'
+              '    "ENTITY_NONPOLY_CATEGORY",\n'
+              '    "MAX_MMCIF_NONPOLY_ENTITY_ROWS",\n'
+              '    "MAX_MMCIF_NONPOLY_IDENTITY_INPUT_CHARS",\n'
+              '    "MAX_MMCIF_NONPOLY_IDENTITY_TOKEN_CHARS",\n'
+              '    "MAX_MMCIF_NONPOLY_SCHEME_ROWS",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_CHEM_COMP_HEADERS",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_DOCUMENT_SCHEMA_ID",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_ENTITY_HEADERS",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_ENTITY_NONPOLY_HEADERS",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_ENTITY_NONPOLY_NAME_HEADER",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_PARSER_VERSION",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_PROFILE_ID",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_PROJECTION_SCHEMA_ID",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_SCHEME_HEADERS",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_SOURCE_BINDING_SCHEMA_ID",\n'
+              '    "MMCIF_NONPOLY_IDENTITY_STRUCT_ASYM_HEADERS",\n'
+              '    "MmcifNonpolyCategoryBinding",\n'
+              '    "MmcifNonpolyComponentIdentity",\n'
+              '    "MmcifNonpolyEntityIdentity",\n'
+              '    "MmcifNonpolyIdentityError",\n'
+              '    "MmcifNonpolyIdentitySnapshot",\n'
+              '    "MmcifNonpolyInstanceIdentity",\n'
+              '    "NONPOLY_SCHEME_CATEGORY",\n'
+              '    "STRUCT_ASYM_CATEGORY",\n'
+              '    "mmcif_nonpoly_identity_document",\n'
+              '    "mmcif_nonpoly_identity_json_bytes",\n'
+              '    "mmcif_nonpoly_identity_projection",\n'
+              '    "mmcif_nonpoly_identity_source_binding",\n'
+              '    "parse_mmcif_nonpoly_identity",\n'
+              '    "require_mmcif_nonpoly_identity_document",\n'
+              '    "write_mmcif_nonpoly_identity_json",\n'
+          )
+          insert_before(molecular, '    "MAX_MMCIF_SEMANTIC_ROWS",\n', all_names)
+
+          capabilities = Path('betelgeuze_engine_v2/capabilities.py')
+          insert_before(
+              capabilities,
+              'PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"\n',
+              'MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_identity"\n',
+          )
+          insert_before(
+              capabilities,
+              '    PHYSICS_REGISTRY_CAPABILITY_ID: (\n',
+              '''    MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID: (\n        "source_authentication_missing",\n        "atom_site_identity_join_not_interpreted",\n        "component_chemistry_and_topology_not_interpreted",\n        "auth_label_equivalence_not_established",\n        "product_integration_not_qualified",\n    ),\n''',
+          )
+          insert_before(
+              capabilities,
+              '            PHYSICS_REGISTRY_CAPABILITY_ID: _row(\n',
+              '''            MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID: _row(\n                MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,\n                current_state="bounded_nonpoly_component_instance_identity",\n                internal_execution_enabled=True,\n                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",\n            ),\n''',
+          )
+          insert_before(
+              capabilities,
+              '    "MMCIF_SEMANTICS_CAPABILITY_ID",\n',
+              '    "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",\n',
+          )
+
+          capability_yaml = Path('config/independent_engine_v2_capabilities.yaml')
+          insert_before(
+              capability_yaml,
+              '  v2_independent_physics_registry:\n',
+              '''  v2_bounded_mmcif_nonpoly_identity:\n    current_state: bounded_nonpoly_component_instance_identity\n    implemented: true\n    reference_contract_ready: true\n    internal_reference_execution_enabled: true\n    calibrated: false\n    scientifically_validated: false\n    public_evidence_ready: false\n    benchmark_validated: false\n    product_qualified: false\n    customer_execution_enabled: false\n    claim_safe: false\n    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS\n    blockers:\n      - source_authentication_missing\n      - atom_site_identity_join_not_interpreted\n      - component_chemistry_and_topology_not_interpreted\n      - auth_label_equivalence_not_established\n      - product_integration_not_qualified\n\n''',
+          )
+
+          post_merge = Path('tests/unit/test_engine_v2_post_merge_state.py')
+          insert_before(
+              post_merge,
+              '    MMCIF_SEMANTICS_CAPABILITY_ID,\n',
+              '    MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,\n',
+          )
+          replace_once(
+              post_merge,
+              '    assert len(loaded["capabilities"]) == 12\n',
+              '    assert len(loaded["capabilities"]) == 13\n',
+          )
+          insert_before(
+              post_merge,
+              '    assert MMCIF_SEMANTICS_CAPABILITY_ID in rows\n',
+              '    assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows\n',
+          )
+          insert_before(
+              post_merge,
+              '    physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]\n',
+              '''    nonpoly_identity = rows[MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID]\n    assert nonpoly_identity["current_state"] == "bounded_nonpoly_component_instance_identity"\n    assert nonpoly_identity["internal_reference_execution_enabled"] is True\n    assert "source_authentication_missing" in nonpoly_identity["blockers"]\n    assert "atom_site_identity_join_not_interpreted" in nonpoly_identity["blockers"]\n    assert "component_chemistry_and_topology_not_interpreted" in nonpoly_identity["blockers"]\n    assert "auth_label_equivalence_not_established" in nonpoly_identity["blockers"]\n\n''',
+          )
+          insert_before(
+              post_merge,
+              '        "test_engine_v2_sparse_geometry_features.py",\n',
+              '        "test_engine_v2_mmcif_nonpoly_identity.py",\n',
+          )
+
+          main_workflow = Path('.github/workflows/ci-engine-v2-main.yml')
+          replace_once(
+              main_workflow,
+              '            tests/unit/test_engine_v2_mmcif_altloc_declarations.py\n            tests/unit/test_engine_v2_sparse_geometry_features.py\n',
+              '            tests/unit/test_engine_v2_mmcif_altloc_declarations.py\n            tests/unit/test_engine_v2_mmcif_nonpoly_identity.py\n            tests/unit/test_engine_v2_sparse_geometry_features.py\n',
+          )
+          replace_once(
+              main_workflow,
+              '            tests/unit/test_engine_v2_mmcif_altloc_declarations.py \\\n            tests/unit/test_engine_v2_sparse_geometry_features.py \\\n',
+              '            tests/unit/test_engine_v2_mmcif_altloc_declarations.py \\\n            tests/unit/test_engine_v2_mmcif_nonpoly_identity.py \\\n            tests/unit/test_engine_v2_sparse_geometry_features.py \\\n',
+          )
+          replace_once(
+              main_workflow,
+              '          from betelgeuze_engine_v2.molecular import CANONICAL_SYSTEM_JSON_SCHEMA_ID\n',
+              '          from betelgeuze_engine_v2.molecular import (\n              CANONICAL_SYSTEM_JSON_SCHEMA_ID,\n              MMCIF_NONPOLY_IDENTITY_DOCUMENT_SCHEMA_ID,\n          )\n',
+          )
+          insert_before(
+              main_workflow,
+              '          assert MMCIF_ALTLOC_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")\n',
+              '          assert MMCIF_NONPOLY_IDENTITY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")\n',
+          )
+          PY
+
+          python -m py_compile \
+            betelgeuze_engine_v2/molecular/__init__.py \
+            betelgeuze_engine_v2/capabilities.py \
+            tests/unit/test_engine_v2_post_merge_state.py
+          git diff --check
+
+      - name: Commit the minimal registration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            betelgeuze_engine_v2/molecular/__init__.py \
+            betelgeuze_engine_v2/capabilities.py \
+            config/independent_engine_v2_capabilities.yaml \
+            tests/unit/test_engine_v2_post_merge_state.py \
+            .github/workflows/ci-engine-v2-main.yml
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "feat(v2): register bounded mmCIF nonpoly identity capability"
+          git push origin HEAD:codex/v2-mmcif-nonpoly-identity
