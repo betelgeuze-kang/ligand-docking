@@ -8,6 +8,7 @@ on:
       - "betelgeuze_product/job_terminal_state.py"
       - "betelgeuze_product/payload_privacy.py"
       - "betelgeuze_product/docking_response.py"
+      - "betelgeuze_product/scientific_input_provenance.py"
       - "betelgeuze_product/api_contract.py"
       - "betelgeuze_product/private_payload_store.py"
       - "betelgeuze_product/benchmark_ledger.py"
@@ -129,6 +130,7 @@ jobs:
             betelgeuze_product/docking_response.py \
             betelgeuze_product/job_orchestration.py \
             betelgeuze_product/payload_privacy.py \
+            betelgeuze_product/scientific_input_provenance.py \
             betelgeuze_product/tier_beta_vertical_slice.py \
             core/claim_boundary.py \
             tests/mobile
