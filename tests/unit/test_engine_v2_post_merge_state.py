@@ -26,6 +26,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID,
     MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID,
     MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID,
+    MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID,
     MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
@@ -46,7 +47,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 30
+    assert len(loaded["capabilities"]) == 31
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -76,6 +77,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID in rows
     assert PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
@@ -289,7 +291,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "reviewed_parameter_source_binding_is_separate_capability" in (
         all_atom_system["blockers"]
     )
-    assert "partial_charge_assignment_not_implemented" in (
+    assert "partial_charge_assignment_is_separate_capability" in (
         all_atom_system["blockers"]
     )
     assert "source_format_round_trip_not_implemented" in (
@@ -304,8 +306,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert parameter_binding["internal_reference_execution_enabled"] is True
     assert "offxml_semantic_parsing_not_implemented" in parameter_binding["blockers"]
     assert "parameter_assignment_not_implemented" in parameter_binding["blockers"]
-    assert "partial_charge_assignment_not_implemented" in (
+    assert "partial_charge_assignment_is_separate_capability" in (
         parameter_binding["blockers"]
+    )
+
+    partial_charge = rows[MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID]
+    assert partial_charge["current_state"] == (
+        "bounded_explicit_charge_vector_application_without_generation_or_validation"
+    )
+    assert partial_charge["internal_reference_execution_enabled"] is True
+    assert "explicit_charge_values_required_from_caller" in partial_charge["blockers"]
+    assert "charge_generation_not_implemented" in partial_charge["blockers"]
+    assert "charge_method_scientific_validation_missing" in (
+        partial_charge["blockers"]
     )
 
     parameter_source = rows[PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID]
@@ -318,7 +331,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         parameter_source["blockers"]
     )
     assert "parameter_assignment_not_implemented" in parameter_source["blockers"]
-    assert "partial_charge_assignment_not_implemented" in (
+    assert "partial_charge_assignment_is_separate_capability" in (
         parameter_source["blockers"]
     )
     assert "applicability_domain_validation_missing" in (
@@ -331,7 +344,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
     assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "four_classified_implementation_gaps_remain" in (
+    assert "three_classified_implementation_gaps_remain" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]

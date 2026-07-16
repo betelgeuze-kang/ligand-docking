@@ -64,10 +64,13 @@ The current `main` branch contains:
   plus a separate source-to-system binding carrier that attaches that reviewed
   source identity, immutable artifact digest, license identity, and candidate
   scope to eligible canonical system hashes without assigning any values,
+  plus an explicit partial-charge vector application contract that binds finite
+  binary64 values, atom order, total-charge conservation, method provenance, and
+  source system hashes while providing no charge generator or scientific method,
   plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
   2 invalid-source cases, plus a 52-axis executable coverage ledger classifying
-  21 supported, 27 explicitly unsupported, and 4 not-implemented rows,
+  22 supported, 27 explicitly unsupported, and 3 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -89,8 +92,9 @@ not currently establish:
   validated hydrogen geometry, source-to-graph parameter assignment, parsed
   parameter values or assigned parameters, general ligand/cofactor or
   non-source-declared modified-residue role interpretation,
-  metal/ion/modified-residue preparation, source-to-system parameter-value or
-  partial-charge assignment, source-format all-atom round trip, or a
+  metal/ion/modified-residue preparation, source-to-system parameter-value
+  assignment, partial-charge generation/calibration/validation, source-format
+  all-atom round trip, or a
   parameterable `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;

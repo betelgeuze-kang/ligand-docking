@@ -69,6 +69,9 @@ MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID = (
 MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_parameter_source_binding"
 )
+MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_partial_charge_assignment"
+)
 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = (
     "v2_reviewed_parameter_source_provenance"
 )
@@ -260,7 +263,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "source_format_semantic_validation_missing",
         "candidate_scope_parameter_coverage_not_validated",
         "parameter_assignment_not_implemented",
-        "partial_charge_assignment_not_implemented",
+        "partial_charge_assignment_is_separate_capability",
         "applicability_domain_validation_missing",
         "parameter_value_calibration_missing",
         "force_energy_validation_missing",
@@ -276,7 +279,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "source_authentication_missing",
         "reviewed_parameter_source_binding_is_separate_capability",
         "parameter_assignment_not_implemented",
-        "partial_charge_assignment_not_implemented",
+        "partial_charge_assignment_is_separate_capability",
         "atom_masses_not_assigned",
         "source_format_round_trip_not_implemented",
         "chemistry_validation_missing",
@@ -289,7 +292,20 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "candidate_scope_parameter_coverage_not_validated",
         "applicability_domain_validation_missing",
         "parameter_assignment_not_implemented",
-        "partial_charge_assignment_not_implemented",
+        "partial_charge_assignment_is_separate_capability",
+        "atom_masses_not_assigned",
+        "fixed_parent_offset_geometry_not_validated",
+        "force_energy_validation_missing",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID: (
+        "explicit_charge_values_required_from_caller",
+        "charge_generation_not_implemented",
+        "charge_method_scientific_validation_missing",
+        "charge_value_calibration_missing",
+        "parameter_coverage_and_applicability_not_validated",
+        "force_field_parameter_assignment_not_implemented",
         "atom_masses_not_assigned",
         "fixed_parent_offset_geometry_not_validated",
         "force_energy_validation_missing",
@@ -298,7 +314,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "four_classified_implementation_gaps_remain",
+        "three_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -537,6 +553,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID,
+                current_state=(
+                    "bounded_explicit_charge_vector_application_without_"
+                    "generation_or_validation"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID: _row(
                 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
                 current_state=(
@@ -640,6 +665,7 @@ __all__ = [
     "MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID",
     "MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID",
     "MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID",
+    "MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",
