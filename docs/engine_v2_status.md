@@ -30,7 +30,9 @@ The current `main` branch contains:
   fail-closed component-bond/identity-symmetry connection topology that keeps
   metal coordination edges separate from canonical bonds, plus bounded neutral
   acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
-  failure-complete per-instance parameterability report;
+  failure-complete per-instance parameterability report, plus a frozen 21-case
+  synthetic contract corpus and 51-axis executable coverage ledger that retains
+  supported, explicitly unsupported, invalid-source, and not-implemented rows;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.
@@ -41,6 +43,8 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
+- a licensing/provenance-reviewed real-world preparation corpus or authorization
+  to fit parameters from the synthetic contract corpus;
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
   coordinates, reviewed parameters, or a prepared `AllAtomSystem`;

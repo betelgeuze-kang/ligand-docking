@@ -49,6 +49,9 @@ MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID = (
 MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_neutral_coh_preparation"
 )
+MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_preparation_corpus"
+)
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -161,6 +164,14 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "aromatic_charged_stereo_and_extended_elements_not_supported",
         "ph_tautomer_and_intercomponent_connections_not_prepared",
         "prepared_all_atom_system_not_created",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
+        "synthetic_contract_corpus_only",
+        "sixteen_classified_implementation_gaps_remain",
+        "real_world_supported_corpus_missing",
+        "parameter_fitting_not_authorized",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -330,6 +341,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
+                current_state=(
+                    "frozen_21_case_failure_complete_corpus_and_"
+                    "51_axis_coverage_ledger"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PHYSICS_REGISTRY_CAPABILITY_ID: _row(
                 PHYSICS_REGISTRY_CAPABILITY_ID,
                 current_state="reference_terms_implemented_unvalidated",
@@ -407,6 +427,7 @@ __all__ = [
     "MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID",
     "MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID",
     "MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID",
+    "MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID",
     "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",

@@ -18,6 +18,7 @@ on:
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   pull_request:
     paths:
@@ -35,6 +36,7 @@ on:
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   workflow_dispatch:
 
@@ -92,6 +94,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py
             tests/unit/test_engine_v2_commercial_roadmap.py
             tests/unit/test_engine_v2_sparse_geometry_features.py
             tests/unit/test_engine_v2_ai_core.py
@@ -116,6 +119,7 @@ jobs:
             README.ko.md
             .github/workflows/ci-engine-v2-external-baseline.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -159,6 +163,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py \
             tests/unit/test_engine_v2_commercial_roadmap.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \
