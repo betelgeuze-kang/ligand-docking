@@ -2,10 +2,10 @@
 
 역사적 분해 기준: `main@29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
 
-현재 기준: donor-cleanup endpoint `main@7dc025ed5a1f6f53e33d09bd457e9d6afa825808`
+현재 기준: donor-cleanup evidence endpoint `main@2c0eddb107dde5dbdddf206ea24b6fefc78d7d18`
 
-상태: #43과 #49는 bounded replacements 뒤 superseded로 닫혔다. #66만
-남은 open donor이며 통째 병합 금지다.
+상태: #43, #49, #66은 bounded replacements 뒤 superseded로 닫혔다.
+열린 donor PR은 없다. 닫힌 donor도 통째 병합 금지이며 다시 cherry-pick하지 않는다.
 
 이 문서는 대형 draft PR #43과 #49를 통째로 병합하지 않고, 보안 스택과
 독립 Engine v2 스택을 분리해 검토하기 위한 파일 단위 기준선이다.
@@ -129,9 +129,10 @@ H3 donor #61은 #72 병합 후 superseded로 닫혔다. H4는 위 Engine 계층�
 ## 9. 현재 donor 경계
 
 - #43은 closed/superseded이며 어떤 donor commit도 다시 가져오지 않는다.
-- #66은 stale mixed ancestry의 유일한 open donor다. #73/#89/#90/#91/#94/#95가
-  병합됐고, selected `_struct_conn`, polymer topology, peptide preparation,
-  PDB/SDF/SMILES, alkane physics, SPICE evidence는 각각 독립 검토가 필요하다.
+- #66은 stale mixed ancestry donor로서 병합 없이 닫혔다. #73/#89/#90/#91/#94/#95만
+  bounded child로 병합됐다. selected `_struct_conn`, polymer topology, peptide
+  preparation, PDB/SDF/SMILES, alkane physics, SPICE evidence의 donor patch는
+  폐기됐으며, 필요하면 각각 current `main`에서 새 작업으로 독립 검토한다.
 - 추출된 syntax/identity/declaration 테스트 성공은 semantic mmCIF conformance, molecular preparation,
   scientific validation, public benchmark validation, GPU parity, customer execution,
   또는 commercial readiness를 확립하지 않는다.

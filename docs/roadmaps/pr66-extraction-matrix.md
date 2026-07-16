@@ -149,20 +149,18 @@ Actual first-child evidence:
 | #94 | `7dc4e5de` | nonpoly entity/component/asym/instance identity carrier |
 | #95 | `e570cd70` | selected component atom and optional bond source declarations |
 
-## Remaining extraction decisions
+## Final donor decision
 
-PR #66 remains draft/open and is not a merge candidate. The next child must be
-chosen only after re-auditing its dependencies against current `main@7dc025ed`.
-The current order remains:
+PR #66 was closed without merge after the six accepted bounded children above
+were linked. The remaining donor patches are explicitly discarded rather than
+implicitly approved for later extraction:
 
-1. selected `_struct_conn` identity relationships without bond-order chemistry,
-   coordinate materialization, or topology authority;
-2. separately review whether any nonpoly topology interpretation is retained;
-3. polymer topology before mixed composition and peptide preparation;
-4. peptide completion/preparation only after those topology contracts;
-5. PDB/SDF/SMILES, alkane physics, and SPICE evidence as separately owned
-   families with focused workflows.
+1. selected `_struct_conn` identity relationships and nonpoly topology;
+2. polymer topology, mixed composition, and peptide completion/preparation;
+3. PDB/SDF/SMILES format families;
+4. alkane physics and SPICE evidence families.
 
-No donor commit is approved for cherry-pick. Donor #66 may be closed as
-superseded only after each retained family has a linked current-main child or
-an explicit discard record.
+No donor commit is approved for cherry-pick. Future work in any discarded
+family must be a new current-main design and implementation with focused tests,
+independent provenance, and unchanged false promotion flags. This closure is a
+source-control decision, not scientific evidence or a capability promotion.
