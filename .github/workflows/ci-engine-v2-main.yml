@@ -19,6 +19,7 @@ on:
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   pull_request:
     paths:
@@ -37,6 +38,7 @@ on:
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   workflow_dispatch:
 
@@ -88,6 +90,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_altloc_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
             tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py
@@ -120,6 +123,7 @@ jobs:
             .github/workflows/ci-engine-v2-external-baseline.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -157,6 +161,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_altloc_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_component_declarations.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py \
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py \
@@ -234,6 +239,7 @@ jobs:
           from betelgeuze_engine_v2.molecular import (
               CANONICAL_SYSTEM_JSON_SCHEMA_ID,
               MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID,
+              MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID,
               MMCIF_NONPOLY_ATOM_SITE_OBSERVATION_DOCUMENT_SCHEMA_ID,
               MMCIF_NONPOLY_IDENTITY_DOCUMENT_SCHEMA_ID,
               MMCIF_STRUCT_CONN_DECLARATION_DOCUMENT_SCHEMA_ID,
@@ -278,6 +284,7 @@ jobs:
           ).scientifically_validated is False
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
+          assert MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_ATOM_SITE_OBSERVATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_ALTLOC_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_IDENTITY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")

@@ -24,6 +24,11 @@ from .mmcif_nonpoly_component_declarations import (
     MMCIF_NONPOLY_COMPONENT_ATOM_HEADERS,
     MMCIF_NONPOLY_COMPONENT_BOND_HEADERS,
 )
+from .mmcif_nonpoly_component_roles import (
+    MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,
+    MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
+    parse_mmcif_nonpoly_component_roles,
+)
 from .mmcif_nonpoly_preparation import (
     MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
     MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
@@ -48,7 +53,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "d8c91571832504ae6d8dffc7a79e40acc6d42e5d89737a7d019dcb6a55106c12"
+    "ca26b71cd0d6ad660604a06dbb86f611d542c4687fca7f536d530f5adf631265"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -188,8 +193,10 @@ class MmcifPreparationCorpusCaseResult:
     input_sha256: str
     observed_outcome: str
     preparation_snapshot_sha256: str
+    component_role_snapshot_sha256: str
     error_code: str
     reports: tuple[Mapping[str, Any], ...]
+    component_roles: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -200,8 +207,10 @@ class MmcifPreparationCorpusCaseResult:
             "observed_outcome": self.observed_outcome,
             "expectation_matched": True,
             "preparation_snapshot_sha256": self.preparation_snapshot_sha256,
+            "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
             "error_code": self.error_code,
             "reports": [dict(row) for row in self.reports],
+            "component_roles": [dict(row) for row in self.component_roles],
             "signals": list(self.signals),
         }
 
@@ -476,7 +485,7 @@ def _corpus_source(
                 },
                 {
                     "_chem_comp.id": "HOH",
-                    "_chem_comp.type": "water",
+                    "_chem_comp.type": "non-polymer",
                     "_chem_comp.pdbx_formal_charge": "0",
                 },
             ),
@@ -541,27 +550,29 @@ def _corpus_source(
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
     MappingProxyType(
         {
-            "supported_carbonyl": "fabb4ee9eccd99132f825bdb3b3351cc89a4ed385d1392f2420ab4bdb308d573",
-            "supported_single_coh": "96981b8a6217296573ad0aeef844360cd7e1c0d46a8a46bee47669b7076cbb4b",
-            "supported_source_hydrogen": "9fb0c7d48ae6e22e88fa1da603f733a61b6a4eb2746b57ad63191140e0fe6605",
-            "unprepared_intercomponent_covalent": "14eb3c1be911736d30f7ae92aac1de5caecc3ba8dc9f43c5603726add0427e9c",
-            "unsupported_charged_component": "5ad0190fc25e267d2108d1d0b1ac8ed2d470ade75830e2c50f077c235019cb24",
-            "unsupported_extended_element": "d4c8959770fd510df61c8bf275815c588b87805468e5b155f05f100017817aae",
-            "unsupported_aromatic_atom": "a87f289c5c1ceb5d060976489d5a1b3d7bd7aeaab8a0d5bd8158ceb0d76acb65",
-            "unsupported_atom_stereo": "f0b3d84c0239240a39351102f03907ef444737af7431c35133946e05421a13df",
-            "unsupported_bond_stereo": "ae1bac5f8e6fde11ed85b90b591d7bf3f7c605d72cdfe925e3e00f1f4be01296",
-            "unsupported_triple_bond": "6ec684ae7c990192c73e9dc9c69641c819ab59f2c5c36583af066e0253aa9571",
-            "unsupported_quadruple_bond": "7e8a5ac94241da1f141ce0499c49ff72001c13c0a0fb5434ed9c6ffee1eed8de",
-            "unsupported_aromatic_bond": "98c0e7da3e4f92fd9913b609b71ea86f1820d6bbc64dc1ccfe7b6d47141a0df9",
-            "unsupported_cyclic_graph": "fe27a629482366b9a7749acde21d5f1414a745abae625111d5eee5d249d4c75b",
-            "unsupported_disconnected_graph": "28e26e6a0faaf5cb00d3902582203f025e0f2d3ec03178d1e399c52ed1972ca1",
-            "unsupported_element_crosscheck_mismatch": "d17a9cbe623f2759b63ed38fc4acef2fe947b3e053ef7b82e03cf77806b3a965",
-            "unsupported_charge_crosscheck_mismatch": "ed44aea36b7b40529e098a606a3e09e8da9d8b2fffe746ee9d28cb5f58b99dc9",
-            "unsupported_formal_charge_unavailable": "ec005270208164507a0da6fa3215c21244d4eb3091c44efa1eb5a11450f3dace",
-            "unsupported_overfull_valence": "219ea49f2dbe81fdb0e54a3fe65578ebad17c447a645513936811bbd15f6694d",
-            "unsupported_incomplete_source_hydrogen": "7ee4ce4f15b0cd83a0594ada24f111011053f02e4eaca9fc0e9fc820d6cb2966",
-            "invalid_component_charge_grammar": "3b4cd6b801dfee83a717ef2d63bcef3ebc51e3a87695c7cb7302d7989d684e03",
-            "invalid_component_charge_range": "e81f27fe674a88ba73c6c6469e1f747c4c07408b61179e55db65538f9a71679a",
+            "supported_carbonyl": "368b6aede70a893c9f2e60c50b18d1c2d1399bc8039c42b1c2613cd1601050fb",
+            "supported_single_coh": "0b33ffb7d232a58664293085c5086f7991e596d10cc161bd7b4b9be6dd4c7238",
+            "supported_source_hydrogen": "a6a2dab9058b48956c8514291ce672d2f8b05b049d6138d36bb93c85dc62f5a8",
+            "unprepared_intercomponent_covalent": "2764644c17bd5c32a5277efdc17ddaa1092c06b294f6c5ebdf05f14462199906",
+            "unsupported_charged_component": "e0129d499970f12c91d39fa404985ab23228f456615e8a50d6e7e40468f6f97c",
+            "unsupported_extended_element": "0f6c47a87a2c8871e4bb3fc3b765f3ecbf5d28b09011a7883fed6e83bcd33499",
+            "unsupported_aromatic_atom": "de7032783768797897048a8da450561227373565ba0adae053312f6c594df836",
+            "unsupported_atom_stereo": "c70e5f5d02f7945d87a1549588ba5c5ec95ddb3c234dcaa5884bf6a2ba73ba2f",
+            "unsupported_bond_stereo": "6941d3495fca99b96533655dfe2f3761d7c1fd4fcf99c379cb60d07962a1a508",
+            "unsupported_triple_bond": "534ac463a3727a40c167ebc7169805a5fb4ff2ec7efc4da3f1e1b2364c1e5687",
+            "unsupported_quadruple_bond": "19f03c9920763e0bc45a2ad51ab340a7fb54ef758e5b34faeaf156d1e34a9b98",
+            "unsupported_aromatic_bond": "f6a282fa552ea0ad095de942ad3bb7892e4f46d46cc401cdadeed1b9f90288e2",
+            "unsupported_cyclic_graph": "13ff3145c90c8366da052ee2c368364b441034fd8d8df460ede319009b33ec07",
+            "unsupported_disconnected_graph": "83619ddd5d600cbeefaba78f4e28338589c9102a4d63b7c1b1b641941063ac82",
+            "unsupported_element_crosscheck_mismatch": "ed43b77f64df81e268245bbd37b2d6f826ae5640e08ec438090e0114b1f340f6",
+            "unsupported_charge_crosscheck_mismatch": "e4d4480020b34d4281a1ebcccc7d7e73e7d334e9dd7e05cced948562b0897052",
+            "unsupported_formal_charge_unavailable": "cc1aa1d60caa878feef838756064f514be50bff5ed8dca08c1fd64c4f02ac94c",
+            "unsupported_overfull_valence": "af6d1eec54281f3e0cb05dd5c8c69567dc6ffc882cac41a38bd11f718192b466",
+            "unsupported_incomplete_source_hydrogen": "9741a52326e820ce70b075ada0854c859d1aa42bda70efeec7562b6550f6f158",
+            "unsupported_monoatomic_metal": "5d33f6f81bfe91e59b419993d37c51fee8bc9934a3cb0160d33824d67c2122e7",
+            "unsupported_monoatomic_nonmetal_ion": "cb03af1d7e2626d4b74d55c84929e87ced1953f6fedc0a67f17d9cf7bb78dd4c",
+            "invalid_component_charge_grammar": "43f64cf79729dbbf92a858cb315421067393e5796466e0614a65f6db937c5ed5",
+            "invalid_component_charge_range": "a7a25d9fa84a602b3221faf553918e54bfbad06d443355fca8b3eb67df81438d",
         }
     )
 )
@@ -953,6 +964,34 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
             ("source_hydrogen:incomplete",),
             ligand_report=_unsupported_report(
                 ("source_hydrogen_valence_incomplete",), integration=coordination
+            ),
+        ),
+        _case(
+            "unsupported_monoatomic_metal",
+            "unsupported_chemistry",
+            (MmcifPreparationCorpusAtom("ZN1", "Zn", "+2"),),
+            (),
+            ("composition_role:monoatomic_metal_component",),
+            ligand_report=_unsupported_report(
+                (
+                    "element_outside_neutral_coh_scope",
+                    "charged_chemistry_not_supported",
+                ),
+                integration=coordination,
+            ),
+        ),
+        _case(
+            "unsupported_monoatomic_nonmetal_ion",
+            "unsupported_chemistry",
+            (MmcifPreparationCorpusAtom("CL1", "Cl", "-1"),),
+            (),
+            ("composition_role:monoatomic_nonmetal_ion",),
+            ligand_report=_unsupported_report(
+                (
+                    "element_outside_neutral_coh_scope",
+                    "charged_chemistry_not_supported",
+                ),
+                integration=coordination,
             ),
         ),
         _case(
@@ -1352,15 +1391,20 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
             "tautomer_selection_not_implemented",
         ),
         _coverage(
-            "role.ion", "role_assignment", missing, "", (), "ion_role_not_interpreted"
+            "role.ion",
+            "role_assignment",
+            unsupported,
+            "composition_role:LIG:monoatomic_nonmetal_ion",
+            ("unsupported_monoatomic_nonmetal_ion",),
+            "monoatomic_nonmetal_ion_preparation_not_supported",
         ),
         _coverage(
             "role.metal",
             "role_assignment",
-            missing,
-            "",
-            (),
-            "metal_role_not_interpreted",
+            unsupported,
+            "composition_role:LIG:monoatomic_metal_component",
+            ("unsupported_monoatomic_metal",),
+            "monoatomic_metal_preparation_not_supported",
         ),
         _coverage(
             "role.cofactor",
@@ -1500,6 +1544,7 @@ def _expected_report_projection(
 def _signals_for_reports(
     case: MmcifPreparationCorpusCase,
     reports: tuple[Mapping[str, Any], ...],
+    component_roles: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
 ) -> tuple[str, ...]:
     signals = [f"source_feature:{value}" for value in case.source_features]
@@ -1520,6 +1565,18 @@ def _signals_for_reports(
         signals.extend(
             f"parameterability_blocker:{component}:{value}"
             for value in report["parameterability_blockers"]
+        )
+    for role in component_roles:
+        component = str(role["component_id"])
+        signals.extend(
+            (
+                f"composition_role:{component}:{role['composition_role']}",
+                f"role_status:{component}:{role['role_status']}",
+                f"preparation_disposition:{component}:{role['preparation_disposition']}",
+            )
+        )
+        signals.extend(
+            f"role_blocker:{component}:{value}" for value in role["role_blockers"]
         )
     for key, value in sorted(claim_payload.items()):
         if type(value) is bool:
@@ -1543,8 +1600,10 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             input_sha256=case.input_sha256,
             observed_outcome="expected_error",
             preparation_snapshot_sha256="",
+            component_role_snapshot_sha256="",
             error_code=exc.code,
             reports=(),
+            component_roles=(),
             signals=tuple(
                 dict.fromkeys(
                     (
@@ -1558,9 +1617,13 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         raise MmcifNonpolyPreparationCorpusError(
             f"corpus case {case.case_id} accepted an invalid source"
         )
+    role_snapshot = parse_mmcif_nonpoly_component_roles(case.source_text)
     reports = tuple(_report_projection(row) for row in snapshot.instance_reports)
+    component_roles = tuple(row.to_dict() for row in role_snapshot.roles)
     if [row["component_id"] for row in reports] != [
         row.component_id for row in case.expected_reports
+    ] or [row["component_id"] for row in component_roles] != [
+        row["component_id"] for row in reports
     ]:
         raise MmcifNonpolyPreparationCorpusError(
             f"corpus case {case.case_id} report coverage drifted"
@@ -1578,9 +1641,13 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         input_sha256=case.input_sha256,
         observed_outcome="failure_complete_reports",
         preparation_snapshot_sha256=snapshot.snapshot_sha256,
+        component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
         error_code="",
         reports=reports,
-        signals=_signals_for_reports(case, reports, snapshot.to_dict()),
+        component_roles=component_roles,
+        signals=_signals_for_reports(
+            case, reports, component_roles, snapshot.to_dict()
+        ),
     )
 
 
@@ -1675,6 +1742,8 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         "schema_id": MMCIF_NONPOLY_PREPARATION_CORPUS_SOURCE_BINDING_SCHEMA_ID,
         "preparation_profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
         "preparation_parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
+        "component_role_profile_id": MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
+        "component_role_parser_version": MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,
         "corpus_profile_id": MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID,
         "corpus_runner_version": MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION,
         "cases": [row.binding_dict() for row in cases],

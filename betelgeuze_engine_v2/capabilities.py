@@ -31,6 +31,7 @@ MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_identity"
 MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_component_declarations"
 )
+MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_component_roles"
 MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID = (
     "v2_bounded_mmcif_struct_conn_declarations"
 )
@@ -113,6 +114,17 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "preparation_and_parameterability_not_assessed",
         "product_integration_not_qualified",
     ),
+    MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID: (
+        "source_authentication_missing",
+        "general_ligand_role_not_interpreted",
+        "cofactor_role_not_interpreted",
+        "modified_residue_role_not_interpreted",
+        "metal_coordination_chemistry_not_interpreted",
+        "monoatomic_metal_preparation_not_supported",
+        "monoatomic_nonmetal_ion_preparation_not_supported",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID: (
         "source_authentication_missing",
         "atom_site_identity_and_coordinates_not_joined",
@@ -169,7 +181,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "sixteen_classified_implementation_gaps_remain",
+        "fourteen_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -302,6 +314,14 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID,
+                current_state=(
+                    "bounded_water_monoatomic_metal_and_nonmetal_ion_composition_roles"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID: _row(
                 MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID,
                 current_state="bounded_nonpoly_struct_conn_identity_declarations",
@@ -344,8 +364,7 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
                 current_state=(
-                    "frozen_21_case_failure_complete_corpus_and_"
-                    "51_axis_coverage_ledger"
+                    "frozen_23_case_failure_complete_corpus_and_51_axis_coverage_ledger"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -422,6 +441,7 @@ __all__ = [
     "IMPLEMENTATION_STAGE",
     "MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID",
+    "MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID",
     "MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID",
     "MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID",
     "MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID",

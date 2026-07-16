@@ -188,6 +188,30 @@ capabilities:
       - preparation_and_parameterability_not_assessed
       - product_integration_not_qualified
 
+  v2_bounded_mmcif_nonpoly_component_roles:
+    current_state: bounded_water_monoatomic_metal_and_nonmetal_ion_composition_roles
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - source_authentication_missing
+      - general_ligand_role_not_interpreted
+      - cofactor_role_not_interpreted
+      - modified_residue_role_not_interpreted
+      - metal_coordination_chemistry_not_interpreted
+      - monoatomic_metal_preparation_not_supported
+      - monoatomic_nonmetal_ion_preparation_not_supported
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
   v2_bounded_mmcif_struct_conn_declarations:
     current_state: bounded_nonpoly_struct_conn_identity_declarations
     implemented: true
@@ -321,7 +345,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_bounded_mmcif_nonpoly_preparation_corpus:
-    current_state: frozen_21_case_failure_complete_corpus_and_51_axis_coverage_ledger
+    current_state: frozen_23_case_failure_complete_corpus_and_51_axis_coverage_ledger
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
@@ -335,7 +359,7 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - synthetic_contract_corpus_only
-      - sixteen_classified_implementation_gaps_remain
+      - fourteen_classified_implementation_gaps_remain
       - real_world_supported_corpus_missing
       - parameter_fitting_not_authorized
       - scientific_validation_missing
