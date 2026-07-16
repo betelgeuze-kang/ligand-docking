@@ -19,7 +19,15 @@ import tempfile
 from types import MappingProxyType
 from typing import Any, Mapping
 
-from .mmcif_nonpoly_atom_site_observations import MMCIF_NONPOLY_ATOM_SITE_HEADERS
+from .mmcif_atom_site_model_policy import (
+    MMCIF_ATOM_SITE_MODEL_POLICY_PARSER_VERSION,
+    MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
+    parse_mmcif_atom_site_model_policy,
+)
+from .mmcif_nonpoly_atom_site_observations import (
+    MMCIF_NONPOLY_ATOM_SITE_HEADERS,
+    MmcifNonpolyAtomSiteObservationError,
+)
 from .mmcif_modified_residue_declarations import (
     MMCIF_MODIFIED_RESIDUE_DECLARATION_HEADERS,
     MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION,
@@ -59,7 +67,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "c7c107663bc42873d473a9a61355623a61e143345ad36e39cc2d49160bdb9748"
+    "a64f73a4de1bf4a81ee159a3248fbb4c58935f07d99fdd8a606a27c251deba1b"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -206,10 +214,12 @@ class MmcifPreparationCorpusCaseResult:
     input_sha256: str
     observed_outcome: str
     preparation_snapshot_sha256: str
+    atom_site_model_policy_snapshot_sha256: str
     component_role_snapshot_sha256: str
     modified_residue_declaration_snapshot_sha256: str
     error_code: str
     reports: tuple[Mapping[str, Any], ...]
+    atom_site_model_policy: Mapping[str, Any]
     component_roles: tuple[Mapping[str, Any], ...]
     modified_residue_declarations: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
@@ -222,12 +232,16 @@ class MmcifPreparationCorpusCaseResult:
             "observed_outcome": self.observed_outcome,
             "expectation_matched": True,
             "preparation_snapshot_sha256": self.preparation_snapshot_sha256,
+            "atom_site_model_policy_snapshot_sha256": (
+                self.atom_site_model_policy_snapshot_sha256
+            ),
             "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
             "modified_residue_declaration_snapshot_sha256": (
                 self.modified_residue_declaration_snapshot_sha256
             ),
             "error_code": self.error_code,
             "reports": [dict(row) for row in self.reports],
+            "atom_site_model_policy": dict(self.atom_site_model_policy),
             "component_roles": [dict(row) for row in self.component_roles],
             "modified_residue_declarations": [
                 dict(row) for row in self.modified_residue_declarations
@@ -406,7 +420,7 @@ def _water_atom_row() -> dict[str, str]:
     }
 
 
-def _water_site_row(source_id: int) -> dict[str, str]:
+def _water_site_row(source_id: int, *, model_number: str = "1") -> dict[str, str]:
     return {
         "_atom_site.group_pdb": "HETATM",
         "_atom_site.id": str(source_id),
@@ -427,7 +441,7 @@ def _water_site_row(source_id: int) -> dict[str, str]:
         "_atom_site.auth_comp_id": "HOH",
         "_atom_site.auth_asym_id": "W",
         "_atom_site.auth_atom_id": "O",
-        "_atom_site.pdbx_pdb_model_num": "1",
+        "_atom_site.pdbx_pdb_model_num": model_number,
         "_atom_site.pdbx_pdb_ins_code": "?",
     }
 
@@ -439,6 +453,7 @@ def _corpus_source(
     connection_type: str = "metalc",
     connection_order: str = "?",
     modified_residue: bool = False,
+    water_model_number: str = "1",
 ) -> str:
     if not atoms:
         raise MmcifNonpolyPreparationCorpusError(
@@ -455,7 +470,7 @@ def _corpus_source(
     )
     site_rows = tuple(
         _site_row(atom, source_id) for source_id, atom in enumerate(atoms, start=1)
-    ) + (_water_site_row(len(atoms) + 1),)
+    ) + (_water_site_row(len(atoms) + 1, model_number=water_model_number),)
     connection = {
         "_struct_conn.id": "conn-1",
         "_struct_conn.conn_type_id": connection_type,
@@ -646,6 +661,7 @@ FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
             "unsupported_monoatomic_metal": "5d33f6f81bfe91e59b419993d37c51fee8bc9934a3cb0160d33824d67c2122e7",
             "unsupported_monoatomic_nonmetal_ion": "cb03af1d7e2626d4b74d55c84929e87ced1953f6fedc0a67f17d9cf7bb78dd4c",
             "unsupported_source_declared_modified_residue": "ff1f1c1053df34f121fa85cfec2f91d247a3d0e898cf0e14a1ca68bce1c20570",
+            "unsupported_multimodel_input": "9aaa7806cf65ca5d2d8d0b667aa9afb5833d5da88851e8372e8c01b710296d0b",
             "invalid_component_charge_grammar": "43f64cf79729dbbf92a858cb315421067393e5796466e0614a65f6db937c5ed5",
             "invalid_component_charge_range": "a7a25d9fa84a602b3221faf553918e54bfbad06d443355fca8b3eb67df81438d",
         }
@@ -722,6 +738,7 @@ def _case(
     connection_type: str = "metalc",
     connection_order: str = "?",
     modified_residue: bool = False,
+    water_model_number: str = "1",
 ) -> MmcifPreparationCorpusCase:
     source = _corpus_source(
         atoms,
@@ -729,6 +746,7 @@ def _case(
         connection_type=connection_type,
         connection_order=connection_order,
         modified_residue=modified_residue,
+        water_model_number=water_model_number,
     )
     digest = hashlib.sha256(source.encode("ascii")).hexdigest()
     frozen = FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256.get(case_id, "")
@@ -1086,6 +1104,15 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
                 integration=coordination,
             ),
             modified_residue=True,
+        ),
+        _case(
+            "unsupported_multimodel_input",
+            "unsupported_upstream_policy",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("atom_site_model_set:multimodel",),
+            expected_error_code="selected_model_not_supported",
+            water_model_number="2",
         ),
         _case(
             "invalid_component_charge_grammar",
@@ -1585,10 +1612,10 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "upstream.multimodel_policy",
             "upstream_ingest",
-            missing,
-            "",
-            (),
-            "multimodel_policy_not_implemented",
+            unsupported,
+            "model_policy_status:explicitly_unsupported_multimodel",
+            ("unsupported_multimodel_input",),
+            "multimodel_execution_not_supported",
         ),
         _coverage(
             "round_trip.all_atom_identity",
@@ -1640,11 +1667,23 @@ def _expected_report_projection(
 def _signals_for_reports(
     case: MmcifPreparationCorpusCase,
     reports: tuple[Mapping[str, Any], ...],
+    atom_site_model_policy: Mapping[str, Any],
     component_roles: tuple[Mapping[str, Any], ...],
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
 ) -> tuple[str, ...]:
     signals = [f"source_feature:{value}" for value in case.source_features]
+    signals.extend(
+        (
+            f"model_policy_status:{atom_site_model_policy['execution_policy_status']}",
+            "model_policy_execution_allowed:"
+            f"{str(atom_site_model_policy['execution_allowed']).lower()}",
+        )
+    )
+    signals.extend(
+        f"model_policy_blocker:{value}"
+        for value in atom_site_model_policy["execution_blockers"]
+    )
     for report in reports:
         component = str(report["component_id"])
         signals.extend(
@@ -1697,9 +1736,11 @@ def _signals_for_reports(
 def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseResult:
     if not _SHA256_RE.fullmatch(case.input_sha256):
         raise MmcifNonpolyPreparationCorpusError("corpus input digest is invalid")
+    model_policy_snapshot = parse_mmcif_atom_site_model_policy(case.source_text)
+    model_policy = model_policy_snapshot.to_dict()
     try:
         snapshot = parse_mmcif_nonpoly_preparation(case.source_text)
-    except MmcifNonpolyPreparationError as exc:
+    except (MmcifNonpolyPreparationError, MmcifNonpolyAtomSiteObservationError) as exc:
         if not case.expected_error_code or exc.code != case.expected_error_code:
             raise MmcifNonpolyPreparationCorpusError(
                 f"corpus case {case.case_id} produced an unexpected preparation error"
@@ -1710,16 +1751,27 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             input_sha256=case.input_sha256,
             observed_outcome="expected_error",
             preparation_snapshot_sha256="",
+            atom_site_model_policy_snapshot_sha256=(
+                model_policy_snapshot.snapshot_sha256
+            ),
             component_role_snapshot_sha256="",
             modified_residue_declaration_snapshot_sha256="",
             error_code=exc.code,
             reports=(),
+            atom_site_model_policy=model_policy,
             component_roles=(),
             modified_residue_declarations=(),
             signals=tuple(
                 dict.fromkeys(
                     (
                         *(f"source_feature:{value}" for value in case.source_features),
+                        f"model_policy_status:{model_policy['execution_policy_status']}",
+                        "model_policy_execution_allowed:"
+                        f"{str(model_policy['execution_allowed']).lower()}",
+                        *(
+                            f"model_policy_blocker:{value}"
+                            for value in model_policy["execution_blockers"]
+                        ),
                         f"error:{exc.code}",
                     )
                 )
@@ -1763,6 +1815,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         input_sha256=case.input_sha256,
         observed_outcome="failure_complete_reports",
         preparation_snapshot_sha256=snapshot.snapshot_sha256,
+        atom_site_model_policy_snapshot_sha256=(
+            model_policy_snapshot.snapshot_sha256
+        ),
         component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
         modified_residue_declaration_snapshot_sha256=(
             modified_residue_snapshot.snapshot_sha256
@@ -1771,11 +1826,13 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         ),
         error_code="",
         reports=reports,
+        atom_site_model_policy=model_policy,
         component_roles=component_roles,
         modified_residue_declarations=modified_residue_declarations,
         signals=_signals_for_reports(
             case,
             reports,
+            model_policy,
             component_roles,
             modified_residue_declarations,
             snapshot.to_dict(),
@@ -1834,6 +1891,7 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
         "supported_graph",
         "unprepared_integration",
         "unsupported_chemistry",
+        "unsupported_upstream_policy",
         "invalid_source",
     }:
         raise MmcifNonpolyPreparationCorpusError(
@@ -1874,6 +1932,10 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         "schema_id": MMCIF_NONPOLY_PREPARATION_CORPUS_SOURCE_BINDING_SCHEMA_ID,
         "preparation_profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
         "preparation_parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
+        "atom_site_model_policy_profile_id": MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
+        "atom_site_model_policy_parser_version": (
+            MMCIF_ATOM_SITE_MODEL_POLICY_PARSER_VERSION
+        ),
         "component_role_profile_id": MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
         "component_role_parser_version": MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,
         "modified_residue_declaration_profile_id": (

@@ -1,0 +1,129 @@
+name: ci-engine-v2-mmcif-atom-site-model-policy
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_observations.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py"
+      - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_post_merge_state.py"
+      - ".github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_atom_site_observations.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py"
+      - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_post_merge_state.py"
+      - ".github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-mmcif-atom-site-model-policy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  atom-site-model-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out atom-site model-policy surface
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            config/independent_engine_v2_capabilities.yaml
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_mmcif_syntax.py
+            tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py
+            tests/unit/test_engine_v2_post_merge_state.py
+            docs/engine_v2_status.md
+            docs/engine_v2_public_api.md
+            docs/entrypoints.md
+            README.md
+            README.ko.md
+            .github/workflows/ci-engine-v2-main.yml
+            .github/workflows/ci-engine-v2-mmcif-atom-site-model-policy.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 PyYAML==6.0.3 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce architecture boundary
+        shell: bash
+        run: |
+          set +e
+          {
+            python -m compileall -q betelgeuze_engine_v2
+            python tools/check_engine_v2_architecture.py
+          } > mmcif-atom-site-model-policy.log 2>&1
+          status=$?
+          cat mmcif-atom-site-model-policy.log
+          exit "$status"
+
+      - name: Run model policy carrier corpus and registry contracts
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -vv -x \
+            tests/unit/test_engine_v2_mmcif_syntax.py \
+            tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py \
+            tests/unit/test_engine_v2_post_merge_state.py \
+            >> mmcif-atom-site-model-policy.log 2>&1
+          status=$?
+          cat mmcif-atom-site-model-policy.log
+          exit "$status"
+
+      - name: Upload model-policy diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mmcif-atom-site-model-policy-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: mmcif-atom-site-model-policy.log
+          if-no-files-found: error
+          retention-days: 7

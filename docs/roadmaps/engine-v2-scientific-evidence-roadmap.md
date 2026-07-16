@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@29ccca63aea8425a1383be33c9b0efc65633f6d5`
+Observed baseline: `main@0953d1aede827a013dc3ec6728ec2ed5ff06a1af`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -74,9 +74,9 @@ claim status without revalidating the dependency and freshness chain.
   acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
   generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
-- Keep the exact-input 24-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 16 axes as supported, 22 as
-  explicitly unsupported, and 13 as not implemented; it is not parameter-fitting
+- Keep the exact-input 25-case synthetic supported/failure contract corpus and
+  51-axis coverage ledger executable. It classifies 16 axes as supported, 23 as
+  explicitly unsupported, and 12 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep source water and bounded monoatomic metal/nonmetal-ion composition roles
   executable without inferring general ligand, cofactor, modified-residue, or
@@ -84,7 +84,11 @@ claim status without revalidating the dependency and freshness chain.
 - Keep `_pdbx_struct_mod_residue` source declarations joined to bounded polymer
   label identity while atom-site observation, parent chemistry, modification
   nature, auth/model/insertion semantics, and preparation remain blocked.
-- Next, close the 13 implementation-gap rows by independent capability slices and
+- Keep the complete atom-site model-number set classified while only `{1}` is
+  execution-eligible. Multi-model and singleton non-1 input remain explicit
+  failure rows; selection, ensemble, trajectory, averaging, and cross-category
+  reconciliation remain unimplemented.
+- Next, close the 12 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
