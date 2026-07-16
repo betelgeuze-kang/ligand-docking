@@ -1,17 +1,17 @@
 # PR #66 bounded extraction matrix
 
-Status: active extraction record; first bounded child merged
+Status: active extraction record; six bounded children merged
 
 Observed at: 2026-07-15
 
 - First-child extraction base: `origin/main@13af55c8f9251bc465d144b90d263efa5f5d01ea`
-- Current reviewed `main`: `3f9ede19bb158a02eb3d06e0ed42dea6952db680`
+- Current reviewed `main`: `7dc025ed5a1f6f53e33d09bd457e9d6afa825808`
 - Donor PR head: `83e4eb221377b03069b3d8546e7057f475b6be8d`
 - Donor PR base: `fbf1a419b7926333b7e33f43bd751a9566b2b1d6`
 - Common ancestor: `29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
 - Divergence measured at the extraction base: 192 commits on main, 12 commits
   on the donor side
-- Divergence remeasured at current `main`: 220 commits on main, 12 commits on
+- Divergence remeasured at current `main`: 249 commits on main, 12 commits on
   the donor side; common ancestor remains `29aa6de8b15ed33a72519e4a7e06acf01e1ac356`
 
 This document records source ownership, dependency order, and bounded child-PR
@@ -46,11 +46,11 @@ readiness. No child may modify a promotion flag to satisfy a test.
 
 | Donor commit | Donor scope and size | Extraction buckets | Current-main dependency state | Decision and order |
 |---|---|---|---|---|
-| `d07dc5e8` | Mixed Engine v2 foundation; 247 files, +132,386/-104 | CIF syntax; shared topology/observation; exact PDB, SDF V2000, and SMILES parsing/writing; base mmCIF identity/missingness/assembly; C1-C4 alkane; harmonic diagnostics/minimization | Current main now has the bounded CIF syntax child plus canonical molecular models, serialization, and validation, but not the donor's semantic parser, writer, topology/observation, forcefield, or mmCIF layers | Never cherry-pick. The dependency-free CIF syntax subset was reconstructed and merged in #73; audit each remaining format or physics family independently against current canonical APIs |
+| `d07dc5e8` | Mixed Engine v2 foundation; 247 files, +132,386/-104 | CIF syntax; shared topology/observation; exact PDB, SDF V2000, and SMILES parsing/writing; base mmCIF identity/missingness/assembly; C1-C4 alkane; harmonic diagnostics/minimization | Current main has bounded CIF syntax, identity/polymer-sequence, zero-occupancy, altloc, nonpoly identity, and component declaration children, but not the donor's general writer/topology/forcefield layers | Never cherry-pick. #73/#89/#90/#91/#94/#95 reconstruct accepted subsets; audit every remaining family independently against current canonical APIs |
 | `18414be9` | Ordered opaque PDB `CONECT` preservation; 25 files, +4,118/-18 | `pdb_conect_declaration.py`, one corpus manifest, 15 PDB fixtures, and two focused tests | Missing `missingness.py`, `pdb_mmcif.py`, `pdb_writer.py`, `topology.py`, and three serialization APIs used by the donor | Defer until a current-main PDB parser/writer substrate exists. Preserve direction and duplicate declarations only; never infer bond order, covalence, or coordination |
-| `be7fec2b` | Selected mmCIF zero-occupancy declarations; 18 files, +8,494/-21 | Atom-level and residue-level zero-occupancy envelopes, one corpus, six fixtures, and three tests | Bounded CIF syntax is now on main, but semantic mmCIF parser/writer, polymer sequence, missingness, topology, and serialization adapters are still absent | Defer until the shared mmCIF substrate is accepted; keep source-reported zero occupancy separate from completed or prepared structure state |
-| `1e32ead3` | Explicit mmCIF alternate-location selection; 14 files, +4,489/-5 | One altloc envelope, one corpus, six fixtures, and two tests | Bounded CIF syntax is now on main, but semantic mmCIF parser/writer, topology, serialization, and canonical element handling remain prerequisites | Defer to a dedicated child after shared mmCIF parsing. Selection preservation must not claim chemical correctness or preparation readiness |
-| `ad9c3780` | Strict nonpoly component and covalent `struct_conn` topology envelopes; 28 files, +11,918/-339 | Two topology contracts, two corpora, eight fixtures, six tests, and preparation/profile bridges | Requires nonpoly identity, CIF syntax, shared observation, donor serialization/topology behavior, and preparation surfaces | Split topology preservation from preparation bridging. Extract only after current-main identity and topology semantics are reconciled |
+| `be7fec2b` | Selected mmCIF zero-occupancy declarations; 18 files, +8,494/-21 | Atom-level and residue-level zero-occupancy envelopes, one corpus, six fixtures, and three tests | Bounded source-declaration subset merged in #90 without donor topology/writer/preparation | Extracted subset complete; broader donor semantics remain discarded unless separately justified |
+| `1e32ead3` | Explicit mmCIF alternate-location selection; 14 files, +4,489/-5 | One altloc envelope, one corpus, six fixtures, and two tests | Bounded source-declaration subset merged in #91 without selection chemistry or preparation authority | Extracted subset complete; no chemical-correctness or preparation claim |
+| `ad9c3780` | Strict nonpoly component and covalent `struct_conn` topology envelopes; 28 files, +11,918/-339 | Two topology contracts, two corpora, eight fixtures, six tests, and preparation/profile bridges | #94 provides identity and #95 provides selected atom/optional bond source declarations; no topology materialization or preparation bridge was accepted | Next extract selected `_struct_conn` identity relationships only; topology interpretation and preparation remain separate decisions |
 | `e5842399` | Polymer component topology and polymer/nonpoly composition; 32 files, +11,798/-119 | Two new topology contracts and corpora plus changes to the preceding nonpoly contracts | Depends on the `ad9c3780` nonpoly contracts, polymer sequence, observation, serialization, topology, and preparation bridges | Defer until nonpoly topology is accepted; split polymer topology from mixed composition and re-run all predecessor tests |
 | `83e4eb22` | Peptide preparation and SPICE evidence gates; 60 files, +31,841/-39 | Standard-L-peptide topology/completion/preparation family; separate SPICE C1-C4 quantum-reference, source-review, population, target, and observability family | Peptide work depends on preceding polymer topology. SPICE records are structurally separable but still need provenance and scientific review before any validation claim | Split into at least peptide and SPICE child families. Peptide follows polymer topology; SPICE evidence remains non-promoting and cannot authorize fitting, execution, or validation |
 
@@ -58,9 +58,12 @@ readiness. No child may modify a promotion flag to satisfy a test.
 
 ```text
 bounded CIF syntax [merged in #73]
-  -> shared mmCIF parse/write/identity/missingness/sequence
-     -> zero occupancy and altloc preservation
-     -> nonpoly topology
+  -> bounded identity/polymer-sequence projection [merged in #89]
+     -> zero occupancy and altloc declarations [merged in #90/#91]
+     -> nonpoly identity [merged in #94]
+        -> selected component atom/bond declarations [merged in #95]
+        -> selected struct_conn identity declarations [next]
+        -> nonpoly topology interpretation [not authorized]
         -> polymer topology and mixed composition
            -> peptide completion and preparation
 
@@ -135,15 +138,27 @@ Actual first-child evidence:
 - Ruff, architecture guard, compileall, workflow YAML parsing, wheel install and
   outside-checkout parse, and diff check: passed
 
+## Bounded child ledger
+
+| PR | Merge SHA | Accepted scope |
+|---|---|---|
+| #73 | `6ae6d114` | single-block CIF lexical/structural subset |
+| #89 | `eeed0433` | entry/entity/asym/polymer-sequence identity projection |
+| #90 | `57f61a64` | zero-occupancy source declarations |
+| #91 | `41f78162` | alternate-location source declarations |
+| #94 | `7dc4e5de` | nonpoly entity/component/asym/instance identity carrier |
+| #95 | `e570cd70` | selected component atom and optional bond source declarations |
+
 ## Remaining extraction decisions
 
 PR #66 remains draft/open and is not a merge candidate. The next child must be
-chosen only after re-auditing its dependencies against current `main@3f9ede19`.
+chosen only after re-auditing its dependencies against current `main@7dc025ed`.
 The current order remains:
 
-1. shared semantic mmCIF parse/write/identity/missingness/sequence substrate;
-2. zero-occupancy and altloc preservation as separate bounded contracts;
-3. nonpoly topology before polymer topology and mixed composition;
+1. selected `_struct_conn` identity relationships without bond-order chemistry,
+   coordinate materialization, or topology authority;
+2. separately review whether any nonpoly topology interpretation is retained;
+3. polymer topology before mixed composition and peptide preparation;
 4. peptide completion/preparation only after those topology contracts;
 5. PDB/SDF/SMILES, alkane physics, and SPICE evidence as separately owned
    families with focused workflows.
