@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@576d23448a5b4c04f422c10af7a2097ed97e0746`
+Observed baseline: `main@3881ebb1046b70c9fc8a78860ea858b6c9278ace`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -70,10 +70,10 @@ claim status without revalidating the dependency and freshness chain.
 
 ## Near-term work queue
 
-- Continue V2-1 from current `main`: keep the bounded coordinate and atom-site
-  scalar-value carriers executable, then interpret component bond-order and
-  supported connection semantics in a separate fail-closed topology capability.
-  Geometry quality, preparation chemistry, and scientific validity remain unassessed.
+- Continue V2-1 from current `main`: keep the bounded coordinate, scalar-value,
+  and canonical-topology carriers executable, then define the first deliberately
+  small supported chemistry/preparation and parameterability-report domain.
+  Geometry quality and scientific validity remain unassessed.
 - Define the first executable supported-chemistry and preparation coverage table
   before starting production parameter fitting.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
