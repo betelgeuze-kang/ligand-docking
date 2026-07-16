@@ -72,9 +72,16 @@ jobs:
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Compile and enforce Engine v2 architecture boundary
+        shell: bash
         run: |
-          python -m compileall -q betelgeuze_engine_v2
-          python tools/check_engine_v2_architecture.py
+          set +e
+          {
+            python -m compileall -q betelgeuze_engine_v2
+            python tools/check_engine_v2_architecture.py
+          } > mmcif-zero-occupancy.log 2>&1
+          status=$?
+          cat mmcif-zero-occupancy.log
+          exit "$status"
 
       - name: Run lexical, semantic, and zero-occupancy declaration contracts
         shell: bash
@@ -84,7 +91,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_syntax.py \
             tests/unit/test_engine_v2_mmcif_semantics.py \
             tests/unit/test_engine_v2_mmcif_zero_occupancy.py \
-            > mmcif-zero-occupancy.log 2>&1
+            >> mmcif-zero-occupancy.log 2>&1
           status=$?
           cat mmcif-zero-occupancy.log
           exit "$status"
