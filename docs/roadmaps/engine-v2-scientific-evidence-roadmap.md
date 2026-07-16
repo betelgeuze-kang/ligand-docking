@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@3881ebb1046b70c9fc8a78860ea858b6c9278ace`
+Observed baseline: `main@a02f046451ae5a25fc56d2d0b2cc704271d8ed76`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -70,12 +70,12 @@ claim status without revalidating the dependency and freshness chain.
 
 ## Near-term work queue
 
-- Continue V2-1 from current `main`: keep the bounded coordinate, scalar-value,
-  and canonical-topology carriers executable, then define the first deliberately
-  small supported chemistry/preparation and parameterability-report domain.
-  Geometry quality and scientific validity remain unassessed.
-- Define the first executable supported-chemistry and preparation coverage table
-  before starting production parameter fitting.
+- Keep the bounded coordinate, scalar-value, canonical-topology, and first neutral
+  acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
+  generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
+  parameterability, geometry quality, and scientific validity remain false.
+- Next, freeze the executable supported/failure chemistry corpus and preparation
+  coverage table before extending chemistry or starting production parameter fitting.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.

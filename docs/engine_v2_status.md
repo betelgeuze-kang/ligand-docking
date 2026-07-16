@@ -28,7 +28,9 @@ The current `main` branch contains:
   binding that retains each raw token spelling and exact 64-bit pattern, plus
   bounded occupancy/B-factor/formal-charge marker and numeric semantics and a
   fail-closed component-bond/identity-symmetry connection topology that keeps
-  metal coordination edges separate from canonical bonds;
+  metal coordination edges separate from canonical bonds, plus bounded neutral
+  acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
+  failure-complete per-instance parameterability report;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.
@@ -40,7 +42,8 @@ not currently establish:
 
 - a calibrated independent force field;
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
-  population or B-factor quality assessment, charge chemistry, or all-atom preparation;
+  population or B-factor quality assessment, general charge chemistry, hydrogen
+  coordinates, reviewed parameters, or a prepared `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;

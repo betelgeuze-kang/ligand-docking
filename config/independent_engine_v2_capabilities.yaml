@@ -298,6 +298,28 @@ capabilities:
       - chemistry_preparation_and_parameterability_not_assessed
       - product_integration_not_qualified
 
+  v2_bounded_mmcif_nonpoly_neutral_coh_preparation:
+    current_state: bounded_neutral_acyclic_coh_graph_preparation_and_parameterability_report
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - hydrogen_coordinates_not_generated
+      - reviewed_parameter_source_missing
+      - aromatic_charged_stereo_and_extended_elements_not_supported
+      - ph_tautomer_and_intercomponent_connections_not_prepared
+      - prepared_all_atom_system_not_created
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
   v2_independent_physics_registry:
     current_state: reference_terms_implemented_unvalidated
     implemented: true
