@@ -17,8 +17,9 @@ from api.runner_profile_contract import (
 from api.validated_runner import _runner_script, validate_profile_readiness
 from betelgeuze_product.engine_dispatch import DEFAULT_RUNNER_PROFILE, engine_roadmap_ready
 from betelgeuze_product.job_orchestration import append_job_event, read_job_record, write_job_record
-from betelgeuze_product.structured_reason import reason_fields
 from betelgeuze_product.job_terminal_state import apply_terminal_job_state
+from betelgeuze_product.scientific_input_provenance import verify_scientific_input_provenance
+from betelgeuze_product.structured_reason import reason_fields
 
 INTERNAL_SMOKE_ACTORS = {"tier_alpha_dispatch_smoke"}
 _RAW_MATERIALIZATION_FIELDS = ("smiles", "ligand_smiles", "inchi")
@@ -49,10 +50,19 @@ def _internal_smoke_authorized(record: dict[str, Any], *, allow_internal_smoke: 
 def _materialization_row_ready(row: Any) -> bool:
     if not isinstance(row, dict):
         return False
-    # A private payload reference is not considered ready until a resolver is
-    # implemented in the materializers. This prevents dispatch from admitting
-    # an opaque reference that the worker cannot actually dereference.
     return any(_text(row.get(key)) for key in _RAW_MATERIALIZATION_FIELDS)
+
+
+def _private_materialization_ready(record: dict[str, Any]) -> bool:
+    """Recognize encrypted raw inputs that current materializers can recover."""
+
+    if record.get("private_payload_stored") is not True:
+        return False
+    receipt = record.get("scientific_input_provenance")
+    if not isinstance(receipt, dict) or receipt.get("execution_input_ready") is not True:
+        return False
+    expected_count = int(record.get("ligand_count", 0) or 0)
+    return bool(expected_count > 0 and int(receipt.get("ligand_count", 0) or 0) == expected_count)
 
 
 def _record_materialization_ready(record: dict[str, Any]) -> bool:
@@ -66,11 +76,24 @@ def _record_materialization_ready(record: dict[str, Any]) -> bool:
         intake_ligands = intake.get("ligands")
         if isinstance(intake_ligands, list) and intake_ligands:
             candidates.append(intake_ligands)
-    return any(
+    inline_ready = any(
         rows
         and (expected_count <= 0 or len(rows) == expected_count)
         and all(_materialization_row_ready(row) for row in rows)
         for rows in candidates
+    )
+    return bool(inline_ready or _private_materialization_ready(record))
+
+
+def _scientific_input_provenance_ready(record: dict[str, Any]) -> tuple[bool, str]:
+    manifest = record.get("engine_dispatch_manifest")
+    if not isinstance(manifest, dict):
+        manifest = {}
+    return verify_scientific_input_provenance(
+        record.get("scientific_input_provenance"),
+        request_sha256=_text(record.get("request_sha256")),
+        dispatch_manifest=manifest,
+        require_ready=True,
     )
 
 
@@ -141,6 +164,11 @@ def is_dispatch_eligible(
             return False, f"runner_profile_not_customer_submission_allowed:{profile_id}"
         if not _record_materialization_ready(record):
             return False, "runner_input_materialization_not_ready"
+        if record.get("private_payload_stored") is not True:
+            return False, "scientific_input_private_payload_not_stored"
+        provenance_ready, provenance_reason = _scientific_input_provenance_ready(record)
+        if not provenance_ready:
+            return False, provenance_reason
     else:
         return False, f"runner_profile_execution_mode_not_supported:{profile_id}"
     return True, "eligible"
@@ -157,6 +185,7 @@ def build_simulate_request(
         manifest = {}
     profile_id = _text(manifest.get("runner_profile_id")) or DEFAULT_RUNNER_PROFILE
     execution = dict(execution_contract or {})
+    restricted = _text(execution.get("execution_mode")) == EXECUTION_MODE_RESTRICTED_PRODUCTION
     return {
         "runner_profile_id": profile_id,
         "target_name": _text(record.get("target_id")),
@@ -174,6 +203,10 @@ def build_simulate_request(
             "runner_production_claim_allowed": execution.get("production_claim_allowed") is True,
             "runner_customer_pose_emission_allowed": execution.get("customer_pose_emission_allowed") is True,
             "allow_synthetic_ligand_input": bool(allow_synthetic_ligand_input),
+            "scientific_input_provenance_required": restricted,
+            "scientific_input_provenance": record.get("scientific_input_provenance", {}),
+            "scientific_input_provenance_sha256": _text(record.get("scientific_input_provenance_sha256")),
+            "private_payload_stored": record.get("private_payload_stored") is True,
             "intake_payload": record.get("intake_payload", {}),
             "ligands": list((record.get("intake_payload") or {}).get("ligands", []) or []),
         },
