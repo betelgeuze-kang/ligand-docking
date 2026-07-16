@@ -41,6 +41,7 @@ jobs:
           new_line = new_ref + " # v6.3.0"
           old_ref = "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
           trusted = Path(".github/workflows/product-api-worker-trusted.yml")
+          applicator = Path(".github/workflows/ci-setup-python-v6-hosted.yml")
           targets = [
               Path(".github/workflows/ci-api-h4-hosted.yml"),
               Path(".github/workflows/ci-engine-v2-ai.yml"),
@@ -69,7 +70,8 @@ jobs:
           discovered = sorted(
               path
               for path in Path(".github/workflows").glob("*.y*ml")
-              if setup_pattern.search(path.read_text(encoding="utf-8"))
+              if path != applicator
+              and setup_pattern.search(path.read_text(encoding="utf-8"))
           )
           expected = sorted([*targets, trusted])
           if discovered != expected:
