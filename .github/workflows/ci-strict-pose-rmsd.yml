@@ -1,0 +1,40 @@
+name: ci-strict-pose-rmsd-source-export
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine/biodiscovery/pose.py"
+      - "betelgeuze_engine/biodiscovery/screening.py"
+      - "tests/unit/test_biodiscovery_screening.py"
+      - ".github/workflows/ci-strict-pose-rmsd.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out focused source surface
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          sparse-checkout: |
+            betelgeuze_engine/biodiscovery/pose.py
+            betelgeuze_engine/biodiscovery/screening.py
+            tests/unit/test_biodiscovery_screening.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Upload focused source surface
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-pose-rmsd-source-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            betelgeuze_engine/biodiscovery/pose.py
+            betelgeuze_engine/biodiscovery/screening.py
+            tests/unit/test_biodiscovery_screening.py
+          if-no-files-found: error
+          retention-days: 1
