@@ -1,0 +1,56 @@
+name: apply-mmcif-semantic-location-separation
+
+on:
+  pull_request:
+    paths:
+      - ".github/patches/mmcif-semantic-location.patch"
+      - ".github/workflows/ci-engine-v2-mmcif-semantics.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-mmcif-semantic-location-separation
+  cancel-in-progress: false
+
+jobs:
+  apply-patch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/v2-mmcif-semantic-projection'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled semantic projection branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-semantic-projection
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+
+      - name: Apply reviewed semantic/source separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check .github/patches/mmcif-semantic-location.patch
+          git apply .github/patches/mmcif-semantic-location.patch
+          rm .github/patches/mmcif-semantic-location.patch
+          python -m py_compile \
+            betelgeuze_engine_v2/molecular/mmcif_semantics.py \
+            tests/unit/test_engine_v2_mmcif_semantics.py
+          git diff --check
+
+      - name: Commit source change without modifying workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- \
+            betelgeuze_engine_v2/molecular/mmcif_semantics.py \
+            .github/patches/mmcif-semantic-location.patch
+          git diff --cached --check
+          git commit -m "fix(v2): separate mmCIF semantics from source locations"
+          git push origin HEAD:codex/v2-mmcif-semantic-projection
