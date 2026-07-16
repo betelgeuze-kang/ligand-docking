@@ -69,7 +69,7 @@ jobs:
           discovered = sorted(
               path
               for path in Path(".github/workflows").glob("*.y*ml")
-              if "actions/setup-python@" in path.read_text(encoding="utf-8")
+              if setup_pattern.search(path.read_text(encoding="utf-8"))
           )
           expected = sorted([*targets, trusted])
           if discovered != expected:
@@ -88,15 +88,20 @@ jobs:
               )
               if count < 1:
                   raise SystemExit(f"no setup-python reference found in {path}")
-              remaining = setup_pattern.findall(updated)
-              refs = re.findall(r"actions/setup-python@[^\s#]+", updated)
+              refs = re.findall(
+                  r"(?m)^\s*(?:-\s*)?uses:\s*(actions/setup-python@[^\s#]+)",
+                  updated,
+              )
               if not refs or any(ref != new_ref for ref in refs):
                   raise SystemExit(f"non-v6 setup-python reference remains in {path}: {refs}")
               path.write_text(updated, encoding="utf-8")
               replacement_counts[str(path)] = count
 
           trusted_source = trusted.read_text(encoding="utf-8")
-          trusted_refs = re.findall(r"actions/setup-python@[^\s#]+", trusted_source)
+          trusted_refs = re.findall(
+              r"(?m)^\s*(?:-\s*)?uses:\s*(actions/setup-python@[^\s#]+)",
+              trusted_source,
+          )
           if trusted_refs != [old_ref]:
               raise SystemExit(
                   "trusted self-hosted setup-python exception drifted: "
@@ -107,8 +112,10 @@ jobs:
           contract_source = contract_path.read_text(encoding="utf-8")
           if contract_source.count(old_ref) != 1:
               raise SystemExit("external-baseline setup-python assertion count drifted")
-          contract_source = contract_source.replace(old_ref, new_ref)
-          contract_path.write_text(contract_source, encoding="utf-8")
+          contract_path.write_text(
+              contract_source.replace(old_ref, new_ref),
+              encoding="utf-8",
+          )
 
           final_workflow = '''name: ci-setup-python-v6-hosted
 
@@ -128,7 +135,7 @@ jobs:
             contents: read
 
           concurrency:
-            group: ci-setup-python-v6-hosted-${{ github.ref }}
+            group: ci-setup-python-v6-hosted-__GITHUB_REF__
             cancel-in-progress: true
 
           jobs:
@@ -175,12 +182,12 @@ jobs:
                     hosted = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
                     trusted_v5 = "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
                     trusted_path = Path(".github/workflows/product-api-worker-trusted.yml")
+                    uses_pattern = re.compile(
+                        r"(?m)^\s*(?:-\s*)?uses:\s*(actions/setup-python@[^\s#]+)"
+                    )
                     observed = {}
                     for path in sorted(Path(".github/workflows").glob("*.y*ml")):
-                        refs = re.findall(
-                            r"actions/setup-python@[^\\s#]+",
-                            path.read_text(encoding="utf-8"),
-                        )
+                        refs = uses_pattern.findall(path.read_text(encoding="utf-8"))
                         if refs:
                             observed[str(path)] = refs
                             expected = trusted_v5 if path == trusted_path else hosted
@@ -212,17 +219,26 @@ jobs:
                   if: always()
                   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
                   with:
-                    name: setup-python-v6-hosted-${{ github.run_id }}-${{ github.run_attempt }}
+                    name: setup-python-v6-hosted-__GITHUB_RUN_ID__-__GITHUB_RUN_ATTEMPT__
                     path: setup-python-v6-hosted.log
                     if-no-files-found: warn
                     retention-days: 7
           '''
-          # Remove the indentation introduced by this applicator's Python heredoc.
-          lines = final_workflow.splitlines()
           normalized = "\n".join(
               line[10:] if line.startswith("          ") else line
-              for line in lines
+              for line in final_workflow.splitlines()
           ).lstrip() + "\n"
+          expression_open = "$" + "{{"
+          normalized = normalized.replace(
+              "__GITHUB_REF__",
+              expression_open + " github.ref }}",
+          ).replace(
+              "__GITHUB_RUN_ID__",
+              expression_open + " github.run_id }}",
+          ).replace(
+              "__GITHUB_RUN_ATTEMPT__",
+              expression_open + " github.run_attempt }}",
+          )
           Path(".github/workflows/ci-setup-python-v6-hosted.yml").write_text(
               normalized,
               encoding="utf-8",
