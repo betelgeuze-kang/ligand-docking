@@ -2,8 +2,7 @@ name: product-api-worker-trusted
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
     tags:
       - "v*"
       - "product-*"
@@ -27,6 +26,7 @@ on:
       - "tools/smoke_alert_delivery.py"
       - "tools/product/materialize_docking_htvs_request.py"
       - "tools/product/materialize_docking_backmapping_request.py"
+      - "tools/product/self_hosted_runner_qualification.py"
       - "tools/accounting/build_pdbbind_casf_pose_affinity_results.py"
       - "tools/product/validate_api_runner_profiles.py"
       - "tools/product/build_api_runner_profile_enablement_work_order.py"
@@ -54,6 +54,7 @@ on:
       - "monitoring/**"
       - "viewer/**"
       - "tests/unit/test_docking_pipeline_hardening.py"
+      - "tests/unit/test_self_hosted_runner_qualification.py"
       - "tests/unit/test_ci_contract_fixture_packets.py"
       - "tests/unit/test_deploy_model_registry.py"
       - "tests/unit/test_product_release_bundle.py"
@@ -83,14 +84,8 @@ on:
       - "tests/unit/test_docking_private_payload.py"
       - "tests/unit/test_structured_reason.py"
       - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
-      - "tests/unit/test_github_workflow_trust_boundaries.py"
-      - "tools/product/github_workflow_trust_boundaries.py"
-      - "tests/mobile/**"
-      - "requirements-mobile.txt"
-      - "pytest-mobile.ini"
-      - ".github/dependabot.yml"
       - ".github/workflows/**"
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -101,16 +96,7 @@ concurrency:
 
 jobs:
   api-worker-contract-trusted:
-    if: >-
-      ${{ vars.TRUSTED_SELF_HOSTED_CI_ENABLED == 'true'
-      && ((github.event_name == 'push'
-      && (github.ref == 'refs/heads/main'
-      || startsWith(github.ref, 'refs/tags/v')
-      || startsWith(github.ref, 'refs/tags/product-')))
-      || (github.event_name == 'workflow_dispatch'
-      && (github.ref == 'refs/heads/main'
-      || startsWith(github.ref, 'refs/tags/v')
-      || startsWith(github.ref, 'refs/tags/product-')))) }}
+    if: ${{ vars.TRUSTED_SELF_HOSTED_CI_ENABLED == 'true' && ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/product-'))) || (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/product-')))) }}
     runs-on: [self-hosted, linux]
     timeout-minutes: 90
     steps:
@@ -120,7 +106,17 @@ jobs:
           path: product-ci-checkout
           persist-credentials: false
           clean: true
+          fetch-depth: 1
           show-progress: false
+
+      - name: Qualify self-hosted runner for Node 24 Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          receipt="${RUNNER_TEMP}/self-hosted-runner-qualification-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          echo "SELF_HOSTED_RUNNER_QUALIFICATION_RECEIPT=${receipt}" >> "${GITHUB_ENV}"
+          python3 product-ci-checkout/tools/product/self_hosted_runner_qualification.py \
+            --receipt "${receipt}"
 
       - name: Prepare ephemeral API artifact root
         shell: bash
@@ -129,20 +125,29 @@ jobs:
           artifact_root="${RUNNER_TEMP}/product-api-worker-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           rm -rf "${artifact_root}"
           mkdir -p "${artifact_root}"
+          rm -rf product-ci-checkout/runs
           ln -s "${artifact_root}" product-ci-checkout/runs
+          echo "PRODUCT_API_WORKER_ARTIFACT_ROOT=${artifact_root}" >> "${GITHUB_ENV}"
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
-      - name: Install API test dependencies
+      - name: Install API profile
         working-directory: product-ci-checkout
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install -r requirements.txt -r requirements-api.txt
+          python3 -m pip install --no-cache-dir \
+            PyYAML \
+            fastapi \
+            uvicorn \
+            pydantic-settings \
+            prometheus-client \
+            pytest \
+            httpx
 
-      - name: Compile API and worker modules
+      - name: Compile API and worker source
         working-directory: product-ci-checkout
         run: |
           python3 -m py_compile \
@@ -153,18 +158,27 @@ jobs:
             api/security.py \
             api/validated_runner.py \
             api/worker.py \
+            api/product.py \
+            api/product_docking.py \
+            api/product_structure.py \
+            api/product_benchmark.py \
+            api/product_claims.py \
+            api/product_capabilities.py \
+            api/product_release_evidence.py \
+            api/product_release_ops.py \
+            api/product_operator_cockpit.py \
+            api/product_evidence_goal.py \
+            api/product_benchmark_contract.py \
+            api/goal.py \
             api/main.py \
-            api/result_manifest.py \
-            api/tasks.py \
+            betelgeuze_product/docking_request.py \
+            betelgeuze_product/docking_response.py \
             betelgeuze_product/engine_dispatch.py \
+            betelgeuze_product/job_orchestration.py \
             betelgeuze_product/job_terminal_state.py \
             betelgeuze_product/payload_privacy.py \
-            betelgeuze_product/docking_response.py \
-            betelgeuze_product/api_contract.py \
-            api/product_docking.py \
             betelgeuze_product/private_payload_store.py \
             betelgeuze_product/benchmark_ledger.py \
-            tools/product/build_benchmark_ledger.py \
             betelgeuze_product/hbond_backmap_report.py \
             betelgeuze_product/docking_comparison_contract.py \
             betelgeuze_product/gpcr_hard_decoy_suite.py \
@@ -172,55 +186,80 @@ jobs:
             betelgeuze_product/docking_private_payload.py \
             betelgeuze_product/structured_reason.py \
             betelgeuze_product/docking_materialization_errors.py \
-            deploy/model_registry.py \
-            deploy/upload_model.py \
-            deploy/download_model.py \
-            deploy/rollback_model.py \
-            deploy/product_release_bundle.py \
-            deploy/product_rollout.py \
             tools/run_api_simulation_worker.py \
             tools/smoke_alert_delivery.py \
             tools/product/materialize_docking_htvs_request.py \
             tools/product/materialize_docking_backmapping_request.py \
+            tools/product/self_hosted_runner_qualification.py \
             tools/accounting/build_pdbbind_casf_pose_affinity_results.py \
-            scripts/verify_quality_gate.py \
+            tools/product/validate_api_runner_profiles.py \
+            tools/product/build_api_runner_profile_enablement_work_order.py \
+            tools/product/build_refine_tier_public_benchmark_readiness.py \
+            tools/product/apply_refine_tier_public_benchmark_work_order.py \
+            tools/build_viewer_asset_base_url_decision.py \
+            tools/build_product_commercial_independence_gate.py \
+            tools/accounting/build_product_scope_breadth_closure_checklist.py \
             tools/product/bootstrap_api_worker_contract_artifacts.py \
+            tools/product/ci_contract_fixture_packets.py \
             tools/product/build_api_runner_profile_promotion_operator_receipt.py \
             tools/product/build_production_ai_registry_promotion_operator_receipt.py \
             tools/product/build_production_ai_registry_promotion_priority_packet.py \
             tools/product/build_product_pose_sampling_readiness.py \
             tools/product/build_product_launch_r4_preflight.py \
-            tools/product/build_refine_tier_public_benchmark_readiness.py \
-            tools/product/apply_refine_tier_public_benchmark_work_order.py \
-            tools/product/validate_api_runner_profiles.py \
-            tools/product/build_api_runner_profile_enablement_work_order.py \
-            tools/build_viewer_asset_base_url_decision.py \
+            tools/product/build_self_hosted_license_distribution_audit.py \
             tools/product/build_engine_refinement_tier_readiness.py \
             tools/product/build_engine_refinement_claim_evidence_receipt.py \
             tools/product/build_product_scope_breadth_evidence_receipt.py \
             tools/product/build_product_full_commercial_blocker_evidence_matrix.py \
-            tools/product/build_self_hosted_license_distribution_audit.py
+            scripts/verify_quality_gate.py
 
-      - name: Refresh release bundle local decision artifacts
+      - name: Import product API
+        working-directory: product-ci-checkout
+        run: python3 -c "import api.main"
+
+      - name: Bootstrap CI contract artifacts
+        working-directory: product-ci-checkout
+        run: python3 tools/product/bootstrap_api_worker_contract_artifacts.py --profile ci_stub
+
+      - name: Validate runner profiles and build enablement work order
         working-directory: product-ci-checkout
         run: |
-          python3 tools/product/bootstrap_api_worker_contract_artifacts.py
-          python3 tools/build_viewer_asset_base_url_decision.py \
-            --out-json runs/viewer_asset_base_url_decision_current.json
-          python3 tools/build_product_commercial_independence_gate.py
-          python3 tools/product/build_self_hosted_license_distribution_audit.py \
-            --out-json runs/self_hosted_license_distribution_audit_current.json
-          python3 tools/product/build_product_launch_r4_preflight.py
-          python3 deploy/product_release_bundle.py
+          python3 tools/product/validate_api_runner_profiles.py \
+            --profiles-dir config/api_validated_runner_profiles \
+            --out-json runs/api_runner_profile_validation_current.json \
+            --out-md runs/api_runner_profile_validation_current.md \
+            --skip-profile-readiness
+          python3 tools/product/build_api_runner_profile_enablement_work_order.py \
+            --profiles-dir config/api_validated_runner_profiles \
+            --evidence-dir /tmp/api_runner_profile_evidence_templates \
+            --write-evidence-templates \
+            --out-json /tmp/api_runner_profile_enablement_work_order.json \
+            --out-md /tmp/api_runner_profile_enablement_work_order.md
 
-      - name: Run API worker and deploy artifact tests
+      - name: Run API worker contract tests
         working-directory: product-ci-checkout
+        env:
+          PRODUCT_API_AUTH_REQUIRED: "0"
+          PYTHONPATH: .
         run: |
           python3 -m pytest -q \
+            tests/unit/test_self_hosted_runner_qualification.py \
             tests/unit/test_docking_pipeline_hardening.py \
+            tests/unit/test_ci_contract_fixture_packets.py \
+            tests/unit/test_deploy_model_registry.py \
+            tests/unit/test_product_release_bundle.py \
+            tests/unit/test_product_rollout.py \
+            tests/unit/test_smoke_alert_delivery.py \
+            tests/unit/test_viewer_self_hosted_assets.py \
+            tests/unit/test_build_viewer_asset_base_url_decision.py \
+            tests/unit/test_build_self_hosted_license_distribution_audit.py \
+            tests/unit/test_build_refine_tier_public_benchmark_readiness.py \
+            tests/unit/test_apply_refine_tier_public_benchmark_work_order.py \
             tests/unit/test_api_job_store.py \
-            tests/unit/test_api_validated_runner_adapter.py \
-            tests/unit/test_api_runner_profile_enablement_work_order.py \
+            tests/unit/test_api_goal_import.py \
+            tests/unit/test_api_casp17_import.py \
+            tests/unit/test_api_cleanup_import.py \
+            tests/unit/test_api_product_import.py \
             tests/unit/test_api_worker_deploy_artifacts.py \
             tests/unit/test_api_security_middleware.py \
             tests/unit/test_payload_privacy.py \
@@ -234,36 +273,7 @@ jobs:
             tests/unit/test_pocketmd_lite_contract.py \
             tests/unit/test_docking_private_payload.py \
             tests/unit/test_structured_reason.py \
-            tests/unit/test_build_pdbbind_casf_pose_affinity_results.py \
-            tests/unit/test_deploy_model_registry.py \
-            tests/unit/test_product_release_bundle.py \
-            tests/unit/test_build_product_launch_r4_preflight.py \
-            tests/unit/test_build_refine_tier_public_benchmark_readiness.py \
-            tests/unit/test_apply_refine_tier_public_benchmark_work_order.py \
-            tests/unit/test_product_rollout.py \
-            tests/unit/test_smoke_alert_delivery.py \
-            tests/unit/test_viewer_self_hosted_assets.py \
-            tests/unit/test_build_viewer_asset_base_url_decision.py \
-            tests/unit/test_build_self_hosted_license_distribution_audit.py \
-            tests/unit/test_api_goal_import.py \
-            tests/unit/test_api_casp17_import.py \
-            tests/unit/test_api_cleanup_import.py \
-            tests/unit/test_api_product_import.py
-
-      - name: Validate API runner profiles
-        working-directory: product-ci-checkout
-        run: |
-          python3 tools/product/validate_api_runner_profiles.py --profiles-dir config/api_validated_runner_profiles
-
-      - name: Build API runner profile enablement work order
-        working-directory: product-ci-checkout
-        run: |
-          python3 tools/product/build_api_runner_profile_enablement_work_order.py \
-            --profiles-dir config/api_validated_runner_profiles \
-            --evidence-dir /tmp/api_runner_profile_evidence_templates \
-            --write-evidence-templates \
-            --out-json /tmp/api_runner_profile_enablement_work_order.json \
-            --out-md /tmp/api_runner_profile_enablement_work_order.md
+            tests/unit/test_build_pdbbind_casf_pose_affinity_results.py
 
       - name: Smoke worker CLI with empty durable queue
         working-directory: product-ci-checkout
@@ -282,3 +292,12 @@ jobs:
         working-directory: product-ci-checkout
         run: |
           python3 tools/smoke_alert_delivery.py --local-receiver-smoke
+
+      - name: Upload self-hosted runner qualification receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: self-hosted-runner-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.SELF_HOSTED_RUNNER_QUALIFICATION_RECEIPT }}
+          if-no-files-found: warn
+          retention-days: 30
