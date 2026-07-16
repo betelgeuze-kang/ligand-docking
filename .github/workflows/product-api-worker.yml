@@ -143,10 +143,25 @@ jobs:
           tests/unit/test_github_workflow_trust_boundaries.py
 
       - name: Run scientific input dispatch enforcement contracts
-        run: >-
-          python -m pytest --confcutdir=tests/unit -q
-          tests/unit/test_scientific_input_dispatch_enforcement.py
-          tests/unit/test_docking_pipeline_hardening.py
+        shell: bash
+        run: |
+          set +e
+          python -m pytest --confcutdir=tests/unit -vv -x \
+            tests/unit/test_scientific_input_dispatch_enforcement.py \
+            tests/unit/test_docking_pipeline_hardening.py \
+            > scientific-input-dispatch.log 2>&1
+          status=$?
+          cat scientific-input-dispatch.log
+          exit "$status"
+
+      - name: Upload scientific input dispatch diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scientific-input-dispatch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: scientific-input-dispatch.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Run dependency-light API contracts
         run: >-
