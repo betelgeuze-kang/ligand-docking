@@ -608,15 +608,22 @@ def test_invalid_opaque_tokens_fail_without_echo() -> None:
     assert "PRIVATE-AUTH" not in str(error)
     assert "PRIVATE-AUTH" not in repr(error)
 
-    multiline_source = _pure_source(
-        entity_nonpoly_rows=(
-            {
-                "_pdbx_entity_nonpoly.entity_id": "1",
-                "_pdbx_entity_nonpoly.name": "\n;PRIVATE-NAME\nSECOND-LINE\n;",
-                "_pdbx_entity_nonpoly.comp_id": "HEM",
-            },
-        ),
-        tail="",
+    multiline_source = (
+        "data_nonpoly\n#\n"
+        + _loop(ENTITY_HEADERS, PURE_ENTITY_ROWS)
+        + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)
+        + _loop(CHEM_COMP_HEADERS, PURE_COMPONENT_ROWS)
+        + "loop_\n"
+        "_pdbx_entity_nonpoly.entity_id\n"
+        "_pdbx_entity_nonpoly.name\n"
+        "_pdbx_entity_nonpoly.comp_id\n"
+        "1\n"
+        ";PRIVATE-NAME\n"
+        "SECOND-LINE\n"
+        ";\n"
+        "HEM\n"
+        "#\n"
+        + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS)
     )
     error = _error(multiline_source, "multiline_value_not_supported")
     assert "PRIVATE-NAME" not in str(error)
