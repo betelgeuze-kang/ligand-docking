@@ -831,11 +831,11 @@ def test_ci_owns_the_contract_without_external_engine_execution() -> None:
     assert "runs-on: ubuntu-latest" in dedicated
     assert "permissions:\n  contents: read" in dedicated
     assert (
-        "uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
+        "uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
         in dedicated
     )
     assert (
-        "uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+        "uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
         in dedicated
     )
     assert "persist-credentials: false" in dedicated
