@@ -8,7 +8,7 @@ from tools.product.github_action_pins import audit_all_action_pins
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_DIR = ROOT / ".github" / "workflows"
-SETUP_PYTHON_V5_SHA = "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"
+SETUP_PYTHON_V6_SHA = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
 
 
 def _copy_workflows(tmp_path: Path) -> Path:
@@ -25,13 +25,13 @@ def test_unregistered_workflow_mutable_step_tag_is_rejected(tmp_path: Path) -> N
     root = _copy_workflows(tmp_path)
     path = root / ".github" / "workflows" / "ci-engine-v2-ai.yml"
     source = path.read_text(encoding="utf-8")
-    assert SETUP_PYTHON_V5_SHA in source
-    path.write_text(source.replace(SETUP_PYTHON_V5_SHA, "actions/setup-python@v5", 1), encoding="utf-8")
+    assert SETUP_PYTHON_V6_SHA in source
+    path.write_text(source.replace(SETUP_PYTHON_V6_SHA, "actions/setup-python@v6", 1), encoding="utf-8")
 
     errors = audit_all_action_pins(root)
 
     assert any(
-        error.endswith("action_not_sha_pinned:actions/setup-python@v5")
+        error.endswith("action_not_sha_pinned:actions/setup-python@v6")
         and error.startswith("ci-engine-v2-ai.yml:ai-reference:")
         for error in errors
     )
