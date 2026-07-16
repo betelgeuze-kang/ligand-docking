@@ -54,8 +54,10 @@ jobs:
       PRODUCT_API_AUTH_REQUIRED: "0"
     steps:
       - name: Check out dependency-light source
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          persist-credentials: false
+          clean: true
           show-progress: false
           sparse-checkout: |
             api
