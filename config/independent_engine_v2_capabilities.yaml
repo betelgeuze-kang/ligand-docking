@@ -147,6 +147,26 @@ capabilities:
       - mmcif_chemistry_topology_and_preparation_not_interpreted
       - product_integration_not_qualified
 
+  v2_bounded_mmcif_nonpoly_identity:
+    current_state: bounded_nonpoly_component_instance_identity
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - source_authentication_missing
+      - atom_site_identity_and_coordinates_not_joined
+      - component_chemistry_and_roles_not_interpreted
+      - bond_topology_and_preparation_not_interpreted
+      - product_integration_not_qualified
+
   v2_independent_physics_registry:
     current_state: reference_terms_implemented_unvalidated
     implemented: true

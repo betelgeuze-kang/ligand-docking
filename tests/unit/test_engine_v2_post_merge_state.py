@@ -14,6 +14,7 @@ from betelgeuze_engine_v2.capabilities import (
     EXTERNAL_BASELINE_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
     MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID,
+    MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,
     MMCIF_SEMANTICS_CAPABILITY_ID,
     MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
@@ -28,7 +29,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 12
+    assert len(loaded["capabilities"]) == 13
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -43,6 +44,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     assert CIF_SYNTAX_CAPABILITY_ID in rows
     assert MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
     assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
@@ -68,6 +70,14 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "coordinate_and_occupancy_values_not_interpreted" in altloc["blockers"]
     assert "altloc_population_and_missingness_not_inferred" in altloc["blockers"]
     assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in altloc["blockers"]
+
+    nonpoly = rows[MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID]
+    assert nonpoly["current_state"] == "bounded_nonpoly_component_instance_identity"
+    assert nonpoly["internal_reference_execution_enabled"] is True
+    assert "source_authentication_missing" in nonpoly["blockers"]
+    assert "atom_site_identity_and_coordinates_not_joined" in nonpoly["blockers"]
+    assert "component_chemistry_and_roles_not_interpreted" in nonpoly["blockers"]
+    assert "bond_topology_and_preparation_not_interpreted" in nonpoly["blockers"]
 
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
@@ -115,6 +125,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_semantics.py",
         "test_engine_v2_mmcif_zero_occupancy.py",
         "test_engine_v2_mmcif_altloc_declarations.py",
+        "test_engine_v2_mmcif_nonpoly_identity.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
         "test_engine_v2_periodic_energy.py",
