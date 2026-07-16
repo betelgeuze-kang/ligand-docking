@@ -67,7 +67,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "7890eba5a02c53c65cdb68bbc04bd5d84812db5f67cc166bd0c9bf1b1ed00a46"
+    "5745d65a47765d1b8d719ca3cae12a706be97ef36756d4bc9f87b9bf667d8be4"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -1571,9 +1571,9 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "role.cofactor",
             "role_assignment",
-            missing,
-            "",
-            (),
+            unsupported,
+            "role_blocker:LIG:ligand_cofactor_and_other_nonpoly_roles_not_interpreted",
+            ("supported_carbonyl",),
             "cofactor_role_not_interpreted",
         ),
         _coverage(

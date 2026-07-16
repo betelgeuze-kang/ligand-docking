@@ -126,7 +126,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_atom_site_scalar_values` | occupancy·B-factor·formal charge의 known/unknown/not-applicable 상태와 bounded numeric value 결속 | occupancy population·B-factor quality·charge chemistry·altloc·topology |
 | `v2_bounded_mmcif_nonpoly_canonical_topology` | component SING/DOUB/TRIP/QUAD/AROM bond와 identity-symmetry `covale` Bond, 별도 `metalc` coordination edge | 비identity symmetry·hydrog·disulf·DELO/PI/POLY·원소/charge/aromaticity chemistry |
 | `v2_bounded_mmcif_nonpoly_neutral_coh_preparation` | neutral acyclic C/O/H component의 single/double bond graph, 명시적 0 formal charge, fixed-valence hydrogen completion과 instance별 failure-complete parameterability report | hydrogen 좌표·reviewed parameter·`AllAtomSystem`·charged/aromatic/stereo/extended-element/cyclic/pH/tautomer/intercomponent preparation |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 27-case synthetic contract corpus와 51-axis executable coverage ledger; supported 17·explicitly unsupported 24·not implemented 10 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 27-case synthetic contract corpus와 51-axis executable coverage ledger; supported 17·explicitly unsupported 25·not implemented 9 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -148,6 +148,10 @@ composition인 경우만 water로 해석하며, bounded explicit element allowli
 unknown charge에는 dictionary default를 추론하지 않고, 일반 nonpoly component를
 ligand·cofactor·modified residue로 추정하지 않는다. metal/ion은 분류되더라도
 preparation과 parameterization은 명시적으로 미지원이다.
+일반 nonpoly component의 `unresolved_nonpoly_component` 결과와
+`ligand_cofactor_and_other_nonpoly_roles_not_interpreted` blocker는 corpus evidence로
+고정되며, cofactor 역할을 추정하지 않는 명시적 미지원 경계다. 이는 해당 component가
+생물학적으로 cofactor가 아니라고 판정하는 것이 아니다.
 
 bounded modified-residue declaration capability는 공식
 `_pdbx_struct_mod_residue` category가 명시한 modified polymer component만
@@ -190,7 +194,7 @@ bounded preparation corpus는 27개 입력과 기대 결과를 개별 SHA-256으
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 2개, invalid-source 2개를 모두 실행하고 failure row를
 denominator에서 제거하지 않는다. 51-axis coverage ledger는 17개 supported,
-24개 explicitly unsupported, 10개 `not_implemented`로 분류하며 unclassified
+25개 explicitly unsupported, 9개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -248,10 +252,9 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 6. 완료된 첫 contract layer로 exact ASCII 27-case synthetic supported/failure
    corpus와 51-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 다음으로 10개 `not_implemented` row를 작은 capability별로 닫고,
+7. 다음으로 9개 `not_implemented` row를 작은 capability별로 닫고,
    licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
-   우선순위는 general ligand/cofactor 역할, assembly/missingness 정책,
-   coordinate-bearing hydrogen,
+   우선순위는 assembly/missingness 정책, coordinate-bearing hydrogen,
    parameter provenance와 canonical `AllAtomSystem`이다.
 8. 위 gap과 real-world corpus가 닫히기 전에는 V2-2 parameter fitting·validation을
    시작하지 않는다.
