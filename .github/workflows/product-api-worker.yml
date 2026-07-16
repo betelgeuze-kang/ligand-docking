@@ -50,6 +50,7 @@ on:
       - "monitoring/**"
       - "viewer/**"
       - "tests/unit/test_docking_pipeline_hardening.py"
+      - "tests/unit/test_scientific_input_dispatch_enforcement.py"
       - "tests/unit/test_ci_contract_fixture_packets.py"
       - "tests/unit/test_deploy_model_registry.py"
       - "tests/unit/test_product_release_bundle.py"
@@ -133,12 +134,19 @@ jobs:
             betelgeuze_product/scientific_input_provenance.py \
             betelgeuze_product/tier_beta_vertical_slice.py \
             core/claim_boundary.py \
-            tests/mobile
+            tests/mobile \
+            tests/unit/test_scientific_input_dispatch_enforcement.py
 
       - name: Enforce workflow trust boundaries
         run: >-
           python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_github_workflow_trust_boundaries.py
+
+      - name: Run scientific input dispatch enforcement contracts
+        run: >-
+          python -m pytest --confcutdir=tests/unit -q
+          tests/unit/test_scientific_input_dispatch_enforcement.py
+          tests/unit/test_docking_pipeline_hardening.py
 
       - name: Run dependency-light API contracts
         run: >-
