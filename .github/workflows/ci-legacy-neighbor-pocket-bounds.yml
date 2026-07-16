@@ -1,0 +1,85 @@
+name: ci-legacy-neighbor-pocket-bounds
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine/physics/neighbor.py"
+      - "core/pocket_detection.py"
+      - "tests/unit/test_neighbor_cache_geometry.py"
+      - "tests/unit/test_pocket_detection_bounds.py"
+      - "tests/unit/test_runtime_neighbor_release_scaling.py"
+      - "tests/unit/test_rust_hip_neighbor_provider_parity.py"
+      - ".github/workflows/ci-legacy-neighbor-pocket-bounds.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine/physics/neighbor.py"
+      - "core/pocket_detection.py"
+      - "tests/unit/test_neighbor_cache_geometry.py"
+      - "tests/unit/test_pocket_detection_bounds.py"
+      - "tests/unit/test_runtime_neighbor_release_scaling.py"
+      - "tests/unit/test_rust_hip_neighbor_provider_parity.py"
+      - ".github/workflows/ci-legacy-neighbor-pocket-bounds.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-legacy-neighbor-pocket-bounds-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  legacy-bounds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - name: Check out bounded legacy physics surface
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            betelgeuze_engine
+            core
+            tests/unit/test_neighbor_cache_geometry.py
+            tests/unit/test_pocket_detection_bounds.py
+            tests/unit/test_runtime_neighbor_release_scaling.py
+            tests/unit/test_rust_hip_neighbor_provider_parity.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile bounded surfaces
+        run: >-
+          python -m py_compile
+          betelgeuze_engine/physics/neighbor.py
+          core/pocket_detection.py
+
+      - name: Run neighbor and pocket bounds contracts
+        run: >-
+          python -m pytest -q
+          tests/unit/test_neighbor_cache_geometry.py
+          tests/unit/test_pocket_detection_bounds.py
+          tests/unit/test_runtime_neighbor_release_scaling.py
+          tests/unit/test_rust_hip_neighbor_provider_parity.py
