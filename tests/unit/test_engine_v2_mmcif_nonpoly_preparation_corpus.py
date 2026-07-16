@@ -440,8 +440,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 5,
-        "supported": 19,
+        "not_implemented": 4,
+        "supported": 20,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -469,9 +469,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "upstream.multimodel_policy" not in missing
     assert "hydrogen.coordinates" not in missing
     assert "parameter_source.reviewed" not in missing
-    assert missing["all_atom_system.creation"] == (
-        "prepared_all_atom_system_not_created"
-    )
+    assert "all_atom_system.creation" not in missing
 
     parameter_source = next(
         row for row in rows if row.coverage_id == "parameter_source.reviewed"
@@ -483,6 +481,44 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
         "reviewed_identity_license_and_scope_only"
     )
     assert payload["reviewed_parameter_source_provenance_bound"] is True
+    assert payload["canonical_all_atom_materialization_bound"] is True
+
+    all_atom_system = next(
+        row for row in rows if row.coverage_id == "all_atom_system.creation"
+    )
+    assert all_atom_system.policy_status == "supported"
+    assert all_atom_system.blocker == ""
+    assert all_atom_system.expected_signal == (
+        "all_atom_system_status:canonical_all_atom_system_created"
+    )
+
+
+def test_corpus_binds_failure_complete_all_atom_materialization(corpus_snapshot) -> None:
+    by_id = {row.case_id: row for row in corpus_snapshot.case_results}
+    supported = by_id["supported_single_coh"]
+    assert supported.all_atom_system_snapshot_sha256
+    assert supported.all_atom_system_summary["created_system_count"] == 2
+    assert supported.all_atom_system_summary["unavailable_system_count"] == 0
+    assert all(
+        row["materialization_status"] == "canonical_all_atom_system_created"
+        for row in supported.all_atom_system_summary["instance_reports"]
+    )
+
+    unsupported = by_id["unsupported_extended_element"]
+    assert unsupported.all_atom_system_summary["created_system_count"] == 1
+    assert unsupported.all_atom_system_summary["unavailable_system_count"] == 1
+    statuses = {
+        row["component_id"]: row["materialization_status"]
+        for row in unsupported.all_atom_system_summary["instance_reports"]
+    }
+    assert statuses == {
+        "LIG": "not_created_preparation_graph_unavailable",
+        "HOH": "canonical_all_atom_system_created",
+    }
+
+    covalent = by_id["unprepared_intercomponent_covalent"]
+    assert covalent.all_atom_system_summary["created_system_count"] == 0
+    assert covalent.all_atom_system_summary["unavailable_system_count"] == 2
 
 
 def test_document_is_deterministic_self_verifying_and_written_private(

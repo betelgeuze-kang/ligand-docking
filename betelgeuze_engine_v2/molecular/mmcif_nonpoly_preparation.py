@@ -75,7 +75,7 @@ MAX_MMCIF_PREPARATION_ADDED_HYDROGENS_PER_INSTANCE = 256
 MMCIF_PREPARATION_UNIVERSAL_PARAMETERABILITY_BLOCKERS = (
     "reviewed_parameter_source_not_bound_to_preparation",
     "hydrogen_coordinate_geometry_not_validated",
-    "prepared_all_atom_system_not_created",
+    "canonical_all_atom_system_not_bound_to_preparation_report",
 )
 MMCIF_NONPOLY_PREPARATION_DICTIONARY_ITEMS: Mapping[str, str] = MappingProxyType(
     {
