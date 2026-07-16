@@ -13,6 +13,7 @@ from betelgeuze_engine_v2.capabilities import (
     CIF_SYNTAX_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
+    MMCIF_SEMANTICS_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
     capability_snapshot,
     require_capability_snapshot,
@@ -25,7 +26,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 9
+    assert len(loaded["capabilities"]) == 10
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -39,8 +40,17 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert all(row["customer_execution_enabled"] is False for row in rows.values())
 
     assert CIF_SYNTAX_CAPABILITY_ID in rows
+    assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
     assert rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"] is False
+
+    semantic = rows[MMCIF_SEMANTICS_CAPABILITY_ID]
+    assert semantic["current_state"] == "bounded_entity_asym_polymer_sequence_projection"
+    assert "atom_site_coordinate_observation_not_interpreted" in semantic["blockers"]
+    assert "mmcif_chemistry_and_topology_not_interpreted" in semantic["blockers"]
+    assert semantic["scientifically_validated"] is False
+    assert semantic["product_qualified"] is False
+    assert semantic["claim_safe"] is False
 
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
@@ -84,6 +94,8 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
     for test_file in (
         "test_engine_v2_contracts_molecular.py",
+        "test_engine_v2_mmcif_syntax.py",
+        "test_engine_v2_mmcif_semantics.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
         "test_engine_v2_periodic_energy.py",
