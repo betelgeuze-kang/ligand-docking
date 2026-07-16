@@ -67,7 +67,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "54c825c7b12dcd5059078e34c01596f627838454df8ccccd680a87172afc3c6c"
+    "7890eba5a02c53c65cdb68bbc04bd5d84812db5f67cc166bd0c9bf1b1ed00a46"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -380,6 +380,7 @@ def _site_row(
     source_id: int,
     *,
     label_alt_id: str = ".",
+    insertion_code: str = ".",
 ) -> dict[str, str]:
     return {
         "_atom_site.group_pdb": "HETATM",
@@ -406,7 +407,7 @@ def _site_row(
         "_atom_site.auth_asym_id": "L",
         "_atom_site.auth_atom_id": atom.atom_id,
         "_atom_site.pdbx_pdb_model_num": "1",
-        "_atom_site.pdbx_pdb_ins_code": ".",
+        "_atom_site.pdbx_pdb_ins_code": insertion_code,
     }
 
 
@@ -457,6 +458,7 @@ def _corpus_source(
     modified_residue: bool = False,
     water_model_number: str = "1",
     ligand_alt_id: str = ".",
+    ligand_insertion_code: str = ".",
 ) -> str:
     if not atoms:
         raise MmcifNonpolyPreparationCorpusError(
@@ -472,7 +474,12 @@ def _corpus_source(
         _bond_row(bond, ordinal) for ordinal, bond in enumerate(bonds, start=1)
     )
     site_rows = tuple(
-        _site_row(atom, source_id, label_alt_id=ligand_alt_id)
+        _site_row(
+            atom,
+            source_id,
+            label_alt_id=ligand_alt_id,
+            insertion_code=ligand_insertion_code,
+        )
         for source_id, atom in enumerate(atoms, start=1)
     ) + (_water_site_row(len(atoms) + 1, model_number=water_model_number),)
     connection = {
@@ -483,7 +490,7 @@ def _corpus_source(
         "_struct_conn.ptnr1_label_seq_id": ".",
         "_struct_conn.ptnr1_label_atom_id": atoms[0].atom_id,
         "_struct_conn.pdbx_ptnr1_label_alt_id": ".",
-        "_struct_conn.pdbx_ptnr1_pdb_ins_code": ".",
+        "_struct_conn.pdbx_ptnr1_pdb_ins_code": ligand_insertion_code,
         "_struct_conn.ptnr1_symmetry": "1_555",
         "_struct_conn.ptnr2_label_asym_id": "W",
         "_struct_conn.ptnr2_label_comp_id": "HOH",
@@ -576,7 +583,7 @@ def _corpus_source(
                     "_pdbx_nonpoly_scheme.pdb_mon_id": "LIG",
                     "_pdbx_nonpoly_scheme.auth_mon_id": "LIG",
                     "_pdbx_nonpoly_scheme.pdb_strand_id": "L",
-                    "_pdbx_nonpoly_scheme.pdb_ins_code": ".",
+                    "_pdbx_nonpoly_scheme.pdb_ins_code": ligand_insertion_code,
                 },
                 {
                     "_pdbx_nonpoly_scheme.asym_id": "W",
@@ -646,6 +653,7 @@ FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
             "supported_carbonyl": "368b6aede70a893c9f2e60c50b18d1c2d1399bc8039c42b1c2613cd1601050fb",
             "supported_single_coh": "0b33ffb7d232a58664293085c5086f7991e596d10cc161bd7b4b9be6dd4c7238",
             "supported_source_hydrogen": "a6a2dab9058b48956c8514291ce672d2f8b05b049d6138d36bb93c85dc62f5a8",
+            "supported_nonpoly_insertion_code": "ae9b5768e9f02fbff5cbf8e719dfadb3f3493645c7a461502f6002bd719372da",
             "unprepared_intercomponent_covalent": "2764644c17bd5c32a5277efdc17ddaa1092c06b294f6c5ebdf05f14462199906",
             "unsupported_charged_component": "e0129d499970f12c91d39fa404985ab23228f456615e8a50d6e7e40468f6f97c",
             "unsupported_extended_element": "0f6c47a87a2c8871e4bb3fc3b765f3ecbf5d28b09011a7883fed6e83bcd33499",
@@ -745,6 +753,7 @@ def _case(
     modified_residue: bool = False,
     water_model_number: str = "1",
     ligand_alt_id: str = ".",
+    ligand_insertion_code: str = ".",
 ) -> MmcifPreparationCorpusCase:
     source = _corpus_source(
         atoms,
@@ -754,6 +763,7 @@ def _case(
         modified_residue=modified_residue,
         water_model_number=water_model_number,
         ligand_alt_id=ligand_alt_id,
+        ligand_insertion_code=ligand_insertion_code,
     )
     digest = hashlib.sha256(source.encode("ascii")).hexdigest()
     frozen = FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256.get(case_id, "")
@@ -857,6 +867,22 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
                 bond_count=5,
                 integration=coordination,
             ),
+        ),
+        _case(
+            "supported_nonpoly_insertion_code",
+            "supported_graph",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("insertion_code:known_exact_nonpoly_identity",),
+            ligand_report=_prepared_report(
+                "LIG",
+                formula=(("C", 1), ("H", 2), ("O", 1)),
+                added_hydrogens=2,
+                atom_count=4,
+                bond_count=3,
+                integration=coordination,
+            ),
+            ligand_insertion_code="A",
         ),
         _case(
             "unprepared_intercomponent_covalent",
@@ -1612,10 +1638,9 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "upstream.insertion_semantics",
             "upstream_ingest",
-            missing,
-            "",
-            (),
-            "insertion_semantics_not_interpreted",
+            supported,
+            "source_feature:insertion_code:known_exact_nonpoly_identity",
+            ("supported_nonpoly_insertion_code",),
         ),
         _coverage(
             "upstream.missing_atom_residue_policy",

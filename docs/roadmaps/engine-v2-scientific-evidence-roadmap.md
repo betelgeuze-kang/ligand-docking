@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@2f2006dac235cdb6b04e5ab45e87b2cccafa3fc8`
+Observed baseline: `main@aa4422ae79cd2d7dbfe92c9f0ec8304fa000eb8a`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -74,9 +74,9 @@ claim status without revalidating the dependency and freshness chain.
   acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
   generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
-- Keep the exact-input 26-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 16 axes as supported, 24 as
-  explicitly unsupported, and 11 as not implemented; it is not parameter-fitting
+- Keep the exact-input 27-case synthetic supported/failure contract corpus and
+  51-axis coverage ledger executable. It classifies 17 axes as supported, 24 as
+  explicitly unsupported, and 10 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep source water and bounded monoatomic metal/nonmetal-ion composition roles
   executable without inferring general ligand, cofactor, modified-residue, or
@@ -91,7 +91,10 @@ claim status without revalidating the dependency and freshness chain.
 - Keep explicit nonpoly atom-site alternate locations as a frozen preparation
   failure row. Conformer selection, occupancy population, and altloc chemistry
   remain unimplemented.
-- Next, close the 11 implementation-gap rows by independent capability slices and
+- Keep known nonpoly insertion-code markers exactly joined across scheme,
+  atom-site, and connection endpoint identity. This does not interpret polymer
+  insertion/deletion, canonical renumbering, or general author/label semantics.
+- Next, close the 10 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive

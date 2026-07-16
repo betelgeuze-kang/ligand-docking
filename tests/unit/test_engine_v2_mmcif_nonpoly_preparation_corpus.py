@@ -8,6 +8,12 @@ import stat
 import pytest
 
 import betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation_corpus as module
+from betelgeuze_engine_v2.molecular.mmcif_nonpoly_atom_site_observations import (
+    parse_mmcif_nonpoly_atom_site_observations,
+)
+from betelgeuze_engine_v2.molecular.mmcif_nonpoly_identity import (
+    parse_mmcif_nonpoly_identity,
+)
 from betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation_corpus import (
     FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256,
     FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256,
@@ -23,6 +29,9 @@ from betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation_corpus import (
     run_mmcif_nonpoly_preparation_corpus,
     write_mmcif_nonpoly_preparation_corpus_json,
 )
+from betelgeuze_engine_v2.molecular.mmcif_struct_conn_declarations import (
+    parse_mmcif_struct_conn_declarations,
+)
 
 
 @pytest.fixture(scope="module")
@@ -33,7 +42,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 26
+    assert len(cases) == 27
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -75,6 +84,44 @@ def test_supported_graphs_water_and_source_hydrogen_match_exactly(
     source_h = by_id["supported_source_hydrogen"].reports[0]
     assert source_h["formula"] == {"C": 1, "H": 4, "O": 1}
     assert source_h["added_hydrogen_count"] == 3
+
+
+def test_known_nonpoly_insertion_code_is_exactly_joined_and_prepared(
+    corpus_snapshot,
+) -> None:
+    case = {
+        row.case_id: row for row in mmcif_nonpoly_preparation_corpus_cases()
+    }["supported_nonpoly_insertion_code"]
+    result = {
+        row.case_id: row for row in corpus_snapshot.case_results
+    }["supported_nonpoly_insertion_code"]
+    identity = parse_mmcif_nonpoly_identity(case.source_text)
+    observations = parse_mmcif_nonpoly_atom_site_observations(case.source_text)
+    connection = parse_mmcif_struct_conn_declarations(case.source_text)
+
+    ligand_instance = next(row for row in identity.instances if row.asym_id == "L")
+    ligand_observations = tuple(
+        row for row in observations.observations if row.label_asym_id == "L"
+    )
+    partner = connection.declarations[0].partner_1
+    assert ligand_instance.pdb_ins_code.to_dict() == {
+        "state": "known",
+        "value": "A",
+        "quoted": False,
+    }
+    assert ligand_observations
+    assert all(
+        row.insertion_code.to_dict() == ligand_instance.pdb_ins_code.to_dict()
+        for row in ligand_observations
+    )
+    assert all(
+        row.instance_identity_sha256 == ligand_instance.instance_identity_sha256
+        for row in ligand_observations
+    )
+    assert partner.pdb_ins_code.to_dict() == ligand_instance.pdb_ins_code.to_dict()
+    assert partner.instance_identity_sha256 == ligand_instance.instance_identity_sha256
+    assert result.reports[0]["preparation_status"] == "prepared_component_graph"
+    assert result.reports[0]["added_hydrogen_count"] == 2
 
 
 @pytest.mark.parametrize(
@@ -279,8 +326,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 24,
-        "not_implemented": 11,
-        "supported": 16,
+        "not_implemented": 10,
+        "supported": 17,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -302,6 +349,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
     assert "role.modified_residue" not in missing
     assert "upstream.altloc_selection" not in missing
+    assert "upstream.insertion_semantics" not in missing
     assert "upstream.multimodel_policy" not in missing
     assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
     assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
