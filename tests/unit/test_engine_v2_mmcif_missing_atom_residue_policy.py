@@ -363,6 +363,8 @@ def test_dedicated_policy_workflow_covers_supported_python_matrix() -> None:
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
     assert "mmcif_missing_atom_residue_policy.py" in source
     assert "test_engine_v2_mmcif_missing_atom_residue_policy.py" in source
+    assert "test_engine_v2_mmcif_nonpoly_atom_site_observations.py" in source
+    assert "test_engine_v2_mmcif_nonpoly_canonical_topology.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
     assert "test_engine_v2_post_merge_state.py" in source

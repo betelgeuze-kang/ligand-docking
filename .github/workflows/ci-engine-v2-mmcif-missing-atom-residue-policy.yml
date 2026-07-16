@@ -82,6 +82,8 @@ jobs:
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_zero_occupancy.py
             tests/unit/test_engine_v2_mmcif_missing_atom_residue_policy.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py
             tests/unit/test_engine_v2_commercial_roadmap.py
