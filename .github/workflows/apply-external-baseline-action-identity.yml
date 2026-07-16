@@ -17,8 +17,7 @@ jobs:
   apply-migration:
     if: >-
       github.repository == 'betelgeuze-kang/ligand-docking' &&
-      github.ref == 'refs/heads/codex/external-baseline-action-identity-v2' &&
-      github.actor == 'betelgeuze-kang'
+      github.ref == 'refs/heads/codex/external-baseline-action-identity-v2'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
