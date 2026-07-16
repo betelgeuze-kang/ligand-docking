@@ -6,6 +6,7 @@ on:
       - "betelgeuze_engine/biodiscovery/pose.py"
       - "betelgeuze_engine/biodiscovery/screening.py"
       - "tests/unit/test_biodiscovery_screening.py"
+      - "tests/unit/test_tier_beta_vertical_slice.py"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
 
 permissions:
@@ -25,6 +26,7 @@ jobs:
             betelgeuze_engine/biodiscovery/pose.py
             betelgeuze_engine/biodiscovery/screening.py
             tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_tier_beta_vertical_slice.py
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -36,5 +38,6 @@ jobs:
             betelgeuze_engine/biodiscovery/pose.py
             betelgeuze_engine/biodiscovery/screening.py
             tests/unit/test_biodiscovery_screening.py
+            tests/unit/test_tier_beta_vertical_slice.py
           if-no-files-found: error
           retention-days: 1
