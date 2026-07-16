@@ -1,16 +1,14 @@
-name: ci-engine-v2-mmcif-nonpoly-partial-charges
+name: ci-engine-v2-mmcif-nonpoly-all-atom-round-trip
 
 on:
   pull_request:
     paths:
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_round_trip.py"
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
-      - "tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -18,22 +16,19 @@ on:
       - "docs/engine_v2_status.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-round-trip.yml"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   push:
     branches: ["main"]
     paths:
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_round_trip.py"
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
-      - "tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -41,9 +36,8 @@ on:
       - "docs/engine_v2_status.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-round-trip.yml"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   workflow_dispatch:
@@ -52,11 +46,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-mmcif-nonpoly-partial-charges-${{ github.ref }}
+  group: ci-engine-v2-mmcif-nonpoly-all-atom-round-trip-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  partial-charges:
+  all-atom-round-trip:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -69,7 +63,7 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - name: Check out bounded partial charge surface
+      - name: Check out bounded all-atom round-trip surface
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
@@ -79,7 +73,6 @@ jobs:
             betelgeuze_engine_v2
             config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
-            tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -91,9 +84,8 @@ jobs:
             docs/entrypoints.md
             README.md
             README.ko.md
-            .github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-round-trip.yml
-            .github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
@@ -117,31 +109,30 @@ jobs:
           {
             python -m compileall -q betelgeuze_engine_v2
             python tools/check_engine_v2_architecture.py
-          } > mmcif-nonpoly-partial-charges.log 2>&1
+          } > mmcif-nonpoly-all-atom-round-trip.log 2>&1
           status=$?
-          cat mmcif-nonpoly-partial-charges.log
+          cat mmcif-nonpoly-all-atom-round-trip.log
           exit "$status"
 
-      - name: Run partial charge and registry contracts
+      - name: Run all-atom round-trip and registry contracts
         shell: bash
         run: |
           set +e
           python -m pytest -vv -x \
-            tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py \
             tests/unit/test_engine_v2_commercial_roadmap.py \
             tests/unit/test_engine_v2_post_merge_state.py \
-            >> mmcif-nonpoly-partial-charges.log 2>&1
+            >> mmcif-nonpoly-all-atom-round-trip.log 2>&1
           status=$?
-          cat mmcif-nonpoly-partial-charges.log
+          cat mmcif-nonpoly-all-atom-round-trip.log
           exit "$status"
 
-      - name: Upload partial charge diagnostics
+      - name: Upload all-atom round-trip diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mmcif-nonpoly-partial-charges-py${{ matrix.python-version }}-${{ github.run_id }}
-          path: mmcif-nonpoly-partial-charges.log
+          name: mmcif-nonpoly-all-atom-round-trip-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: mmcif-nonpoly-all-atom-round-trip.log
           if-no-files-found: error
           retention-days: 7

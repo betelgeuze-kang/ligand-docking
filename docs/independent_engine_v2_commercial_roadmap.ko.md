@@ -132,8 +132,9 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_all_atom_systems` | eligible instance의 prepared atom/bond identity, source scalar state, exact coordinate bit, residue/chain source identity를 기존 canonical `AllAtomSystem`과 SHA-256에 결속; coordination edge는 metadata로 보존하고 intercomponent covalence는 fail-closed | parameter source·parameter/partial-charge/mass assignment, geometry·chemistry validation, coordination의 canonical Bond 승격, source-format round trip, parameterability |
 | `v2_bounded_mmcif_nonpoly_parameter_source_binding` | reviewed Sage source identity·immutable artifact SHA-256·license identity·candidate scope를 eligible canonical system hash와 별도 carrier로 결속 | artifact bundling·OFFXML parsing·parameter coverage/applicability·parameter/partial-charge/mass assignment·geometry·force/energy·과학 검증·parameterability |
 | `v2_bounded_mmcif_nonpoly_partial_charge_assignment` | caller가 제공한 explicit partial-charge vector를 exact parameter-bound system hash·atom order·finite binary64 bit·method provenance SHA-256·formal total-charge 보존과 결속해 `Atom.partial_charge_e`에 적용 | charge 생성·보정·과학적 method validation, parameter coverage/applicability, force-field parameter·mass assignment, geometry·force/energy 검증·parameterability |
+| `v2_bounded_mmcif_nonpoly_all_atom_round_trip` | charge-assigned system의 canonical Engine v2 JSON encode/decode/re-encode byte identity, atom·bond·residue·chain, topology·coordinate hash, source lineage metadata, parameter-source binding과 partial-charge binary64 bit 보존 receipt | original mmCIF text 재출력, source token spelling·category order·comment·whitespace 보존, chemistry·parameter·과학 검증·parameterability |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 52-axis executable coverage ledger; supported 22·explicitly unsupported 27·not implemented 3 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 52-axis executable coverage ledger; supported 23·explicitly unsupported 27·not implemented 2 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -252,6 +253,15 @@ synthetic contract fixture만 사용하며 parameter fitting data가 아니다. 
 capability는 charge generation·calibration·scientific validation·applicability 또는
 force-field parameter/mass assignment를 확립하지 않고 `parameterable=false`를 유지한다.
 
+bounded all-atom round-trip capability는 charge-assigned canonical system을 Engine v2
+canonical JSON으로 encode한 뒤 독립 decode·re-encode하고 byte SHA-256과 system,
+topology, coordinate, identity-projection hash가 모두 동일한지 검증한다. atom·bond·
+residue·chain field, source lineage metadata, parameter-source binding과 partial-charge
+binary64 bit도 projection에 포함한다. 이는 canonical interchange identity receipt이며
+original mmCIF text를 다시 쓰거나 source token spelling, category order, comment,
+whitespace를 보존하는 lexical round trip이 아니다. chemistry·parameter·scientific
+validation 또는 customer readiness도 승격하지 않는다.
+
 reviewed parameter-source provenance capability는 OpenFF 공식 force-field repository의
 Sage 2.2.1 unconstrained artifact를 release tag `2024.09.0`과 exact commit에 고정하고,
 artifact byte size·SHA-256, `CC-BY-4.0` license identity와 license-text SHA-256,
@@ -264,8 +274,8 @@ molecule coverage, applicability domain, parameter calibration, force/energy 정
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
-denominator에서 제거하지 않는다. 52-axis coverage ledger는 22개 supported,
-27개 explicitly unsupported, 3개 `not_implemented`로 분류하며 unclassified
+denominator에서 제거하지 않는다. 52-axis coverage ledger는 23개 supported,
+27개 explicitly unsupported, 2개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -328,10 +338,11 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 6. 완료된 첫 contract layer로 exact ASCII 30-case synthetic supported/failure
    corpus와 52-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 다음으로 3개 `not_implemented` row를 작은 capability별로 닫고,
+7. 다음으로 남은 2개 `not_implemented` row인 pH-dependent protonation과
+   tautomer selection을 각각 독립 capability로 닫고,
    licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
-   source-to-system identity binding과 explicit partial-charge 적용 계약 다음
-   우선순위는 source-format all-atom round trip이다.
+   canonical all-atom identity round trip까지 완료된 뒤에도 original mmCIF lexical
+   재출력은 별도 미지원으로 유지한다.
 8. 위 gap과 real-world corpus가 닫히기 전에는 V2-2 parameter fitting·validation을
    시작하지 않는다.
 9. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과

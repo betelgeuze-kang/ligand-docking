@@ -67,10 +67,13 @@ The current `main` branch contains:
   plus an explicit partial-charge vector application contract that binds finite
   binary64 values, atom order, total-charge conservation, method provenance, and
   source system hashes while providing no charge generator or scientific method,
+  plus canonical Engine v2 JSON identity round-trip receipts that re-execute
+  encode/decode/re-encode and preserve topology, coordinates, lineage metadata,
+  parameter-source binding, and charge bits without re-emitting original mmCIF,
   plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
   2 invalid-source cases, plus a 52-axis executable coverage ledger classifying
-  22 supported, 27 explicitly unsupported, and 3 not-implemented rows,
+  23 supported, 27 explicitly unsupported, and 2 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -93,8 +96,8 @@ not currently establish:
   parameter values or assigned parameters, general ligand/cofactor or
   non-source-declared modified-residue role interpretation,
   metal/ion/modified-residue preparation, source-to-system parameter-value
-  assignment, partial-charge generation/calibration/validation, source-format
-  all-atom round trip, or a
+  assignment, partial-charge generation/calibration/validation, original mmCIF
+  text/token/category-order/comment/whitespace round trip, or a
   parameterable `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;

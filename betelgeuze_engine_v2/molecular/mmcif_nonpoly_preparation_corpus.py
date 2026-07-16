@@ -63,6 +63,11 @@ from .mmcif_nonpoly_partial_charge_assignments import (
     MmcifNonpolyPartialChargeAssignmentInput,
     apply_explicit_mmcif_nonpoly_partial_charge_assignments,
 )
+from .mmcif_nonpoly_all_atom_round_trip import (
+    MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_PROFILE_ID,
+    MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_VERIFIER_VERSION,
+    verify_mmcif_nonpoly_all_atom_round_trips,
+)
 from .mmcif_modified_residue_declarations import (
     MMCIF_MODIFIED_RESIDUE_DECLARATION_HEADERS,
     MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION,
@@ -111,7 +116,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "e87908c7e88d08f7a70d0d0c881fe2dd4ca76eb2da5a0d0720835eedc33287dc"
+    "f81aced2fa4f47ca494518583f20593bc193a073f9a500ea50b8d00022dfe455"
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_PARTIAL_CHARGE_METHOD_ID = (
     "synthetic_neutral_zero_charge_contract_fixture"
@@ -272,6 +277,7 @@ class MmcifPreparationCorpusCaseResult:
     all_atom_system_snapshot_sha256: str
     parameter_source_binding_snapshot_sha256: str
     partial_charge_assignment_snapshot_sha256: str
+    all_atom_round_trip_snapshot_sha256: str
     component_role_snapshot_sha256: str
     modified_residue_declaration_snapshot_sha256: str
     error_code: str
@@ -283,6 +289,7 @@ class MmcifPreparationCorpusCaseResult:
     all_atom_system_summary: Mapping[str, Any]
     parameter_source_binding_summary: Mapping[str, Any]
     partial_charge_assignment_summary: Mapping[str, Any]
+    all_atom_round_trip_summary: Mapping[str, Any]
     component_roles: tuple[Mapping[str, Any], ...]
     modified_residue_declarations: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
@@ -316,6 +323,9 @@ class MmcifPreparationCorpusCaseResult:
             "partial_charge_assignment_snapshot_sha256": (
                 self.partial_charge_assignment_snapshot_sha256
             ),
+            "all_atom_round_trip_snapshot_sha256": (
+                self.all_atom_round_trip_snapshot_sha256
+            ),
             "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
             "modified_residue_declaration_snapshot_sha256": (
                 self.modified_residue_declaration_snapshot_sha256
@@ -335,6 +345,7 @@ class MmcifPreparationCorpusCaseResult:
             "partial_charge_assignment_summary": dict(
                 self.partial_charge_assignment_summary
             ),
+            "all_atom_round_trip_summary": dict(self.all_atom_round_trip_summary),
             "component_roles": [dict(row) for row in self.component_roles],
             "modified_residue_declarations": [
                 dict(row) for row in self.modified_residue_declarations
@@ -428,6 +439,7 @@ def _claim_policy() -> dict[str, bool]:
         "canonical_all_atom_materialization_bound": True,
         "reviewed_parameter_source_bound_to_canonical_systems": True,
         "explicit_partial_charge_assignment_contract_bound": True,
+        "canonical_all_atom_identity_round_trip_bound": True,
         "corpus_is_parameter_fitting_data": False,
         "parameter_fitting_allowed": False,
         "v2_1_exit_ready": False,
@@ -1905,10 +1917,12 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "round_trip.all_atom_identity",
             "canonical_ingest",
-            missing,
-            "",
-            (),
-            "prepared_all_atom_round_trip_not_implemented",
+            supported,
+            (
+                "all_atom_round_trip_status:"
+                "canonical_all_atom_identity_round_trip_verified"
+            ),
+            ("supported_single_coh", "supported_source_hydrogen"),
         ),
     )
     if (
@@ -1959,6 +1973,7 @@ def _signals_for_reports(
     all_atom_system_summary: Mapping[str, Any],
     parameter_source_binding_summary: Mapping[str, Any],
     partial_charge_assignment_summary: Mapping[str, Any],
+    all_atom_round_trip_summary: Mapping[str, Any],
     component_roles: tuple[Mapping[str, Any], ...],
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
@@ -2059,6 +2074,18 @@ def _signals_for_reports(
     signals.extend(
         f"partial_charge_assignment_status:{row['assignment_status']}"
         for row in partial_charge_assignment_summary["instance_reports"]
+    )
+    signals.extend(
+        (
+            "all_atom_round_trip_verified_system_count:"
+            f"{all_atom_round_trip_summary['verified_system_count']}",
+            "all_atom_round_trip_unavailable_system_count:"
+            f"{all_atom_round_trip_summary['unavailable_system_count']}",
+        )
+    )
+    signals.extend(
+        f"all_atom_round_trip_status:{row['round_trip_status']}"
+        for row in all_atom_round_trip_summary["instance_reports"]
     )
     for report in reports:
         component = str(report["component_id"])
@@ -2192,6 +2219,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             all_atom_system_snapshot_sha256="",
             parameter_source_binding_snapshot_sha256="",
             partial_charge_assignment_snapshot_sha256="",
+            all_atom_round_trip_snapshot_sha256="",
             component_role_snapshot_sha256="",
             modified_residue_declaration_snapshot_sha256="",
             error_code=exc.code,
@@ -2203,6 +2231,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             all_atom_system_summary={},
             parameter_source_binding_summary={},
             partial_charge_assignment_summary={},
+            all_atom_round_trip_summary={},
             component_roles=(),
             modified_residue_declarations=(),
             signals=tuple(
@@ -2296,6 +2325,16 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         ],
         "method_scope": "synthetic_contract_fixture_only",
     }
+    all_atom_round_trip_snapshot = verify_mmcif_nonpoly_all_atom_round_trips(
+        partial_charge_assignment_snapshot
+    )
+    all_atom_round_trip_summary = {
+        **all_atom_round_trip_snapshot.to_dict(),
+        "instance_reports": [
+            row.to_dict() for row in all_atom_round_trip_snapshot.instance_reports
+        ],
+        "interchange_format": "betelgeuze_engine_v2_canonical_all_atom_json",
+    }
     role_snapshot = parse_mmcif_nonpoly_component_roles(case.source_text)
     modified_residue_snapshot = (
         parse_mmcif_modified_residue_declarations(case.source_text)
@@ -2349,6 +2388,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         partial_charge_assignment_snapshot_sha256=(
             partial_charge_assignment_snapshot.snapshot_sha256
         ),
+        all_atom_round_trip_snapshot_sha256=(
+            all_atom_round_trip_snapshot.snapshot_sha256
+        ),
         component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
         modified_residue_declaration_snapshot_sha256=(
             modified_residue_snapshot.snapshot_sha256
@@ -2364,6 +2406,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         all_atom_system_summary=all_atom_system_summary,
         parameter_source_binding_summary=parameter_source_binding_summary,
         partial_charge_assignment_summary=partial_charge_assignment_summary,
+        all_atom_round_trip_summary=all_atom_round_trip_summary,
         component_roles=component_roles,
         modified_residue_declarations=modified_residue_declarations,
         signals=_signals_for_reports(
@@ -2376,6 +2419,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             all_atom_system_summary,
             parameter_source_binding_summary,
             partial_charge_assignment_summary,
+            all_atom_round_trip_summary,
             component_roles,
             modified_residue_declarations,
             snapshot.to_dict(),
@@ -2524,6 +2568,15 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
             MMCIF_NONPOLY_PREPARATION_CORPUS_PARTIAL_CHARGE_METHOD_PROVENANCE_SHA256
         ),
         "partial_charge_method_scope": "synthetic_contract_fixture_only",
+        "all_atom_round_trip_profile_id": (
+            MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_PROFILE_ID
+        ),
+        "all_atom_round_trip_verifier_version": (
+            MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_VERIFIER_VERSION
+        ),
+        "all_atom_round_trip_interchange_format": (
+            "betelgeuze_engine_v2_canonical_all_atom_json"
+        ),
         "parameter_source_provenance_profile_id": (
             PARAMETER_SOURCE_PROVENANCE_PROFILE_ID
         ),
