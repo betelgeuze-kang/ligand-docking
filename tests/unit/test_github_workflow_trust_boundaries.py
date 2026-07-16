@@ -215,13 +215,13 @@ def test_policy_rejects_a_mutable_action_tag(tmp_path: Path) -> None:
     _mutate(
         root,
         "product-image-smoke.yml",
-        "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-        "actions/checkout@v4",
+        "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+        "actions/checkout@v7",
     )
 
     errors = audit_workflow_trust_boundaries(root)
 
     assert (
         "product-image-smoke.yml:"
-        "product-image-build-smoke:action_not_sha_pinned:actions/checkout@v4"
+        "product-image-build-smoke:action_not_sha_pinned:actions/checkout@v7"
     ) in errors
