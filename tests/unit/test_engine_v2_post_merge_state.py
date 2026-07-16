@@ -14,6 +14,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     EXTERNAL_BASELINE_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
     MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID,
+    MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID,
     MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID,
@@ -38,7 +39,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 22
+    assert len(loaded["capabilities"]) == 23
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -53,6 +54,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     assert CIF_SYNTAX_CAPABILITY_ID in rows
     assert MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID in rows
+    assert MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID in rows
@@ -88,6 +90,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "coordinate_and_occupancy_values_not_interpreted" in altloc["blockers"]
     assert "altloc_population_and_missingness_not_inferred" in altloc["blockers"]
     assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in altloc["blockers"]
+
+    modified_residue = rows[MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID]
+    assert modified_residue["current_state"] == (
+        "bounded_source_declared_modified_polymer_residue_identity"
+    )
+    assert modified_residue["internal_reference_execution_enabled"] is True
+    assert "atom_site_label_identity_not_crosschecked" in modified_residue["blockers"]
+    assert "parent_component_chemistry_not_interpreted" in (
+        modified_residue["blockers"]
+    )
+    assert "modified_residue_preparation_not_supported" in (
+        modified_residue["blockers"]
+    )
 
     nonpoly = rows[MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID]
     assert nonpoly["current_state"] == "bounded_nonpoly_component_instance_identity"
@@ -180,11 +195,11 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     preparation_corpus = rows[MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID]
     assert preparation_corpus["current_state"] == (
-        "frozen_23_case_failure_complete_corpus_and_51_axis_coverage_ledger"
+        "frozen_24_case_failure_complete_corpus_and_51_axis_coverage_ledger"
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
     assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "fourteen_classified_implementation_gaps_remain" in (
+    assert "thirteen_classified_implementation_gaps_remain" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]
@@ -235,6 +250,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_semantics.py",
         "test_engine_v2_mmcif_zero_occupancy.py",
         "test_engine_v2_mmcif_altloc_declarations.py",
+        "test_engine_v2_mmcif_modified_residue_declarations.py",
         "test_engine_v2_mmcif_nonpoly_identity.py",
         "test_engine_v2_mmcif_nonpoly_component_declarations.py",
         "test_engine_v2_mmcif_nonpoly_component_roles.py",

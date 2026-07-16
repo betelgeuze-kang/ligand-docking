@@ -20,6 +20,12 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 from .mmcif_nonpoly_atom_site_observations import MMCIF_NONPOLY_ATOM_SITE_HEADERS
+from .mmcif_modified_residue_declarations import (
+    MMCIF_MODIFIED_RESIDUE_DECLARATION_HEADERS,
+    MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION,
+    MMCIF_MODIFIED_RESIDUE_DECLARATION_PROFILE_ID,
+    parse_mmcif_modified_residue_declarations,
+)
 from .mmcif_nonpoly_component_declarations import (
     MMCIF_NONPOLY_COMPONENT_ATOM_HEADERS,
     MMCIF_NONPOLY_COMPONENT_BOND_HEADERS,
@@ -53,11 +59,18 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "ca26b71cd0d6ad660604a06dbb86f611d542c4687fca7f536d530f5adf631265"
+    "c7c107663bc42873d473a9a61355623a61e143345ad36e39cc2d49160bdb9748"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
 _ASYM_HEADERS = ("_struct_asym.id", "_struct_asym.entity_id")
+_ENTITY_POLY_HEADERS = ("_entity_poly.entity_id", "_entity_poly.type")
+_ENTITY_POLY_SEQ_HEADERS = (
+    "_entity_poly_seq.entity_id",
+    "_entity_poly_seq.num",
+    "_entity_poly_seq.mon_id",
+    "_entity_poly_seq.hetero",
+)
 _CHEM_COMP_HEADERS = (
     "_chem_comp.id",
     "_chem_comp.type",
@@ -194,9 +207,11 @@ class MmcifPreparationCorpusCaseResult:
     observed_outcome: str
     preparation_snapshot_sha256: str
     component_role_snapshot_sha256: str
+    modified_residue_declaration_snapshot_sha256: str
     error_code: str
     reports: tuple[Mapping[str, Any], ...]
     component_roles: tuple[Mapping[str, Any], ...]
+    modified_residue_declarations: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
 
     def to_dict(self) -> dict[str, Any]:
@@ -208,9 +223,15 @@ class MmcifPreparationCorpusCaseResult:
             "expectation_matched": True,
             "preparation_snapshot_sha256": self.preparation_snapshot_sha256,
             "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
+            "modified_residue_declaration_snapshot_sha256": (
+                self.modified_residue_declaration_snapshot_sha256
+            ),
             "error_code": self.error_code,
             "reports": [dict(row) for row in self.reports],
             "component_roles": [dict(row) for row in self.component_roles],
+            "modified_residue_declarations": [
+                dict(row) for row in self.modified_residue_declarations
+            ],
             "signals": list(self.signals),
         }
 
@@ -417,6 +438,7 @@ def _corpus_source(
     *,
     connection_type: str = "metalc",
     connection_order: str = "?",
+    modified_residue: bool = False,
 ) -> str:
     if not atoms:
         raise MmcifNonpolyPreparationCorpusError(
@@ -459,37 +481,54 @@ def _corpus_source(
         "_struct_conn.ptnr2_symmetry": "1_555",
         "_struct_conn.pdbx_value_order": connection_order,
     }
+    entity_rows = (
+        {"_entity.id": "1", "_entity.type": "non-polymer"},
+        {"_entity.id": "2", "_entity.type": "water"},
+    ) + (
+        ({"_entity.id": "3", "_entity.type": "polymer"},)
+        if modified_residue
+        else ()
+    )
+    asym_rows = (
+        {"_struct_asym.id": "L", "_struct_asym.entity_id": "1"},
+        {"_struct_asym.id": "W", "_struct_asym.entity_id": "2"},
+    ) + (
+        ({"_struct_asym.id": "P", "_struct_asym.entity_id": "3"},)
+        if modified_residue
+        else ()
+    )
+    chem_comp_rows = (
+        {
+            "_chem_comp.id": "LIG",
+            "_chem_comp.type": "non-polymer",
+            "_chem_comp.pdbx_formal_charge": "0",
+        },
+        {
+            "_chem_comp.id": "HOH",
+            "_chem_comp.type": "non-polymer",
+            "_chem_comp.pdbx_formal_charge": "0",
+        },
+    ) + (
+        (
+            {
+                "_chem_comp.id": "MSE",
+                "_chem_comp.type": "'L-peptide linking'",
+                "_chem_comp.pdbx_formal_charge": "0",
+            },
+            {
+                "_chem_comp.id": "MET",
+                "_chem_comp.type": "'L-peptide linking'",
+                "_chem_comp.pdbx_formal_charge": "0",
+            },
+        )
+        if modified_residue
+        else ()
+    )
     source = (
         "data_v2_preparation_corpus\n#\n"
-        + _loop(
-            _ENTITY_HEADERS,
-            (
-                {"_entity.id": "1", "_entity.type": "non-polymer"},
-                {"_entity.id": "2", "_entity.type": "water"},
-            ),
-        )
-        + _loop(
-            _ASYM_HEADERS,
-            (
-                {"_struct_asym.id": "L", "_struct_asym.entity_id": "1"},
-                {"_struct_asym.id": "W", "_struct_asym.entity_id": "2"},
-            ),
-        )
-        + _loop(
-            _CHEM_COMP_HEADERS,
-            (
-                {
-                    "_chem_comp.id": "LIG",
-                    "_chem_comp.type": "non-polymer",
-                    "_chem_comp.pdbx_formal_charge": "0",
-                },
-                {
-                    "_chem_comp.id": "HOH",
-                    "_chem_comp.type": "non-polymer",
-                    "_chem_comp.pdbx_formal_charge": "0",
-                },
-            ),
-        )
+        + _loop(_ENTITY_HEADERS, entity_rows)
+        + _loop(_ASYM_HEADERS, asym_rows)
+        + _loop(_CHEM_COMP_HEADERS, chem_comp_rows)
         + _loop(
             _ENTITY_NONPOLY_HEADERS,
             (
@@ -534,8 +573,43 @@ def _corpus_source(
                 },
             ),
         )
-        + _loop(MMCIF_NONPOLY_COMPONENT_ATOM_HEADERS, atom_rows)
     )
+    if modified_residue:
+        source += _loop(
+            _ENTITY_POLY_HEADERS,
+            (
+                {
+                    "_entity_poly.entity_id": "3",
+                    "_entity_poly.type": "'polypeptide(L)'",
+                },
+            ),
+        )
+        source += _loop(
+            _ENTITY_POLY_SEQ_HEADERS,
+            (
+                {
+                    "_entity_poly_seq.entity_id": "3",
+                    "_entity_poly_seq.num": "1",
+                    "_entity_poly_seq.mon_id": "MSE",
+                    "_entity_poly_seq.hetero": "n",
+                },
+            ),
+        )
+        source += _loop(
+            MMCIF_MODIFIED_RESIDUE_DECLARATION_HEADERS,
+            (
+                {
+                    "_pdbx_struct_mod_residue.id": "1",
+                    "_pdbx_struct_mod_residue.label_asym_id": "P",
+                    "_pdbx_struct_mod_residue.label_seq_id": "1",
+                    "_pdbx_struct_mod_residue.label_comp_id": "MSE",
+                    "_pdbx_struct_mod_residue.parent_comp_id": "MET",
+                    "_pdbx_struct_mod_residue.pdb_model_num": "1",
+                    "_pdbx_struct_mod_residue.pdb_ins_code": ".",
+                },
+            ),
+        )
+    source += _loop(MMCIF_NONPOLY_COMPONENT_ATOM_HEADERS, atom_rows)
     if bond_rows:
         source += _loop(MMCIF_NONPOLY_COMPONENT_BOND_HEADERS, bond_rows)
     source += (
@@ -571,6 +645,7 @@ FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
             "unsupported_incomplete_source_hydrogen": "9741a52326e820ce70b075ada0854c859d1aa42bda70efeec7562b6550f6f158",
             "unsupported_monoatomic_metal": "5d33f6f81bfe91e59b419993d37c51fee8bc9934a3cb0160d33824d67c2122e7",
             "unsupported_monoatomic_nonmetal_ion": "cb03af1d7e2626d4b74d55c84929e87ced1953f6fedc0a67f17d9cf7bb78dd4c",
+            "unsupported_source_declared_modified_residue": "ff1f1c1053df34f121fa85cfec2f91d247a3d0e898cf0e14a1ca68bce1c20570",
             "invalid_component_charge_grammar": "43f64cf79729dbbf92a858cb315421067393e5796466e0614a65f6db937c5ed5",
             "invalid_component_charge_range": "a7a25d9fa84a602b3221faf553918e54bfbad06d443355fca8b3eb67df81438d",
         }
@@ -646,12 +721,14 @@ def _case(
     expected_error_code: str = "",
     connection_type: str = "metalc",
     connection_order: str = "?",
+    modified_residue: bool = False,
 ) -> MmcifPreparationCorpusCase:
     source = _corpus_source(
         atoms,
         bonds,
         connection_type=connection_type,
         connection_order=connection_order,
+        modified_residue=modified_residue,
     )
     digest = hashlib.sha256(source.encode("ascii")).hexdigest()
     frozen = FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256.get(case_id, "")
@@ -993,6 +1070,22 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
                 ),
                 integration=coordination,
             ),
+        ),
+        _case(
+            "unsupported_source_declared_modified_residue",
+            "unsupported_chemistry",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("source_declared_modified_residue",),
+            ligand_report=_prepared_report(
+                "LIG",
+                formula=(("C", 1), ("H", 2), ("O", 1)),
+                added_hydrogens=2,
+                atom_count=4,
+                bond_count=3,
+                integration=coordination,
+            ),
+            modified_residue=True,
         ),
         _case(
             "invalid_component_charge_grammar",
@@ -1417,10 +1510,13 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "role.modified_residue",
             "role_assignment",
-            missing,
-            "",
-            (),
-            "modified_residue_role_not_interpreted",
+            unsupported,
+            (
+                "modified_residue_role:"
+                "source_declared_modified_polymer_component"
+            ),
+            ("unsupported_source_declared_modified_residue",),
+            "modified_residue_preparation_not_supported",
         ),
         _coverage(
             "hydrogen.coordinates",
@@ -1545,6 +1641,7 @@ def _signals_for_reports(
     case: MmcifPreparationCorpusCase,
     reports: tuple[Mapping[str, Any], ...],
     component_roles: tuple[Mapping[str, Any], ...],
+    modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
 ) -> tuple[str, ...]:
     signals = [f"source_feature:{value}" for value in case.source_features]
@@ -1578,6 +1675,19 @@ def _signals_for_reports(
         signals.extend(
             f"role_blocker:{component}:{value}" for value in role["role_blockers"]
         )
+    for declaration in modified_residue_declarations:
+        signals.extend(
+            (
+                f"modified_residue_role:{declaration['modified_residue_role']}",
+                f"modified_residue_role_status:{declaration['role_status']}",
+                "preparation_disposition:modified_residue:"
+                f"{declaration['preparation_disposition']}",
+            )
+        )
+        signals.extend(
+            f"modified_residue_blocker:{value}"
+            for value in declaration["role_blockers"]
+        )
     for key, value in sorted(claim_payload.items()):
         if type(value) is bool:
             signals.append(f"claim:{str(value).lower()}:{key}")
@@ -1601,9 +1711,11 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             observed_outcome="expected_error",
             preparation_snapshot_sha256="",
             component_role_snapshot_sha256="",
+            modified_residue_declaration_snapshot_sha256="",
             error_code=exc.code,
             reports=(),
             component_roles=(),
+            modified_residue_declarations=(),
             signals=tuple(
                 dict.fromkeys(
                     (
@@ -1618,8 +1730,18 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             f"corpus case {case.case_id} accepted an invalid source"
         )
     role_snapshot = parse_mmcif_nonpoly_component_roles(case.source_text)
+    modified_residue_snapshot = (
+        parse_mmcif_modified_residue_declarations(case.source_text)
+        if "source_declared_modified_residue" in case.source_features
+        else None
+    )
     reports = tuple(_report_projection(row) for row in snapshot.instance_reports)
     component_roles = tuple(row.to_dict() for row in role_snapshot.roles)
+    modified_residue_declarations = (
+        tuple(row.to_dict() for row in modified_residue_snapshot.declarations)
+        if modified_residue_snapshot is not None
+        else ()
+    )
     if [row["component_id"] for row in reports] != [
         row.component_id for row in case.expected_reports
     ] or [row["component_id"] for row in component_roles] != [
@@ -1642,11 +1764,21 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         observed_outcome="failure_complete_reports",
         preparation_snapshot_sha256=snapshot.snapshot_sha256,
         component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
+        modified_residue_declaration_snapshot_sha256=(
+            modified_residue_snapshot.snapshot_sha256
+            if modified_residue_snapshot is not None
+            else ""
+        ),
         error_code="",
         reports=reports,
         component_roles=component_roles,
+        modified_residue_declarations=modified_residue_declarations,
         signals=_signals_for_reports(
-            case, reports, component_roles, snapshot.to_dict()
+            case,
+            reports,
+            component_roles,
+            modified_residue_declarations,
+            snapshot.to_dict(),
         ),
     )
 
@@ -1744,6 +1876,12 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         "preparation_parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
         "component_role_profile_id": MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
         "component_role_parser_version": MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,
+        "modified_residue_declaration_profile_id": (
+            MMCIF_MODIFIED_RESIDUE_DECLARATION_PROFILE_ID
+        ),
+        "modified_residue_declaration_parser_version": (
+            MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION
+        ),
         "corpus_profile_id": MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID,
         "corpus_runner_version": MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION,
         "cases": [row.binding_dict() for row in cases],
