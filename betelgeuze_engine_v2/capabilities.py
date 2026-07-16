@@ -23,6 +23,9 @@ PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
 SDF_INGEST_CAPABILITY_ID = "v2_bounded_sdf_v2000_ingest"
 CIF_SYNTAX_CAPABILITY_ID = "v2_bounded_cif_syntax"
 MMCIF_SEMANTICS_CAPABILITY_ID = "v2_bounded_mmcif_semantic_projection"
+MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = (
+    "v2_bounded_mmcif_zero_occupancy_declarations"
+)
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -53,6 +56,13 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "atom_site_coordinate_observation_not_interpreted",
         "mmcif_missingness_altloc_and_assembly_not_interpreted",
         "mmcif_chemistry_and_topology_not_interpreted",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID: (
+        "atom_site_occupancy_not_crosschecked",
+        "coordinate_observation_and_missingness_not_inferred",
+        "alternate_location_population_not_interpreted",
+        "mmcif_chemistry_topology_and_preparation_not_interpreted",
         "product_integration_not_qualified",
     ),
     PHYSICS_REGISTRY_CAPABILITY_ID: (
@@ -158,6 +168,12 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID: _row(
+                MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
+                current_state="bounded_source_reported_zero_occupancy_declarations",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PHYSICS_REGISTRY_CAPABILITY_ID: _row(
                 PHYSICS_REGISTRY_CAPABILITY_ID,
                 current_state="reference_terms_implemented_unvalidated",
@@ -229,6 +245,7 @@ __all__ = [
     "EXTERNAL_BASELINE_CAPABILITY_ID",
     "IMPLEMENTATION_STAGE",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
+    "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",
     "PDB_INGEST_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",
     "SDF_INGEST_CAPABILITY_ID",

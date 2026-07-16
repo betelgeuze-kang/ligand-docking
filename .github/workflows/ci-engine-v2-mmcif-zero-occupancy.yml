@@ -7,9 +7,13 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_semantics.py"
       - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
       - "tests/unit/test_engine_v2_mmcif_semantics.py"
       - "tests/unit/test_engine_v2_mmcif_zero_occupancy.py"
+      - "tests/unit/test_engine_v2_post_merge_state.py"
+      - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-mmcif-zero-occupancy.yml"
   push:
     branches: ["main"]
@@ -18,9 +22,13 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_semantics.py"
       - "betelgeuze_engine_v2/molecular/mmcif_zero_occupancy.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
       - "tests/unit/test_engine_v2_mmcif_semantics.py"
       - "tests/unit/test_engine_v2_mmcif_zero_occupancy.py"
+      - "tests/unit/test_engine_v2_post_merge_state.py"
+      - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-mmcif-zero-occupancy.yml"
   workflow_dispatch:
 
@@ -34,7 +42,7 @@ concurrency:
 jobs:
   zero-occupancy-declarations:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -53,10 +61,19 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             betelgeuze_engine_v2
+            config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
             tests/unit/test_engine_v2_mmcif_zero_occupancy.py
+            tests/unit/test_engine_v2_post_merge_state.py
+            docs/engine_v2_status.md
+            docs/engine_v2_public_api.md
+            docs/entrypoints.md
+            README.md
+            README.ko.md
+            .github/workflows/ci-engine-v2-main.yml
+            .github/workflows/ci-engine-v2-mmcif-zero-occupancy.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -68,7 +85,7 @@ jobs:
       - name: Install focused CPU dependencies
         run: |
           python -m pip install pip==25.0.1
-          python -m pip install pytest==8.3.5 numpy==1.26.4
+          python -m pip install pytest==8.3.5 PyYAML==6.0.3 numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Compile and enforce Engine v2 architecture boundary
@@ -83,7 +100,7 @@ jobs:
           cat mmcif-zero-occupancy.log
           exit "$status"
 
-      - name: Run lexical, semantic, and zero-occupancy declaration contracts
+      - name: Run lexical semantic declaration capability and registration contracts
         shell: bash
         run: |
           set +e
@@ -91,6 +108,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_syntax.py \
             tests/unit/test_engine_v2_mmcif_semantics.py \
             tests/unit/test_engine_v2_mmcif_zero_occupancy.py \
+            tests/unit/test_engine_v2_post_merge_state.py \
             >> mmcif-zero-occupancy.log 2>&1
           status=$?
           cat mmcif-zero-occupancy.log

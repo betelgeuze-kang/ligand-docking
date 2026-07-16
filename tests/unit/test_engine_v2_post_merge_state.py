@@ -14,6 +14,7 @@ from betelgeuze_engine_v2.capabilities import (
     EXTERNAL_BASELINE_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
     MMCIF_SEMANTICS_CAPABILITY_ID,
+    MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
     capability_snapshot,
     require_capability_snapshot,
@@ -26,7 +27,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 10
+    assert len(loaded["capabilities"]) == 11
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -41,16 +42,22 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     assert CIF_SYNTAX_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
+    assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
     assert rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"] is False
 
-    semantic = rows[MMCIF_SEMANTICS_CAPABILITY_ID]
-    assert semantic["current_state"] == "bounded_entity_asym_polymer_sequence_projection"
-    assert "atom_site_coordinate_observation_not_interpreted" in semantic["blockers"]
-    assert "mmcif_chemistry_and_topology_not_interpreted" in semantic["blockers"]
-    assert semantic["scientifically_validated"] is False
-    assert semantic["product_qualified"] is False
-    assert semantic["claim_safe"] is False
+    mmcif_semantics = rows[MMCIF_SEMANTICS_CAPABILITY_ID]
+    assert mmcif_semantics["current_state"] == "bounded_entity_asym_polymer_sequence_projection"
+    assert "atom_site_coordinate_observation_not_interpreted" in mmcif_semantics["blockers"]
+    assert "mmcif_missingness_altloc_and_assembly_not_interpreted" in mmcif_semantics["blockers"]
+
+    zero_occupancy = rows[MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID]
+    assert zero_occupancy["current_state"] == "bounded_source_reported_zero_occupancy_declarations"
+    assert zero_occupancy["internal_reference_execution_enabled"] is True
+    assert "atom_site_occupancy_not_crosschecked" in zero_occupancy["blockers"]
+    assert "coordinate_observation_and_missingness_not_inferred" in zero_occupancy["blockers"]
+    assert "alternate_location_population_not_interpreted" in zero_occupancy["blockers"]
+    assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in zero_occupancy["blockers"]
 
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
@@ -96,6 +103,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_contracts_molecular.py",
         "test_engine_v2_mmcif_syntax.py",
         "test_engine_v2_mmcif_semantics.py",
+        "test_engine_v2_mmcif_zero_occupancy.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
         "test_engine_v2_periodic_energy.py",
@@ -105,6 +113,9 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_bounded_scaffolds.py",
         "test_engine_v2_post_merge_state.py",
         "test_engine_v2_docking_semantics.py",
+        "test_engine_v2_benchmark_contracts.py",
+        "test_engine_v2_reference_physics.py",
+        "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source
     assert "pip check" in source
