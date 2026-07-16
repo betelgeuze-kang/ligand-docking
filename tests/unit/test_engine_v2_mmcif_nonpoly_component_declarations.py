@@ -517,7 +517,7 @@ def test_identity_marker_integer_and_token_bounds_are_enforced() -> None:
 
 def test_errors_do_not_echo_private_identity_values() -> None:
     private = _updated(ATOM_ROWS, 1, "_chem_comp_atom.comp_id", "PRIVATE-COMP")
-    error = _error(_source(atom_rows=private), "component_atom_coverage_mismatch")
+    error = _error(_source(atom_rows=private), "bond_endpoint_identity_missing")
 
     assert "PRIVATE-COMP" not in str(error)
     assert "PRIVATE-COMP" not in error.detail
