@@ -1,3 +1,4 @@
+# GitHub-hosted setup-python v6 policy; reviewed v5 exceptions are explicit below.
 name: ci-setup-python-v6-hosted
 
 on:
