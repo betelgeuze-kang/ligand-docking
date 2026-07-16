@@ -29,7 +29,7 @@ def materialize_from_docking_request(
     docking_job_id = _text(params.get("docking_job_id") or payload.get("job_id"))
     target = _text(payload.get("target_name") or params.get("target_id")) or "target"
     family = _text(params.get("family"))
-    ligands, target, family, expected_count, synthetic_used = _resolve_materialization_inputs(
+    ligands, target, family, expected_count, synthetic_used, _recovered_request = _resolve_materialization_inputs(
         payload,
         params,
         docking_job_id=docking_job_id,
@@ -61,6 +61,9 @@ def materialize_from_docking_request(
         "synthetic_input_used": synthetic_used,
         "docking_job_id": docking_job_id,
         "request_json_path": str(request_json_path),
+        "scientific_input_provenance_recheck": dict(
+            params.get("_scientific_input_provenance_recheck") or {}
+        ),
     }
     meta_path = os.path.join(out_dir, "docking_backmapping_materialized.json")
     Path(meta_path).write_text(
