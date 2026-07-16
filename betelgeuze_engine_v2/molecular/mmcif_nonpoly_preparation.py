@@ -25,6 +25,9 @@ import tempfile
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from .mmcif_missing_atom_residue_policy import (
+    parse_mmcif_missing_atom_residue_policy,
+)
 from .mmcif_nonpoly_atom_site_observations import (
     MmcifNonpolyAtomSiteObservationSnapshot,
     parse_mmcif_nonpoly_atom_site_observations,
@@ -232,6 +235,9 @@ class MmcifNonpolyInstancePreparationReport:
 @dataclass(frozen=True, slots=True, repr=False)
 class MmcifNonpolyPreparationSnapshot:
     source_sha256: str
+    missing_atom_residue_policy_snapshot_sha256: str
+    missing_atom_residue_policy_projection_sha256: str
+    missing_atom_residue_policy_source_binding_sha256: str
     observation_snapshot_sha256: str
     scalar_snapshot_sha256: str
     scalar_projection_sha256: str
@@ -284,6 +290,9 @@ class MmcifNonpolyPreparationSnapshot:
             "profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
             "parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
             "source_sha256": self.source_sha256,
+            "missing_atom_residue_policy_snapshot_sha256": (
+                self.missing_atom_residue_policy_snapshot_sha256
+            ),
             "observation_snapshot_sha256": self.observation_snapshot_sha256,
             "scalar_snapshot_sha256": self.scalar_snapshot_sha256,
             "component_snapshot_sha256": self.component_snapshot_sha256,
@@ -333,6 +342,7 @@ def _claim_policy() -> dict[str, bool]:
         "hydrogen_completion_graph_created": True,
         "parameterability_assessed": True,
         "failure_complete_instance_reports": True,
+        "missing_atom_residue_admission_checked": True,
         "source_authenticated": False,
         "charged_chemistry_supported": False,
         "aromatic_chemistry_supported": False,
@@ -781,12 +791,19 @@ def parse_mmcif_nonpoly_preparation(text: str) -> MmcifNonpolyPreparationSnapsho
 
     if type(text) is not str:
         raise TypeError("mmCIF nonpoly preparation input must be a string")
+    missing_atom_residue_policy = parse_mmcif_missing_atom_residue_policy(text)
+    if not missing_atom_residue_policy.execution_allowed:
+        raise MmcifNonpolyPreparationError(
+            "source_declared_observation_gap_not_supported",
+            "source-declared unobserved or zero-occupancy rows block preparation",
+        )
     observation = parse_mmcif_nonpoly_atom_site_observations(text)
     scalar = parse_mmcif_nonpoly_atom_site_scalar_values(text)
     components = parse_mmcif_nonpoly_component_declarations(text)
     topology = parse_mmcif_nonpoly_canonical_topology(text)
     if not (
-        observation.source_sha256
+        missing_atom_residue_policy.source_sha256
+        == observation.source_sha256
         == scalar.source_sha256
         == components.source_sha256
         == topology.source_sha256
@@ -830,6 +847,15 @@ def parse_mmcif_nonpoly_preparation(text: str) -> MmcifNonpolyPreparationSnapsho
         global_blockers.append("intercomponent_coordination_not_prepared")
     return MmcifNonpolyPreparationSnapshot(
         source_sha256=observation.source_sha256,
+        missing_atom_residue_policy_snapshot_sha256=(
+            missing_atom_residue_policy.snapshot_sha256
+        ),
+        missing_atom_residue_policy_projection_sha256=(
+            missing_atom_residue_policy.policy_projection_sha256
+        ),
+        missing_atom_residue_policy_source_binding_sha256=(
+            missing_atom_residue_policy.source_binding_sha256
+        ),
         observation_snapshot_sha256=observation.snapshot_sha256,
         scalar_snapshot_sha256=scalar.snapshot_sha256,
         scalar_projection_sha256=scalar.scalar_projection_sha256,
@@ -852,6 +878,9 @@ def mmcif_nonpoly_preparation_projection(
         "schema_id": MMCIF_NONPOLY_PREPARATION_PROJECTION_SCHEMA_ID,
         "profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
         "parser_version": MMCIF_NONPOLY_PREPARATION_PARSER_VERSION,
+        "missing_atom_residue_policy_projection_sha256": (
+            snapshot.missing_atom_residue_policy_projection_sha256
+        ),
         "scalar_projection_sha256": snapshot.scalar_projection_sha256,
         "component_projection_sha256": snapshot.component_projection_sha256,
         "topology_projection_sha256": snapshot.topology_projection_sha256,
@@ -870,6 +899,12 @@ def mmcif_nonpoly_preparation_source_binding(
     return {
         "schema_id": MMCIF_NONPOLY_PREPARATION_SOURCE_BINDING_SCHEMA_ID,
         "source_sha256": snapshot.source_sha256,
+        "missing_atom_residue_policy_snapshot_sha256": (
+            snapshot.missing_atom_residue_policy_snapshot_sha256
+        ),
+        "missing_atom_residue_policy_source_binding_sha256": (
+            snapshot.missing_atom_residue_policy_source_binding_sha256
+        ),
         "observation_snapshot_sha256": snapshot.observation_snapshot_sha256,
         "scalar_snapshot_sha256": snapshot.scalar_snapshot_sha256,
         "scalar_source_binding_sha256": snapshot.scalar_source_binding_sha256,
@@ -1204,6 +1239,7 @@ def require_mmcif_nonpoly_preparation_document(
     if document.get("source_sha256") != source_sha:
         raise ValueError("nonpoly preparation source digest mismatch")
     for key in (
+        "missing_atom_residue_policy_snapshot_sha256",
         "observation_snapshot_sha256",
         "scalar_snapshot_sha256",
         "component_snapshot_sha256",
@@ -1213,12 +1249,14 @@ def require_mmcif_nonpoly_preparation_document(
         if document.get(key) != digest:
             raise ValueError(f"nonpoly preparation {key} mismatch")
     for key in (
+        "missing_atom_residue_policy_projection_sha256",
         "scalar_projection_sha256",
         "component_projection_sha256",
         "topology_projection_sha256",
     ):
         _require_digest(projection.get(key), key)
     for key in (
+        "missing_atom_residue_policy_source_binding_sha256",
         "scalar_source_binding_sha256",
         "component_source_binding_sha256",
         "topology_source_binding_sha256",
