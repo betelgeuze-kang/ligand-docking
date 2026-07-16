@@ -419,7 +419,7 @@ def test_entity_asym_component_and_instance_relationships_fail_closed() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.asym_id", "PRIVATE"),
     )
-    _error(unknown_asym, "asym_reference_missing")
+    _error(unknown_asym, "nonpoly_scheme_join_mismatch")
 
     wrong_entity = _source(
         entity_rows=PURE_ENTITY_ROWS,
@@ -428,7 +428,7 @@ def test_entity_asym_component_and_instance_relationships_fail_closed() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.entity_id", "2"),
     )
-    _error(wrong_entity, "asym_entity_reference_mismatch")
+    _error(wrong_entity, "nonpoly_scheme_join_mismatch")
 
     wrong_component = _source(
         entity_rows=PURE_ENTITY_ROWS,
@@ -437,7 +437,7 @@ def test_entity_asym_component_and_instance_relationships_fail_closed() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.mon_id", "OTHER"),
     )
-    _error(wrong_component, "scheme_component_mismatch")
+    _error(wrong_component, "nonpoly_component_join_mismatch")
 
 
 def test_duplicate_identity_and_instance_keys_are_rejected() -> None:
@@ -477,7 +477,7 @@ def test_errors_do_not_echo_private_identity_values() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=_updated(PURE_SCHEME_ROWS, 0, "_pdbx_nonpoly_scheme.asym_id", "PRIVATE-ASYM"),
     )
-    error = _error(source, "asym_reference_missing")
+    error = _error(source, "nonpoly_scheme_join_mismatch")
     assert "PRIVATE-ASYM" not in str(error)
     assert "PRIVATE-ASYM" not in error.detail
 
