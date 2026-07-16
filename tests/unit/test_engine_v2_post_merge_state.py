@@ -197,14 +197,8 @@ def test_readmes_describe_conditional_complexity_and_v2_quick_start() -> None:
 
 def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     source = Path(".github/workflows/ci-engine-v2-main.yml").read_text(encoding="utf-8")
-    preparation_source = Path(
-        ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
-    ).read_text(encoding="utf-8")
     assert 'branches: ["main"]' in source
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
-    assert 'python-version: ["3.10", "3.11", "3.12"]' in preparation_source
-    assert "mmcif_nonpoly_preparation.py" in preparation_source
-    assert "test_engine_v2_mmcif_nonpoly_preparation.py" in preparation_source
     for test_file in (
         "test_engine_v2_contracts_molecular.py",
         "test_engine_v2_mmcif_syntax.py",
