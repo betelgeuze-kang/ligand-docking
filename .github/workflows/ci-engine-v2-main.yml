@@ -77,6 +77,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
             tests/unit/test_engine_v2_mmcif_zero_occupancy.py
+            tests/unit/test_engine_v2_mmcif_altloc_source.py
             tests/unit/test_engine_v2_sparse_geometry_features.py
             tests/unit/test_engine_v2_ai_core.py
             tests/unit/test_engine_v2_periodic_energy.py
@@ -131,6 +132,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_syntax.py \
             tests/unit/test_engine_v2_mmcif_semantics.py \
             tests/unit/test_engine_v2_mmcif_zero_occupancy.py \
+            tests/unit/test_engine_v2_mmcif_altloc_source.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \
             tests/unit/test_engine_v2_periodic_energy.py \
@@ -197,7 +199,10 @@ jobs:
           )
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.docking import DockingProblemIdentity
-          from betelgeuze_engine_v2.molecular import CANONICAL_SYSTEM_JSON_SCHEMA_ID
+          from betelgeuze_engine_v2.molecular import (
+              CANONICAL_SYSTEM_JSON_SCHEMA_ID,
+              MMCIF_ALTLOC_SOURCE_DOCUMENT_SCHEMA_ID,
+          )
           from betelgeuze_engine_v2.molecular.mmcif_syntax import parse_cif_block
           from betelgeuze_engine_v2.molecular.mmcif_zero_occupancy import (
               MMCIF_ZERO_OCCUPANCY_DOCUMENT_SCHEMA_ID,
@@ -235,5 +240,6 @@ jobs:
           ).scientifically_validated is False
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_ZERO_OCCUPANCY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
+          assert MMCIF_ALTLOC_SOURCE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert parse_cif_block("data_child\n_entry.id syntax\n").name == "child"
           PY
