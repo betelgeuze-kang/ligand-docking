@@ -33,7 +33,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 25
+    assert len(cases) == 26
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -209,6 +209,22 @@ def test_multimodel_source_is_classified_before_preparation_rejects_it(
     ]
 
 
+def test_explicit_nonpoly_altloc_is_a_frozen_preparation_boundary(
+    corpus_snapshot,
+) -> None:
+    result = {
+        row.case_id: row for row in corpus_snapshot.case_results
+    }["unsupported_altloc_input"]
+
+    assert result.cohort == "unsupported_upstream_policy"
+    assert result.observed_outcome == "expected_error"
+    assert result.error_code == "nonblank_atom_site_marker_not_supported"
+    assert result.preparation_snapshot_sha256 == ""
+    assert result.atom_site_model_policy["execution_allowed"] is True
+    assert "source_feature:atom_site_label_alt_id:explicit" in result.signals
+    assert "error:nonblank_atom_site_marker_not_supported" in result.signals
+
+
 def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
     corpus_snapshot,
 ) -> None:
@@ -262,8 +278,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 23,
-        "not_implemented": 12,
+        "explicitly_unsupported": 24,
+        "not_implemented": 11,
         "supported": 16,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -285,6 +301,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "role.metal" not in missing
     assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
     assert "role.modified_residue" not in missing
+    assert "upstream.altloc_selection" not in missing
     assert "upstream.multimodel_policy" not in missing
     assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
     assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")

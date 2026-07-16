@@ -24,9 +24,9 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "coordination edge" in roadmap
     assert "neutral acyclic C/O/H" in roadmap
     assert "parameterable=false" in roadmap
-    assert "exact ASCII 25-case" in roadmap
+    assert "exact ASCII 26-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "12개 `not_implemented`" in roadmap
+    assert "11개 `not_implemented`" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap
@@ -36,6 +36,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "atom-site\nobservation, parent chemistry" in roadmap
     assert "model set이 정확히 `{1}`" in roadmap
     assert "첫 model로 자동 선택하지 않고 명시적으로" in roadmap
+    assert "explicit `label_alt_id` 입력" in roadmap
+    assert "chemistry preparation 전에 fail-closed" in roadmap
     assert "parameter_fitting_allowed=false" in roadmap
     assert "v2_1_exit_ready=false" in roadmap
     assert "atom_site_identity_joined" in roadmap
