@@ -1,0 +1,89 @@
+name: fix-v2-mmcif-nonpoly-applicator
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/fix-v2-mmcif-nonpoly-applicator.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-v2-mmcif-nonpoly-applicator
+  cancel-in-progress: false
+
+jobs:
+  correct-applicator:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/v2-mmcif-nonpoly-identity'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-nonpoly-identity
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+
+      - name: Correct repeated path expectations and bot continuation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          applicator = Path(".github/workflows/apply-v2-mmcif-nonpoly-registration.yml")
+          source = applicator.read_text(encoding="utf-8")
+          old_actor = "      github.actor == 'betelgeuze-kang' &&\n"
+          new_actor = (
+              "      (github.actor == 'betelgeuze-kang' || "
+              "github.actor == 'github-actions[bot]') &&\n"
+          )
+          if source.count(old_actor) != 1:
+              raise SystemExit("unexpected actor guard count")
+          source = source.replace(old_actor, new_actor, 1)
+
+          old_helper = '''              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"unexpected replacement count in {path}: {count} for {old!r}"
+                  )
+              file.write_text(source.replace(old, new, 1), encoding="utf-8")
+          '''
+          new_helper = '''              count = source.count(old)
+              repeated_paths = {
+                  '      - "betelgeuze_engine_v2/molecular/__init__.py"\\n',
+                  '      - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"\\n',
+              }
+              expected_count = 2 if old in repeated_paths else 1
+              if count != expected_count:
+                  raise SystemExit(
+                      f"unexpected replacement count in {path}: {count} "
+                      f"expected {expected_count} for {old!r}"
+                  )
+              file.write_text(
+                  source.replace(old, new, expected_count),
+                  encoding="utf-8",
+              )
+          '''
+          if source.count(old_helper) != 1:
+              raise SystemExit("unexpected replacement helper count")
+          applicator.write_text(source.replace(old_helper, new_helper, 1), encoding="utf-8")
+          Path(".github/workflows/fix-v2-mmcif-nonpoly-applicator.yml").unlink()
+          PY
+          git diff --check
+
+      - name: Commit corrected one-time applicator
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "ci: correct bounded nonpoly registration counts"
+          git push origin HEAD:codex/v2-mmcif-nonpoly-identity
