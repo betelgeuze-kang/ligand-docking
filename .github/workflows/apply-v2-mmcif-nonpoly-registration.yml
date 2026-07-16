@@ -17,8 +17,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == 'betelgeuze-kang' &&
-      github.head_ref == 'codex/v2-mmcif-nonpoly-identity' &&
-      github.event.pull_request.head.sha == '2e052faf78ca7e7ada25bf6c20b3009b889610c4'
+      github.head_ref == 'codex/v2-mmcif-nonpoly-identity'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
