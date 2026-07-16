@@ -5,14 +5,14 @@ on:
     paths:
       - "tools/product/self_hosted_runner_qualification.py"
       - "tests/unit/test_self_hosted_runner_qualification.py"
-      - ".github/workflows/product-api-worker-trusted.yml"
+      - ".github/workflows/self-hosted-runner-node24-qualification-trusted.yml"
       - ".github/workflows/ci-self-hosted-runner-qualification.yml"
   push:
     branches: ["main"]
     paths:
       - "tools/product/self_hosted_runner_qualification.py"
       - "tests/unit/test_self_hosted_runner_qualification.py"
-      - ".github/workflows/product-api-worker-trusted.yml"
+      - ".github/workflows/self-hosted-runner-node24-qualification-trusted.yml"
       - ".github/workflows/ci-self-hosted-runner-qualification.yml"
   workflow_dispatch:
 
@@ -38,10 +38,12 @@ jobs:
           clean: true
           fetch-depth: 1
           sparse-checkout: |
+            tools/__init__.py
+            tools/product/__init__.py
             tools/product/self_hosted_runner_qualification.py
             tests/__init__.py
             tests/unit/test_self_hosted_runner_qualification.py
-            .github/workflows/product-api-worker-trusted.yml
+            .github/workflows/self-hosted-runner-node24-qualification-trusted.yml
             .github/workflows/ci-self-hosted-runner-qualification.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -51,8 +53,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install focused test dependency
-        run: python -m pip install pytest==9.1.1
+      - name: Install focused test dependencies
+        run: python -m pip install pytest==9.1.1 PyYAML==6.0.3
 
       - name: Compile and run qualification contracts
         shell: bash

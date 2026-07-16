@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Qualify a self-hosted GitHub Actions runner for Node 24 based Actions.
 
-The trusted workflow deliberately keeps setup-python v5 until a real runner
-receipt demonstrates that its Actions runner satisfies the Node 24 minimum.
-This tool discovers the installed Runner.Listener, records its exact version and
-binary digest, and fails closed when the version cannot be established.
+The qualification path uses a Node-20-compatible checkout action, then discovers
+and hashes the installed ``Runner.Listener`` before any Node 24 based action is
+allowed to execute. The resulting receipt describes runner software compatibility
+only; it is not scientific, GPU, product, or customer-execution evidence.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from typing import Any, Iterable, Mapping, Sequence
 QUALIFICATION_SCHEMA_VERSION = "self_hosted_runner_qualification_v1"
 NODE24_MINIMUM_RUNNER_VERSION = (2, 327, 1)
 _VERSION_RE = re.compile(r"^[vV]?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 MAX_LISTENER_BYTES = 256 * 1024 * 1024
 
 
@@ -59,6 +60,12 @@ def _canonical_bytes(value: Any) -> bytes:
         ensure_ascii=False,
         allow_nan=False,
     ).encode("utf-8")
+
+
+def _receipt_sha256(receipt: Mapping[str, Any]) -> str:
+    body = dict(receipt)
+    body.pop("receipt_sha256", None)
+    return hashlib.sha256(_canonical_bytes(body)).hexdigest()
 
 
 def _sha256_file(path: Path) -> tuple[str, int]:
@@ -138,13 +145,16 @@ def _candidate_listener_paths(
         try:
             executable = Path(os.readlink(f"/proc/{pid}/exe"))
         except OSError:
-            executable = Path()
-        if executable:
+            executable = None
+        if executable is not None:
             yield from emit(executable.parent / "Runner.Listener")
             yield from emit(executable.parent.parent / "bin" / "Runner.Listener")
         try:
-            stat_fields = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8").split()
-            pid = int(stat_fields[3])
+            raw_stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+            _prefix, separator, suffix = raw_stat.rpartition(")")
+            fields = suffix.split() if separator else []
+            # Fields after the command name begin with state and then ppid.
+            pid = int(fields[1])
         except (OSError, ValueError, IndexError):
             break
 
@@ -199,6 +209,7 @@ def build_qualification_receipt(
     version_source: str,
     listener_sha256: str = "",
     listener_size_bytes: int = 0,
+    declared_runner_version: str = "",
     environment: Mapping[str, str] | None = None,
     observed_at_utc: str | None = None,
 ) -> dict[str, Any]:
@@ -207,6 +218,7 @@ def build_qualification_receipt(
     minimum = NODE24_MINIMUM_RUNNER_VERSION
     qualified = version_at_least(parsed, minimum)
     runner_name = str(env.get("RUNNER_NAME", "") or "")
+    declared = version_text(parse_runner_version(declared_runner_version)) if declared_runner_version else ""
     body: dict[str, Any] = {
         "schema_version": QUALIFICATION_SCHEMA_VERSION,
         "status": (
@@ -218,6 +230,10 @@ def build_qualification_receipt(
         "observed_runner_version": version_text(parsed),
         "minimum_runner_version": version_text(minimum),
         "version_source": str(version_source),
+        "declared_runner_version": declared,
+        "declared_version_matches_listener": (
+            declared == version_text(parsed) if declared else None
+        ),
         "runner_listener_sha256": str(listener_sha256),
         "runner_listener_size_bytes": int(listener_size_bytes),
         "runner_name_sha256": hashlib.sha256(runner_name.encode("utf-8")).hexdigest() if runner_name else "",
@@ -235,11 +251,49 @@ def build_qualification_receipt(
             "GPU parity, product execution, customer delivery, or commercial readiness."
         ),
     }
-    body["receipt_sha256"] = hashlib.sha256(_canonical_bytes(body)).hexdigest()
+    body["receipt_sha256"] = _receipt_sha256(body)
     return body
 
 
+def verify_qualification_receipt(
+    receipt: Any,
+    *,
+    require_qualified: bool = False,
+) -> tuple[bool, str]:
+    if not isinstance(receipt, Mapping):
+        return False, "qualification_receipt_not_mapping"
+    payload = dict(receipt)
+    observed_digest = str(payload.get("receipt_sha256") or "")
+    if _SHA256_RE.fullmatch(observed_digest) is None or observed_digest != _receipt_sha256(payload):
+        return False, "qualification_receipt_digest_mismatch"
+    if payload.get("schema_version") != QUALIFICATION_SCHEMA_VERSION:
+        return False, "qualification_receipt_schema_mismatch"
+    try:
+        observed = parse_runner_version(payload.get("observed_runner_version"))
+        minimum = parse_runner_version(payload.get("minimum_runner_version"))
+    except ValueError:
+        return False, "qualification_receipt_version_invalid"
+    expected_qualified = version_at_least(observed, minimum)
+    if payload.get("qualified") is not expected_qualified:
+        return False, "qualification_receipt_status_inconsistent"
+    if payload.get("setup_python_v6_qualified") is not expected_qualified:
+        return False, "qualification_receipt_setup_python_status_inconsistent"
+    if payload.get("version_source") == "Runner.Listener":
+        if _SHA256_RE.fullmatch(str(payload.get("runner_listener_sha256") or "")) is None:
+            return False, "qualification_receipt_listener_digest_missing"
+        if int(payload.get("runner_listener_size_bytes") or 0) <= 0:
+            return False, "qualification_receipt_listener_size_missing"
+        if payload.get("declared_version_matches_listener") is False:
+            return False, "qualification_receipt_declared_version_mismatch"
+    if require_qualified and not expected_qualified:
+        return False, "qualification_receipt_runner_too_old"
+    return True, "verified"
+
+
 def write_receipt(path: str | Path, receipt: Mapping[str, Any]) -> Path:
+    verified, reason = verify_qualification_receipt(receipt, require_qualified=False)
+    if not verified:
+        raise RunnerQualificationError(reason)
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(dict(receipt), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
@@ -257,6 +311,12 @@ def write_receipt(path: str | Path, receipt: Mapping[str, Any]) -> Path:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary_path, destination)
+        directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0)
+        directory_fd = os.open(destination.parent, directory_flags)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     except Exception:
         try:
             os.close(file_fd)
@@ -282,31 +342,36 @@ def qualify_runner(
     explicit = str(observed_version or "").strip()
     listener_sha256 = ""
     listener_size = 0
+    declared = str(env.get("ACTIONS_RUNNER_VERSION", "") or "").strip()
     if explicit:
         version = version_text(parse_runner_version(explicit))
         source = "explicit_argument"
     else:
-        env_version = str(env.get("ACTIONS_RUNNER_VERSION", "") or "").strip()
-        if env_version:
-            version = version_text(parse_runner_version(env_version))
-            source = "ACTIONS_RUNNER_VERSION"
-        else:
-            listener = discover_runner_listener(
-                runner_root=runner_root,
-                environment=env,
-                parent_pid=parent_pid,
+        listener = discover_runner_listener(
+            runner_root=runner_root,
+            environment=env,
+            parent_pid=parent_pid,
+        )
+        version = listener_version(listener)
+        listener_sha256, listener_size = _sha256_file(listener)
+        source = "Runner.Listener"
+        if declared and parse_runner_version(declared) != parse_runner_version(version):
+            raise RunnerQualificationError(
+                "ACTIONS_RUNNER_VERSION disagrees with Runner.Listener --version"
             )
-            version = listener_version(listener)
-            listener_sha256, listener_size = _sha256_file(listener)
-            source = "Runner.Listener"
-    return build_qualification_receipt(
+    receipt = build_qualification_receipt(
         observed_version=version,
         version_source=source,
         listener_sha256=listener_sha256,
         listener_size_bytes=listener_size,
+        declared_runner_version=declared,
         environment=env,
         observed_at_utc=observed_at_utc,
     )
+    verified, reason = verify_qualification_receipt(receipt, require_qualified=False)
+    if not verified:
+        raise RunnerQualificationError(reason)
+    return receipt
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,0 +1,54 @@
+name: self-hosted-runner-node24-qualification-trusted
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "tools/product/self_hosted_runner_qualification.py"
+      - "tests/unit/test_self_hosted_runner_qualification.py"
+      - ".github/workflows/self-hosted-runner-node24-qualification-trusted.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-runner-node24-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node24-runner-qualification:
+    if: >-
+      ${{ vars.TRUSTED_SELF_HOSTED_CI_ENABLED == 'true'
+      && ((github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 15
+    steps:
+      - name: Check out qualification source with the reviewed Node 20 action
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            tools/product/self_hosted_runner_qualification.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - name: Qualify Runner.Listener for Node 24 Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          receipt="${RUNNER_TEMP}/self-hosted-runner-qualification-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          echo "SELF_HOSTED_RUNNER_QUALIFICATION_RECEIPT=${receipt}" >> "${GITHUB_ENV}"
+          python3 tools/product/self_hosted_runner_qualification.py \
+            --receipt "${receipt}"
+
+      - name: Upload qualified self-hosted runner receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: self-hosted-runner-node24-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.SELF_HOSTED_RUNNER_QUALIFICATION_RECEIPT }}
+          if-no-files-found: error
+          retention-days: 30
