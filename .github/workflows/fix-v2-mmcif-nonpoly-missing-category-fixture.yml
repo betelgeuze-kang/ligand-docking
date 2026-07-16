@@ -38,22 +38,30 @@ jobs:
 
           path = Path("tests/unit/test_engine_v2_mmcif_nonpoly_identity.py")
           source = path.read_text(encoding="utf-8")
-          old = '''    missing = _source(
-              entity_rows=PURE_ENTITY_ROWS,
-              asym_rows=PURE_ASYM_ROWS,
-              component_rows=PURE_COMPONENT_ROWS,
-              entity_nonpoly_rows=(),
-              scheme_rows=PURE_SCHEME_ROWS,
+          old = "\n".join(
+              [
+                  "    missing = _source(",
+                  "        entity_rows=PURE_ENTITY_ROWS,",
+                  "        asym_rows=PURE_ASYM_ROWS,",
+                  "        component_rows=PURE_COMPONENT_ROWS,",
+                  "        entity_nonpoly_rows=(),",
+                  "        scheme_rows=PURE_SCHEME_ROWS,",
+                  "    )",
+                  "",
+              ]
           )
-          '''
-          new = '''    missing = (
-              "data_nonpoly\\n#\\n"
-              + _loop(ENTITY_HEADERS, PURE_ENTITY_ROWS)
-              + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)
-              + _loop(CHEM_COMP_HEADERS, PURE_COMPONENT_ROWS)
-              + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS)
+          new = "\n".join(
+              [
+                  "    missing = (",
+                  '        "data_nonpoly\\n#\\n"',
+                  "        + _loop(ENTITY_HEADERS, PURE_ENTITY_ROWS)",
+                  "        + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)",
+                  "        + _loop(CHEM_COMP_HEADERS, PURE_COMPONENT_ROWS)",
+                  "        + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS)",
+                  "    )",
+                  "",
+              ]
           )
-          '''
           if source.count(old) != 1:
               raise SystemExit("missing-category fixture block drifted")
           path.write_text(source.replace(old, new, 1), encoding="utf-8")
