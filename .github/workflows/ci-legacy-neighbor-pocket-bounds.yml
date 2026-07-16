@@ -52,6 +52,8 @@ jobs:
           sparse-checkout: |
             betelgeuze_engine
             core
+            tools/product/run_runtime_neighbor_release_scaling.py
+            tools/product/run_rust_hip_neighbor_provider_parity.py
             tests/unit/test_neighbor_cache_geometry.py
             tests/unit/test_pocket_detection_bounds.py
             tests/unit/test_runtime_neighbor_release_scaling.py
