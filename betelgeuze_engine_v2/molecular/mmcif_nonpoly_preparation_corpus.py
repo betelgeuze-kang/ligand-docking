@@ -19,6 +19,12 @@ import tempfile
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from betelgeuze_engine_v2.parameter_source_provenance import (
+    PARAMETER_SOURCE_PROVENANCE_PROFILE_ID,
+    PARAMETER_SOURCE_PROVENANCE_REVIEW_VERSION,
+    reviewed_parameter_source_provenance,
+)
+
 from .mmcif_atom_site_model_policy import (
     MMCIF_ATOM_SITE_MODEL_POLICY_PARSER_VERSION,
     MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
@@ -89,7 +95,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "315da1d7142f3b6df0ab64f8168ec16a0252c218326e1eab8caf0a4cce2eacda"
+    "52e9ee605a8155108612edf789f9b9e7b60fc06559538987754bc34c2f25baaf"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -373,6 +379,7 @@ def _claim_policy() -> dict[str, bool]:
         "failure_complete_case_rows": True,
         "declared_coverage_axes_classified": True,
         "expectations_executed_against_current_parser": True,
+        "reviewed_parameter_source_provenance_bound": True,
         "corpus_is_parameter_fitting_data": False,
         "parameter_fitting_allowed": False,
         "v2_1_exit_ready": False,
@@ -1767,10 +1774,12 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "parameter_source.reviewed",
             "parameterability",
-            missing,
-            "",
-            (),
-            "reviewed_parameter_source_missing",
+            supported,
+            (
+                "parameter_source_provenance_status:"
+                "reviewed_identity_license_and_scope_only"
+            ),
+            ("supported_carbonyl",),
         ),
         _coverage(
             "partial_charge.assignment",
@@ -1894,7 +1903,18 @@ def _signals_for_reports(
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
 ) -> tuple[str, ...]:
+    parameter_source_provenance = reviewed_parameter_source_provenance()
     signals = [f"source_feature:{value}" for value in case.source_features]
+    signals.extend(
+        (
+            "parameter_source_provenance_status:"
+            f"{parameter_source_provenance.review_status}",
+            "parameter_source_provenance_snapshot_sha256:"
+            f"{parameter_source_provenance.snapshot_sha256}",
+            "parameter_source_assignment_implemented:false",
+            "parameter_source_applicability_validated:false",
+        )
+    )
     signals.extend(
         (
             f"model_policy_status:{atom_site_model_policy['execution_policy_status']}",
@@ -2246,6 +2266,7 @@ def mmcif_nonpoly_preparation_corpus_projection(
 
 def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
     cases = mmcif_nonpoly_preparation_corpus_cases()
+    parameter_source_provenance = reviewed_parameter_source_provenance()
     return {
         "schema_id": MMCIF_NONPOLY_PREPARATION_CORPUS_SOURCE_BINDING_SCHEMA_ID,
         "preparation_profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
@@ -2271,6 +2292,15 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         ),
         "hydrogen_coordinate_generator_version": (
             MMCIF_NONPOLY_HYDROGEN_COORDINATE_GENERATOR_VERSION
+        ),
+        "parameter_source_provenance_profile_id": (
+            PARAMETER_SOURCE_PROVENANCE_PROFILE_ID
+        ),
+        "parameter_source_provenance_review_version": (
+            PARAMETER_SOURCE_PROVENANCE_REVIEW_VERSION
+        ),
+        "parameter_source_provenance_snapshot_sha256": (
+            parameter_source_provenance.snapshot_sha256
         ),
         "component_role_profile_id": MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
         "component_role_parser_version": MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,

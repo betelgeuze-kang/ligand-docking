@@ -6,6 +6,17 @@ from betelgeuze_engine_v2.physics.composition import (
     IndependentPhysicsProvider,
     compose_energy_terms,
 )
+from betelgeuze_engine_v2.parameter_source_provenance import (
+    PARAMETER_SOURCE_PROVENANCE_PROFILE_ID,
+    PARAMETER_SOURCE_PROVENANCE_SCHEMA_ID,
+    PARAMETER_SOURCE_REVIEW_STATUS,
+    ParameterSourceProvenanceError,
+    ParameterSourceProvenanceSnapshot,
+    parameter_source_provenance_document,
+    require_parameter_source_provenance_document,
+    reviewed_parameter_source_provenance,
+    verify_parameter_source_review_files,
+)
 from betelgeuze_engine_v2.physics.projection import (
     MAX_FIXED_PROJECTION_RANK,
     ProjectionDiagnostics,
@@ -55,7 +66,12 @@ __all__ = [
     "IndependentPhysicsTerm",
     "MAX_FIXED_PROJECTION_RANK",
     "MAX_REGISTERED_PHYSICS_TERMS",
+    "PARAMETER_SOURCE_PROVENANCE_PROFILE_ID",
+    "PARAMETER_SOURCE_PROVENANCE_SCHEMA_ID",
+    "PARAMETER_SOURCE_REVIEW_STATUS",
     "PairScalingParameter",
+    "ParameterSourceProvenanceError",
+    "ParameterSourceProvenanceSnapshot",
     "PeriodicTorsionParameter",
     "PhysicsRegistryEvaluation",
     "PhysicsTermRegistry",
@@ -74,6 +90,10 @@ __all__ = [
     "fixed_rank_orthogonal_complement",
     "fixed_rank_projection_adjoint",
     "local_normal_projection",
+    "parameter_source_provenance_document",
     "project_rigid_body_forces",
+    "require_parameter_source_provenance_document",
+    "reviewed_parameter_source_provenance",
     "sum_validated_physics_terms",
+    "verify_parameter_source_review_files",
 ]

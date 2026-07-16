@@ -73,7 +73,7 @@ MMCIF_PREPARATION_SUPPORTED_BOND_ORDERS = (1.0, 2.0)
 MAX_MMCIF_PREPARATION_SOURCE_ATOMS_PER_INSTANCE = 64
 MAX_MMCIF_PREPARATION_ADDED_HYDROGENS_PER_INSTANCE = 256
 MMCIF_PREPARATION_UNIVERSAL_PARAMETERABILITY_BLOCKERS = (
-    "reviewed_parameter_source_missing",
+    "reviewed_parameter_source_not_bound_to_preparation",
     "hydrogen_coordinate_geometry_not_validated",
     "prepared_all_atom_system_not_created",
 )
@@ -761,7 +761,7 @@ def _instance_report(
         parameterability_status = (
             "graph_ready_external_connection_blocked"
             if integration_blockers
-            else "graph_ready_parameter_source_missing"
+            else "graph_ready_parameter_source_not_bound"
         )
         formula_counts = {
             element: sum(row.element == element for row in prepared_atoms)
@@ -1051,7 +1051,7 @@ def _require_instance_report(payload: object) -> tuple[str, bool]:
         raise ValueError("nonpoly preparation status mismatch")
     if report.get("parameterability_status") not in {
         "graph_ready_external_connection_blocked",
-        "graph_ready_parameter_source_missing",
+        "graph_ready_parameter_source_not_bound",
     }:
         raise ValueError("nonpoly preparation parameterability status invalid")
 

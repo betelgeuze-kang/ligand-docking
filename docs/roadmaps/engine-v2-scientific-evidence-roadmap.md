@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@3128810c0e054d7e8fe4bb15553001893db6d706`
+Observed baseline: `main@7119ca421a36bdf49c2ad61c72e66a7749c8b5f9`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -72,16 +72,23 @@ claim status without revalidating the dependency and freshness chain.
 
 - Keep the bounded coordinate, scalar-value, canonical-topology, and first neutral
   acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
-  coordinate payload, reviewed parameter source, or `AllAtomSystem`;
+  coordinate payload, reviewed parameter source bound to it, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
 - Keep the separate graph-bound hydrogen-coordinate scaffold executable. It
   preserves source Cartesian angstrom coordinates and uses a deterministic
   1.0-angstrom fixed parent-offset table for added hydrogens; neighbor geometry,
   stereo, protonation, tautomer, bond-length calibration, clashes, minimization,
   parameterability, and scientific validity remain unestablished.
+- Keep the reviewed parameter-source provenance contract executable. It freezes
+  the official OpenFF Sage 2.2.1 unconstrained release tag, commit, artifact byte
+  size and SHA-256, CC-BY-4.0 license identity and license-text SHA-256, reviewer
+  role, timestamp, and explicit included/excluded scope. It neither bundles nor
+  fetches the artifact, parses OFFXML, assigns parameters or partial charges,
+  establishes molecule coverage or applicability, calibrates values, approves
+  legal compliance, nor promotes scientific or product claims.
 - Keep the exact-input 30-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 18 axes as supported, 27 as
-  explicitly unsupported, and 6 as not implemented; it is not parameter-fitting
+  51-axis coverage ledger executable. It classifies 19 axes as supported, 27 as
+  explicitly unsupported, and 5 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep exact selected source assembly metadata, generation, and Cartesian-
   operation rows bound while blocking preparation whenever any selected assembly
@@ -113,10 +120,11 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the 6 implementation-gap rows by independent capability slices and
+- Next, close the 5 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open;
-  reviewed parameter-source provenance is the next preparation priority.
+  canonical `AllAtomSystem` and source-to-graph parameter binding are the next
+  preparation priorities.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.
