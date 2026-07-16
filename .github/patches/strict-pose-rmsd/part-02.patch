@@ -1,0 +1,90 @@
++            "Kabsch-aligned, symmetry-aware generated-conformer spread only; not an exhaustive rotamer search or "
++            "benchmarked pose-diversity guarantee."
+         ),
+     }
+ 
+-
+ def ligand_symmetry_mappings(smiles: str, *, max_mappings: int = 256) -> list[tuple[int, ...]]:
+     if Chem is None:
+         return []
+@@ -128,9 +252,10 @@
+         matches = ()
+     mappings: list[tuple[int, ...]] = [identity]
+     seen = {identity}
++    expected = set(identity)
+     for match in matches:
+         mapping = tuple(int(idx) for idx in match)
+-        if len(mapping) != atom_count or mapping in seen:
++        if len(mapping) != atom_count or set(mapping) != expected or mapping in seen:
+             continue
+         seen.add(mapping)
+         mappings.append(mapping)
+@@ -142,25 +267,32 @@
+     b: np.ndarray,
+     symmetry_mappings: list[tuple[int, ...]] | None = None,
+ ) -> float:
+-    left = np.asarray(a, dtype=np.float64)
+-    right = np.asarray(b, dtype=np.float64)
+-    n = min(int(left.shape[0]), int(right.shape[0]))
+-    if n <= 0:
+-        return float("inf")
+-    candidates = symmetry_mappings or [tuple(range(n))]
+-    best = pose_rmsd(left[:n], right[:n])
+-    for mapping in candidates:
+-        if len(mapping) < n:
+-            continue
+-        indices = [int(idx) for idx in mapping[:n]]
+-        if any(idx < 0 or idx >= int(right.shape[0]) for idx in indices):
+-            continue
+-        candidate = pose_rmsd(left[:n], right[indices])
+-        if candidate < best:
+-            best = candidate
++    """Return strict direct RMSD minimized over full atom-index automorphisms."""
++
++    _mapped, best, _mapping = best_symmetry_mapped_pose(
++        a,
++        b,
++        symmetry_mappings,
++        align=False,
++    )
+     return float(best)
+ 
+ 
++def aligned_symmetry_aware_pose_rmsd(
++    a: np.ndarray,
++    b: np.ndarray,
++    symmetry_mappings: list[tuple[int, ...]] | None = None,
++) -> float:
++    """Return Kabsch-aligned RMSD minimized over full atom-index automorphisms."""
++
++    _mapped, best, _mapping = best_symmetry_mapped_pose(
++        a,
++        b,
++        symmetry_mappings,
++        align=True,
++    )
++    return float(best)
++
+ def cluster_poses_by_symmetry(
+     pose_scores: list[dict[str, Any]],
+     placed_pose_coords: dict[int, np.ndarray],
+@@ -200,6 +332,8 @@
+             "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
+             "threshold_a": float(threshold_a),
+             "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
++            "atom_mapping_contract": "strict_full_atom_bijection",
++            "coordinate_frame": "receptor_frame_no_alignment",
+             "cluster_id": int(assigned_cluster),
+             "cluster_representative_pose_index": int(clusters[assigned_cluster]["representative_pose_index"]),
+         }
+@@ -210,6 +344,8 @@
+         "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
+         "threshold_a": float(threshold_a),
+         "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
++        "atom_mapping_contract": "strict_full_atom_bijection",
++        "coordinate_frame": "receptor_frame_no_alignment",
+         "cluster_count": int(len(clusters)),
+         "clusters": clusters,
+     }
+--- a/betelgeuze_engine/biodiscovery/screening.py
++++ b/betelgeuze_engine/biodiscovery/screening.py
