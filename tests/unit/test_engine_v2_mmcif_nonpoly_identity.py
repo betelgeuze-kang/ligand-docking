@@ -163,6 +163,11 @@ MIXED_ASYM_ROWS = (
 )
 MIXED_COMPONENT_ROWS = (
     {
+        "_chem_comp.id": "ALA",
+        "_chem_comp.type": "L-peptide linking",
+        "_chem_comp.pdbx_formal_charge": "0",
+    },
+    {
         "_chem_comp.id": "LIG",
         "_chem_comp.type": "non-polymer",
         "_chem_comp.pdbx_formal_charge": "0",
@@ -315,6 +320,7 @@ def test_pure_nonpoly_source_preserves_opaque_identity_without_atom_site_parsing
 def test_mixed_polymer_nonpoly_and_water_cover_only_selected_entity_types() -> None:
     snapshot = parse_mmcif_nonpoly_identity(_mixed_source())
 
+    assert [row.comp_id for row in snapshot.components] == ["LIG", "HOH"]
     assert [(row.entity_id, row.entity_type, row.comp_id) for row in snapshot.entities] == [
         ("2", "non-polymer", "LIG"),
         ("3", "water", "HOH"),
@@ -359,6 +365,38 @@ def test_header_order_and_uninterpreted_values_change_only_source_binding() -> N
     assert canonical.identity_projection_sha256 == changed_uninterpreted.identity_projection_sha256
     assert canonical.source_binding_sha256 != reordered.source_binding_sha256
     assert canonical.source_binding_sha256 != changed_uninterpreted.source_binding_sha256
+
+
+def test_unreferenced_chem_comp_rows_are_source_bound_but_not_projected() -> None:
+    canonical = parse_mmcif_nonpoly_identity(_pure_source(tail=""))
+    with_polymer_component = parse_mmcif_nonpoly_identity(
+        _pure_source(
+            component_rows=PURE_COMPONENT_ROWS
+            + (
+                {
+                    "_chem_comp.id": "ALA",
+                    "_chem_comp.type": "L-peptide linking",
+                    "_chem_comp.pdbx_formal_charge": "0",
+                },
+            ),
+            tail="",
+        )
+    )
+
+    assert [row.comp_id for row in canonical.components] == ["HEM"]
+    assert [row.comp_id for row in with_polymer_component.components] == ["HEM"]
+    assert (
+        canonical.identity_projection_sha256
+        == with_polymer_component.identity_projection_sha256
+    )
+    assert canonical.source_binding_sha256 != with_polymer_component.source_binding_sha256
+    binding = next(
+        row
+        for row in with_polymer_component.category_bindings
+        if row.category == CHEM_COMP_CATEGORY
+    )
+    assert binding.row_count == 2
+    assert len(binding.row_sha256) == 2
 
 
 def test_uninterpreted_atom_site_changes_do_not_change_identity_projection() -> None:
@@ -522,18 +560,6 @@ def test_entity_component_and_scheme_coverage_fail_closed() -> None:
             scheme_rows=(MIXED_SCHEME_ROWS[0],),
         ),
         "nonpoly_entity_coverage_mismatch",
-    )
-
-    extra_component = PURE_COMPONENT_ROWS + (
-        {
-            "_chem_comp.id": "EXTRA",
-            "_chem_comp.type": "non-polymer",
-            "_chem_comp.pdbx_formal_charge": "0",
-        },
-    )
-    _error(
-        _pure_source(component_rows=extra_component, tail=""),
-        "component_coverage_mismatch",
     )
 
     missing_component = _updated(

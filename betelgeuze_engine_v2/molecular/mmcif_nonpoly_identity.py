@@ -602,12 +602,6 @@ def _parse_nonpoly_entities(
             "nonpoly_entity_coverage_mismatch",
             "entity_nonpoly rows must exactly cover non-polymer and water entities",
         )
-    selected_components = {row.comp_id for row in entities}
-    if component_ids != selected_components:
-        raise MmcifNonpolyIdentityError(
-            "component_coverage_mismatch",
-            "chem_comp identifiers must exactly cover selected nonpoly components",
-        )
     return tuple(entities)
 
 
@@ -825,6 +819,10 @@ def parse_mmcif_nonpoly_identity(text: str) -> MmcifNonpolyIdentitySnapshot:
         entity_nonpoly_index,
         entity_types=entity_types,
         component_ids={row.comp_id for row in components},
+    )
+    selected_component_ids = {row.comp_id for row in entities}
+    components = tuple(
+        row for row in components if row.comp_id in selected_component_ids
     )
     instances = _parse_instances(
         scheme_loop,
