@@ -39,24 +39,29 @@ jobs:
 
           module = Path("betelgeuze_engine_v2/molecular/mmcif_semantics.py")
           source = module.read_text(encoding="utf-8")
-          old = '''            "quoted": self.quoted,
-                      "line_number": self.line_number,
-                      "column_number": self.column_number,
-          '''
-          new = '''            "quoted": self.quoted,
-          '''
+          old = (
+              '            "quoted": self.quoted,\n'
+              '            "line_number": self.line_number,\n'
+              '            "column_number": self.column_number,\n'
+          )
+          new = '            "quoted": self.quoted,\n'
           if source.count(old) != 1:
               raise SystemExit("semantic value location block drifted")
           module.write_text(source.replace(old, new, 1), encoding="utf-8")
 
           test_path = Path("tests/unit/test_engine_v2_mmcif_semantics.py")
           tests = test_path.read_text(encoding="utf-8")
-          old_test = '            _replace_once(CANONICAL, "loop_\\n_entity.id\\n_entity.type", "_entity.id 1\\n_entity.type polymer"),'
-          new_test = '''            _replace_once(
-                          CANONICAL,
-                          "loop_\\n_entity.id\\n_entity.type\\n1 polymer\\n2 water\\n#",
-                          "_entity.id 1\\n_entity.type polymer\\n#",
-                      ),'''
+          old_test = (
+              '            _replace_once(CANONICAL, "loop_\\n_entity.id\\n_entity.type", '
+              '"_entity.id 1\\n_entity.type polymer"),'
+          )
+          new_test = (
+              '            _replace_once(\n'
+              '                CANONICAL,\n'
+              '                "loop_\\n_entity.id\\n_entity.type\\n1 polymer\\n2 water\\n#",\n'
+              '                "_entity.id 1\\n_entity.type polymer\\n#",\n'
+              '            ),'
+          )
           if tests.count(old_test) != 1:
               raise SystemExit("scalar category fixture drifted")
           test_path.write_text(tests.replace(old_test, new_test, 1), encoding="utf-8")
