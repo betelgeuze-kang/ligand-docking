@@ -123,21 +123,6 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
-def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None:
-    roadmap = Path("docs/independent_engine_v2_commercial_roadmap.ko.md").read_text(
-        encoding="utf-8"
-    )
-
-    assert "current-main canonical planning reference" in roadmap
-    assert "v2_bounded_mmcif_nonpoly_component_declarations" in roadmap
-    assert "v2_bounded_mmcif_struct_conn_declarations" in roadmap
-    assert "atom_site_identity_joined" in roadmap
-    assert "connection type·symmetry·order·covalence·coordination·topology" in roadmap
-    assert "scientifically_validated" in roadmap
-    assert "commercial_readiness" in roadmap
-    assert "현재 상태는 위 종료 기준을 충족하지 않는다" in roadmap
-
-
 def test_readmes_describe_conditional_complexity_and_v2_quick_start() -> None:
     english = Path("README.md").read_text(encoding="utf-8")
     korean = Path("README.ko.md").read_text(encoding="utf-8")
@@ -163,6 +148,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_identity.py",
         "test_engine_v2_mmcif_nonpoly_component_declarations.py",
         "test_engine_v2_mmcif_struct_conn_declarations.py",
+        "test_engine_v2_commercial_roadmap.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
         "test_engine_v2_periodic_energy.py",
