@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@0953d1aede827a013dc3ec6728ec2ed5ff06a1af`
+Observed baseline: `main@2f2006dac235cdb6b04e5ab45e87b2cccafa3fc8`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -74,9 +74,9 @@ claim status without revalidating the dependency and freshness chain.
   acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
   generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
-- Keep the exact-input 25-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 16 axes as supported, 23 as
-  explicitly unsupported, and 12 as not implemented; it is not parameter-fitting
+- Keep the exact-input 26-case synthetic supported/failure contract corpus and
+  51-axis coverage ledger executable. It classifies 16 axes as supported, 24 as
+  explicitly unsupported, and 11 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep source water and bounded monoatomic metal/nonmetal-ion composition roles
   executable without inferring general ligand, cofactor, modified-residue, or
@@ -88,7 +88,10 @@ claim status without revalidating the dependency and freshness chain.
   execution-eligible. Multi-model and singleton non-1 input remain explicit
   failure rows; selection, ensemble, trajectory, averaging, and cross-category
   reconciliation remain unimplemented.
-- Next, close the 12 implementation-gap rows by independent capability slices and
+- Keep explicit nonpoly atom-site alternate locations as a frozen preparation
+  failure row. Conformer selection, occupancy population, and altloc chemistry
+  remain unimplemented.
+- Next, close the 11 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive

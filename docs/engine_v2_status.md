@@ -38,9 +38,10 @@ The current `main` branch contains:
   fail-closed component-bond/identity-symmetry connection topology that keeps
   metal coordination edges separate from canonical bonds, plus bounded neutral
   acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
-  failure-complete per-instance parameterability report, plus a frozen 25-case
+  failure-complete per-instance parameterability report, plus a frozen 26-case
   synthetic contract corpus and 51-axis executable coverage ledger that retains
-  supported, explicitly unsupported, invalid-source, and not-implemented rows;
+  supported, explicitly unsupported, invalid-source, and not-implemented rows,
+  including a nonpoly explicit-altloc preparation failure boundary;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.

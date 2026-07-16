@@ -67,7 +67,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "a64f73a4de1bf4a81ee159a3248fbb4c58935f07d99fdd8a606a27c251deba1b"
+    "54c825c7b12dcd5059078e34c01596f627838454df8ccccd680a87172afc3c6c"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -378,13 +378,15 @@ def _bond_row(bond: MmcifPreparationCorpusBond, ordinal: int) -> dict[str, str]:
 def _site_row(
     atom: MmcifPreparationCorpusAtom,
     source_id: int,
+    *,
+    label_alt_id: str = ".",
 ) -> dict[str, str]:
     return {
         "_atom_site.group_pdb": "HETATM",
         "_atom_site.id": str(source_id),
         "_atom_site.type_symbol": atom.site_element or atom.element,
         "_atom_site.label_atom_id": atom.atom_id,
-        "_atom_site.label_alt_id": ".",
+        "_atom_site.label_alt_id": label_alt_id,
         "_atom_site.label_comp_id": "LIG",
         "_atom_site.label_asym_id": "L",
         "_atom_site.label_entity_id": "1",
@@ -454,6 +456,7 @@ def _corpus_source(
     connection_order: str = "?",
     modified_residue: bool = False,
     water_model_number: str = "1",
+    ligand_alt_id: str = ".",
 ) -> str:
     if not atoms:
         raise MmcifNonpolyPreparationCorpusError(
@@ -469,7 +472,8 @@ def _corpus_source(
         _bond_row(bond, ordinal) for ordinal, bond in enumerate(bonds, start=1)
     )
     site_rows = tuple(
-        _site_row(atom, source_id) for source_id, atom in enumerate(atoms, start=1)
+        _site_row(atom, source_id, label_alt_id=ligand_alt_id)
+        for source_id, atom in enumerate(atoms, start=1)
     ) + (_water_site_row(len(atoms) + 1, model_number=water_model_number),)
     connection = {
         "_struct_conn.id": "conn-1",
@@ -662,6 +666,7 @@ FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
             "unsupported_monoatomic_nonmetal_ion": "cb03af1d7e2626d4b74d55c84929e87ced1953f6fedc0a67f17d9cf7bb78dd4c",
             "unsupported_source_declared_modified_residue": "ff1f1c1053df34f121fa85cfec2f91d247a3d0e898cf0e14a1ca68bce1c20570",
             "unsupported_multimodel_input": "9aaa7806cf65ca5d2d8d0b667aa9afb5833d5da88851e8372e8c01b710296d0b",
+            "unsupported_altloc_input": "3c76390e49d672ab9d3a4aff02590382096550e7c762451ea201e10456796673",
             "invalid_component_charge_grammar": "43f64cf79729dbbf92a858cb315421067393e5796466e0614a65f6db937c5ed5",
             "invalid_component_charge_range": "a7a25d9fa84a602b3221faf553918e54bfbad06d443355fca8b3eb67df81438d",
         }
@@ -739,6 +744,7 @@ def _case(
     connection_order: str = "?",
     modified_residue: bool = False,
     water_model_number: str = "1",
+    ligand_alt_id: str = ".",
 ) -> MmcifPreparationCorpusCase:
     source = _corpus_source(
         atoms,
@@ -747,6 +753,7 @@ def _case(
         connection_order=connection_order,
         modified_residue=modified_residue,
         water_model_number=water_model_number,
+        ligand_alt_id=ligand_alt_id,
     )
     digest = hashlib.sha256(source.encode("ascii")).hexdigest()
     frozen = FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256.get(case_id, "")
@@ -1113,6 +1120,15 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
             ("atom_site_model_set:multimodel",),
             expected_error_code="selected_model_not_supported",
             water_model_number="2",
+        ),
+        _case(
+            "unsupported_altloc_input",
+            "unsupported_upstream_policy",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("atom_site_label_alt_id:explicit",),
+            expected_error_code="nonblank_atom_site_marker_not_supported",
+            ligand_alt_id="A",
         ),
         _case(
             "invalid_component_charge_grammar",
@@ -1580,9 +1596,9 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "upstream.altloc_selection",
             "upstream_ingest",
-            missing,
-            "",
-            (),
+            unsupported,
+            "error:nonblank_atom_site_marker_not_supported",
+            ("unsupported_altloc_input",),
             "altloc_selection_not_implemented",
         ),
         _coverage(
