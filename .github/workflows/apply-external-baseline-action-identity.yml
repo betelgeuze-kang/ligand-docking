@@ -1,8 +1,7 @@
 name: apply-external-baseline-action-identity
 
 on:
-  push:
-    branches: ["codex/external-baseline-action-identity-v2"]
+  pull_request:
     paths:
       - ".github/workflows/apply-external-baseline-action-identity.yml"
 
@@ -16,8 +15,8 @@ concurrency:
 jobs:
   apply-migration:
     if: >-
-      github.repository == 'betelgeuze-kang/ligand-docking' &&
-      github.ref == 'refs/heads/codex/external-baseline-action-identity-v2'
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'codex/external-baseline-action-identity-v2'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
