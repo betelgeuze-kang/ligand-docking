@@ -14,12 +14,18 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_atom_site_scalar_values" in roadmap
     assert "v2_bounded_mmcif_nonpoly_canonical_topology" in roadmap
     assert "v2_bounded_mmcif_nonpoly_neutral_coh_preparation" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
     assert "exact bit pattern" in roadmap
     assert "known/unknown/not-applicable" in roadmap
     assert "coordination edge" in roadmap
     assert "neutral acyclic C/O/H" in roadmap
     assert "parameterable=false" in roadmap
+    assert "exact ASCII 21-case" in roadmap
+    assert "51-axis coverage ledger" in roadmap
+    assert "16개 `not_implemented`" in roadmap
+    assert "parameter_fitting_allowed=false" in roadmap
+    assert "v2_1_exit_ready=false" in roadmap
     assert "atom_site_identity_joined" in roadmap
     assert "connection type·symmetry·order·covalence·coordination·topology" in roadmap
     assert "scientifically_validated" in roadmap

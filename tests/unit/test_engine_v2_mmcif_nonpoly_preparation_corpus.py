@@ -1,0 +1,291 @@
+from __future__ import annotations
+
+from copy import deepcopy
+import json
+from pathlib import Path
+import stat
+
+import pytest
+
+import betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation_corpus as module
+from betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation_corpus import (
+    FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256,
+    FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256,
+    MMCIF_NONPOLY_PREPARATION_CORPUS_DOCUMENT_SCHEMA_ID,
+    MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID,
+    MMCIF_NONPOLY_PREPARATION_REQUIRED_COVERAGE_IDS,
+    MmcifNonpolyPreparationCorpusError,
+    mmcif_nonpoly_preparation_corpus_cases,
+    mmcif_nonpoly_preparation_corpus_document,
+    mmcif_nonpoly_preparation_corpus_json_bytes,
+    mmcif_nonpoly_preparation_coverage_rows,
+    require_mmcif_nonpoly_preparation_corpus_document,
+    run_mmcif_nonpoly_preparation_corpus,
+    write_mmcif_nonpoly_preparation_corpus_json,
+)
+
+
+@pytest.fixture(scope="module")
+def corpus_snapshot():
+    return run_mmcif_nonpoly_preparation_corpus()
+
+
+def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
+    cases = mmcif_nonpoly_preparation_corpus_cases()
+
+    assert len(cases) == 21
+    assert tuple(row.case_id for row in cases) == tuple(
+        FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
+    )
+    assert {row.cohort for row in cases} == {
+        "supported_graph",
+        "unprepared_integration",
+        "unsupported_chemistry",
+        "invalid_source",
+    }
+    assert all(row.source_text.encode("ascii") for row in cases)
+    assert all(
+        row.input_sha256
+        == FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256[row.case_id]
+        for row in cases
+    )
+
+
+def test_supported_graphs_water_and_source_hydrogen_match_exactly(
+    corpus_snapshot,
+) -> None:
+    by_id = {row.case_id: row for row in corpus_snapshot.case_results}
+
+    carbonyl = by_id["supported_carbonyl"]
+    ligand, water = carbonyl.reports
+    assert ligand["preparation_status"] == "prepared_component_graph"
+    assert ligand["formula"] == {"C": 1, "H": 2, "O": 1}
+    assert ligand["total_formal_charge"] == 0
+    assert ligand["added_hydrogen_count"] == 2
+    assert ligand["prepared_atom_count"] == 4
+    assert ligand["prepared_bond_count"] == 3
+    assert water["component_id"] == "HOH"
+    assert water["formula"] == {"H": 2, "O": 1}
+    assert water["parameterable"] is False
+
+    single = by_id["supported_single_coh"].reports[0]
+    assert single["formula"] == {"C": 1, "H": 4, "O": 1}
+    assert single["added_hydrogen_count"] == 4
+    source_h = by_id["supported_source_hydrogen"].reports[0]
+    assert source_h["formula"] == {"C": 1, "H": 4, "O": 1}
+    assert source_h["added_hydrogen_count"] == 3
+
+
+@pytest.mark.parametrize(
+    ("case_id", "blocker"),
+    (
+        ("unsupported_charged_component", "charged_chemistry_not_supported"),
+        ("unsupported_extended_element", "element_outside_neutral_coh_scope"),
+        ("unsupported_aromatic_atom", "aromatic_chemistry_not_supported"),
+        ("unsupported_atom_stereo", "atom_stereochemistry_not_prepared"),
+        ("unsupported_bond_stereo", "bond_stereochemistry_not_prepared"),
+        ("unsupported_triple_bond", "bond_order_outside_neutral_coh_scope"),
+        ("unsupported_quadruple_bond", "bond_order_outside_neutral_coh_scope"),
+        ("unsupported_aromatic_bond", "bond_order_outside_neutral_coh_scope"),
+        ("unsupported_cyclic_graph", "cyclic_chemistry_not_supported"),
+        ("unsupported_disconnected_graph", "component_graph_disconnected"),
+        (
+            "unsupported_element_crosscheck_mismatch",
+            "atom_site_component_element_mismatch",
+        ),
+        (
+            "unsupported_charge_crosscheck_mismatch",
+            "atom_site_component_formal_charge_mismatch",
+        ),
+        (
+            "unsupported_formal_charge_unavailable",
+            "component_formal_charge_unavailable",
+        ),
+        ("unsupported_overfull_valence", "neutral_valence_not_satisfied"),
+        (
+            "unsupported_incomplete_source_hydrogen",
+            "source_hydrogen_valence_incomplete",
+        ),
+    ),
+)
+def test_expected_failure_rows_retain_exact_chemistry_blocker(
+    case_id: str, blocker: str, corpus_snapshot
+) -> None:
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[case_id]
+    ligand = result.reports[0]
+
+    assert result.cohort == "unsupported_chemistry"
+    assert ligand["preparation_status"] == "unsupported_chemistry"
+    assert ligand["chemistry_blockers"] == [blocker]
+    assert ligand["parameterable"] is False
+    assert ligand["prepared_atom_count"] == 0
+    assert ligand["prepared_bond_count"] == 0
+
+
+def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
+    corpus_snapshot,
+) -> None:
+    by_id = {row.case_id: row for row in corpus_snapshot.case_results}
+
+    assert by_id["invalid_component_charge_grammar"].error_code == (
+        "invalid_component_formal_charge"
+    )
+    assert by_id["invalid_component_charge_range"].error_code == (
+        "component_formal_charge_out_of_bounds"
+    )
+    assert by_id["invalid_component_charge_grammar"].reports == ()
+    document_text = json.dumps(
+        mmcif_nonpoly_preparation_corpus_document(corpus_snapshot), sort_keys=True
+    )
+    assert "data_v2_preparation_corpus" not in document_text
+    assert "1.0 HETATM" not in document_text
+
+
+def test_intercomponent_connections_remain_unprepared_parameterability_boundaries(
+    corpus_snapshot,
+) -> None:
+    by_id = {row.case_id: row for row in corpus_snapshot.case_results}
+
+    coordination = by_id["supported_carbonyl"].reports[0]
+    covalent = by_id["unprepared_intercomponent_covalent"].reports[0]
+    assert (
+        "intercomponent_coordination_not_prepared"
+        in (coordination["parameterability_blockers"])
+    )
+    assert (
+        "intercomponent_covalent_connection_not_prepared"
+        in (covalent["parameterability_blockers"])
+    )
+    assert coordination["parameterability_status"] == (
+        "graph_ready_external_connection_blocked"
+    )
+    assert covalent["parameterability_status"] == (
+        "graph_ready_external_connection_blocked"
+    )
+
+
+def test_all_required_coverage_axes_are_classified_without_promotion(
+    corpus_snapshot,
+) -> None:
+    rows = mmcif_nonpoly_preparation_coverage_rows()
+    payload = corpus_snapshot.to_dict()
+
+    assert tuple(row.coverage_id for row in rows) == (
+        MMCIF_NONPOLY_PREPARATION_REQUIRED_COVERAGE_IDS
+    )
+    assert len(rows) == 51
+    assert payload["coverage_status_counts"] == {
+        "explicitly_unsupported": 19,
+        "not_implemented": 16,
+        "supported": 16,
+    }
+    assert payload["unclassified_coverage_row_count"] == 0
+    assert payload["expectation_mismatch_count"] == 0
+    assert payload["parameter_fitting_allowed"] is False
+    assert payload["v2_1_exit_ready"] is False
+    assert payload["scientifically_validated"] is False
+    assert payload["benchmark_validated"] is False
+    assert payload["product_qualified"] is False
+    assert payload["customer_execution_enabled"] is False
+    assert payload["claim_safe"] is False
+
+    missing = {
+        row.coverage_id: row.blocker
+        for row in rows
+        if row.policy_status == "not_implemented"
+    }
+    assert missing["role.ion"] == "ion_role_not_interpreted"
+    assert missing["role.metal"] == "metal_role_not_interpreted"
+    assert missing["role.cofactor"] == "cofactor_role_not_interpreted"
+    assert missing["role.modified_residue"] == ("modified_residue_role_not_interpreted")
+    assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
+    assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
+    assert missing["all_atom_system.creation"] == (
+        "prepared_all_atom_system_not_created"
+    )
+
+
+def test_document_is_deterministic_self_verifying_and_written_private(
+    tmp_path: Path,
+) -> None:
+    first = run_mmcif_nonpoly_preparation_corpus()
+    second = run_mmcif_nonpoly_preparation_corpus()
+    document = mmcif_nonpoly_preparation_corpus_document(first)
+
+    assert first == second
+    assert first.snapshot_sha256 == (
+        FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256
+    )
+    assert document["schema_id"] == (
+        MMCIF_NONPOLY_PREPARATION_CORPUS_DOCUMENT_SCHEMA_ID
+    )
+    assert document["profile_id"] == MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID
+    assert require_mmcif_nonpoly_preparation_corpus_document(document) == document
+    encoded = mmcif_nonpoly_preparation_corpus_json_bytes(first)
+    assert json.loads(encoded) == document
+
+    destination = write_mmcif_nonpoly_preparation_corpus_json(
+        tmp_path / "preparation-corpus.json", first
+    )
+    assert destination.read_bytes() == encoded + b"\n"
+    assert stat.S_IMODE(destination.stat().st_mode) == 0o600
+    assert not list(tmp_path.glob(".preparation-corpus.json.*.tmp"))
+
+    tampered = deepcopy(document)
+    tampered["corpus_projection"]["case_results"][0]["reports"][0][
+        "added_hydrogen_count"
+    ] = 99
+    projection_digest = module._sha256(tampered["corpus_projection"])
+    tampered["corpus_projection_sha256"] = projection_digest
+    tampered["snapshot_sha256"] = module._sha256(
+        {
+            "schema_id": MMCIF_NONPOLY_PREPARATION_CORPUS_DOCUMENT_SCHEMA_ID,
+            "corpus_projection_sha256": projection_digest,
+            "source_binding_sha256": tampered["source_binding_sha256"],
+            "claim_policy": module._claim_policy(),
+        }
+    )
+    with pytest.raises(ValueError, match="drifted from executable evidence"):
+        require_mmcif_nonpoly_preparation_corpus_document(tampered)
+
+
+def test_input_and_snapshot_freezes_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bad_inputs = dict(FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256)
+    bad_inputs["supported_carbonyl"] = "0" * 64
+    monkeypatch.setattr(
+        module,
+        "FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256",
+        bad_inputs,
+    )
+    with pytest.raises(
+        MmcifNonpolyPreparationCorpusError, match="input digest drifted"
+    ):
+        mmcif_nonpoly_preparation_corpus_cases()
+
+    monkeypatch.setattr(
+        module,
+        "FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256",
+        FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256,
+    )
+    monkeypatch.setattr(
+        module,
+        "FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256",
+        "0" * 64,
+    )
+    with pytest.raises(MmcifNonpolyPreparationCorpusError, match="snapshot drifted"):
+        run_mmcif_nonpoly_preparation_corpus()
+
+
+def test_dedicated_corpus_workflow_covers_supported_python_matrix() -> None:
+    source = Path(
+        ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+    ).read_text(encoding="utf-8")
+
+    assert 'branches: ["main"]' in source
+    assert 'python-version: ["3.10", "3.11", "3.12"]' in source
+    assert "mmcif_nonpoly_preparation_corpus.py" in source
+    assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
+    assert "test_engine_v2_post_merge_state.py" in source
+    assert "permissions:\n  contents: read" in source
