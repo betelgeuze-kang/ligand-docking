@@ -1,0 +1,121 @@
+name: ci-hosted-setup-python-v6-migration
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-hosted-setup-python-v6-migration.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  export-migration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out migration surface
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Build hosted-only setup-python migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import json
+          from pathlib import Path
+          import shutil
+
+          import yaml
+
+          old = "a26af69be951a213d495a4c3e4e4022e16d87065"
+          new = "ece7cb06caefa5fff74198d8649806c4678c61a1"
+          excluded = {Path(".github/workflows/product-api-worker-trusted.yml")}
+          changed: list[Path] = []
+
+          for path in sorted(Path(".github/workflows").glob("*.y*ml")):
+              source = path.read_text(encoding="utf-8")
+              if old not in source:
+                  continue
+              if path in excluded:
+                  continue
+              payload = yaml.load(source, Loader=yaml.BaseLoader)
+              jobs = payload.get("jobs", {}) if isinstance(payload, dict) else {}
+              owners: list[str] = []
+              for job_id, job in jobs.items():
+                  if not isinstance(job, dict):
+                      continue
+                  if old not in json.dumps(job, sort_keys=True):
+                      continue
+                  owners.append(str(job_id))
+                  if job.get("runs-on") != "ubuntu-latest":
+                      raise SystemExit(
+                          f"refusing non-hosted migration: {path}:{job_id}:{job.get('runs-on')}"
+                      )
+              if not owners:
+                  raise SystemExit(f"setup-python SHA was not owned by a parsed job: {path}")
+              updated = source.replace(old, new).replace("# v5.6.0", "# v6.3.0")
+              path.write_text(updated, encoding="utf-8")
+              changed.append(path)
+
+          external_test = Path("tests/unit/test_engine_v2_external_baseline.py")
+          source = external_test.read_text(encoding="utf-8")
+          if old not in source:
+              raise SystemExit("external-baseline exact-SHA assertion was not found")
+          external_test.write_text(source.replace(old, new), encoding="utf-8")
+          changed.append(external_test)
+
+          pin_test = Path("tests/unit/test_github_action_sha_pins.py")
+          source = pin_test.read_text(encoding="utf-8")
+          if old not in source:
+              raise SystemExit("global action-pin setup-python fixture was not found")
+          source = source.replace("SETUP_PYTHON_V5_SHA", "SETUP_PYTHON_V6_SHA")
+          source = source.replace(old, new)
+          source = source.replace("actions/setup-python@v5", "actions/setup-python@v6")
+          pin_test.write_text(source, encoding="utf-8")
+          changed.append(pin_test)
+
+          remaining = []
+          for path in Path(".").rglob("*"):
+              if not path.is_file() or ".git" in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except (OSError, UnicodeDecodeError):
+                  continue
+              if old in text and path not in excluded:
+                  remaining.append(path.as_posix())
+          if remaining:
+              raise SystemExit(f"unexpected old setup-python SHA references: {remaining}")
+
+          export_root = Path("migration-export")
+          for path in changed:
+              destination = export_root / path
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(path, destination)
+          manifest = {
+              "old_sha": old,
+              "new_sha": new,
+              "changed_files": [path.as_posix() for path in changed],
+              "excluded_self_hosted_files": [path.as_posix() for path in sorted(excluded)],
+          }
+          (export_root / "migration-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(manifest, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload hosted setup-python migration
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hosted-setup-python-v6-${{ github.run_id }}-${{ github.run_attempt }}
+          path: migration-export
+          if-no-files-found: error
+          retention-days: 1
