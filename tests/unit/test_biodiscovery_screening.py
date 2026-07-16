@@ -11,6 +11,7 @@ from betelgeuze_engine.biodiscovery import manifest as biodiscovery_manifest
 from betelgeuze_engine.biodiscovery import pose as biodiscovery_pose
 from betelgeuze_engine.biodiscovery import protein_prep
 from betelgeuze_engine.biodiscovery import scoring as biodiscovery_scoring
+from betelgeuze_engine.biodiscovery import screening as biodiscovery_screening
 from betelgeuze_engine.biodiscovery.screening import (
     TierBetaScreening,
     TierBetaScreeningResult,
@@ -220,12 +221,53 @@ class TestHelperFunctions:
         assert biodiscovery_pose.clash_count(protein_beads, ligand) >= 1
         assert biodiscovery_pose.pose_rmsd(ligand, ligand) == 0.0
 
+    def test_pose_rmsd_rejects_shape_mismatch_empty_and_nonfinite_coordinates(self):
+        pose = np.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
+        with pytest.raises(ValueError, match="shapes must match exactly"):
+            biodiscovery_pose.pose_rmsd(pose, pose[:1])
+        with pytest.raises(ValueError, match="at least one atom"):
+            biodiscovery_pose.pose_rmsd(np.zeros((0, 3)), np.zeros((0, 3)))
+        nonfinite = pose.copy()
+        nonfinite[0, 0] = np.nan
+        with pytest.raises(ValueError, match="non-finite"):
+            biodiscovery_pose.pose_rmsd(nonfinite, pose)
+
+    def test_aligned_symmetry_rmsd_removes_only_rigid_motion(self):
+        reference = np.asarray(
+            [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [0.3, 1.2, 0.4]],
+            dtype=np.float64,
+        )
+        rotation = np.asarray(
+            [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            dtype=np.float64,
+        )
+        moved = reference @ rotation.T + np.asarray([8.0, -3.0, 2.0])
+        assert biodiscovery_pose.pose_rmsd(reference, moved) > 1.0
+        assert biodiscovery_pose.aligned_pose_rmsd(reference, moved) == pytest.approx(0.0, abs=1e-7)
+        assert biodiscovery_pose.aligned_symmetry_aware_pose_rmsd(reference, moved) == pytest.approx(
+            0.0, abs=1e-7
+        )
+
+    @pytest.mark.parametrize(
+        "mapping",
+        [
+            [(0,)],
+            [(0, 0)],
+            [(0, 2)],
+            [(0, 1.0)],
+        ],
+    )
+    def test_symmetry_rmsd_rejects_non_bijective_or_non_integer_mappings(self, mapping):
+        pose = np.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32)
+        with pytest.raises(ValueError, match="symmetry mapping"):
+            biodiscovery_pose.symmetry_aware_pose_rmsd(pose, pose, mapping)
+
     def test_conformer_diversity_diagnostics_measure_rotatable_heavy_atom_rmsd(self):
         conformers = np.asarray(
             [
                 [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 0.0, 0.0], [4.5, 0.0, 0.0]],
-                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 0.8, 0.0], [4.5, 1.2, 0.0]],
-                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, -0.8, 0.0], [4.5, -1.2, 0.0]],
+                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 2.0, 0.0], [4.5, 4.0, 0.0]],
+                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, -2.0, 0.0], [4.5, -4.0, 0.0]],
             ],
             dtype=np.float32,
         )
@@ -234,7 +276,10 @@ class TestHelperFunctions:
 
         assert diagnostics["schema_version"] == "tier_beta_conformer_diversity_v1"
         assert diagnostics["status"] == "rotatable_conformer_diversity_measured"
-        assert diagnostics["method"] == "atom_order_pairwise_heavy_atom_rmsd"
+        assert diagnostics["method"] == "kabsch_aligned_rdkit_automorphism_min_heavy_atom_rmsd"
+        assert diagnostics["alignment"] == "kabsch"
+        assert diagnostics["coordinate_frame_invariant"] is True
+        assert diagnostics["atom_mapping_contract"] == "strict_full_atom_bijection"
         assert diagnostics["rotatable_bond_count"] >= 1
         assert diagnostics["conformer_count"] == 3
         assert diagnostics["pairwise_rmsd_count"] == 3
@@ -289,8 +334,8 @@ class TestHelperFunctions:
     def test_pose_search_candidates_use_so3_translation_grid_and_clash_beam(self):
         conformers = np.asarray(
             [
-                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]],
-                [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+                [[0.0, 0.0, 0.0], [1.5, 0.0, 0.0], [3.0, 0.0, 0.0], [4.5, 0.0, 0.0]],
+                [[0.0, 0.0, 0.0], [0.0, 1.5, 0.0], [0.0, 3.0, 0.0], [0.0, 4.5, 0.0]],
             ],
             dtype=np.float32,
         )
@@ -310,7 +355,8 @@ class TestHelperFunctions:
         assert diagnostics["conformer_count"] == 2
         assert diagnostics["conformer_diversity"]["schema_version"] == "tier_beta_conformer_diversity_v1"
         assert diagnostics["conformer_diversity"]["pairwise_rmsd_count"] == 1
-        assert diagnostics["conformer_diversity"]["pairwise_rmsd_max_a"] == pytest.approx(1.0)
+        assert diagnostics["conformer_diversity"]["pairwise_rmsd_max_a"] == pytest.approx(0.0, abs=1e-7)
+        assert diagnostics["conformer_diversity"]["coordinate_frame_invariant"] is True
         assert diagnostics["rotatable_bond_count"] == biodiscovery_pose.rotatable_bond_count("CCCC")
         assert diagnostics["retained_conformer_count"] == len(
             {candidate["conformer_index"] for candidate in candidates}
@@ -329,7 +375,7 @@ class TestHelperFunctions:
         assert diagnostics["local_minimization_degrees_of_freedom"] == ["translation", "rotation"]
         assert diagnostics["local_minimization_candidate_count"] == 10
         assert len(candidates) == 5
-        assert all(candidate["coords"].shape == (2, 3) for candidate in candidates)
+        assert all(candidate["coords"].shape == (4, 3) for candidate in candidates)
         assert [candidate["clash_count"] for candidate in candidates] == sorted(
             candidate["clash_count"] for candidate in candidates
         )
@@ -387,6 +433,55 @@ class TestHelperFunctions:
         assert summary["cluster_count"] == 1
         assert rows[0]["pose_cluster_id"] == rows[1]["pose_cluster_id"]
         assert rows[1]["symmetry_aware_pose_rmsd_to_cluster_representative_a"] == 0.0
+
+    def test_state_scoped_pose_rmsd_never_compares_different_ligand_atom_counts(self):
+        rows = [
+            {
+                "pose_index": 0,
+                "composite_score": 0.0,
+                "ligand_state": {"state_id": "state-cc", "smiles": "CC"},
+                "pose_search": {},
+            },
+            {
+                "pose_index": 1,
+                "composite_score": 1.0,
+                "ligand_state": {"state_id": "state-cc", "smiles": "CC"},
+                "pose_search": {},
+            },
+            {
+                "pose_index": 2,
+                "composite_score": 0.5,
+                "ligand_state": {"state_id": "state-ccc", "smiles": "CCC"},
+                "pose_search": {},
+            },
+        ]
+        coords = {
+            0: np.asarray([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float32),
+            1: np.asarray([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32),
+            2: np.asarray(
+                [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [2.0, 0.4, 0.0]],
+                dtype=np.float32,
+            ),
+        }
+
+        diagnostics = biodiscovery_screening._annotate_state_scoped_pose_rmsd(
+            rows,
+            coords,
+            default_smiles="CC",
+            cluster_threshold_a=0.1,
+        )
+
+        assert diagnostics["state_scoped"] is True
+        assert diagnostics["cross_state_rmsd_computed"] is False
+        assert diagnostics["state_cluster_count"] == 2
+        assert rows[0]["pose_rmsd_reference_state_id"] == "state-cc"
+        assert rows[1]["pose_rmsd_reference_state_id"] == "state-cc"
+        assert rows[2]["pose_rmsd_reference_state_id"] == "state-ccc"
+        assert rows[0]["pose_rmsd_atom_count"] == 2
+        assert rows[2]["pose_rmsd_atom_count"] == 3
+        assert rows[1]["symmetry_aware_pose_rmsd_to_top1_a"] == pytest.approx(0.0)
+        assert rows[2]["symmetry_aware_pose_rmsd_to_top1_a"] == pytest.approx(0.0)
+        assert all(row["pose_rmsd_state_scoped"] is True for row in rows)
 
     def test_chemical_anchor_mapping_uses_feature_charge_ring_graph_atoms(self):
         mapping = biodiscovery_pose.chemical_anchor_mapping("CC(=O)N", {"atom_count": 4})

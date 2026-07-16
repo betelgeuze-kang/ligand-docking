@@ -51,6 +51,7 @@ from betelgeuze_engine.biodiscovery.protein_prep import (
     validate_protein as _validate_protein,
 )
 from betelgeuze_engine.biodiscovery.pose import (
+    best_symmetry_mapped_pose as _best_symmetry_mapped_pose,
     chemical_anchor_mapping as _chemical_anchor_mapping,
     chemistry_validity_summary as _chemistry_validity_summary,
     clash_count as _clash_count,
@@ -198,6 +199,103 @@ def _benchmark_metric_summary_from_pose_scores(pose_scores: list[dict[str, Any]]
     )
     return payload
 
+
+
+def _ligand_state_identity(row: dict[str, Any], default_smiles: str) -> tuple[str, str]:
+    state = row.get("ligand_state")
+    if not isinstance(state, dict):
+        state = {}
+    state_smiles = str(state.get("smiles") or default_smiles)
+    state_id = str(state.get("state_id") or f"smiles:{state_smiles}")
+    return state_id, state_smiles
+
+
+def _annotate_state_scoped_pose_rmsd(
+    pose_scores: list[dict[str, Any]],
+    placed_pose_coords: dict[int, np.ndarray],
+    *,
+    default_smiles: str,
+    cluster_threshold_a: float = 2.0,
+    centroid_limit: int = 5,
+) -> dict[str, Any]:
+    """Cluster and annotate poses only against chemically comparable ligand states."""
+
+    state_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in pose_scores:
+        state_id, state_smiles = _ligand_state_identity(row, default_smiles)
+        state_groups.setdefault((state_id, state_smiles), []).append(row)
+
+    state_diagnostics: list[dict[str, Any]] = []
+    max_mapping_count = 1
+    total_cluster_count = 0
+    for (state_id, state_smiles), state_rows in state_groups.items():
+        mappings = _ligand_symmetry_mappings(state_smiles)
+        state_diag = _cluster_poses_by_symmetry(
+            state_rows,
+            placed_pose_coords,
+            mappings,
+            threshold_a=float(cluster_threshold_a),
+        )
+        state_diag["ligand_state_id"] = state_id
+        state_diag["ligand_state_smiles"] = state_smiles
+        state_diag["state_pose_count"] = int(len(state_rows))
+        state_diag["state_scoped"] = True
+        state_diagnostics.append(state_diag)
+        max_mapping_count = max(max_mapping_count, int(state_diag["symmetry_mapping_count"]))
+        total_cluster_count += int(state_diag["cluster_count"])
+
+        state_top1 = state_rows[0]
+        reference_pose_index = int(state_top1["pose_index"])
+        reference_coords = placed_pose_coords[reference_pose_index]
+        centroid_rows = state_rows[: min(max(1, int(centroid_limit)), len(state_rows))]
+        canonicalized: list[np.ndarray] = []
+        for centroid_row in centroid_rows:
+            coords = placed_pose_coords[int(centroid_row["pose_index"])]
+            mapped, _rmsd, _mapping = _best_symmetry_mapped_pose(
+                reference_coords,
+                coords,
+                mappings,
+                align=False,
+            )
+            canonicalized.append(mapped)
+        centroid = np.mean(canonicalized, axis=0)
+
+        for row in state_rows:
+            coords = placed_pose_coords[int(row["pose_index"])]
+            mapped, symmetry_rmsd, mapping = _best_symmetry_mapped_pose(
+                reference_coords,
+                coords,
+                mappings,
+                align=False,
+            )
+            row["pose_rmsd_to_top1_a"] = _pose_rmsd(coords, reference_coords)
+            row["symmetry_aware_pose_rmsd_to_top1_a"] = float(symmetry_rmsd)
+            row["pose_rmsd_to_top5_centroid_a"] = _pose_rmsd(mapped, centroid)
+            row["pose_rmsd_method"] = (
+                "rdkit_automorphism_min_rmsd" if mappings else "identity_atom_order_rmsd"
+            )
+            row["pose_rmsd_state_scoped"] = True
+            row["pose_rmsd_reference_state_id"] = state_id
+            row["pose_rmsd_reference_pose_index"] = reference_pose_index
+            row["pose_rmsd_top5_centroid_member_count"] = int(len(centroid_rows))
+            row["pose_rmsd_atom_count"] = int(coords.shape[0])
+            row["pose_rmsd_symmetry_mapping"] = [int(index) for index in mapping]
+            row["pose_search"]["symmetry_ligand_smiles"] = state_smiles
+            row["pose_search"]["symmetry_ligand_state_id"] = state_id
+
+    return {
+        "status": "symmetry_aware_rmsd_clustered",
+        "method": "rdkit_automorphism_min_rmsd",
+        "threshold_a": float(cluster_threshold_a),
+        "symmetry_mapping_count": int(max_mapping_count),
+        "cluster_count": int(total_cluster_count),
+        "state_cluster_count": int(len(state_diagnostics)),
+        "state_scoped": True,
+        "cross_state_rmsd_computed": False,
+        "atom_mapping_contract": "strict_full_atom_bijection",
+        "coordinate_frame": "receptor_frame_no_alignment",
+        "state_clusters": state_diagnostics,
+    }
 
 class TierBetaScreening:
     def __init__(
@@ -675,61 +773,26 @@ class TierBetaScreening:
         for rank, row in enumerate(pose_scores, start=1):
             row["pose_rank"] = rank
 
-        state_groups: dict[str, list[dict[str, Any]]] = {}
-        for row in pose_scores:
-            state_smiles = str(row.get("ligand_state", {}).get("smiles") or ligand_smiles)
-            state_groups.setdefault(state_smiles, []).append(row)
-        state_cluster_diagnostics: list[dict[str, Any]] = []
-        for state_smiles, state_rows in state_groups.items():
-            state_mappings = _ligand_symmetry_mappings(state_smiles)
-            state_diag = _cluster_poses_by_symmetry(
-                state_rows,
-                placed_pose_coords,
-                state_mappings,
-                threshold_a=2.0,
-            )
-            state_diag["ligand_state_smiles"] = state_smiles
-            state_cluster_diagnostics.append(state_diag)
-            for row in state_rows:
-                row["pose_search"]["symmetry_ligand_smiles"] = state_smiles
-        clustering_diagnostics = {
-            "status": "symmetry_aware_rmsd_clustered",
-            "method": "rdkit_automorphism_min_rmsd",
-            "threshold_a": 2.0,
-            "symmetry_mapping_count": int(
-                max((int(diag["symmetry_mapping_count"]) for diag in state_cluster_diagnostics), default=1)
-            ),
-            "cluster_count": int(sum(int(diag["cluster_count"]) for diag in state_cluster_diagnostics)),
-            "state_cluster_count": int(len(state_cluster_diagnostics)),
-            "state_clusters": state_cluster_diagnostics,
-        }
+        clustering_diagnostics = _annotate_state_scoped_pose_rmsd(
+            pose_scores,
+            placed_pose_coords,
+            default_smiles=ligand_smiles,
+            cluster_threshold_a=2.0,
+            centroid_limit=5,
+        )
         search_diagnostics["symmetry_rmsd_clustering_status"] = clustering_diagnostics["status"]
         search_diagnostics["symmetry_mapping_count"] = int(clustering_diagnostics["symmetry_mapping_count"])
         search_diagnostics["symmetry_cluster_count"] = int(clustering_diagnostics["cluster_count"])
+        search_diagnostics["symmetry_state_cluster_count"] = int(clustering_diagnostics["state_cluster_count"])
+        search_diagnostics["cross_state_rmsd_computed"] = False
         for row in pose_scores:
             row["pose_search"]["symmetry_rmsd_clustering_status"] = clustering_diagnostics["status"]
             row["pose_search"]["symmetry_mapping_count"] = int(clustering_diagnostics["symmetry_mapping_count"])
             row["pose_search"]["symmetry_cluster_count"] = int(clustering_diagnostics["cluster_count"])
+            row["pose_search"]["symmetry_state_cluster_count"] = int(clustering_diagnostics["state_cluster_count"])
+            row["pose_search"]["cross_state_rmsd_computed"] = False
 
         top_k_poses = pose_scores[:self.top_k]
-        top1_coords = placed_pose_coords[int(top_k_poses[0]["pose_index"])]
-        top5_indices = [
-            int(row["pose_index"])
-            for row in pose_scores
-            if placed_pose_coords[int(row["pose_index"])].shape == top1_coords.shape
-        ][: min(5, len(pose_scores))]
-        top5_centroid = np.mean([placed_pose_coords[idx] for idx in top5_indices], axis=0)
-        for row in pose_scores:
-            coords_for_row = placed_pose_coords[int(row["pose_index"])]
-            row_symmetry_mappings = _ligand_symmetry_mappings(str(row.get("ligand_state", {}).get("smiles") or ligand_smiles))
-            row["pose_rmsd_to_top1_a"] = _pose_rmsd(coords_for_row, top1_coords)
-            row["symmetry_aware_pose_rmsd_to_top1_a"] = _symmetry_aware_pose_rmsd(
-                coords_for_row,
-                top1_coords,
-                row_symmetry_mappings,
-            )
-            row["pose_rmsd_method"] = "rdkit_automorphism_min_rmsd" if row_symmetry_mappings else "identity_atom_order_rmsd"
-            row["pose_rmsd_to_top5_centroid_a"] = _pose_rmsd(coords_for_row, top5_centroid)
         stage_records.append(
             StageRecord(
                 stage_id="top_k_refine",
