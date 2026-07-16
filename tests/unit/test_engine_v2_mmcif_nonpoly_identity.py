@@ -390,12 +390,12 @@ def test_document_is_canonical_self_verifying_and_written_private(tmp_path: Path
 
 
 def test_required_categories_and_headers_fail_closed() -> None:
-    missing = _source(
-        entity_rows=PURE_ENTITY_ROWS,
-        asym_rows=PURE_ASYM_ROWS,
-        component_rows=PURE_COMPONENT_ROWS,
-        entity_nonpoly_rows=(),
-        scheme_rows=PURE_SCHEME_ROWS,
+    missing = (
+        "data_nonpoly\n#\n"
+        + _loop(ENTITY_HEADERS, PURE_ENTITY_ROWS)
+        + _loop(ASYM_HEADERS, PURE_ASYM_ROWS)
+        + _loop(CHEM_COMP_HEADERS, PURE_COMPONENT_ROWS)
+        + _loop(SCHEME_HEADERS, PURE_SCHEME_ROWS)
     )
     _error(missing, "required_category_missing")
 
