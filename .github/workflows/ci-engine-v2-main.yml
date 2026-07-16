@@ -75,6 +75,7 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_contracts_molecular.py
             tests/unit/test_engine_v2_mmcif_syntax.py
+            tests/unit/test_engine_v2_mmcif_semantics.py
             tests/unit/test_engine_v2_sparse_geometry_features.py
             tests/unit/test_engine_v2_ai_core.py
             tests/unit/test_engine_v2_periodic_energy.py
@@ -127,6 +128,7 @@ jobs:
           python -m pytest -vv -x \
             tests/unit/test_engine_v2_contracts_molecular.py \
             tests/unit/test_engine_v2_mmcif_syntax.py \
+            tests/unit/test_engine_v2_mmcif_semantics.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \
             tests/unit/test_engine_v2_periodic_energy.py \
@@ -193,7 +195,10 @@ jobs:
           )
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.docking import DockingProblemIdentity
-          from betelgeuze_engine_v2.molecular import CANONICAL_SYSTEM_JSON_SCHEMA_ID
+          from betelgeuze_engine_v2.molecular import (
+              CANONICAL_SYSTEM_JSON_SCHEMA_ID,
+              parse_mmcif_semantics,
+          )
           from betelgeuze_engine_v2.molecular.mmcif_syntax import parse_cif_block
           from betelgeuze_engine_v2.physics import (
               AtomNonbondedParameter,
@@ -228,4 +233,13 @@ jobs:
           ).scientifically_validated is False
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert parse_cif_block("data_child\n_entry.id syntax\n").name == "child"
+          semantic = parse_mmcif_semantics(
+              "data_child\n"
+              "loop_\n_entity.id\n_entity.type\n1 polymer\n"
+              "loop_\n_struct_asym.id\n_struct_asym.entity_id\nA 1\n"
+              "loop_\n_entity_poly.entity_id\n_entity_poly.type\n1 ?\n"
+              "loop_\n_entity_poly_seq.entity_id\n_entity_poly_seq.num\n"
+              "_entity_poly_seq.mon_id\n_entity_poly_seq.hetero\n1 1 GLY n\n"
+          )
+          assert semantic.to_dict()["claim_safe"] is False
           PY
