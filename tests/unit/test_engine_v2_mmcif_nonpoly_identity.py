@@ -499,4 +499,4 @@ def test_input_type_and_token_bounds_are_enforced() -> None:
         ),
         scheme_rows=PURE_SCHEME_ROWS,
     )
-    _error(source, "semantic_token_out_of_bounds")
+    _error(source, "source_token_out_of_bounds")
