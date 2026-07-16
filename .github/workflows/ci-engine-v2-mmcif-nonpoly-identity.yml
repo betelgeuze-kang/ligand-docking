@@ -1,3 +1,4 @@
+# Bounded source-only nonpoly identity and registration contract.
 name: ci-engine-v2-mmcif-nonpoly-identity
 
 on:
@@ -7,9 +8,13 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_semantics.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
       - "tests/unit/test_engine_v2_mmcif_semantics.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
+      - "tests/unit/test_engine_v2_post_merge_state.py"
+      - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-identity.yml"
   push:
     branches: ["main"]
@@ -18,9 +23,13 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_semantics.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_mmcif_syntax.py"
       - "tests/unit/test_engine_v2_mmcif_semantics.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_identity.py"
+      - "tests/unit/test_engine_v2_post_merge_state.py"
+      - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-identity.yml"
   workflow_dispatch:
 
@@ -53,10 +62,19 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             betelgeuze_engine_v2
+            config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
+            tests/unit/test_engine_v2_post_merge_state.py
+            docs/engine_v2_status.md
+            docs/engine_v2_public_api.md
+            docs/entrypoints.md
+            README.md
+            README.ko.md
+            .github/workflows/ci-engine-v2-main.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-identity.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -68,7 +86,7 @@ jobs:
       - name: Install focused CPU dependencies
         run: |
           python -m pip install pip==25.0.1
-          python -m pip install pytest==8.3.5 numpy==1.26.4
+          python -m pip install pytest==8.3.5 PyYAML==6.0.3 numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Compile and enforce architecture boundary
@@ -76,7 +94,7 @@ jobs:
           python -m compileall -q betelgeuze_engine_v2
           python tools/check_engine_v2_architecture.py
 
-      - name: Run inherited and nonpoly identity contracts
+      - name: Run inherited nonpoly identity and registration contracts
         shell: bash
         run: |
           set +e
@@ -84,6 +102,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_syntax.py \
             tests/unit/test_engine_v2_mmcif_semantics.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_identity.py \
+            tests/unit/test_engine_v2_post_merge_state.py \
             > mmcif-nonpoly-identity.log 2>&1
           status=$?
           cat mmcif-nonpoly-identity.log
