@@ -117,16 +117,16 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_altloc_declarations` | polymer atom-site altloc source declaration 보존 | conformer selection·population 해석 |
 | `v2_bounded_mmcif_atom_site_model_policy` | 전체 `_atom_site.pdbx_PDB_model_num` 정수 token·row 결속과 model-set 분류; model 1 단일 입력만 bounded execution 허용 | multi-model·single non-1 model 실행, model selection·ensemble·trajectory·averaging, cross-category model reconciliation |
 | `v2_bounded_mmcif_modified_residue_declarations` | `_pdbx_struct_mod_residue`의 source-declared modified polymer component를 label asym·sequence·component identity와 결속 | atom-site observation·parent chemistry·modification nature·auth/model/insertion semantics·preparation |
-| `v2_bounded_mmcif_nonpoly_identity` | nonpoly component/entity/asym/instance alias identity | atom-site join·role·chemistry·topology |
+| `v2_bounded_mmcif_nonpoly_identity` | nonpoly component/entity/asym/instance alias와 source insertion-code marker identity | atom-site join·role·chemistry·topology, general author/label 의미 |
 | `v2_bounded_mmcif_nonpoly_component_declarations` | selected component atom과 optional component bond source row | element·charge·aromaticity·stereo·bond order·topology |
 | `v2_bounded_mmcif_nonpoly_component_roles` | `_entity.type`, `_chem_comp.type`, component element·formal-charge composition으로 source water와 단원자 metal/nonmetal ion 경계를 보수적으로 분류 | general ligand·cofactor·nonpoly modified-residue 역할, metal coordination chemistry, ion/metal preparation |
 | `v2_bounded_mmcif_struct_conn_declarations` | selected 23-field `_struct_conn` row의 nonpoly instance·component atom identity join | connection type·symmetry·order·covalence·coordination·topology |
-| `v2_bounded_mmcif_nonpoly_atom_site_observations` | exact 21-field `_atom_site`에서 selected nonpoly instance·component atom과 `_struct_conn` endpoint observation join | coordinate numeric value·geometry·occupancy·B-factor·formal charge·topology |
+| `v2_bounded_mmcif_nonpoly_atom_site_observations` | exact 21-field `_atom_site`에서 selected nonpoly instance·component atom과 `_struct_conn` endpoint observation join; known insertion code의 scheme·atom-site·connection exact identity 일치 | coordinate numeric value·geometry·occupancy·B-factor·formal charge·topology, polymer insertion/deletion·renumbering 의미 |
 | `v2_bounded_mmcif_nonpoly_coordinate_values` | selected `Cartn_x/y/z` 원문 spelling·finite binary64 값·exact bit pattern 결속 | coordinate unit·geometry quality·distance·clash·occupancy·B-factor·formal charge·topology |
 | `v2_bounded_mmcif_nonpoly_atom_site_scalar_values` | occupancy·B-factor·formal charge의 known/unknown/not-applicable 상태와 bounded numeric value 결속 | occupancy population·B-factor quality·charge chemistry·altloc·topology |
 | `v2_bounded_mmcif_nonpoly_canonical_topology` | component SING/DOUB/TRIP/QUAD/AROM bond와 identity-symmetry `covale` Bond, 별도 `metalc` coordination edge | 비identity symmetry·hydrog·disulf·DELO/PI/POLY·원소/charge/aromaticity chemistry |
 | `v2_bounded_mmcif_nonpoly_neutral_coh_preparation` | neutral acyclic C/O/H component의 single/double bond graph, 명시적 0 formal charge, fixed-valence hydrogen completion과 instance별 failure-complete parameterability report | hydrogen 좌표·reviewed parameter·`AllAtomSystem`·charged/aromatic/stereo/extended-element/cyclic/pH/tautomer/intercomponent preparation |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 26-case synthetic contract corpus와 51-axis executable coverage ledger; supported 16·explicitly unsupported 24·not implemented 11 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 27-case synthetic contract corpus와 51-axis executable coverage ledger; supported 17·explicitly unsupported 24·not implemented 10 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -166,6 +166,13 @@ model은 source 사실을 삭제하거나 첫 model로 자동 선택하지 않�
 차단한다. 이 분류는 model selection, ensemble·trajectory·averaging 의미,
 cross-category model reference 또는 좌표·원자 identity 해석이 아니다.
 
+bounded nonpoly insertion identity는 공식 PDBx/mmCIF의
+`_pdbx_nonpoly_scheme.pdb_ins_code`와 `_atom_site.pdbx_PDB_ins_code` marker를
+source state·value·quoted 형태로 보존하고, known code가 scheme·selected atom-site·
+`_struct_conn` endpoint에서 정확히 같을 때 동일 instance identity로 결속한다.
+이는 bounded nonpoly source identity 지원일 뿐 polymer insertion/deletion,
+canonical renumbering, sequence alignment 또는 일반 author/label 의미 해석이 아니다.
+
 bounded topology capability는 component bond order·aromatic flag·E/Z stereo를
 명시적으로 교차검증한다. `_struct_conn`의 identity-symmetry `covale`만 explicit
 order로 canonical Bond를 만들고 `metalc`는 Bond가 아닌 coordination edge로
@@ -179,11 +186,11 @@ hydrogen 좌표·reviewed parameter source·`AllAtomSystem`이 없으므로 항�
 `parameterable=false`다. 이는 pH-dependent protonation, tautomer selection,
 과학적 chemistry validation 또는 실행 가능한 all-atom preparation이 아니다.
 
-bounded preparation corpus는 26개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
-지원 그래프 3개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
+bounded preparation corpus는 27개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
+지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 2개, invalid-source 2개를 모두 실행하고 failure row를
-denominator에서 제거하지 않는다. 51-axis coverage ledger는 16개 supported,
-24개 explicitly unsupported, 11개 `not_implemented`로 분류하며 unclassified
+denominator에서 제거하지 않는다. 51-axis coverage ledger는 17개 supported,
+24개 explicitly unsupported, 10개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -238,12 +245,12 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    single/double bond로 고정하고, fixed-valence hydrogen-completed graph 및
    failure-complete parameterability report를 유지한다. 좌표·parameter·
    `AllAtomSystem`, pH·tautomer·aromatic/charged chemistry는 계속 분리한다.
-6. 완료된 첫 contract layer로 exact ASCII 26-case synthetic supported/failure
+6. 완료된 첫 contract layer로 exact ASCII 27-case synthetic supported/failure
    corpus와 51-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 다음으로 11개 `not_implemented` row를 작은 capability별로 닫고,
+7. 다음으로 10개 `not_implemented` row를 작은 capability별로 닫고,
    licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
-   우선순위는 general ligand/cofactor 역할, assembly/insertion/missingness 정책,
+   우선순위는 general ligand/cofactor 역할, assembly/missingness 정책,
    coordinate-bearing hydrogen,
    parameter provenance와 canonical `AllAtomSystem`이다.
 8. 위 gap과 real-world corpus가 닫히기 전에는 V2-2 parameter fitting·validation을

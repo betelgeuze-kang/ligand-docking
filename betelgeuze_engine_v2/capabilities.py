@@ -204,7 +204,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "eleven_classified_implementation_gaps_remain",
+        "ten_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -404,7 +404,7 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
                 current_state=(
-                    "frozen_26_case_failure_complete_corpus_and_51_axis_coverage_ledger"
+                    "frozen_27_case_failure_complete_corpus_and_51_axis_coverage_ledger"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
