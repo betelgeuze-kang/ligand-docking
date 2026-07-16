@@ -1,4 +1,4 @@
-name: apply-mmcif-semantic-location-separation
+name: apply-mmcif-semantic-projection-corrections
 
 on:
   pull_request:
@@ -10,11 +10,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-mmcif-semantic-location-separation
+  group: apply-mmcif-semantic-projection-corrections
   cancel-in-progress: false
 
 jobs:
-  apply-patch:
+  apply-corrections:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == 'betelgeuze-kang' &&
@@ -30,19 +30,45 @@ jobs:
           persist-credentials: true
           clean: true
 
-      - name: Apply reviewed semantic/source separation
+      - name: Separate semantic values from source locations and fix scalar fixture
         shell: bash
         run: |
           set -euo pipefail
-          git apply --check .github/patches/mmcif-semantic-location.patch
-          git apply .github/patches/mmcif-semantic-location.patch
-          rm .github/patches/mmcif-semantic-location.patch
+          python - <<'PY'
+          from pathlib import Path
+
+          module = Path("betelgeuze_engine_v2/molecular/mmcif_semantics.py")
+          source = module.read_text(encoding="utf-8")
+          old = '''            "quoted": self.quoted,
+                      "line_number": self.line_number,
+                      "column_number": self.column_number,
+          '''
+          new = '''            "quoted": self.quoted,
+          '''
+          if source.count(old) != 1:
+              raise SystemExit("semantic value location block drifted")
+          module.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          test_path = Path("tests/unit/test_engine_v2_mmcif_semantics.py")
+          tests = test_path.read_text(encoding="utf-8")
+          old_test = '            _replace_once(CANONICAL, "loop_\\n_entity.id\\n_entity.type", "_entity.id 1\\n_entity.type polymer"),'
+          new_test = '''            _replace_once(
+                          CANONICAL,
+                          "loop_\\n_entity.id\\n_entity.type\\n1 polymer\\n2 water\\n#",
+                          "_entity.id 1\\n_entity.type polymer\\n#",
+                      ),'''
+          if tests.count(old_test) != 1:
+              raise SystemExit("scalar category fixture drifted")
+          test_path.write_text(tests.replace(old_test, new_test, 1), encoding="utf-8")
+
+          Path(".github/patches/mmcif-semantic-location.patch").unlink()
+          PY
           python -m py_compile \
             betelgeuze_engine_v2/molecular/mmcif_semantics.py \
             tests/unit/test_engine_v2_mmcif_semantics.py
           git diff --check
 
-      - name: Commit source change without modifying workflow
+      - name: Commit corrected source and tests without modifying workflow
         shell: bash
         run: |
           set -euo pipefail
@@ -50,7 +76,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A -- \
             betelgeuze_engine_v2/molecular/mmcif_semantics.py \
+            tests/unit/test_engine_v2_mmcif_semantics.py \
             .github/patches/mmcif-semantic-location.patch
           git diff --cached --check
-          git commit -m "fix(v2): separate mmCIF semantics from source locations"
+          git commit -m "fix(v2): separate mmCIF semantics from source binding"
           git push origin HEAD:codex/v2-mmcif-semantic-projection
