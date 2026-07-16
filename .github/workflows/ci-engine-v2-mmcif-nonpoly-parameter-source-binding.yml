@@ -1,54 +1,50 @@
-name: ci-engine-v2-mmcif-nonpoly-all-atom-systems
+name: ci-engine-v2-mmcif-nonpoly-parameter-source-binding
 
 on:
   pull_request:
     paths:
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
-      - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - "docs/engine_v2_status.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   push:
     branches: ["main"]
     paths:
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
-      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_hydrogen_coordinates.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation_corpus.py"
       - "betelgeuze_engine_v2/molecular/__init__.py"
+      - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
-      - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
+      - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - "docs/engine_v2_status.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
-      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -58,11 +54,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-engine-v2-mmcif-nonpoly-all-atom-systems-${{ github.ref }}
+  group: ci-engine-v2-mmcif-nonpoly-parameter-source-binding-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  all-atom-systems:
+  parameter-source-binding:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -75,7 +71,7 @@ jobs:
       ROCR_VISIBLE_DEVICES: ""
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
     steps:
-      - name: Check out bounded all-atom materialization surface
+      - name: Check out bounded parameter source binding surface
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
@@ -85,9 +81,10 @@ jobs:
             betelgeuze_engine_v2
             config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
-            tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py
             tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py
+            tests/unit/test_engine_v2_parameter_source_provenance.py
             tests/unit/test_engine_v2_commercial_roadmap.py
             tests/unit/test_engine_v2_post_merge_state.py
             docs/engine_v2_status.md
@@ -97,10 +94,8 @@ jobs:
             docs/entrypoints.md
             README.md
             README.ko.md
-            .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml
-            .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
-            .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
             .github/workflows/ci-engine-v2-main.yml
@@ -125,31 +120,32 @@ jobs:
           {
             python -m compileall -q betelgeuze_engine_v2
             python tools/check_engine_v2_architecture.py
-          } > mmcif-nonpoly-all-atom-systems.log 2>&1
+          } > mmcif-nonpoly-parameter-source-binding.log 2>&1
           status=$?
-          cat mmcif-nonpoly-all-atom-systems.log
+          cat mmcif-nonpoly-parameter-source-binding.log
           exit "$status"
 
-      - name: Run all-atom materialization corpus and registry contracts
+      - name: Run parameter source binding and registry contracts
         shell: bash
         run: |
           set +e
           python -m pytest -vv -x \
-            tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py \
+            tests/unit/test_engine_v2_parameter_source_provenance.py \
             tests/unit/test_engine_v2_commercial_roadmap.py \
             tests/unit/test_engine_v2_post_merge_state.py \
-            >> mmcif-nonpoly-all-atom-systems.log 2>&1
+            >> mmcif-nonpoly-parameter-source-binding.log 2>&1
           status=$?
-          cat mmcif-nonpoly-all-atom-systems.log
+          cat mmcif-nonpoly-parameter-source-binding.log
           exit "$status"
 
-      - name: Upload all-atom materialization diagnostics
+      - name: Upload parameter source binding diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mmcif-nonpoly-all-atom-systems-py${{ matrix.python-version }}-${{ github.run_id }}
-          path: mmcif-nonpoly-all-atom-systems.log
+          name: mmcif-nonpoly-parameter-source-binding-py${{ matrix.python-version }}-${{ github.run_id }}
+          path: mmcif-nonpoly-parameter-source-binding.log
           if-no-files-found: error
           retention-days: 7

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
       - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/physics/__init__.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
@@ -12,6 +13,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
@@ -22,6 +24,7 @@ on:
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
@@ -30,6 +33,7 @@ on:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_systems.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
       - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/physics/__init__.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_preparation.py"
@@ -38,6 +42,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py"
@@ -48,6 +53,7 @@ on:
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
@@ -87,6 +93,7 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_parameter_source_provenance.py
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -103,6 +110,7 @@ jobs:
             README.ko.md
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
@@ -140,6 +148,7 @@ jobs:
           python -m pytest -vv -x \
             tests/unit/test_engine_v2_parameter_source_provenance.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation_corpus.py \

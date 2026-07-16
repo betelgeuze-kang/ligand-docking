@@ -66,6 +66,9 @@ MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID = (
 MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_all_atom_systems"
 )
+MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_parameter_source_binding"
+)
 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = (
     "v2_reviewed_parameter_source_provenance"
 )
@@ -233,7 +236,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "source_declared_biological_assembly_preparation_not_supported",
         "source_declared_observation_gap_preparation_not_supported",
         "hydrogen_coordinate_geometry_not_validated",
-        "reviewed_parameter_source_not_bound_to_preparation",
+        "reviewed_parameter_source_binding_is_separate",
         "aromatic_charged_stereo_and_extended_elements_not_supported",
         "ph_tautomer_and_intercomponent_connections_not_prepared",
         "canonical_all_atom_system_not_bound_to_preparation_report",
@@ -246,7 +249,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "stereochemistry_protonation_and_tautomer_not_interpreted",
         "steric_clash_and_coordinate_quality_not_assessed",
         "coordinate_minimization_not_performed",
-        "reviewed_parameter_source_not_bound_to_preparation",
+        "reviewed_parameter_source_binding_is_separate",
         "partial_charge_assignment_not_performed",
         "canonical_all_atom_system_adapter_is_separate",
         "scientific_validation_missing",
@@ -262,7 +265,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "parameter_value_calibration_missing",
         "force_energy_validation_missing",
         "legal_compliance_determination_not_provided",
-        "canonical_all_atom_system_not_bound_to_parameter_source",
+        "canonical_system_binding_is_separate_capability",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -271,12 +274,25 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "intercomponent_coordination_preserved_as_metadata_only",
         "fixed_parent_offset_geometry_not_validated",
         "source_authentication_missing",
-        "parameter_source_not_bound_to_system",
+        "reviewed_parameter_source_binding_is_separate_capability",
         "parameter_assignment_not_implemented",
         "partial_charge_assignment_not_implemented",
         "atom_masses_not_assigned",
         "source_format_round_trip_not_implemented",
         "chemistry_validation_missing",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID: (
+        "source_artifact_not_bundled",
+        "offxml_semantic_parsing_not_implemented",
+        "candidate_scope_parameter_coverage_not_validated",
+        "applicability_domain_validation_missing",
+        "parameter_assignment_not_implemented",
+        "partial_charge_assignment_not_implemented",
+        "atom_masses_not_assigned",
+        "fixed_parent_offset_geometry_not_validated",
+        "force_energy_validation_missing",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -512,6 +528,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID,
+                current_state=(
+                    "reviewed_parameter_source_identity_bound_to_bounded_"
+                    "canonical_systems_without_assignment"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID: _row(
                 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
                 current_state=(
@@ -523,7 +548,7 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
                 current_state=(
-                    "frozen_30_case_failure_complete_corpus_and_51_axis_coverage_ledger"
+                    "frozen_30_case_failure_complete_corpus_and_52_axis_coverage_ledger"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -614,6 +639,7 @@ __all__ = [
     "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
     "MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID",
     "MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID",
+    "MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",

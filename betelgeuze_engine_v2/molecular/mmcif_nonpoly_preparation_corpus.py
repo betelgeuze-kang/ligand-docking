@@ -52,6 +52,11 @@ from .mmcif_nonpoly_all_atom_systems import (
     MMCIF_NONPOLY_ALL_ATOM_SYSTEM_PROFILE_ID,
     parse_mmcif_nonpoly_all_atom_systems,
 )
+from .mmcif_nonpoly_parameter_source_binding import (
+    MMCIF_NONPOLY_PARAMETER_SOURCE_BINDER_VERSION,
+    MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_PROFILE_ID,
+    bind_reviewed_parameter_source_to_all_atom_snapshot,
+)
 from .mmcif_modified_residue_declarations import (
     MMCIF_MODIFIED_RESIDUE_DECLARATION_HEADERS,
     MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION,
@@ -100,7 +105,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "d01d6620930c876eadf133561eeebf634f81cc8b9b45478bde2034aaa9e74b32"
+    "1f70f50173ef6b343333ff03657fd66ed3da81be656d827f52aa2464b761417c"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -252,6 +257,7 @@ class MmcifPreparationCorpusCaseResult:
     missing_atom_residue_policy_snapshot_sha256: str
     hydrogen_coordinate_snapshot_sha256: str
     all_atom_system_snapshot_sha256: str
+    parameter_source_binding_snapshot_sha256: str
     component_role_snapshot_sha256: str
     modified_residue_declaration_snapshot_sha256: str
     error_code: str
@@ -261,6 +267,7 @@ class MmcifPreparationCorpusCaseResult:
     missing_atom_residue_policy: Mapping[str, Any]
     hydrogen_coordinate_summary: Mapping[str, Any]
     all_atom_system_summary: Mapping[str, Any]
+    parameter_source_binding_summary: Mapping[str, Any]
     component_roles: tuple[Mapping[str, Any], ...]
     modified_residue_declarations: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
@@ -288,6 +295,9 @@ class MmcifPreparationCorpusCaseResult:
             "all_atom_system_snapshot_sha256": (
                 self.all_atom_system_snapshot_sha256
             ),
+            "parameter_source_binding_snapshot_sha256": (
+                self.parameter_source_binding_snapshot_sha256
+            ),
             "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
             "modified_residue_declaration_snapshot_sha256": (
                 self.modified_residue_declaration_snapshot_sha256
@@ -301,6 +311,9 @@ class MmcifPreparationCorpusCaseResult:
             ),
             "hydrogen_coordinate_summary": dict(self.hydrogen_coordinate_summary),
             "all_atom_system_summary": dict(self.all_atom_system_summary),
+            "parameter_source_binding_summary": dict(
+                self.parameter_source_binding_summary
+            ),
             "component_roles": [dict(row) for row in self.component_roles],
             "modified_residue_declarations": [
                 dict(row) for row in self.modified_residue_declarations
@@ -392,6 +405,7 @@ def _claim_policy() -> dict[str, bool]:
         "expectations_executed_against_current_parser": True,
         "reviewed_parameter_source_provenance_bound": True,
         "canonical_all_atom_materialization_bound": True,
+        "reviewed_parameter_source_bound_to_canonical_systems": True,
         "corpus_is_parameter_fitting_data": False,
         "parameter_fitting_allowed": False,
         "v2_1_exit_ready": False,
@@ -1423,6 +1437,7 @@ MMCIF_NONPOLY_PREPARATION_REQUIRED_COVERAGE_IDS = (
     "role.modified_residue",
     "hydrogen.coordinates",
     "parameter_source.reviewed",
+    "parameter_source.system_binding",
     "partial_charge.assignment",
     "all_atom_system.creation",
     "upstream.altloc_selection",
@@ -1794,6 +1809,16 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
             ("supported_carbonyl",),
         ),
         _coverage(
+            "parameter_source.system_binding",
+            "parameterability",
+            supported,
+            (
+                "parameter_source_binding_status:"
+                "reviewed_parameter_source_identity_bound_to_system"
+            ),
+            ("supported_single_coh", "supported_source_hydrogen"),
+        ),
+        _coverage(
             "partial_charge.assignment",
             "parameterability",
             missing,
@@ -1911,6 +1936,7 @@ def _signals_for_reports(
     missing_atom_residue_policy: Mapping[str, Any],
     hydrogen_coordinate_summary: Mapping[str, Any],
     all_atom_system_summary: Mapping[str, Any],
+    parameter_source_binding_summary: Mapping[str, Any],
     component_roles: tuple[Mapping[str, Any], ...],
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
@@ -1987,6 +2013,18 @@ def _signals_for_reports(
     signals.extend(
         f"all_atom_system_status:{row['materialization_status']}"
         for row in all_atom_system_summary["instance_reports"]
+    )
+    signals.extend(
+        (
+            "parameter_source_binding_bound_system_count:"
+            f"{parameter_source_binding_summary['bound_system_count']}",
+            "parameter_source_binding_unbound_system_count:"
+            f"{parameter_source_binding_summary['unbound_system_count']}",
+        )
+    )
+    signals.extend(
+        f"parameter_source_binding_status:{row['binding_status']}"
+        for row in parameter_source_binding_summary["instance_reports"]
     )
     for report in reports:
         component = str(report["component_id"])
@@ -2074,6 +2112,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             ),
             hydrogen_coordinate_snapshot_sha256="",
             all_atom_system_snapshot_sha256="",
+            parameter_source_binding_snapshot_sha256="",
             component_role_snapshot_sha256="",
             modified_residue_declaration_snapshot_sha256="",
             error_code=exc.code,
@@ -2083,6 +2122,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             missing_atom_residue_policy=missing_policy,
             hydrogen_coordinate_summary={},
             all_atom_system_summary={},
+            parameter_source_binding_summary={},
             component_roles=(),
             modified_residue_declarations=(),
             signals=tuple(
@@ -2142,6 +2182,20 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             for row in all_atom_system_snapshot.instance_reports
         ],
     }
+    parameter_source_binding_snapshot = (
+        bind_reviewed_parameter_source_to_all_atom_snapshot(all_atom_system_snapshot)
+    )
+    parameter_source_binding_summary = {
+        **parameter_source_binding_snapshot.to_dict(),
+        "instance_reports": [
+            {
+                key: value
+                for key, value in row.to_dict().items()
+                if key != "canonical_bound_system_document"
+            }
+            for row in parameter_source_binding_snapshot.instance_reports
+        ],
+    }
     role_snapshot = parse_mmcif_nonpoly_component_roles(case.source_text)
     modified_residue_snapshot = (
         parse_mmcif_modified_residue_declarations(case.source_text)
@@ -2189,6 +2243,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             hydrogen_coordinate_snapshot.snapshot_sha256
         ),
         all_atom_system_snapshot_sha256=all_atom_system_snapshot.snapshot_sha256,
+        parameter_source_binding_snapshot_sha256=(
+            parameter_source_binding_snapshot.snapshot_sha256
+        ),
         component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
         modified_residue_declaration_snapshot_sha256=(
             modified_residue_snapshot.snapshot_sha256
@@ -2202,6 +2259,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         missing_atom_residue_policy=missing_policy,
         hydrogen_coordinate_summary=hydrogen_coordinate_summary,
         all_atom_system_summary=all_atom_system_summary,
+        parameter_source_binding_summary=parameter_source_binding_summary,
         component_roles=component_roles,
         modified_residue_declarations=modified_residue_declarations,
         signals=_signals_for_reports(
@@ -2212,6 +2270,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             missing_policy,
             hydrogen_coordinate_summary,
             all_atom_system_summary,
+            parameter_source_binding_summary,
             component_roles,
             modified_residue_declarations,
             snapshot.to_dict(),
@@ -2337,6 +2396,12 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         "all_atom_system_profile_id": MMCIF_NONPOLY_ALL_ATOM_SYSTEM_PROFILE_ID,
         "all_atom_system_materializer_version": (
             MMCIF_NONPOLY_ALL_ATOM_SYSTEM_MATERIALIZER_VERSION
+        ),
+        "parameter_source_binding_profile_id": (
+            MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_PROFILE_ID
+        ),
+        "parameter_source_binder_version": (
+            MMCIF_NONPOLY_PARAMETER_SOURCE_BINDER_VERSION
         ),
         "parameter_source_provenance_profile_id": (
             PARAMETER_SOURCE_PROVENANCE_PROFILE_ID

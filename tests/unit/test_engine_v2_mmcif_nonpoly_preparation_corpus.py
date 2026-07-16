@@ -437,11 +437,11 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert tuple(row.coverage_id for row in rows) == (
         MMCIF_NONPOLY_PREPARATION_REQUIRED_COVERAGE_IDS
     )
-    assert len(rows) == 51
+    assert len(rows) == 52
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
         "not_implemented": 4,
-        "supported": 20,
+        "supported": 21,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -469,6 +469,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "upstream.multimodel_policy" not in missing
     assert "hydrogen.coordinates" not in missing
     assert "parameter_source.reviewed" not in missing
+    assert "parameter_source.system_binding" not in missing
     assert "all_atom_system.creation" not in missing
 
     parameter_source = next(
@@ -482,6 +483,17 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert payload["reviewed_parameter_source_provenance_bound"] is True
     assert payload["canonical_all_atom_materialization_bound"] is True
+    assert payload["reviewed_parameter_source_bound_to_canonical_systems"] is True
+
+    parameter_binding = next(
+        row for row in rows if row.coverage_id == "parameter_source.system_binding"
+    )
+    assert parameter_binding.policy_status == "supported"
+    assert parameter_binding.blocker == ""
+    assert parameter_binding.expected_signal == (
+        "parameter_source_binding_status:"
+        "reviewed_parameter_source_identity_bound_to_system"
+    )
 
     all_atom_system = next(
         row for row in rows if row.coverage_id == "all_atom_system.creation"
@@ -519,6 +531,32 @@ def test_corpus_binds_failure_complete_all_atom_materialization(corpus_snapshot)
     covalent = by_id["unprepared_intercomponent_covalent"]
     assert covalent.all_atom_system_summary["created_system_count"] == 0
     assert covalent.all_atom_system_summary["unavailable_system_count"] == 2
+
+
+def test_corpus_binds_reviewed_parameter_source_to_created_systems(
+    corpus_snapshot,
+) -> None:
+    supported = next(
+        row
+        for row in corpus_snapshot.case_results
+        if row.case_id == "supported_single_coh"
+    )
+    assert supported.parameter_source_binding_snapshot_sha256
+    assert supported.parameter_source_binding_summary["bound_system_count"] == 2
+    assert supported.parameter_source_binding_summary["unbound_system_count"] == 0
+    assert all(
+        row["binding_status"]
+        == "reviewed_parameter_source_identity_bound_to_system"
+        for row in supported.parameter_source_binding_summary["instance_reports"]
+    )
+
+    covalent = next(
+        row
+        for row in corpus_snapshot.case_results
+        if row.case_id == "unprepared_intercomponent_covalent"
+    )
+    assert covalent.parameter_source_binding_summary["bound_system_count"] == 0
+    assert covalent.parameter_source_binding_summary["unbound_system_count"] == 2
 
 
 def test_document_is_deterministic_self_verifying_and_written_private(
