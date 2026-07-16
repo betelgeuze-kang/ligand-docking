@@ -1,8 +1,7 @@
 name: apply-strict-pose-rmsd-patch
 
 on:
-  push:
-    branches: ["codex/strict-pose-rmsd"]
+  pull_request:
     paths:
       - ".github/patches/strict-pose-rmsd/**"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
@@ -16,11 +15,14 @@ concurrency:
 
 jobs:
   apply-patch:
-    if: ${{ !contains(github.event.head_commit.message, '[strict-pose-applied]') }}
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/strict-pose-rmsd'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out trusted feature branch
+      - name: Check out the controlled feature branch
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: codex/strict-pose-rmsd
@@ -60,12 +62,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            betelgeuze_engine/biodiscovery/pose.py \
-            betelgeuze_engine/biodiscovery/screening.py \
-            tests/unit/test_biodiscovery_screening.py \
-            .github/workflows/ci-strict-pose-rmsd.yml \
-            .github/patches/strict-pose-rmsd
+          git add -A
           git diff --cached --check
           git commit -m "fix(biodiscovery): enforce strict state-aware pose RMSD [strict-pose-applied]"
           git push origin HEAD:codex/strict-pose-rmsd
