@@ -42,7 +42,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 29
+    assert len(cases) == 30
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -342,6 +342,36 @@ def test_source_declared_observation_gaps_block_preparation_with_policy_evidence
     assert f"missing_atom_residue_policy_blocker:{blocker}" in result.signals
 
 
+def test_source_declared_biological_assembly_blocks_with_policy_evidence(
+    corpus_snapshot,
+) -> None:
+    result = {
+        row.case_id: row for row in corpus_snapshot.case_results
+    }["unsupported_biological_assembly_input"]
+
+    assert result.cohort == "unsupported_upstream_policy"
+    assert result.observed_outcome == "expected_error"
+    assert result.error_code == "source_declared_biological_assembly_not_supported"
+    assert result.preparation_snapshot_sha256 == ""
+    assert len(result.biological_assembly_policy_snapshot_sha256) == 64
+    policy = result.biological_assembly_policy
+    assert policy["execution_policy_status"] == (
+        "explicitly_unsupported_source_declared_biological_assembly"
+    )
+    assert policy["execution_allowed"] is False
+    assert policy["present_categories"] == [
+        "_pdbx_struct_assembly",
+        "_pdbx_struct_assembly_gen",
+        "_pdbx_struct_oper_list",
+    ]
+    assert policy["coordinates_expanded"] is False
+    assert (
+        "biological_assembly_policy_status:"
+        "explicitly_unsupported_source_declared_biological_assembly"
+        in result.signals
+    )
+
+
 def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
     corpus_snapshot,
 ) -> None:
@@ -395,8 +425,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 26,
-        "not_implemented": 8,
+        "explicitly_unsupported": 27,
+        "not_implemented": 7,
         "supported": 17,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -419,6 +449,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "role.cofactor" not in missing
     assert "role.modified_residue" not in missing
     assert "upstream.altloc_selection" not in missing
+    assert "upstream.biological_assembly" not in missing
     assert "upstream.insertion_semantics" not in missing
     assert "upstream.missing_atom_residue_policy" not in missing
     assert "upstream.multimodel_policy" not in missing
@@ -515,6 +546,8 @@ def test_dedicated_corpus_workflow_covers_supported_python_matrix() -> None:
     assert "test_engine_v2_mmcif_atom_site_model_policy.py" in source
     assert "mmcif_missing_atom_residue_policy.py" in source
     assert "test_engine_v2_mmcif_missing_atom_residue_policy.py" in source
+    assert "mmcif_biological_assembly_policy.py" in source
+    assert "test_engine_v2_mmcif_biological_assembly_policy.py" in source
     assert "test_engine_v2_mmcif_modified_residue_declarations.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
     assert "test_engine_v2_post_merge_state.py" in source

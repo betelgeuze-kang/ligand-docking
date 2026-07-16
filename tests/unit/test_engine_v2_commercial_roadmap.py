@@ -10,6 +10,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_component_declarations" in roadmap
     assert "v2_bounded_mmcif_nonpoly_component_roles" in roadmap
     assert "v2_bounded_mmcif_atom_site_model_policy" in roadmap
+    assert "v2_bounded_mmcif_biological_assembly_policy" in roadmap
     assert "v2_bounded_mmcif_missing_atom_residue_policy" in roadmap
     assert "v2_bounded_mmcif_modified_residue_declarations" in roadmap
     assert "v2_bounded_mmcif_struct_conn_declarations" in roadmap
@@ -25,9 +26,9 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "coordination edge" in roadmap
     assert "neutral acyclic C/O/H" in roadmap
     assert "parameterable=false" in roadmap
-    assert "exact ASCII 29-case" in roadmap
+    assert "exact ASCII 30-case" in roadmap
     assert "51-axis coverage ledger" in roadmap
-    assert "8개 `not_implemented`" in roadmap
+    assert "7개 `not_implemented`" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap
@@ -37,6 +38,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "atom-site\nobservation, parent chemistry" in roadmap
     assert "model set이 정확히 `{1}`" in roadmap
     assert "첫 model로 자동 선택하지 않고 명시적으로" in roadmap
+    assert "deposited asymmetric unit이\nbiologically relevant assembly라는 증거" in roadmap
+    assert "matrix/vector 값과 composition order를 해석하거나 좌표를 확장하지" in roadmap
     assert "0=`zero_occupancy`, 1=`unobserved`" in roadmap
     assert "그 부재가 구조가 완전하거나 missing atom/residue가 없다는 증거는" in roadmap
     assert "source-declared zero-occupancy 또는 unobserved atom/residue" in roadmap

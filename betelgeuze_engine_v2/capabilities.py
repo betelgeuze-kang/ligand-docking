@@ -28,6 +28,9 @@ MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = (
 )
 MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_altloc_declarations"
 MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID = "v2_bounded_mmcif_atom_site_model_policy"
+MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID = (
+    "v2_bounded_mmcif_biological_assembly_policy"
+)
 MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID = (
     "v2_bounded_mmcif_missing_atom_residue_policy"
 )
@@ -112,6 +115,16 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "cross_category_model_references_not_reconciled",
         "model_selection_ensemble_and_trajectory_semantics_not_interpreted",
         "coordinate_identity_and_chemistry_not_interpreted",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID: (
+        "source_declared_biological_assembly_expansion_not_supported",
+        "assembly_id_generation_expression_and_asym_list_not_interpreted",
+        "operation_matrix_vector_and_composition_not_interpreted",
+        "absence_does_not_prove_asymmetric_unit_is_biological_assembly",
+        "biological_assembly_correctness_not_assessed",
+        "coordinates_not_expanded",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -208,6 +221,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "product_integration_not_qualified",
     ),
     MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID: (
+        "source_declared_biological_assembly_preparation_not_supported",
         "source_declared_observation_gap_preparation_not_supported",
         "hydrogen_coordinates_not_generated",
         "reviewed_parameter_source_missing",
@@ -219,7 +233,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "eight_classified_implementation_gaps_remain",
+        "seven_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -349,6 +363,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID: _row(
+                MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID,
+                current_state=(
+                    "bounded_source_declared_biological_assembly_"
+                    "preparation_admission"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID: _row(
                 MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID,
                 current_state=(
@@ -427,7 +450,7 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
                 current_state=(
-                    "frozen_29_case_failure_complete_corpus_and_51_axis_coverage_ledger"
+                    "frozen_30_case_failure_complete_corpus_and_51_axis_coverage_ledger"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -504,6 +527,7 @@ __all__ = [
     "IMPLEMENTATION_STAGE",
     "MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID",
+    "MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID",
     "MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID",
     "MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID",

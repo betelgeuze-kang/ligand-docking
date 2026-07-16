@@ -15,6 +15,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     IMPLEMENTATION_STAGE,
     MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID,
     MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID,
+    MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID,
     MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID,
     MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID,
@@ -41,7 +42,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 25
+    assert len(loaded["capabilities"]) == 26
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -57,6 +58,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert CIF_SYNTAX_CAPABILITY_ID in rows
     assert MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID in rows
+    assert MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID in rows
     assert MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID in rows
     assert MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID in rows
@@ -106,6 +108,21 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert (
         "model_selection_ensemble_and_trajectory_semantics_not_interpreted"
         in model_policy["blockers"]
+    )
+
+    assembly_policy = rows[MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID]
+    assert assembly_policy["current_state"] == (
+        "bounded_source_declared_biological_assembly_preparation_admission"
+    )
+    assert assembly_policy["internal_reference_execution_enabled"] is True
+    assert "source_declared_biological_assembly_expansion_not_supported" in (
+        assembly_policy["blockers"]
+    )
+    assert "operation_matrix_vector_and_composition_not_interpreted" in (
+        assembly_policy["blockers"]
+    )
+    assert "absence_does_not_prove_asymmetric_unit_is_biological_assembly" in (
+        assembly_policy["blockers"]
     )
 
     missing_policy = rows[MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID]
@@ -221,6 +238,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_neutral_acyclic_coh_graph_preparation_and_parameterability_report"
     )
     assert preparation["internal_reference_execution_enabled"] is True
+    assert "source_declared_biological_assembly_preparation_not_supported" in (
+        preparation["blockers"]
+    )
     assert "source_declared_observation_gap_preparation_not_supported" in (
         preparation["blockers"]
     )
@@ -230,11 +250,11 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     preparation_corpus = rows[MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID]
     assert preparation_corpus["current_state"] == (
-        "frozen_29_case_failure_complete_corpus_and_51_axis_coverage_ledger"
+        "frozen_30_case_failure_complete_corpus_and_51_axis_coverage_ledger"
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
     assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "eight_classified_implementation_gaps_remain" in (
+    assert "seven_classified_implementation_gaps_remain" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]
@@ -286,6 +306,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_zero_occupancy.py",
         "test_engine_v2_mmcif_altloc_declarations.py",
         "test_engine_v2_mmcif_atom_site_model_policy.py",
+        "test_engine_v2_mmcif_biological_assembly_policy.py",
         "test_engine_v2_mmcif_missing_atom_residue_policy.py",
         "test_engine_v2_mmcif_modified_residue_declarations.py",
         "test_engine_v2_mmcif_nonpoly_identity.py",
