@@ -85,6 +85,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_commercial_roadmap.py
             tests/unit/test_engine_v2_sparse_geometry_features.py
             tests/unit/test_engine_v2_ai_core.py
@@ -147,6 +148,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_struct_conn_declarations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_observations.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_coordinate_values.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_commercial_roadmap.py \
             tests/unit/test_engine_v2_sparse_geometry_features.py \
             tests/unit/test_engine_v2_ai_core.py \

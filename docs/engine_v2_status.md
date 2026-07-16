@@ -25,7 +25,8 @@ The current `main` branch contains:
   zero-occupancy, altloc, nonpoly instance, component atom/bond, and selected
   `_struct_conn` source-declaration contracts, plus a bounded selected nonpoly
   `_atom_site` observation-to-identity join and finite-binary64 coordinate-value
-  binding that retains each raw token spelling and exact 64-bit pattern;
+  binding that retains each raw token spelling and exact 64-bit pattern, plus
+  bounded occupancy/B-factor/formal-charge marker and numeric semantics;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
 - a benchmark manifest and one-row-per-case success/failure ledger.
@@ -36,8 +37,8 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
-- general mmCIF coordinate units/geometry/topology interpretation or all-atom
-  preparation;
+- general mmCIF coordinate geometry/topology interpretation, occupancy
+  population or B-factor quality assessment, charge chemistry, or all-atom preparation;
 - a scientifically validated docking scorer or ranker;
 - public CASF/PDBBind/LIT-PCBA holdout performance;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;
