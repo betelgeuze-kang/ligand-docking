@@ -102,8 +102,6 @@ class MmcifSemanticValue:
             "state": self.state,
             "value": self.value,
             "quoted": self.quoted,
-            "line_number": self.line_number,
-            "column_number": self.column_number,
         }
 
 

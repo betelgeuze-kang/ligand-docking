@@ -286,7 +286,11 @@ def test_semantic_errors_do_not_echo_private_identity_values() -> None:
     ("source", "code"),
     [
         (
-            _replace_once(CANONICAL, "loop_\n_entity.id\n_entity.type", "_entity.id 1\n_entity.type polymer"),
+            _replace_once(
+                CANONICAL,
+                "loop_\n_entity.id\n_entity.type\n1 polymer\n2 water\n#",
+                "_entity.id 1\n_entity.type polymer\n#",
+            ),
             "category_must_be_loop",
         ),
         (
