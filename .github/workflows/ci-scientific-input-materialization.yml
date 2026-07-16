@@ -101,7 +101,13 @@ jobs:
           set +e
           python -m pytest --confcutdir=tests/unit -vv -x \
             tests/unit/test_scientific_input_materialization_recheck.py \
-            tests/unit/test_docking_pipeline_hardening.py \
+            tests/unit/test_docking_pipeline_hardening.py::test_htvs_materializer_rejects_redacted_hash_only_ligand \
+            tests/unit/test_docking_pipeline_hardening.py::test_htvs_materializer_error_exposes_structured_reason \
+            tests/unit/test_docking_pipeline_hardening.py::test_backmapping_materializer_rejects_empty_ligand_input \
+            tests/unit/test_docking_pipeline_hardening.py::test_backmapping_materializer_recovers_redacted_ligands_from_private_store \
+            tests/unit/test_docking_pipeline_hardening.py::test_explicit_internal_smoke_uses_one_labelled_synthetic_ligand \
+            tests/unit/test_docking_pipeline_hardening.py::test_htvs_materializer_recovers_redacted_ligands_from_private_store \
+            tests/unit/test_docking_pipeline_hardening.py::test_htvs_materializer_fails_closed_when_private_store_binding_mismatches \
             > scientific-input-materialization.log 2>&1
           status=$?
           cat scientific-input-materialization.log
