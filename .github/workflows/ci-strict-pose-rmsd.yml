@@ -34,24 +34,43 @@ jobs:
       - name: Decode and apply the reviewed patch
         shell: bash
         run: |
-          set -euo pipefail
-          shopt -s nullglob
-          parts=(tools/patches/strict_pose_rmsd.patch.b64.*)
-          if (( ${#parts[@]} == 0 )); then
-            echo "reviewed patch parts missing"
-            exit 1
-          fi
-          cat "${parts[@]}" | base64 --decode > /tmp/strict-pose-rmsd.patch
-          echo "06321e5955819f8a49f05fb10d4bfcb11c8c9d1f916381a196741c834eba6348  /tmp/strict-pose-rmsd.patch" | sha256sum --check -
-          git apply --check /tmp/strict-pose-rmsd.patch
-          git apply /tmp/strict-pose-rmsd.patch
-          rm -rf tools/patches/strict_pose_rmsd.patch* .github/patches/strict-pose-rmsd
-          python -m py_compile \
-            betelgeuze_engine/biodiscovery/pose.py \
-            betelgeuze_engine/biodiscovery/screening.py \
-            tests/unit/test_biodiscovery_screening.py \
-            tests/unit/test_tier_beta_vertical_slice.py
-          git diff --check
+          set +e
+          {
+            set -x
+            shopt -s nullglob
+            parts=(tools/patches/strict_pose_rmsd.patch.b64.*)
+            printf 'part_count=%s\n' "${#parts[@]}"
+            printf '%s\n' "${parts[@]}"
+            if (( ${#parts[@]} == 0 )); then
+              echo "reviewed patch parts missing"
+              exit 1
+            fi
+            cat "${parts[@]}" | base64 --decode > /tmp/strict-pose-rmsd.patch
+            wc -c /tmp/strict-pose-rmsd.patch
+            sha256sum /tmp/strict-pose-rmsd.patch
+            echo "06321e5955819f8a49f05fb10d4bfcb11c8c9d1f916381a196741c834eba6348  /tmp/strict-pose-rmsd.patch" | sha256sum --check -
+            git apply --check --verbose /tmp/strict-pose-rmsd.patch
+            git apply --verbose /tmp/strict-pose-rmsd.patch
+            rm -rf tools/patches/strict_pose_rmsd.patch* .github/patches/strict-pose-rmsd
+            python -m py_compile \
+              betelgeuze_engine/biodiscovery/pose.py \
+              betelgeuze_engine/biodiscovery/screening.py \
+              tests/unit/test_biodiscovery_screening.py \
+              tests/unit/test_tier_beta_vertical_slice.py
+            git diff --check
+          } > strict-pose-decode.log 2>&1
+          status=$?
+          cat strict-pose-decode.log
+          exit "$status"
+
+      - name: Upload strict pose decode diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strict-pose-clean-decode-${{ github.run_id }}-${{ github.run_attempt }}
+          path: strict-pose-decode.log
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Commit source changes without modifying workflow files
         shell: bash
