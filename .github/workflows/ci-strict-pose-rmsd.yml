@@ -1,25 +1,25 @@
 name: apply-strict-pose-rmsd-patch
 
 on:
-  push:
-    branches: ["codex/strict-pose-rmsd-clean"]
+  pull_request:
     paths:
       - "tools/patches/strict_pose_rmsd.patch*"
+      - ".github/patches/strict-pose-rmsd/**"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
 
 permissions:
   contents: write
 
 concurrency:
-  group: apply-strict-pose-rmsd-clean-${{ github.ref }}
+  group: apply-strict-pose-rmsd-clean
   cancel-in-progress: false
 
 jobs:
   apply-patch:
     if: >-
-      github.repository == 'betelgeuze-kang/ligand-docking' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor == 'betelgeuze-kang' &&
-      github.ref == 'refs/heads/codex/strict-pose-rmsd-clean'
+      github.head_ref == 'codex/strict-pose-rmsd-clean'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
