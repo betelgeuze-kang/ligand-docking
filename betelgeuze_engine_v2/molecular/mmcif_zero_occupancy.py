@@ -510,7 +510,7 @@ def _parse_residues(
             row[index[f"{RESIDUE_CATEGORY}.pdb_model_num"]],
             field=f"{RESIDUE_CATEGORY}.pdb_model_num",
         )
-        label_asym_token = row[index[f"{RESIDUE_CATEGORY}.label_asym_id"]
+        label_asym_token = row[index[f"{RESIDUE_CATEGORY}.label_asym_id"]]
         label_asym_id = _known_identity(
             label_asym_token,
             field=f"{RESIDUE_CATEGORY}.label_asym_id",
@@ -594,7 +594,7 @@ def _parse_atoms(
             row[index[f"{ATOM_CATEGORY}.pdb_model_num"]],
             field=f"{ATOM_CATEGORY}.pdb_model_num",
         )
-        label_asym_token = row[index[f"{ATOM_CATEGORY}.label_asym_id"]
+        label_asym_token = row[index[f"{ATOM_CATEGORY}.label_asym_id"]]
         label_asym_id = _known_identity(
             label_asym_token,
             field=f"{ATOM_CATEGORY}.label_asym_id",
