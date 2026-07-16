@@ -3,9 +3,7 @@ name: ci-scientific-input-materialization
 on:
   pull_request:
     paths:
-      - "api/config.py"
-      - "api/job_store.py"
-      - "api/request_privacy.py"
+      - "api/**"
       - "betelgeuze_product/docking_materialization_errors.py"
       - "betelgeuze_product/docking_private_payload.py"
       - "betelgeuze_product/job_orchestration.py"
@@ -21,9 +19,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "api/config.py"
-      - "api/job_store.py"
-      - "api/request_privacy.py"
+      - "api/**"
       - "betelgeuze_product/docking_materialization_errors.py"
       - "betelgeuze_product/docking_private_payload.py"
       - "betelgeuze_product/job_orchestration.py"
@@ -61,10 +57,7 @@ jobs:
           clean: true
           fetch-depth: 1
           sparse-checkout: |
-            api/__init__.py
-            api/config.py
-            api/job_store.py
-            api/request_privacy.py
+            api
             betelgeuze_product
             core
             tools/__init__.py
@@ -96,8 +89,7 @@ jobs:
       - name: Compile materialization and receipt surfaces
         run: |
           python -m compileall -q \
-            api/config.py \
-            api/job_store.py \
+            api \
             betelgeuze_product \
             tools/product/materialize_docking_htvs_request.py \
             tools/product/materialize_docking_backmapping_request.py \
