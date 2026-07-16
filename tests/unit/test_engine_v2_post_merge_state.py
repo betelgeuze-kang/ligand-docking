@@ -16,6 +16,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID,
     MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID,
+    MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID,
     MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,
     MMCIF_SEMANTICS_CAPABILITY_ID,
     MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID,
@@ -32,7 +33,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 16
+    assert len(loaded["capabilities"]) == 17
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -49,6 +50,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
@@ -109,6 +111,17 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "coordinate_tokens_not_numerically_interpreted" in atom_site["blockers"]
     assert "connection_chemistry_and_topology_not_interpreted" in atom_site["blockers"]
 
+    coordinate_values = rows[MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID]
+    assert coordinate_values["current_state"] == (
+        "bounded_nonpoly_finite_binary64_coordinate_values"
+    )
+    assert coordinate_values["internal_reference_execution_enabled"] is True
+    assert "coordinate_units_and_geometry_not_interpreted" in coordinate_values["blockers"]
+    assert (
+        "occupancy_b_factor_and_formal_charge_not_interpreted"
+        in coordinate_values["blockers"]
+    )
+
     physics_blockers = rows[PHYSICS_REGISTRY_CAPABILITY_ID]["blockers"]
     assert "reference_physics_scientific_validation_missing" in physics_blockers
     assert "validated_independent_physics_terms_missing" not in physics_blockers
@@ -159,6 +172,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_component_declarations.py",
         "test_engine_v2_mmcif_struct_conn_declarations.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_observations.py",
+        "test_engine_v2_mmcif_nonpoly_coordinate_values.py",
         "test_engine_v2_commercial_roadmap.py",
         "test_engine_v2_sparse_geometry_features.py",
         "test_engine_v2_ai_core.py",
