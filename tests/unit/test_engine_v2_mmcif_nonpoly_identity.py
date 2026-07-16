@@ -448,7 +448,7 @@ def test_duplicate_identity_and_instance_keys_are_rejected() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=PURE_SCHEME_ROWS,
     )
-    _error(duplicate_component, "duplicate_component_identity")
+    _error(duplicate_component, "duplicate_component_id")
 
     duplicate_entity = _source(
         entity_rows=PURE_ENTITY_ROWS + PURE_ENTITY_ROWS,
@@ -457,7 +457,7 @@ def test_duplicate_identity_and_instance_keys_are_rejected() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=PURE_SCHEME_ROWS,
     )
-    _error(duplicate_entity, "duplicate_entity_identity")
+    _error(duplicate_entity, "duplicate_entity_id")
 
     duplicate_instance = _source(
         entity_rows=PURE_ENTITY_ROWS,
@@ -466,7 +466,7 @@ def test_duplicate_identity_and_instance_keys_are_rejected() -> None:
         entity_nonpoly_rows=PURE_ENTITY_NONPOLY_ROWS,
         scheme_rows=PURE_SCHEME_ROWS + (dict(PURE_SCHEME_ROWS[0]),),
     )
-    _error(duplicate_instance, "duplicate_instance_identity")
+    _error(duplicate_instance, "duplicate_nonpoly_scheme_key")
 
 
 def test_errors_do_not_echo_private_identity_values() -> None:
