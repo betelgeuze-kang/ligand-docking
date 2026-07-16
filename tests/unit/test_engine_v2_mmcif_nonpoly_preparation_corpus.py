@@ -440,8 +440,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 52
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 4,
-        "supported": 21,
+        "not_implemented": 3,
+        "supported": 22,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -470,6 +470,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "hydrogen.coordinates" not in missing
     assert "parameter_source.reviewed" not in missing
     assert "parameter_source.system_binding" not in missing
+    assert "partial_charge.assignment" not in missing
     assert "all_atom_system.creation" not in missing
 
     parameter_source = next(
@@ -484,6 +485,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert payload["reviewed_parameter_source_provenance_bound"] is True
     assert payload["canonical_all_atom_materialization_bound"] is True
     assert payload["reviewed_parameter_source_bound_to_canonical_systems"] is True
+    assert payload["explicit_partial_charge_assignment_contract_bound"] is True
 
     parameter_binding = next(
         row for row in rows if row.coverage_id == "parameter_source.system_binding"
@@ -493,6 +495,15 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert parameter_binding.expected_signal == (
         "parameter_source_binding_status:"
         "reviewed_parameter_source_identity_bound_to_system"
+    )
+
+    partial_charge = next(
+        row for row in rows if row.coverage_id == "partial_charge.assignment"
+    )
+    assert partial_charge.policy_status == "supported"
+    assert partial_charge.blocker == ""
+    assert partial_charge.expected_signal == (
+        "partial_charge_assignment_status:explicit_partial_charge_vector_assigned"
     )
 
     all_atom_system = next(
@@ -557,6 +568,33 @@ def test_corpus_binds_reviewed_parameter_source_to_created_systems(
     )
     assert covalent.parameter_source_binding_summary["bound_system_count"] == 0
     assert covalent.parameter_source_binding_summary["unbound_system_count"] == 2
+
+
+def test_corpus_applies_only_frozen_synthetic_partial_charge_contract_records(
+    corpus_snapshot,
+) -> None:
+    supported = next(
+        row
+        for row in corpus_snapshot.case_results
+        if row.case_id == "supported_single_coh"
+    )
+    assert supported.partial_charge_assignment_snapshot_sha256
+    summary = supported.partial_charge_assignment_summary
+    assert summary["assigned_system_count"] == 2
+    assert summary["unassigned_system_count"] == 0
+    assert summary["method_scope"] == "synthetic_contract_fixture_only"
+    assert all(
+        row["assignment_status"] == "explicit_partial_charge_vector_assigned"
+        for row in summary["instance_reports"]
+    )
+
+    covalent = next(
+        row
+        for row in corpus_snapshot.case_results
+        if row.case_id == "unprepared_intercomponent_covalent"
+    )
+    assert covalent.partial_charge_assignment_summary["assigned_system_count"] == 0
+    assert covalent.partial_charge_assignment_summary["unassigned_system_count"] == 2
 
 
 def test_document_is_deterministic_self_verifying_and_written_private(

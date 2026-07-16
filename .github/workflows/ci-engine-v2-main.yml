@@ -21,6 +21,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
@@ -48,6 +49,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
@@ -117,6 +119,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py
             tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py
             tests/unit/test_engine_v2_parameter_source_provenance.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
@@ -149,6 +152,7 @@ jobs:
             .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-partial-charges.yml
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
@@ -204,6 +208,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_systems.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py \
             tests/unit/test_engine_v2_parameter_source_provenance.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
@@ -283,6 +288,7 @@ jobs:
               MMCIF_NONPOLY_HYDROGEN_COORDINATE_DOCUMENT_SCHEMA_ID,
               MMCIF_NONPOLY_ALL_ATOM_SYSTEM_DOCUMENT_SCHEMA_ID,
               MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_DOCUMENT_SCHEMA_ID,
+              MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_DOCUMENT_SCHEMA_ID,
               MMCIF_MODIFIED_RESIDUE_DECLARATION_DOCUMENT_SCHEMA_ID,
               MMCIF_ATOM_SITE_MODEL_POLICY_DOCUMENT_SCHEMA_ID,
               MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_DOCUMENT_SCHEMA_ID,
@@ -339,6 +345,7 @@ jobs:
           assert MMCIF_NONPOLY_HYDROGEN_COORDINATE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_ALL_ATOM_SYSTEM_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
+          assert MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_MODIFIED_RESIDUE_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_ATOM_SITE_MODEL_POLICY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")

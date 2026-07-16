@@ -101,9 +101,16 @@ claim status without revalidating the dependency and freshness chain.
   that binding metadata is the only system change. It does not bundle or parse
   OFFXML, establish parameter coverage/applicability, assign parameters, charges,
   or masses, validate geometry/physics, or make a system parameterable.
+- Keep the explicit partial-charge application contract executable. It binds a
+  caller-supplied finite binary64 vector to exact system identity, atom order,
+  method-provenance digest, and formal total-charge conservation before updating
+  `Atom.partial_charge_e`. The synthetic corpus uses positive-zero fixture values
+  only. The capability does not generate, calibrate, or scientifically validate
+  charges, establish applicability, assign force-field values or masses, or make
+  a system parameterable.
 - Keep the exact-input 30-case synthetic supported/failure contract corpus and
-  52-axis coverage ledger executable. It classifies 21 axes as supported, 27 as
-  explicitly unsupported, and 4 as not implemented; it is not parameter-fitting
+  52-axis coverage ledger executable. It classifies 22 axes as supported, 27 as
+  explicitly unsupported, and 3 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep exact selected source assembly metadata, generation, and Cartesian-
   operation rows bound while blocking preparation whenever any selected assembly
@@ -135,11 +142,11 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the 4 implementation-gap rows by independent capability slices and
+- Next, close the 3 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open;
-  bounded partial-charge assignment and source-format all-atom round trip are the
-  next preparation priorities after source-to-system identity binding.
+  source-format all-atom round trip is the next preparation priority after the
+  source binding and explicit charge-vector application contracts.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.
