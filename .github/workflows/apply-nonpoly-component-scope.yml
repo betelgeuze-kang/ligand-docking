@@ -1,0 +1,98 @@
+name: apply-nonpoly-component-scope
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/apply-nonpoly-component-scope.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-nonpoly-component-scope
+  cancel-in-progress: false
+
+jobs:
+  apply-correction:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'codex/v2-mmcif-nonpoly-identity'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-nonpoly-identity
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+          show-progress: false
+
+      - name: Scope projected chem_comp identities to selected nonpoly entities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          module_path = Path('betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py')
+          test_path = Path('tests/unit/test_engine_v2_mmcif_nonpoly_identity.py')
+
+          module = module_path.read_text(encoding='utf-8')
+          old_exact_coverage = '''    selected_components = {row.comp_id for row in entities}\n    if component_ids != selected_components:\n        raise MmcifNonpolyIdentityError(\n            "component_coverage_mismatch",\n            "chem_comp identifiers must exactly cover selected nonpoly components",\n        )\n    return tuple(entities)\n'''
+          if module.count(old_exact_coverage) != 1:
+              raise SystemExit('component exact-coverage block drifted')
+          module = module.replace(old_exact_coverage, '    return tuple(entities)\n')
+
+          old_parse_join = '''    entities = _parse_nonpoly_entities(\n        entity_nonpoly_loop,\n        entity_nonpoly_index,\n        entity_types=entity_types,\n        component_ids={row.comp_id for row in components},\n    )\n    instances = _parse_instances(\n'''
+          new_parse_join = '''    entities = _parse_nonpoly_entities(\n        entity_nonpoly_loop,\n        entity_nonpoly_index,\n        entity_types=entity_types,\n        component_ids={row.comp_id for row in components},\n    )\n    selected_component_ids = {row.comp_id for row in entities}\n    components = tuple(\n        row for row in components if row.comp_id in selected_component_ids\n    )\n    instances = _parse_instances(\n'''
+          if module.count(old_parse_join) != 1:
+              raise SystemExit('component projection join block drifted')
+          module = module.replace(old_parse_join, new_parse_join)
+          module_path.write_text(module, encoding='utf-8')
+
+          tests = test_path.read_text(encoding='utf-8')
+          old_extra_test = '''    extra_component = PURE_COMPONENT_ROWS + (\n        {\n            "_chem_comp.id": "EXTRA",\n            "_chem_comp.type": "non-polymer",\n            "_chem_comp.pdbx_formal_charge": "0",\n        },\n    )\n    _error(\n        _pure_source(component_rows=extra_component, tail=""),\n        "component_coverage_mismatch",\n    )\n\n'''
+          if tests.count(old_extra_test) != 1:
+              raise SystemExit('extra component failure fixture drifted')
+          tests = tests.replace(old_extra_test, '')
+
+          insertion_marker = '''def test_uninterpreted_atom_site_changes_do_not_change_identity_projection() -> None:\n'''
+          added_test = '''def test_unreferenced_chem_comp_rows_are_source_bound_but_not_projected() -> None:\n    canonical = parse_mmcif_nonpoly_identity(_pure_source(tail=""))\n    with_polymer_component = parse_mmcif_nonpoly_identity(\n        _pure_source(\n            component_rows=PURE_COMPONENT_ROWS\n            + (\n                {\n                    "_chem_comp.id": "ALA",\n                    "_chem_comp.type": "L-peptide linking",\n                    "_chem_comp.pdbx_formal_charge": "0",\n                },\n            ),\n            tail="",\n        )\n    )\n\n    assert [row.comp_id for row in canonical.components] == ["HEM"]\n    assert [row.comp_id for row in with_polymer_component.components] == ["HEM"]\n    assert (\n        canonical.identity_projection_sha256\n        == with_polymer_component.identity_projection_sha256\n    )\n    assert canonical.source_binding_sha256 != with_polymer_component.source_binding_sha256\n    binding = next(\n        row\n        for row in with_polymer_component.category_bindings\n        if row.category == CHEM_COMP_CATEGORY\n    )\n    assert binding.row_count == 2\n    assert len(binding.row_sha256) == 2\n\n\n'''
+          if tests.count(insertion_marker) != 1:
+              raise SystemExit('test insertion marker drifted')
+          tests = tests.replace(insertion_marker, added_test + insertion_marker)
+
+          mixed_marker = '''MIXED_COMPONENT_ROWS = (\n    {\n        "_chem_comp.id": "LIG",\n'''
+          mixed_replacement = '''MIXED_COMPONENT_ROWS = (\n    {\n        "_chem_comp.id": "ALA",\n        "_chem_comp.type": "L-peptide linking",\n        "_chem_comp.pdbx_formal_charge": "0",\n    },\n    {\n        "_chem_comp.id": "LIG",\n'''
+          if tests.count(mixed_marker) != 1:
+              raise SystemExit('mixed component fixture marker drifted')
+          tests = tests.replace(mixed_marker, mixed_replacement)
+
+          mixed_assertion = '''    assert [(row.entity_id, row.entity_type, row.comp_id) for row in snapshot.entities] == [\n        ("2", "non-polymer", "LIG"),\n        ("3", "water", "HOH"),\n    ]\n'''
+          mixed_assertion_replacement = '''    assert [row.comp_id for row in snapshot.components] == ["LIG", "HOH"]\n    assert [(row.entity_id, row.entity_type, row.comp_id) for row in snapshot.entities] == [\n        ("2", "non-polymer", "LIG"),\n        ("3", "water", "HOH"),\n    ]\n'''
+          if tests.count(mixed_assertion) != 1:
+              raise SystemExit('mixed projection assertion drifted')
+          tests = tests.replace(mixed_assertion, mixed_assertion_replacement)
+          test_path.write_text(tests, encoding='utf-8')
+          PY
+
+          python -m py_compile \
+            betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
+          git diff --check
+
+      - name: Commit the focused correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            betelgeuze_engine_v2/molecular/mmcif_nonpoly_identity.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "fix(v2): allow unrelated chem_comp rows in nonpoly sources"
+          git push origin HEAD:codex/v2-mmcif-nonpoly-identity
