@@ -45,6 +45,7 @@ on:
       - "tools/product/build_engine_refinement_claim_evidence_receipt.py"
       - "tools/product/build_product_scope_breadth_evidence_receipt.py"
       - "tools/product/build_product_full_commercial_blocker_evidence_matrix.py"
+      - "tools/product/github_action_pins.py"
       - "scripts/verify_quality_gate.py"
       - "deploy/**"
       - "monitoring/**"
@@ -82,6 +83,7 @@ on:
       - "tests/unit/test_structured_reason.py"
       - "tests/unit/test_build_pdbbind_casf_pose_affinity_results.py"
       - "tests/unit/test_github_workflow_trust_boundaries.py"
+      - "tests/unit/test_github_action_sha_pins.py"
       - "tools/product/github_workflow_trust_boundaries.py"
       - "tests/mobile/**"
       - "requirements-mobile.txt"
@@ -135,14 +137,17 @@ jobs:
             betelgeuze_product/scientific_input_provenance.py \
             betelgeuze_product/tier_beta_vertical_slice.py \
             core/claim_boundary.py \
+            tools/product/github_action_pins.py \
             tests/mobile \
+            tests/unit/test_github_action_sha_pins.py \
             tests/unit/test_scientific_input_dispatch_enforcement.py \
             tests/unit/test_scientific_input_dispatch_regression.py
 
-      - name: Enforce workflow trust boundaries
+      - name: Enforce workflow trust and action pin boundaries
         run: >-
           python -m pytest --confcutdir=tests/unit -q
           tests/unit/test_github_workflow_trust_boundaries.py
+          tests/unit/test_github_action_sha_pins.py
 
       - name: Run scientific input dispatch enforcement contracts
         shell: bash
