@@ -1,4 +1,4 @@
-# Bounded source-only nonpoly identity and registration contract; duplicate-contract-corrected final rerun.
+# Bounded source-only nonpoly identity and registration contract; final reviewed matrix.
 name: ci-engine-v2-mmcif-nonpoly-identity
 
 on:
