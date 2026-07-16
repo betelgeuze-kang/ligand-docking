@@ -1,10 +1,9 @@
 """Fail-closed provenance receipts for product docking scientific inputs.
 
-The public docking ledger must not retain raw receptor or ligand content.  This
-module therefore records bounded byte digests, source kinds, explicit-pocket
-identity, and request/dispatch bindings without copying the scientific payload.
-Implementation readiness is deliberately separate from scientific or product
-claim safety.
+The public docking ledger must not retain raw receptor or ligand content. This
+module records bounded byte digests, source kinds, explicit-pocket identity, and
+request/dispatch bindings without copying the scientific payload. Implementation
+readiness is deliberately separate from scientific or product claim safety.
 """
 
 from __future__ import annotations
@@ -23,6 +22,8 @@ MAX_SCIENTIFIC_INPUT_BYTES = 64 * 1024 * 1024
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _STRUCTURE_FIELDS = ("pdb_content", "pdb_path", "mmcif_content", "mmcif_path", "pdb_id")
 _LIGAND_FIELDS = ("smiles", "inchi", "sdf_path", "mol2_path", "pdbqt_path", "compound_id")
+_INLINE_SOURCE_FIELDS = {"pdb_content", "mmcif_content", "smiles", "inchi"}
+_PATH_SOURCE_FIELDS = {"pdb_path", "mmcif_path", "sdf_path", "mol2_path", "pdbqt_path"}
 _CURRENT_MATERIALIZABLE_LIGAND_FIELDS = {"smiles", "inchi"}
 
 
@@ -32,6 +33,17 @@ class ScientificInputProvenanceError(ValueError):
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _source_value(payload: dict[str, Any], key: str) -> str:
+    """Return source text while preserving exact submitted inline bytes."""
+
+    raw = payload.get(key)
+    if key in _INLINE_SOURCE_FIELDS:
+        if not isinstance(raw, str) or not raw.strip():
+            return ""
+        return raw
+    return _text(raw)
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -56,16 +68,22 @@ def _valid_sha256(value: Any) -> bool:
     return bool(_SHA256_RE.fullmatch(_text(value)))
 
 
+def _is_within(root: Path, candidate: Path) -> bool:
+    return candidate == root or root in candidate.parents
+
+
 def _file_digest(path_value: str, *, root: Path) -> tuple[str, int]:
     """Hash one bounded regular single-link file without following symlinks."""
 
-    candidate = Path(path_value).expanduser()
-    if not candidate.is_absolute():
-        candidate = root / candidate
-    logical = Path(os.path.abspath(str(candidate)))
+    root_path = Path(os.path.abspath(str(root.expanduser())))
+    requested = Path(path_value).expanduser()
+    relative_input = not requested.is_absolute()
+    logical = Path(os.path.abspath(str(root_path / requested if relative_input else requested)))
+    if relative_input and not _is_within(root_path, logical):
+        raise ScientificInputProvenanceError("scientific_input_relative_path_escapes_root")
 
     # Reject every symlink in the caller-provided path before opening the final
-    # component.  The descriptor checks below still own the final byte identity.
+    # component. Descriptor identity checks below still own the byte receipt.
     cursor = Path(logical.anchor)
     for component in logical.parts[1:]:
         cursor = cursor / component
@@ -129,13 +147,13 @@ def _source_digest(
     *,
     root: Path,
 ) -> tuple[str, int, bool, str]:
-    if source_kind in {"pdb_content", "mmcif_content", "smiles", "inchi"}:
+    if source_kind in _INLINE_SOURCE_FIELDS:
         try:
             digest, size = _inline_digest(source_value)
             return digest, size, True, ""
         except ScientificInputProvenanceError as exc:
             return "", 0, False, str(exc)
-    if source_kind in {"pdb_path", "mmcif_path", "sdf_path", "mol2_path", "pdbqt_path"}:
+    if source_kind in _PATH_SOURCE_FIELDS:
         try:
             digest, size = _file_digest(source_value, root=root)
             return digest, size, True, ""
@@ -145,7 +163,7 @@ def _source_digest(
 
 
 def _structure_receipt(payload: dict[str, Any], *, root: Path) -> tuple[dict[str, Any], list[str]]:
-    present = [(key, _text(payload.get(key))) for key in _STRUCTURE_FIELDS if _text(payload.get(key))]
+    present = [(key, _source_value(payload, key)) for key in _STRUCTURE_FIELDS if _source_value(payload, key)]
     blockers: list[str] = []
     if len(present) != 1:
         blockers.append("structure_source_must_be_exactly_one")
@@ -185,7 +203,7 @@ def _ligand_receipts(payload: dict[str, Any], *, root: Path) -> tuple[list[dict[
     blockers: list[str] = []
     for index, raw_row in enumerate(raw_rows, start=1):
         row = raw_row if isinstance(raw_row, dict) else {}
-        present = [(key, _text(row.get(key))) for key in _LIGAND_FIELDS if _text(row.get(key))]
+        present = [(key, _source_value(row, key)) for key in _LIGAND_FIELDS if _source_value(row, key)]
         ligand_id = _ligand_id(row, index)
         row_blockers: list[str] = []
         if len(present) != 1:
