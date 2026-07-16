@@ -1,7 +1,8 @@
 name: apply-strict-pose-rmsd-patch
 
 on:
-  pull_request:
+  push:
+    branches: ["codex/strict-pose-rmsd"]
     paths:
       - "tools/patches/strict_pose_rmsd.patch*"
       - ".github/workflows/ci-strict-pose-rmsd.yml"
@@ -16,9 +17,9 @@ concurrency:
 jobs:
   apply-patch:
     if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.repository == 'betelgeuze-kang/ligand-docking' &&
       github.actor == 'betelgeuze-kang' &&
-      github.head_ref == 'codex/strict-pose-rmsd'
+      github.ref == 'refs/heads/codex/strict-pose-rmsd'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
