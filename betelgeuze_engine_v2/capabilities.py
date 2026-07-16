@@ -27,6 +27,7 @@ MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = (
     "v2_bounded_mmcif_zero_occupancy_declarations"
 )
 MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_altloc_declarations"
+MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_identity"
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -71,6 +72,13 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "coordinate_and_occupancy_values_not_interpreted",
         "altloc_population_and_missingness_not_inferred",
         "mmcif_chemistry_topology_and_preparation_not_interpreted",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID: (
+        "source_authentication_missing",
+        "atom_site_identity_and_coordinates_not_joined",
+        "component_chemistry_and_roles_not_interpreted",
+        "bond_topology_and_preparation_not_interpreted",
         "product_integration_not_qualified",
     ),
     PHYSICS_REGISTRY_CAPABILITY_ID: (
@@ -188,6 +196,12 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID,
+                current_state="bounded_nonpoly_component_instance_identity",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PHYSICS_REGISTRY_CAPABILITY_ID: _row(
                 PHYSICS_REGISTRY_CAPABILITY_ID,
                 current_state="reference_terms_implemented_unvalidated",
@@ -259,6 +273,7 @@ __all__ = [
     "EXTERNAL_BASELINE_CAPABILITY_ID",
     "IMPLEMENTATION_STAGE",
     "MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID",
+    "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",
     "PDB_INGEST_CAPABILITY_ID",
