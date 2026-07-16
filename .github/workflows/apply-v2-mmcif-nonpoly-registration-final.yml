@@ -43,13 +43,17 @@ jobs:
             tests/unit/test_engine_v2_post_merge_state.py
           git diff --check
 
-      - name: Commit registration and remove one-time files
+      - name: Commit non-workflow registration files
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add -- \
+            betelgeuze_engine_v2/molecular/__init__.py \
+            betelgeuze_engine_v2/capabilities.py \
+            config/independent_engine_v2_capabilities.yaml \
+            tests/unit/test_engine_v2_post_merge_state.py
           git diff --cached --check
           git diff --cached --stat
           git commit -m "feat(v2): register bounded mmCIF nonpoly identity"
