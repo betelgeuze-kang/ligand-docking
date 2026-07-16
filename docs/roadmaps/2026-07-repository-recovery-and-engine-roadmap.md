@@ -1,11 +1,11 @@
 # Repository recovery and Engine v2 roadmap — 2026-07
 
-Status: core recovery complete; donor extraction and governance follow-up active
+Status: core recovery and donor cleanup complete; future feature work is independent
 
 Observed at: 2026-07-15
 Starting `main`: `de83e282d4e69b0e5233ea3306ca2ab929fc823e`
 Core-recovery endpoint `main`: `3f9ede19bb158a02eb3d06e0ed42dea6952db680`
-Current donor-cleanup endpoint `main`: `7dc025ed5a1f6f53e33d09bd457e9d6afa825808`
+Donor-cleanup evidence endpoint `main`: `2c0eddb107dde5dbdddf206ea24b6fefc78d7d18`
 
 This is the living decision record for recovering the open pull-request stack. It records code ownership and merge order; it is not scientific evidence and does not promote any product or execution claim.
 
@@ -93,7 +93,7 @@ H4 #62 was eligible to proceed after P0 in parallel with H2/H3 because it was AP
 - The former runner host must be treated as untrusted. Re-registration is blocked pending clean rebuild/reimage, review and rotation of host-accessible credentials, and an execution design that does not expose a persistent repository runner to public PR workflows.
 - PR-only and trusted self-hosted workflows are now separate files, with exact semantic policy tests. Those tests detect repository regressions but do not replace the external runner-access boundary.
 - The #61 ancestry break was resolved by reconstructing and merging replacement #72; #63/#64/#65 were then restacked and merged on the repaired line.
-- #66 is now 249 commits behind current `main` and 12 donor commits ahead, and still combines unrelated ownership buckets.
+- At closure, #66 was 249 commits behind then-current `main` and 12 donor commits ahead, and still combined unrelated ownership buckets.
 - The unsafe `clean:false`/pre-checkout recovery assumptions in product preflight tests and status builders were removed with P0 instead of being preserved as compatibility tokens.
 - No promotion flag may be changed as a shortcut for a failing test or missing runtime receipt.
 
@@ -121,15 +121,18 @@ Observed after remediation on 2026-07-15:
 | #43 | closed and superseded without merge | #96 retained neighbor/pocket working-set correctness and #97 retained claim-honest legacy proxy semantics; all old API/security/dependency/Tier-beta material was discarded. |
 | #49 | closed and superseded | Engine v2 scope was decomposed into merged #50–#54, #56, and #57; no donor branch merge remains. |
 | #61 | closed and superseded | Replacement #72 was reconstructed on merged H2 and merged cleanly. No donor branch merge remains. |
-| #66 | open donor; six bounded children merged | #73, #89, #90, #91, #94, and #95 are merged. Continue with selected `_struct_conn` identity declarations; close only after every retained family is linked or explicitly discarded. |
+| #66 | closed and superseded without merge; six bounded children merged | #73, #89, #90, #91, #94, and #95 are merged. All other donor families are discarded as donor patches. Any future `_struct_conn`, topology, preparation, format, physics, or evidence work must start independently from current `main`. |
 
 ## Open PR snapshot after donor cleanup
 
-Observed after `main@7dc025ed` on 2026-07-16:
+Observed after `main@2c0eddb` on 2026-07-16: no open pull requests remained.
 
-| PR | State | Recovery decision | Next action |
-|---|---|---|---|
-| #66 | draft on stale donor base | bounded extraction donor | Continue after merged child #95 with selected `_struct_conn` source identity; never bulk merge. |
+PR #66 was closed without merge after its six accepted children were linked.
+Closing the donor does not promote its unextracted content: selected
+`_struct_conn`, polymer topology, peptide preparation, PDB/SDF/SMILES, alkane
+physics, and SPICE evidence remain unaccepted donor material. If pursued, each
+must be designed and reviewed as a new current-main change with its own tests
+and claim boundary.
 
 ## Governance follow-up resolution
 
@@ -173,5 +176,5 @@ This append-only table records the exact completed core-recovery merge order.
 | 4 | #63 | `8097b516d112e33abd64887e8ad4cb6f6ce6799c` | merge commit | Restacked H5 bounded reference-physics contracts with promotion flags unchanged. |
 | 5 | #64 | `1657b6a1039ba75799cf167a609eefc49faa75fd` | merge commit | Restacked H6 release candidate with separate static-analysis and release-matrix checks. |
 | 6 | #65 | `13af55c8f9251bc465d144b90d263efa5f5d01ea` | merge commit | Independent H7 offline external-baseline receipt leaf. |
-| 7 | #73 | `6ae6d1140c52402a3d375d74b4c34d3a3b7e9ddb` | merge commit | First bounded #66 child: CIF syntax only; donor remains open. |
+| 7 | #73 | `6ae6d1140c52402a3d375d74b4c34d3a3b7e9ddb` | merge commit | First bounded #66 child: CIF syntax only; donor was later closed after the bounded audit. |
 | 8 | #62 | `3f9ede19bb158a02eb3d06e0ed42dea6952db680` | merge commit | Final H4 API security restack; four required hosted lanes green and final security re-audit clear of P0/P1. |
