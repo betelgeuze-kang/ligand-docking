@@ -58,14 +58,117 @@ def place_pose_in_pocket(pose: np.ndarray, pocket_center: np.ndarray) -> np.ndar
     return shifted + np.asarray(pocket_center, dtype=np.float32).reshape(1, 3)
 
 
-def pose_rmsd(a: np.ndarray, b: np.ndarray) -> float:
-    left = np.asarray(a, dtype=np.float64)
-    right = np.asarray(b, dtype=np.float64)
-    n = min(int(left.shape[0]), int(right.shape[0]))
-    if n <= 0:
-        return float("inf")
-    return float(np.sqrt(np.mean(np.sum((left[:n] - right[:n]) ** 2, axis=1))))
+def _validated_pose_coordinates(value: np.ndarray, *, label: str) -> np.ndarray:
+    coords = np.asarray(value, dtype=np.float64)
+    if coords.ndim != 2 or coords.shape[1] != 3:
+        raise ValueError(f"{label} must have shape [N, 3]")
+    if int(coords.shape[0]) <= 0:
+        raise ValueError(f"{label} must contain at least one atom")
+    if not np.isfinite(coords).all():
+        raise ValueError(f"{label} contains non-finite coordinates")
+    return coords
 
+
+def _validated_pose_pair(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    left = _validated_pose_coordinates(a, label="left pose")
+    right = _validated_pose_coordinates(b, label="right pose")
+    if left.shape != right.shape:
+        raise ValueError(
+            "pose coordinate shapes must match exactly; "
+            f"left={tuple(left.shape)} right={tuple(right.shape)}"
+        )
+    return left, right
+
+
+def _strict_symmetry_mappings(
+    symmetry_mappings: list[tuple[int, ...]] | None,
+    *,
+    atom_count: int,
+) -> list[tuple[int, ...]]:
+    identity = tuple(range(int(atom_count)))
+    if not symmetry_mappings:
+        return [identity]
+    mappings: list[tuple[int, ...]] = [identity]
+    seen = {identity}
+    expected = set(identity)
+    for mapping_index, mapping in enumerate(symmetry_mappings):
+        values: list[int] = []
+        for value in mapping:
+            if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+                raise ValueError(
+                    f"symmetry mapping {mapping_index} must contain integer atom indices"
+                )
+            values.append(int(value))
+        normalized = tuple(values)
+        if len(normalized) != int(atom_count):
+            raise ValueError(
+                f"symmetry mapping {mapping_index} must contain exactly {atom_count} indices"
+            )
+        if set(normalized) != expected:
+            raise ValueError(
+                f"symmetry mapping {mapping_index} must be a full atom-index bijection"
+            )
+        if normalized not in seen:
+            seen.add(normalized)
+            mappings.append(normalized)
+    return mappings
+
+
+def pose_rmsd(a: np.ndarray, b: np.ndarray) -> float:
+    """Return direct receptor-frame RMSD for exactly matching atom coordinates."""
+
+    left, right = _validated_pose_pair(a, b)
+    return float(np.sqrt(np.mean(np.sum((left - right) ** 2, axis=1))))
+
+
+def _kabsch_align(reference: np.ndarray, candidate: np.ndarray) -> np.ndarray:
+    left, right = _validated_pose_pair(reference, candidate)
+    left_centered = left - left.mean(axis=0, keepdims=True)
+    right_centered = right - right.mean(axis=0, keepdims=True)
+    covariance = right_centered.T @ left_centered
+    u, _singular_values, vt = np.linalg.svd(covariance)
+    rotation = u @ vt
+    if float(np.linalg.det(rotation)) < 0.0:
+        u = u.copy()
+        u[:, -1] *= -1.0
+        rotation = u @ vt
+    return right_centered @ rotation
+
+
+def aligned_pose_rmsd(a: np.ndarray, b: np.ndarray) -> float:
+    """Return Kabsch-aligned RMSD for exactly matching atom coordinates."""
+
+    left, right = _validated_pose_pair(a, b)
+    left_centered = left - left.mean(axis=0, keepdims=True)
+    right_aligned = _kabsch_align(left, right)
+    return float(np.sqrt(np.mean(np.sum((left_centered - right_aligned) ** 2, axis=1))))
+
+
+def best_symmetry_mapped_pose(
+    reference: np.ndarray,
+    candidate: np.ndarray,
+    symmetry_mappings: list[tuple[int, ...]] | None = None,
+    *,
+    align: bool = False,
+) -> tuple[np.ndarray, float, tuple[int, ...]]:
+    """Return the candidate atom ordering with the lowest strict RMSD."""
+
+    left, right = _validated_pose_pair(reference, candidate)
+    mappings = _strict_symmetry_mappings(
+        symmetry_mappings,
+        atom_count=int(left.shape[0]),
+    )
+    best_coords = right
+    best_mapping = mappings[0]
+    best = float("inf")
+    for mapping in mappings:
+        mapped = right[np.asarray(mapping, dtype=np.int64)]
+        value = aligned_pose_rmsd(left, mapped) if align else pose_rmsd(left, mapped)
+        if value < best:
+            best = float(value)
+            best_coords = mapped
+            best_mapping = mapping
+    return np.asarray(best_coords, dtype=np.float64).copy(), float(best), best_mapping
 
 def rotatable_bond_count(smiles: str) -> int:
     if Chem is None or rdMolDescriptors is None:
@@ -82,12 +185,25 @@ def conformer_diversity_diagnostics(
     smiles: str = "",
     diversity_threshold_a: float = 0.5,
 ) -> dict[str, Any]:
-    conformers = np.asarray(poses, dtype=np.float32)
-    count = int(conformers.shape[0]) if conformers.ndim >= 3 else 0
+    conformers = np.asarray(poses, dtype=np.float64)
+    if conformers.ndim != 3 or conformers.shape[-1] != 3:
+        raise ValueError("conformer ensemble must have shape [C, N, 3]")
+    if int(conformers.shape[0]) <= 0 or int(conformers.shape[1]) <= 0:
+        raise ValueError("conformer ensemble must contain at least one conformer and atom")
+    if not np.isfinite(conformers).all():
+        raise ValueError("conformer ensemble contains non-finite coordinates")
+    count = int(conformers.shape[0])
+    symmetry_mappings = ligand_symmetry_mappings(smiles) if smiles else []
     rmsd_values: list[float] = []
     for i in range(count):
         for j in range(i + 1, count):
-            rmsd_values.append(pose_rmsd(conformers[i], conformers[j]))
+            rmsd_values.append(
+                aligned_symmetry_aware_pose_rmsd(
+                    conformers[i],
+                    conformers[j],
+                    symmetry_mappings,
+                )
+            )
     finite = [float(value) for value in rmsd_values if math.isfinite(float(value))]
     if count <= 1:
         status = "single_conformer_no_pairwise_diversity"
@@ -98,7 +214,16 @@ def conformer_diversity_diagnostics(
     return {
         "schema_version": "tier_beta_conformer_diversity_v1",
         "status": status,
-        "method": "atom_order_pairwise_heavy_atom_rmsd",
+        "method": (
+            "kabsch_aligned_rdkit_automorphism_min_heavy_atom_rmsd"
+            if symmetry_mappings
+            else "kabsch_aligned_identity_heavy_atom_rmsd"
+        ),
+        "alignment": "kabsch",
+        "coordinate_frame_invariant": True,
+        "atom_mapping_contract": "strict_full_atom_bijection",
+        "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+        "atom_count": int(conformers.shape[1]),
         "rotatable_bond_count": rotatable_bond_count(smiles) if smiles else 0,
         "conformer_count": count,
         "pairwise_rmsd_count": int(len(finite)),
@@ -108,11 +233,10 @@ def conformer_diversity_diagnostics(
         "diversity_threshold_a": float(diversity_threshold_a),
         "diverse_pair_count": int(sum(1 for value in finite if value >= float(diversity_threshold_a))),
         "claim_boundary": (
-            "Diagnostic generated-conformer spread only; not an exhaustive rotamer search or benchmarked "
-            "pose-diversity guarantee."
+            "Kabsch-aligned, symmetry-aware generated-conformer spread only; not an exhaustive rotamer search or "
+            "benchmarked pose-diversity guarantee."
         ),
     }
-
 
 def ligand_symmetry_mappings(smiles: str, *, max_mappings: int = 256) -> list[tuple[int, ...]]:
     if Chem is None:
@@ -128,9 +252,10 @@ def ligand_symmetry_mappings(smiles: str, *, max_mappings: int = 256) -> list[tu
         matches = ()
     mappings: list[tuple[int, ...]] = [identity]
     seen = {identity}
+    expected = set(identity)
     for match in matches:
         mapping = tuple(int(idx) for idx in match)
-        if len(mapping) != atom_count or mapping in seen:
+        if len(mapping) != atom_count or set(mapping) != expected or mapping in seen:
             continue
         seen.add(mapping)
         mappings.append(mapping)
@@ -142,24 +267,31 @@ def symmetry_aware_pose_rmsd(
     b: np.ndarray,
     symmetry_mappings: list[tuple[int, ...]] | None = None,
 ) -> float:
-    left = np.asarray(a, dtype=np.float64)
-    right = np.asarray(b, dtype=np.float64)
-    n = min(int(left.shape[0]), int(right.shape[0]))
-    if n <= 0:
-        return float("inf")
-    candidates = symmetry_mappings or [tuple(range(n))]
-    best = pose_rmsd(left[:n], right[:n])
-    for mapping in candidates:
-        if len(mapping) < n:
-            continue
-        indices = [int(idx) for idx in mapping[:n]]
-        if any(idx < 0 or idx >= int(right.shape[0]) for idx in indices):
-            continue
-        candidate = pose_rmsd(left[:n], right[indices])
-        if candidate < best:
-            best = candidate
+    """Return strict direct RMSD minimized over full atom-index automorphisms."""
+
+    _mapped, best, _mapping = best_symmetry_mapped_pose(
+        a,
+        b,
+        symmetry_mappings,
+        align=False,
+    )
     return float(best)
 
+
+def aligned_symmetry_aware_pose_rmsd(
+    a: np.ndarray,
+    b: np.ndarray,
+    symmetry_mappings: list[tuple[int, ...]] | None = None,
+) -> float:
+    """Return Kabsch-aligned RMSD minimized over full atom-index automorphisms."""
+
+    _mapped, best, _mapping = best_symmetry_mapped_pose(
+        a,
+        b,
+        symmetry_mappings,
+        align=True,
+    )
+    return float(best)
 
 def cluster_poses_by_symmetry(
     pose_scores: list[dict[str, Any]],
@@ -200,6 +332,8 @@ def cluster_poses_by_symmetry(
             "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
             "threshold_a": float(threshold_a),
             "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+            "atom_mapping_contract": "strict_full_atom_bijection",
+            "coordinate_frame": "receptor_frame_no_alignment",
             "cluster_id": int(assigned_cluster),
             "cluster_representative_pose_index": int(clusters[assigned_cluster]["representative_pose_index"]),
         }
@@ -210,6 +344,8 @@ def cluster_poses_by_symmetry(
         "method": "rdkit_automorphism_min_rmsd" if symmetry_mappings else "identity_atom_order_rmsd",
         "threshold_a": float(threshold_a),
         "symmetry_mapping_count": int(len(symmetry_mappings) if symmetry_mappings else 1),
+        "atom_mapping_contract": "strict_full_atom_bijection",
+        "coordinate_frame": "receptor_frame_no_alignment",
         "cluster_count": int(len(clusters)),
         "clusters": clusters,
     }
