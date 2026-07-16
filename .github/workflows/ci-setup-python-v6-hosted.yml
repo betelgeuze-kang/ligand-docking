@@ -1,0 +1,43 @@
+name: export-latest-main-tree-for-setup-python-v6
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-setup-python-v6-hosted.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  export-base-tree:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/setup-python-v6-hosted-final'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled final branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/setup-python-v6-hosted-final
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Record exact base commit and tree
+        run: |
+          git rev-parse HEAD > setup-python-v6-base-commit.txt
+          git rev-parse 'HEAD^{tree}' > setup-python-v6-base-tree.txt
+          cat setup-python-v6-base-commit.txt
+          cat setup-python-v6-base-tree.txt
+
+      - name: Upload exact base identity
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: setup-python-v6-final-base-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            setup-python-v6-base-commit.txt
+            setup-python-v6-base-tree.txt
+          if-no-files-found: error
+          retention-days: 1
