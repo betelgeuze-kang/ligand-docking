@@ -23,6 +23,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_all_atom_systems" in roadmap
     assert "v2_bounded_mmcif_nonpoly_parameter_source_binding" in roadmap
     assert "v2_bounded_mmcif_nonpoly_partial_charge_assignment" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_all_atom_round_trip" in roadmap
     assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
@@ -33,7 +34,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
     assert "52-axis coverage ledger" in roadmap
-    assert "3개 `not_implemented`" in roadmap
+    assert "2개 `not_implemented`" in roadmap
     assert "Sage 2.2.1 unconstrained artifact" in roadmap
     assert "OFFXML을\n해석하거나" in roadmap
     assert "partial charge" in roadmap
@@ -62,6 +63,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "명시적 값 적용 계약" in roadmap
     assert "전부 positive-zero인\nsynthetic contract fixture" in roadmap
     assert "charge generation·calibration·scientific validation" in roadmap
+    assert "canonical Engine v2 JSON encode/decode/re-encode byte identity" in roadmap
+    assert "original mmCIF text를 다시 쓰거나 source token spelling" in roadmap
     assert "explicit `label_alt_id` 입력" in roadmap
     assert "chemistry preparation 전에 fail-closed" in roadmap
     assert "known insertion code의 scheme·atom-site·connection exact identity" in roadmap

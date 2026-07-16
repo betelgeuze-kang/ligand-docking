@@ -72,6 +72,9 @@ MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID = (
 MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_partial_charge_assignment"
 )
+MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_all_atom_round_trip"
+)
 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = (
     "v2_reviewed_parameter_source_provenance"
 )
@@ -281,7 +284,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "parameter_assignment_not_implemented",
         "partial_charge_assignment_is_separate_capability",
         "atom_masses_not_assigned",
-        "source_format_round_trip_not_implemented",
+        "canonical_all_atom_round_trip_is_separate_capability",
         "chemistry_validation_missing",
         "scientific_validation_missing",
         "product_integration_not_qualified",
@@ -312,9 +315,20 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
+    MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID: (
+        "original_mmcif_text_not_re_emitted",
+        "source_token_spelling_order_comments_and_whitespace_not_preserved",
+        "canonical_engine_v2_json_format_only",
+        "caller_supplied_partial_charges_not_scientifically_validated",
+        "force_field_parameter_assignment_not_implemented",
+        "atom_masses_not_assigned",
+        "fixed_parent_offset_geometry_not_validated",
+        "chemistry_force_energy_and_scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
         "synthetic_contract_corpus_only",
-        "three_classified_implementation_gaps_remain",
+        "two_classified_implementation_gaps_remain",
         "real_world_supported_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
@@ -562,6 +576,14 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID,
+                current_state=(
+                    "canonical_json_all_atom_identity_round_trip_receipts"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID: _row(
                 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
                 current_state=(
@@ -664,6 +686,7 @@ __all__ = [
     "MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID",
     "MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID",
     "MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID",
+    "MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID",
     "MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID",
     "MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",

@@ -25,6 +25,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID,
     MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID,
     MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID,
+    MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID,
     MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID,
     MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID,
     MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
@@ -47,7 +48,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 31
+    assert len(loaded["capabilities"]) == 32
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -76,6 +77,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID in rows
     assert PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID in rows
@@ -294,7 +296,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "partial_charge_assignment_is_separate_capability" in (
         all_atom_system["blockers"]
     )
-    assert "source_format_round_trip_not_implemented" in (
+    assert "canonical_all_atom_round_trip_is_separate_capability" in (
         all_atom_system["blockers"]
     )
 
@@ -321,6 +323,17 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         partial_charge["blockers"]
     )
 
+    round_trip = rows[MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID]
+    assert round_trip["current_state"] == (
+        "canonical_json_all_atom_identity_round_trip_receipts"
+    )
+    assert round_trip["internal_reference_execution_enabled"] is True
+    assert "original_mmcif_text_not_re_emitted" in round_trip["blockers"]
+    assert "canonical_engine_v2_json_format_only" in round_trip["blockers"]
+    assert "caller_supplied_partial_charges_not_scientifically_validated" in (
+        round_trip["blockers"]
+    )
+
     parameter_source = rows[PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID]
     assert parameter_source["current_state"] == (
         "reviewed_openff_sage_2_2_1_identity_license_scope_only"
@@ -344,7 +357,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
     assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "three_classified_implementation_gaps_remain" in (
+    assert "two_classified_implementation_gaps_remain" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]

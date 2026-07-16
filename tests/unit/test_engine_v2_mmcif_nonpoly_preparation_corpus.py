@@ -440,8 +440,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 52
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 3,
-        "supported": 22,
+        "not_implemented": 2,
+        "supported": 23,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -471,6 +471,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "parameter_source.reviewed" not in missing
     assert "parameter_source.system_binding" not in missing
     assert "partial_charge.assignment" not in missing
+    assert "round_trip.all_atom_identity" not in missing
     assert "all_atom_system.creation" not in missing
 
     parameter_source = next(
@@ -486,6 +487,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert payload["canonical_all_atom_materialization_bound"] is True
     assert payload["reviewed_parameter_source_bound_to_canonical_systems"] is True
     assert payload["explicit_partial_charge_assignment_contract_bound"] is True
+    assert payload["canonical_all_atom_identity_round_trip_bound"] is True
 
     parameter_binding = next(
         row for row in rows if row.coverage_id == "parameter_source.system_binding"
@@ -504,6 +506,16 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert partial_charge.blocker == ""
     assert partial_charge.expected_signal == (
         "partial_charge_assignment_status:explicit_partial_charge_vector_assigned"
+    )
+
+    round_trip = next(
+        row for row in rows if row.coverage_id == "round_trip.all_atom_identity"
+    )
+    assert round_trip.policy_status == "supported"
+    assert round_trip.blocker == ""
+    assert round_trip.expected_signal == (
+        "all_atom_round_trip_status:"
+        "canonical_all_atom_identity_round_trip_verified"
     )
 
     all_atom_system = next(
@@ -595,6 +607,37 @@ def test_corpus_applies_only_frozen_synthetic_partial_charge_contract_records(
     )
     assert covalent.partial_charge_assignment_summary["assigned_system_count"] == 0
     assert covalent.partial_charge_assignment_summary["unassigned_system_count"] == 2
+
+
+def test_corpus_verifies_canonical_all_atom_identity_round_trips(
+    corpus_snapshot,
+) -> None:
+    supported = next(
+        row
+        for row in corpus_snapshot.case_results
+        if row.case_id == "supported_single_coh"
+    )
+    assert supported.all_atom_round_trip_snapshot_sha256
+    summary = supported.all_atom_round_trip_summary
+    assert summary["verified_system_count"] == 2
+    assert summary["unavailable_system_count"] == 0
+    assert summary["interchange_format"] == (
+        "betelgeuze_engine_v2_canonical_all_atom_json"
+    )
+    assert all(
+        row["round_trip_status"]
+        == "canonical_all_atom_identity_round_trip_verified"
+        and row["canonical_reencoding_byte_identical"] is True
+        for row in summary["instance_reports"]
+    )
+
+    covalent = next(
+        row
+        for row in corpus_snapshot.case_results
+        if row.case_id == "unprepared_intercomponent_covalent"
+    )
+    assert covalent.all_atom_round_trip_summary["verified_system_count"] == 0
+    assert covalent.all_atom_round_trip_summary["unavailable_system_count"] == 2
 
 
 def test_document_is_deterministic_self_verifying_and_written_private(

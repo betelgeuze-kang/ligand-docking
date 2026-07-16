@@ -108,9 +108,15 @@ claim status without revalidating the dependency and freshness chain.
   only. The capability does not generate, calibrate, or scientifically validate
   charges, establish applicability, assign force-field values or masses, or make
   a system parameterable.
+- Keep the canonical all-atom identity round-trip receipt executable. It
+  re-executes canonical Engine v2 JSON encode/decode/re-encode and requires byte,
+  system, topology, coordinate, lineage-metadata, parameter-source-binding, and
+  partial-charge-bit identity. It does not re-emit original mmCIF text or preserve
+  token spelling, category order, comments, or whitespace, and makes no chemistry,
+  parameter, scientific, or product promotion.
 - Keep the exact-input 30-case synthetic supported/failure contract corpus and
-  52-axis coverage ledger executable. It classifies 22 axes as supported, 27 as
-  explicitly unsupported, and 3 as not implemented; it is not parameter-fitting
+  52-axis coverage ledger executable. It classifies 23 axes as supported, 27 as
+  explicitly unsupported, and 2 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep exact selected source assembly metadata, generation, and Cartesian-
   operation rows bound while blocking preparation whenever any selected assembly
@@ -142,11 +148,12 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the 3 implementation-gap rows by independent capability slices and
+- Next, close the 2 remaining implementation-gap rows, pH-dependent protonation
+  and tautomer selection, by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
   start production parameter fitting while either requirement remains open;
-  source-format all-atom round trip is the next preparation priority after the
-  source binding and explicit charge-vector application contracts.
+  original mmCIF lexical re-emission remains explicitly outside the canonical
+  identity round-trip receipt.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.
