@@ -42,7 +42,7 @@ def corpus_snapshot():
 def test_exact_ascii_inputs_and_all_cohorts_are_frozen() -> None:
     cases = mmcif_nonpoly_preparation_corpus_cases()
 
-    assert len(cases) == 27
+    assert len(cases) == 29
     assert tuple(row.case_id for row in cases) == tuple(
         FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256
     )
@@ -290,6 +290,58 @@ def test_explicit_nonpoly_altloc_is_a_frozen_preparation_boundary(
     assert "error:nonblank_atom_site_marker_not_supported" in result.signals
 
 
+@pytest.mark.parametrize(
+    ("case_id", "declaration_kind", "declaration_status", "blocker"),
+    (
+        (
+            "unsupported_zero_occupancy_residue_input",
+            "residue",
+            "zero_occupancy",
+            "source_declared_zero_occupancy_residue_preparation_not_supported",
+        ),
+        (
+            "unsupported_unobserved_atom_input",
+            "atom",
+            "unobserved",
+            "source_declared_unobserved_atom_preparation_not_supported",
+        ),
+    ),
+)
+def test_source_declared_observation_gaps_block_preparation_with_policy_evidence(
+    case_id: str,
+    declaration_kind: str,
+    declaration_status: str,
+    blocker: str,
+    corpus_snapshot,
+) -> None:
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[case_id]
+
+    assert result.cohort == "unsupported_upstream_policy"
+    assert result.observed_outcome == "expected_error"
+    assert result.error_code == "source_declared_observation_gap_not_supported"
+    assert result.preparation_snapshot_sha256 == ""
+    assert len(result.missing_atom_residue_policy_snapshot_sha256) == 64
+    policy = result.missing_atom_residue_policy
+    assert policy["execution_policy_status"] == (
+        "explicitly_unsupported_source_declared_observation_gaps"
+    )
+    assert policy["execution_allowed"] is False
+    assert policy["execution_blockers"] == [blocker]
+    count_row = next(
+        row
+        for row in policy["declaration_status_counts"]
+        if row["declaration_kind"] == declaration_kind
+        and row["declaration_status"] == declaration_status
+    )
+    assert count_row["row_count"] == 1
+    assert (
+        "missing_atom_residue_policy_status:"
+        "explicitly_unsupported_source_declared_observation_gaps"
+        in result.signals
+    )
+    assert f"missing_atom_residue_policy_blocker:{blocker}" in result.signals
+
+
 def test_invalid_source_rows_retain_stable_error_codes_without_raw_source(
     corpus_snapshot,
 ) -> None:
@@ -343,8 +395,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
     assert len(rows) == 51
     assert payload["coverage_status_counts"] == {
-        "explicitly_unsupported": 25,
-        "not_implemented": 9,
+        "explicitly_unsupported": 26,
+        "not_implemented": 8,
         "supported": 17,
     }
     assert payload["unclassified_coverage_row_count"] == 0
@@ -368,6 +420,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "role.modified_residue" not in missing
     assert "upstream.altloc_selection" not in missing
     assert "upstream.insertion_semantics" not in missing
+    assert "upstream.missing_atom_residue_policy" not in missing
     assert "upstream.multimodel_policy" not in missing
     assert missing["hydrogen.coordinates"] == "hydrogen_coordinates_not_generated"
     assert missing["parameter_source.reviewed"] == ("reviewed_parameter_source_missing")
@@ -460,6 +513,8 @@ def test_dedicated_corpus_workflow_covers_supported_python_matrix() -> None:
     assert "mmcif_modified_residue_declarations.py" in source
     assert "mmcif_atom_site_model_policy.py" in source
     assert "test_engine_v2_mmcif_atom_site_model_policy.py" in source
+    assert "mmcif_missing_atom_residue_policy.py" in source
+    assert "test_engine_v2_mmcif_missing_atom_residue_policy.py" in source
     assert "test_engine_v2_mmcif_modified_residue_declarations.py" in source
     assert "test_engine_v2_mmcif_nonpoly_preparation_corpus.py" in source
     assert "test_engine_v2_post_merge_state.py" in source

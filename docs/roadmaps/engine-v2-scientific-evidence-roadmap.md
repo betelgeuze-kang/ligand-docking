@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@70cda6479c7484e4466b5a2f3bff45f4c0acd7a8`
+Observed baseline: `main@21ebef2b91db71c56414fece614a4df7c9f7f901`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -74,10 +74,15 @@ claim status without revalidating the dependency and freshness chain.
   acyclic C/O/H chemical-graph preparation carriers executable. The graph has no
   generated hydrogen coordinates, reviewed parameter source, or `AllAtomSystem`;
   parameterability, geometry quality, and scientific validity remain false.
-- Keep the exact-input 27-case synthetic supported/failure contract corpus and
-  51-axis coverage ledger executable. It classifies 17 axes as supported, 25 as
-  explicitly unsupported, and 9 as not implemented; it is not parameter-fitting
+- Keep the exact-input 29-case synthetic supported/failure contract corpus and
+  51-axis coverage ledger executable. It classifies 17 axes as supported, 26 as
+  explicitly unsupported, and 8 as not implemented; it is not parameter-fitting
   data and does not make V2-1 exit-ready.
+- Keep both official source observation-gap categories bound and classify
+  `occupancy_flag` 0 as zero occupancy and 1 as unobserved. Any such declaration
+  blocks preparation before chemistry; absence of both optional categories does
+  not prove structural completeness, and no identity, missingness, repair, or
+  coordinate inference is performed.
 - Keep source water and bounded monoatomic metal/nonmetal-ion composition roles
   executable without inferring general ligand, cofactor, modified-residue, or
   biological function. Metal/ion preparation remains explicitly unsupported.
@@ -97,9 +102,10 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the 9 implementation-gap rows by independent capability slices and
+- Next, close the 8 implementation-gap rows by independent capability slices and
   add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
-  start production parameter fitting while either requirement remains open.
+  start production parameter fitting while either requirement remains open;
+  biological-assembly admission is the next upstream-policy priority.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.

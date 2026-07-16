@@ -29,7 +29,12 @@ The current `main` branch contains:
   bounded occupancy/B-factor/formal-charge marker and numeric semantics and a
   complete atom-site model-number classification that permits only model set
   `{1}` for bounded execution and explicitly blocks multi-model or singleton
-  non-1 execution without automatic selection, plus a
+  non-1 execution without automatic selection, plus a bounded
+  `_pdbx_unobs_or_zero_occ_residues`/`_pdbx_unobs_or_zero_occ_atoms`
+  observation-gap admission policy that classifies source `occupancy_flag` 0/1
+  and blocks preparation whenever a zero-occupancy or unobserved declaration is
+  present without treating absent declaration categories as proof of structural
+  completeness, plus a
   bounded source-water/monoatomic-metal/monoatomic-nonmetal-ion composition-role
   projection that does not infer general ligand, cofactor, or biological roles,
   plus source-declared modified polymer residue identity joined to the bounded
@@ -38,9 +43,10 @@ The current `main` branch contains:
   fail-closed component-bond/identity-symmetry connection topology that keeps
   metal coordination edges separate from canonical bonds, plus bounded neutral
   acyclic C/O/H single/double-bond chemical-graph hydrogen completion with a
-  failure-complete per-instance parameterability report, plus a frozen 27-case
-  synthetic contract corpus and 51-axis executable coverage ledger that retains
-  supported, explicitly unsupported, invalid-source, and not-implemented rows,
+  failure-complete per-instance parameterability report, plus a frozen 29-case
+  synthetic contract corpus that retains supported, explicitly unsupported, and
+  2 invalid-source cases, plus a 51-axis executable coverage ledger classifying
+  17 supported, 26 explicitly unsupported, and 8 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;

@@ -23,6 +23,9 @@ from betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation import (
     require_mmcif_nonpoly_preparation_document,
     write_mmcif_nonpoly_preparation_json,
 )
+from betelgeuze_engine_v2.molecular.mmcif_nonpoly_preparation_corpus import (
+    mmcif_nonpoly_preparation_corpus_cases,
+)
 from tests.unit.test_engine_v2_mmcif_nonpoly_atom_site_observations import (
     ATOM_DECLARATIONS,
     ATOM_SITE_ROWS,
@@ -70,6 +73,9 @@ def test_bounded_neutral_coh_graphs_are_hydrogen_completed_but_not_parameterable
     snapshot = parse_mmcif_nonpoly_preparation(_preparation_source())
 
     assert snapshot.prepared_graph_count == 2
+    assert len(snapshot.missing_atom_residue_policy_snapshot_sha256) == 64
+    assert len(snapshot.missing_atom_residue_policy_projection_sha256) == 64
+    assert len(snapshot.missing_atom_residue_policy_source_binding_sha256) == 64
     assert [row.component_id for row in snapshot.instance_reports] == ["LIG", "HOH"]
     ligand, water = snapshot.instance_reports
     assert ligand.preparation_status == "prepared_component_graph"
@@ -139,6 +145,21 @@ def test_bounded_neutral_coh_graphs_are_hydrogen_completed_but_not_parameterable
         "claim_safe",
     ):
         assert payload[flag] is False
+
+
+def test_source_declared_observation_gap_blocks_preparation_before_chemistry() -> None:
+    case = next(
+        row
+        for row in mmcif_nonpoly_preparation_corpus_cases()
+        if row.case_id == "unsupported_unobserved_atom_input"
+    )
+    error = _preparation_error(
+        case.source_text,
+        "source_declared_observation_gap_not_supported",
+    )
+
+    assert "PRIVATE" not in error.detail
+    assert "PRIVATE" not in str(error)
 
 
 @pytest.mark.parametrize(
@@ -251,6 +272,10 @@ def test_document_is_canonical_self_verifying_and_written_private(
 
     assert document["schema_id"] == MMCIF_NONPOLY_PREPARATION_DOCUMENT_SCHEMA_ID
     assert document["profile_id"] == MMCIF_NONPOLY_PREPARATION_PROFILE_ID
+    assert document["missing_atom_residue_admission_checked"] is True
+    assert document["source_binding"][
+        "missing_atom_residue_policy_snapshot_sha256"
+    ] == snapshot.missing_atom_residue_policy_snapshot_sha256
     assert document["source_binding"]["dictionary_items"] == (
         MMCIF_NONPOLY_PREPARATION_DICTIONARY_ITEMS
     )

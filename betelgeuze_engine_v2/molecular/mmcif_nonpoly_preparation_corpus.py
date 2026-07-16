@@ -24,6 +24,11 @@ from .mmcif_atom_site_model_policy import (
     MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
     parse_mmcif_atom_site_model_policy,
 )
+from .mmcif_missing_atom_residue_policy import (
+    MMCIF_MISSING_ATOM_RESIDUE_POLICY_PARSER_VERSION,
+    MMCIF_MISSING_ATOM_RESIDUE_POLICY_PROFILE_ID,
+    parse_mmcif_missing_atom_residue_policy,
+)
 from .mmcif_nonpoly_atom_site_observations import (
     MMCIF_NONPOLY_ATOM_SITE_HEADERS,
     MmcifNonpolyAtomSiteObservationError,
@@ -51,6 +56,10 @@ from .mmcif_nonpoly_preparation import (
     parse_mmcif_nonpoly_preparation,
 )
 from .mmcif_struct_conn_declarations import MMCIF_STRUCT_CONN_HEADERS
+from .mmcif_zero_occupancy import (
+    MMCIF_ZERO_OCCUPANCY_ATOM_HEADERS,
+    MMCIF_ZERO_OCCUPANCY_RESIDUE_HEADERS,
+)
 
 
 MMCIF_NONPOLY_PREPARATION_CORPUS_PROJECTION_SCHEMA_ID = (
@@ -67,7 +76,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "5745d65a47765d1b8d719ca3cae12a706be97ef36756d4bc9f87b9bf667d8be4"
+    "4cb19ae131728b9df264da4bb8c801c0b6b5737404e7e6aedab4e21081d70255"
 )
 
 _ENTITY_HEADERS = ("_entity.id", "_entity.type")
@@ -215,11 +224,13 @@ class MmcifPreparationCorpusCaseResult:
     observed_outcome: str
     preparation_snapshot_sha256: str
     atom_site_model_policy_snapshot_sha256: str
+    missing_atom_residue_policy_snapshot_sha256: str
     component_role_snapshot_sha256: str
     modified_residue_declaration_snapshot_sha256: str
     error_code: str
     reports: tuple[Mapping[str, Any], ...]
     atom_site_model_policy: Mapping[str, Any]
+    missing_atom_residue_policy: Mapping[str, Any]
     component_roles: tuple[Mapping[str, Any], ...]
     modified_residue_declarations: tuple[Mapping[str, Any], ...]
     signals: tuple[str, ...]
@@ -235,6 +246,9 @@ class MmcifPreparationCorpusCaseResult:
             "atom_site_model_policy_snapshot_sha256": (
                 self.atom_site_model_policy_snapshot_sha256
             ),
+            "missing_atom_residue_policy_snapshot_sha256": (
+                self.missing_atom_residue_policy_snapshot_sha256
+            ),
             "component_role_snapshot_sha256": self.component_role_snapshot_sha256,
             "modified_residue_declaration_snapshot_sha256": (
                 self.modified_residue_declaration_snapshot_sha256
@@ -242,6 +256,9 @@ class MmcifPreparationCorpusCaseResult:
             "error_code": self.error_code,
             "reports": [dict(row) for row in self.reports],
             "atom_site_model_policy": dict(self.atom_site_model_policy),
+            "missing_atom_residue_policy": dict(
+                self.missing_atom_residue_policy
+            ),
             "component_roles": [dict(row) for row in self.component_roles],
             "modified_residue_declarations": [
                 dict(row) for row in self.modified_residue_declarations
@@ -459,6 +476,7 @@ def _corpus_source(
     water_model_number: str = "1",
     ligand_alt_id: str = ".",
     ligand_insertion_code: str = ".",
+    observation_gap: str = "",
 ) -> str:
     if not atoms:
         raise MmcifNonpolyPreparationCorpusError(
@@ -507,12 +525,13 @@ def _corpus_source(
         "_struct_conn.ptnr2_symmetry": "1_555",
         "_struct_conn.pdbx_value_order": connection_order,
     }
+    include_polymer = modified_residue or bool(observation_gap)
     entity_rows = (
         {"_entity.id": "1", "_entity.type": "non-polymer"},
         {"_entity.id": "2", "_entity.type": "water"},
     ) + (
         ({"_entity.id": "3", "_entity.type": "polymer"},)
-        if modified_residue
+        if include_polymer
         else ()
     )
     asym_rows = (
@@ -520,7 +539,7 @@ def _corpus_source(
         {"_struct_asym.id": "W", "_struct_asym.entity_id": "2"},
     ) + (
         ({"_struct_asym.id": "P", "_struct_asym.entity_id": "3"},)
-        if modified_residue
+        if include_polymer
         else ()
     )
     chem_comp_rows = (
@@ -548,7 +567,17 @@ def _corpus_source(
             },
         )
         if modified_residue
-        else ()
+        else (
+            (
+                {
+                    "_chem_comp.id": "GLY",
+                    "_chem_comp.type": "'L-peptide linking'",
+                    "_chem_comp.pdbx_formal_charge": "0",
+                },
+            )
+            if observation_gap
+            else ()
+        )
     )
     source = (
         "data_v2_preparation_corpus\n#\n"
@@ -600,7 +629,7 @@ def _corpus_source(
             ),
         )
     )
-    if modified_residue:
+    if include_polymer:
         source += _loop(
             _ENTITY_POLY_HEADERS,
             (
@@ -616,11 +645,12 @@ def _corpus_source(
                 {
                     "_entity_poly_seq.entity_id": "3",
                     "_entity_poly_seq.num": "1",
-                    "_entity_poly_seq.mon_id": "MSE",
+                    "_entity_poly_seq.mon_id": "MSE" if modified_residue else "GLY",
                     "_entity_poly_seq.hetero": "n",
                 },
             ),
         )
+    if modified_residue:
         source += _loop(
             MMCIF_MODIFIED_RESIDUE_DECLARATION_HEADERS,
             (
@@ -634,6 +664,51 @@ def _corpus_source(
                     "_pdbx_struct_mod_residue.pdb_ins_code": ".",
                 },
             ),
+        )
+    if observation_gap == "zero_occupancy_residue":
+        source += _loop(
+            MMCIF_ZERO_OCCUPANCY_RESIDUE_HEADERS,
+            (
+                {
+                    "_pdbx_unobs_or_zero_occ_residues.id": "1",
+                    "_pdbx_unobs_or_zero_occ_residues.polymer_flag": "Y",
+                    "_pdbx_unobs_or_zero_occ_residues.occupancy_flag": "0",
+                    "_pdbx_unobs_or_zero_occ_residues.pdb_model_num": "1",
+                    "_pdbx_unobs_or_zero_occ_residues.auth_asym_id": "P",
+                    "_pdbx_unobs_or_zero_occ_residues.auth_comp_id": "GLY",
+                    "_pdbx_unobs_or_zero_occ_residues.auth_seq_id": "1",
+                    "_pdbx_unobs_or_zero_occ_residues.pdb_ins_code": ".",
+                    "_pdbx_unobs_or_zero_occ_residues.label_asym_id": "P",
+                    "_pdbx_unobs_or_zero_occ_residues.label_comp_id": "GLY",
+                    "_pdbx_unobs_or_zero_occ_residues.label_seq_id": "1",
+                },
+            ),
+        )
+    elif observation_gap == "unobserved_atom":
+        source += _loop(
+            MMCIF_ZERO_OCCUPANCY_ATOM_HEADERS,
+            (
+                {
+                    "_pdbx_unobs_or_zero_occ_atoms.id": "1",
+                    "_pdbx_unobs_or_zero_occ_atoms.polymer_flag": "Y",
+                    "_pdbx_unobs_or_zero_occ_atoms.occupancy_flag": "1",
+                    "_pdbx_unobs_or_zero_occ_atoms.pdb_model_num": "1",
+                    "_pdbx_unobs_or_zero_occ_atoms.auth_asym_id": "P",
+                    "_pdbx_unobs_or_zero_occ_atoms.auth_comp_id": "GLY",
+                    "_pdbx_unobs_or_zero_occ_atoms.auth_seq_id": "1",
+                    "_pdbx_unobs_or_zero_occ_atoms.pdb_ins_code": ".",
+                    "_pdbx_unobs_or_zero_occ_atoms.auth_atom_id": "CA",
+                    "_pdbx_unobs_or_zero_occ_atoms.label_alt_id": ".",
+                    "_pdbx_unobs_or_zero_occ_atoms.label_asym_id": "P",
+                    "_pdbx_unobs_or_zero_occ_atoms.label_comp_id": "GLY",
+                    "_pdbx_unobs_or_zero_occ_atoms.label_seq_id": "1",
+                    "_pdbx_unobs_or_zero_occ_atoms.label_atom_id": "CA",
+                },
+            ),
+        )
+    elif observation_gap:
+        raise MmcifNonpolyPreparationCorpusError(
+            "corpus observation-gap fixture is unsupported"
         )
     source += _loop(MMCIF_NONPOLY_COMPONENT_ATOM_HEADERS, atom_rows)
     if bond_rows:
@@ -675,6 +750,8 @@ FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256: Mapping[str, str] = (
             "unsupported_source_declared_modified_residue": "ff1f1c1053df34f121fa85cfec2f91d247a3d0e898cf0e14a1ca68bce1c20570",
             "unsupported_multimodel_input": "9aaa7806cf65ca5d2d8d0b667aa9afb5833d5da88851e8372e8c01b710296d0b",
             "unsupported_altloc_input": "3c76390e49d672ab9d3a4aff02590382096550e7c762451ea201e10456796673",
+            "unsupported_zero_occupancy_residue_input": "4fda53fbe92eb89adb8a27e67749a84672a5c930c8e6a5aa747bf3d951ee0df0",
+            "unsupported_unobserved_atom_input": "1b35f9b45192f46565b88be9d3e9d7a8abd81081c2f63233e9c95e718bd2eb42",
             "invalid_component_charge_grammar": "43f64cf79729dbbf92a858cb315421067393e5796466e0614a65f6db937c5ed5",
             "invalid_component_charge_range": "a7a25d9fa84a602b3221faf553918e54bfbad06d443355fca8b3eb67df81438d",
         }
@@ -754,6 +831,7 @@ def _case(
     water_model_number: str = "1",
     ligand_alt_id: str = ".",
     ligand_insertion_code: str = ".",
+    observation_gap: str = "",
 ) -> MmcifPreparationCorpusCase:
     source = _corpus_source(
         atoms,
@@ -764,6 +842,7 @@ def _case(
         water_model_number=water_model_number,
         ligand_alt_id=ligand_alt_id,
         ligand_insertion_code=ligand_insertion_code,
+        observation_gap=observation_gap,
     )
     digest = hashlib.sha256(source.encode("ascii")).hexdigest()
     frozen = FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256.get(case_id, "")
@@ -1155,6 +1234,24 @@ def mmcif_nonpoly_preparation_corpus_cases() -> tuple[MmcifPreparationCorpusCase
             ("atom_site_label_alt_id:explicit",),
             expected_error_code="nonblank_atom_site_marker_not_supported",
             ligand_alt_id="A",
+        ),
+        _case(
+            "unsupported_zero_occupancy_residue_input",
+            "unsupported_upstream_policy",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("source_declared_observation_gap:zero_occupancy_residue",),
+            expected_error_code="source_declared_observation_gap_not_supported",
+            observation_gap="zero_occupancy_residue",
+        ),
+        _case(
+            "unsupported_unobserved_atom_input",
+            "unsupported_upstream_policy",
+            carbonyl_atoms,
+            carbonyl_bond,
+            ("source_declared_observation_gap:unobserved_atom",),
+            expected_error_code="source_declared_observation_gap_not_supported",
+            observation_gap="unobserved_atom",
         ),
         _case(
             "invalid_component_charge_grammar",
@@ -1645,10 +1742,16 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "upstream.missing_atom_residue_policy",
             "upstream_ingest",
-            missing,
-            "",
-            (),
-            "missing_atom_residue_policy_not_implemented",
+            unsupported,
+            (
+                "missing_atom_residue_policy_status:"
+                "explicitly_unsupported_source_declared_observation_gaps"
+            ),
+            (
+                "unsupported_zero_occupancy_residue_input",
+                "unsupported_unobserved_atom_input",
+            ),
+            "source_declared_observation_gap_preparation_not_supported",
         ),
         _coverage(
             "upstream.multimodel_policy",
@@ -1709,6 +1812,7 @@ def _signals_for_reports(
     case: MmcifPreparationCorpusCase,
     reports: tuple[Mapping[str, Any], ...],
     atom_site_model_policy: Mapping[str, Any],
+    missing_atom_residue_policy: Mapping[str, Any],
     component_roles: tuple[Mapping[str, Any], ...],
     modified_residue_declarations: tuple[Mapping[str, Any], ...],
     claim_payload: Mapping[str, Any],
@@ -1724,6 +1828,18 @@ def _signals_for_reports(
     signals.extend(
         f"model_policy_blocker:{value}"
         for value in atom_site_model_policy["execution_blockers"]
+    )
+    signals.extend(
+        (
+            "missing_atom_residue_policy_status:"
+            f"{missing_atom_residue_policy['execution_policy_status']}",
+            "missing_atom_residue_policy_execution_allowed:"
+            f"{str(missing_atom_residue_policy['execution_allowed']).lower()}",
+        )
+    )
+    signals.extend(
+        f"missing_atom_residue_policy_blocker:{value}"
+        for value in missing_atom_residue_policy["execution_blockers"]
     )
     for report in reports:
         component = str(report["component_id"])
@@ -1779,6 +1895,10 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         raise MmcifNonpolyPreparationCorpusError("corpus input digest is invalid")
     model_policy_snapshot = parse_mmcif_atom_site_model_policy(case.source_text)
     model_policy = model_policy_snapshot.to_dict()
+    missing_policy_snapshot = parse_mmcif_missing_atom_residue_policy(
+        case.source_text
+    )
+    missing_policy = missing_policy_snapshot.to_dict()
     try:
         snapshot = parse_mmcif_nonpoly_preparation(case.source_text)
     except (MmcifNonpolyPreparationError, MmcifNonpolyAtomSiteObservationError) as exc:
@@ -1795,11 +1915,15 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
             atom_site_model_policy_snapshot_sha256=(
                 model_policy_snapshot.snapshot_sha256
             ),
+            missing_atom_residue_policy_snapshot_sha256=(
+                missing_policy_snapshot.snapshot_sha256
+            ),
             component_role_snapshot_sha256="",
             modified_residue_declaration_snapshot_sha256="",
             error_code=exc.code,
             reports=(),
             atom_site_model_policy=model_policy,
+            missing_atom_residue_policy=missing_policy,
             component_roles=(),
             modified_residue_declarations=(),
             signals=tuple(
@@ -1812,6 +1936,14 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
                         *(
                             f"model_policy_blocker:{value}"
                             for value in model_policy["execution_blockers"]
+                        ),
+                        "missing_atom_residue_policy_status:"
+                        f"{missing_policy['execution_policy_status']}",
+                        "missing_atom_residue_policy_execution_allowed:"
+                        f"{str(missing_policy['execution_allowed']).lower()}",
+                        *(
+                            f"missing_atom_residue_policy_blocker:{value}"
+                            for value in missing_policy["execution_blockers"]
                         ),
                         f"error:{exc.code}",
                     )
@@ -1859,6 +1991,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         atom_site_model_policy_snapshot_sha256=(
             model_policy_snapshot.snapshot_sha256
         ),
+        missing_atom_residue_policy_snapshot_sha256=(
+            missing_policy_snapshot.snapshot_sha256
+        ),
         component_role_snapshot_sha256=role_snapshot.snapshot_sha256,
         modified_residue_declaration_snapshot_sha256=(
             modified_residue_snapshot.snapshot_sha256
@@ -1868,12 +2003,14 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         error_code="",
         reports=reports,
         atom_site_model_policy=model_policy,
+        missing_atom_residue_policy=missing_policy,
         component_roles=component_roles,
         modified_residue_declarations=modified_residue_declarations,
         signals=_signals_for_reports(
             case,
             reports,
             model_policy,
+            missing_policy,
             component_roles,
             modified_residue_declarations,
             snapshot.to_dict(),
@@ -1976,6 +2113,12 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         "atom_site_model_policy_profile_id": MMCIF_ATOM_SITE_MODEL_POLICY_PROFILE_ID,
         "atom_site_model_policy_parser_version": (
             MMCIF_ATOM_SITE_MODEL_POLICY_PARSER_VERSION
+        ),
+        "missing_atom_residue_policy_profile_id": (
+            MMCIF_MISSING_ATOM_RESIDUE_POLICY_PROFILE_ID
+        ),
+        "missing_atom_residue_policy_parser_version": (
+            MMCIF_MISSING_ATOM_RESIDUE_POLICY_PARSER_VERSION
         ),
         "component_role_profile_id": MMCIF_NONPOLY_COMPONENT_ROLE_PROFILE_ID,
         "component_role_parser_version": MMCIF_NONPOLY_COMPONENT_ROLE_PARSER_VERSION,
