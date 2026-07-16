@@ -1,0 +1,73 @@
+name: fix-v2-mmcif-nonpoly-error-contracts
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/fix-v2-mmcif-nonpoly-error-contracts.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-v2-mmcif-nonpoly-error-contracts
+  cancel-in-progress: false
+
+jobs:
+  correct-contracts:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'betelgeuze-kang' &&
+      github.head_ref == 'codex/v2-mmcif-nonpoly-identity'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out controlled feature branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: codex/v2-mmcif-nonpoly-identity
+          fetch-depth: 0
+          persist-credentials: true
+          clean: true
+
+      - name: Align tests with bounded privacy-preserving error contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/unit/test_engine_v2_mmcif_nonpoly_identity.py")
+          source = path.read_text(encoding="utf-8")
+          replacements = {
+              '_error(unknown_asym, "asym_reference_missing")':
+                  '_error(unknown_asym, "nonpoly_scheme_join_mismatch")',
+              '_error(wrong_entity, "asym_entity_reference_mismatch")':
+                  '_error(wrong_entity, "nonpoly_scheme_join_mismatch")',
+              '_error(wrong_component, "scheme_component_mismatch")':
+                  '_error(wrong_component, "nonpoly_component_join_mismatch")',
+              'error = _error(source, "asym_reference_missing")':
+                  'error = _error(source, "nonpoly_scheme_join_mismatch")',
+          }
+          for old, new in replacements.items():
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"unexpected error-contract replacement count: {count} for {old!r}"
+                  )
+              source = source.replace(old, new, 1)
+          path.write_text(source, encoding="utf-8")
+          Path(".github/workflows/fix-v2-mmcif-nonpoly-error-contracts.yml").unlink()
+          PY
+          python -m py_compile tests/unit/test_engine_v2_mmcif_nonpoly_identity.py
+          git diff --check
+
+      - name: Commit corrected tests and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "test(v2): align nonpoly privacy error contracts"
+          git push origin HEAD:codex/v2-mmcif-nonpoly-identity
