@@ -300,17 +300,27 @@ def test_missing_scalar_mixed_and_extra_header_categories_are_rejected() -> None
     scalar = SEMANTIC_PREFIX + "_pdbx_unobs_or_zero_occ_residues.id 1\n"
     _error(scalar, "category_must_be_loop")
 
+    residue_rows = (
+        "1 Y 0 1 AX GLY AUTH-1 ? A GLY 1\n"
+        "2 Y -0.0E+0 2 AX ALA AUTH-2 '.' A ALA 2"
+    )
     mixed = _replace_once(
-        CANONICAL,
-        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n",
-        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n_atom_site.id\n",
+        NO_ATOM_SITE,
+        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n" + residue_rows,
+        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n"
+        "_custom.value\n"
+        "1 Y 0 1 AX GLY AUTH-1 ? A GLY 1 first\n"
+        "2 Y -0.0E+0 2 AX ALA AUTH-2 '.' A ALA 2 second",
     )
     _error(mixed, "mixed_category_loop")
 
     extra = _replace_once(
-        CANONICAL,
-        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n",
-        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n_pdbx_unobs_or_zero_occ_residues.details\n",
+        NO_ATOM_SITE,
+        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n" + residue_rows,
+        "_pdbx_unobs_or_zero_occ_residues.label_seq_id\n"
+        "_pdbx_unobs_or_zero_occ_residues.details\n"
+        "1 Y 0 1 AX GLY AUTH-1 ? A GLY 1 first\n"
+        "2 Y -0.0E+0 2 AX ALA AUTH-2 '.' A ALA 2 second",
     )
     _error(extra, "unsupported_headers")
 
