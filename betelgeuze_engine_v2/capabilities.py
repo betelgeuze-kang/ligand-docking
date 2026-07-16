@@ -22,6 +22,7 @@ CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
 SDF_INGEST_CAPABILITY_ID = "v2_bounded_sdf_v2000_ingest"
 CIF_SYNTAX_CAPABILITY_ID = "v2_bounded_cif_syntax"
+MMCIF_SEMANTICS_CAPABILITY_ID = "v2_bounded_mmcif_semantic_projection"
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -43,9 +44,15 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "product_integration_not_qualified",
     ),
     CIF_SYNTAX_CAPABILITY_ID: (
-        "semantic_mmcif_identity_and_topology_missing",
+        "semantic_mmcif_projection_is_separate_capability",
         "dictionary_conformance_not_established",
         "assembly_missingness_and_altloc_semantics_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_SEMANTICS_CAPABILITY_ID: (
+        "atom_site_coordinate_observation_not_interpreted",
+        "mmcif_missingness_altloc_and_assembly_not_interpreted",
+        "mmcif_chemistry_and_topology_not_interpreted",
         "product_integration_not_qualified",
     ),
     PHYSICS_REGISTRY_CAPABILITY_ID: (
@@ -145,6 +152,12 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_SEMANTICS_CAPABILITY_ID: _row(
+                MMCIF_SEMANTICS_CAPABILITY_ID,
+                current_state="bounded_entity_asym_polymer_sequence_projection",
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PHYSICS_REGISTRY_CAPABILITY_ID: _row(
                 PHYSICS_REGISTRY_CAPABILITY_ID,
                 current_state="reference_terms_implemented_unvalidated",
@@ -215,6 +228,7 @@ __all__ = [
     "ENGINE_ID",
     "EXTERNAL_BASELINE_CAPABILITY_ID",
     "IMPLEMENTATION_STAGE",
+    "MMCIF_SEMANTICS_CAPABILITY_ID",
     "PDB_INGEST_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",
     "SDF_INGEST_CAPABILITY_ID",
