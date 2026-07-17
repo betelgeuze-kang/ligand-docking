@@ -31,6 +31,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "v2_frozen_public_benchmark_protocol" in roadmap
+    assert "v2_h5_reference_physics_parameter_applicability_record" in roadmap
     assert "finite binary64" in roadmap
     assert "exact bit pattern" in roadmap
     assert "known/unknown/not-applicable" in roadmap
@@ -64,6 +65,12 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "packaged PDB example 4건" in roadmap
     assert "all-case failure denominator" in roadmap
     assert "PoseBusters Benchmark 동등성" in roadmap
+    assert "caller-supplied explicit parameter origin" in roadmap
+    assert "기존 reviewed candidate\nidentity" in roadmap
+    assert "package에는 production\n또는 reference parameter set이 없다" in roadmap
+    assert "runtime\nparameter 값을 추출했다는 주장도 하지 않는다" in roadmap
+    assert "scientific applicability domain이 아니다" in roadmap
+    assert "fitting·calibration" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap

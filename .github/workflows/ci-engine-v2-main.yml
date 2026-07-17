@@ -26,6 +26,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-tautomer-selection.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
+      - ".github/workflows/ci-engine-v2-h5-parameter-applicability.yml"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
@@ -58,6 +59,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-tautomer-selection.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
+      - ".github/workflows/ci-engine-v2-h5-parameter-applicability.yml"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
@@ -134,6 +136,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_tautomer_selection.py
             tests/unit/test_engine_v2_mmcif_nonpoly_tautomer_selection_corpus.py
             tests/unit/test_engine_v2_parameter_source_provenance.py
+            tests/unit/test_engine_v2_reference_parameter_applicability.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -170,6 +173,7 @@ jobs:
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-round-trip.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
+            .github/workflows/ci-engine-v2-h5-parameter-applicability.yml
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
@@ -232,6 +236,7 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_tautomer_selection.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_tautomer_selection_corpus.py \
             tests/unit/test_engine_v2_parameter_source_provenance.py \
+            tests/unit/test_engine_v2_reference_parameter_applicability.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
@@ -336,7 +341,9 @@ jobs:
           )
           from betelgeuze_engine_v2.physics import (
               AtomNonbondedParameter,
+              FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
               ReferenceForceFieldParameters,
+              reference_parameter_applicability_document,
               reviewed_parameter_source_provenance,
           )
 
@@ -345,7 +352,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_j_frozen_public_benchmark_protocol"
+          assert capability_snapshot()["implementation_stage"] == "v2_k_h5_parameter_applicability_record"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
@@ -373,6 +380,11 @@ jobs:
           parameter_source = reviewed_parameter_source_provenance()
           assert parameter_source.review_status == "reviewed_identity_license_and_scope_only"
           assert parameter_source.to_dict()["parameter_assignment_implemented"] is False
+          parameter_applicability = reference_parameter_applicability_document()
+          assert (
+              parameter_applicability["record_sha256"]
+              == FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
+          )
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")

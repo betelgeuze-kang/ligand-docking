@@ -26,6 +26,10 @@ scientific claim from a package version.
   data bundling, benchmark execution, results, or scientific promotion.
 - Explicit reference bond, angle, torsion, Lennard–Jones, and screened-Coulomb
   equations with autograd forces and fail-closed applicability contracts.
+- Frozen H5 parameter-origin/runtime-envelope record with seven exact source
+  hashes, caller-supplied value provenance, executable admission semantics, and
+  explicit separation from the unparsed Sage candidate, scientific chemical
+  applicability, parameter fitting, and force/energy validation.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

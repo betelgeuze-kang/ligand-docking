@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_j_frozen_public_benchmark_protocol
+v2_k_h5_parameter_applicability_record
 ```
 
 The current `main` branch contains:
@@ -107,7 +107,17 @@ The current `main` branch contains:
   all-case failure denominators, and exact scorer-source hashes. No raw data is
   bundled, no network fetch or benchmark execution is implemented or authorized,
   no result document exists, and the four fixtures do not establish statistical
-  representativeness or PoseBusters Benchmark equivalence.
+  representativeness or PoseBusters Benchmark equivalence;
+- a frozen H5 reference-physics parameter-origin and runtime-envelope record.
+  It binds seven exact implementation-source SHA-256 identities, records that
+  every runtime value is supplied explicitly by the caller, and enumerates the
+  implemented bond, angle, proper-periodic-torsion, Lennard-Jones, screened-
+  Coulomb, switching, pair-scaling, orthorhombic-PBC, topology, and capacity
+  checks. The existing reviewed Sage 2.2.1 artifact remains a pinned candidate
+  identity only: it is not claimed to be the latest selection, is not parsed,
+  and no value from it is bound to the runtime parameter object. The code-
+  enforced runtime envelope is explicitly not a scientifically validated
+  chemical applicability domain and authorizes neither fitting nor validation.
 
 ## What the implementation does not establish
 
@@ -115,6 +125,10 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
+- a shipped production/reference parameter set, reviewed caller-supplied
+  parameter values, a Sage-to-runtime value binding, or a scientifically
+  validated molecule/element/charge applicability domain; the H5 runtime
+  capacity envelope establishes execution admission only;
 - general-chemistry real-world coverage, a legal determination for source-
   specific PubChem content, thermodynamic/population evidence for the bounded
   tautomer pair, or authorization to fit parameters from any contract corpus;
@@ -154,7 +168,7 @@ Each capability row separates four questions:
 3. **scientifically validated** — independent scientific evidence exists;
 4. **customer execution enabled** — the capability is admitted to a product route.
 
-Only the first two are true for selected V2-J surfaces. `claim_safe` remains
+Only the first two are true for selected V2-K surfaces. `claim_safe` remains
 false for every current capability row.
 
 ## Verification
