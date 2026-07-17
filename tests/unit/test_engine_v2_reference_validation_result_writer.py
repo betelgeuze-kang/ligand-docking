@@ -20,6 +20,7 @@ from betelgeuze_engine_v2.physics.reference_validation_runner import (
     REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
     REFERENCE_VALIDATION_RUNNER_MAX_CASES,
     REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS,
+    ReferenceValidationRunnerError,
     reference_validation_runner_source_sha256,
     require_reference_validation_run_observation_document,
     run_bounded_cpu_reference_validation,
@@ -104,6 +105,11 @@ def _observation(
         runner_module,
         "require_reference_validation_execution_environment_receipt_for_runner",
         lambda *args, **kwargs: selected,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "reference_validation_checked_out_code_commit_sha",
+        lambda: selected.code_commit_sha,
     )
     return run_bounded_cpu_reference_validation(
         root,
@@ -416,6 +422,31 @@ def test_writer_rejects_tampered_runner_start_and_observation_before_result(
         _write(root, observation)
 
 
+def test_writer_rejects_passing_case_with_failed_retained_metric(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _private_root(tmp_path)
+    environment = _environment(root)
+    observation = _observation(root, monkeypatch, environment=environment)
+    payload = observation.to_dict()
+    contradictory = next(
+        row
+        for row in payload["case_results"]
+        if row["metric_values"]
+        and any(not metric["passed"] for metric in row["metric_values"])
+    )
+    contradictory["observed_status"] = "metrics_passed"
+    contradictory["observed_error_code"] = None
+    contradictory["case_passed"] = True
+
+    with pytest.raises(
+        ReferenceValidationRunnerError,
+        match="status contradicts",
+    ):
+        require_reference_validation_run_observation_document(payload)
+
+
 def test_writer_refuses_a_preexisting_result_symlink_without_touching_target(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -529,6 +560,36 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
             revoked_result_receipt_sha256s=(),
             superseded_result_receipt_sha256s=(receipt.receipt_sha256,),
         )
+
+
+def test_result_reader_binds_filename_nonce_and_opens_special_files_nonblocking(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _private_root(tmp_path)
+    environment = _environment(root)
+    observation = _observation(root, monkeypatch, environment=environment)
+    _install_verified_chain(monkeypatch, environment)
+    _write(root, observation)
+    original = root / f"{AUTHORIZATION_NONCE}.result.json"
+    other_nonce = "0" * 64
+    copied = root / f"{other_nonce}.result.json"
+    copied.write_bytes(original.read_bytes())
+    copied.chmod(0o600)
+
+    with pytest.raises(
+        ReferenceValidationResultWriterError,
+        match="authorization nonce is cross-wired",
+    ):
+        read_reference_validation_result_receipt(root, other_nonce)
+
+    copied.unlink()
+    os.mkfifo(copied, mode=0o600)
+    with pytest.raises(
+        ReferenceValidationResultWriterError,
+        match="cannot be read securely",
+    ):
+        read_reference_validation_result_receipt(root, other_nonce)
 
 
 def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() -> None:

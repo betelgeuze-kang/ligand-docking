@@ -232,19 +232,27 @@ claim status without revalidating the dependency and freshness chain.
   production validation, fitting, result, or scientific claim. No production key,
   attestation, root, nonce reservation, or environment receipt is bundled.
 - Preserve the bounded failure-inclusive CPU float64 runner. It re-reads and
-  live-reverifies the environment receipt, exact code, source, dependency, and
-  frozen-artifact identities, atomically consumes one private nonce-bound start
+  live-reverifies the environment receipt, constrained read-only Git clean-
+  checkout proof for the observed `HEAD`, signed runner
+  source, dependency rows, and frozen evaluator/materializer/oracle identities,
+  atomically consumes one private nonce-bound start
   marker, and evaluates exactly twenty-seven cases and fifty-nine variants under
-  a 120-second evaluation budget. Every success, expected failure, unexpected
+  a POSIX-interrupted 120-second evaluation budget. Every success, expected failure, unexpected
   failure, missing metric, and failed threshold remains in one canonical
-  in-memory observation. Direct CLI execution and marker release/deletion remain
-  unavailable. Test-only artifacts exercise the primitive; no production key,
+  in-memory observation. The exact module command accepts only a bounded canonical
+  stdin request, keeps trust material out of argv/output, and can create the
+  environment receipt, run, and finalize the result in one verified process. It
+  requires a clean source checkout with Git metadata and fails closed for a
+  wheel-only invocation; marker release/deletion remain unavailable. Test-only
+  artifacts exercise the primitive; no production key,
   receipt, start, result, acceptance, fitting, or scientific claim is bundled.
 - Preserve the failure-inclusive result-receipt writer and verifier. They
   re-verify the raw signed review and authorization, live/persisted execution
   environment, durable runner-start marker, and exact bounded observation before
   atomically persisting one canonical private mode-0600 nonce-bound receipt.
-  Every failed case, variant, and metric remains present. Verification requires
+  Every failed case, variant, and metric remains present; metric/status
+  contradictions, filename/embedded-nonce mismatches, and blocking special-file
+  reads fail closed. Verification requires
   an out-of-band exact receipt SHA-256 plus current external revocation and
   supersession inputs. The receipt is unsigned; private POSIX storage is not an
   external authenticity proof, same-UID replacement resistance is not

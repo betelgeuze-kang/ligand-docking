@@ -1,4 +1,4 @@
-"""Frozen source binding for CPU validation materializer and analytic oracle.
+"""Frozen source binding for CPU evaluator, materializer, and analytic oracle.
 
 This record advances implementation readiness only.  It binds the exact
 materializer and independent-oracle sources to the already-frozen pre-result
@@ -46,8 +46,14 @@ FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256 = (
     "2d4eda974f2a551f3963ead1f12c5f474414e6760aa461e735d7aa45829bf19a"
 )
 FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256 = "71627d266a6b1c64b2e6db0f8126bd91e8381c017ea4c6ae2bb76ec84d7b257b"
-FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256 = "bb5344419c24c467cc28d51330ce093159b005d5f2cf3e2a7a0b8a9c665c753f"
+FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256 = (
+    "af8422789c5c9a473bce05d93b7e502d00cd0a955601ff39dbb3fd3b831648db"
+)
+FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256 = "76241cbc9441f8fbed86cb5858069e3c64b21b37838d2ae94d1b2c768db5b57e"
 
+_REFERENCE_EVALUATOR_SOURCE_RELATIVE_PATH = (
+    "betelgeuze_engine_v2/physics/reference_forcefield.py"
+)
 _ORACLE_SOURCE_RELATIVE_PATH = "betelgeuze_engine_v2/physics/reference_validation_oracle.py"
 _MATERIALIZER_SOURCE_RELATIVE_PATH = "betelgeuze_engine_v2/physics/reference_validation_materializer.py"
 _ALLOWED_ORACLE_IMPORT_ROOTS = frozenset({"__future__", "dataclasses", "hashlib", "json", "math", "numbers", "typing"})
@@ -133,6 +139,19 @@ def independent_analytic_oracle_source_sha256() -> str:
     return hashlib.sha256(_oracle_source_path().read_bytes()).hexdigest()
 
 
+def _reference_evaluator_source_path() -> Path:
+    return _source_path(
+        str(Path(__file__).resolve(strict=True).parent / "reference_forcefield.py"),
+        expected_name="reference force-field evaluator",
+    )
+
+
+def reference_forcefield_source_sha256() -> str:
+    """Return the exact evaluator source identity frozen for this study."""
+
+    return hashlib.sha256(_reference_evaluator_source_path().read_bytes()).hexdigest()
+
+
 def _oracle_import_audit() -> dict[str, Any]:
     source_path = _oracle_source_path()
     source_bytes = source_path.read_bytes()
@@ -180,6 +199,7 @@ def _claim_policy() -> dict[str, bool]:
         "protocol_definition_frozen": True,
         "fixture_materializer_implemented": True,
         "fixture_materializer_source_identity_bound": True,
+        "reference_evaluator_source_identity_bound": True,
         "independent_oracle_implemented": True,
         "independent_oracle_source_identity_bound": True,
         "independent_oracle_import_boundary_verified": True,
@@ -214,6 +234,7 @@ class ReferenceValidationArtifactBinding:
     fixture_manifest_sha256: str
     h5_applicability_record_sha256: str
     materialization_manifest_sha256: str
+    reference_evaluator_source_sha256: str
     materializer_source_sha256: str
     oracle_source_sha256: str
 
@@ -232,6 +253,7 @@ class ReferenceValidationArtifactBinding:
             "fixture_manifest_sha256",
             "h5_applicability_record_sha256",
             "materialization_manifest_sha256",
+            "reference_evaluator_source_sha256",
             "materializer_source_sha256",
             "oracle_source_sha256",
         ):
@@ -247,7 +269,7 @@ class ReferenceValidationArtifactBinding:
             "binding_version": self.binding_version,
             "frozen_at_utc": self.frozen_at_utc,
             "purpose": {
-                "scope": "bind_exact_fixture_materializer_and_independent_analytic_oracle",
+                "scope": "bind_exact_reference_evaluator_fixture_materializer_and_independent_analytic_oracle",
                 "implementation_artifact_only": True,
                 "validation_result": False,
                 "authorizes_validation_execution": False,
@@ -271,6 +293,13 @@ class ReferenceValidationArtifactBinding:
                 "all_frozen_fixtures_materialized": True,
                 "all_frozen_mutations_materialized": True,
                 "all_frozen_cases_retained": True,
+                "result_values_present": False,
+            },
+            "reference_evaluator": {
+                "status": "implemented_exact_source_bound_not_executed_as_validation_study",
+                "source_relative_path": _REFERENCE_EVALUATOR_SOURCE_RELATIVE_PATH,
+                "source_sha256": self.reference_evaluator_source_sha256,
+                "exact_source_reverification_required_before_execution": True,
                 "result_values_present": False,
             },
             "independent_oracle": {
@@ -340,8 +369,13 @@ class ReferenceValidationArtifactBinding:
 def _build_reference_validation_artifact_binding() -> ReferenceValidationArtifactBinding:
     protocol = frozen_cpu_reference_validation_protocol()
     materialization = reference_validation_materialization_manifest_document(protocol)
+    evaluator_source = reference_forcefield_source_sha256()
     materializer_source = reference_validation_materializer_source_sha256()
     oracle_source = independent_analytic_oracle_source_sha256()
+    if evaluator_source != FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256:
+        raise ReferenceValidationArtifactBindingError(
+            "frozen reference evaluator source SHA-256 drifted"
+        )
     if materializer_source != FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256:
         raise ReferenceValidationArtifactBindingError("frozen fixture materializer source SHA-256 drifted")
     if oracle_source != FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256:
@@ -360,6 +394,7 @@ def _build_reference_validation_artifact_binding() -> ReferenceValidationArtifac
         fixture_manifest_sha256=protocol.fixture_manifest_sha256,
         h5_applicability_record_sha256=protocol.h5_applicability_record_sha256,
         materialization_manifest_sha256=materialization["materialization_manifest_sha256"],
+        reference_evaluator_source_sha256=evaluator_source,
         materializer_source_sha256=materializer_source,
         oracle_source_sha256=oracle_source,
     )
@@ -487,6 +522,7 @@ def write_reference_validation_artifact_binding_json(
 
 __all__ = [
     "FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256",
+    "FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256",
     "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256",
     "FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256",
     "REFERENCE_VALIDATION_ARTIFACT_BINDING_ID",
@@ -497,6 +533,7 @@ __all__ = [
     "ReferenceValidationArtifactBindingError",
     "frozen_reference_validation_artifact_binding",
     "independent_analytic_oracle_source_sha256",
+    "reference_forcefield_source_sha256",
     "reference_validation_artifact_authorization_decision",
     "reference_validation_artifact_binding_document",
     "reference_validation_artifact_binding_json_bytes",

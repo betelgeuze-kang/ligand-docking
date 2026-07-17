@@ -913,7 +913,10 @@ def _read_result_receipt_bytes(
         try:
             descriptor = os.open(
                 f"{nonce}.result.json",
-                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                os.O_RDONLY
+                | os.O_NONBLOCK
+                | os.O_NOFOLLOW
+                | os.O_CLOEXEC,
                 dir_fd=root_fd,
             )
             _validate_reservation_file_stat(os.fstat(descriptor))
@@ -946,9 +949,13 @@ def read_reference_validation_result_receipt(
 ) -> ReferenceValidationResultReceipt:
     """Read one canonical private result receipt without accepting it."""
 
+    nonce = _require_sha256(
+        authorization_nonce_sha256,
+        name="result receipt authorization nonce",
+    )
     raw = _read_result_receipt_bytes(
         artifact_output_root,
-        authorization_nonce_sha256,
+        nonce,
     )
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -978,7 +985,12 @@ def read_reference_validation_result_receipt(
         raise ReferenceValidationResultWriterError(
             "result receipt is not canonical JSON"
         )
-    return _receipt_from_payload(payload)
+    receipt = _receipt_from_payload(payload)
+    if not hmac.compare_digest(receipt.authorization_nonce_sha256, nonce):
+        raise ReferenceValidationResultWriterError(
+            "result receipt authorization nonce is cross-wired"
+        )
+    return receipt
 
 
 def verify_reference_validation_result_receipt(

@@ -2,17 +2,42 @@ from __future__ import annotations
 
 import ast
 from copy import copy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
+import io
 import inspect
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
+import time
 from types import SimpleNamespace
+from typing import Mapping
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_validation_authorization import (
+    AuthorizationOperatorTrustAnchor,
+    build_signed_reference_validation_authorization_receipt,
+)
+from betelgeuze_engine_v2.physics.reference_validation_nonce_reservation import (
+    reserve_reference_validation_authorization_nonce,
+)
 from betelgeuze_engine_v2.physics.reference_validation_protocol import (
     frozen_cpu_reference_validation_protocol,
+)
+from betelgeuze_engine_v2.physics.reference_validation_receipts import (
+    FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
+    FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.reference_validation_review import (
+    ScientificReviewerTrustAnchor,
+    build_signed_reference_validation_review_attestation,
+)
+from betelgeuze_engine_v2.physics.reference_validation_run_start import (
+    build_signed_reference_validation_network_isolation_attestation,
+    reference_validation_artifact_output_root_identity_sha256,
 )
 from betelgeuze_engine_v2.physics.reference_validation_runner import (
     FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256,
@@ -25,6 +50,7 @@ from betelgeuze_engine_v2.physics.reference_validation_runner import (
     reference_validation_runner_contract_decision,
     reference_validation_runner_contract_document,
     reference_validation_runner_source_sha256,
+    reference_validation_checked_out_code_commit_sha,
     require_reference_validation_runner_contract_document,
     run_bounded_cpu_reference_validation,
 )
@@ -80,6 +106,11 @@ def _install_verified_receipt(
         "require_reference_validation_execution_environment_receipt_for_runner",
         lambda *args, **kwargs: receipt,
     )
+    monkeypatch.setattr(
+        module,
+        "reference_validation_checked_out_code_commit_sha",
+        lambda: receipt.code_commit_sha,
+    )
 
 
 def _run(root: Path):
@@ -133,6 +164,45 @@ def test_runner_contract_rejects_tamper_and_source_identity_is_exact() -> None:
     assert reference_validation_runner_source_sha256() == hashlib.sha256(
         source.read_bytes()
     ).hexdigest()
+    assert reference_validation_checked_out_code_commit_sha() == subprocess.check_output(
+        ["git", "rev-parse", "HEAD"],
+        text=True,
+    ).strip()
+
+
+def test_clean_checkout_preflight_uses_only_the_root_owned_absolute_git(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commit = reference_validation_checked_out_code_commit_sha()
+    seen: dict[str, object] = {}
+
+    def clean_run(command: object, **kwargs: object) -> SimpleNamespace:
+        seen["command"] = command
+        seen["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0, stdout=b"")
+
+    monkeypatch.setattr(subprocess, "run", clean_run)
+    module._require_clean_checked_out_code_commit(commit)
+    command = seen["command"]
+    kwargs = seen["kwargs"]
+    assert isinstance(command, list)
+    assert command[0] == "/usr/bin/git"
+    assert command[-3:] == ["status", "--porcelain=v1", "--untracked-files=all"]
+    assert isinstance(kwargs, dict)
+    assert kwargs["stdin"] is subprocess.DEVNULL
+    assert kwargs["stderr"] is subprocess.DEVNULL
+    assert kwargs["timeout"] == 10
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=0,
+            stdout=b" M betelgeuze_engine_v2/physics/reference_forcefield.py\n",
+        ),
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="not exactly clean"):
+        module._require_clean_checked_out_code_commit(commit)
 
 
 def test_bounded_runner_retains_exact_matrix_and_consumes_start_once(
@@ -241,6 +311,39 @@ def test_runner_preflight_rejects_stale_or_crosswired_receipt_before_start(
     assert list(root.iterdir()) == []
 
 
+def test_runner_rejects_checkout_or_frozen_evaluator_source_drift_before_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from betelgeuze_engine_v2.physics import reference_validation_artifact_binding
+
+    checkout_root = _private_root(tmp_path, "checkout")
+    _install_verified_receipt(monkeypatch, _receipt())
+    monkeypatch.setattr(
+        module,
+        "reference_validation_checked_out_code_commit_sha",
+        lambda: "0" * 40,
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="checked-out code commit"):
+        _run(checkout_root)
+    assert list(checkout_root.iterdir()) == []
+
+    evaluator_root = _private_root(tmp_path, "evaluator")
+    monkeypatch.setattr(
+        module,
+        "reference_validation_checked_out_code_commit_sha",
+        lambda: CODE_COMMIT_SHA,
+    )
+    monkeypatch.setattr(
+        reference_validation_artifact_binding,
+        "reference_forcefield_source_sha256",
+        lambda: "0" * 64,
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="artifact source drifted"):
+        _run(evaluator_root)
+    assert list(evaluator_root.iterdir()) == []
+
+
 def test_unexpected_evaluator_failures_are_sanitized_and_fully_retained(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -274,6 +377,38 @@ def test_unexpected_evaluator_failures_are_sanitized_and_fully_retained(
     assert "sensitive-internal-diagnostic" not in json.dumps(observation.to_dict())
 
 
+def test_evaluator_is_interrupted_at_the_frozen_wall_clock_deadline(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from betelgeuze_engine_v2.physics import reference_forcefield
+
+    root = _private_root(tmp_path)
+    _install_verified_receipt(monkeypatch, _receipt())
+    monkeypatch.setattr(module, "REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS", 0.05)
+
+    def _slow(*args: object, **kwargs: object):
+        time.sleep(5.0)
+        return None
+
+    monkeypatch.setattr(reference_forcefield, "evaluate_reference_force_field", _slow)
+    started = time.monotonic()
+    observation = _run(root)
+    elapsed = time.monotonic() - started
+
+    variants = [
+        variant
+        for case in observation.case_results
+        for variant in case.variant_results
+    ]
+    assert elapsed < 1.0
+    assert len(variants) == REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
+    assert all(
+        variant.observed_status == "time_budget_exhausted"
+        for variant in variants
+    )
+
+
 def test_runner_public_surface_has_no_unsafe_clock_writer_or_evaluator() -> None:
     signature = inspect.signature(run_bounded_cpu_reference_validation)
     assert "checked_at" not in signature.parameters
@@ -303,3 +438,253 @@ def test_runner_public_surface_has_no_unsafe_clock_writer_or_evaluator() -> None
     }
     assert "subprocess" not in imported_modules
     assert "socket" not in imported_modules
+
+
+def test_exact_module_entrypoint_dispatches_canonical_stdin_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = {
+        "schema_id": module.REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID,
+        "reservation_root": "/private/reservations",
+        "artifact_output_root": "/private/results",
+        "authorization_nonce_sha256": AUTHORIZATION_NONCE,
+        "authorization_receipt": {"signed": "authorization"},
+        "review_attestation": {"signed": "review"},
+        "trusted_reviewer_keys": [
+            {
+                "key_id": "reviewer",
+                "reviewer_identity_sha256": "8" * 64,
+                "verification_key_hex": "aa" * 32,
+            }
+        ],
+        "expected_implementation_author_identity_sha256": "9" * 64,
+        "trusted_operator_keys": [
+            {
+                "key_id": "operator",
+                "operator_identity_sha256": "a" * 64,
+                "verification_key_hex": "bb" * 32,
+            }
+        ],
+        "network_isolation_attestation": {"signed": "network"},
+        "expected_code_commit_sha": CODE_COMMIT_SHA,
+        "expected_runner_source_sha256": "b" * 64,
+        "expected_dependency_artifact_sha256_rows": DEPENDENCY_ROWS,
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+    }
+    response = {
+        "schema_id": module.REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID,
+        "claim_safe": False,
+    }
+    encoded_request = module._canonical_bytes(request) + b"\n"
+    output = io.BytesIO()
+    monkeypatch.setattr(
+        module.sys,
+        "stdin",
+        SimpleNamespace(buffer=io.BytesIO(encoded_request)),
+    )
+    monkeypatch.setattr(
+        module.sys,
+        "stdout",
+        SimpleNamespace(buffer=output),
+    )
+    seen: dict[str, object] = {}
+
+    def execute(parsed: Mapping[str, object]) -> dict[str, object]:
+        seen["request"] = parsed
+        return response
+
+    monkeypatch.setattr(module, "_execute_runner_request", execute)
+
+    assert module.main() == 0
+    assert seen["request"] == request
+    assert output.getvalue() == module._canonical_bytes(response) + b"\n"
+
+
+def test_exact_module_invocation_runs_the_real_receipt_chain(
+    tmp_path: Path,
+) -> None:
+    if subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+        cwd=Path(__file__).resolve().parents[2],
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout:
+        pytest.skip("real entrypoint integration requires an exact clean checkout")
+    reservation_root = _private_root(tmp_path, "reservations")
+    artifact_root = _private_root(tmp_path, "artifacts")
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    reviewed_at = now - timedelta(minutes=1)
+    review_expires_at = now + timedelta(minutes=10)
+    authorization_expires_at = now + timedelta(minutes=5)
+    network_expires_at = now + timedelta(minutes=2)
+    author_identity = "1" * 64
+    reviewer_identity = "2" * 64
+    operator_identity = "3" * 64
+    review_key_id = "entrypoint-reviewer"
+    operator_key_id = "entrypoint-operator"
+    review_key = b"entrypoint-review-key-material-32-bytes-minimum"
+    operator_key = b"entrypoint-operator-key-material-32-bytes-minimum"
+    nonce = hashlib.sha256(os.fspath(tmp_path).encode("utf-8")).hexdigest()
+    review_nonce = hashlib.sha256(f"review:{tmp_path}".encode("utf-8")).hexdigest()
+    code_commit = reference_validation_checked_out_code_commit_sha()
+    runner_source = reference_validation_runner_source_sha256()
+    dependencies = {
+        "numpy-1.26.4-wheel": "4" * 64,
+        "python-runtime": "5" * 64,
+        "torch-2.6.0-cpu-wheel": "6" * 64,
+    }
+    review = build_signed_reference_validation_review_attestation(
+        implementation_author_identity_sha256=author_identity,
+        independent_reviewer_identity_sha256=reviewer_identity,
+        reviewer_key_id=review_key_id,
+        signing_key=review_key,
+        reviewed_at=reviewed_at,
+        expires_at=review_expires_at,
+        nonce_sha256=review_nonce,
+    )
+    reviewer_keys = {
+        review_key_id: ScientificReviewerTrustAnchor(
+            reviewer_identity,
+            review_key,
+        )
+    }
+    authorization = build_signed_reference_validation_authorization_receipt(
+        review_attestation=review,
+        trusted_reviewer_keys=reviewer_keys,
+        expected_implementation_author_identity_sha256=author_identity,
+        authorization_operator_identity_sha256=operator_identity,
+        authorization_key_id=operator_key_id,
+        signing_key=operator_key,
+        issued_at=now,
+        expires_at=authorization_expires_at,
+        authorization_nonce_sha256=nonce,
+        code_commit_sha=code_commit,
+        runner_source_sha256=runner_source,
+        execution_environment_contract_sha256=(
+            FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+        ),
+        result_receipt_contract_sha256=(
+            FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+        ),
+        dependency_artifact_sha256_rows=dependencies,
+    )
+    operator_keys = {
+        operator_key_id: AuthorizationOperatorTrustAnchor(
+            operator_identity,
+            operator_key,
+        )
+    }
+    reserve_reference_validation_authorization_nonce(
+        reservation_root,
+        authorization_receipt=authorization,
+        review_attestation=review,
+        trusted_reviewer_keys=reviewer_keys,
+        expected_implementation_author_identity_sha256=author_identity,
+        trusted_operator_keys=operator_keys,
+        reserved_at=now,
+        expected_code_commit_sha=code_commit,
+        expected_runner_source_sha256=runner_source,
+        expected_dependency_artifact_sha256_rows=dependencies,
+    )
+    namespace_identity = hashlib.sha256(
+        os.readlink("/proc/self/ns/net").encode("utf-8")
+    ).hexdigest()
+    network = build_signed_reference_validation_network_isolation_attestation(
+        authorization_receipt_sha256=authorization["receipt_sha256"],
+        authorization_nonce_sha256=nonce,
+        authorization_operator_identity_sha256=operator_identity,
+        authorization_key_id=operator_key_id,
+        signing_key=operator_key,
+        code_commit_sha=code_commit,
+        runner_source_sha256=runner_source,
+        artifact_output_root_identity_sha256=(
+            reference_validation_artifact_output_root_identity_sha256(
+                artifact_root
+            )
+        ),
+        network_namespace_identity_sha256=namespace_identity,
+        observed_at=now,
+        expires_at=network_expires_at,
+    )
+    request = {
+        "schema_id": module.REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID,
+        "reservation_root": os.fspath(reservation_root),
+        "artifact_output_root": os.fspath(artifact_root),
+        "authorization_nonce_sha256": nonce,
+        "authorization_receipt": authorization,
+        "review_attestation": review,
+        "trusted_reviewer_keys": [
+            {
+                "key_id": review_key_id,
+                "reviewer_identity_sha256": reviewer_identity,
+                "verification_key_hex": review_key.hex(),
+            }
+        ],
+        "expected_implementation_author_identity_sha256": author_identity,
+        "trusted_operator_keys": [
+            {
+                "key_id": operator_key_id,
+                "operator_identity_sha256": operator_identity,
+                "verification_key_hex": operator_key.hex(),
+            }
+        ],
+        "network_isolation_attestation": network,
+        "expected_code_commit_sha": code_commit,
+        "expected_runner_source_sha256": runner_source,
+        "expected_dependency_artifact_sha256_rows": dependencies,
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+    }
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "CUDA_VISIBLE_DEVICES": "",
+            "HIP_VISIBLE_DEVICES": "",
+            "ROCR_VISIBLE_DEVICES": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "MKL_NUM_THREADS": "1",
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "TZ": "UTC",
+            "PYTHONHASHSEED": "123",
+            "BETELGEUZE_REFERENCE_VALIDATION_SEED": "456",
+        }
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "betelgeuze_engine_v2.physics.reference_validation_runner",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        env=environment,
+        input=module._canonical_bytes(request) + b"\n",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=150,
+    )
+
+    assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
+    response = json.loads(completed.stdout.decode("ascii"))
+    assert response["schema_id"] == module.REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID
+    assert response["claim_safe"] is False
+    assert response["production_validation_results_collected"] is False
+    assert sorted(path.name for path in artifact_root.iterdir()) == [
+        f"{nonce}.environment.json",
+        f"{nonce}.result.json",
+        f"{nonce}.runner-start.json",
+    ]
+    assert response["result_receipt_sha256"] in (
+        artifact_root / f"{nonce}.result.json"
+    ).read_text(encoding="ascii")
+    secret_hex = operator_key.hex().encode("ascii")
+    assert secret_hex not in completed.stdout
+    assert secret_hex not in completed.stderr
+    assert secret_hex not in (artifact_root / f"{nonce}.result.json").read_bytes()

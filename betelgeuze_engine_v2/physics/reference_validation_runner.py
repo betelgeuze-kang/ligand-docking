@@ -3,8 +3,10 @@
 The runner accepts only a freshly reverified execution-environment receipt,
 atomically consumes a one-time runner-start marker, verifies the frozen source
 binding, and evaluates exactly twenty-seven cases and fifty-nine variants.  It
-returns an in-memory failure-inclusive observation.  It does not write a result
-receipt, authorize a production run, accept parameter-fitting data, or promote
+returns an in-memory failure-inclusive observation.  The exact module entrypoint
+can additionally orchestrate environment-receipt creation and result-receipt
+finalization from one canonical standard-input request, but neither path
+authorizes a production run, accepts parameter-fitting data, or promotes
 scientific, benchmark, product, publication, or customer claims.
 """
 
@@ -17,7 +19,10 @@ import json
 import math
 import os
 from pathlib import Path
+import signal
 import stat
+import sys
+import threading
 import time
 from typing import Any, Mapping
 
@@ -63,10 +68,17 @@ REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_VALIDATION_RUNNER_MAX_CASES = 27
 REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS = 59
 REFERENCE_VALIDATION_RUNNER_MAX_START_RECORD_BYTES = 65_536
+REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES = 1_048_576
 REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM = 1.0e-5
+REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_validation_runner_request/1.0.0"
+)
+REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_validation_runner_response/1.0.0"
+)
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "a3f198edbdeefcd92d5cd30ef2089acce3a289c0ebb6ce17b4544d6292778531"
+    "46e11e1c372c0eaf9ad1c3636717ec87864437a2f069611843609e2dd164a92a"
 )
 
 _ROTATION_MATRIX = (
@@ -108,6 +120,10 @@ class ReferenceValidationRunnerError(RuntimeError):
 
 class ReferenceValidationRunnerAlreadyStartedError(ReferenceValidationRunnerError):
     """The one-time runner-start path for the authorization nonce exists."""
+
+
+class _ReferenceValidationDeadlineExceeded(Exception):
+    """Internal, sanitized control flow for the frozen wall-clock deadline."""
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -258,6 +274,199 @@ def reference_validation_runner_source_sha256() -> str:
         return hashlib.sha256(resolved.read_bytes()).hexdigest()
     except OSError as exc:
         raise ReferenceValidationRunnerError("runner source cannot be read") from exc
+
+
+def _read_small_regular_text(
+    path: Path,
+    *,
+    name: str,
+    maximum_bytes: int = 65_536,
+    encoding: str = "ascii",
+) -> str:
+    try:
+        file_stat = path.lstat()
+        if (
+            path.is_symlink()
+            or not stat.S_ISREG(file_stat.st_mode)
+            or not 0 < file_stat.st_size <= maximum_bytes
+        ):
+            raise ReferenceValidationRunnerError(f"{name} is not a small regular file")
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise ReferenceValidationRunnerError(f"{name} cannot be read") from exc
+    if len(raw) != file_stat.st_size:
+        raise ReferenceValidationRunnerError(f"{name} changed while it was read")
+    try:
+        return raw.decode(encoding).strip()
+    except UnicodeDecodeError as exc:
+        raise ReferenceValidationRunnerError(
+            f"{name} contains invalid text encoding"
+        ) from exc
+
+
+def _require_safe_git_ref(value: str) -> str:
+    if (
+        not value.startswith("refs/")
+        or value.startswith("refs/.")
+        or value.endswith(("/", "."))
+        or ".." in value
+        or "//" in value
+        or not all(
+            character.isascii()
+            and (character.isalnum() or character in "/._-")
+            for character in value
+        )
+    ):
+        raise ReferenceValidationRunnerError("checked-out Git ref is invalid")
+    return value
+
+
+def _packed_git_ref(common_git_dir: Path, ref_name: str) -> str:
+    packed_refs = _read_small_regular_text(
+        common_git_dir / "packed-refs",
+        name="Git packed refs",
+        maximum_bytes=8 * 1024 * 1024,
+    )
+    matches = []
+    for line in packed_refs.splitlines():
+        if not line or line.startswith(("#", "^")):
+            continue
+        try:
+            commit_sha, candidate_ref = line.split(" ", 1)
+        except ValueError as exc:
+            raise ReferenceValidationRunnerError("Git packed refs are invalid") from exc
+        if candidate_ref == ref_name:
+            matches.append(commit_sha)
+    if len(matches) != 1:
+        raise ReferenceValidationRunnerError(
+            "checked-out Git ref is absent or ambiguous"
+        )
+    return matches[0]
+
+
+def reference_validation_checked_out_code_commit_sha() -> str:
+    """Observe the Git HEAD containing the loaded runner without spawning Git."""
+
+    source = Path(__file__).resolve(strict=True)
+    repository_root = source.parents[2]
+    dot_git = repository_root / ".git"
+    if dot_git.is_symlink():
+        raise ReferenceValidationRunnerError("Git metadata must not be a symlink")
+    if dot_git.is_dir():
+        git_dir = dot_git.resolve(strict=True)
+    else:
+        pointer = _read_small_regular_text(
+            dot_git,
+            name="Git worktree pointer",
+            encoding="utf-8",
+        )
+        if not pointer.startswith("gitdir: "):
+            raise ReferenceValidationRunnerError("Git worktree pointer is invalid")
+        candidate = Path(pointer[8:])
+        git_dir = (
+            candidate if candidate.is_absolute() else repository_root / candidate
+        ).resolve(strict=True)
+    if not git_dir.is_dir() or git_dir.is_symlink():
+        raise ReferenceValidationRunnerError("Git directory is invalid")
+    common_git_dir = git_dir
+    commondir_path = git_dir / "commondir"
+    if commondir_path.exists():
+        commondir = _read_small_regular_text(
+            commondir_path,
+            name="Git common-directory pointer",
+            encoding="utf-8",
+        )
+        candidate = Path(commondir)
+        common_git_dir = (
+            candidate if candidate.is_absolute() else git_dir / candidate
+        ).resolve(strict=True)
+        if not common_git_dir.is_dir() or common_git_dir.is_symlink():
+            raise ReferenceValidationRunnerError("Git common directory is invalid")
+
+    head = _read_small_regular_text(git_dir / "HEAD", name="Git HEAD")
+    for _ in range(5):
+        if not head.startswith("ref: "):
+            return _require_commit_sha(head, name="checked-out Git HEAD")
+        ref_name = _require_safe_git_ref(head[5:])
+        ref_paths = (git_dir / ref_name, common_git_dir / ref_name)
+        existing = tuple(dict.fromkeys(path for path in ref_paths if path.exists()))
+        if existing:
+            if len(existing) != 1:
+                raise ReferenceValidationRunnerError(
+                    "checked-out Git ref is ambiguous"
+                )
+            head = _read_small_regular_text(existing[0], name="checked-out Git ref")
+        else:
+            head = _packed_git_ref(common_git_dir, ref_name)
+    raise ReferenceValidationRunnerError("checked-out Git ref chain is too deep")
+
+
+def _require_clean_checked_out_code_commit(expected_commit_sha: str) -> None:
+    """Use one constrained local Git status call to prove HEAD has no drift."""
+
+    import subprocess
+
+    expected = _require_commit_sha(
+        expected_commit_sha,
+        name="clean-checkout expected commit",
+    )
+    if reference_validation_checked_out_code_commit_sha() != expected:
+        raise ReferenceValidationRunnerError(
+            "checked-out code commit does not match the clean-checkout request"
+        )
+    git_executable = Path("/usr/bin/git")
+    try:
+        executable_stat = git_executable.lstat()
+    except OSError as exc:
+        raise ReferenceValidationRunnerError(
+            "clean-checkout Git executable is unavailable"
+        ) from exc
+    if (
+        git_executable.is_symlink()
+        or not stat.S_ISREG(executable_stat.st_mode)
+        or executable_stat.st_uid != 0
+        or stat.S_IMODE(executable_stat.st_mode) & 0o022
+    ):
+        raise ReferenceValidationRunnerError(
+            "clean-checkout Git executable does not satisfy the trust policy"
+        )
+    repository_root = Path(__file__).resolve(strict=True).parents[2]
+    environment = {
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "HOME": "/nonexistent",
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "PATH": "/usr/bin:/bin",
+    }
+    try:
+        completed = subprocess.run(
+            [
+                os.fspath(git_executable),
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+            ],
+            cwd=repository_root,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ReferenceValidationRunnerError(
+            "clean-checkout Git preflight could not run"
+        ) from exc
+    if completed.returncode != 0 or completed.stdout:
+        raise ReferenceValidationRunnerError(
+            "validation checkout is not exactly clean at the authorized commit"
+        )
 
 
 def _force_array_sha256(values: tuple[tuple[float, float, float], ...]) -> str:
@@ -569,6 +778,19 @@ class ReferenceValidationCaseObservation:
                 raise ReferenceValidationRunnerError(
                     "metric case cannot contain an observed error"
                 )
+            metrics_passed = all(
+                row.observed and row.passed for row in self.metric_values
+            )
+            if (
+                self.observed_status == "metrics_passed"
+                and not metrics_passed
+            ) or (
+                self.observed_status == "metric_threshold_failed"
+                and metrics_passed
+            ):
+                raise ReferenceValidationRunnerError(
+                    "metric case status contradicts its retained metric rows"
+                )
         elif not self.observed_error_code:
             raise ReferenceValidationRunnerError(
                 "non-metric case requires an observed error"
@@ -785,6 +1007,8 @@ def _contract_projection() -> dict[str, Any]:
                 REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE.total_seconds()
             ),
             "exact_code_runner_dependency_identity_required": True,
+            "actual_checked_out_git_head_required": True,
+            "frozen_reference_evaluator_source_required": True,
             "frozen_artifact_binding_reverification_required": True,
             "one_time_runner_start_marker_required": True,
             "duplicate_runner_start_fails_closed": True,
@@ -801,7 +1025,23 @@ def _contract_projection() -> dict[str, Any]:
             "all_failure_rows_retained": True,
             "skipped_cases_allowed": False,
             "network_access_allowed": False,
-            "subprocess_execution_allowed": False,
+            "arbitrary_subprocess_execution_allowed": False,
+            "root_owned_absolute_git_clean_checkout_preflight_required": True,
+            "evaluator_or_oracle_subprocess_execution_allowed": False,
+            "posix_main_thread_deadline_interrupt_required": True,
+        },
+        "entrypoint": {
+            "logical_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
+            "clean_source_checkout_with_git_metadata_required": True,
+            "canonical_standard_input_request_schema_id": (
+                REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
+            ),
+            "maximum_request_bytes": REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES,
+            "secret_bearing_argv_allowed": False,
+            "trust_keys_retained_or_echoed": False,
+            "environment_receipt_runner_and_result_writer_reachable": True,
+            "result_receipt_finalized_in_same_verified_process": True,
+            "response_contains_hashes_and_closed_claim_state_only": True,
         },
         "observation": {
             "in_memory_only": True,
@@ -1397,6 +1637,52 @@ def _metric_observations(
     return tuple(observations)
 
 
+def _require_deadline_timer_available() -> None:
+    if (
+        threading.current_thread() is not threading.main_thread()
+        or not hasattr(signal, "SIGALRM")
+        or not hasattr(signal, "ITIMER_REAL")
+    ):
+        raise ReferenceValidationRunnerError(
+            "bounded validation must run on the POSIX main thread"
+        )
+    try:
+        active_seconds, active_interval = signal.getitimer(signal.ITIMER_REAL)
+    except (OSError, ValueError) as exc:
+        raise ReferenceValidationRunnerError(
+            "bounded validation deadline timer is unavailable"
+        ) from exc
+    if active_seconds > 0.0 or active_interval > 0.0:
+        raise ReferenceValidationRunnerError(
+            "bounded validation requires an unused process deadline timer"
+        )
+
+
+def _call_before_deadline(
+    function: Any,
+    *args: Any,
+    deadline: float,
+) -> Any:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0.0:
+        raise _ReferenceValidationDeadlineExceeded
+    previous_handler = signal.getsignal(signal.SIGALRM)
+
+    def deadline_handler(_signum: int, _frame: Any) -> None:
+        raise _ReferenceValidationDeadlineExceeded
+
+    try:
+        signal.signal(signal.SIGALRM, deadline_handler)
+        signal.setitimer(signal.ITIMER_REAL, remaining)
+        result = function(*args)
+        if time.monotonic() >= deadline:
+            raise _ReferenceValidationDeadlineExceeded
+        return result
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0.0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+
 def _evaluate_case(
     ordinal: int,
     case: CPUReferenceValidationCase,
@@ -1421,11 +1707,23 @@ def _evaluate_case(
             )
             continue
         try:
-            evaluation = evaluate_reference_force_field(
+            evaluation = _call_before_deadline(
+                evaluate_reference_force_field,
                 variant.system,
                 variant.neighbors,
                 variant.parameters,
+                deadline=deadline,
             )
+        except _ReferenceValidationDeadlineExceeded:
+            rows.append(
+                _failure_variant(
+                    variant_ordinal,
+                    variant,
+                    status="time_budget_exhausted",
+                    error_code="runner_time_budget_exhausted",
+                )
+            )
+            continue
         except reference_error_type as exc:
             status = (
                 "fail_closed"
@@ -1462,8 +1760,21 @@ def _evaluate_case(
             )
             continue
         try:
-            oracle = evaluate_independent_analytic_oracle(variant.oracle_input)
+            oracle = _call_before_deadline(
+                evaluate_independent_analytic_oracle,
+                variant.oracle_input,
+                deadline=deadline,
+            )
             rows.append(_success_variant(variant_ordinal, variant, evaluation, oracle))
+        except _ReferenceValidationDeadlineExceeded:
+            rows.append(
+                _failure_variant(
+                    variant_ordinal,
+                    variant,
+                    status="time_budget_exhausted",
+                    error_code="runner_time_budget_exhausted",
+                )
+            )
         except Exception:
             rows.append(
                 _failure_variant(
@@ -1578,8 +1889,15 @@ def run_bounded_cpu_reference_validation(
         raise ReferenceValidationRunnerError(
             "runner source does not match the signed authorization chain"
         )
+    checked_out_commit = reference_validation_checked_out_code_commit_sha()
+    if checked_out_commit != expected_code_commit_sha:
+        raise ReferenceValidationRunnerError(
+            "checked-out code commit does not match the signed authorization chain"
+        )
+    _require_deadline_timer_available()
 
     from .reference_validation_artifact_binding import (
+        ReferenceValidationArtifactBindingError,
         frozen_reference_validation_artifact_binding,
     )
     from .reference_validation_materializer import (
@@ -1590,7 +1908,12 @@ def run_bounded_cpu_reference_validation(
         evaluate_independent_analytic_oracle,
     )
 
-    frozen_reference_validation_artifact_binding()
+    try:
+        frozen_reference_validation_artifact_binding()
+    except ReferenceValidationArtifactBindingError as exc:
+        raise ReferenceValidationRunnerError(
+            "runner reference evaluator or validation artifact source drifted"
+        ) from exc
     manifest = reference_validation_materialization_manifest_document()
     if manifest["coverage"] != {
         "fixture_count": 7,
@@ -1832,10 +2155,312 @@ def require_reference_validation_run_observation_document(
     return result
 
 
-def main() -> int:
-    """Keep direct CLI execution closed; an in-process verified chain is required."""
+def _require_string_sequence(value: object, *, name: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or any(not isinstance(row, str) for row in value):
+        raise ReferenceValidationRunnerError(f"{name} must be a JSON string array")
+    return tuple(value)
 
-    return 2
+
+def _verification_key_from_hex(value: object, *, name: str) -> bytes:
+    if (
+        not isinstance(value, str)
+        or len(value) < 64
+        or len(value) % 2
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise ReferenceValidationRunnerError(
+            f"{name} must be canonical lowercase hexadecimal key material"
+        )
+    return bytes.fromhex(value)
+
+
+def _trusted_reviewer_keys_from_request(value: object) -> dict[str, Any]:
+    from .reference_validation_review import ScientificReviewerTrustAnchor
+
+    if not isinstance(value, list) or not value:
+        raise ReferenceValidationRunnerError(
+            "runner request trusted reviewer keys must be a non-empty array"
+        )
+    result: dict[str, ScientificReviewerTrustAnchor] = {}
+    for row in value:
+        if not isinstance(row, dict) or set(row) != {
+            "key_id",
+            "reviewer_identity_sha256",
+            "verification_key_hex",
+        }:
+            raise ReferenceValidationRunnerError(
+                "runner request trusted reviewer key fields are invalid"
+            )
+        key_id = row["key_id"]
+        if not isinstance(key_id, str) or key_id in result:
+            raise ReferenceValidationRunnerError(
+                "runner request trusted reviewer key identity is invalid"
+            )
+        result[key_id] = ScientificReviewerTrustAnchor(
+            row["reviewer_identity_sha256"],
+            _verification_key_from_hex(
+                row["verification_key_hex"],
+                name="trusted reviewer verification key",
+            ),
+        )
+    return result
+
+
+def _trusted_operator_keys_from_request(value: object) -> dict[str, Any]:
+    from .reference_validation_authorization import AuthorizationOperatorTrustAnchor
+
+    if not isinstance(value, list) or not value:
+        raise ReferenceValidationRunnerError(
+            "runner request trusted operator keys must be a non-empty array"
+        )
+    result: dict[str, AuthorizationOperatorTrustAnchor] = {}
+    for row in value:
+        if not isinstance(row, dict) or set(row) != {
+            "key_id",
+            "operator_identity_sha256",
+            "verification_key_hex",
+        }:
+            raise ReferenceValidationRunnerError(
+                "runner request trusted operator key fields are invalid"
+            )
+        key_id = row["key_id"]
+        if not isinstance(key_id, str) or key_id in result:
+            raise ReferenceValidationRunnerError(
+                "runner request trusted operator key identity is invalid"
+            )
+        result[key_id] = AuthorizationOperatorTrustAnchor(
+            row["operator_identity_sha256"],
+            _verification_key_from_hex(
+                row["verification_key_hex"],
+                name="trusted operator verification key",
+            ),
+        )
+    return result
+
+
+def _load_runner_request(raw: bytes) -> dict[str, Any]:
+    if (
+        not raw
+        or len(raw) > REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES
+        or not raw.endswith(b"\n")
+    ):
+        raise ReferenceValidationRunnerError("runner request size or framing is invalid")
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunnerError(
+                    "runner request contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        request = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "runner request must be canonical ASCII JSON"
+        ) from exc
+    if (
+        not isinstance(request, dict)
+        or _canonical_bytes(request) + b"\n" != raw
+    ):
+        raise ReferenceValidationRunnerError(
+            "runner request must be exact canonical JSON"
+        )
+    expected_fields = {
+        "schema_id",
+        "reservation_root",
+        "artifact_output_root",
+        "authorization_nonce_sha256",
+        "authorization_receipt",
+        "review_attestation",
+        "trusted_reviewer_keys",
+        "expected_implementation_author_identity_sha256",
+        "trusted_operator_keys",
+        "network_isolation_attestation",
+        "expected_code_commit_sha",
+        "expected_runner_source_sha256",
+        "expected_dependency_artifact_sha256_rows",
+        "revoked_authorization_receipt_sha256s",
+        "revoked_review_attestation_sha256s",
+        "externally_conflicting_nonce_sha256s",
+        "revoked_network_attestation_sha256s",
+    }
+    if set(request) != expected_fields or request.get("schema_id") != (
+        REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
+    ):
+        raise ReferenceValidationRunnerError("runner request fields are invalid")
+    for name in ("reservation_root", "artifact_output_root"):
+        if not isinstance(request[name], str) or not request[name]:
+            raise ReferenceValidationRunnerError(
+                f"runner request {name} must be non-empty text"
+            )
+    if not isinstance(request["authorization_receipt"], dict) or not isinstance(
+        request["review_attestation"], dict
+    ) or not isinstance(request["network_isolation_attestation"], dict):
+        raise ReferenceValidationRunnerError(
+            "runner request signed artifacts must be JSON objects"
+        )
+    if not isinstance(request["expected_dependency_artifact_sha256_rows"], dict):
+        raise ReferenceValidationRunnerError(
+            "runner request dependency rows must be a JSON object"
+        )
+    return request
+
+
+def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
+    from .reference_validation_run_start import (
+        create_reference_validation_execution_environment_receipt,
+    )
+    from .reference_validation_result_writer import (
+        write_reference_validation_result_receipt,
+    )
+
+    reviewer_keys = _trusted_reviewer_keys_from_request(
+        request["trusted_reviewer_keys"]
+    )
+    operator_keys = _trusted_operator_keys_from_request(
+        request["trusted_operator_keys"]
+    )
+    revoked_authorizations = _require_string_sequence(
+        request["revoked_authorization_receipt_sha256s"],
+        name="revoked authorization receipts",
+    )
+    revoked_reviews = _require_string_sequence(
+        request["revoked_review_attestation_sha256s"],
+        name="revoked review attestations",
+    )
+    conflicting_nonces = _require_string_sequence(
+        request["externally_conflicting_nonce_sha256s"],
+        name="externally conflicting nonces",
+    )
+    revoked_network = _require_string_sequence(
+        request["revoked_network_attestation_sha256s"],
+        name="revoked network attestations",
+    )
+    expected_commit = _require_commit_sha(
+        request["expected_code_commit_sha"],
+        name="runner request code commit",
+    )
+    expected_source = _require_sha256(
+        request["expected_runner_source_sha256"],
+        name="runner request source",
+    )
+    if reference_validation_checked_out_code_commit_sha() != expected_commit:
+        raise ReferenceValidationRunnerError(
+            "runner request code commit does not match the checkout"
+        )
+    _require_clean_checked_out_code_commit(expected_commit)
+    if reference_validation_runner_source_sha256() != expected_source:
+        raise ReferenceValidationRunnerError(
+            "runner request source does not match the loaded runner"
+        )
+
+    import torch
+
+    try:
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        torch.use_deterministic_algorithms(True)
+    except RuntimeError as exc:
+        raise ReferenceValidationRunnerError(
+            "runner deterministic single-thread runtime cannot be configured"
+        ) from exc
+
+    environment = create_reference_validation_execution_environment_receipt(
+        request["reservation_root"],
+        request["artifact_output_root"],
+        authorization_nonce_sha256=request["authorization_nonce_sha256"],
+        authorization_receipt=request["authorization_receipt"],
+        review_attestation=request["review_attestation"],
+        trusted_reviewer_keys=reviewer_keys,
+        expected_implementation_author_identity_sha256=(
+            request["expected_implementation_author_identity_sha256"]
+        ),
+        trusted_operator_keys=operator_keys,
+        network_isolation_attestation=request["network_isolation_attestation"],
+        expected_code_commit_sha=expected_commit,
+        expected_runner_source_sha256=expected_source,
+        expected_dependency_artifact_sha256_rows=(
+            request["expected_dependency_artifact_sha256_rows"]
+        ),
+        revoked_receipt_sha256s=revoked_authorizations,
+        revoked_review_attestation_sha256s=revoked_reviews,
+        externally_conflicting_nonce_sha256s=conflicting_nonces,
+        revoked_network_attestation_sha256s=revoked_network,
+    )
+    observation = run_bounded_cpu_reference_validation(
+        request["artifact_output_root"],
+        request["authorization_nonce_sha256"],
+        expected_environment_receipt_sha256=environment.receipt_sha256,
+        expected_code_commit_sha=expected_commit,
+        expected_dependency_artifact_sha256_rows=(
+            request["expected_dependency_artifact_sha256_rows"]
+        ),
+    )
+    receipt = write_reference_validation_result_receipt(
+        request["artifact_output_root"],
+        request["authorization_nonce_sha256"],
+        observation,
+        review_attestation=request["review_attestation"],
+        authorization_receipt=request["authorization_receipt"],
+        trusted_reviewer_keys=reviewer_keys,
+        expected_implementation_author_identity_sha256=(
+            request["expected_implementation_author_identity_sha256"]
+        ),
+        trusted_operator_keys=operator_keys,
+        revoked_authorization_receipt_sha256s=revoked_authorizations,
+        revoked_review_attestation_sha256s=revoked_reviews,
+        externally_conflicting_nonce_sha256s=conflicting_nonces,
+    )
+    return {
+        "schema_id": REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID,
+        "environment_receipt_sha256": environment.receipt_sha256,
+        "observation_sha256": observation.observation_sha256,
+        "result_receipt_sha256": receipt.receipt_sha256,
+        "production_validation_results_collected": False,
+        "parameter_fitting_authorized": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+
+
+def _main_from_standard_streams() -> int:
+    input_stream = getattr(sys.stdin, "buffer", sys.stdin)
+    output_stream = getattr(sys.stdout, "buffer", sys.stdout)
+    try:
+        raw = input_stream.read(REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES + 1)
+    except (AttributeError, OSError):
+        return 2
+    if not isinstance(raw, bytes):
+        return 2
+    try:
+        response = _execute_runner_request(_load_runner_request(raw))
+        encoded = _canonical_bytes(response) + b"\n"
+        output_stream.write(encoded)
+        output_stream.flush()
+    except Exception:
+        return 2
+    return 0
+
+
+def main() -> int:
+    """Run the exact stdin-delivered, fail-closed validation chain."""
+
+    canonical_name = "betelgeuze_engine_v2.physics.reference_validation_runner"
+    canonical_module = sys.modules.get(canonical_name)
+    if (
+        __name__ == "__main__"
+        and canonical_module is not None
+        and canonical_module is not sys.modules.get(__name__)
+    ):
+        return canonical_module._main_from_standard_streams()
+    return _main_from_standard_streams()
 
 
 __all__ = [
@@ -1846,10 +2471,13 @@ __all__ = [
     "REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION",
     "REFERENCE_VALIDATION_RUNNER_MAX_CASES",
     "REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE",
+    "REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES",
     "REFERENCE_VALIDATION_RUNNER_MAX_START_RECORD_BYTES",
     "REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS",
     "REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS",
     "REFERENCE_VALIDATION_RUNNER_START_SCHEMA_ID",
+    "REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID",
+    "REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID",
     "REFERENCE_VALIDATION_RUN_OBSERVATION_SCHEMA_ID",
     "ReferenceValidationCaseObservation",
     "ReferenceValidationMetricObservation",
@@ -1860,6 +2488,7 @@ __all__ = [
     "reference_validation_runner_contract_decision",
     "reference_validation_runner_contract_document",
     "reference_validation_runner_source_sha256",
+    "reference_validation_checked_out_code_commit_sha",
     "read_reference_validation_runner_start_record",
     "require_reference_validation_run_observation_document",
     "require_reference_validation_runner_contract_document",

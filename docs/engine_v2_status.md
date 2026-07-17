@@ -169,17 +169,26 @@ The current `main` branch contains:
   caller root. It provides neither kernel network isolation nor execution
   authorization, and the receipt never authorizes execution or fitting. A
   separate bounded runner now re-reads that persisted receipt, re-verifies the
-  live process and exact code/source/dependency/artifact identities, atomically
+  live process, root-owned absolute-Git clean-checkout proof for the observed
+  `HEAD`, signed runner source, frozen reference-
+  evaluator/materializer/oracle sources, and dependency identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
   twenty-seven cases and fifty-nine variants on CPU float64 under a 120-second
-  evaluation budget. It returns one canonical failure-inclusive observation in
-  memory, including failed metrics and sanitized evaluator failures, and exposes
-  no direct execution CLI or marker release API. A separate failure-inclusive
+  POSIX main-thread deadline that interrupts evaluator and oracle calls. It
+  returns one canonical failure-inclusive observation in memory, including
+  failed metrics and sanitized evaluator failures. The exact module command is
+  reachable only through a bounded canonical stdin request; trust keys never
+  enter argv or the response, and environment receipt creation, evaluation, and
+  result finalization remain in one verified process. It requires a clean source
+  checkout with Git metadata; wheel-only invocation fails closed. No marker
+  release API is exposed. A separate failure-inclusive
   result writer re-verifies the raw signed review/authorization chain, persisted
   environment receipt, live process, durable runner-start record, and exact
   observation identities before creating one canonical private mode-0600
   nonce-bound receipt with `O_EXCL`, `O_NOFOLLOW`, file `fsync`, and directory
-  `fsync`. It retains every case, variant, metric, and failure. Its verifier
+  `fsync`. It retains every case, variant, metric, and failure, rejects a case
+  status that contradicts its metrics, binds the embedded nonce to the selected
+  filename, and opens special files nonblocking before rejecting them. Its verifier
   requires an out-of-band exact receipt SHA-256 and current external revocation/
   supersession inputs. The receipt is unsigned, private POSIX storage is not an
   external authenticity proof, and same-UID replacement resistance is not

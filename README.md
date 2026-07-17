@@ -52,14 +52,21 @@ Implemented and GitHub-hosted CPU tested:
   network-isolation attestation, and atomically persists a secret-free
   environment receipt, followed by a bounded CPU float64 runner that re-reads
   and re-verifies that receipt and its exact code, source, dependency, and
-  artifact bindings, atomically consumes a one-time runner-start marker, and
+  artifact bindings—including a read-only Git clean-checkout proof for the
+  observed `HEAD` and frozen reference-
+  evaluator source—atomically consumes a one-time runner-start marker, and
   retains every result or failure for the exact 27-case/59-variant matrix in
-  memory under a 120-second evaluation budget, followed by a failure-inclusive
+  memory under a POSIX-interrupted 120-second evaluation budget, followed by a failure-inclusive
   result writer that re-verifies the raw signed chain, live environment receipt,
   runner-start marker, and exact observation before atomically persisting one
   canonical private mode-0600 receipt. Its reader requires an out-of-band exact
   receipt hash plus external revocation/supersession inputs; no receipt signature
-  or same-UID replacement resistance is claimed. The direct CLI remains closed.
+  or same-UID replacement resistance is claimed. The exact module command accepts
+  only a bounded canonical JSON request on standard input, keeps trust material
+  out of argv and responses, and performs environment receipt creation, the run,
+  and result finalization in the same verified process. It requires a clean
+  source checkout with Git metadata and fails closed when invoked only from an
+  installed wheel.
   No trusted key, production receipt,
   reservation or artifact root, production nonce reservation, production
   environment receipt, runner start/result receipt, authorized production
