@@ -510,9 +510,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "frozen_cpu_reference_protocol_with_exact_fixture_materializer_"
-        "and_independent_oracle_source_binding_and_closed_execution_and_"
-        "fitting_gate"
+        "frozen_cpu_reference_protocol_with_source_bound_materializer_"
+        "oracle_and_independent_review_attestation_contract_with_closed_"
+        "execution_and_fitting_gates"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
     assert (
@@ -525,6 +525,14 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert (
         "independent_scientific_review_missing"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "signed_independent_scientific_review_attestation_missing"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "trusted_independent_scientific_reviewer_key_not_provided"
         in validation_protocol["blockers"]
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
@@ -602,6 +610,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_parameter_applicability.py",
         "test_engine_v2_cpu_reference_validation_protocol.py",
         "test_engine_v2_reference_validation_artifacts.py",
+        "test_engine_v2_reference_validation_review.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -626,7 +635,8 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_m_cpu_reference_validation_artifacts"' in source
+    assert '"v2_n_cpu_reference_validation_review_contract"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
     assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source
+    assert "FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256" in source

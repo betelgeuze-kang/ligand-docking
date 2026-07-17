@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_m_cpu_reference_validation_artifacts
+v2_n_cpu_reference_validation_review_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -39,7 +39,9 @@ Implemented and GitHub-hosted CPU tested:
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture
   materialization and a source-bound standard-library-only analytic oracle that
-  collect no validation result and keep the gate closed;
+  collect no validation result, plus a frozen signed independent-review
+  attestation contract that requires author/reviewer separation and an
+  out-of-band trusted reviewer key while keeping the gate closed;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_m_cpu_reference_validation_artifacts
+v2_n_cpu_reference_validation_review_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -35,7 +35,9 @@ v2_m_cpu_reference_validation_artifacts
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound
-  표준 라이브러리 전용 analytic oracle
+  표준 라이브러리 전용 analytic oracle, 구현 작성자/독립 reviewer identity 분리와
+  외부 trusted reviewer key를 요구하지만 실제 review는 포함하지 않는 signed
+  independent-review attestation 계약
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 
