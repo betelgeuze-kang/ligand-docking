@@ -510,8 +510,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "frozen_cpu_reference_validation_review_and_execution_authorization_"
-        "contracts_with_no_receipts_and_closed_execution_and_fitting_gates"
+        "frozen_cpu_reference_environment_and_result_receipt_contracts_"
+        "without_receipts_runner_or_authorized_execution"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
     assert (
@@ -545,6 +545,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert (
         "authorization_nonce_not_atomically_reserved"
         in validation_protocol["blockers"]
+    )
+    assert "execution_environment_contract_not_frozen" not in (
+        validation_protocol["blockers"]
+    )
+    assert "result_receipt_contract_not_frozen" not in (
+        validation_protocol["blockers"]
+    )
+    assert "execution_environment_receipt_missing" in (
+        validation_protocol["blockers"]
+    )
+    assert "validation_runner_not_implemented" in validation_protocol["blockers"]
+    assert "result_receipt_writer_not_implemented" in (
+        validation_protocol["blockers"]
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
     assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
@@ -623,6 +636,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_validation_artifacts.py",
         "test_engine_v2_reference_validation_review.py",
         "test_engine_v2_reference_validation_authorization.py",
+        "test_engine_v2_reference_validation_receipts.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -647,9 +661,14 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_o_cpu_reference_validation_authorization_contract"' in source
+    assert '"v2_p_cpu_reference_validation_receipt_contracts"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
     assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256" in source
+    assert (
+        "FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256"
+        in source
+    )
+    assert "FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256" in source

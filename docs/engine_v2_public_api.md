@@ -41,6 +41,7 @@ betelgeuze_engine_v2.physics.reference_validation_oracle
 betelgeuze_engine_v2.physics.reference_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_validation_review
 betelgeuze_engine_v2.physics.reference_validation_authorization
+betelgeuze_engine_v2.physics.reference_validation_receipts
 betelgeuze_engine_v2.runtime
 ```
 
@@ -92,6 +93,15 @@ identities, a maximum 24-hour lifetime, external revocation sets, and an unused
 one-time nonce. No key or receipt is bundled. Successful verification is only
 eligible for future atomic nonce reservation and still reports
 `validation_execution_authorized=false`.
+
+The receipt-contract symbols freeze the CPU-only execution-environment receipt
+shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
+materialized variants, and 19 predefined metrics. They bind the protocol,
+artifact, authorization, environment, code, runner, dependency, lifecycle, and
+review identities required by a future run. The package provides no receipt
+builder, validation runner, result writer, or observed energy, force, error, or
+metric values. `require_reference_validation_execution_ready()` therefore
+always fails closed.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

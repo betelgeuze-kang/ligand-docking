@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_o_cpu_reference_validation_authorization_contract
+implementation_stage: v2_p_cpu_reference_validation_receipt_contracts
 
 claim_policy:
   customer_execution_enabled: false
@@ -766,7 +766,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_energy_force_validation_protocol:
-    current_state: frozen_cpu_reference_validation_review_and_execution_authorization_contracts_with_no_receipts_and_closed_execution_and_fitting_gates
+    current_state: frozen_cpu_reference_environment_and_result_receipt_contracts_without_receipts_runner_or_authorized_execution
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -789,8 +789,9 @@ capabilities:
       - signed_execution_authorization_receipt_missing
       - trusted_authorization_operator_key_not_provided
       - authorization_nonce_not_atomically_reserved
-      - execution_environment_contract_not_frozen
-      - result_receipt_contract_not_frozen
+      - execution_environment_receipt_missing
+      - validation_runner_not_implemented
+      - result_receipt_writer_not_implemented
       - validation_execution_not_authorized
       - validation_results_not_collected
       - parameter_fitting_not_authorized

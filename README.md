@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_o_cpu_reference_validation_authorization_contract
+v2_p_cpu_reference_validation_receipt_contracts
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -43,7 +43,9 @@ Implemented and GitHub-hosted CPU tested:
   attestation contract that requires author/reviewer separation and an
   out-of-band trusted reviewer key, and a separate single-run authorization
   receipt contract with operator separation, 24-hour expiry, revocation inputs,
-  and one-time nonce semantics while keeping the gate closed;
+  and one-time nonce semantics, plus frozen CPU execution-environment and
+  failure-inclusive result-receipt schemas for all 27 cases and 59 variants.
+  No receipt, runner, result writer, or authorized execution is present;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

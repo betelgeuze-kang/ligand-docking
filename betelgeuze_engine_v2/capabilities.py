@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_o_cpu_reference_validation_authorization_contract"
+IMPLEMENTATION_STAGE = "v2_p_cpu_reference_validation_receipt_contracts"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -433,8 +433,9 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "signed_execution_authorization_receipt_missing",
         "trusted_authorization_operator_key_not_provided",
         "authorization_nonce_not_atomically_reserved",
-        "execution_environment_contract_not_frozen",
-        "result_receipt_contract_not_frozen",
+        "execution_environment_receipt_missing",
+        "validation_runner_not_implemented",
+        "result_receipt_writer_not_implemented",
         "validation_execution_not_authorized",
         "validation_results_not_collected",
         "parameter_fitting_not_authorized",
@@ -766,9 +767,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_cpu_reference_validation_review_and_execution_"
-                    "authorization_contracts_with_no_receipts_and_closed_"
-                    "execution_and_fitting_gates"
+                    "frozen_cpu_reference_environment_and_result_receipt_"
+                    "contracts_without_receipts_runner_or_authorized_execution"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

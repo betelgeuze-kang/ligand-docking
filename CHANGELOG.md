@@ -52,6 +52,11 @@ scientific claim from a package version.
   external receipt/review revocation sets, and an unused one-time nonce. No
   operator key or receipt is bundled, nonce reservation is not implemented, and
   execution remains disabled.
+- Frozen CPU execution-environment and failure-inclusive result-receipt
+  contracts binding the exact protocol, authorization, materialization, 27-case,
+  59-variant, and 19-metric identities. They define future receipt fields only;
+  no receipt, runner, writer, observed value, execution, or claim promotion is
+  provided.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

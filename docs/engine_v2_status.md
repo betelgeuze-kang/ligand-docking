@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_o_cpu_reference_validation_authorization_contract
+v2_p_cpu_reference_validation_receipt_contracts
 ```
 
 The current `main` branch contains:
@@ -145,6 +145,14 @@ The current `main` branch contains:
   external receipt/review revocation sets, and a one-time nonce. No operator key
   or receipt is bundled. Verification only makes a receipt eligible for a
   future atomic nonce reservation; it does not open execution or fitting.
+  Separate frozen receipt contracts now define a CPU-only, network-disabled
+  execution environment and the exact failure-inclusive result shape for all
+  twenty-seven protocol cases, fifty-nine materialized variants, and nineteen
+  predefined metrics. They require exact authorization, nonce, code, runner,
+  dependency, environment, artifact-path, reviewer, supersession, and revocation
+  identities. No environment receipt, nonce reservation, validation runner,
+  result writer, observed energy/force/error/metric value, or result receipt
+  exists, so the execution and fitting gates remain closed.
 
 ## What the implementation does not establish
 
