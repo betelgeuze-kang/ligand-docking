@@ -453,6 +453,12 @@ def test_evaluator_is_interrupted_at_the_frozen_wall_clock_deadline(
 
     root = _private_root(tmp_path)
     _install_verified_receipt(monkeypatch, _receipt())
+    protocol, manifest_cases = module._load_frozen_case_matrix()
+    monkeypatch.setattr(
+        module,
+        "_run_supervised_frozen_case_matrix",
+        lambda **_kwargs: (protocol, manifest_cases),
+    )
     monkeypatch.setattr(module, "REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS", 0.05)
 
     def _slow(*args: object, **kwargs: object):
@@ -486,6 +492,12 @@ def test_case_materialization_is_interrupted_and_all_variants_are_retained(
 
     root = _private_root(tmp_path)
     _install_verified_receipt(monkeypatch, _receipt())
+    protocol, manifest_cases = module._load_frozen_case_matrix()
+    monkeypatch.setattr(
+        module,
+        "_run_supervised_frozen_case_matrix",
+        lambda **_kwargs: (protocol, manifest_cases),
+    )
     binding = reference_validation_artifact_binding.frozen_reference_validation_artifact_binding()
     manifest = reference_validation_materializer.reference_validation_materialization_manifest_document()
     monkeypatch.setattr(module, "REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS", 0.05)
@@ -524,6 +536,23 @@ def test_case_materialization_is_interrupted_and_all_variants_are_retained(
         variant.observed_status == "time_budget_exhausted"
         for variant in variants
     )
+
+
+def test_expired_manifest_preflight_budget_does_not_consume_runner_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _private_root(tmp_path)
+    _install_verified_receipt(monkeypatch, _receipt())
+    monkeypatch.setattr(module, "REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS", -1.0)
+
+    with pytest.raises(
+        ReferenceValidationRunnerError,
+        match="time budget expired before runner start",
+    ):
+        _run(root)
+
+    assert list(root.iterdir()) == []
 
 
 def test_supervisor_hard_kills_a_case_worker_at_the_wall_deadline(

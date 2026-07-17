@@ -176,10 +176,10 @@ The current `main` branch contains:
   reference-evaluator/materializer/oracle sources, and dependency identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
   twenty-seven cases and fifty-nine variants on CPU float64 under a 120-second
-  deadline. Frozen manifest materialization runs in a supervised preflight child
-  before marker consumption, and evaluator/oracle work runs in a separate fixed
-  child whose process is hard-killed at the deadline; POSIX timers remain an
-  inner defense. It
+  deadline. Frozen manifest materialization runs in a supervised preflight child;
+  remaining budget is rechecked before marker consumption, and evaluator/oracle
+  work runs in a separate fixed child whose process is hard-killed at the deadline;
+  POSIX timers remain an inner defense. It
   returns one canonical failure-inclusive observation in memory, including
   failed metrics and sanitized evaluator failures. The exact module command is
   reachable only through a bounded canonical stdin request that cannot contain

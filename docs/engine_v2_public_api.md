@@ -124,7 +124,8 @@ require source-only imports, reject Git replacement refs, and atomically consume
 one nonce-bound mode-0600 runner-start marker. Frozen manifest construction and
 the exact 27-case/59-variant CPU float64 evaluation run in fixed supervised child
 processes with automatic site initialization disabled and only the verified
-runtime's dependency roots supplied; a parent hard deadline can terminate
+runtime's dependency roots supplied. Remaining budget is rechecked before the
+start marker is consumed, and a parent hard deadline can terminate
 blocked native code. The result
 is a canonical in-memory observation that retains
 successes, expected failures, unexpected failures, missing metrics, and failed

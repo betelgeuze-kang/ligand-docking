@@ -380,7 +380,7 @@ replacement ref를 비활성화·거부하는 root-owned absolute Git read-only 
 clean HEAD·signed runner source·frozen evaluator/materializer/oracle
 source·dependency를 다시 확인하고 nonce별 mode-0600 runner-start marker 하나를
 `O_EXCL`·file/directory `fsync`로 소비한다. Frozen manifest는 marker 소비 전 supervised
-preflight child에서 만들고, 이후 CPU float64 27개 case·59개 variant는 고정 case worker에서
+preflight child에서 만들고 남은 budget을 다시 확인한 뒤에만 marker를 소비한다. 이후 CPU float64 27개 case·59개 variant는 고정 case worker에서
 순서대로 평가한다. Parent의 120초 hard deadline은 Torch/native stall도 worker kill로
 중단하며 worker 내부 POSIX timer는 보조 경계로 유지한다. threshold failure, expected fail-closed row,
 unexpected evaluator failure와 미관측 metric까지 canonical in-memory observation에 모두

@@ -90,7 +90,7 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "44f120553ac8ede8b49d7ace74b9e39e88924d43b73d1c449cdcf2ff99ccebee"
+    "1bf5211b5f06de0fe68dc8e54ec8fa1c27ba369a5460d4977524ca3ea2d921f2"
 )
 
 _ROTATION_MATRIX = (
@@ -1116,6 +1116,7 @@ def _contract_projection() -> dict[str, Any]:
             "git_no_replace_objects_environment_required": True,
             "case_materialization_under_posix_deadline_required": True,
             "dedicated_manifest_preflight_worker_required": True,
+            "runner_start_requires_remaining_wall_budget": True,
             "dedicated_case_worker_subprocess_required": True,
             "worker_automatic_site_initialization_allowed": False,
             "worker_dependency_paths_derived_from_verified_runtime": True,
@@ -2886,6 +2887,10 @@ def run_bounded_cpu_reference_validation(
         expected_runner_source_sha256=runner_source,
         deadline=deadline,
     )
+    if time.monotonic() >= deadline:
+        raise ReferenceValidationRunnerError(
+            "validation time budget expired before runner start"
+        )
 
     started_at_utc = _format_utc(_utc_now(), name="runner started_at")
     start_record_sha256 = _persist_runner_start(
