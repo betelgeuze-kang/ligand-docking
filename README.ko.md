@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_g_bounded_scientific_scaffolds
+v2_l_cpu_reference_validation_protocol
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -32,6 +32,8 @@ v2_g_bounded_scientific_scaffolds
 - Python 3.10–3.12용 독립 `betelgeuze-engine-v2` wheel
 - 단일 모델 PDB와 단일 분자 SDF V2000 제한형 파서
 - 독립 physics term registry 계약
+- exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
+  parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 

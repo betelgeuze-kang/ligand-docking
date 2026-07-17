@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@14d900502d224b6a44a09ee3b73be48cebedf1fa`
+Observed baseline: `main@a14ca404692efec9e5733d47e4207c0a87698637`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -188,8 +188,20 @@ claim status without revalidating the dependency and freshness chain.
   are caller supplied and are not extracted from the reviewed Sage candidate.
   The runtime envelope is not a scientific chemical applicability domain, and
   the record authorizes neither parameter fitting nor a validation study.
-- Define an independently reviewed CPU energy/force validation protocol and its
-  authorization gate before collecting results or proposing parameter fitting.
+- Preserve the frozen CPU reference energy/force contract-validation protocol.
+  It binds seven synthetic fixture profiles, twenty mutation contracts,
+  twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
+  metrics, the exact H5 dependency, all-case denominators, future environment
+  and result-receipt fields, and an executable closed authorization decision.
+  No fixtures or oracle are materialized, no result exists, synthetic values are
+  not fit data, and neither validation execution nor a parameter-fitting proposal
+  is authorized.
+- Implement the exact fixture materializer and an independently sourced analytic
+  oracle without importing the reference evaluator, bind both source identities,
+  then obtain independent scientific review and a signed authorization receipt
+  before collecting any result. The scientific parameterized-force-field lane
+  additionally requires reviewed runtime values, a frozen chemical applicability
+  domain, a complete holdout manifest, and independent reference artifacts.
 - Design CPU/GPU parity fixtures only after the CPU reference behavior and
   tolerances are frozen.
 - Close the remaining same-UID artifact TOCTOU, unsigned ledger, and runtime

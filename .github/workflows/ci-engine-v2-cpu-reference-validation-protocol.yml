@@ -1,0 +1,146 @@
+name: ci-engine-v2-cpu-reference-validation-protocol
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/physics/**"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "packaging/engine-v2/pyproject.toml"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
+      - "tests/unit/test_engine_v2_reference_physics.py"
+      - "tests/unit/test_engine_v2_commercial_roadmap.py"
+      - "docs/engine_v2_status.md"
+      - "docs/engine_v2_public_api.md"
+      - "docs/independent_engine_v2_commercial_roadmap.ko.md"
+      - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
+      - "README.md"
+      - "README.ko.md"
+      - "CHANGELOG.md"
+      - ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml"
+      - ".github/workflows/ci-engine-v2-main.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/physics/**"
+      - "betelgeuze_engine_v2/capabilities.py"
+      - "packaging/engine-v2/pyproject.toml"
+      - "config/independent_engine_v2_capabilities.yaml"
+      - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
+      - "tests/unit/test_engine_v2_reference_physics.py"
+      - "tests/unit/test_engine_v2_commercial_roadmap.py"
+      - "docs/engine_v2_status.md"
+      - "docs/engine_v2_public_api.md"
+      - "docs/independent_engine_v2_commercial_roadmap.ko.md"
+      - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
+      - "README.md"
+      - "README.ko.md"
+      - "CHANGELOG.md"
+      - ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml"
+      - ".github/workflows/ci-engine-v2-main.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-cpu-reference-validation-protocol-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu-reference-validation-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            packaging/engine-v2/pyproject.toml
+            config/independent_engine_v2_capabilities.yaml
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
+            tests/unit/test_engine_v2_reference_parameter_applicability.py
+            tests/unit/test_engine_v2_reference_physics.py
+            tests/unit/test_engine_v2_commercial_roadmap.py
+            docs/engine_v2_status.md
+            docs/engine_v2_public_api.md
+            docs/independent_engine_v2_commercial_roadmap.ko.md
+            docs/roadmaps/engine-v2-scientific-evidence-roadmap.md
+            README.md
+            README.ko.md
+            CHANGELOG.md
+            .github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml
+            .github/workflows/ci-engine-v2-main.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install \
+            pytest==8.3.5 \
+            PyYAML==6.0.3 \
+            ruff==0.12.4 \
+            numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce architecture boundary
+        run: |
+          python -m compileall -q betelgeuze_engine_v2
+          python tools/check_engine_v2_architecture.py
+          ruff check \
+            betelgeuze_engine_v2/physics/reference_validation_protocol.py \
+            betelgeuze_engine_v2/physics/__init__.py \
+            betelgeuze_engine_v2/capabilities.py \
+            tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            --config packaging/engine-v2/pyproject.toml
+
+      - name: Verify frozen protocol, H5 dependency, and non-promotion
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_parameter_applicability.py \
+            tests/unit/test_engine_v2_reference_physics.py \
+            tests/unit/test_engine_v2_commercial_roadmap.py
+
+      - name: Verify capability snapshot and closed authorization gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          from betelgeuze_engine_v2.capabilities import capability_snapshot
+          from betelgeuze_engine_v2.physics import (
+              cpu_reference_validation_authorization_decision,
+          )
+
+          loaded = yaml.safe_load(
+              Path("config/independent_engine_v2_capabilities.yaml").read_text(
+                  encoding="utf-8"
+              )
+          )
+          assert loaded == capability_snapshot()
+          assert len(loaded["capabilities"]) == 39
+          decision = cpu_reference_validation_authorization_decision()
+          assert decision.validation_execution_authorized is False
+          assert decision.parameter_fitting_proposal_authorized is False
+          PY

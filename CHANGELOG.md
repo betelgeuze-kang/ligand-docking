@@ -30,6 +30,11 @@ scientific claim from a package version.
   hashes, caller-supplied value provenance, executable admission semantics, and
   explicit separation from the unparsed Sage candidate, scientific chemical
   applicability, parameter fitting, and force/energy validation.
+- Frozen CPU reference energy/force contract-validation protocol with seven
+  synthetic fixture profiles, twenty mutation contracts, twenty-seven
+  failure-inclusive cases, nineteen predefined float64 metrics, exact H5
+  dependency identity, independent-oracle/result-receipt requirements, and a
+  closed validation-execution and parameter-fitting authorization gate.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

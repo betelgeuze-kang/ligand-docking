@@ -11,6 +11,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     BENCHMARK_CAPABILITY_ID,
     CAPABILITY_SCHEMA_VERSION,
     CIF_SYNTAX_CAPABILITY_ID,
+    CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
     H5_PARAMETER_APPLICABILITY_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
@@ -54,7 +55,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 38
+    assert len(loaded["capabilities"]) == 39
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -98,6 +99,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
     assert PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID in rows
     assert H5_PARAMETER_APPLICABILITY_CAPABILITY_ID in rows
+    assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert (
         rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
         is False
@@ -505,6 +507,20 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         in (h5_record["blockers"])
     )
     assert "parameter_fitting_not_authorized" in h5_record["blockers"]
+
+    validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
+    assert validation_protocol["current_state"] == (
+        "frozen_cpu_reference_energy_force_contract_validation_protocol_"
+        "with_closed_execution_and_fitting_gate"
+    )
+    assert validation_protocol["internal_reference_execution_enabled"] is False
+    assert "fixture_materializer_not_implemented" in (validation_protocol["blockers"])
+    assert (
+        "independent_analytic_oracle_not_implemented"
+        in (validation_protocol["blockers"])
+    )
+    assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
+    assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
     assert (
         "posebusters_benchmark_equivalence_not_established"
         in public_protocol["blockers"]
@@ -524,9 +540,12 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "scientifically validated method" in status
     assert "runtime-envelope record" in status
     assert "scientifically validated\n  chemical applicability domain" in status
+    assert "CPU reference energy/force contract-validation protocol" in status
+    assert "denies validation execution and parameter-\n  fitting proposals" in status
     assert "Stable within an Engine API major version" in policy
     assert "Provisional submodule APIs" in policy
     assert "reference_parameter_applicability" in policy
+    assert "reference_validation_protocol" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -573,6 +592,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_tautomer_selection_corpus.py",
         "test_engine_v2_parameter_source_provenance.py",
         "test_engine_v2_reference_parameter_applicability.py",
+        "test_engine_v2_cpu_reference_validation_protocol.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -597,5 +617,6 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_k_h5_parameter_applicability_record"' in source
+    assert '"v2_l_cpu_reference_validation_protocol"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
+    assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
