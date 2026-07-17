@@ -440,8 +440,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 52
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 2,
-        "supported": 23,
+        "not_implemented": 1,
+        "supported": 24,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -473,6 +473,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "partial_charge.assignment" not in missing
     assert "round_trip.all_atom_identity" not in missing
     assert "all_atom_system.creation" not in missing
+    assert "protonation.ph_dependent" not in missing
+    assert missing == {"tautomer.selection": "tautomer_selection_not_implemented"}
 
     parameter_source = next(
         row for row in rows if row.coverage_id == "parameter_source.reviewed"
@@ -488,6 +490,27 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert payload["reviewed_parameter_source_bound_to_canonical_systems"] is True
     assert payload["explicit_partial_charge_assignment_contract_bound"] is True
     assert payload["canonical_all_atom_identity_round_trip_bound"] is True
+    assert payload["bounded_ph_dependent_protonation_bound"] is True
+    assert payload["real_world_supported_abstention_failure_corpus_bound"] is True
+
+    protonation = next(
+        row for row in rows if row.coverage_id == "protonation.ph_dependent"
+    )
+    assert protonation.policy_status == "supported"
+    assert protonation.blocker == ""
+    assert protonation.expected_signal == "canonical_round_trip:verified"
+    assert protonation.evidence_case_ids == (
+        "pubchem_cid_176_ph2_protonated",
+        "pubchem_cid_176_ph7_deprotonated",
+    )
+    ph_evidence = payload["ph_protonation_corpus_evidence"]
+    assert ph_evidence["case_count"] == 7
+    assert ph_evidence["selected_state_count"] == 2
+    assert ph_evidence["abstention_count"] == 1
+    assert ph_evidence["expected_error_count"] == 4
+    assert ph_evidence["parameter_fitting_allowed"] is False
+    assert ph_evidence["scientifically_validated"] is False
+    assert ph_evidence["claim_safe"] is False
 
     parameter_binding = next(
         row for row in rows if row.coverage_id == "parameter_source.system_binding"

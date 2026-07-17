@@ -10,6 +10,7 @@ not a parameter-fitting dataset.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 import hashlib
 import json
 import os
@@ -116,7 +117,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "f81aced2fa4f47ca494518583f20593bc193a073f9a500ea50b8d00022dfe455"
+    "efd59c6813fc49426934155886e24d5fca6cf7818f7e29cba648f1e239f7cf76"
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_PARTIAL_CHARGE_METHOD_ID = (
     "synthetic_neutral_zero_charge_contract_fixture"
@@ -358,6 +359,7 @@ class MmcifPreparationCorpusCaseResult:
 class MmcifNonpolyPreparationCorpusSnapshot:
     case_results: tuple[MmcifPreparationCorpusCaseResult, ...]
     coverage_rows: tuple[MmcifPreparationCoverageRow, ...]
+    ph_protonation_corpus_evidence: Mapping[str, Any]
 
     def __repr__(self) -> str:
         return (
@@ -404,6 +406,9 @@ class MmcifNonpolyPreparationCorpusSnapshot:
             },
             "unclassified_coverage_row_count": 0,
             "expectation_mismatch_count": 0,
+            "ph_protonation_corpus_evidence": dict(
+                self.ph_protonation_corpus_evidence
+            ),
             "parameter_fitting_allowed": False,
             "v2_1_exit_ready": False,
             "corpus_projection_sha256": self.corpus_projection_sha256,
@@ -440,6 +445,8 @@ def _claim_policy() -> dict[str, bool]:
         "reviewed_parameter_source_bound_to_canonical_systems": True,
         "explicit_partial_charge_assignment_contract_bound": True,
         "canonical_all_atom_identity_round_trip_bound": True,
+        "bounded_ph_dependent_protonation_bound": True,
+        "real_world_supported_abstention_failure_corpus_bound": True,
         "corpus_is_parameter_fitting_data": False,
         "parameter_fitting_allowed": False,
         "v2_1_exit_ready": False,
@@ -1777,10 +1784,12 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "protonation.ph_dependent",
             "chemistry",
-            missing,
-            "",
-            (),
-            "ph_dependent_protonation_not_implemented",
+            supported,
+            "canonical_round_trip:verified",
+            (
+                "pubchem_cid_176_ph2_protonated",
+                "pubchem_cid_176_ph7_deprotonated",
+            ),
         ),
         _coverage(
             "tautomer.selection",
@@ -2427,6 +2436,43 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
     )
 
 
+@lru_cache(maxsize=1)
+def _ph_protonation_corpus_snapshot() -> Any:
+    # Imported lazily because the real-world corpus reuses the frozen mmCIF
+    # fixture constructor from this module.  The immutable snapshot is cached
+    # so a preparation-corpus digest does not repeatedly execute the same rows.
+    from .mmcif_nonpoly_ph_protonation_corpus import (
+        run_mmcif_nonpoly_ph_protonation_corpus,
+    )
+
+    return run_mmcif_nonpoly_ph_protonation_corpus()
+
+
+def _ph_protonation_corpus_evidence(snapshot: Any) -> dict[str, Any]:
+    return {
+        "profile_id": "frozen_pubchem_identity_ph_protonation_corpus/1.0.0",
+        "runner_version": "1.0.0",
+        "snapshot_sha256": snapshot.snapshot_sha256,
+        "corpus_projection_sha256": snapshot.corpus_projection_sha256,
+        "source_binding_sha256": snapshot.source_binding_sha256,
+        "case_count": len(snapshot.case_results),
+        "case_ids": [row.case_id for row in snapshot.case_results],
+        "selected_state_count": sum(
+            bool(row.selected_state) for row in snapshot.case_results
+        ),
+        "abstention_count": sum(
+            row.decision_status == "abstained_population_not_dominant"
+            for row in snapshot.case_results
+        ),
+        "expected_error_count": sum(
+            bool(row.error_code) for row in snapshot.case_results
+        ),
+        "parameter_fitting_allowed": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+
+
 def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnapshot:
     """Execute every frozen case and require complete coverage evidence."""
 
@@ -2437,6 +2483,8 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
         )
     results = tuple(_run_case(case) for case in cases)
     result_map = {row.case_id: row for row in results}
+    ph_corpus = _ph_protonation_corpus_snapshot()
+    ph_result_map = {row.case_id: row for row in ph_corpus.case_results}
     coverage = mmcif_nonpoly_preparation_coverage_rows()
     referenced_cases: set[str] = set()
     for row in coverage:
@@ -2464,11 +2512,14 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
             )
         for case_id in row.evidence_case_ids:
             result = result_map.get(case_id)
-            if result is None or row.expected_signal not in result.signals:
+            external_result = ph_result_map.get(case_id)
+            evidence = result if result is not None else external_result
+            if evidence is None or row.expected_signal not in evidence.signals:
                 raise MmcifNonpolyPreparationCorpusError(
                     f"coverage evidence signal missing for {row.coverage_id}"
                 )
-            referenced_cases.add(case_id)
+            if result is not None:
+                referenced_cases.add(case_id)
     if referenced_cases != set(result_map):
         raise MmcifNonpolyPreparationCorpusError(
             "every executable corpus case must support at least one coverage row"
@@ -2487,6 +2538,7 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
     snapshot = MmcifNonpolyPreparationCorpusSnapshot(
         case_results=results,
         coverage_rows=coverage,
+        ph_protonation_corpus_evidence=_ph_protonation_corpus_evidence(ph_corpus),
     )
     if (
         snapshot.snapshot_sha256
@@ -2507,6 +2559,9 @@ def mmcif_nonpoly_preparation_corpus_projection(
         "runner_version": MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION,
         "case_results": [row.to_dict() for row in snapshot.case_results],
         "coverage_rows": [row.to_dict() for row in snapshot.coverage_rows],
+        "ph_protonation_corpus_evidence": dict(
+            snapshot.ph_protonation_corpus_evidence
+        ),
         "case_order": "frozen_manifest_order",
         "coverage_order": "required_axis_order",
         **_claim_policy(),
@@ -2516,6 +2571,17 @@ def mmcif_nonpoly_preparation_corpus_projection(
 def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
     cases = mmcif_nonpoly_preparation_corpus_cases()
     parameter_source_provenance = reviewed_parameter_source_provenance()
+    ph_corpus = _ph_protonation_corpus_snapshot()
+    from .mmcif_nonpoly_ph_protonation import (
+        MMCIF_NONPOLY_PH_PROTONATION_ENGINE_VERSION,
+        MMCIF_NONPOLY_PH_PROTONATION_PROFILE_ID,
+        mmcif_nonpoly_ph_protonation_reference_sha256,
+    )
+    from .mmcif_nonpoly_ph_protonation_corpus import (
+        MMCIF_NONPOLY_PH_PROTONATION_CORPUS_PROFILE_ID,
+        MMCIF_NONPOLY_PH_PROTONATION_CORPUS_RUNNER_VERSION,
+    )
+
     return {
         "schema_id": MMCIF_NONPOLY_PREPARATION_CORPUS_SOURCE_BINDING_SCHEMA_ID,
         "preparation_profile_id": MMCIF_NONPOLY_PREPARATION_PROFILE_ID,
@@ -2593,6 +2659,26 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
         ),
         "modified_residue_declaration_parser_version": (
             MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION
+        ),
+        "ph_protonation_profile_id": MMCIF_NONPOLY_PH_PROTONATION_PROFILE_ID,
+        "ph_protonation_engine_version": (
+            MMCIF_NONPOLY_PH_PROTONATION_ENGINE_VERSION
+        ),
+        "ph_protonation_reference_snapshot_sha256": (
+            mmcif_nonpoly_ph_protonation_reference_sha256()
+        ),
+        "ph_protonation_corpus_profile_id": (
+            MMCIF_NONPOLY_PH_PROTONATION_CORPUS_PROFILE_ID
+        ),
+        "ph_protonation_corpus_runner_version": (
+            MMCIF_NONPOLY_PH_PROTONATION_CORPUS_RUNNER_VERSION
+        ),
+        "ph_protonation_corpus_snapshot_sha256": ph_corpus.snapshot_sha256,
+        "ph_protonation_corpus_projection_sha256": (
+            ph_corpus.corpus_projection_sha256
+        ),
+        "ph_protonation_corpus_source_binding_sha256": (
+            ph_corpus.source_binding_sha256
         ),
         "corpus_profile_id": MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID,
         "corpus_runner_version": MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION,
