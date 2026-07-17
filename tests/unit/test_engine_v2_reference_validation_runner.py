@@ -117,6 +117,11 @@ def _install_verified_receipt(
         "_require_clean_checked_out_code_commit",
         lambda _expected_commit: None,
     )
+    monkeypatch.setattr(
+        module,
+        "_require_isolated_python_bootstrap_runtime",
+        lambda: (),
+    )
     monkeypatch.setattr(module, "_require_source_only_python_runtime", lambda: None)
 
     def run_in_process(
@@ -184,10 +189,32 @@ def test_runner_contract_rejects_tamper_and_source_identity_is_exact() -> None:
     ):
         require_reference_validation_runner_contract_document(tampered)
 
-    source = Path(inspect.getsourcefile(module) or "")
-    assert source.is_file()
+    runner_source = Path(inspect.getsourcefile(module) or "")
+    bootstrap_source = Path(module.reference_validation_bootstrap_path())
+    assert runner_source.is_file()
+    assert bootstrap_source.is_file()
+    expected_source_identity = {
+        "schema_id": (
+            "betelgeuze.engine_v2_reference_validation_execution_sources/1.0.0"
+        ),
+        "sources": [
+            {
+                "path": (
+                    "betelgeuze_engine_v2/physics/"
+                    "reference_validation_bootstrap.py"
+                ),
+                "sha256": hashlib.sha256(bootstrap_source.read_bytes()).hexdigest(),
+            },
+            {
+                "path": (
+                    "betelgeuze_engine_v2/physics/reference_validation_runner.py"
+                ),
+                "sha256": hashlib.sha256(runner_source.read_bytes()).hexdigest(),
+            },
+        ],
+    }
     assert reference_validation_runner_source_sha256() == hashlib.sha256(
-        source.read_bytes()
+        module._canonical_bytes(expected_source_identity)
     ).hexdigest()
     assert reference_validation_checked_out_code_commit_sha() == subprocess.check_output(
         ["git", "rev-parse", "HEAD"],
@@ -680,6 +707,65 @@ def test_source_only_import_runtime_requires_redirected_disabled_bytecode() -> N
     assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
 
 
+def test_isolated_bootstrap_ignores_pythonpath_user_site_and_sitecustomize(
+    tmp_path: Path,
+) -> None:
+    shadow_root = tmp_path / "shadow"
+    shadow_torch = shadow_root / "torch"
+    shadow_torch.mkdir(parents=True)
+    import_marker = tmp_path / "shadow-imported"
+    site_marker = tmp_path / "sitecustomize-imported"
+    shadow_torch.joinpath("__init__.py").write_text(
+        f"from pathlib import Path\nPath({str(import_marker)!r}).touch()\n",
+        encoding="ascii",
+    )
+    shadow_root.joinpath("sitecustomize.py").write_text(
+        f"from pathlib import Path\nPath({str(site_marker)!r}).touch()\n",
+        encoding="ascii",
+    )
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PYTHONPATH": os.fspath(shadow_root),
+            "PYTHONUSERBASE": os.fspath(shadow_root),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": "/dev/null",
+        }
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-S",
+            "-B",
+            "-X",
+            "pycache_prefix=/dev/null",
+            module.reference_validation_bootstrap_path(),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        input=b"{}\n",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=30,
+    )
+
+    assert completed.returncode == 2
+    assert completed.stdout == b""
+    assert completed.stderr == b""
+    assert not import_marker.exists()
+    assert not site_marker.exists()
+
+
+def test_runner_rejects_execution_without_isolated_bootstrap() -> None:
+    with pytest.raises(
+        ReferenceValidationRunnerError,
+        match="isolated dependency bootstrap",
+    ):
+        module._require_isolated_python_bootstrap_runtime()
+
+
 def test_source_only_import_runtime_ignores_a_valid_timestamp_cache(
     tmp_path: Path,
 ) -> None:
@@ -1033,8 +1119,12 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
         completed = subprocess.run(
             [
                 sys.executable,
-                "-m",
-                "betelgeuze_engine_v2.physics.reference_validation_runner",
+                "-I",
+                "-S",
+                "-B",
+                "-X",
+                "pycache_prefix=/dev/null",
+                module.reference_validation_bootstrap_path(),
             ],
             cwd=Path(__file__).resolve().parents[2],
             env=environment,

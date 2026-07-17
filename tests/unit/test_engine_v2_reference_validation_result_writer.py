@@ -118,6 +118,11 @@ def _observation(
     )
     monkeypatch.setattr(
         runner_module,
+        "_require_isolated_python_bootstrap_runtime",
+        lambda: (),
+    )
+    monkeypatch.setattr(
+        runner_module,
         "_require_source_only_python_runtime",
         lambda: None,
     )

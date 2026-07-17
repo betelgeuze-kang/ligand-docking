@@ -375,16 +375,19 @@ file/directory `fsync`로 기록한다. 실제 path와 secret-bearing argv는 �
 library 자체는 network namespace를 만들거나 kernel isolation·same-UID resistance를
 확립하지 않는다. production key·attestation·root·receipt는 bundle하지 않으며 생성된
 receipt도 production validation execution, fitting 또는 과학 주장을 승인하지 않는다.
-별도 bounded runner는 persisted receipt와 live process, source-only Python import,
+별도 bounded runner는 persisted receipt와 live process, validation dependency import
+전에 실행되는 stdlib-only `-I -S -B -X pycache_prefix=/dev/null` bootstrap,
 replacement ref를 비활성화·거부하는 root-owned absolute Git read-only preflight가 증명한
-clean HEAD·signed runner source·frozen evaluator/materializer/oracle
+clean HEAD·bootstrap과 runner를 함께 묶은 signed runner source·frozen evaluator/materializer/oracle
 source·dependency를 다시 확인하고 nonce별 mode-0600 runner-start marker 하나를
 `O_EXCL`·file/directory `fsync`로 소비한다. Frozen manifest는 marker 소비 전 supervised
 preflight child에서 만들고 남은 budget을 다시 확인한 뒤에만 marker를 소비한다. 이후 CPU float64 27개 case·59개 variant는 고정 case worker에서
 순서대로 평가한다. Parent의 120초 hard deadline은 Torch/native stall도 worker kill로
 중단하며 worker 내부 POSIX timer는 보조 경계로 유지한다. threshold failure, expected fail-closed row,
 unexpected evaluator failure와 미관측 metric까지 canonical in-memory observation에 모두
-보존한다. exact module command는 trust key가 없는 bounded canonical stdin 요청만 받고,
+보존한다. exact process command는 absolute checked-out bootstrap path만 사용하며
+`PYTHONPATH`·user-site override와 `sitecustomize`·`.pth` 실행을 무시하고 root-owned
+read-only dependency root만 허용한다. trust key가 없는 bounded canonical stdin 요청만 받고,
 reviewer/operator anchor는 저장소가 bundle하지 않는 고정 `/etc/betelgeuze/engine-v2/
 reference-validation-trust-anchors.json` root-owned mode-0600 외부 store에서만 읽는다.
 trust material을 stdin·argv·worker request·response에 남기지 않고 verified supervisor가

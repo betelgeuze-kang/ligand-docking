@@ -26,6 +26,10 @@ import threading
 import time
 from typing import Any, Mapping
 
+from .reference_validation_bootstrap import (
+    REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+    reference_validation_bootstrap_path,
+)
 from .reference_validation_nonce_reservation import (
     ReferenceValidationNonceReservationError,
     _open_secure_reservation_root,
@@ -62,7 +66,7 @@ REFERENCE_VALIDATION_RUNNER_CONTRACT_ID = (
     "cpu_reference_validation_bounded_runner/1.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-17T08:08:00Z"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:20:00Z"
 REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_VALIDATION_RUNNER_MAX_CASES = 27
@@ -90,7 +94,7 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "1bf5211b5f06de0fe68dc8e54ec8fa1c27ba369a5460d4977524ca3ea2d921f2"
+    "3c0dfe22af0496e3309aff8b226ebbda97c4e7bf40fcc30384ccf281775aa267"
 )
 
 _ROTATION_MATRIX = (
@@ -171,6 +175,84 @@ def _require_source_only_python_runtime() -> None:
         raise ReferenceValidationRunnerError(
             "source-only Python cache sink is invalid"
         )
+
+
+def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
+    """Require the stdlib-only bootstrap before trusting imported dependencies."""
+
+    state = getattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, None)
+    expected_bootstrap = Path(reference_validation_bootstrap_path())
+    expected_repository = Path(__file__).resolve(strict=True).parents[2]
+    if (
+        sys.flags.isolated != 1
+        or sys.flags.ignore_environment != 1
+        or sys.flags.no_site != 1
+        or sys.flags.no_user_site != 1
+        or sys.flags.dont_write_bytecode != 1
+        or sys.dont_write_bytecode is not True
+        or sys.pycache_prefix != "/dev/null"
+        or not isinstance(state, tuple)
+        or len(state) != 4
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation runner requires the isolated dependency bootstrap"
+        )
+    bootstrap_path, repository_root, raw_dependency_roots, frozen_sys_path = state
+    if (
+        bootstrap_path != os.fspath(expected_bootstrap)
+        or repository_root != os.fspath(expected_repository)
+        or not isinstance(raw_dependency_roots, tuple)
+        or not raw_dependency_roots
+        or not isinstance(frozen_sys_path, tuple)
+        or tuple(sys.path) != frozen_sys_path
+        or not sys.path
+        or sys.path[0] != os.fspath(expected_repository)
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation runner bootstrap state is invalid"
+        )
+    dependency_roots: list[Path] = []
+    for raw_root in raw_dependency_roots:
+        if not isinstance(raw_root, str) or not raw_root or os.pathsep in raw_root:
+            raise ReferenceValidationRunnerError(
+                "validation runner dependency root is invalid"
+            )
+        candidate = Path(raw_root)
+        try:
+            file_stat = candidate.lstat()
+            resolved = candidate.resolve(strict=True)
+        except OSError as exc:
+            raise ReferenceValidationRunnerError(
+                "validation runner dependency root is unavailable"
+            ) from exc
+        if (
+            not candidate.is_absolute()
+            or candidate.is_symlink()
+            or resolved != candidate
+            or not stat.S_ISDIR(file_stat.st_mode)
+            or file_stat.st_uid != 0
+            or stat.S_IMODE(file_stat.st_mode) & 0o022
+        ):
+            raise ReferenceValidationRunnerError(
+                "validation runner dependency root is not trusted"
+            )
+        dependency_roots.append(resolved)
+
+    import numpy
+    import torch
+
+    for dependency, name in ((numpy, "NumPy"), (torch, "Torch")):
+        try:
+            module_path = Path(dependency.__file__).resolve(strict=True)
+        except (OSError, TypeError) as exc:
+            raise ReferenceValidationRunnerError(
+                f"validation runner {name} source is unavailable"
+            ) from exc
+        if not any(module_path.is_relative_to(root) for root in dependency_roots):
+            raise ReferenceValidationRunnerError(
+                f"validation runner {name} was not imported from a trusted root"
+            )
+    return tuple(dependency_roots)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -297,30 +379,51 @@ def _normalize_dependency_rows(
 
 
 def reference_validation_runner_source_sha256() -> str:
-    """Return the exact regular-file identity used by an authorization receipt."""
+    """Return the exact bootstrap-and-runner identity used by authorization."""
 
-    source = Path(__file__)
-    if source.is_symlink():
-        raise ReferenceValidationRunnerError("runner source must not be a symlink")
-    try:
-        resolved = source.resolve(strict=True)
-        file_stat = resolved.stat()
-    except OSError as exc:
-        raise ReferenceValidationRunnerError("runner source is unavailable") from exc
-    if (
-        resolved.name != "reference_validation_runner.py"
-        or resolved.parent.name != "physics"
-        or resolved.parent.parent.name != "betelgeuze_engine_v2"
-        or not stat.S_ISREG(file_stat.st_mode)
-        or file_stat.st_nlink != 1
-    ):
-        raise ReferenceValidationRunnerError(
-            "runner source does not satisfy the regular-file policy"
-        )
-    try:
-        return hashlib.sha256(resolved.read_bytes()).hexdigest()
-    except OSError as exc:
-        raise ReferenceValidationRunnerError("runner source cannot be read") from exc
+    source_paths = (
+        (
+            "betelgeuze_engine_v2/physics/reference_validation_bootstrap.py",
+            Path(reference_validation_bootstrap_path()),
+        ),
+        (
+            "betelgeuze_engine_v2/physics/reference_validation_runner.py",
+            Path(__file__),
+        ),
+    )
+    source_rows: list[dict[str, str]] = []
+    for relative_path, source in source_paths:
+        if source.is_symlink():
+            raise ReferenceValidationRunnerError(
+                "runner source must not be a symlink"
+            )
+        try:
+            resolved = source.resolve(strict=True)
+            file_stat = resolved.stat()
+            digest = hashlib.sha256(resolved.read_bytes()).hexdigest()
+        except OSError as exc:
+            raise ReferenceValidationRunnerError(
+                "runner source is unavailable"
+            ) from exc
+        if (
+            resolved.name != Path(relative_path).name
+            or resolved.parent.name != "physics"
+            or resolved.parent.parent.name != "betelgeuze_engine_v2"
+            or not stat.S_ISREG(file_stat.st_mode)
+            or file_stat.st_nlink != 1
+        ):
+            raise ReferenceValidationRunnerError(
+                "runner source does not satisfy the regular-file policy"
+            )
+        source_rows.append({"path": relative_path, "sha256": digest})
+    return _sha256(
+        {
+            "schema_id": (
+                "betelgeuze.engine_v2_reference_validation_execution_sources/1.0.0"
+            ),
+            "sources": source_rows,
+        }
+    )
 
 
 def _read_small_regular_text(
@@ -1095,6 +1198,10 @@ def _contract_projection() -> dict[str, Any]:
             "frozen_artifact_binding_reverification_required": True,
             "source_only_python_import_runtime_required": True,
             "ignored_timestamp_bytecode_cache_execution_allowed": False,
+            "stdlib_only_bootstrap_before_dependency_imports_required": True,
+            "isolated_python_startup_required": True,
+            "pythonpath_user_site_and_pth_startup_allowed": False,
+            "bootstrap_source_bound_to_runner_source_sha256": True,
             "git_replacement_refs_allowed": False,
             "one_time_runner_start_marker_required": True,
             "duplicate_runner_start_fails_closed": True,
@@ -1120,12 +1227,23 @@ def _contract_projection() -> dict[str, Any]:
             "dedicated_case_worker_subprocess_required": True,
             "worker_automatic_site_initialization_allowed": False,
             "worker_dependency_paths_derived_from_verified_runtime": True,
+            "worker_dependency_paths_derived_from_isolated_bootstrap": True,
             "case_worker_request_contains_trust_keys_or_receipts": False,
             "case_worker_hard_kill_at_wall_deadline_required": True,
             "in_worker_posix_deadline_interrupt_required": True,
         },
         "entrypoint": {
             "logical_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
+            "direct_stdlib_only_bootstrap_required": True,
+            "isolated_python_flags": [
+                "-I",
+                "-S",
+                "-B",
+                "-X",
+                "pycache_prefix=/dev/null",
+            ],
+            "environment_import_path_overrides_honored": False,
+            "automatic_site_initialization_allowed": False,
             "clean_source_checkout_with_git_metadata_required": True,
             "canonical_standard_input_request_schema_id": (
                 REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
@@ -2347,37 +2465,12 @@ def _case_worker_environment() -> dict[str, str]:
 
 
 def _fixed_worker_dependency_python_path() -> str:
-    """Return only the active site/dist-package roots needed by fixed workers."""
+    """Return only dependency roots established by the isolated bootstrap."""
 
     import numpy
     import torch
 
-    roots: list[Path] = []
-    for raw_path in sys.path:
-        if not raw_path:
-            continue
-        candidate = Path(raw_path)
-        if not candidate.is_absolute() or candidate.name not in {
-            "site-packages",
-            "dist-packages",
-        }:
-            continue
-        try:
-            resolved = candidate.resolve(strict=True)
-        except OSError as exc:
-            raise ReferenceValidationRunnerError(
-                "validation-worker dependency path is unavailable"
-            ) from exc
-        if not resolved.is_dir() or os.pathsep in os.fspath(resolved):
-            raise ReferenceValidationRunnerError(
-                "validation-worker dependency path is invalid"
-            )
-        if resolved not in roots:
-            roots.append(resolved)
-    if not roots:
-        raise ReferenceValidationRunnerError(
-            "validation-worker dependency paths are unavailable"
-        )
+    roots = list(_require_isolated_python_bootstrap_runtime())
     for module, name in ((torch, "Torch"), (numpy, "NumPy")):
         module_path = Path(module.__file__).resolve(strict=True)
         if not any(module_path.is_relative_to(root) for root in roots):
@@ -2868,6 +2961,7 @@ def run_bounded_cpu_reference_validation(
         raise ReferenceValidationRunnerError(
             "runner dependency artifact rows are cross-wired"
         )
+    _require_isolated_python_bootstrap_runtime()
     _require_source_only_python_runtime()
     runner_source = reference_validation_runner_source_sha256()
     if receipt.runner_source_sha256 != runner_source:
@@ -3575,6 +3669,7 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ReferenceValidationRunnerError(
             "runner request code commit does not match the checkout"
         )
+    _require_isolated_python_bootstrap_runtime()
     _require_source_only_python_runtime()
     _require_clean_checked_out_code_commit(expected_commit)
     if reference_validation_runner_source_sha256() != expected_source:

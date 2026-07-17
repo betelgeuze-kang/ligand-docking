@@ -169,9 +169,12 @@ The current `main` branch contains:
   caller root. It provides neither kernel network isolation nor execution
   authorization, and the receipt never authorizes execution or fitting. A
   separate bounded runner now re-reads that persisted receipt, re-verifies the
-  live process, source-only Python startup that redirects and disables bytecode
-  caches, and workers with automatic site initialization disabled and only the
-  verified runtime's dependency roots supplied, root-owned absolute-Git clean-checkout proof with replacement refs
+  live process, a direct stdlib-only `-I -S -B -X pycache_prefix=/dev/null`
+  bootstrap that ignores environment/user-site import paths before any
+  validation dependency is imported, and workers with automatic site
+  initialization disabled and only root-owned read-only bootstrap-verified
+  dependency roots supplied. The signed runner-source identity binds both the
+  bootstrap and runner files. Root-owned absolute-Git clean-checkout proof with replacement refs
   disabled and rejected for the observed `HEAD`, signed runner source, frozen
   reference-evaluator/materializer/oracle sources, and dependency identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
@@ -181,9 +184,10 @@ The current `main` branch contains:
   work runs in a separate fixed child whose process is hard-killed at the deadline;
   POSIX timers remain an inner defense. It
   returns one canonical failure-inclusive observation in memory, including
-  failed metrics and sanitized evaluator failures. The exact module command is
-  reachable only through a bounded canonical stdin request that cannot contain
-  trust keys. Reviewer/operator anchors load only from the externally provisioned
+  failed metrics and sanitized evaluator failures. The exact process command
+  executes the absolute checked-out bootstrap path with the frozen isolated
+  Python flags and accepts only a bounded canonical stdin request that cannot
+  contain trust keys. Reviewer/operator anchors load only from the externally provisioned
   fixed `/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json`
   root-owned mode-0600 store; the repository does not bundle that store or keys.
   Trust material never enters stdin, argv, the worker requests, or the response;

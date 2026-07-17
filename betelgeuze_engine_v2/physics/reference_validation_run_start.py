@@ -19,10 +19,15 @@ import os
 from pathlib import Path
 import platform
 import re
+import stat
 from typing import Any, Mapping, Sequence
 
 import torch
 
+from .reference_validation_bootstrap import (
+    REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+    reference_validation_bootstrap_path,
+)
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -63,18 +68,12 @@ REFERENCE_VALIDATION_RUN_START_CONTRACT_ID = (
     "cpu_reference_validation_run_start_environment/1.0.0"
 )
 REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T06:57:00Z"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:20:00Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 REFERENCE_VALIDATION_APPLICATION_SEED_ENV = "BETELGEUZE_REFERENCE_VALIDATION_SEED"
-REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
-    "python",
-    "-m",
-    "betelgeuze_engine_v2.physics.reference_validation_runner",
-)
-
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "b0adacfcd5492f0e4960cebd37e7df00b4e08e39cfa2626f5083808ee2acea79"
+    "946b939fcf6abd9b12958503bfe8d37e467760c70ae857aaab135c73f3a23658"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -656,10 +655,24 @@ def _read_logical_runner_argv() -> tuple[str, ...]:
         raise ReferenceValidationRunStartError(
             "exact Linux process argv cannot be observed"
         ) from exc
+    expected_bootstrap = Path(reference_validation_bootstrap_path())
+    try:
+        observed_bootstrap = Path(decoded[-1])
+        bootstrap_stat = observed_bootstrap.lstat()
+        bootstrap_matches = (
+            observed_bootstrap.is_absolute()
+            and not observed_bootstrap.is_symlink()
+            and stat.S_ISREG(bootstrap_stat.st_mode)
+            and bootstrap_stat.st_nlink == 1
+            and observed_bootstrap.resolve(strict=True) == expected_bootstrap
+        )
+    except (IndexError, OSError):
+        bootstrap_matches = False
     if (
-        len(decoded) != 3
+        len(decoded) != len(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV)
         or not _PYTHON_EXECUTABLE_RE.fullmatch(Path(decoded[0]).name)
-        or decoded[1:] != REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:]
+        or decoded[1:-1] != REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1]
+        or not bootstrap_matches
     ):
         raise ReferenceValidationRunStartError(
             "process argv is not the frozen secret-free validation runner command"
@@ -872,6 +885,10 @@ def _contract_projection() -> dict[str, Any]:
             "locale_timezone_and_thread_environment_exact": True,
             "source_only_python_import_environment_exact": True,
             "ignored_timestamp_bytecode_cache_execution_allowed": False,
+            "isolated_python_startup_required": True,
+            "automatic_site_initialization_allowed": False,
+            "python_import_path_environment_ignored": True,
+            "user_site_packages_allowed": False,
             "python_hash_and_application_seeds_exact": True,
             "torch_single_thread_and_deterministic_algorithms_required": True,
             "logical_runner_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
