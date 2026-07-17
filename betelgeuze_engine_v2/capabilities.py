@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_i_bounded_tautomer_selection"
+IMPLEMENTATION_STAGE = "v2_j_frozen_public_benchmark_protocol"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -92,6 +92,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
+PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID = "v2_frozen_public_benchmark_protocol"
 EXTERNAL_BASELINE_CAPABILITY_ID = "v2_external_baseline_receipts"
 DISTRIBUTION_CAPABILITY_ID = "v2_independent_distribution"
 
@@ -411,6 +412,18 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "public_holdout_results_missing",
         "public_asymmetric_attestation_and_transparency_missing",
     ),
+    PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: (
+        "four_case_contract_cohort_not_statistically_representative",
+        "posebusters_benchmark_equivalence_not_established",
+        "symmetry_mapping_materializer_not_implemented",
+        "reference_ligand_match_materializer_not_implemented",
+        "public_benchmark_not_executed",
+        "public_holdout_results_missing",
+        "independent_attestation_missing",
+        "legal_compliance_determination_not_made",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     EXTERNAL_BASELINE_CAPABILITY_ID: (
         "reviewed_external_engine_results_missing",
         "public_comparison_evidence_missing",
@@ -712,6 +725,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
+                PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
+                current_state=(
+                    "frozen_four_case_public_redocking_protocol_definition_"
+                    "without_execution_or_results"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             EXTERNAL_BASELINE_CAPABILITY_ID: _row(
                 EXTERNAL_BASELINE_CAPABILITY_ID,
                 current_state="offline_work_order_and_verified_receipt_contract_ready",
@@ -793,6 +815,7 @@ __all__ = [
     "PDB_INGEST_CAPABILITY_ID",
     "PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",
+    "PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID",
     "SDF_INGEST_CAPABILITY_ID",
     "capability_snapshot",
     "require_capability_snapshot",

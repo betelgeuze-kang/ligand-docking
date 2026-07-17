@@ -6,7 +6,8 @@
 
 현재 단계: V2-0 독립 CPU 스캐폴드와 V2-1의 bounded source-contract, exact
 PubChem CID 176 pH-state, CID 177/11199 reference-canonical tautomer 조각을
-구현한 상태다. V2-1 all-atom preparation,
+구현하고 four-case public redocking protocol definition을 고정한 상태다.
+V2-1 all-atom preparation,
 V2-2 과학 힘장, V2-3 도킹,
 V2-4 MD, V2-5 production AI, V2-6 ROCm/HIP, V2-7 상용 제품은 완료되지 않았다.
 
@@ -141,6 +142,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_tautomer_selection_corpus` | CID 177·11199·702 factual identity와 license-review boundary를 결속한 6-case real-world-identity corpus; supported 2·failure 4를 모두 실행 | raw PubChem record·contributor text·conformer bundling, source identity 인증, general chemistry coverage, thermodynamic evidence, legal determination, parameter fitting·과학/benchmark/product 승격 |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -380,8 +382,9 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    유지한다. 52-axis ledger의 implementation gap이 0이어도 scientific 또는
    commercial readiness로 승격하지 않으며 original mmCIF lexical 재출력은 별도
    미지원으로 유지한다.
-8. 다음 evidence slice로 licensing-compatible public benchmark protocol/manifest를
-   결과 실행·발표 없이 고정한 뒤, H5 reference physics의 parameter provenance와
+8. 완료된 four-case public benchmark protocol/manifest의 exact source·license
+   metadata·endpoint·failure denominator·scorer identity를 결과 실행·발표 없이
+   유지한다. 다음 slice로 H5 reference physics의 parameter provenance와
    applicability-domain record를 정의한다. production parameter fitting·validation은
    독립 gate 전에는 시작하지 않는다.
 9. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과

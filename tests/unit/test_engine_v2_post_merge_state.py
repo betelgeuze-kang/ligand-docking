@@ -41,6 +41,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
     PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
+    PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
     capability_snapshot,
     require_capability_snapshot,
 )
@@ -52,7 +53,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 36
+    assert len(loaded["capabilities"]) == 37
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -94,6 +95,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
     assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
+    assert PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID in rows
     assert (
         rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
         is False
@@ -478,6 +480,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert "artifact_signature_verification_missing" not in benchmark_blockers
 
+    public_protocol = rows[PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
+    assert public_protocol["current_state"] == (
+        "frozen_four_case_public_redocking_protocol_definition_"
+        "without_execution_or_results"
+    )
+    assert public_protocol["internal_reference_execution_enabled"] is False
+    assert "public_benchmark_not_executed" in public_protocol["blockers"]
+    assert (
+        "posebusters_benchmark_equivalence_not_established"
+        in public_protocol["blockers"]
+    )
+    assert "public_holdout_results_missing" in public_protocol["blockers"]
+
     require_capability_snapshot(loaded)
 
 
@@ -552,6 +567,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_input_identity.py",
         "test_engine_v2_docking_semantics.py",
         "test_engine_v2_benchmark_contracts.py",
+        "test_engine_v2_public_benchmark_protocol.py",
         "test_engine_v2_reference_physics.py",
         "test_engine_v2_external_baseline.py",
     ):
@@ -559,4 +575,4 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_i_bounded_tautomer_selection"' in source
+    assert '"v2_j_frozen_public_benchmark_protocol"' in source
