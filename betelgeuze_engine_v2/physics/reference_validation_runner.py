@@ -100,6 +100,11 @@ _ROTATION_MATRIX = (
 )
 _PERMUTATION_NEW_TO_OLD = (3, 1, 0, 2)
 _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
+_REFERENCE_VALIDATION_FIXED_WORKER_BOOTSTRAP = (
+    "import sys;"
+    "from betelgeuze_engine_v2.physics import reference_validation_runner as worker;"
+    "raise SystemExit(worker._fixed_worker_main(sys.argv[1:]))"
+)
 _POST_RUN_BLOCKERS = (
     "production_validation_result_not_collected",
     "result_receipt_writer_not_implemented",
@@ -2297,6 +2302,14 @@ def _manifest_worker_main_from_standard_streams() -> int:
     return 0
 
 
+def _fixed_worker_main(arguments: list[str]) -> int:
+    if arguments == ["--manifest-worker"]:
+        return _manifest_worker_main_from_standard_streams()
+    if arguments == ["--case-worker"]:
+        return _case_worker_main_from_standard_streams()
+    return 2
+
+
 def _case_worker_environment() -> dict[str, str]:
     required_names = (
         "BETELGEUZE_REFERENCE_VALIDATION_SEED",
@@ -2512,8 +2525,8 @@ def _start_fixed_validation_worker(worker_flag: str) -> Any:
             [
                 os.fspath(executable),
                 "-S",
-                "-m",
-                "betelgeuze_engine_v2.physics.reference_validation_runner",
+                "-c",
+                _REFERENCE_VALIDATION_FIXED_WORKER_BOOTSTRAP,
                 worker_flag,
             ],
             cwd=repository_root,
@@ -3655,10 +3668,6 @@ def main() -> int:
         and canonical_module is not sys.modules.get(__name__)
     )
     implementation = canonical_module if delegate else sys.modules[__name__]
-    if sys.argv[1:] == ["--manifest-worker"]:
-        return implementation._manifest_worker_main_from_standard_streams()
-    if sys.argv[1:] == ["--case-worker"]:
-        return implementation._case_worker_main_from_standard_streams()
     return implementation._main_from_standard_streams()
 
 
