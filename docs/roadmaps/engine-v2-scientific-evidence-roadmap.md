@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@8777badfc23168cc85385fab92edb0d2f70beb66`
+Observed baseline: `main@88f0e6ada2b232116e3b08cc5e5994b8734fd950`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -206,9 +206,17 @@ claim status without revalidating the dependency and freshness chain.
   out-of-band trusted reviewer key, HMAC-SHA256 integrity, and at most 30 days
   of validity. No trusted key or attestation is bundled, and review verification
   alone cannot authorize execution or fitting.
-- Obtain an actual independently signed review attestation, freeze and verify a
-  separately signed non-expired authorization receipt, and only then collect
-  any synthetic implementation-mathematics result. The
+- Preserve the separate frozen single-run authorization receipt contract. It
+  requires a still-valid verified review, pairwise-distinct authorization
+  operator identity, an out-of-band trusted key, exact code/runner/environment/
+  result/dependency hashes, at most 24 hours of validity, external revocation
+  inputs, and an unused one-time nonce. No key or receipt is bundled; receipt
+  verification cannot open execution until atomic nonce reservation and run-
+  start environment/result contracts exist.
+- Obtain an actual independently signed review attestation and separately
+  signed non-expired authorization receipt, then atomically reserve its nonce;
+  only after every run-start dependency is reverified may any synthetic
+  implementation-mathematics result be collected. The
   scientific parameterized-force-field lane additionally requires reviewed
   runtime values, a frozen chemical applicability domain, a complete holdout
   manifest, and independent reference artifacts.

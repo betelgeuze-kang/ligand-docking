@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_n_cpu_reference_validation_review_contract
+v2_o_cpu_reference_validation_authorization_contract
 ```
 
 The current `main` branch contains:
@@ -139,6 +139,12 @@ The current `main` branch contains:
   HMAC-SHA256 integrity, and a maximum 30-day validity window. No attestation or
   trusted key is bundled, and even a verified review cannot itself authorize
   execution or fitting. The current gate denies validation execution and parameter-fitting proposals.
+  A separate authorization contract now binds a future verified review to a
+  pairwise-distinct operator identity, out-of-band HMAC key, exact code/runner/
+  environment/result/dependency identities, at most 24 hours of validity,
+  external receipt/review revocation sets, and a one-time nonce. No operator key
+  or receipt is bundled. Verification only makes a receipt eligible for a
+  future atomic nonce reservation; it does not open execution or fitting.
 
 ## What the implementation does not establish
 

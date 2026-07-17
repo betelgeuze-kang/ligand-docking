@@ -142,6 +142,7 @@ jobs:
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
+            tests/unit/test_engine_v2_reference_validation_authorization.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -246,6 +247,7 @@ jobs:
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
+            tests/unit/test_engine_v2_reference_validation_authorization.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
@@ -354,6 +356,7 @@ jobs:
               FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
               FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
               cpu_reference_validation_authorization_decision,
               cpu_reference_validation_protocol_document,
@@ -362,6 +365,8 @@ jobs:
               reference_validation_artifact_binding_document,
               reference_validation_review_contract_authorization_decision,
               reference_validation_review_contract_document,
+              reference_validation_authorization_contract_decision,
+              reference_validation_authorization_contract_document,
               reviewed_parameter_source_provenance,
           )
 
@@ -370,7 +375,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_n_cpu_reference_validation_review_contract"
+          assert capability_snapshot()["implementation_stage"] == "v2_o_cpu_reference_validation_authorization_contract"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
@@ -431,6 +436,15 @@ jobs:
           assert review_decision["review_attestation_present"] is False
           assert review_decision["validation_execution_authorized"] is False
           assert review_decision["parameter_fitting_authorized"] is False
+          authorization_contract = reference_validation_authorization_contract_document()
+          assert (
+              authorization_contract["contract_sha256"]
+              == FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+          )
+          authorization_decision = reference_validation_authorization_contract_decision()
+          assert authorization_decision["authorization_receipt_present"] is False
+          assert authorization_decision["authorization_nonce_reserved"] is False
+          assert authorization_decision["validation_execution_authorized"] is False
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")

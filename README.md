@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_n_cpu_reference_validation_review_contract
+v2_o_cpu_reference_validation_authorization_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -41,7 +41,9 @@ Implemented and GitHub-hosted CPU tested:
   materialization and a source-bound standard-library-only analytic oracle that
   collect no validation result, plus a frozen signed independent-review
   attestation contract that requires author/reviewer separation and an
-  out-of-band trusted reviewer key while keeping the gate closed;
+  out-of-band trusted reviewer key, and a separate single-run authorization
+  receipt contract with operator separation, 24-hour expiry, revocation inputs,
+  and one-time nonce semantics while keeping the gate closed;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 
