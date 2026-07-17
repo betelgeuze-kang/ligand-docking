@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_m_cpu_reference_validation_artifacts
+implementation_stage: v2_n_cpu_reference_validation_review_contract
 
 claim_policy:
   customer_execution_enabled: false
@@ -766,7 +766,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_energy_force_validation_protocol:
-    current_state: frozen_cpu_reference_protocol_with_exact_fixture_materializer_and_independent_oracle_source_binding_and_closed_execution_and_fitting_gate
+    current_state: frozen_cpu_reference_protocol_with_source_bound_materializer_oracle_and_independent_review_attestation_contract_with_closed_execution_and_fitting_gates
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -783,6 +783,8 @@ capabilities:
       - scientific_parameter_applicability_domain_not_established
       - scientific_holdout_case_manifest_not_frozen
       - independent_scientific_review_missing
+      - signed_independent_scientific_review_attestation_missing
+      - trusted_independent_scientific_reviewer_key_not_provided
       - implementation_author_and_independent_reviewer_separation_not_attested
       - signed_execution_authorization_receipt_schema_not_frozen
       - signed_execution_authorization_receipt_missing

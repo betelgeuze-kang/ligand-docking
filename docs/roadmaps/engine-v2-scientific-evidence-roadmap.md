@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@cf9bec1bd49be01ae598610e6361fd000287f022`
+Observed baseline: `main@8777badfc23168cc85385fab92edb0d2f70beb66`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -200,9 +200,15 @@ claim status without revalidating the dependency and freshness chain.
   reference-evaluator, protocol, Torch, NumPy, and external-solver imports. No
   comparison or metric result exists, synthetic values are not fit data, and
   neither validation execution nor a parameter-fitting proposal is authorized.
-- Obtain independent scientific review with explicit implementation-author
-  separation, freeze and verify a signed non-expired authorization receipt, and
-  only then collect any synthetic implementation-mathematics result. The
+- Preserve the separate frozen independent-review attestation contract. It
+  requires exact artifact dependencies, complete ordered review checks and
+  limitations, implementation-author/reviewer identity separation, an
+  out-of-band trusted reviewer key, HMAC-SHA256 integrity, and at most 30 days
+  of validity. No trusted key or attestation is bundled, and review verification
+  alone cannot authorize execution or fitting.
+- Obtain an actual independently signed review attestation, freeze and verify a
+  separately signed non-expired authorization receipt, and only then collect
+  any synthetic implementation-mathematics result. The
   scientific parameterized-force-field lane additionally requires reviewed
   runtime values, a frozen chemical applicability domain, a complete holdout
   manifest, and independent reference artifacts.

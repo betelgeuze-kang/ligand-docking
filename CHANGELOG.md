@@ -40,6 +40,12 @@ scientific claim from a package version.
   variants, plus a source-bound standard-library-only analytic oracle with
   forward-mode exact forces and an AST-enforced evaluator/protocol/third-party
   import boundary. No comparison result or scientific promotion is created.
+- Frozen independent-review attestation contract binding the exact validation
+  artifacts, ordered review checks and limitations, implementation-author and
+  reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256
+  integrity, and a 30-day maximum validity window. No trusted key, attestation,
+  execution authorization, validation result, or scientific promotion is
+  bundled.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

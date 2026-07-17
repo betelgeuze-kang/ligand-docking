@@ -8,8 +8,9 @@
 PubChem CID 176 pH-state, CID 177/11199 reference-canonical tautomer 조각을
 구현하고 four-case public redocking protocol definition, H5 parameter/runtime
 boundary, CPU reference energy/force contract-validation protocol을 결과 실행
-전에 고정하고 exact fixture materializer와 독립 analytic oracle의 source binding을
-완료한 상태다.
+전에 고정하고 exact fixture materializer와 독립 analytic oracle의 source binding,
+실제 review를 포함하지 않는 signed independent-review attestation 계약을 완료한
+상태다.
 V2-1 all-atom preparation,
 V2-2 과학 힘장, V2-3 도킹,
 V2-4 MD, V2-5 production AI, V2-6 ROCm/HIP, V2-7 상용 제품은 완료되지 않았다.
@@ -147,7 +148,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 | `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 | `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
-| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·27개 ordered pass/fail-closed case·19개 float64 metric·H5 dependency·failure-inclusive denominator를 고정하고, 59개 deterministic CPU float64 variant의 exact materializer와 evaluator/protocol/third-party import를 금지한 standard-library analytic oracle의 source SHA-256 binding을 별도 frozen record로 유지 | validation result collection, reviewed runtime parameter values, scientific holdout/applicability, independent scientific review·author separation attestation, signed execution authorization, energy/force/minimization validation, parameter fitting·제품 승격 |
+| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·27개 ordered pass/fail-closed case·19개 float64 metric·H5 dependency·failure-inclusive denominator를 고정하고, 59개 deterministic CPU float64 variant의 exact materializer와 evaluator/protocol/third-party import를 금지한 standard-library analytic oracle의 source SHA-256 binding 및 signed independent-review attestation schema/verifier를 별도 frozen record로 유지 | 실제 independent scientific review, trusted reviewer key/attestation bundling, validation result collection, reviewed runtime parameter values, scientific holdout/applicability, signed execution authorization, energy/force/minimization validation, parameter fitting·제품 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -337,8 +338,12 @@ float64 runtime variant로 materialize하고, 표준 라이브러리 scalar 식�
 exact derivative만 사용하는 독립 analytic oracle을 exact source SHA-256으로 결속한다.
 Oracle source는 reference evaluator·validation protocol·Torch·NumPy·외부 molecular
 solver import가 없음을 AST로 검사한다. 그러나 두 구현을 비교하는 validation study나
-결과 receipt는 없고 독립 과학 review·author separation attestation·signed authorization도
-없다. synthetic 값은 parameter-fit data가 아니며 scientific parameterized-force-field
+결과 receipt는 없다. 별도 frozen review contract는 exact dependency, ordered review
+check/limitation, implementation-author/reviewer SHA-256 identity 분리, 외부 trusted
+reviewer key, HMAC-SHA256 integrity와 최대 30일 validity를 요구한다. 저장소는 trusted
+key나 실제 attestation을 bundle하지 않고, verified review만으로 실행 또는 fitting을
+승인하지 않는다. 따라서 독립 과학 review·author separation attestation·signed
+authorization은 아직 없다. synthetic 값은 parameter-fit data가 아니며 scientific parameterized-force-field
 lane의 reviewed runtime 값, chemical applicability, holdout과 독립 reference도 아직
 고정되지 않았다. 따라서 current artifact authorization decision은 validation 실행과
 parameter-fitting proposal을 모두 거부한다.
@@ -425,9 +430,10 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    fitting·calibration 또는 validation study는 독립 승인 gate 전에는 시작하지 않는다.
 10. 완료된 CPU reference energy/force contract-validation protocol을 유지한다.
    synthetic fixture/mutation/case identity, 사전 float64 threshold, failure-inclusive
-   denominator와 H5 dependency, exact materializer·independent oracle source binding은
-   고정하지만 result receipt·independent review·author separation attestation·signed
-   authorization이 없으므로 실행과 parameter-fitting proposal은 계속 fail-closed한다.
+   denominator와 H5 dependency, exact materializer·independent oracle source binding,
+   signed independent-review attestation 계약은 고정하지만 actual attestation,
+   trusted reviewer key, result receipt와 signed execution authorization이 없으므로
+   실행과 parameter-fitting proposal은 계속 fail-closed한다.
 11. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
 12. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행

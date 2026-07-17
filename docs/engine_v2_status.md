@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_m_cpu_reference_validation_artifacts
+v2_n_cpu_reference_validation_review_contract
 ```
 
 The current `main` branch contains:
@@ -133,8 +133,12 @@ The current `main` branch contains:
   oracle, materialization-manifest, protocol, fixture-manifest, and H5 SHA-256
   identities are bound. No result receipt, scientific holdout, independently
   reviewed runtime parameter values, independent scientific acceptance, or
-  signed authorization receipt exists; the current artifact authorization gate
-  therefore denies validation execution and parameter-fitting proposals.
+  signed authorization receipt exists. A separate frozen review-attestation
+  contract now fixes the required review checks, acknowledged limitations,
+  author/reviewer identity separation, out-of-band trusted reviewer key,
+  HMAC-SHA256 integrity, and a maximum 30-day validity window. No attestation or
+  trusted key is bundled, and even a verified review cannot itself authorize
+  execution or fitting. The current gate denies validation execution and parameter-fitting proposals.
 
 ## What the implementation does not establish
 
