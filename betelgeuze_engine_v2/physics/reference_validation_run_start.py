@@ -21,7 +21,6 @@ import platform
 import re
 from typing import Any, Mapping, Sequence
 
-import numpy as np
 import torch
 
 from .reference_validation_artifact_binding import (
@@ -667,6 +666,13 @@ def _read_logical_runner_argv() -> tuple[str, ...]:
 
 
 def _observe_current_runtime() -> _RuntimeObservation:
+    try:
+        import numpy as np
+    except ImportError as exc:
+        raise ReferenceValidationRunStartError(
+            "runtime NumPy dependency is unavailable"
+        ) from exc
+
     environment_names = (
         *_REQUIRED_EMPTY_ENVIRONMENT_VARIABLES,
         *(name for name, _ in _REQUIRED_ENVIRONMENT_VALUES),
