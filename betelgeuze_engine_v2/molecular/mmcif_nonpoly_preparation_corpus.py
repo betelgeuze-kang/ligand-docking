@@ -117,7 +117,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID = (
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION = "1.0.0"
 FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256 = (
-    "efd59c6813fc49426934155886e24d5fca6cf7818f7e29cba648f1e239f7cf76"
+    "7fa69590541687d99f40860972a60e29b42f56daf3e64d4c558e75b3f967a279"
 )
 MMCIF_NONPOLY_PREPARATION_CORPUS_PARTIAL_CHARGE_METHOD_ID = (
     "synthetic_neutral_zero_charge_contract_fixture"
@@ -315,9 +315,7 @@ class MmcifPreparationCorpusCaseResult:
             "hydrogen_coordinate_snapshot_sha256": (
                 self.hydrogen_coordinate_snapshot_sha256
             ),
-            "all_atom_system_snapshot_sha256": (
-                self.all_atom_system_snapshot_sha256
-            ),
+            "all_atom_system_snapshot_sha256": (self.all_atom_system_snapshot_sha256),
             "parameter_source_binding_snapshot_sha256": (
                 self.parameter_source_binding_snapshot_sha256
             ),
@@ -335,9 +333,7 @@ class MmcifPreparationCorpusCaseResult:
             "reports": [dict(row) for row in self.reports],
             "atom_site_model_policy": dict(self.atom_site_model_policy),
             "biological_assembly_policy": dict(self.biological_assembly_policy),
-            "missing_atom_residue_policy": dict(
-                self.missing_atom_residue_policy
-            ),
+            "missing_atom_residue_policy": dict(self.missing_atom_residue_policy),
             "hydrogen_coordinate_summary": dict(self.hydrogen_coordinate_summary),
             "all_atom_system_summary": dict(self.all_atom_system_summary),
             "parameter_source_binding_summary": dict(
@@ -360,6 +356,7 @@ class MmcifNonpolyPreparationCorpusSnapshot:
     case_results: tuple[MmcifPreparationCorpusCaseResult, ...]
     coverage_rows: tuple[MmcifPreparationCoverageRow, ...]
     ph_protonation_corpus_evidence: Mapping[str, Any]
+    tautomer_selection_corpus_evidence: Mapping[str, Any]
 
     def __repr__(self) -> str:
         return (
@@ -406,8 +403,9 @@ class MmcifNonpolyPreparationCorpusSnapshot:
             },
             "unclassified_coverage_row_count": 0,
             "expectation_mismatch_count": 0,
-            "ph_protonation_corpus_evidence": dict(
-                self.ph_protonation_corpus_evidence
+            "ph_protonation_corpus_evidence": dict(self.ph_protonation_corpus_evidence),
+            "tautomer_selection_corpus_evidence": dict(
+                self.tautomer_selection_corpus_evidence
             ),
             "parameter_fitting_allowed": False,
             "v2_1_exit_ready": False,
@@ -447,6 +445,8 @@ def _claim_policy() -> dict[str, bool]:
         "canonical_all_atom_identity_round_trip_bound": True,
         "bounded_ph_dependent_protonation_bound": True,
         "real_world_supported_abstention_failure_corpus_bound": True,
+        "bounded_tautomer_selection_bound": True,
+        "real_world_tautomer_supported_failure_corpus_bound": True,
         "corpus_is_parameter_fitting_data": False,
         "parameter_fitting_allowed": False,
         "v2_1_exit_ready": False,
@@ -629,11 +629,7 @@ def _corpus_source(
     entity_rows = (
         {"_entity.id": "1", "_entity.type": "non-polymer"},
         {"_entity.id": "2", "_entity.type": "water"},
-    ) + (
-        ({"_entity.id": "3", "_entity.type": "polymer"},)
-        if include_polymer
-        else ()
-    )
+    ) + (({"_entity.id": "3", "_entity.type": "polymer"},) if include_polymer else ())
     asym_rows = (
         {"_struct_asym.id": "L", "_struct_asym.entity_id": "1"},
         {"_struct_asym.id": "W", "_struct_asym.entity_id": "2"},
@@ -1515,7 +1511,6 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
 
     supported = "supported"
     unsupported = "explicitly_unsupported"
-    missing = "not_implemented"
     rows = (
         _coverage(
             "source_entity.nonpolymer",
@@ -1794,10 +1789,12 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
         _coverage(
             "tautomer.selection",
             "chemistry",
-            missing,
-            "",
-            (),
-            "tautomer_selection_not_implemented",
+            supported,
+            "canonical_round_trip:verified",
+            (
+                "pubchem_cid_177_reference_selected",
+                "pubchem_cid_11199_reference_selected",
+            ),
         ),
         _coverage(
             "role.ion",
@@ -1827,10 +1824,7 @@ def mmcif_nonpoly_preparation_coverage_rows() -> tuple[
             "role.modified_residue",
             "role_assignment",
             unsupported,
-            (
-                "modified_residue_role:"
-                "source_declared_modified_polymer_component"
-            ),
+            ("modified_residue_role:source_declared_modified_polymer_component"),
             ("unsupported_source_declared_modified_residue",),
             "modified_residue_preparation_not_supported",
         ),
@@ -2194,13 +2188,9 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         raise MmcifNonpolyPreparationCorpusError("corpus input digest is invalid")
     model_policy_snapshot = parse_mmcif_atom_site_model_policy(case.source_text)
     model_policy = model_policy_snapshot.to_dict()
-    assembly_policy_snapshot = parse_mmcif_biological_assembly_policy(
-        case.source_text
-    )
+    assembly_policy_snapshot = parse_mmcif_biological_assembly_policy(case.source_text)
     assembly_policy = assembly_policy_snapshot.to_dict()
-    missing_policy_snapshot = parse_mmcif_missing_atom_residue_policy(
-        case.source_text
-    )
+    missing_policy_snapshot = parse_mmcif_missing_atom_residue_policy(case.source_text)
     missing_policy = missing_policy_snapshot.to_dict()
     try:
         snapshot = parse_mmcif_nonpoly_preparation(case.source_text)
@@ -2378,9 +2368,7 @@ def _run_case(case: MmcifPreparationCorpusCase) -> MmcifPreparationCorpusCaseRes
         input_sha256=case.input_sha256,
         observed_outcome="failure_complete_reports",
         preparation_snapshot_sha256=snapshot.snapshot_sha256,
-        atom_site_model_policy_snapshot_sha256=(
-            model_policy_snapshot.snapshot_sha256
-        ),
+        atom_site_model_policy_snapshot_sha256=(model_policy_snapshot.snapshot_sha256),
         biological_assembly_policy_snapshot_sha256=(
             assembly_policy_snapshot.snapshot_sha256
         ),
@@ -2473,6 +2461,41 @@ def _ph_protonation_corpus_evidence(snapshot: Any) -> dict[str, Any]:
     }
 
 
+@lru_cache(maxsize=1)
+def _tautomer_selection_corpus_snapshot() -> Any:
+    # Imported lazily because the real-world corpus reuses the frozen mmCIF
+    # fixture constructor from this module.
+    from .mmcif_nonpoly_tautomer_selection_corpus import (
+        run_mmcif_nonpoly_tautomer_selection_corpus,
+    )
+
+    return run_mmcif_nonpoly_tautomer_selection_corpus()
+
+
+def _tautomer_selection_corpus_evidence(snapshot: Any) -> dict[str, Any]:
+    return {
+        "profile_id": "frozen_pubchem_identity_tautomer_selection_corpus/1.0.0",
+        "runner_version": "1.0.0",
+        "snapshot_sha256": snapshot.snapshot_sha256,
+        "corpus_projection_sha256": snapshot.corpus_projection_sha256,
+        "source_binding_sha256": snapshot.source_binding_sha256,
+        "case_count": len(snapshot.case_results),
+        "case_ids": [row.case_id for row in snapshot.case_results],
+        "selected_state_count": sum(
+            bool(row.selected_state) for row in snapshot.case_results
+        ),
+        "transferred_generated_hydrogen_count": sum(
+            row.transferred_generated_hydrogen_count for row in snapshot.case_results
+        ),
+        "expected_error_count": sum(
+            bool(row.error_code) for row in snapshot.case_results
+        ),
+        "parameter_fitting_allowed": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+
+
 def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnapshot:
     """Execute every frozen case and require complete coverage evidence."""
 
@@ -2485,6 +2508,8 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
     result_map = {row.case_id: row for row in results}
     ph_corpus = _ph_protonation_corpus_snapshot()
     ph_result_map = {row.case_id: row for row in ph_corpus.case_results}
+    tautomer_corpus = _tautomer_selection_corpus_snapshot()
+    tautomer_result_map = {row.case_id: row for row in tautomer_corpus.case_results}
     coverage = mmcif_nonpoly_preparation_coverage_rows()
     referenced_cases: set[str] = set()
     for row in coverage:
@@ -2513,6 +2538,8 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
         for case_id in row.evidence_case_ids:
             result = result_map.get(case_id)
             external_result = ph_result_map.get(case_id)
+            if external_result is None:
+                external_result = tautomer_result_map.get(case_id)
             evidence = result if result is not None else external_result
             if evidence is None or row.expected_signal not in evidence.signals:
                 raise MmcifNonpolyPreparationCorpusError(
@@ -2539,9 +2566,13 @@ def run_mmcif_nonpoly_preparation_corpus() -> MmcifNonpolyPreparationCorpusSnaps
         case_results=results,
         coverage_rows=coverage,
         ph_protonation_corpus_evidence=_ph_protonation_corpus_evidence(ph_corpus),
+        tautomer_selection_corpus_evidence=(
+            _tautomer_selection_corpus_evidence(tautomer_corpus)
+        ),
     )
     if (
-        snapshot.snapshot_sha256
+        FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256
+        and snapshot.snapshot_sha256
         != FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_SNAPSHOT_SHA256
     ):
         raise MmcifNonpolyPreparationCorpusError(
@@ -2559,8 +2590,9 @@ def mmcif_nonpoly_preparation_corpus_projection(
         "runner_version": MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION,
         "case_results": [row.to_dict() for row in snapshot.case_results],
         "coverage_rows": [row.to_dict() for row in snapshot.coverage_rows],
-        "ph_protonation_corpus_evidence": dict(
-            snapshot.ph_protonation_corpus_evidence
+        "ph_protonation_corpus_evidence": dict(snapshot.ph_protonation_corpus_evidence),
+        "tautomer_selection_corpus_evidence": dict(
+            snapshot.tautomer_selection_corpus_evidence
         ),
         "case_order": "frozen_manifest_order",
         "coverage_order": "required_axis_order",
@@ -2572,6 +2604,7 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
     cases = mmcif_nonpoly_preparation_corpus_cases()
     parameter_source_provenance = reviewed_parameter_source_provenance()
     ph_corpus = _ph_protonation_corpus_snapshot()
+    tautomer_corpus = _tautomer_selection_corpus_snapshot()
     from .mmcif_nonpoly_ph_protonation import (
         MMCIF_NONPOLY_PH_PROTONATION_ENGINE_VERSION,
         MMCIF_NONPOLY_PH_PROTONATION_PROFILE_ID,
@@ -2580,6 +2613,15 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
     from .mmcif_nonpoly_ph_protonation_corpus import (
         MMCIF_NONPOLY_PH_PROTONATION_CORPUS_PROFILE_ID,
         MMCIF_NONPOLY_PH_PROTONATION_CORPUS_RUNNER_VERSION,
+    )
+    from .mmcif_nonpoly_tautomer_selection import (
+        MMCIF_NONPOLY_TAUTOMER_SELECTION_ENGINE_VERSION,
+        MMCIF_NONPOLY_TAUTOMER_SELECTION_PROFILE_ID,
+        mmcif_nonpoly_tautomer_selection_reference_sha256,
+    )
+    from .mmcif_nonpoly_tautomer_selection_corpus import (
+        MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_PROFILE_ID,
+        MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_RUNNER_VERSION,
     )
 
     return {
@@ -2661,9 +2703,7 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
             MMCIF_MODIFIED_RESIDUE_DECLARATION_PARSER_VERSION
         ),
         "ph_protonation_profile_id": MMCIF_NONPOLY_PH_PROTONATION_PROFILE_ID,
-        "ph_protonation_engine_version": (
-            MMCIF_NONPOLY_PH_PROTONATION_ENGINE_VERSION
-        ),
+        "ph_protonation_engine_version": (MMCIF_NONPOLY_PH_PROTONATION_ENGINE_VERSION),
         "ph_protonation_reference_snapshot_sha256": (
             mmcif_nonpoly_ph_protonation_reference_sha256()
         ),
@@ -2674,11 +2714,29 @@ def mmcif_nonpoly_preparation_corpus_source_binding() -> dict[str, Any]:
             MMCIF_NONPOLY_PH_PROTONATION_CORPUS_RUNNER_VERSION
         ),
         "ph_protonation_corpus_snapshot_sha256": ph_corpus.snapshot_sha256,
-        "ph_protonation_corpus_projection_sha256": (
-            ph_corpus.corpus_projection_sha256
-        ),
+        "ph_protonation_corpus_projection_sha256": (ph_corpus.corpus_projection_sha256),
         "ph_protonation_corpus_source_binding_sha256": (
             ph_corpus.source_binding_sha256
+        ),
+        "tautomer_selection_profile_id": (MMCIF_NONPOLY_TAUTOMER_SELECTION_PROFILE_ID),
+        "tautomer_selection_engine_version": (
+            MMCIF_NONPOLY_TAUTOMER_SELECTION_ENGINE_VERSION
+        ),
+        "tautomer_selection_reference_snapshot_sha256": (
+            mmcif_nonpoly_tautomer_selection_reference_sha256()
+        ),
+        "tautomer_selection_corpus_profile_id": (
+            MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_PROFILE_ID
+        ),
+        "tautomer_selection_corpus_runner_version": (
+            MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_RUNNER_VERSION
+        ),
+        "tautomer_selection_corpus_snapshot_sha256": (tautomer_corpus.snapshot_sha256),
+        "tautomer_selection_corpus_projection_sha256": (
+            tautomer_corpus.corpus_projection_sha256
+        ),
+        "tautomer_selection_corpus_source_binding_sha256": (
+            tautomer_corpus.source_binding_sha256
         ),
         "corpus_profile_id": MMCIF_NONPOLY_PREPARATION_CORPUS_PROFILE_ID,
         "corpus_runner_version": MMCIF_NONPOLY_PREPARATION_CORPUS_RUNNER_VERSION,

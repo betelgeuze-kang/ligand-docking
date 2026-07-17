@@ -4,8 +4,9 @@
 
 문서 상태: current-main canonical planning reference; 비실행·비주장 문서
 
-현재 단계: V2-0 독립 CPU 스캐폴드와 V2-1의 bounded source-contract 및 exact
-PubChem CID 176 pH-state 조각을 구현한 상태다. V2-1 all-atom preparation,
+현재 단계: V2-0 독립 CPU 스캐폴드와 V2-1의 bounded source-contract, exact
+PubChem CID 176 pH-state, CID 177/11199 reference-canonical tautomer 조각을
+구현한 상태다. V2-1 all-atom preparation,
 V2-2 과학 힘장, V2-3 도킹,
 V2-4 MD, V2-5 production AI, V2-6 ROCm/HIP, V2-7 상용 제품은 완료되지 않았다.
 
@@ -136,8 +137,10 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_all_atom_round_trip` | charge-assigned system의 canonical Engine v2 JSON encode/decode/re-encode byte identity, atom·bond·residue·chain, topology·coordinate hash, source lineage metadata, parameter-source binding과 partial-charge binary64 bit 보존 receipt | original mmCIF text 재출력, source token spelling·category order·comment·whitespace 보존, chemistry·parameter·과학 검증·parameterability |
 | `v2_bounded_mmcif_nonpoly_ph_dependent_protonation` | 입력 graph가 reviewed PubChem CID 176 neutral acetic-acid graph contract와 정확히 일치할 때 pKa 4.76과 caller pH를 결속하고 Henderson–Hasselbalch 우세 population이 90% 이상이면 protonated/deprotonated canonical `AllAtomSystem` 선택; 경계 population은 abstain하고 선택 system은 canonical JSON byte round-trip 검증 | source structure identity 인증, general acid/base·multi-site·polyprotic chemistry, pKa prediction/calibration, source-observed H 제거, resonance equivalence·tautomer selection, partial charge·parameter·mass, geometry·energy·과학 검증·parameterability |
 | `v2_bounded_mmcif_nonpoly_ph_protonation_corpus` | PubChem CID 176·702 factual identity, source URL·retrieval date·license-review boundary를 결속한 7-case real-world-identity corpus; supported 2·abstention 1·failure 4를 모두 실행 | source structure identity 인증, raw PubChem record·contributor text·PubChem conformer bundling, general chemistry coverage, legal determination, parameter fitting·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_reference_tautomer_selection` | exact neutral C2H4O PubChem CID 177 acetaldehyde 또는 CID 11199 vinyl-alcohol graph contract만 인식하고 reviewed reference-canonical acetaldehyde graph 선택; vinyl alcohol에서는 generated hydroxyl H 하나만 이동하고 canonical JSON byte round-trip 검증 | source structure identity 인증, general tautomer enumeration, source-observed H 이동, population·equilibrium·thermodynamic preference·pH 해석, partial charge·parameter·mass, geometry·energy·과학 검증·parameterability |
+| `v2_bounded_mmcif_nonpoly_tautomer_selection_corpus` | CID 177·11199·702 factual identity와 license-review boundary를 결속한 6-case real-world-identity corpus; supported 2·failure 4를 모두 실행 | raw PubChem record·contributor text·conformer bundling, source identity 인증, general chemistry coverage, thermodynamic evidence, legal determination, parameter fitting·과학/benchmark/product 승격 |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 24·explicitly unsupported 27·not implemented 1 | real-world tautomer corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -287,6 +290,14 @@ supported·abstention·failure를 모두 denominator에 남기며 parameter fitt
 아니다. PubChem download policy가 contributor별 제약 확인을 요구하므로 commercial
 redistribution 승인이나 법률 판단도 주장하지 않는다.
 
+별도 tautomer-selection capability는 CID 177 acetaldehyde와 CID 11199 vinyl
+alcohol의 exact neutral C2H4O graph contract만 인식하고 acetaldehyde를 reviewed
+reference-canonical identity로 선택한다. vinyl alcohol의 generated hydroxyl H만
+이동하며 source-observed H 이동은 fail-closed다. 이는 population, equilibrium,
+thermodynamic preference 또는 pH 예측이 아니다. 6-case corpus는 두 supported
+selection과 structure mismatch·source-H·reference·instance crosswire failure 네
+개를 모두 denominator에 유지한다.
+
 reviewed parameter-source provenance capability는 OpenFF 공식 force-field repository의
 Sage 2.2.1 unconstrained artifact를 release tag `2024.09.0`과 exact commit에 고정하고,
 artifact byte size·SHA-256, `CC-BY-4.0` license identity와 license-text SHA-256,
@@ -299,9 +310,9 @@ molecule coverage, applicability domain, parameter calibration, force/energy 정
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
-denominator에서 제거하지 않는다. 별도 7-case pH real-world-identity corpus를
-결속한 52-axis coverage ledger는 24개 supported, 27개 explicitly unsupported,
-1개 `not_implemented`로 분류하며 unclassified
+denominator에서 제거하지 않는다. 별도 7-case pH 및 6-case tautomer
+real-world-identity corpus를 결속한 52-axis coverage ledger는 25개 supported,
+27개 explicitly unsupported, 0개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -364,14 +375,15 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 6. 완료된 첫 contract layer로 exact ASCII 30-case synthetic supported/failure
    corpus와 52-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 완료된 exact PubChem CID 176 pH-dependent protonation과 7-case
-   real-world-identity supported/abstention/failure corpus를 유지한다. 다음으로 남은
-   1개 `not_implemented` row인 tautomer selection을 독립 capability로 닫고,
-   licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
-   canonical all-atom identity round trip까지 완료된 뒤에도 original mmCIF lexical
-   재출력은 별도 미지원으로 유지한다.
-8. 위 gap과 real-world corpus가 닫히기 전에는 V2-2 parameter fitting·validation을
-   시작하지 않는다.
+7. 완료된 exact PubChem CID 176 pH-dependent protonation과 7-case corpus,
+   exact CID 177/11199 reference-canonical tautomer selection과 6-case corpus를
+   유지한다. 52-axis ledger의 implementation gap이 0이어도 scientific 또는
+   commercial readiness로 승격하지 않으며 original mmCIF lexical 재출력은 별도
+   미지원으로 유지한다.
+8. 다음 evidence slice로 licensing-compatible public benchmark protocol/manifest를
+   결과 실행·발표 없이 고정한 뒤, H5 reference physics의 parameter provenance와
+   applicability-domain record를 정의한다. production parameter fitting·validation은
+   독립 gate 전에는 시작하지 않는다.
 9. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
 10. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행

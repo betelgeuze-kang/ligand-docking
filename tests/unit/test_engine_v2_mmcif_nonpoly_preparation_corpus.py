@@ -91,8 +91,7 @@ def test_supported_graphs_water_and_source_hydrogen_match_exactly(
     assert hydrogen_summary["added_hydrogen_coordinate_count"] == 4
     assert hydrogen_summary["all_prepared_graphs_coordinate_bearing"] is True
     assert {
-        row["coordinate_status"]
-        for row in hydrogen_summary["instance_reports"]
+        row["coordinate_status"] for row in hydrogen_summary["instance_reports"]
     } == {"coordinate_bearing_prepared_graph"}
     assert (
         "hydrogen_coordinate_status:coordinate_bearing_prepared_graph"
@@ -103,12 +102,12 @@ def test_supported_graphs_water_and_source_hydrogen_match_exactly(
 def test_known_nonpoly_insertion_code_is_exactly_joined_and_prepared(
     corpus_snapshot,
 ) -> None:
-    case = {
-        row.case_id: row for row in mmcif_nonpoly_preparation_corpus_cases()
-    }["supported_nonpoly_insertion_code"]
-    result = {
-        row.case_id: row for row in corpus_snapshot.case_results
-    }["supported_nonpoly_insertion_code"]
+    case = {row.case_id: row for row in mmcif_nonpoly_preparation_corpus_cases()}[
+        "supported_nonpoly_insertion_code"
+    ]
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[
+        "supported_nonpoly_insertion_code"
+    ]
     identity = parse_mmcif_nonpoly_identity(case.source_text)
     observations = parse_mmcif_nonpoly_atom_site_observations(case.source_text)
     connection = parse_mmcif_struct_conn_declarations(case.source_text)
@@ -222,9 +221,9 @@ def test_interpreted_monoatomic_roles_remain_explicitly_unsupported(
 
 
 def test_unresolved_nonpoly_role_does_not_guess_a_cofactor(corpus_snapshot) -> None:
-    result = {
-        row.case_id: row for row in corpus_snapshot.case_results
-    }["supported_carbonyl"]
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[
+        "supported_carbonyl"
+    ]
     ligand_role = result.component_roles[0]
 
     assert ligand_role["component_id"] == "LIG"
@@ -242,9 +241,9 @@ def test_unresolved_nonpoly_role_does_not_guess_a_cofactor(corpus_snapshot) -> N
 def test_source_declared_modified_residue_is_retained_as_unsupported_preparation(
     corpus_snapshot,
 ) -> None:
-    result = {
-        row.case_id: row for row in corpus_snapshot.case_results
-    }["unsupported_source_declared_modified_residue"]
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[
+        "unsupported_source_declared_modified_residue"
+    ]
 
     assert result.cohort == "unsupported_chemistry"
     assert len(result.modified_residue_declaration_snapshot_sha256) == 64
@@ -267,9 +266,9 @@ def test_source_declared_modified_residue_is_retained_as_unsupported_preparation
 def test_multimodel_source_is_classified_before_preparation_rejects_it(
     corpus_snapshot,
 ) -> None:
-    result = {
-        row.case_id: row for row in corpus_snapshot.case_results
-    }["unsupported_multimodel_input"]
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[
+        "unsupported_multimodel_input"
+    ]
 
     assert result.cohort == "unsupported_upstream_policy"
     assert result.observed_outcome == "expected_error"
@@ -279,21 +278,17 @@ def test_multimodel_source_is_classified_before_preparation_rejects_it(
     policy = result.atom_site_model_policy
     assert policy["model_numbers"] == [1, 2]
     assert policy["multi_model_input"] is True
-    assert policy["execution_policy_status"] == (
-        "explicitly_unsupported_multimodel"
-    )
+    assert policy["execution_policy_status"] == ("explicitly_unsupported_multimodel")
     assert policy["execution_allowed"] is False
-    assert policy["execution_blockers"] == [
-        "multimodel_execution_not_supported"
-    ]
+    assert policy["execution_blockers"] == ["multimodel_execution_not_supported"]
 
 
 def test_explicit_nonpoly_altloc_is_a_frozen_preparation_boundary(
     corpus_snapshot,
 ) -> None:
-    result = {
-        row.case_id: row for row in corpus_snapshot.case_results
-    }["unsupported_altloc_input"]
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[
+        "unsupported_altloc_input"
+    ]
 
     assert result.cohort == "unsupported_upstream_policy"
     assert result.observed_outcome == "expected_error"
@@ -350,8 +345,7 @@ def test_source_declared_observation_gaps_block_preparation_with_policy_evidence
     assert count_row["row_count"] == 1
     assert (
         "missing_atom_residue_policy_status:"
-        "explicitly_unsupported_source_declared_observation_gaps"
-        in result.signals
+        "explicitly_unsupported_source_declared_observation_gaps" in result.signals
     )
     assert f"missing_atom_residue_policy_blocker:{blocker}" in result.signals
 
@@ -359,9 +353,9 @@ def test_source_declared_observation_gaps_block_preparation_with_policy_evidence
 def test_source_declared_biological_assembly_blocks_with_policy_evidence(
     corpus_snapshot,
 ) -> None:
-    result = {
-        row.case_id: row for row in corpus_snapshot.case_results
-    }["unsupported_biological_assembly_input"]
+    result = {row.case_id: row for row in corpus_snapshot.case_results}[
+        "unsupported_biological_assembly_input"
+    ]
 
     assert result.cohort == "unsupported_upstream_policy"
     assert result.observed_outcome == "expected_error"
@@ -381,8 +375,7 @@ def test_source_declared_biological_assembly_blocks_with_policy_evidence(
     assert policy["coordinates_expanded"] is False
     assert (
         "biological_assembly_policy_status:"
-        "explicitly_unsupported_source_declared_biological_assembly"
-        in result.signals
+        "explicitly_unsupported_source_declared_biological_assembly" in result.signals
     )
 
 
@@ -440,8 +433,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert len(rows) == 52
     assert payload["coverage_status_counts"] == {
         "explicitly_unsupported": 27,
-        "not_implemented": 1,
-        "supported": 24,
+        "supported": 25,
     }
     assert payload["unclassified_coverage_row_count"] == 0
     assert payload["expectation_mismatch_count"] == 0
@@ -474,7 +466,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert "round_trip.all_atom_identity" not in missing
     assert "all_atom_system.creation" not in missing
     assert "protonation.ph_dependent" not in missing
-    assert missing == {"tautomer.selection": "tautomer_selection_not_implemented"}
+    assert "tautomer.selection" not in missing
+    assert missing == {}
 
     parameter_source = next(
         row for row in rows if row.coverage_id == "parameter_source.reviewed"
@@ -482,8 +475,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert parameter_source.policy_status == "supported"
     assert parameter_source.blocker == ""
     assert parameter_source.expected_signal == (
-        "parameter_source_provenance_status:"
-        "reviewed_identity_license_and_scope_only"
+        "parameter_source_provenance_status:reviewed_identity_license_and_scope_only"
     )
     assert payload["reviewed_parameter_source_provenance_bound"] is True
     assert payload["canonical_all_atom_materialization_bound"] is True
@@ -492,6 +484,8 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert payload["canonical_all_atom_identity_round_trip_bound"] is True
     assert payload["bounded_ph_dependent_protonation_bound"] is True
     assert payload["real_world_supported_abstention_failure_corpus_bound"] is True
+    assert payload["bounded_tautomer_selection_bound"] is True
+    assert payload["real_world_tautomer_supported_failure_corpus_bound"] is True
 
     protonation = next(
         row for row in rows if row.coverage_id == "protonation.ph_dependent"
@@ -511,6 +505,23 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert ph_evidence["parameter_fitting_allowed"] is False
     assert ph_evidence["scientifically_validated"] is False
     assert ph_evidence["claim_safe"] is False
+
+    tautomer = next(row for row in rows if row.coverage_id == "tautomer.selection")
+    assert tautomer.policy_status == "supported"
+    assert tautomer.blocker == ""
+    assert tautomer.expected_signal == "canonical_round_trip:verified"
+    assert tautomer.evidence_case_ids == (
+        "pubchem_cid_177_reference_selected",
+        "pubchem_cid_11199_reference_selected",
+    )
+    tautomer_evidence = payload["tautomer_selection_corpus_evidence"]
+    assert tautomer_evidence["case_count"] == 6
+    assert tautomer_evidence["selected_state_count"] == 2
+    assert tautomer_evidence["transferred_generated_hydrogen_count"] == 1
+    assert tautomer_evidence["expected_error_count"] == 4
+    assert tautomer_evidence["parameter_fitting_allowed"] is False
+    assert tautomer_evidence["scientifically_validated"] is False
+    assert tautomer_evidence["claim_safe"] is False
 
     parameter_binding = next(
         row for row in rows if row.coverage_id == "parameter_source.system_binding"
@@ -537,8 +548,7 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     assert round_trip.policy_status == "supported"
     assert round_trip.blocker == ""
     assert round_trip.expected_signal == (
-        "all_atom_round_trip_status:"
-        "canonical_all_atom_identity_round_trip_verified"
+        "all_atom_round_trip_status:canonical_all_atom_identity_round_trip_verified"
     )
 
     all_atom_system = next(
@@ -551,7 +561,9 @@ def test_all_required_coverage_axes_are_classified_without_promotion(
     )
 
 
-def test_corpus_binds_failure_complete_all_atom_materialization(corpus_snapshot) -> None:
+def test_corpus_binds_failure_complete_all_atom_materialization(
+    corpus_snapshot,
+) -> None:
     by_id = {row.case_id: row for row in corpus_snapshot.case_results}
     supported = by_id["supported_single_coh"]
     assert supported.all_atom_system_snapshot_sha256
@@ -591,8 +603,7 @@ def test_corpus_binds_reviewed_parameter_source_to_created_systems(
     assert supported.parameter_source_binding_summary["bound_system_count"] == 2
     assert supported.parameter_source_binding_summary["unbound_system_count"] == 0
     assert all(
-        row["binding_status"]
-        == "reviewed_parameter_source_identity_bound_to_system"
+        row["binding_status"] == "reviewed_parameter_source_identity_bound_to_system"
         for row in supported.parameter_source_binding_summary["instance_reports"]
     )
 
@@ -648,8 +659,7 @@ def test_corpus_verifies_canonical_all_atom_identity_round_trips(
         "betelgeuze_engine_v2_canonical_all_atom_json"
     )
     assert all(
-        row["round_trip_status"]
-        == "canonical_all_atom_identity_round_trip_verified"
+        row["round_trip_status"] == "canonical_all_atom_identity_round_trip_verified"
         and row["canonical_reencoding_byte_identical"] is True
         for row in summary["instance_reports"]
     )

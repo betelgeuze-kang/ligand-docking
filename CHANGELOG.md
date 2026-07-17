@@ -22,6 +22,9 @@ scientific claim from a package version.
   confidence intervals, and optional signed reports.
 - Explicit reference bond, angle, torsion, Lennard–Jones, and screened-Coulomb
   equations with autograd forces and fail-closed applicability contracts.
+- Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
+  selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
+  identity corpus without thermodynamic or scientific promotion.
 - PEP 561 `py.typed`, focused Ruff/Pyright gates, reproducible-wheel checks, and
   SPDX 2.3 SBOM generation.
 
