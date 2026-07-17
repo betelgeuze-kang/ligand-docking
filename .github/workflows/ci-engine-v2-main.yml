@@ -165,6 +165,7 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
+            tests/unit/test_engine_v2_reference_minimization.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_external_baseline.py
             docs/engine_v2_pr_overlap_matrix.md
@@ -275,6 +276,7 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_benchmark_contracts.py \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
+            tests/unit/test_engine_v2_reference_minimization.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
           status=$?
