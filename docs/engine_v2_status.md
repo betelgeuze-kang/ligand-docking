@@ -178,10 +178,14 @@ The current `main` branch contains:
   and oracle calls. It
   returns one canonical failure-inclusive observation in memory, including
   failed metrics and sanitized evaluator failures. The exact module command is
-  reachable only through a bounded canonical stdin request; trust keys never
-  enter argv or the response, and environment receipt creation, evaluation, and
-  result finalization remain in one verified process. It requires a clean source
-  checkout with Git metadata; wheel-only invocation fails closed. No marker
+  reachable only through a bounded canonical stdin request that cannot contain
+  trust keys. Reviewer/operator anchors load only from the externally provisioned
+  fixed `/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json`
+  root-owned mode-0600 store; the repository does not bundle that store or keys.
+  Trust material never enters stdin, argv, or the response, and environment
+  receipt creation, evaluation, and result finalization remain in one verified
+  process. A missing or unsafe trust store, wheel-only invocation, or a checkout
+  without exact clean Git metadata fails closed. No marker
   release API is exposed. A separate failure-inclusive
   result writer re-verifies the raw signed review/authorization chain, persisted
   environment receipt, live process, durable runner-start record, and exact

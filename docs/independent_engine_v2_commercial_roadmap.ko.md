@@ -17,8 +17,9 @@ CPU process를 run-start에서 재검증해 secret-free environment receipt를 �
 기록하는 primitive, root-owned absolute Git의 read-only clean-checkout proof로 실제 Git
 HEAD를 확인하고 signed runner source·frozen evaluator source·dependency를
 다시 확인하고 case materialization/evaluator/oracle 호출 자체를 POSIX timer로 중단하면서 모든 실패를 보존하는
-120초 제한 CPU float64 runner, Git metadata가 있는 clean source checkout에서만 canonical
-stdin 요청으로 같은 검증 process의 전체 chain을 실행하고 wheel-only 실행은 fail-closed하는
+120초 제한 CPU float64 runner, trust key가 없는 canonical stdin 요청과 저장소가 bundle하지
+않는 고정 `/etc` root-owned mode-0600 외부 trust store만 사용해 Git metadata가 있는 clean
+source checkout의 같은 검증 process에서 전체 chain을 실행하고 미설정 store·wheel-only 실행은 fail-closed하는
 exact module entrypoint, 그리고 raw chain·environment·runner-start·observation을
 재검증해 test-only failure-inclusive receipt를 원자적으로 기록·검증하는 primitive를
 완료한 상태다. Production receipt와 independent result review는 포함하지 않는다.
@@ -159,7 +160,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 | `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 | `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
-| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·27개 ordered pass/fail-closed case·19개 float64 metric·H5 dependency·failure-inclusive denominator를 고정하고, 59개 deterministic CPU float64 variant의 exact materializer, frozen reference evaluator source, evaluator/protocol/third-party import를 금지한 standard-library analytic oracle, signed independent-review attestation, operator-signed single-run authorization, CPU execution-environment/result-receipt schema, oversized payload를 path 생성 전에 거부하는 local POSIX atomic nonce reservation, live CPU process와 짧은 수명의 signed network-isolation attestation을 재검증해 mode-0600 environment receipt를 기록하는 run-start primitive, root-owned absolute Git read-only preflight로 실제 clean HEAD·signed runner source·frozen evaluator/materializer/oracle·dependency를 다시 확인하고 one-time start marker를 소비하며 evaluator/oracle 호출을 POSIX timer로 중단해 모든 성공·실패를 메모리에 보존하는 120초 제한 CPU float64 runner, trust material을 argv/output에 노출하지 않는 bounded canonical-stdin exact module entrypoint, raw signed chain·live environment·runner-start·exact observation을 재검증하고 metric/status·filename/embedded nonce·special-file read를 fail-closed하며 실패 행 전체를 mode-0600 canonical receipt 하나에 원자적으로 보존하는 result writer/verifier를 유지 | 실제 independent scientific review와 independent result review, trusted reviewer/operator key 또는 production receipt bundling, production reservation/artifact root와 실제 nonce/environment receipt/runner start/result receipt, kernel-enforced network isolation과 same-UID replacement resistance, externally authenticated receipt signature, production validation result collection, reviewed runtime parameter values, scientific holdout/applicability, energy/force/minimization validation, parameter fitting·제품 승격 |
+| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·27개 ordered pass/fail-closed case·19개 float64 metric·H5 dependency·failure-inclusive denominator를 고정하고, 59개 deterministic CPU float64 variant의 exact materializer, frozen reference evaluator source, evaluator/protocol/third-party import를 금지한 standard-library analytic oracle, signed independent-review attestation, operator-signed single-run authorization, CPU execution-environment/result-receipt schema, oversized payload를 path 생성 전에 거부하는 local POSIX atomic nonce reservation, live CPU process와 짧은 수명의 signed network-isolation attestation을 재검증해 mode-0600 environment receipt를 기록하는 run-start primitive, root-owned absolute Git read-only preflight로 실제 clean HEAD·signed runner source·frozen evaluator/materializer/oracle·dependency를 다시 확인하고 one-time start marker를 소비하며 materialization/evaluator/oracle 호출을 POSIX timer로 중단해 모든 성공·실패를 메모리에 보존하는 120초 제한 CPU float64 runner, trust key를 받지 않는 bounded canonical stdin과 저장소가 bundle하지 않는 고정 `/etc` root-owned mode-0600 외부 trust store만 사용하는 exact module entrypoint, raw signed chain·live environment·runner-start·exact observation을 재검증하고 metric/status·filename/embedded nonce·special-file read를 fail-closed하며 실패 행 전체를 mode-0600 canonical receipt 하나에 원자적으로 보존하는 result writer/verifier를 유지 | 실제 independent scientific review와 independent result review, trusted reviewer/operator key 또는 production trust store/receipt bundling, production reservation/artifact root와 실제 nonce/environment receipt/runner start/result receipt, kernel-enforced network isolation과 same-UID replacement resistance, externally authenticated receipt signature, production validation result collection, reviewed runtime parameter values, scientific holdout/applicability, energy/force/minimization validation, parameter fitting·제품 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -378,10 +379,13 @@ source·dependency를 다시 확인하고 nonce별 mode-0600 runner-start marker
 `O_EXCL`·file/directory `fsync`로 소비한다. 이후 CPU float64 27개 case·59개 variant를
 case materialization/evaluator/oracle 호출 자체를 중단하는 POSIX main-thread 120초 평가 예산으로 순서대로 평가하며 threshold failure, expected fail-closed row,
 unexpected evaluator failure와 미관측 metric까지 canonical in-memory observation에 모두
-보존한다. exact module command는 bounded canonical stdin 요청만 받아 trust key를 argv·
-response에 남기지 않고 environment receipt 생성, run, result finalize를 같은 verified
-process에서 수행하되 Git metadata가 있는 clean source checkout을 요구하고 wheel-only
-invocation은 fail-closed한다. marker release/delete API는 닫혀 있다. 별도 result writer는 raw
+보존한다. exact module command는 trust key가 없는 bounded canonical stdin 요청만 받고,
+reviewer/operator anchor는 저장소가 bundle하지 않는 고정 `/etc/betelgeuze/engine-v2/
+reference-validation-trust-anchors.json` root-owned mode-0600 외부 store에서만 읽는다.
+trust material을 stdin·argv·response에 남기지 않고 environment receipt 생성, run, result
+finalize를 같은 verified process에서 수행하되 Git metadata가 있는 clean source checkout을
+요구하며 store 미설정·unsafe mode·wheel-only invocation은 fail-closed한다. marker
+release/delete API는 닫혀 있다. 별도 result writer는 raw
 signed review/authorization, persisted/live environment, durable runner-start와 exact
 observation identity를 다시 확인한 뒤 private caller root에 mode-0600 canonical receipt
 하나를 `O_EXCL`·`O_NOFOLLOW`·file/directory `fsync`로 기록하고 모든 실패 case·variant·

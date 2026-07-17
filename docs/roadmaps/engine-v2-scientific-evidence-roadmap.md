@@ -241,10 +241,13 @@ claim status without revalidating the dependency and freshness chain.
   Every success, expected failure, unexpected
   failure, missing metric, and failed threshold remains in one canonical
   in-memory observation. The exact module command accepts only a bounded canonical
-  stdin request, keeps trust material out of argv/output, and can create the
-  environment receipt, run, and finalize the result in one verified process. It
-  requires a clean source checkout with Git metadata and fails closed for a
-  wheel-only invocation; marker release/deletion remain unavailable. Test-only
+  stdin request without trust keys. Reviewer/operator anchors load only from the
+  externally provisioned fixed `/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json`
+  root-owned mode-0600 store, which is not repository-bundled. Trust material stays
+  out of stdin/argv/output while the environment receipt, run, and result finalize
+  in one verified process. A missing or unsafe store, a checkout without clean Git
+  metadata, or a wheel-only invocation fails closed; marker release/deletion remain
+  unavailable. Test-only
   artifacts exercise the primitive; no production key,
   receipt, start, result, acceptance, fitting, or scientific claim is bundled.
 - Preserve the failure-inclusive result-receipt writer and verifier. They

@@ -69,16 +69,23 @@ REFERENCE_VALIDATION_RUNNER_MAX_CASES = 27
 REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS = 59
 REFERENCE_VALIDATION_RUNNER_MAX_START_RECORD_BYTES = 65_536
 REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES = 1_048_576
+REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM = 1.0e-5
 REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_request/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_request/1.1.0"
 )
 REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_runner_response/1.0.0"
 )
+REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_validation_trust_store/1.0.0"
+)
+REFERENCE_VALIDATION_TRUST_STORE_PATH = (
+    "/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json"
+)
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "08531389f3f3977c89b8141140bb6a65eeb94ba37e346bbf7abdd744b14dff04"
+    "57cc97a19d9da51cbc27285c1575018a38e3533cc279498262cc2f58029f80dd"
 )
 
 _ROTATION_MATRIX = (
@@ -1039,6 +1046,10 @@ def _contract_projection() -> dict[str, Any]:
             ),
             "maximum_request_bytes": REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES,
             "secret_bearing_argv_allowed": False,
+            "trust_keys_in_standard_input_allowed": False,
+            "fixed_root_owned_mode_0600_trust_store_required": True,
+            "trust_store_path": REFERENCE_VALIDATION_TRUST_STORE_PATH,
+            "repository_bundles_trust_store_or_keys": False,
             "trust_keys_retained_or_echoed": False,
             "environment_receipt_runner_and_result_writer_reachable": True,
             "result_receipt_finalized_in_same_verified_process": True,
@@ -1059,6 +1070,7 @@ def _contract_projection() -> dict[str, Any]:
             "production_validation_execution_authorized": False,
             "production_validation_results_collected": False,
             "production_result_receipt_present": False,
+            "preconfigured_trust_store_present": False,
         },
         "claim_policy": _closed_claim_policy(),
         "blockers": list(_CURRENT_BLOCKERS),
@@ -2287,12 +2299,25 @@ def _verification_key_from_hex(value: object, *, name: str) -> bytes:
     return bytes.fromhex(value)
 
 
-def _trusted_reviewer_keys_from_request(value: object) -> dict[str, Any]:
+def _trust_store_key_id(value: object, *, name: str) -> str:
+    allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+    if (
+        not isinstance(value, str)
+        or not 1 <= len(value) <= 128
+        or any(character not in allowed for character in value)
+    ):
+        raise ReferenceValidationRunnerError(
+            f"{name} must contain 1 to 128 safe ASCII characters"
+        )
+    return value
+
+
+def _trusted_reviewer_keys_from_store(value: object) -> dict[str, Any]:
     from .reference_validation_review import ScientificReviewerTrustAnchor
 
     if not isinstance(value, list) or not value:
         raise ReferenceValidationRunnerError(
-            "runner request trusted reviewer keys must be a non-empty array"
+            "preconfigured trust store reviewer keys must be a non-empty array"
         )
     result: dict[str, ScientificReviewerTrustAnchor] = {}
     for row in value:
@@ -2302,12 +2327,15 @@ def _trusted_reviewer_keys_from_request(value: object) -> dict[str, Any]:
             "verification_key_hex",
         }:
             raise ReferenceValidationRunnerError(
-                "runner request trusted reviewer key fields are invalid"
+                "preconfigured trust store reviewer key fields are invalid"
             )
-        key_id = row["key_id"]
-        if not isinstance(key_id, str) or key_id in result:
+        key_id = _trust_store_key_id(
+            row["key_id"],
+            name="preconfigured reviewer key id",
+        )
+        if key_id in result:
             raise ReferenceValidationRunnerError(
-                "runner request trusted reviewer key identity is invalid"
+                "preconfigured trust store reviewer key ids are not unique"
             )
         result[key_id] = ScientificReviewerTrustAnchor(
             row["reviewer_identity_sha256"],
@@ -2319,12 +2347,12 @@ def _trusted_reviewer_keys_from_request(value: object) -> dict[str, Any]:
     return result
 
 
-def _trusted_operator_keys_from_request(value: object) -> dict[str, Any]:
+def _trusted_operator_keys_from_store(value: object) -> dict[str, Any]:
     from .reference_validation_authorization import AuthorizationOperatorTrustAnchor
 
     if not isinstance(value, list) or not value:
         raise ReferenceValidationRunnerError(
-            "runner request trusted operator keys must be a non-empty array"
+            "preconfigured trust store operator keys must be a non-empty array"
         )
     result: dict[str, AuthorizationOperatorTrustAnchor] = {}
     for row in value:
@@ -2334,12 +2362,15 @@ def _trusted_operator_keys_from_request(value: object) -> dict[str, Any]:
             "verification_key_hex",
         }:
             raise ReferenceValidationRunnerError(
-                "runner request trusted operator key fields are invalid"
+                "preconfigured trust store operator key fields are invalid"
             )
-        key_id = row["key_id"]
-        if not isinstance(key_id, str) or key_id in result:
+        key_id = _trust_store_key_id(
+            row["key_id"],
+            name="preconfigured operator key id",
+        )
+        if key_id in result:
             raise ReferenceValidationRunnerError(
-                "runner request trusted operator key identity is invalid"
+                "preconfigured trust store operator key ids are not unique"
             )
         result[key_id] = AuthorizationOperatorTrustAnchor(
             row["operator_identity_sha256"],
@@ -2349,6 +2380,156 @@ def _trusted_operator_keys_from_request(value: object) -> dict[str, Any]:
             ),
         )
     return result
+
+
+def _validate_preconfigured_trust_directory(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISDIR(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) & 0o022
+    ):
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust-store directory policy failed"
+        )
+
+
+def _validate_preconfigured_trust_file(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISREG(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) != 0o600
+        or file_stat.st_nlink != 1
+        or not 0 < file_stat.st_size <= REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES
+    ):
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust-store file policy failed"
+        )
+
+
+def _open_preconfigured_trust_store() -> int:
+    required_flags = ("O_NOFOLLOW", "O_CLOEXEC", "O_DIRECTORY", "O_NONBLOCK")
+    if (
+        os.name != "posix"
+        or any(not hasattr(os, name) for name in required_flags)
+        or os.open not in os.supports_dir_fd
+    ):
+        raise ReferenceValidationRunnerError(
+            "secure preconfigured trust-store access is unavailable"
+        )
+    path = Path(REFERENCE_VALIDATION_TRUST_STORE_PATH)
+    if not path.is_absolute() or ".." in path.parts or path.anchor != os.sep:
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust-store path is invalid"
+        )
+    components = tuple(part for part in path.parts[1:] if part not in {"", "."})
+    if len(components) < 2:
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust-store path is invalid"
+        )
+    directory_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_DIRECTORY
+    current_fd = -1
+    file_fd = -1
+    try:
+        current_fd = os.open(os.sep, directory_flags)
+        for component in components[:-1]:
+            _validate_preconfigured_trust_directory(os.fstat(current_fd))
+            next_fd = os.open(component, directory_flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        _validate_preconfigured_trust_directory(os.fstat(current_fd))
+        file_fd = os.open(
+            components[-1],
+            os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC,
+            dir_fd=current_fd,
+        )
+        file_stat = os.fstat(file_fd)
+        _validate_preconfigured_trust_file(file_stat)
+        result_fd = file_fd
+        file_fd = -1
+        return result_fd
+    except ReferenceValidationRunnerError:
+        raise
+    except (OSError, ValueError) as exc:
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust store cannot be opened securely"
+        ) from exc
+    finally:
+        if file_fd >= 0:
+            os.close(file_fd)
+        if current_fd >= 0:
+            os.close(current_fd)
+
+
+def _load_preconfigured_trust_anchors() -> tuple[dict[str, Any], dict[str, Any]]:
+    descriptor = _open_preconfigured_trust_store()
+    try:
+        initial_stat = os.fstat(descriptor)
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(descriptor, 8192)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES:
+                raise ReferenceValidationRunnerError(
+                    "preconfigured trust store exceeds the size limit"
+                )
+        final_stat = os.fstat(descriptor)
+        _validate_preconfigured_trust_file(final_stat)
+    except ReferenceValidationRunnerError:
+        raise
+    except OSError as exc:
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust store cannot be read securely"
+        ) from exc
+    finally:
+        os.close(descriptor)
+    raw = b"".join(chunks)
+    if (
+        initial_stat.st_dev != final_stat.st_dev
+        or initial_stat.st_ino != final_stat.st_ino
+        or initial_stat.st_size != final_stat.st_size
+        or len(raw) != initial_stat.st_size
+        or not raw.endswith(b"\n")
+    ):
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust store changed or is not framed canonically"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunnerError(
+                    "preconfigured trust store contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        payload = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust store must be canonical ASCII JSON"
+        ) from exc
+    if (
+        not isinstance(payload, dict)
+        or set(payload) != {"schema_id", "reviewer_keys", "operator_keys"}
+        or payload.get("schema_id") != REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID
+        or _canonical_bytes(payload) + b"\n" != raw
+    ):
+        raise ReferenceValidationRunnerError(
+            "preconfigured trust store is not the exact canonical schema"
+        )
+    return (
+        _trusted_reviewer_keys_from_store(payload["reviewer_keys"]),
+        _trusted_operator_keys_from_store(payload["operator_keys"]),
+    )
 
 
 def _load_runner_request(raw: bytes) -> dict[str, Any]:
@@ -2392,9 +2573,7 @@ def _load_runner_request(raw: bytes) -> dict[str, Any]:
         "authorization_nonce_sha256",
         "authorization_receipt",
         "review_attestation",
-        "trusted_reviewer_keys",
         "expected_implementation_author_identity_sha256",
-        "trusted_operator_keys",
         "network_isolation_attestation",
         "expected_code_commit_sha",
         "expected_runner_source_sha256",
@@ -2434,12 +2613,6 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
         write_reference_validation_result_receipt,
     )
 
-    reviewer_keys = _trusted_reviewer_keys_from_request(
-        request["trusted_reviewer_keys"]
-    )
-    operator_keys = _trusted_operator_keys_from_request(
-        request["trusted_operator_keys"]
-    )
     revoked_authorizations = _require_string_sequence(
         request["revoked_authorization_receipt_sha256s"],
         name="revoked authorization receipts",
@@ -2473,6 +2646,7 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ReferenceValidationRunnerError(
             "runner request source does not match the loaded runner"
         )
+    reviewer_keys, operator_keys = _load_preconfigured_trust_anchors()
 
     import torch
 
@@ -2592,6 +2766,9 @@ __all__ = [
     "REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID",
     "REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID",
     "REFERENCE_VALIDATION_RUN_OBSERVATION_SCHEMA_ID",
+    "REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES",
+    "REFERENCE_VALIDATION_TRUST_STORE_PATH",
+    "REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID",
     "ReferenceValidationCaseObservation",
     "ReferenceValidationMetricObservation",
     "ReferenceValidationRunObservation",

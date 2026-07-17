@@ -525,21 +525,7 @@ def test_exact_module_entrypoint_dispatches_canonical_stdin_request(
         "authorization_nonce_sha256": AUTHORIZATION_NONCE,
         "authorization_receipt": {"signed": "authorization"},
         "review_attestation": {"signed": "review"},
-        "trusted_reviewer_keys": [
-            {
-                "key_id": "reviewer",
-                "reviewer_identity_sha256": "8" * 64,
-                "verification_key_hex": "aa" * 32,
-            }
-        ],
         "expected_implementation_author_identity_sha256": "9" * 64,
-        "trusted_operator_keys": [
-            {
-                "key_id": "operator",
-                "operator_identity_sha256": "a" * 64,
-                "verification_key_hex": "bb" * 32,
-            }
-        ],
         "network_isolation_attestation": {"signed": "network"},
         "expected_code_commit_sha": CODE_COMMIT_SHA,
         "expected_runner_source_sha256": "b" * 64,
@@ -578,16 +564,78 @@ def test_exact_module_entrypoint_dispatches_canonical_stdin_request(
     assert output.getvalue() == module._canonical_bytes(response) + b"\n"
 
 
-def test_exact_module_invocation_runs_the_real_receipt_chain(
+def test_preconfigured_trust_store_parses_keys_and_enforces_root_owned_stats(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = {
+        "schema_id": module.REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID,
+        "reviewer_keys": [
+            {
+                "key_id": "reviewer",
+                "reviewer_identity_sha256": "8" * 64,
+                "verification_key_hex": "aa" * 32,
+            }
+        ],
+        "operator_keys": [
+            {
+                "key_id": "operator",
+                "operator_identity_sha256": "9" * 64,
+                "verification_key_hex": "bb" * 32,
+            }
+        ],
+    }
+    store_path = tmp_path / "trust-store.json"
+    store_path.write_bytes(module._canonical_bytes(payload) + b"\n")
+    store_path.chmod(0o600)
+    validate_file = module._validate_preconfigured_trust_file
+    monkeypatch.setattr(
+        module,
+        "_open_preconfigured_trust_store",
+        lambda: os.open(store_path, os.O_RDONLY | os.O_CLOEXEC),
+    )
+    monkeypatch.setattr(
+        module,
+        "_validate_preconfigured_trust_file",
+        lambda _file_stat: None,
+    )
+
+    reviewer_keys, operator_keys = module._load_preconfigured_trust_anchors()
+
+    assert set(reviewer_keys) == {"reviewer"}
+    assert set(operator_keys) == {"operator"}
+    assert reviewer_keys["reviewer"].verification_key == b"\xaa" * 32
+    assert operator_keys["operator"].verification_key == b"\xbb" * 32
+
+    module._validate_preconfigured_trust_directory(
+        SimpleNamespace(st_mode=module.stat.S_IFDIR | 0o755, st_uid=0)
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="directory policy"):
+        module._validate_preconfigured_trust_directory(
+            SimpleNamespace(st_mode=module.stat.S_IFDIR | 0o777, st_uid=0)
+        )
+    validate_file(
+        SimpleNamespace(
+            st_mode=module.stat.S_IFREG | 0o600,
+            st_uid=0,
+            st_nlink=1,
+            st_size=store_path.stat().st_size,
+        )
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="file policy"):
+        validate_file(
+            SimpleNamespace(
+                st_mode=module.stat.S_IFREG | 0o600,
+                st_uid=1,
+                st_nlink=1,
+                st_size=store_path.stat().st_size,
+            )
+        )
+
+
+def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
     tmp_path: Path,
 ) -> None:
-    if subprocess.run(
-        ["git", "status", "--porcelain=v1", "--untracked-files=all"],
-        cwd=Path(__file__).resolve().parents[2],
-        check=True,
-        stdout=subprocess.PIPE,
-    ).stdout:
-        pytest.skip("real entrypoint integration requires an exact clean checkout")
     reservation_root = _private_root(tmp_path, "reservations")
     artifact_root = _private_root(tmp_path, "artifacts")
     now = datetime.now(timezone.utc).replace(microsecond=0)
@@ -691,21 +739,7 @@ def test_exact_module_invocation_runs_the_real_receipt_chain(
         "authorization_nonce_sha256": nonce,
         "authorization_receipt": authorization,
         "review_attestation": review,
-        "trusted_reviewer_keys": [
-            {
-                "key_id": review_key_id,
-                "reviewer_identity_sha256": reviewer_identity,
-                "verification_key_hex": review_key.hex(),
-            }
-        ],
         "expected_implementation_author_identity_sha256": author_identity,
-        "trusted_operator_keys": [
-            {
-                "key_id": operator_key_id,
-                "operator_identity_sha256": operator_identity,
-                "verification_key_hex": operator_key.hex(),
-            }
-        ],
         "network_isolation_attestation": network,
         "expected_code_commit_sha": code_commit,
         "expected_runner_source_sha256": runner_source,
@@ -731,35 +765,41 @@ def test_exact_module_invocation_runs_the_real_receipt_chain(
             "BETELGEUZE_REFERENCE_VALIDATION_SEED": "456",
         }
     )
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "betelgeuze_engine_v2.physics.reference_validation_runner",
-        ],
-        cwd=Path(__file__).resolve().parents[2],
-        env=environment,
-        input=module._canonical_bytes(request) + b"\n",
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=150,
-    )
-
-    assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
-    response = json.loads(completed.stdout.decode("ascii"))
-    assert response["schema_id"] == module.REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID
-    assert response["claim_safe"] is False
-    assert response["production_validation_results_collected"] is False
-    assert sorted(path.name for path in artifact_root.iterdir()) == [
-        f"{nonce}.environment.json",
-        f"{nonce}.result.json",
-        f"{nonce}.runner-start.json",
+    self_authorized_request = dict(request)
+    self_authorized_request["trusted_reviewer_keys"] = [
+        {
+            "key_id": review_key_id,
+            "reviewer_identity_sha256": reviewer_identity,
+            "verification_key_hex": review_key.hex(),
+        }
     ]
-    assert response["result_receipt_sha256"] in (
-        artifact_root / f"{nonce}.result.json"
-    ).read_text(encoding="ascii")
+    self_authorized_request["trusted_operator_keys"] = [
+        {
+            "key_id": operator_key_id,
+            "operator_identity_sha256": operator_identity,
+            "verification_key_hex": operator_key.hex(),
+        }
+    ]
+    for candidate in (self_authorized_request, request):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "betelgeuze_engine_v2.physics.reference_validation_runner",
+            ],
+            cwd=Path(__file__).resolve().parents[2],
+            env=environment,
+            input=module._canonical_bytes(candidate) + b"\n",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=30,
+        )
+        assert completed.returncode == 2
+        assert completed.stdout == b""
+        assert operator_key.hex().encode("ascii") not in completed.stderr
+
+    assert list(artifact_root.iterdir()) == []
     secret_hex = operator_key.hex().encode("ascii")
     assert secret_hex not in completed.stdout
     assert secret_hex not in completed.stderr
-    assert secret_hex not in (artifact_root / f"{nonce}.result.json").read_bytes()
