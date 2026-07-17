@@ -15,6 +15,7 @@ from betelgeuze_engine_v2.molecular import canonical_topology_sha256  # noqa: E4
 from betelgeuze_engine_v2.physics import (  # noqa: E402
     FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
     FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256,
+    FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256,
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
     FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256,
     IndependentAnalyticOracleInput,
@@ -23,6 +24,7 @@ from betelgeuze_engine_v2.physics import (  # noqa: E402
     evaluate_independent_analytic_oracle,
     frozen_cpu_reference_validation_protocol,
     independent_analytic_oracle_source_sha256,
+    reference_forcefield_source_sha256,
     materialize_frozen_reference_validation_case,
     reference_validation_artifact_authorization_decision,
     reference_validation_artifact_binding_document,
@@ -71,9 +73,15 @@ def test_artifact_binding_freezes_exact_sources_and_dependencies() -> None:
         "dependency_claim_status_inherited": False,
     }
     assert document["materializer"]["source_sha256"] == (FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256)
+    assert document["reference_evaluator"]["source_sha256"] == (
+        FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256
+    )
     assert document["independent_oracle"]["source_sha256"] == (FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256)
     assert reference_validation_materializer_source_sha256() == (FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256)
     assert independent_analytic_oracle_source_sha256() == (FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256)
+    assert reference_forcefield_source_sha256() == (
+        FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256
+    )
 
     audit = document["independent_oracle"]["import_audit"]
     assert audit["audit_passed"] is True

@@ -53,10 +53,10 @@ REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "1.0.0"
 REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-17T05:38:00Z"
 
 FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "c782fe3d63e405476a8b2243eec21d55f271f0af182815d8db41f0eb14f72945"
+    "1e0ad1aa30f000fb0c6f53a6646519f844b20b53e4e5dfa55b3492e12852086e"
 )
 FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
-    "09fceb63279e9ed47428c5734617f7847d428724e33aee17b710b2b3a399e345"
+    "efce21a7fd79ee50e1e4afd9d1e0189c0ad9f9e579ca78161d5c10abfad5c1a5"
 )
 
 _CURRENT_BLOCKERS = (
@@ -160,6 +160,8 @@ def _environment_contract_projection() -> dict[str, Any]:
                 "MKL_NUM_THREADS": "1",
                 "OMP_NUM_THREADS": "1",
                 "OPENBLAS_NUM_THREADS": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONPYCACHEPREFIX": "/dev/null",
                 "TZ": "UTC",
             },
             "python_hash_seed_required": True,

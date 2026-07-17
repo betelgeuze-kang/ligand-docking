@@ -52,7 +52,7 @@ REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = (
 REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
-    "e68f816fd42158afafa56ca8f205692769c8dea193a1c80cb04e9a7970487af4"
+    "5528d2ed4f8b05905cc9d776510bc38aa5a0a870d02a83a4f2db86f12ea92880"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -646,6 +646,11 @@ def _write_all(descriptor: int, payload: bytes) -> None:
 
 def _persist_reservation(root_fd: int, reservation: ReferenceValidationNonceReservation) -> None:
     filename = f"{reservation.authorization_nonce_sha256}.json"
+    encoded = _canonical_bytes(reservation.to_dict()) + b"\n"
+    if len(encoded) > REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES:
+        raise ReferenceValidationNonceReservationError(
+            "nonce reservation record exceeds the size limit"
+        )
     flags = (
         os.O_WRONLY
         | os.O_CREAT
@@ -666,7 +671,7 @@ def _persist_reservation(root_fd: int, reservation: ReferenceValidationNonceRese
     try:
         try:
             _validate_reservation_file_stat(os.fstat(descriptor))
-            _write_all(descriptor, _canonical_bytes(reservation.to_dict()) + b"\n")
+            _write_all(descriptor, encoded)
             os.fsync(descriptor)
         except Exception as exc:
             raise ReferenceValidationNonceReservationError(

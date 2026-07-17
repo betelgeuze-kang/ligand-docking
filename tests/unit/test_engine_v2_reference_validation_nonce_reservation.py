@@ -240,6 +240,34 @@ def test_duplicate_reservation_always_fails_closed(tmp_path: Path) -> None:
     assert first.validation_execution_authorized is False
 
 
+def test_oversized_reservation_is_rejected_before_nonce_path_is_consumed(
+    tmp_path: Path,
+) -> None:
+    root = _reservation_root(tmp_path)
+    dependency_rows = {
+        f"dependency-{index:04d}": f"{index:064x}"
+        for index in range(800)
+    }
+    review = _review_attestation()
+    receipt = _authorization_receipt(
+        review_attestation=review,
+        dependency_artifact_sha256_rows=dependency_rows,
+    )
+
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="exceeds the size limit",
+    ):
+        _reserve(
+            root,
+            receipt=receipt,
+            review=review,
+            expected_dependency_artifact_sha256_rows=dependency_rows,
+        )
+
+    assert list(root.iterdir()) == []
+
+
 def test_concurrent_reservation_has_exactly_one_winner(tmp_path: Path) -> None:
     root = _reservation_root(tmp_path)
     review = _review_attestation()

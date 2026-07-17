@@ -17,6 +17,7 @@ from typing import Any, Mapping, Sequence
 
 from .reference_validation_artifact_binding import (
     FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256,
+    FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256,
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
     FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256,
     reference_validation_artifact_binding_document,
@@ -38,7 +39,7 @@ REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "hmac-sha256"
 REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256 = (
-    "2f19a44ddf77c5fc75063801bf5357f7ac0768183ec5edc396bce018099849b1"
+    "37ca9f550486febc73e36dc36a113e00042d87de79b14bf8033fbbfc1dcbf104"
 )
 
 _REQUIRED_REVIEW_CHECK_IDS = (
@@ -168,6 +169,7 @@ def _contract_projection() -> dict[str, Any]:
             "protocol_sha256": binding["dependencies"]["protocol_sha256"],
             "h5_applicability_record_sha256": binding["dependencies"]["h5_applicability_record_sha256"],
             "materialization_manifest_sha256": binding["materializer"]["materialization_manifest_sha256"],
+            "reference_evaluator_source_sha256": FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256,
             "materializer_source_sha256": FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256,
             "oracle_source_sha256": FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256,
             "exact_dependency_match_required": True,

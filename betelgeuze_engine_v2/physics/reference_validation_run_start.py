@@ -19,10 +19,15 @@ import os
 from pathlib import Path
 import platform
 import re
+import stat
 from typing import Any, Mapping, Sequence
 
 import torch
 
+from .reference_validation_bootstrap import (
+    REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+    reference_validation_bootstrap_path,
+)
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -63,18 +68,12 @@ REFERENCE_VALIDATION_RUN_START_CONTRACT_ID = (
     "cpu_reference_validation_run_start_environment/1.0.0"
 )
 REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T06:57:00Z"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:45:00Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 REFERENCE_VALIDATION_APPLICATION_SEED_ENV = "BETELGEUZE_REFERENCE_VALIDATION_SEED"
-REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
-    "python",
-    "-m",
-    "betelgeuze_engine_v2.physics.reference_validation_runner",
-)
-
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "3f1699451bab731176c801025742a27707a5f19e4729ec28eb0b72b7ade4bd84"
+    "14d67c1b352f91caea2ec8d05068bf469d8213d0cb7800f0dbff5f7b69702e23"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -95,6 +94,8 @@ _REQUIRED_ENVIRONMENT_VALUES = (
     ("MKL_NUM_THREADS", "1"),
     ("OMP_NUM_THREADS", "1"),
     ("OPENBLAS_NUM_THREADS", "1"),
+    ("PYTHONDONTWRITEBYTECODE", "1"),
+    ("PYTHONPYCACHEPREFIX", "/dev/null"),
     ("TZ", "UTC"),
 )
 _POST_ENVIRONMENT_RECEIPT_BLOCKERS = (
@@ -277,6 +278,27 @@ def reference_validation_artifact_output_root_identity_sha256(
         )
     spelling = os.fspath(candidate)
     return hashlib.sha256(spelling.encode("utf-8")).hexdigest()
+
+
+def _require_reference_validation_root_outside_checkout(
+    root: str | os.PathLike[str],
+    *,
+    name: str,
+) -> Path:
+    """Reject roots that contain, equal, or sit beneath the source checkout."""
+
+    try:
+        candidate = Path(root).resolve(strict=True)
+        repository_root = Path(__file__).resolve(strict=True).parents[2]
+    except (OSError, TypeError, ValueError) as exc:
+        raise ReferenceValidationRunStartError(f"{name} is unavailable") from exc
+    if candidate.is_relative_to(repository_root) or repository_root.is_relative_to(
+        candidate
+    ):
+        raise ReferenceValidationRunStartError(
+            f"{name} must be outside the source checkout"
+        )
+    return candidate
 
 
 def _network_attestation_projection(
@@ -654,10 +676,24 @@ def _read_logical_runner_argv() -> tuple[str, ...]:
         raise ReferenceValidationRunStartError(
             "exact Linux process argv cannot be observed"
         ) from exc
+    expected_bootstrap = Path(reference_validation_bootstrap_path())
+    try:
+        observed_bootstrap = Path(decoded[-1])
+        bootstrap_stat = observed_bootstrap.lstat()
+        bootstrap_matches = (
+            observed_bootstrap.is_absolute()
+            and not observed_bootstrap.is_symlink()
+            and stat.S_ISREG(bootstrap_stat.st_mode)
+            and bootstrap_stat.st_nlink == 1
+            and observed_bootstrap.resolve(strict=True) == expected_bootstrap
+        )
+    except (IndexError, OSError):
+        bootstrap_matches = False
     if (
-        len(decoded) != 3
+        len(decoded) != len(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV)
         or not _PYTHON_EXECUTABLE_RE.fullmatch(Path(decoded[0]).name)
-        or decoded[1:] != REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:]
+        or decoded[1:-1] != REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1]
+        or not bootstrap_matches
     ):
         raise ReferenceValidationRunStartError(
             "process argv is not the frozen secret-free validation runner command"
@@ -868,6 +904,12 @@ def _contract_projection() -> dict[str, Any]:
             "cpu_identity_stored_as_sha256_only": True,
             "gpu_visibility_variables_present_and_empty": True,
             "locale_timezone_and_thread_environment_exact": True,
+            "source_only_python_import_environment_exact": True,
+            "ignored_timestamp_bytecode_cache_execution_allowed": False,
+            "isolated_python_startup_required": True,
+            "automatic_site_initialization_allowed": False,
+            "python_import_path_environment_ignored": True,
+            "user_site_packages_allowed": False,
             "python_hash_and_application_seeds_exact": True,
             "torch_single_thread_and_deterministic_algorithms_required": True,
             "logical_runner_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
@@ -885,6 +927,7 @@ def _contract_projection() -> dict[str, Any]:
         },
         "persistence": {
             "caller_provisioned_private_posix_artifact_root_required": True,
+            "reservation_and_artifact_roots_outside_checkout_required": True,
             "artifact_root_path_stored_as_sha256_only": True,
             "receipt_filename": "<authorization_nonce_sha256>.environment.json",
             "exclusive_nofollow_create_and_file_directory_fsync_required": True,
@@ -1354,6 +1397,14 @@ def create_reference_validation_execution_environment_receipt(
 ) -> ReferenceValidationExecutionEnvironmentReceipt:
     """Reverify the full chain and persist one pre-evaluation receipt."""
 
+    _require_reference_validation_root_outside_checkout(
+        reservation_root,
+        name="reservation root",
+    )
+    _require_reference_validation_root_outside_checkout(
+        artifact_output_root,
+        name="artifact output root",
+    )
     nonce = _require_sha256(
         authorization_nonce_sha256,
         name="requested run-start authorization nonce",

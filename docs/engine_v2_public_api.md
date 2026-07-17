@@ -120,13 +120,31 @@ production run nor validation, fitting, or a scientific claim.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
 require exact code, runner-source, dependency, and frozen-artifact identities,
-and atomically consume one nonce-bound mode-0600 runner-start marker. They then
-evaluate exactly 27 cases and 59 variants on CPU float64 under a 120-second
-evaluation budget and return a canonical in-memory observation that retains
+require a source-only stdlib bootstrap launched with `-I -S -B -X
+pycache_prefix=/dev/null` before any validation dependency import, reject Git
+replacement refs, and atomically consume one nonce-bound mode-0600 runner-start
+marker. The bootstrap ignores `PYTHONPATH` and user-site overrides, skips
+`sitecustomize`/`.pth` execution, admits only root-owned read-only dependency
+roots, and binds both bootstrap and runner sources into the signed runner-source
+identity. Before importing the package initializer it bounds and canonicalizes
+stdin, verifies the authorization operator HMAC against the external root-owned
+trust store, requires reservation and artifact roots outside the checkout, and
+uses root-owned Git to prove the exact signed commit, execution-source identity,
+and clean worktree. Frozen manifest construction and
+the exact 27-case/59-variant CPU float64 evaluation run in fixed supervised child
+processes with automatic site initialization disabled and only the verified
+runtime's dependency roots supplied. Remaining budget is rechecked before the
+start marker is consumed, and a parent hard deadline can terminate
+blocked native code. The result
+is a canonical in-memory observation that retains
 successes, expected failures, unexpected failures, missing metrics, and failed
-thresholds. They expose no direct execution CLI, marker release/delete API, or
-embedded receipt-writing side effect. Test-only artifacts can exercise this
-implementation; no production key, receipt, start, result, validation
+thresholds. The exact process entrypoint is the absolute checked-out
+`reference_validation_bootstrap.py` path under those frozen Python flags; it
+accepts one bounded canonical stdin request, loads trust anchors only from the
+fixed external root-owned store, and never sends trust material to either
+worker. It exposes no marker release/delete
+API. Test-only artifacts can exercise this implementation; no production key,
+receipt, start, result, validation
 acceptance, fitting, or claim promotion is bundled.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
