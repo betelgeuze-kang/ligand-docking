@@ -510,8 +510,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "frozen_cpu_reference_environment_and_result_receipt_contracts_"
-        "without_receipts_runner_or_authorized_execution"
+        "atomic_local_one_time_authorization_nonce_reservation_"
+        "implemented_without_receipts_or_authorized_execution"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
     assert (
@@ -540,6 +540,10 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert (
         "trusted_authorization_operator_key_not_provided"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "run_start_dependency_reverification_not_implemented"
         in validation_protocol["blockers"]
     )
     assert (
@@ -637,6 +641,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_validation_review.py",
         "test_engine_v2_reference_validation_authorization.py",
         "test_engine_v2_reference_validation_receipts.py",
+        "test_engine_v2_reference_validation_nonce_reservation.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -661,7 +666,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_p_cpu_reference_validation_receipt_contracts"' in source
+    assert '"v2_q_cpu_reference_validation_nonce_reservation"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
     assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source
@@ -672,3 +677,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         in source
     )
     assert "FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256" in source
+    assert (
+        "FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256"
+        in source
+    )

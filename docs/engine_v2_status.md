@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_p_cpu_reference_validation_receipt_contracts
+v2_q_cpu_reference_validation_nonce_reservation
 ```
 
 The current `main` branch contains:
@@ -150,9 +150,18 @@ The current `main` branch contains:
   twenty-seven protocol cases, fifty-nine materialized variants, and nineteen
   predefined metrics. They require exact authorization, nonce, code, runner,
   dependency, environment, artifact-path, reviewer, supersession, and revocation
-  identities. No environment receipt, nonce reservation, validation runner,
+  identities. No environment receipt, production nonce reservation, validation runner,
   result writer, observed energy/force/error/metric value, or result receipt
   exists, so the execution and fitting gates remain closed.
+  A separate atomic reservation primitive now re-verifies the raw review and
+  authorization artifacts against out-of-band trust anchors and exact downstream
+  hashes, then consumes one nonce in a caller-provisioned private local POSIX
+  directory using `O_EXCL`, `O_NOFOLLOW`, file `fsync`, and directory `fsync`.
+  Its durable canonical record remains execution-disabled and has no release or
+  delete API. The repository bundles no key, artifact, reservation root, or
+  production reservation; filesystem locality and same-UID replacement
+  resistance are not established, so run-start re-verification, environment
+  receipt creation, validation execution, and fitting remain blocked.
 
 ## What the implementation does not establish
 
