@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_r_cpu_reference_validation_run_start_environment
+v2_s_cpu_reference_validation_bounded_runner
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -44,8 +44,12 @@ v2_r_cpu_reference_validation_run_start_environment
   POSIX `O_EXCL`/`fsync`로 one-time nonce를 로컬에서 소비하는 primitive, 이어서 전체
   chain과 실제 CPU-only deterministic process를 다시 검증하고 짧은 수명의 operator-signed
   network-isolation attestation을 확인한 뒤 secret-free 환경 receipt를 원자적으로 기록하는
-  run-start primitive. 실제 trusted key, production receipt·reservation/artifact root·
-  production nonce reservation·환경 receipt·runner·result writer·승인된 실행은 포함하지 않음
+  run-start primitive, 이어서 그 receipt와 exact code·source·dependency·artifact binding을
+  다시 확인하고 one-time runner-start marker를 원자적으로 소비한 뒤 120초 평가 예산 안에서
+  27개 case·59개 variant의 성공과 실패를 빠짐없이 메모리에 보존하는 제한형 CPU float64
+  runner. direct CLI는 닫혀 있고 result receipt는 기록하지 않음. 실제 trusted key,
+  production receipt·reservation/artifact root·production nonce reservation·production 환경
+  receipt·runner start·승인된 실행·validation result는 포함하지 않음
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 

@@ -198,8 +198,10 @@ claim status without revalidating the dependency and freshness chain.
   and a standard-library-only analytic oracle. The oracle uses scalar equations
   with forward-mode exact derivatives and an AST-enforced boundary forbidding
   reference-evaluator, protocol, Torch, NumPy, and external-solver imports. No
-  comparison or metric result exists, synthetic values are not fit data, and
-  neither validation execution nor a parameter-fitting proposal is authorized.
+  production result receipt or independently accepted metric evidence exists;
+  test-only in-memory comparisons are implementation checks, synthetic values
+  are not fit data, and neither production validation execution nor a
+  parameter-fitting proposal is authorized.
 - Preserve the separate frozen independent-review attestation contract. It
   requires exact artifact dependencies, complete ordered review checks and
   limitations, implementation-author/reviewer identity separation, an
@@ -227,8 +229,18 @@ claim status without revalidating the dependency and freshness chain.
   canonical environment receipt. It stores path identities rather than paths
   and rejects secret-bearing argv. The library does not kernel-enforce network
   isolation or same-UID replacement resistance, and the receipt authorizes no
-  runner, validation, fitting, result, or scientific claim. No production key,
+  production validation, fitting, result, or scientific claim. No production key,
   attestation, root, nonce reservation, or environment receipt is bundled.
+- Preserve the bounded failure-inclusive CPU float64 runner. It re-reads and
+  live-reverifies the environment receipt, exact code, source, dependency, and
+  frozen-artifact identities, atomically consumes one private nonce-bound start
+  marker, and evaluates exactly twenty-seven cases and fifty-nine variants under
+  a 120-second evaluation budget. Every success, expected failure, unexpected
+  failure, missing metric, and failed threshold remains in one canonical
+  in-memory observation. Direct CLI execution, marker release/deletion, and
+  result-receipt writing remain unavailable. Test-only artifacts exercise the
+  primitive; no production key, receipt, start, result, acceptance, fitting, or
+  scientific claim is bundled.
 - Preserve the separate frozen execution-environment and result-receipt
   contracts. The environment contract fixes a CPU-only, network-disabled Linux
   lane, Python 3.10–3.12, Torch 2.6.0, NumPy 1.26.4, empty GPU visibility,
@@ -236,16 +248,16 @@ claim status without revalidating the dependency and freshness chain.
   confined artifact output. The result contract fixes all twenty-seven ordered
   cases, fifty-nine ordered variants, nineteen metric thresholds, retained
   failure rows, environment/authorization hashes, reviewer identity, and
-  supersession/revocation fields. No production environment receipt, runner,
-  result writer, observed value, or result receipt exists, and execution remains
-  unauthorized. The run-start primitive satisfies only the receipt construction
-  boundary when all external inputs are supplied; it does not satisfy any
-  downstream runner, result, or scientific input.
+  supersession/revocation fields. No production environment receipt or runner
+  start, result writer, durable observed value, or result receipt exists, and
+  production execution remains unauthorized. The run-start and bounded-runner
+  primitives satisfy only implementation boundaries when test inputs are
+  supplied; they do not satisfy any production result or scientific input.
 - Obtain an actual independently signed review attestation and separately
   signed non-expired authorization receipt, then atomically reserve its nonce
-  and construct a verified production environment receipt; only then may a
-  separately bounded runner be considered for synthetic implementation-
-  mathematics result collection. The
+  and construct a verified production environment receipt; only then may the
+  bounded runner be considered for authorized synthetic implementation-
+  mathematics result collection and a separate result writer be reviewed. The
   scientific parameterized-force-field lane additionally requires reviewed
   runtime values, a frozen chemical applicability domain, a complete holdout
   manifest, and independent reference artifacts.

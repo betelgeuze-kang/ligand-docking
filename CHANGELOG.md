@@ -55,8 +55,8 @@ scientific claim from a package version.
 - Frozen CPU execution-environment and failure-inclusive result-receipt
   contracts binding the exact protocol, authorization, materialization, 27-case,
   59-variant, and 19-metric identities. They define future receipt fields only;
-  no receipt, runner, writer, observed value, execution, or claim promotion is
-  provided.
+  no production receipt, result writer, durable observed value, execution, or
+  claim promotion is provided.
 - Atomic local POSIX one-time authorization-nonce reservation with raw signed
   review and authorization re-verification, `O_EXCL` creation, file and
   directory `fsync`, private owner/mode checks, canonical tamper-evident records,
@@ -68,8 +68,16 @@ scientific claim from a package version.
   runtime observation, a short-lived operator-signed network-isolation
   attestation, secret-free logical argv/path identities, and atomic mode-0600
   environment-receipt persistence. No key, attestation, root, production
-  receipt, kernel isolation, runner, execution, result, or claim promotion is
-  bundled.
+  receipt, kernel isolation, production runner start, execution, result, or
+  claim promotion is bundled.
+- Bounded CPU float64 validation runner with persisted environment-receipt and
+  live-process re-verification, exact code/source/dependency/artifact binding,
+  an atomic one-time runner-start marker, a 120-second evaluation budget, and a
+  canonical in-memory observation retaining every success, expected failure,
+  unexpected failure, and failed metric across the exact 27 cases and 59
+  variants. The direct CLI remains closed and no production key, receipt, start,
+  result writer, durable result receipt, fitting authorization, or scientific
+  promotion is bundled.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

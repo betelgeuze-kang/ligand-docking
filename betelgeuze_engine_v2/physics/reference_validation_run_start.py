@@ -1704,6 +1704,78 @@ def read_reference_validation_execution_environment_receipt(
     )
 
 
+def require_reference_validation_execution_environment_receipt_for_runner(
+    artifact_output_root: str | os.PathLike[str],
+    authorization_nonce_sha256: str,
+    *,
+    expected_receipt_sha256: str,
+) -> ReferenceValidationExecutionEnvironmentReceipt:
+    """Re-read a receipt and require the live process to match it exactly."""
+
+    expected_receipt = _require_sha256(
+        expected_receipt_sha256,
+        name="expected execution environment receipt",
+    )
+    receipt = read_reference_validation_execution_environment_receipt(
+        artifact_output_root,
+        authorization_nonce_sha256,
+    )
+    if not hmac.compare_digest(receipt.receipt_sha256, expected_receipt):
+        raise ReferenceValidationRunStartError(
+            "runner environment receipt identity is cross-wired"
+        )
+    root_identity = reference_validation_artifact_output_root_identity_sha256(
+        artifact_output_root
+    )
+    if not hmac.compare_digest(
+        receipt.artifact_output_root_identity_sha256,
+        root_identity,
+    ):
+        raise ReferenceValidationRunStartError(
+            "runner artifact output root identity is cross-wired"
+        )
+    observation = _observe_current_runtime()
+    _require_runtime_observation(observation)
+    observed_architecture = (
+        "x86_64"
+        if observation.machine_architecture in {"x86_64", "amd64"}
+        else observation.machine_architecture
+    )
+    observed_fields = {
+        "operating_system_release": observation.operating_system_release,
+        "machine_architecture": observed_architecture,
+        "cpu_identity_sha256": observation.cpu_identity_sha256,
+        "python_version": observation.python_version,
+        "torch_version": observation.torch_version,
+        "numpy_version": observation.numpy_version,
+        "environment_variable_rows": observation.environment_variable_rows,
+        "network_namespace_identity_sha256": (
+            observation.network_namespace_identity_sha256
+        ),
+        "command_argv": observation.command_argv,
+        "python_hash_seed": observation.python_hash_seed,
+        "application_seed": observation.application_seed,
+        "thread_count_rows": observation.thread_count_rows,
+    }
+    if any(getattr(receipt, name) != value for name, value in observed_fields.items()):
+        raise ReferenceValidationRunStartError(
+            "live runner process does not match the execution environment receipt"
+        )
+    fingerprint = _sha256(
+        observation.fingerprint_projection(
+            artifact_output_root_identity_sha256=root_identity
+        )
+    )
+    if not hmac.compare_digest(
+        receipt.environment_fingerprint_sha256,
+        fingerprint,
+    ):
+        raise ReferenceValidationRunStartError(
+            "live runner environment fingerprint is cross-wired"
+        )
+    return receipt
+
+
 def reference_validation_run_start_contract_decision() -> dict[str, Any]:
     contract = reference_validation_run_start_contract_document()
     return {
@@ -1739,6 +1811,7 @@ __all__ = [
     "build_signed_reference_validation_network_isolation_attestation",
     "create_reference_validation_execution_environment_receipt",
     "read_reference_validation_execution_environment_receipt",
+    "require_reference_validation_execution_environment_receipt_for_runner",
     "reference_validation_artifact_output_root_identity_sha256",
     "reference_validation_run_start_contract_decision",
     "reference_validation_run_start_contract_document",

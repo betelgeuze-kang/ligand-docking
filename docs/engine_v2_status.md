@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_r_cpu_reference_validation_run_start_environment
+v2_s_cpu_reference_validation_bounded_runner
 ```
 
 The current `main` branch contains:
@@ -151,8 +151,9 @@ The current `main` branch contains:
   predefined metrics. They require exact authorization, nonce, code, runner,
   dependency, environment, artifact-path, reviewer, supersession, and revocation
   identities. No production environment receipt, production nonce reservation,
-  validation runner, result writer, observed energy/force/error/metric value, or
-  result receipt exists, so the execution and fitting gates remain closed.
+  runner start, result writer, durable observed energy/force/error/metric value,
+  or result receipt exists, so the production execution and fitting gates remain
+  closed.
   A separate atomic reservation primitive now re-verifies the raw review and
   authorization artifacts against out-of-band trust anchors and exact downstream
   hashes, then consumes one nonce in a caller-provisioned private local POSIX
@@ -165,8 +166,18 @@ The current `main` branch contains:
   Linux/Python/NumPy/Torch/env/thread/determinism/argv state; verifies a
   short-lived operator-signed network-isolation attestation; and atomically
   persists one mode-0600 secret-free environment receipt beneath a private
-  caller root. It provides neither kernel network isolation nor a runner/result
-  writer, and the receipt never authorizes execution or fitting.
+  caller root. It provides neither kernel network isolation nor execution
+  authorization, and the receipt never authorizes execution or fitting. A
+  separate bounded runner now re-reads that persisted receipt, re-verifies the
+  live process and exact code/source/dependency/artifact identities, atomically
+  consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
+  twenty-seven cases and fifty-nine variants on CPU float64 under a 120-second
+  evaluation budget. It returns one canonical failure-inclusive observation in
+  memory, including failed metrics and sanitized evaluator failures, but writes
+  no result receipt and exposes no direct execution CLI or marker release API.
+  Test-only signed artifacts exercise this primitive; no production key,
+  attestation, receipt, root, runner start, validation result, or scientific
+  acceptance is bundled.
 
 ## What the implementation does not establish
 
@@ -174,10 +185,10 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
-- an executed CPU reference validation study, an independently reviewed and
-  accepted analytic oracle, or accepted energy/force evidence; the frozen
-  protocol and source-bound implementation artifacts remain pre-result
-  contracts and their synthetic values are not parameter-fit data;
+- an authorized, independently reviewed CPU reference validation study, an
+  accepted analytic oracle, a durable result receipt, or accepted energy/force
+  evidence; test-only in-memory synthetic observations are implementation
+  checks, not production validation results or parameter-fit data;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime

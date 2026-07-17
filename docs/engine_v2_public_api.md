@@ -43,6 +43,7 @@ betelgeuze_engine_v2.physics.reference_validation_review
 betelgeuze_engine_v2.physics.reference_validation_authorization
 betelgeuze_engine_v2.physics.reference_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_validation_run_start
+betelgeuze_engine_v2.physics.reference_validation_runner
 betelgeuze_engine_v2.physics.reference_validation_receipts
 betelgeuze_engine_v2.runtime
 ```
@@ -113,17 +114,28 @@ environment receipt in a private caller-provisioned artifact root. Only path
 hashes and a fixed logical runner argv are recorded, not secret-bearing command
 arguments. The library does not create a network namespace or establish
 same-UID replacement resistance. No trusted key, attestation, root, or
-production receipt is bundled, and a verified receipt authorizes neither the
-future runner nor validation, fitting, or a scientific claim.
+production receipt is bundled, and a verified receipt authorizes neither a
+production run nor validation, fitting, or a scientific claim.
+
+The bounded-runner symbols re-read and live-reverify the environment receipt,
+require exact code, runner-source, dependency, and frozen-artifact identities,
+and atomically consume one nonce-bound mode-0600 runner-start marker. They then
+evaluate exactly 27 cases and 59 variants on CPU float64 under a 120-second
+evaluation budget and return a canonical in-memory observation that retains
+successes, expected failures, unexpected failures, missing metrics, and failed
+thresholds. They expose no direct execution CLI, marker release/delete API, or
+result-receipt writer. Test-only artifacts can exercise this implementation;
+no production key, receipt, start, result, validation acceptance, fitting, or
+claim promotion is bundled.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
 materialized variants, and 19 predefined metrics. They bind the protocol,
 artifact, authorization, environment, code, runner, dependency, lifecycle, and
-review identities required by a future run. The package provides no receipt
-builder, validation runner, result writer, or observed energy, force, error, or
-metric values. `require_reference_validation_execution_ready()` therefore
-always fails closed.
+review identities required by a future durable result. The package provides no
+production receipt builder, result writer, or durable observed energy, force,
+error, or metric values. `require_reference_validation_execution_ready()`
+therefore always fails closed.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

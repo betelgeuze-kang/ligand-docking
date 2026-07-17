@@ -41,6 +41,7 @@ from betelgeuze_engine_v2.physics.reference_validation_run_start import (
     reference_validation_artifact_output_root_identity_sha256,
     reference_validation_run_start_contract_decision,
     reference_validation_run_start_contract_document,
+    require_reference_validation_execution_environment_receipt_for_runner,
     require_reference_validation_run_start_contract_document,
     verify_signed_reference_validation_network_isolation_attestation,
 )
@@ -413,6 +414,11 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
     assert read_reference_validation_execution_environment_receipt(
         output_root,
         AUTHORIZATION_NONCE,
+    ) == created
+    assert require_reference_validation_execution_environment_receipt_for_runner(
+        output_root,
+        AUTHORIZATION_NONCE,
+        expected_receipt_sha256=created.receipt_sha256,
     ) == created
 
     payload = json.loads(path.read_text(encoding="ascii"))
