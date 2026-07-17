@@ -510,8 +510,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "bounded_failure_inclusive_cpu_validation_runner_implemented_"
-        "without_production_execution_or_result_receipt"
+        "failure_inclusive_result_receipt_writer_implemented_"
+        "without_production_receipt_or_independent_result_review"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
     assert (
@@ -560,7 +560,14 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         validation_protocol["blockers"]
     )
     assert "validation_runner_not_implemented" not in validation_protocol["blockers"]
-    assert "result_receipt_writer_not_implemented" in (
+    assert "result_receipt_writer_not_implemented" not in (
+        validation_protocol["blockers"]
+    )
+    assert "production_validation_result_receipt_missing" in (
+        validation_protocol["blockers"]
+    )
+    assert "independent_result_review_missing" in validation_protocol["blockers"]
+    assert "result_receipt_external_authenticity_not_established" in (
         validation_protocol["blockers"]
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
@@ -644,6 +651,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_validation_nonce_reservation.py",
         "test_engine_v2_reference_validation_run_start.py",
         "test_engine_v2_reference_validation_runner.py",
+        "test_engine_v2_reference_validation_result_writer.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -668,7 +676,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_s_cpu_reference_validation_bounded_runner"' in source
+    assert '"v2_t_cpu_reference_validation_result_receipt_writer"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
     assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source
@@ -685,3 +693,4 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     )
     assert "FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256" in source
+    assert "FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256" in source

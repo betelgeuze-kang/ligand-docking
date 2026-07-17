@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_s_cpu_reference_validation_bounded_runner
+implementation_stage: v2_t_cpu_reference_validation_result_receipt_writer
 
 claim_policy:
   customer_execution_enabled: false
@@ -766,7 +766,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_energy_force_validation_protocol:
-    current_state: bounded_failure_inclusive_cpu_validation_runner_implemented_without_production_execution_or_result_receipt
+    current_state: failure_inclusive_result_receipt_writer_implemented_without_production_receipt_or_independent_result_review
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -790,7 +790,10 @@ capabilities:
       - trusted_authorization_operator_key_not_provided
       - authorization_nonce_not_atomically_reserved
       - execution_environment_receipt_missing
-      - result_receipt_writer_not_implemented
+      - production_validation_result_receipt_missing
+      - independent_result_review_missing
+      - result_receipt_external_authenticity_not_established
+      - same_uid_artifact_replacement_resistance_not_established
       - validation_execution_not_authorized
       - validation_results_not_collected
       - parameter_fitting_not_authorized

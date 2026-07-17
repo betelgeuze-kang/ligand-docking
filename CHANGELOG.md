@@ -54,9 +54,8 @@ scientific claim from a package version.
   and execution remains disabled.
 - Frozen CPU execution-environment and failure-inclusive result-receipt
   contracts binding the exact protocol, authorization, materialization, 27-case,
-  59-variant, and 19-metric identities. They define future receipt fields only;
-  no production receipt, result writer, durable observed value, execution, or
-  claim promotion is provided.
+  59-variant, and 19-metric identities. No production receipt, durable production
+  observed value, execution, or claim promotion is provided.
 - Atomic local POSIX one-time authorization-nonce reservation with raw signed
   review and authorization re-verification, `O_EXCL` creation, file and
   directory `fsync`, private owner/mode checks, canonical tamper-evident records,
@@ -76,8 +75,16 @@ scientific claim from a package version.
   canonical in-memory observation retaining every success, expected failure,
   unexpected failure, and failed metric across the exact 27 cases and 59
   variants. The direct CLI remains closed and no production key, receipt, start,
-  result writer, durable result receipt, fitting authorization, or scientific
+  durable production result receipt, fitting authorization, or scientific
   promotion is bundled.
+- Failure-inclusive result-receipt writer and verifier that re-verify the raw
+  signed chain, live/persisted environment, durable runner-start marker, and
+  exact bounded observation before one `O_EXCL`/`O_NOFOLLOW` mode-0600 canonical
+  receipt is synchronized to a private caller root. Every failed case, variant,
+  and metric remains present. Acceptance requires an out-of-band exact receipt
+  hash and external revocation/supersession state; the receipt is unsigned,
+  same-UID replacement resistance and independent result review remain external,
+  and no production receipt or claim promotion is bundled.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

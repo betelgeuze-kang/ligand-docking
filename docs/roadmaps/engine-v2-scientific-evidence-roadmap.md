@@ -191,16 +191,16 @@ claim status without revalidating the dependency and freshness chain.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
-  metrics, the exact H5 dependency, all-case denominators, future environment
-  and result-receipt fields, and an executable closed authorization decision.
+  metrics, the exact H5 dependency, all-case denominators, environment and
+  result-receipt fields, and an executable closed authorization decision.
   A separate frozen binding now materializes every fixture, mutation, and case
   into fifty-nine deterministic CPU float64 variants and binds both that source
   and a standard-library-only analytic oracle. The oracle uses scalar equations
   with forward-mode exact derivatives and an AST-enforced boundary forbidding
   reference-evaluator, protocol, Torch, NumPy, and external-solver imports. No
   production result receipt or independently accepted metric evidence exists;
-  test-only in-memory comparisons are implementation checks, synthetic values
-  are not fit data, and neither production validation execution nor a
+  test-only observations and receipts are implementation checks, synthetic
+  values are not fit data, and neither production validation execution nor a
   parameter-fitting proposal is authorized.
 - Preserve the separate frozen independent-review attestation contract. It
   requires exact artifact dependencies, complete ordered review checks and
@@ -237,10 +237,19 @@ claim status without revalidating the dependency and freshness chain.
   marker, and evaluates exactly twenty-seven cases and fifty-nine variants under
   a 120-second evaluation budget. Every success, expected failure, unexpected
   failure, missing metric, and failed threshold remains in one canonical
-  in-memory observation. Direct CLI execution, marker release/deletion, and
-  result-receipt writing remain unavailable. Test-only artifacts exercise the
-  primitive; no production key, receipt, start, result, acceptance, fitting, or
-  scientific claim is bundled.
+  in-memory observation. Direct CLI execution and marker release/deletion remain
+  unavailable. Test-only artifacts exercise the primitive; no production key,
+  receipt, start, result, acceptance, fitting, or scientific claim is bundled.
+- Preserve the failure-inclusive result-receipt writer and verifier. They
+  re-verify the raw signed review and authorization, live/persisted execution
+  environment, durable runner-start marker, and exact bounded observation before
+  atomically persisting one canonical private mode-0600 nonce-bound receipt.
+  Every failed case, variant, and metric remains present. Verification requires
+  an out-of-band exact receipt SHA-256 plus current external revocation and
+  supersession inputs. The receipt is unsigned; private POSIX storage is not an
+  external authenticity proof, same-UID replacement resistance is not
+  established, and independent result review remains pending. No production
+  receipt or scientific claim is bundled.
 - Preserve the separate frozen execution-environment and result-receipt
   contracts. The environment contract fixes a CPU-only, network-disabled Linux
   lane, Python 3.10–3.12, Torch 2.6.0, NumPy 1.26.4, empty GPU visibility,
@@ -248,16 +257,17 @@ claim status without revalidating the dependency and freshness chain.
   confined artifact output. The result contract fixes all twenty-seven ordered
   cases, fifty-nine ordered variants, nineteen metric thresholds, retained
   failure rows, environment/authorization hashes, reviewer identity, and
-  supersession/revocation fields. No production environment receipt or runner
-  start, result writer, durable observed value, or result receipt exists, and
-  production execution remains unauthorized. The run-start and bounded-runner
-  primitives satisfy only implementation boundaries when test inputs are
+  supersession/revocation fields. No production environment receipt, runner
+  start, durable observed value, or result receipt is bundled, and production
+  execution remains unauthorized. The run-start, bounded-runner, and result-
+  writer primitives satisfy only implementation boundaries when test inputs are
   supplied; they do not satisfy any production result or scientific input.
 - Obtain an actual independently signed review attestation and separately
   signed non-expired authorization receipt, then atomically reserve its nonce
   and construct a verified production environment receipt; only then may the
-  bounded runner be considered for authorized synthetic implementation-
-  mathematics result collection and a separate result writer be reviewed. The
+  bounded runner and result writer be considered for authorized synthetic
+  implementation-mathematics result collection and a separate independent
+  result review. The
   scientific parameterized-force-field lane additionally requires reviewed
   runtime values, a frozen chemical applicability domain, a complete holdout
   manifest, and independent reference artifacts.

@@ -45,6 +45,7 @@ betelgeuze_engine_v2.physics.reference_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_validation_run_start
 betelgeuze_engine_v2.physics.reference_validation_runner
 betelgeuze_engine_v2.physics.reference_validation_receipts
+betelgeuze_engine_v2.physics.reference_validation_result_writer
 betelgeuze_engine_v2.runtime
 ```
 
@@ -124,18 +125,30 @@ evaluate exactly 27 cases and 59 variants on CPU float64 under a 120-second
 evaluation budget and return a canonical in-memory observation that retains
 successes, expected failures, unexpected failures, missing metrics, and failed
 thresholds. They expose no direct execution CLI, marker release/delete API, or
-result-receipt writer. Test-only artifacts can exercise this implementation;
-no production key, receipt, start, result, validation acceptance, fitting, or
-claim promotion is bundled.
+embedded receipt-writing side effect. Test-only artifacts can exercise this
+implementation; no production key, receipt, start, result, validation
+acceptance, fitting, or claim promotion is bundled.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
 materialized variants, and 19 predefined metrics. They bind the protocol,
 artifact, authorization, environment, code, runner, dependency, lifecycle, and
 review identities required by a future durable result. The package provides no
-production receipt builder, result writer, or durable observed energy, force,
+production receipt, trusted key, or durable production observed energy, force,
 error, or metric values. `require_reference_validation_execution_ready()`
 therefore always fails closed.
+
+The result-writer symbols accept only a verified bounded-run observation and
+re-verify the raw signed review and authorization, persisted/live environment,
+durable runner-start marker, and exact code/source/dependency identities. They
+atomically persist one canonical mode-0600 nonce-bound receipt while retaining
+every failed case, variant, and metric. Reading verifies canonical JSON and the
+embedded digest; acceptance additionally requires an out-of-band expected
+receipt SHA-256 and current external revocation/supersession inputs. The receipt
+is unsigned, private POSIX storage is not external authenticity, same-UID
+replacement resistance is not established, and result review remains
+`pending_independent_review`. No production receipt or scientific promotion is
+bundled.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

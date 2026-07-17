@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_s_cpu_reference_validation_bounded_runner"
+IMPLEMENTATION_STAGE = "v2_t_cpu_reference_validation_result_receipt_writer"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -434,7 +434,10 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "trusted_authorization_operator_key_not_provided",
         "authorization_nonce_not_atomically_reserved",
         "execution_environment_receipt_missing",
-        "result_receipt_writer_not_implemented",
+        "production_validation_result_receipt_missing",
+        "independent_result_review_missing",
+        "result_receipt_external_authenticity_not_established",
+        "same_uid_artifact_replacement_resistance_not_established",
         "validation_execution_not_authorized",
         "validation_results_not_collected",
         "parameter_fitting_not_authorized",
@@ -766,8 +769,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "bounded_failure_inclusive_cpu_validation_runner_implemented_"
-                    "without_production_execution_or_result_receipt"
+                    "failure_inclusive_result_receipt_writer_implemented_"
+                    "without_production_receipt_or_independent_result_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

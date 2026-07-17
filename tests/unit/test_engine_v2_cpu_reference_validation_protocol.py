@@ -291,7 +291,7 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
         encoding="utf-8"
     )
 
-    assert "v2_s_cpu_reference_validation_bounded_runner" in status
+    assert "v2_t_cpu_reference_validation_result_receipt_writer" in status
     assert "reference_validation_protocol" in public_api
     assert "reference_validation_artifact_binding" in public_api
     assert "reference_validation_review" in public_api
@@ -300,6 +300,7 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
     assert "reference_validation_nonce_reservation" in public_api
     assert "reference_validation_run_start" in public_api
     assert "reference_validation_runner" in public_api
+    assert "reference_validation_result_writer" in public_api
     assert "v2_cpu_reference_energy_force_validation_protocol" in roadmap
     assert "twenty-seven ordered pass/fail-closed cases" in scientific
     for source in (focused_workflow, main_workflow):
@@ -311,6 +312,7 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
         assert "test_engine_v2_reference_validation_nonce_reservation.py" in source
         assert "test_engine_v2_reference_validation_run_start.py" in source
         assert "test_engine_v2_reference_validation_runner.py" in source
+        assert "test_engine_v2_reference_validation_result_writer.py" in source
         assert 'python-version: ["3.10", "3.11", "3.12"]' in source
     assert "reference_validation_artifact_authorization_decision" in main_workflow
     assert "reference_validation_review_contract_authorization_decision" in main_workflow
@@ -319,3 +321,4 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
     assert "reference_validation_nonce_reservation_contract_decision" in main_workflow
     assert "reference_validation_run_start_contract_decision" in main_workflow
     assert "reference_validation_runner_contract_decision" in main_workflow
+    assert "reference_validation_result_writer_contract_decision" in main_workflow

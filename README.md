@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_s_cpu_reference_validation_bounded_runner
+v2_t_cpu_reference_validation_result_receipt_writer
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -54,11 +54,16 @@ Implemented and GitHub-hosted CPU tested:
   and re-verifies that receipt and its exact code, source, dependency, and
   artifact bindings, atomically consumes a one-time runner-start marker, and
   retains every result or failure for the exact 27-case/59-variant matrix in
-  memory under a 120-second evaluation budget. The direct CLI remains closed
-  and no result receipt is written. No trusted key, production receipt,
+  memory under a 120-second evaluation budget, followed by a failure-inclusive
+  result writer that re-verifies the raw signed chain, live environment receipt,
+  runner-start marker, and exact observation before atomically persisting one
+  canonical private mode-0600 receipt. Its reader requires an out-of-band exact
+  receipt hash plus external revocation/supersession inputs; no receipt signature
+  or same-UID replacement resistance is claimed. The direct CLI remains closed.
+  No trusted key, production receipt,
   reservation or artifact root, production nonce reservation, production
-  environment receipt, runner start, authorized execution, or validation result
-  is bundled;
+  environment receipt, runner start/result receipt, authorized production
+  execution, independent result review, or scientific acceptance is bundled;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 
