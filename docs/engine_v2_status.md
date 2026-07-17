@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_h_bounded_ph_protonation
+v2_i_bounded_tautomer_selection
 ```
 
 The current `main` branch contains:
@@ -81,10 +81,16 @@ The current `main` branch contains:
   states, one abstention, and four expected failures whose source URLs,
   retrieval dates, and source-specific license-review boundary are explicit
   while raw PubChem records, contributor text, and conformers are not bundled,
+  plus an exact-graph reference-canonical tautomer-selection contract for
+  PubChem CID 177 acetaldehyde and CID 11199 vinyl alcohol that moves only the
+  generated hydroxyl hydrogen, rejects source-observed hydrogen movement, and
+  explicitly makes no population, equilibrium, thermodynamic-preference, pH,
+  geometry, parameter, or scientific claim, plus a frozen 6-case factual-
+  identity supported/failure corpus that retains four expected failures,
   plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
   2 invalid-source cases, plus a 52-axis executable coverage ledger classifying
-  24 supported, 27 explicitly unsupported, and 1 not-implemented row,
+  25 supported, 27 explicitly unsupported, and 0 not-implemented rows,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -98,9 +104,9 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
-- a general-chemistry or tautomer real-world preparation corpus, a legal
-  determination for source-specific PubChem content, or authorization to fit
-  parameters from either contract corpus;
+- general-chemistry real-world coverage, a legal determination for source-
+  specific PubChem content, thermodynamic/population evidence for the bounded
+  tautomer pair, or authorization to fit parameters from any contract corpus;
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
   model selection, ensemble/trajectory/averaging semantics, multi-model execution,
@@ -135,7 +141,7 @@ Each capability row separates four questions:
 3. **scientifically validated** — independent scientific evidence exists;
 4. **customer execution enabled** — the capability is admitted to a product route.
 
-Only the first two are true for selected V2-H surfaces. `claim_safe` remains
+Only the first two are true for selected V2-I surfaces. `claim_safe` remains
 false for every current capability row.
 
 ## Verification

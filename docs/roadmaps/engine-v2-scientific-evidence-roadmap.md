@@ -129,11 +129,20 @@ claim status without revalidating the dependency and freshness chain.
   source identity, retrieval date, and source-specific license-review boundary.
   It bundles no raw PubChem record, contributor text, or conformer and is not
   parameter-fitting or scientific-validation data.
+- Keep the exact PubChem CID 177 acetaldehyde/CID 11199 vinyl-alcohol
+  reference-canonical tautomer-selection contract and its separate 6-case
+  supported/failure corpus executable. Only exact neutral C2H4O graphs are
+  accepted; vinyl alcohol moves only its generated hydroxyl hydrogen and
+  source-observed hydrogen movement fails closed. Selection is a reviewed
+  identity policy, not population, equilibrium, thermodynamic-preference, pH,
+  geometry, parameter, or scientific evidence. Raw PubChem records, contributor
+  text, and conformers remain unbundled under the source-specific review boundary.
 - Keep the exact-input 30-case synthetic supported/failure contract corpus and
-  the separate pH corpus bound to the 52-axis coverage ledger executable. It
-  classifies 24 axes as supported, 27 as explicitly unsupported, and 1 as not
-  implemented; neither corpus is parameter-fitting
-  data and does not make V2-1 exit-ready.
+  the separate pH and tautomer corpora bound to the 52-axis coverage ledger
+  executable. It classifies 25 axes as supported, 27 as explicitly unsupported,
+  and 0 as not implemented; zero implementation gaps is not scientific or
+  commercial readiness, none of the corpora is parameter-fitting data, and the
+  ledger does not make V2-1 exit-ready.
 - Keep exact selected source assembly metadata, generation, and Cartesian-
   operation rows bound while blocking preparation whenever any selected assembly
   category is present. Category absence does not prove that the deposited
@@ -164,12 +173,9 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the one remaining implementation-gap row, tautomer selection, by
-  an independent capability slice and add a licensing/provenance-reviewed
-  real-world supported/failure corpus. Do not start production parameter fitting
-  while that requirement remains open;
-  original mmCIF lexical re-emission remains explicitly outside the canonical
-  identity round-trip receipt.
+- Preserve the now-closed tautomer implementation row and its bounded real-world
+  identity corpus without treating it as scientific validation. Original mmCIF
+  lexical re-emission remains explicitly outside the canonical identity receipt.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive
   reporting contract; do not run or publish a result as part of that protocol
   definition PR.

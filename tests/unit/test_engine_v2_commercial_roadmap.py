@@ -26,6 +26,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_all_atom_round_trip" in roadmap
     assert "v2_bounded_mmcif_nonpoly_ph_dependent_protonation" in roadmap
     assert "v2_bounded_mmcif_nonpoly_ph_protonation_corpus" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_reference_tautomer_selection" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_tautomer_selection_corpus" in roadmap
     assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
@@ -36,16 +38,24 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
     assert "52-axis coverage ledger" in roadmap
-    assert "1개 `not_implemented`" in roadmap
-    assert "supported 24·explicitly unsupported 27·not implemented 1" in roadmap
+    assert "0개 `not_implemented`" in roadmap
+    assert "supported 25·explicitly unsupported 27·not implemented 0" in roadmap
     assert "exact PubChem CID 176 neutral acetic-acid graph" in roadmap
     assert "Henderson–Hasselbalch" in roadmap
     assert "90% 이상" in roadmap
     assert "system을 만들지 않고 abstain" in roadmap
-    assert "source-observed atom이 아닌\nexact generated hydroxyl H 하나만 제거" in roadmap
+    assert (
+        "source-observed atom이 아닌\nexact generated hydroxyl H 하나만 제거" in roadmap
+    )
     assert "resonance equivalence와 tautomer selection은 해석하지 않으며" in roadmap
     assert "supported·abstention·failure를 모두 denominator에 남기며" in roadmap
     assert "commercial\nredistribution 승인이나 법률 판단도 주장하지 않는다" in roadmap
+    assert "reviewed\nreference-canonical identity로 선택" in roadmap
+    assert "source-observed H 이동은 fail-closed" in roadmap
+    assert (
+        "population, equilibrium,\nthermodynamic preference 또는 pH 예측이 아니다"
+        in roadmap
+    )
     assert "Sage 2.2.1 unconstrained artifact" in roadmap
     assert "OFFXML을\n해석하거나" in roadmap
     assert "partial charge" in roadmap
@@ -59,8 +69,13 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "atom-site\nobservation, parent chemistry" in roadmap
     assert "model set이 정확히 `{1}`" in roadmap
     assert "첫 model로 자동 선택하지 않고 명시적으로" in roadmap
-    assert "deposited asymmetric unit이\nbiologically relevant assembly라는 증거" in roadmap
-    assert "matrix/vector 값과 composition order를 해석하거나 좌표를 확장하지" in roadmap
+    assert (
+        "deposited asymmetric unit이\nbiologically relevant assembly라는 증거"
+        in roadmap
+    )
+    assert (
+        "matrix/vector 값과 composition order를 해석하거나 좌표를 확장하지" in roadmap
+    )
     assert "0=`zero_occupancy`, 1=`unobserved`" in roadmap
     assert "그 부재가 구조가 완전하거나 missing atom/residue가 없다는 증거는" in roadmap
     assert "source-declared zero-occupancy 또는 unobserved atom/residue" in roadmap
@@ -78,7 +93,9 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "original mmCIF text를 다시 쓰거나 source token spelling" in roadmap
     assert "explicit `label_alt_id` 입력" in roadmap
     assert "chemistry preparation 전에 fail-closed" in roadmap
-    assert "known insertion code의 scheme·atom-site·connection exact identity" in roadmap
+    assert (
+        "known insertion code의 scheme·atom-site·connection exact identity" in roadmap
+    )
     assert "polymer insertion/deletion" in roadmap
     assert "cofactor 역할을 추정하지 않는 명시적 미지원 경계" in roadmap
     assert "cofactor가 아니라고 판정하는 것이 아니다" in roadmap

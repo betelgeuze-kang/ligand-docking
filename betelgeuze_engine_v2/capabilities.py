@@ -16,16 +16,14 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_h_bounded_ph_protonation"
+IMPLEMENTATION_STAGE = "v2_i_bounded_tautomer_selection"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
 SDF_INGEST_CAPABILITY_ID = "v2_bounded_sdf_v2000_ingest"
 CIF_SYNTAX_CAPABILITY_ID = "v2_bounded_cif_syntax"
 MMCIF_SEMANTICS_CAPABILITY_ID = "v2_bounded_mmcif_semantic_projection"
-MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = (
-    "v2_bounded_mmcif_zero_occupancy_declarations"
-)
+MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = "v2_bounded_mmcif_zero_occupancy_declarations"
 MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_altloc_declarations"
 MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID = "v2_bounded_mmcif_atom_site_model_policy"
 MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID = (
@@ -81,9 +79,13 @@ MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID = (
 MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_ph_protonation_corpus"
 )
-PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = (
-    "v2_reviewed_parameter_source_provenance"
+MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_reference_tautomer_selection"
 )
+MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_tautomer_selection_corpus"
+)
+PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = "v2_reviewed_parameter_source_provenance"
 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_preparation_corpus"
 )
@@ -340,7 +342,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "fixed_reviewed_pka_not_predicted_or_calibrated",
         "ambiguous_population_abstains_below_90_percent_dominance",
         "localized_carboxylate_resonance_equivalence_not_interpreted",
-        "tautomer_selection_not_implemented",
+        "bounded_cid_177_11199_tautomer_selection_is_separate_capability",
         "source_observed_acidic_hydrogen_removal_not_supported",
         "partial_charge_assignment_not_performed",
         "parameter_assignment_not_implemented",
@@ -355,16 +357,40 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "source_structure_identity_not_authenticated",
         "pubchem_source_specific_license_review_remains",
         "raw_pubchem_records_not_bundled",
-        "one_classified_implementation_gap_remains",
-        "real_world_tautomer_corpus_missing",
+        "tautomer_selection_evidence_is_separate_bounded_pair_corpus",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
+    MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID: (
+        "exact_pubchem_cid_177_and_11199_neutral_c2h4o_graphs_only",
+        "reviewed_reference_canonical_identity_not_thermodynamic_preference",
+        "source_structure_identity_not_authenticated",
+        "generated_hydroxyl_hydrogen_transfer_only",
+        "source_observed_hydrogen_move_not_supported",
+        "fixed_parent_offset_geometry_not_validated",
+        "tautomer_population_equilibrium_and_ph_not_interpreted",
+        "partial_charge_assignment_not_performed",
+        "parameter_assignment_not_implemented",
+        "atom_masses_not_assigned",
+        "geometry_energy_and_force_not_validated",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID: (
+        "three_pubchem_structure_identities_only",
+        "manually_projected_mmcif_coordinates_are_contract_fixtures",
+        "source_structure_identity_not_authenticated",
+        "pubchem_source_specific_license_review_remains",
+        "raw_pubchem_records_not_bundled",
+        "parameter_fitting_not_authorized",
+        "thermodynamic_and_population_evidence_missing",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
-        "synthetic_base_corpus_plus_separate_real_world_ph_corpus",
-        "one_classified_implementation_gap_remains",
-        "real_world_tautomer_corpus_missing",
+        "synthetic_base_corpus_plus_separate_real_world_ph_and_tautomer_corpora",
+        "zero_classified_implementation_gaps_do_not_establish_scientific_readiness",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
         "product_integration_not_qualified",
@@ -496,8 +522,7 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID: _row(
                 MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID,
                 current_state=(
-                    "bounded_source_declared_biological_assembly_"
-                    "preparation_admission"
+                    "bounded_source_declared_biological_assembly_preparation_admission"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -613,9 +638,7 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID,
-                current_state=(
-                    "canonical_json_all_atom_identity_round_trip_receipts"
-                ),
+                current_state=("canonical_json_all_atom_identity_round_trip_receipts"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -633,6 +656,24 @@ def capability_snapshot() -> dict[str, Any]:
                 current_state=(
                     "frozen_7_case_pubchem_identity_supported_abstention_"
                     "and_failure_corpus"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID,
+                current_state=(
+                    "bounded_pubchem_cid_177_11199_reference_canonical_"
+                    "tautomer_selection_with_generated_hydrogen_transfer"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID,
+                current_state=(
+                    "frozen_6_case_pubchem_identity_supported_and_failure_"
+                    "tautomer_corpus"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -744,6 +785,8 @@ __all__ = [
     "MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID",
     "MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID",
     "MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID",
+    "MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID",
+    "MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",

@@ -30,6 +30,8 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID,
     MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID,
     MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID,
+    MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID,
+    MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID,
     MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
@@ -50,7 +52,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 34
+    assert len(loaded["capabilities"]) == 36
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -84,26 +86,49 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID in rows
     assert PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
     assert MMCIF_SEMANTICS_CAPABILITY_ID in rows
     assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
-    assert rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"] is False
+    assert (
+        rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
+        is False
+    )
 
     mmcif_semantics = rows[MMCIF_SEMANTICS_CAPABILITY_ID]
-    assert mmcif_semantics["current_state"] == "bounded_entity_asym_polymer_sequence_projection"
-    assert "atom_site_coordinate_observation_not_interpreted" in mmcif_semantics["blockers"]
-    assert "mmcif_missingness_altloc_and_assembly_not_interpreted" in mmcif_semantics["blockers"]
+    assert (
+        mmcif_semantics["current_state"]
+        == "bounded_entity_asym_polymer_sequence_projection"
+    )
+    assert (
+        "atom_site_coordinate_observation_not_interpreted"
+        in mmcif_semantics["blockers"]
+    )
+    assert (
+        "mmcif_missingness_altloc_and_assembly_not_interpreted"
+        in mmcif_semantics["blockers"]
+    )
 
     zero_occupancy = rows[MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID]
-    assert zero_occupancy["current_state"] == "bounded_source_reported_zero_occupancy_declarations"
+    assert (
+        zero_occupancy["current_state"]
+        == "bounded_source_reported_zero_occupancy_declarations"
+    )
     assert zero_occupancy["internal_reference_execution_enabled"] is True
     assert "atom_site_occupancy_not_crosschecked" in zero_occupancy["blockers"]
-    assert "coordinate_observation_and_missingness_not_inferred" in zero_occupancy["blockers"]
+    assert (
+        "coordinate_observation_and_missingness_not_inferred"
+        in zero_occupancy["blockers"]
+    )
     assert "alternate_location_population_not_interpreted" in zero_occupancy["blockers"]
-    assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in zero_occupancy["blockers"]
+    assert (
+        "mmcif_chemistry_topology_and_preparation_not_interpreted"
+        in zero_occupancy["blockers"]
+    )
 
     altloc = rows[MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID]
     assert altloc["current_state"] == "bounded_polymer_atom_site_altloc_declarations"
@@ -111,7 +136,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "conformer_selection_not_implemented" in altloc["blockers"]
     assert "coordinate_and_occupancy_values_not_interpreted" in altloc["blockers"]
     assert "altloc_population_and_missingness_not_inferred" in altloc["blockers"]
-    assert "mmcif_chemistry_topology_and_preparation_not_interpreted" in altloc["blockers"]
+    assert (
+        "mmcif_chemistry_topology_and_preparation_not_interpreted" in altloc["blockers"]
+    )
 
     model_policy = rows[MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID]
     assert model_policy["current_state"] == (
@@ -131,14 +158,17 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_source_declared_biological_assembly_preparation_admission"
     )
     assert assembly_policy["internal_reference_execution_enabled"] is True
-    assert "source_declared_biological_assembly_expansion_not_supported" in (
-        assembly_policy["blockers"]
+    assert (
+        "source_declared_biological_assembly_expansion_not_supported"
+        in (assembly_policy["blockers"])
     )
-    assert "operation_matrix_vector_and_composition_not_interpreted" in (
-        assembly_policy["blockers"]
+    assert (
+        "operation_matrix_vector_and_composition_not_interpreted"
+        in (assembly_policy["blockers"])
     )
-    assert "absence_does_not_prove_asymmetric_unit_is_biological_assembly" in (
-        assembly_policy["blockers"]
+    assert (
+        "absence_does_not_prove_asymmetric_unit_is_biological_assembly"
+        in (assembly_policy["blockers"])
     )
 
     missing_policy = rows[MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID]
@@ -146,15 +176,15 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_source_declared_observation_gap_preparation_admission"
     )
     assert missing_policy["internal_reference_execution_enabled"] is True
-    assert "source_declared_unobserved_residue_repair_not_supported" in (
-        missing_policy["blockers"]
+    assert (
+        "source_declared_unobserved_residue_repair_not_supported"
+        in (missing_policy["blockers"])
     )
-    assert "source_declared_zero_occupancy_atom_repair_not_supported" in (
-        missing_policy["blockers"]
+    assert (
+        "source_declared_zero_occupancy_atom_repair_not_supported"
+        in (missing_policy["blockers"])
     )
-    assert "absence_does_not_prove_structure_complete" in (
-        missing_policy["blockers"]
-    )
+    assert "absence_does_not_prove_structure_complete" in (missing_policy["blockers"])
 
     modified_residue = rows[MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID]
     assert modified_residue["current_state"] == (
@@ -162,11 +192,11 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert modified_residue["internal_reference_execution_enabled"] is True
     assert "atom_site_label_identity_not_crosschecked" in modified_residue["blockers"]
-    assert "parent_component_chemistry_not_interpreted" in (
-        modified_residue["blockers"]
+    assert (
+        "parent_component_chemistry_not_interpreted" in (modified_residue["blockers"])
     )
-    assert "modified_residue_preparation_not_supported" in (
-        modified_residue["blockers"]
+    assert (
+        "modified_residue_preparation_not_supported" in (modified_residue["blockers"])
     )
 
     nonpoly = rows[MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID]
@@ -183,7 +213,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert component_declarations["internal_reference_execution_enabled"] is True
     assert "component_chemistry_not_interpreted" in component_declarations["blockers"]
-    assert "bond_order_and_topology_not_interpreted" in component_declarations["blockers"]
+    assert (
+        "bond_order_and_topology_not_interpreted" in component_declarations["blockers"]
+    )
 
     component_roles = rows[MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID]
     assert component_roles["current_state"] == (
@@ -205,8 +237,12 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_nonpoly_struct_conn_identity_declarations"
     )
     assert struct_conn["internal_reference_execution_enabled"] is True
-    assert "connection_type_symmetry_and_order_not_interpreted" in struct_conn["blockers"]
-    assert "covalence_coordination_and_topology_not_interpreted" in struct_conn["blockers"]
+    assert (
+        "connection_type_symmetry_and_order_not_interpreted" in struct_conn["blockers"]
+    )
+    assert (
+        "covalence_coordination_and_topology_not_interpreted" in struct_conn["blockers"]
+    )
 
     atom_site = rows[MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID]
     assert atom_site["current_state"] == (
@@ -221,7 +257,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_nonpoly_finite_binary64_coordinate_values"
     )
     assert coordinate_values["internal_reference_execution_enabled"] is True
-    assert "coordinate_units_and_geometry_not_interpreted" in coordinate_values["blockers"]
+    assert (
+        "coordinate_units_and_geometry_not_interpreted" in coordinate_values["blockers"]
+    )
     assert (
         "occupancy_b_factor_and_formal_charge_not_interpreted"
         in coordinate_values["blockers"]
@@ -245,8 +283,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert topology["internal_reference_execution_enabled"] is True
     assert "non_identity_symmetry_not_supported" in topology["blockers"]
     assert (
-        "atom_element_charge_and_aromaticity_not_crosschecked"
-        in topology["blockers"]
+        "atom_element_charge_and_aromaticity_not_crosschecked" in topology["blockers"]
     )
 
     preparation = rows[MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID]
@@ -254,18 +291,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_neutral_acyclic_coh_graph_preparation_and_parameterability_report"
     )
     assert preparation["internal_reference_execution_enabled"] is True
-    assert "source_declared_biological_assembly_preparation_not_supported" in (
-        preparation["blockers"]
+    assert (
+        "source_declared_biological_assembly_preparation_not_supported"
+        in (preparation["blockers"])
     )
-    assert "source_declared_observation_gap_preparation_not_supported" in (
-        preparation["blockers"]
+    assert (
+        "source_declared_observation_gap_preparation_not_supported"
+        in (preparation["blockers"])
     )
     assert "hydrogen_coordinate_geometry_not_validated" in preparation["blockers"]
-    assert "reviewed_parameter_source_binding_is_separate" in (
-        preparation["blockers"]
-    )
-    assert "canonical_all_atom_system_not_bound_to_preparation_report" in (
-        preparation["blockers"]
+    assert "reviewed_parameter_source_binding_is_separate" in (preparation["blockers"])
+    assert (
+        "canonical_all_atom_system_not_bound_to_preparation_report"
+        in (preparation["blockers"])
     )
 
     hydrogen_coordinates = rows[MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID]
@@ -273,14 +311,13 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_graph_bound_fixed_parent_offset_angstrom_coordinates"
     )
     assert hydrogen_coordinates["internal_reference_execution_enabled"] is True
-    assert "fixed_parent_offset_does_not_interpret_neighbor_geometry" in (
-        hydrogen_coordinates["blockers"]
+    assert (
+        "fixed_parent_offset_does_not_interpret_neighbor_geometry"
+        in (hydrogen_coordinates["blockers"])
     )
-    assert "hydrogen_bond_length_not_calibrated" in (
-        hydrogen_coordinates["blockers"]
-    )
-    assert "partial_charge_assignment_not_performed" in (
-        hydrogen_coordinates["blockers"]
+    assert "hydrogen_bond_length_not_calibrated" in (hydrogen_coordinates["blockers"])
+    assert (
+        "partial_charge_assignment_not_performed" in (hydrogen_coordinates["blockers"])
     )
 
     all_atom_system = rows[MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID]
@@ -288,20 +325,25 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "bounded_instance_canonical_all_atom_system_materialization"
     )
     assert all_atom_system["internal_reference_execution_enabled"] is True
-    assert "intercomponent_covalent_connections_not_materialized" in (
-        all_atom_system["blockers"]
+    assert (
+        "intercomponent_covalent_connections_not_materialized"
+        in (all_atom_system["blockers"])
     )
-    assert "intercomponent_coordination_preserved_as_metadata_only" in (
-        all_atom_system["blockers"]
+    assert (
+        "intercomponent_coordination_preserved_as_metadata_only"
+        in (all_atom_system["blockers"])
     )
-    assert "reviewed_parameter_source_binding_is_separate_capability" in (
-        all_atom_system["blockers"]
+    assert (
+        "reviewed_parameter_source_binding_is_separate_capability"
+        in (all_atom_system["blockers"])
     )
-    assert "partial_charge_assignment_is_separate_capability" in (
-        all_atom_system["blockers"]
+    assert (
+        "partial_charge_assignment_is_separate_capability"
+        in (all_atom_system["blockers"])
     )
-    assert "canonical_all_atom_round_trip_is_separate_capability" in (
-        all_atom_system["blockers"]
+    assert (
+        "canonical_all_atom_round_trip_is_separate_capability"
+        in (all_atom_system["blockers"])
     )
 
     parameter_binding = rows[MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID]
@@ -312,8 +354,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert parameter_binding["internal_reference_execution_enabled"] is True
     assert "offxml_semantic_parsing_not_implemented" in parameter_binding["blockers"]
     assert "parameter_assignment_not_implemented" in parameter_binding["blockers"]
-    assert "partial_charge_assignment_is_separate_capability" in (
-        parameter_binding["blockers"]
+    assert (
+        "partial_charge_assignment_is_separate_capability"
+        in (parameter_binding["blockers"])
     )
 
     partial_charge = rows[MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID]
@@ -323,9 +366,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert partial_charge["internal_reference_execution_enabled"] is True
     assert "explicit_charge_values_required_from_caller" in partial_charge["blockers"]
     assert "charge_generation_not_implemented" in partial_charge["blockers"]
-    assert "charge_method_scientific_validation_missing" in (
-        partial_charge["blockers"]
-    )
+    assert "charge_method_scientific_validation_missing" in (partial_charge["blockers"])
 
     round_trip = rows[MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID]
     assert round_trip["current_state"] == (
@@ -334,8 +375,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert round_trip["internal_reference_execution_enabled"] is True
     assert "original_mmcif_text_not_re_emitted" in round_trip["blockers"]
     assert "canonical_engine_v2_json_format_only" in round_trip["blockers"]
-    assert "caller_supplied_partial_charges_not_scientifically_validated" in (
-        round_trip["blockers"]
+    assert (
+        "caller_supplied_partial_charges_not_scientifically_validated"
+        in (round_trip["blockers"])
     )
 
     ph_protonation = rows[MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID]
@@ -344,16 +386,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "and_canonical_round_trip"
     )
     assert ph_protonation["internal_reference_execution_enabled"] is True
-    assert "exact_pubchem_cid_176_neutral_acetic_acid_graph_only" in (
-        ph_protonation["blockers"]
+    assert (
+        "exact_pubchem_cid_176_neutral_acetic_acid_graph_only"
+        in (ph_protonation["blockers"])
     )
-    assert "source_structure_identity_not_authenticated" in (
-        ph_protonation["blockers"]
+    assert "source_structure_identity_not_authenticated" in (ph_protonation["blockers"])
+    assert (
+        "ambiguous_population_abstains_below_90_percent_dominance"
+        in (ph_protonation["blockers"])
     )
-    assert "ambiguous_population_abstains_below_90_percent_dominance" in (
-        ph_protonation["blockers"]
+    assert (
+        "bounded_cid_177_11199_tautomer_selection_is_separate_capability"
+        in (ph_protonation["blockers"])
     )
-    assert "tautomer_selection_not_implemented" in ph_protonation["blockers"]
     assert ph_protonation["scientifically_validated"] is False
     assert ph_protonation["claim_safe"] is False
 
@@ -362,13 +407,37 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "frozen_7_case_pubchem_identity_supported_abstention_and_failure_corpus"
     )
     assert ph_corpus["internal_reference_execution_enabled"] is True
-    assert "source_structure_identity_not_authenticated" in (
-        ph_corpus["blockers"]
+    assert "source_structure_identity_not_authenticated" in (ph_corpus["blockers"])
+    assert "pubchem_source_specific_license_review_remains" in (ph_corpus["blockers"])
+    assert (
+        "tautomer_selection_evidence_is_separate_bounded_pair_corpus"
+        in (ph_corpus["blockers"])
     )
-    assert "pubchem_source_specific_license_review_remains" in (
-        ph_corpus["blockers"]
+
+    tautomer = rows[MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID]
+    assert tautomer["current_state"] == (
+        "bounded_pubchem_cid_177_11199_reference_canonical_tautomer_selection_"
+        "with_generated_hydrogen_transfer"
     )
-    assert "one_classified_implementation_gap_remains" in ph_corpus["blockers"]
+    assert tautomer["internal_reference_execution_enabled"] is True
+    assert "source_structure_identity_not_authenticated" in tautomer["blockers"]
+    assert "generated_hydroxyl_hydrogen_transfer_only" in tautomer["blockers"]
+    assert "thermodynamic_preference_inferred" not in tautomer
+    assert tautomer["scientifically_validated"] is False
+    assert tautomer["claim_safe"] is False
+
+    tautomer_corpus = rows[MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID]
+    assert tautomer_corpus["current_state"] == (
+        "frozen_6_case_pubchem_identity_supported_and_failure_tautomer_corpus"
+    )
+    assert tautomer_corpus["internal_reference_execution_enabled"] is True
+    assert (
+        "pubchem_source_specific_license_review_remains"
+        in (tautomer_corpus["blockers"])
+    )
+    assert (
+        "thermodynamic_and_population_evidence_missing" in (tautomer_corpus["blockers"])
+    )
 
     parameter_source = rows[PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID]
     assert parameter_source["current_state"] == (
@@ -376,30 +445,26 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert parameter_source["internal_reference_execution_enabled"] is True
     assert "source_artifact_not_bundled" in parameter_source["blockers"]
-    assert "source_format_semantic_validation_missing" in (
-        parameter_source["blockers"]
-    )
+    assert "source_format_semantic_validation_missing" in (parameter_source["blockers"])
     assert "parameter_assignment_not_implemented" in parameter_source["blockers"]
-    assert "partial_charge_assignment_is_separate_capability" in (
-        parameter_source["blockers"]
+    assert (
+        "partial_charge_assignment_is_separate_capability"
+        in (parameter_source["blockers"])
     )
-    assert "applicability_domain_validation_missing" in (
-        parameter_source["blockers"]
-    )
+    assert "applicability_domain_validation_missing" in (parameter_source["blockers"])
 
     preparation_corpus = rows[MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID]
     assert preparation_corpus["current_state"] == (
         "frozen_30_case_failure_complete_corpus_and_52_axis_coverage_ledger"
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
-    assert "synthetic_base_corpus_plus_separate_real_world_ph_corpus" in (
-        preparation_corpus["blockers"]
+    assert (
+        "synthetic_base_corpus_plus_separate_real_world_ph_and_tautomer_corpora"
+        in (preparation_corpus["blockers"])
     )
-    assert "one_classified_implementation_gap_remains" in (
-        preparation_corpus["blockers"]
-    )
-    assert "real_world_tautomer_corpus_missing" in (
-        preparation_corpus["blockers"]
+    assert (
+        "zero_classified_implementation_gaps_do_not_establish_scientific_readiness"
+        in (preparation_corpus["blockers"])
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]
 
@@ -408,7 +473,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "validated_independent_physics_terms_missing" not in physics_blockers
 
     benchmark_blockers = rows[BENCHMARK_CAPABILITY_ID]["blockers"]
-    assert "public_asymmetric_attestation_and_transparency_missing" in benchmark_blockers
+    assert (
+        "public_asymmetric_attestation_and_transparency_missing" in benchmark_blockers
+    )
     assert "artifact_signature_verification_missing" not in benchmark_blockers
 
     require_capability_snapshot(loaded)
@@ -466,6 +533,8 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py",
         "test_engine_v2_mmcif_nonpoly_ph_protonation.py",
         "test_engine_v2_mmcif_nonpoly_ph_protonation_corpus.py",
+        "test_engine_v2_mmcif_nonpoly_tautomer_selection.py",
+        "test_engine_v2_mmcif_nonpoly_tautomer_selection_corpus.py",
         "test_engine_v2_parameter_source_provenance.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
@@ -490,4 +559,4 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_h_bounded_ph_protonation"' in source
+    assert '"v2_i_bounded_tautomer_selection"' in source
