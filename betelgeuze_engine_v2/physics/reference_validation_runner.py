@@ -78,7 +78,7 @@ REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "46e11e1c372c0eaf9ad1c3636717ec87864437a2f069611843609e2dd164a92a"
+    "08531389f3f3977c89b8141140bb6a65eeb94ba37e346bbf7abdd744b14dff04"
 )
 
 _ROTATION_MATRIX = (
@@ -1027,6 +1027,7 @@ def _contract_projection() -> dict[str, Any]:
             "network_access_allowed": False,
             "arbitrary_subprocess_execution_allowed": False,
             "root_owned_absolute_git_clean_checkout_preflight_required": True,
+            "case_materialization_under_posix_deadline_required": True,
             "evaluator_or_oracle_subprocess_execution_allowed": False,
             "posix_main_thread_deadline_interrupt_required": True,
         },
@@ -1376,6 +1377,92 @@ def _failure_variant(
         ),
         observed_status=status,
         observed_error_code=error_code,
+    )
+
+
+def _time_budget_case_from_frozen_manifest(
+    ordinal: int,
+    case: CPUReferenceValidationCase,
+    manifest_case: Mapping[str, Any],
+    *,
+    metric_map: Mapping[str, CPUReferenceValidationMetric],
+) -> ReferenceValidationCaseObservation:
+    """Retain exact frozen variant identities when materialization times out."""
+
+    if not isinstance(manifest_case, Mapping) or (
+        manifest_case.get("case_id"),
+        manifest_case.get("case_input_sha256"),
+        manifest_case.get("expected_outcome"),
+        manifest_case.get("expected_error_code"),
+    ) != (
+        case.case_id,
+        case.input_sha256,
+        case.expected_outcome,
+        case.expected_error_code,
+    ):
+        raise ReferenceValidationRunnerError(
+            "materialization manifest case is cross-wired"
+        )
+    variant_payloads = manifest_case.get("variants")
+    if (
+        not isinstance(variant_payloads, list)
+        or not variant_payloads
+        or manifest_case.get("variant_count") != len(variant_payloads)
+    ):
+        raise ReferenceValidationRunnerError(
+            "materialization manifest variant coverage is invalid"
+        )
+    variants: list[ReferenceValidationVariantObservation] = []
+    for variant_ordinal, payload in enumerate(variant_payloads):
+        if not isinstance(payload, Mapping):
+            raise ReferenceValidationRunnerError(
+                "materialization manifest variant is invalid"
+            )
+        variant_id = payload.get("variant_id")
+        if not isinstance(variant_id, str) or not variant_id:
+            raise ReferenceValidationRunnerError(
+                "materialization manifest variant identity is invalid"
+            )
+        oracle_input_sha256 = payload.get("oracle_input_sha256")
+        if oracle_input_sha256 is not None:
+            oracle_input_sha256 = _require_sha256(
+                oracle_input_sha256,
+                name="materialization manifest oracle input",
+            )
+        variants.append(
+            ReferenceValidationVariantObservation(
+                ordinal=variant_ordinal,
+                variant_id=variant_id,
+                runtime_input_sha256=_require_sha256(
+                    payload.get("runtime_input_sha256"),
+                    name="materialization manifest runtime input",
+                ),
+                oracle_input_sha256=oracle_input_sha256,
+                observed_status="time_budget_exhausted",
+                observed_error_code="runner_time_budget_exhausted",
+            )
+        )
+    variant_rows = tuple(variants)
+    metrics = (
+        ()
+        if case.expected_outcome == "fail_closed"
+        else _metric_observations(case, variant_rows, metric_map)
+    )
+    return ReferenceValidationCaseObservation(
+        ordinal=ordinal,
+        case_id=case.case_id,
+        case_input_sha256=case.input_sha256,
+        materialization_sha256=_require_sha256(
+            manifest_case.get("materialization_sha256"),
+            name="materialization manifest case",
+        ),
+        expected_outcome=case.expected_outcome,
+        observed_status="time_budget_exhausted",
+        expected_error_code=case.expected_error_code,
+        observed_error_code="runner_time_budget_exhausted",
+        variant_results=variant_rows,
+        metric_values=metrics,
+        case_passed=False,
     )
 
 
@@ -1894,6 +1981,7 @@ def run_bounded_cpu_reference_validation(
         raise ReferenceValidationRunnerError(
             "checked-out code commit does not match the signed authorization chain"
         )
+    _require_clean_checked_out_code_commit(expected_code_commit_sha)
     _require_deadline_timer_available()
 
     from .reference_validation_artifact_binding import (
@@ -1926,6 +2014,13 @@ def run_bounded_cpu_reference_validation(
         raise ReferenceValidationRunnerError(
             "runner materialization coverage drifted"
         )
+    manifest_cases = manifest.get("cases")
+    if not isinstance(manifest_cases, list) or len(manifest_cases) != (
+        REFERENCE_VALIDATION_RUNNER_MAX_CASES
+    ):
+        raise ReferenceValidationRunnerError(
+            "runner materialization manifest cases drifted"
+        )
     protocol = frozen_cpu_reference_validation_protocol()
     if len(protocol.cases) != REFERENCE_VALIDATION_RUNNER_MAX_CASES:
         raise ReferenceValidationRunnerError("runner protocol case bound drifted")
@@ -1945,21 +2040,39 @@ def run_bounded_cpu_reference_validation(
 
     deadline = time.monotonic() + REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS
     metric_map = {row.metric_id: row for row in protocol.metrics}
-    case_results = tuple(
-        _evaluate_case(
-            ordinal,
-            case,
-            materialize_frozen_reference_validation_case(case.case_id, protocol),
-            metric_map=metric_map,
-            deadline=deadline,
-            evaluate_reference_force_field=evaluate_reference_force_field,
-            reference_error_type=ReferencePhysicsApplicabilityError,
-            evaluate_independent_analytic_oracle=(
-                evaluate_independent_analytic_oracle
-            ),
-        )
-        for ordinal, case in enumerate(protocol.cases)
-    )
+    case_results_list: list[ReferenceValidationCaseObservation] = []
+    for ordinal, (case, manifest_case) in enumerate(
+        zip(protocol.cases, manifest_cases, strict=True)
+    ):
+        try:
+            materialized = _call_before_deadline(
+                materialize_frozen_reference_validation_case,
+                case.case_id,
+                protocol,
+                deadline=deadline,
+            )
+        except _ReferenceValidationDeadlineExceeded:
+            case_result = _time_budget_case_from_frozen_manifest(
+                ordinal,
+                case,
+                manifest_case,
+                metric_map=metric_map,
+            )
+        else:
+            case_result = _evaluate_case(
+                ordinal,
+                case,
+                materialized,
+                metric_map=metric_map,
+                deadline=deadline,
+                evaluate_reference_force_field=evaluate_reference_force_field,
+                reference_error_type=ReferencePhysicsApplicabilityError,
+                evaluate_independent_analytic_oracle=(
+                    evaluate_independent_analytic_oracle
+                ),
+            )
+        case_results_list.append(case_result)
+    case_results = tuple(case_results_list)
     completed_at_utc = _format_utc(_utc_now(), name="runner completed_at")
     return ReferenceValidationRunObservation(
         runner_start_record_sha256=start_record_sha256,

@@ -174,7 +174,8 @@ The current `main` branch contains:
   evaluator/materializer/oracle sources, and dependency identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
   twenty-seven cases and fifty-nine variants on CPU float64 under a 120-second
-  POSIX main-thread deadline that interrupts evaluator and oracle calls. It
+  POSIX main-thread deadline that interrupts case materialization, evaluator,
+  and oracle calls. It
   returns one canonical failure-inclusive observation in memory, including
   failed metrics and sanitized evaluator failures. The exact module command is
   reachable only through a bounded canonical stdin request; trust keys never

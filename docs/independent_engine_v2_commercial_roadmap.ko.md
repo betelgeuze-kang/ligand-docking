@@ -16,7 +16,7 @@ receipt를 포함하지 않는 single-run execution-authorization 계약, 실제
 CPU process를 run-start에서 재검증해 secret-free environment receipt를 원자적으로
 기록하는 primitive, root-owned absolute Git의 read-only clean-checkout proof로 실제 Git
 HEAD를 확인하고 signed runner source·frozen evaluator source·dependency를
-다시 확인하고 evaluator/oracle 호출 자체를 POSIX timer로 중단하면서 모든 실패를 보존하는
+다시 확인하고 case materialization/evaluator/oracle 호출 자체를 POSIX timer로 중단하면서 모든 실패를 보존하는
 120초 제한 CPU float64 runner, Git metadata가 있는 clean source checkout에서만 canonical
 stdin 요청으로 같은 검증 process의 전체 chain을 실행하고 wheel-only 실행은 fail-closed하는
 exact module entrypoint, 그리고 raw chain·environment·runner-start·observation을
@@ -376,7 +376,7 @@ receipt도 production validation execution, fitting 또는 과학 주장을 승�
 preflight가 증명한 clean HEAD·signed runner source·frozen evaluator/materializer/oracle
 source·dependency를 다시 확인하고 nonce별 mode-0600 runner-start marker 하나를
 `O_EXCL`·file/directory `fsync`로 소비한다. 이후 CPU float64 27개 case·59개 variant를
-evaluator/oracle 호출 자체를 중단하는 POSIX main-thread 120초 평가 예산으로 순서대로 평가하며 threshold failure, expected fail-closed row,
+case materialization/evaluator/oracle 호출 자체를 중단하는 POSIX main-thread 120초 평가 예산으로 순서대로 평가하며 threshold failure, expected fail-closed row,
 unexpected evaluator failure와 미관측 metric까지 canonical in-memory observation에 모두
 보존한다. exact module command는 bounded canonical stdin 요청만 받아 trust key를 argv·
 response에 남기지 않고 environment receipt 생성, run, result finalize를 같은 verified

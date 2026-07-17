@@ -237,7 +237,8 @@ claim status without revalidating the dependency and freshness chain.
   source, dependency rows, and frozen evaluator/materializer/oracle identities,
   atomically consumes one private nonce-bound start
   marker, and evaluates exactly twenty-seven cases and fifty-nine variants under
-  a POSIX-interrupted 120-second evaluation budget. Every success, expected failure, unexpected
+  a POSIX-interrupted 120-second case-materialization/evaluator/oracle budget.
+  Every success, expected failure, unexpected
   failure, missing metric, and failed threshold remains in one canonical
   in-memory observation. The exact module command accepts only a bounded canonical
   stdin request, keeps trust material out of argv/output, and can create the

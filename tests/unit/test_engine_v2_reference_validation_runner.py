@@ -111,6 +111,11 @@ def _install_verified_receipt(
         "reference_validation_checked_out_code_commit_sha",
         lambda: receipt.code_commit_sha,
     )
+    monkeypatch.setattr(
+        module,
+        "_require_clean_checked_out_code_commit",
+        lambda _expected_commit: None,
+    )
 
 
 def _run(root: Path):
@@ -328,11 +333,32 @@ def test_runner_rejects_checkout_or_frozen_evaluator_source_drift_before_start(
         _run(checkout_root)
     assert list(checkout_root.iterdir()) == []
 
-    evaluator_root = _private_root(tmp_path, "evaluator")
+    dirty_root = _private_root(tmp_path, "dirty")
     monkeypatch.setattr(
         module,
         "reference_validation_checked_out_code_commit_sha",
         lambda: CODE_COMMIT_SHA,
+    )
+
+    def reject_dirty_checkout(_expected_commit: str) -> None:
+        raise ReferenceValidationRunnerError(
+            "validation checkout is not exactly clean at the authorized commit"
+        )
+
+    monkeypatch.setattr(
+        module,
+        "_require_clean_checked_out_code_commit",
+        reject_dirty_checkout,
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="not exactly clean"):
+        _run(dirty_root)
+    assert list(dirty_root.iterdir()) == []
+
+    evaluator_root = _private_root(tmp_path, "evaluator")
+    monkeypatch.setattr(
+        module,
+        "_require_clean_checked_out_code_commit",
+        lambda _expected_commit: None,
     )
     monkeypatch.setattr(
         reference_validation_artifact_binding,
@@ -392,6 +418,55 @@ def test_evaluator_is_interrupted_at_the_frozen_wall_clock_deadline(
         return None
 
     monkeypatch.setattr(reference_forcefield, "evaluate_reference_force_field", _slow)
+    started = time.monotonic()
+    observation = _run(root)
+    elapsed = time.monotonic() - started
+
+    variants = [
+        variant
+        for case in observation.case_results
+        for variant in case.variant_results
+    ]
+    assert elapsed < 1.0
+    assert len(variants) == REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
+    assert all(
+        variant.observed_status == "time_budget_exhausted"
+        for variant in variants
+    )
+
+
+def test_case_materialization_is_interrupted_and_all_variants_are_retained(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from betelgeuze_engine_v2.physics import reference_validation_artifact_binding
+    from betelgeuze_engine_v2.physics import reference_validation_materializer
+
+    root = _private_root(tmp_path)
+    _install_verified_receipt(monkeypatch, _receipt())
+    binding = reference_validation_artifact_binding.frozen_reference_validation_artifact_binding()
+    manifest = reference_validation_materializer.reference_validation_materialization_manifest_document()
+    monkeypatch.setattr(module, "REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS", 0.05)
+    monkeypatch.setattr(
+        reference_validation_artifact_binding,
+        "frozen_reference_validation_artifact_binding",
+        lambda: binding,
+    )
+    monkeypatch.setattr(
+        reference_validation_materializer,
+        "reference_validation_materialization_manifest_document",
+        lambda: manifest,
+    )
+
+    def slow_materialization(*args: object, **kwargs: object):
+        time.sleep(5.0)
+        raise AssertionError("deadline did not interrupt materialization")
+
+    monkeypatch.setattr(
+        reference_validation_materializer,
+        "materialize_frozen_reference_validation_case",
+        slow_materialization,
+    )
     started = time.monotonic()
     observation = _run(root)
     elapsed = time.monotonic() - started

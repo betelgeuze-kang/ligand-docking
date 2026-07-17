@@ -111,6 +111,11 @@ def _observation(
         "reference_validation_checked_out_code_commit_sha",
         lambda: selected.code_commit_sha,
     )
+    monkeypatch.setattr(
+        runner_module,
+        "_require_clean_checked_out_code_commit",
+        lambda _expected_commit: None,
+    )
     return run_bounded_cpu_reference_validation(
         root,
         AUTHORIZATION_NONCE,

@@ -56,7 +56,8 @@ Implemented and GitHub-hosted CPU tested:
   observed `HEAD` and frozen reference-
   evaluator source—atomically consumes a one-time runner-start marker, and
   retains every result or failure for the exact 27-case/59-variant matrix in
-  memory under a POSIX-interrupted 120-second evaluation budget, followed by a failure-inclusive
+  memory under a POSIX-interrupted 120-second materialization/evaluator/oracle
+  budget, followed by a failure-inclusive
   result writer that re-verifies the raw signed chain, live environment receipt,
   runner-start marker, and exact observation before atomically persisting one
   canonical private mode-0600 receipt. Its reader requires an out-of-band exact
