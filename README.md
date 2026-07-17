@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_g_bounded_scientific_scaffolds
+v2_l_cpu_reference_validation_protocol
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -35,6 +35,9 @@ Implemented and GitHub-hosted CPU tested:
 - independent `betelgeuze-engine-v2` wheel for Python 3.10–3.12;
 - bounded single-model PDB and single-molecule SDF V2000 parsers;
 - independent physics-term registry contracts;
+- a frozen CPU reference energy/force contract-validation protocol with exact
+  synthetic case identities, predefined tolerances, retained failure rows, and
+  a closed execution/parameter-fitting authorization gate;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

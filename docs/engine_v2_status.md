@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_k_h5_parameter_applicability_record
+v2_l_cpu_reference_validation_protocol
 ```
 
 The current `main` branch contains:
@@ -118,6 +118,16 @@ The current `main` branch contains:
   and no value from it is bound to the runtime parameter object. The code-
   enforced runtime envelope is explicitly not a scientifically validated
   chemical applicability domain and authorizes neither fitting nor validation.
+- a frozen CPU reference energy/force contract-validation protocol. It binds
+  seven exact synthetic fixture profiles, twenty exact mutation contracts,
+  twenty-seven ordered cases (fifteen expected passes and twelve expected
+  fail-closed rows), nineteen predefined float64 acceptance metrics, all-case
+  denominators, independent-oracle separation, environment/result-receipt
+  requirements, and the exact H5 dependency. No fixture materializer,
+  independent oracle, result receipt, scientific holdout, independently
+  reviewed runtime parameter values, or signed authorization receipt exists;
+  the executable gate therefore denies validation execution and parameter-
+  fitting proposals.
 
 ## What the implementation does not establish
 
@@ -125,6 +135,9 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
+- an executed CPU reference validation study, an independently reviewed
+  analytic oracle, or accepted energy/force evidence; the frozen protocol is a
+  pre-result contract and its synthetic values are not parameter-fit data;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime
@@ -168,7 +181,7 @@ Each capability row separates four questions:
 3. **scientifically validated** — independent scientific evidence exists;
 4. **customer execution enabled** — the capability is admitted to a product route.
 
-Only the first two are true for selected V2-K surfaces. `claim_safe` remains
+Only the first two are true for selected V2-L surfaces. `claim_safe` remains
 false for every current capability row.
 
 ## Verification

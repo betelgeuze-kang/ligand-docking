@@ -6,7 +6,9 @@
 
 현재 단계: V2-0 독립 CPU 스캐폴드와 V2-1의 bounded source-contract, exact
 PubChem CID 176 pH-state, CID 177/11199 reference-canonical tautomer 조각을
-구현하고 four-case public redocking protocol definition을 고정한 상태다.
+구현하고 four-case public redocking protocol definition, H5 parameter/runtime
+boundary, CPU reference energy/force contract-validation protocol을 결과 실행
+전에 고정한 상태다.
 V2-1 all-atom preparation,
 V2-2 과학 힘장, V2-3 도킹,
 V2-4 MD, V2-5 production AI, V2-6 ROCm/HIP, V2-7 상용 제품은 완료되지 않았다.
@@ -144,6 +146,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 | `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 | `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
+| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·27개 ordered pass/fail-closed case·19개 float64 metric·H5 dependency·failure-inclusive denominator·future result receipt를 고정하고 실행/피팅 gate를 executable closed 상태로 유지 | fixture materialization, independent oracle, result collection, reviewed runtime parameter values, scientific holdout/applicability, independent scientific review, signed execution authorization, energy/force/minimization validation, parameter fitting·제품 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -321,6 +324,19 @@ topology·neighbor·capacity admission을 7개 source SHA-256에 결속한다. �
 bounded code path가 실행 가능하다는 뜻일 뿐 molecule·element·charge coverage나
 physical accuracy를 검증한 scientific applicability domain이 아니다.
 
+CPU reference energy/force contract-validation protocol은 H5 record를 exact
+SHA-256 dependency로 결속하고 synthetic implementation-mathematics lane을 결과
+관측 전에 고정한다. harmonic bond/angle, proper torsion, Lennard-Jones,
+screened Coulomb, mixing/scaling/switch, orthorhombic minimum image, full-term
+composition, central finite difference, translation/rotation/permutation,
+same-environment determinism과 12개 fail-closed row를 포함한다. 모든 metric은
+float64 unit·aggregation·threshold가 사전 정의되고 27개 case 전체가 denominator다.
+그러나 fixture materializer와 독립 analytic oracle은 구현되지 않았고 결과 receipt도
+없다. synthetic 값은 parameter-fit data가 아니며 scientific parameterized-force-field
+lane의 reviewed runtime 값, chemical applicability, holdout과 독립 reference도 아직
+고정되지 않았다. 따라서 executable authorization decision은 validation 실행과
+parameter-fitting proposal을 모두 거부한다.
+
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
@@ -401,9 +417,14 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    caller-supplied 값과 기존 reviewed Sage candidate identity를 분리하고 code-enforced
    execution admission을 scientific applicability와 분리한다. production parameter
    fitting·calibration 또는 validation study는 독립 승인 gate 전에는 시작하지 않는다.
-10. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
+10. 완료된 CPU reference energy/force contract-validation protocol을 유지한다.
+   synthetic fixture/mutation/case identity, 사전 float64 threshold, failure-inclusive
+   denominator와 H5 dependency는 고정하지만 materializer·independent oracle·result
+   receipt·independent review·signed authorization이 없으므로 실행과 parameter-fitting
+   proposal은 계속 fail-closed한다.
+11. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
-11. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
+12. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
    gate가 닫힌 뒤 독립 capability로 진행한다.
 
 ## 6. V2-2 이후 요구사항
@@ -485,6 +506,8 @@ threshold, uncertainty, reviewer와 supersession/revocation 상태를 포함해�
 bounded source·topology·preparation graph test green은 parameterability,
 scientific validity, docking accuracy, MD, GPU parity 또는 commercial readiness가
 아니다.
+고정된 CPU reference validation protocol도 실행 결과가 아니며 force/energy accuracy,
+scientific applicability, minimization 또는 parameter fitting 승인을 뜻하지 않는다.
 
 ## 9. 제품 성숙도
 

@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_k_h5_parameter_applicability_record"
+IMPLEMENTATION_STAGE = "v2_l_cpu_reference_validation_protocol"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -92,6 +92,9 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = (
     "v2_h5_reference_physics_parameter_applicability_record"
+)
+CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = (
+    "v2_cpu_reference_energy_force_validation_protocol"
 )
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -419,6 +422,22 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
+    CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: (
+        "fixture_materializer_not_implemented",
+        "independent_analytic_oracle_not_implemented",
+        "oracle_source_identity_not_bound",
+        "reviewed_runtime_parameter_values_not_bound",
+        "scientific_parameter_applicability_domain_not_established",
+        "scientific_holdout_case_manifest_not_frozen",
+        "independent_scientific_review_missing",
+        "signed_execution_authorization_receipt_missing",
+        "validation_execution_not_authorized",
+        "validation_results_not_collected",
+        "parameter_fitting_not_authorized",
+        "minimization_validation_protocol_missing",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     DOCKING_CAPABILITY_ID: (
         "docking_proposal_scaffold_not_scientifically_validated",
         "validated_docking_scorer_missing",
@@ -740,6 +759,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
+                CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
+                current_state=(
+                    "frozen_cpu_reference_energy_force_contract_validation_"
+                    "protocol_with_closed_execution_and_fitting_gate"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             DOCKING_CAPABILITY_ID: _row(
                 DOCKING_CAPABILITY_ID,
                 current_state="bounded_internal_scaffold",
@@ -808,6 +836,7 @@ __all__ = [
     "CAPABILITY_SCHEMA_VERSION",
     "CIF_SYNTAX_CAPABILITY_ID",
     "CPU_REFERENCE_CAPABILITY_ID",
+    "CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID",
     "DISTRIBUTION_CAPABILITY_ID",
     "DOCKING_CAPABILITY_ID",
     "ENGINE_ID",

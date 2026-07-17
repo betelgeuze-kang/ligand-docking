@@ -26,7 +26,7 @@ Stable root surfaces currently cover:
 
 ### Provisional submodule APIs
 
-The following V2-K modules are intentionally importable but provisional:
+The following V2-L modules are intentionally importable but provisional:
 
 ```text
 betelgeuze_engine_v2.io
@@ -35,6 +35,7 @@ betelgeuze_engine_v2.docking
 betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.physics.registry
 betelgeuze_engine_v2.physics.reference_parameter_applicability
+betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.runtime
 ```
 
@@ -49,6 +50,15 @@ implemented equations, code-enforced execution admission, capacity defaults,
 and bound source hashes. They do not ship or assign a parameter set, parse the
 reviewed Sage artifact, establish chemical applicability, authorize fitting or
 validation, or enable a customer/runtime physics route.
+
+The frozen CPU reference validation-protocol symbols under
+`betelgeuze_engine_v2.physics` define exact synthetic fixture/mutation/case
+identities, float64 energy/force tolerances, failure-inclusive aggregation,
+independent-oracle requirements, future result-receipt fields, and an executable
+closed authorization decision. They do not materialize fixtures, implement an
+oracle, run validation, approve caller-supplied parameter values, establish a
+scientific applicability domain, authorize parameter fitting, or promote a
+scientific or product claim.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

@@ -32,6 +32,7 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "v2_frozen_public_benchmark_protocol" in roadmap
     assert "v2_h5_reference_physics_parameter_applicability_record" in roadmap
+    assert "v2_cpu_reference_energy_force_validation_protocol" in roadmap
     assert "finite binary64" in roadmap
     assert "exact bit pattern" in roadmap
     assert "known/unknown/not-applicable" in roadmap
@@ -71,6 +72,13 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "runtime\nparameter 값을 추출했다는 주장도 하지 않는다" in roadmap
     assert "scientific applicability domain이 아니다" in roadmap
     assert "fitting·calibration" in roadmap
+    assert "7개 synthetic fixture profile·20개 mutation contract" in roadmap
+    assert "27개 ordered pass/fail-closed case·19개 float64 metric" in roadmap
+    assert "same-environment determinism과 12개 fail-closed row" in roadmap
+    assert "27개 case 전체가 denominator" in roadmap
+    assert "fixture materializer와 독립 analytic oracle은 구현되지 않았고" in roadmap
+    assert "synthetic 값은 parameter-fit data가 아니며" in roadmap
+    assert "validation 실행과\nparameter-fitting proposal을 모두 거부" in roadmap
     assert (
         "일반 nonpoly component를\nligand·cofactor·modified residue로 추정하지 않는다"
         in roadmap
