@@ -143,6 +143,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 | `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
+| `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -309,6 +310,17 @@ contract review일 뿐 artifact를 bundle하거나 runtime에서 내려받지 �
 molecule coverage, applicability domain, parameter calibration, force/energy 정확도,
 과학·benchmark 타당성 또는 법률 준수를 승인하지 않는다.
 
+H5 parameter-applicability record는 위 Sage 2.2.1을 기존 reviewed candidate
+identity로만 참조한다. 최신 release를 선택했다는 주장도, OFFXML에서 runtime
+parameter 값을 추출했다는 주장도 하지 않는다. 실제 reference evaluator의 값은
+caller가 `ReferenceForceFieldParameters`로 모두 명시하며 package에는 production
+또는 reference parameter set이 없다. record는 harmonic bond/angle, graph-implied
+proper periodic torsion, Lorentz-Berthelot Lennard-Jones, screened Coulomb,
+quintic switch, explicit exclusion/scale, orthorhombic minimum image와 exact
+topology·neighbor·capacity admission을 7개 source SHA-256에 결속한다. 이 admission은
+bounded code path가 실행 가능하다는 뜻일 뿐 molecule·element·charge coverage나
+physical accuracy를 검증한 scientific applicability domain이 아니다.
+
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
@@ -384,12 +396,14 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    미지원으로 유지한다.
 8. 완료된 four-case public benchmark protocol/manifest의 exact source·license
    metadata·endpoint·failure denominator·scorer identity를 결과 실행·발표 없이
-   유지한다. 다음 slice로 H5 reference physics의 parameter provenance와
-   applicability-domain record를 정의한다. production parameter fitting·validation은
-   독립 gate 전에는 시작하지 않는다.
-9. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
+   유지한다.
+9. 완료된 H5 parameter-origin/runtime-envelope record를 유지한다. 이 record는
+   caller-supplied 값과 기존 reviewed Sage candidate identity를 분리하고 code-enforced
+   execution admission을 scientific applicability와 분리한다. production parameter
+   fitting·calibration 또는 validation study는 독립 승인 gate 전에는 시작하지 않는다.
+10. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
-10. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
+11. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
    gate가 닫힌 뒤 독립 capability로 진행한다.
 
 ## 6. V2-2 이후 요구사항

@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_j_frozen_public_benchmark_protocol
+implementation_stage: v2_k_h5_parameter_applicability_record
 
 claim_policy:
   customer_execution_enabled: false
@@ -736,6 +736,34 @@ capabilities:
       - reference_physics_scientific_validation_missing
       - applicability_domain_evidence_missing
       - public_force_energy_validation_missing
+
+  v2_h5_reference_physics_parameter_applicability_record:
+    current_state: frozen_h5_parameter_origin_and_runtime_envelope_record_without_parameter_set_or_scientific_validation
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: false
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - production_reference_parameter_values_not_shipped
+      - caller_supplied_parameter_values_not_independently_reviewed
+      - reviewed_sage_source_not_bound_to_runtime_parameter_values
+      - offxml_parsing_atom_typing_and_parameter_assignment_not_implemented
+      - partial_charge_generation_and_atom_mass_assignment_not_implemented
+      - improper_torsions_constraints_long_range_and_solvation_not_supported
+      - automatic_bonded_exclusion_and_one_four_scaling_inference_not_implemented
+      - runtime_capacity_envelope_is_not_scientific_applicability_evidence
+      - molecule_element_charge_and_chemical_space_coverage_not_validated
+      - parameter_fitting_not_authorized
+      - independent_force_energy_validation_missing
+      - scientific_validation_missing
+      - product_integration_not_qualified
 
   v2_bounded_docking_scaffold:
     current_state: bounded_internal_scaffold

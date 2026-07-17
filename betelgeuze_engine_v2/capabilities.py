@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_j_frozen_public_benchmark_protocol"
+IMPLEMENTATION_STAGE = "v2_k_h5_parameter_applicability_record"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -90,6 +90,9 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_preparation_corpus"
 )
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
+H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = (
+    "v2_h5_reference_physics_parameter_applicability_record"
+)
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID = "v2_frozen_public_benchmark_protocol"
@@ -400,6 +403,21 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "reference_physics_scientific_validation_missing",
         "applicability_domain_evidence_missing",
         "public_force_energy_validation_missing",
+    ),
+    H5_PARAMETER_APPLICABILITY_CAPABILITY_ID: (
+        "production_reference_parameter_values_not_shipped",
+        "caller_supplied_parameter_values_not_independently_reviewed",
+        "reviewed_sage_source_not_bound_to_runtime_parameter_values",
+        "offxml_parsing_atom_typing_and_parameter_assignment_not_implemented",
+        "partial_charge_generation_and_atom_mass_assignment_not_implemented",
+        "improper_torsions_constraints_long_range_and_solvation_not_supported",
+        "automatic_bonded_exclusion_and_one_four_scaling_inference_not_implemented",
+        "runtime_capacity_envelope_is_not_scientific_applicability_evidence",
+        "molecule_element_charge_and_chemical_space_coverage_not_validated",
+        "parameter_fitting_not_authorized",
+        "independent_force_energy_validation_missing",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
     ),
     DOCKING_CAPABILITY_ID: (
         "docking_proposal_scaffold_not_scientifically_validated",
@@ -713,6 +731,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            H5_PARAMETER_APPLICABILITY_CAPABILITY_ID: _row(
+                H5_PARAMETER_APPLICABILITY_CAPABILITY_ID,
+                current_state=(
+                    "frozen_h5_parameter_origin_and_runtime_envelope_record_"
+                    "without_parameter_set_or_scientific_validation"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             DOCKING_CAPABILITY_ID: _row(
                 DOCKING_CAPABILITY_ID,
                 current_state="bounded_internal_scaffold",
@@ -785,6 +812,7 @@ __all__ = [
     "DOCKING_CAPABILITY_ID",
     "ENGINE_ID",
     "EXTERNAL_BASELINE_CAPABILITY_ID",
+    "H5_PARAMETER_APPLICABILITY_CAPABILITY_ID",
     "IMPLEMENTATION_STAGE",
     "MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID",

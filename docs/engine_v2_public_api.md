@@ -26,7 +26,7 @@ Stable root surfaces currently cover:
 
 ### Provisional submodule APIs
 
-The following V2-J modules are intentionally importable but provisional:
+The following V2-K modules are intentionally importable but provisional:
 
 ```text
 betelgeuze_engine_v2.io
@@ -34,6 +34,7 @@ betelgeuze_engine_v2.molecular.mmcif_*
 betelgeuze_engine_v2.docking
 betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.physics.registry
+betelgeuze_engine_v2.physics.reference_parameter_applicability
 betelgeuze_engine_v2.runtime
 ```
 
@@ -41,6 +42,13 @@ The frozen public-benchmark protocol symbols under
 `betelgeuze_engine_v2.benchmark` define input identities, endpoint rules, and a
 failure-inclusive reporting contract only. They do not authorize data fetch,
 benchmark execution, result publication, or scientific promotion.
+
+The frozen H5 reference-parameter applicability symbols under
+`betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact
+implemented equations, code-enforced execution admission, capacity defaults,
+and bound source hashes. They do not ship or assign a parameter set, parse the
+reviewed Sage artifact, establish chemical applicability, authorize fitting or
+validation, or enable a customer/runtime physics route.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

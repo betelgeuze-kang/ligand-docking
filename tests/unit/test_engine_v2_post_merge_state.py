@@ -12,6 +12,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     CAPABILITY_SCHEMA_VERSION,
     CIF_SYNTAX_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
+    H5_PARAMETER_APPLICABILITY_CAPABILITY_ID,
     IMPLEMENTATION_STAGE,
     MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID,
     MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID,
@@ -53,7 +54,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 37
+    assert len(loaded["capabilities"]) == 38
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -96,6 +97,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID in rows
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
     assert PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID in rows
+    assert H5_PARAMETER_APPLICABILITY_CAPABILITY_ID in rows
     assert (
         rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
         is False
@@ -487,6 +489,22 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert public_protocol["internal_reference_execution_enabled"] is False
     assert "public_benchmark_not_executed" in public_protocol["blockers"]
+
+    h5_record = rows[H5_PARAMETER_APPLICABILITY_CAPABILITY_ID]
+    assert h5_record["current_state"] == (
+        "frozen_h5_parameter_origin_and_runtime_envelope_record_"
+        "without_parameter_set_or_scientific_validation"
+    )
+    assert h5_record["internal_reference_execution_enabled"] is False
+    assert (
+        "reviewed_sage_source_not_bound_to_runtime_parameter_values"
+        in (h5_record["blockers"])
+    )
+    assert (
+        "runtime_capacity_envelope_is_not_scientific_applicability_evidence"
+        in (h5_record["blockers"])
+    )
+    assert "parameter_fitting_not_authorized" in h5_record["blockers"]
     assert (
         "posebusters_benchmark_equivalence_not_established"
         in public_protocol["blockers"]
@@ -504,8 +522,11 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert IMPLEMENTATION_STAGE in status
     assert "implemented scaffold" in status
     assert "scientifically validated method" in status
+    assert "runtime-envelope record" in status
+    assert "scientifically validated\n  chemical applicability domain" in status
     assert "Stable within an Engine API major version" in policy
     assert "Provisional submodule APIs" in policy
+    assert "reference_parameter_applicability" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -551,6 +572,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_tautomer_selection.py",
         "test_engine_v2_mmcif_nonpoly_tautomer_selection_corpus.py",
         "test_engine_v2_parameter_source_provenance.py",
+        "test_engine_v2_reference_parameter_applicability.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -575,4 +597,5 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_j_frozen_public_benchmark_protocol"' in source
+    assert '"v2_k_h5_parameter_applicability_record"' in source
+    assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source

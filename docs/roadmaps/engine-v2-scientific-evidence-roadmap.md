@@ -182,8 +182,14 @@ claim status without revalidating the dependency and freshness chain.
   Seed coordinates are ignored. It bundles and fetches no data, authorizes no
   execution or publication, and is neither statistically representative nor a
   public benchmark result or PoseBusters-equivalence claim.
-- Define independent parameter provenance and applicability-domain records for
-  H5 reference physics before proposing any validation study.
+- Preserve the frozen H5 parameter-origin and runtime-envelope record. It binds
+  exact runtime equations, code-enforced admission, configurable capacity
+  defaults, and seven implementation-source hashes while recording that values
+  are caller supplied and are not extracted from the reviewed Sage candidate.
+  The runtime envelope is not a scientific chemical applicability domain, and
+  the record authorizes neither parameter fitting nor a validation study.
+- Define an independently reviewed CPU energy/force validation protocol and its
+  authorization gate before collecting results or proposing parameter fitting.
 - Design CPU/GPU parity fixtures only after the CPU reference behavior and
   tolerances are frozen.
 - Close the remaining same-UID artifact TOCTOU, unsigned ledger, and runtime
