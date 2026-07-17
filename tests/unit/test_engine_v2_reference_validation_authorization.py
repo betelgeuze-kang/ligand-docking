@@ -213,6 +213,9 @@ def test_signed_authorization_receipt_verifies_but_cannot_open_execution() -> No
     assert receipt["claim_safe"] is False
     assert verification.receipt_authorization_verified is True
     assert verification.eligible_for_atomic_execution_reservation is True
+    assert verification.implementation_author_identity_sha256 == AUTHOR_IDENTITY
+    assert verification.independent_reviewer_identity_sha256 == REVIEWER_IDENTITY
+    assert verification.authorization_key_id == OPERATOR_KEY_ID
     assert verification.code_commit_sha == CODE_COMMIT_SHA
     assert verification.runner_source_sha256 == RUNNER_SOURCE_SHA256
     assert verification.execution_environment_contract_sha256 == (

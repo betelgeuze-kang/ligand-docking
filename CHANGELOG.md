@@ -63,6 +63,13 @@ scientific claim from a package version.
   concurrent duplicate rejection, and no release API. No key, receipt,
   reservation root, production reservation, execution, result, or claim
   promotion is bundled.
+- Fail-closed run-start dependency and live execution-environment re-verification
+  with exact review/authorization/reservation cross-checks, CPU-only deterministic
+  runtime observation, a short-lived operator-signed network-isolation
+  attestation, secret-free logical argv/path identities, and atomic mode-0600
+  environment-receipt persistence. No key, attestation, root, production
+  receipt, kernel isolation, runner, execution, result, or claim promotion is
+  bundled.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

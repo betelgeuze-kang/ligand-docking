@@ -42,6 +42,7 @@ betelgeuze_engine_v2.physics.reference_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_validation_review
 betelgeuze_engine_v2.physics.reference_validation_authorization
 betelgeuze_engine_v2.physics.reference_validation_nonce_reservation
+betelgeuze_engine_v2.physics.reference_validation_run_start
 betelgeuze_engine_v2.physics.reference_validation_receipts
 betelgeuze_engine_v2.runtime
 ```
@@ -103,6 +104,17 @@ tamper-evident record only. No trusted key, receipt, reservation root, or
 production reservation is bundled. Filesystem locality and resistance to a
 same-UID attacker are not established; the primitive cannot create an
 environment receipt, authorize a run, collect results, or authorize fitting.
+
+The run-start symbols re-verify the raw review and authorization plus the
+durable nonce record, require exact downstream artifact identities, inspect the
+live CPU-only deterministic process, verify a short-lived operator-signed
+network-isolation attestation, and atomically persist a canonical mode-0600
+environment receipt in a private caller-provisioned artifact root. Only path
+hashes and a fixed logical runner argv are recorded, not secret-bearing command
+arguments. The library does not create a network namespace or establish
+same-UID replacement resistance. No trusted key, attestation, root, or
+production receipt is bundled, and a verified receipt authorizes neither the
+future runner nor validation, fitting, or a scientific claim.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59

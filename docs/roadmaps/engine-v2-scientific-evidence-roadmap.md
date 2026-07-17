@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@5ad46722aee4be828556d4542dae9d43c3fe03a5`
+Observed baseline: `main@9a600487defbffee91480267ae9353f5081190c7`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -218,8 +218,17 @@ claim status without revalidating the dependency and freshness chain.
   mode-0700 POSIX directory, then synchronizes the file and directory. Duplicate
   or poisoned paths fail closed and there is no release API. No key, receipt,
   root, or production reservation is bundled; filesystem locality and same-UID
-  replacement resistance remain external responsibilities, and every run-start
-  dependency must still be reverified.
+  replacement resistance remain external responsibilities.
+- Preserve the separate run-start re-verification and environment-receipt
+  primitive. It re-verifies the raw review and authorization plus the durable
+  nonce record, observes the live Linux/Python/Torch/NumPy/environment/thread/
+  determinism/fixed-logical-argv state, verifies a short-lived operator-signed
+  network-isolation attestation, and atomically persists one private mode-0600
+  canonical environment receipt. It stores path identities rather than paths
+  and rejects secret-bearing argv. The library does not kernel-enforce network
+  isolation or same-UID replacement resistance, and the receipt authorizes no
+  runner, validation, fitting, result, or scientific claim. No production key,
+  attestation, root, nonce reservation, or environment receipt is bundled.
 - Preserve the separate frozen execution-environment and result-receipt
   contracts. The environment contract fixes a CPU-only, network-disabled Linux
   lane, Python 3.10–3.12, Torch 2.6.0, NumPy 1.26.4, empty GPU visibility,
@@ -227,14 +236,16 @@ claim status without revalidating the dependency and freshness chain.
   confined artifact output. The result contract fixes all twenty-seven ordered
   cases, fifty-nine ordered variants, nineteen metric thresholds, retained
   failure rows, environment/authorization hashes, reviewer identity, and
-  supersession/revocation fields. They define schemas only: no environment
-  receipt, runner, result writer, observed value, or result receipt exists, and
-  execution remains unauthorized. The reservation primitive does not satisfy
-  any of those missing runtime inputs.
+  supersession/revocation fields. No production environment receipt, runner,
+  result writer, observed value, or result receipt exists, and execution remains
+  unauthorized. The run-start primitive satisfies only the receipt construction
+  boundary when all external inputs are supplied; it does not satisfy any
+  downstream runner, result, or scientific input.
 - Obtain an actual independently signed review attestation and separately
-  signed non-expired authorization receipt, then atomically reserve its nonce;
-  only after every run-start dependency is reverified may any synthetic
-  implementation-mathematics result be collected. The
+  signed non-expired authorization receipt, then atomically reserve its nonce
+  and construct a verified production environment receipt; only then may a
+  separately bounded runner be considered for synthetic implementation-
+  mathematics result collection. The
   scientific parameterized-force-field lane additionally requires reviewed
   runtime values, a frozen chemical applicability domain, a complete holdout
   manifest, and independent reference artifacts.

@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_q_cpu_reference_validation_nonce_reservation
+v2_r_cpu_reference_validation_run_start_environment
 ```
 
 The current `main` branch contains:
@@ -150,9 +150,9 @@ The current `main` branch contains:
   twenty-seven protocol cases, fifty-nine materialized variants, and nineteen
   predefined metrics. They require exact authorization, nonce, code, runner,
   dependency, environment, artifact-path, reviewer, supersession, and revocation
-  identities. No environment receipt, production nonce reservation, validation runner,
-  result writer, observed energy/force/error/metric value, or result receipt
-  exists, so the execution and fitting gates remain closed.
+  identities. No production environment receipt, production nonce reservation,
+  validation runner, result writer, observed energy/force/error/metric value, or
+  result receipt exists, so the execution and fitting gates remain closed.
   A separate atomic reservation primitive now re-verifies the raw review and
   authorization artifacts against out-of-band trust anchors and exact downstream
   hashes, then consumes one nonce in a caller-provisioned private local POSIX
@@ -160,8 +160,13 @@ The current `main` branch contains:
   Its durable canonical record remains execution-disabled and has no release or
   delete API. The repository bundles no key, artifact, reservation root, or
   production reservation; filesystem locality and same-UID replacement
-  resistance are not established, so run-start re-verification, environment
-  receipt creation, validation execution, and fitting remain blocked.
+  resistance are not established. A separate run-start primitive now re-verifies
+  the raw review, authorization, and durable nonce record; observes the live
+  Linux/Python/NumPy/Torch/env/thread/determinism/argv state; verifies a
+  short-lived operator-signed network-isolation attestation; and atomically
+  persists one mode-0600 secret-free environment receipt beneath a private
+  caller root. It provides neither kernel network isolation nor a runner/result
+  writer, and the receipt never authorizes execution or fitting.
 
 ## What the implementation does not establish
 
