@@ -17,7 +17,8 @@ CPU process를 run-start에서 재검증해 secret-free environment receipt를 �
 기록하는 primitive, source-only Python import와 Git replacement-ref 거부를 포함한 root-owned
 absolute Git의 read-only clean-checkout proof로 실제 Git HEAD를 확인하고 signed runner
 source·frozen evaluator source·dependency를 다시 확인하며 manifest와
-case materialization/evaluator/oracle을 고정 supervised child에서 실행해 native stall까지
+case materialization/evaluator/oracle을 automatic site 초기화를 끄고 검증 runtime dependency
+root만 받은 고정 supervised child에서 실행해 native stall까지
 hard-kill하면서 모든 실패를 보존하는 120초 제한 CPU float64 runner, trust key가 없는 canonical stdin 요청과 저장소가 bundle하지
 않는 고정 `/etc` root-owned mode-0600 외부 trust store만 사용해 Git metadata가 있는 clean
 source checkout의 verified supervisor chain에서 전체 chain을 실행하고 trust material은 child에 넘기지 않으며 미설정 store·wheel-only 실행은 fail-closed하는

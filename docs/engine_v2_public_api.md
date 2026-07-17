@@ -123,7 +123,9 @@ require exact code, runner-source, dependency, and frozen-artifact identities,
 require source-only imports, reject Git replacement refs, and atomically consume
 one nonce-bound mode-0600 runner-start marker. Frozen manifest construction and
 the exact 27-case/59-variant CPU float64 evaluation run in fixed supervised child
-processes; a parent hard deadline can terminate blocked native code. The result
+processes with automatic site initialization disabled and only the verified
+runtime's dependency roots supplied; a parent hard deadline can terminate
+blocked native code. The result
 is a canonical in-memory observation that retains
 successes, expected failures, unexpected failures, missing metrics, and failed
 thresholds. The exact module entrypoint accepts one bounded canonical stdin

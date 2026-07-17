@@ -90,7 +90,7 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "e162991364925696c81a936977c677d80e836b89a8229417281aa85a12891f21"
+    "44f120553ac8ede8b49d7ace74b9e39e88924d43b73d1c449cdcf2ff99ccebee"
 )
 
 _ROTATION_MATRIX = (
@@ -1112,6 +1112,8 @@ def _contract_projection() -> dict[str, Any]:
             "case_materialization_under_posix_deadline_required": True,
             "dedicated_manifest_preflight_worker_required": True,
             "dedicated_case_worker_subprocess_required": True,
+            "worker_automatic_site_initialization_allowed": False,
+            "worker_dependency_paths_derived_from_verified_runtime": True,
             "case_worker_request_contains_trust_keys_or_receipts": False,
             "case_worker_hard_kill_at_wall_deadline_required": True,
             "in_worker_posix_deadline_interrupt_required": True,
@@ -2230,6 +2232,14 @@ def _load_case_worker_request(raw: bytes) -> dict[str, str]:
 
 def _require_fixed_worker_preflight(request: Mapping[str, str]) -> None:
     _require_source_only_python_runtime()
+    if (
+        sys.flags.no_site != 1
+        or os.environ.get("PYTHONNOUSERSITE") != "1"
+        or not os.environ.get("PYTHONPATH")
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation worker requires isolated site initialization"
+        )
     expected_commit = request["expected_code_commit_sha"]
     if reference_validation_checked_out_code_commit_sha() != expected_commit:
         raise ReferenceValidationRunnerError(
@@ -2315,9 +2325,52 @@ def _case_worker_environment() -> dict[str, str]:
         {
             "HOME": "/nonexistent",
             "PATH": "/usr/bin:/bin",
+            "PYTHONNOUSERSITE": "1",
+            "PYTHONPATH": _fixed_worker_dependency_python_path(),
         }
     )
     return environment
+
+
+def _fixed_worker_dependency_python_path() -> str:
+    """Return only the active site/dist-package roots needed by fixed workers."""
+
+    import numpy
+    import torch
+
+    roots: list[Path] = []
+    for raw_path in sys.path:
+        if not raw_path:
+            continue
+        candidate = Path(raw_path)
+        if not candidate.is_absolute() or candidate.name not in {
+            "site-packages",
+            "dist-packages",
+        }:
+            continue
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError as exc:
+            raise ReferenceValidationRunnerError(
+                "validation-worker dependency path is unavailable"
+            ) from exc
+        if not resolved.is_dir() or os.pathsep in os.fspath(resolved):
+            raise ReferenceValidationRunnerError(
+                "validation-worker dependency path is invalid"
+            )
+        if resolved not in roots:
+            roots.append(resolved)
+    if not roots:
+        raise ReferenceValidationRunnerError(
+            "validation-worker dependency paths are unavailable"
+        )
+    for module, name in ((torch, "Torch"), (numpy, "NumPy")):
+        module_path = Path(module.__file__).resolve(strict=True)
+        if not any(module_path.is_relative_to(root) for root in roots):
+            raise ReferenceValidationRunnerError(
+                f"validation-worker {name} path is outside the fixed dependency roots"
+            )
+    return os.pathsep.join(os.fspath(root) for root in roots)
 
 
 def _decode_case_worker_line(raw: bytes) -> ReferenceValidationCaseObservation:
@@ -2458,6 +2511,7 @@ def _start_fixed_validation_worker(worker_flag: str) -> Any:
         return subprocess.Popen(
             [
                 os.fspath(executable),
+                "-S",
                 "-m",
                 "betelgeuze_engine_v2.physics.reference_validation_runner",
                 worker_flag,

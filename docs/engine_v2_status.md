@@ -170,7 +170,8 @@ The current `main` branch contains:
   authorization, and the receipt never authorizes execution or fitting. A
   separate bounded runner now re-reads that persisted receipt, re-verifies the
   live process, source-only Python startup that redirects and disables bytecode
-  caches, root-owned absolute-Git clean-checkout proof with replacement refs
+  caches, and workers with automatic site initialization disabled and only the
+  verified runtime's dependency roots supplied, root-owned absolute-Git clean-checkout proof with replacement refs
   disabled and rejected for the observed `HEAD`, signed runner source, frozen
   reference-evaluator/materializer/oracle sources, and dependency identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
