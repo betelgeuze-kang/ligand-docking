@@ -7,6 +7,8 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_round_trip.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_ph_protonation.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_ph_protonation_corpus.py"
       - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
       - "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py"
@@ -33,6 +35,8 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation_corpus.py"
       - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
       - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
@@ -41,6 +45,7 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
@@ -59,6 +64,8 @@ on:
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_parameter_source_binding.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_partial_charge_assignments.py"
       - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_all_atom_round_trip.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_ph_protonation.py"
+      - "betelgeuze_engine_v2/molecular/mmcif_nonpoly_ph_protonation_corpus.py"
       - "betelgeuze_engine_v2/parameter_source_provenance.py"
       - "betelgeuze_engine_v2/molecular/mmcif_syntax.py"
       - "betelgeuze_engine_v2/molecular/mmcif_atom_site_model_policy.py"
@@ -85,6 +92,8 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py"
       - "tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation.py"
+      - "tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation_corpus.py"
       - "tests/unit/test_engine_v2_parameter_source_provenance.py"
       - "tests/unit/test_engine_v2_mmcif_atom_site_model_policy.py"
       - "tests/unit/test_engine_v2_mmcif_biological_assembly_policy.py"
@@ -93,6 +102,7 @@ on:
       - "tests/unit/test_engine_v2_mmcif_nonpoly_component_roles.py"
       - "tests/unit/test_engine_v2_post_merge_state.py"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
+      - ".github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml"
@@ -153,6 +163,8 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py
             tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation.py
+            tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation_corpus.py
             tests/unit/test_engine_v2_parameter_source_provenance.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
@@ -167,6 +179,7 @@ jobs:
             .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
+            .github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-parameter-source-binding.yml
@@ -225,6 +238,8 @@ jobs:
             tests/unit/test_engine_v2_mmcif_nonpoly_parameter_source_binding.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation.py \
+            tests/unit/test_engine_v2_mmcif_nonpoly_ph_protonation_corpus.py \
             tests/unit/test_engine_v2_parameter_source_provenance.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \

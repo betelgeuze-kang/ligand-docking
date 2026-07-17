@@ -24,6 +24,8 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "v2_bounded_mmcif_nonpoly_parameter_source_binding" in roadmap
     assert "v2_bounded_mmcif_nonpoly_partial_charge_assignment" in roadmap
     assert "v2_bounded_mmcif_nonpoly_all_atom_round_trip" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_ph_dependent_protonation" in roadmap
+    assert "v2_bounded_mmcif_nonpoly_ph_protonation_corpus" in roadmap
     assert "v2_reviewed_parameter_source_provenance" in roadmap
     assert "v2_bounded_mmcif_nonpoly_preparation_corpus" in roadmap
     assert "finite binary64" in roadmap
@@ -34,7 +36,16 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "parameterable=false" in roadmap
     assert "exact ASCII 30-case" in roadmap
     assert "52-axis coverage ledger" in roadmap
-    assert "2개 `not_implemented`" in roadmap
+    assert "1개 `not_implemented`" in roadmap
+    assert "supported 24·explicitly unsupported 27·not implemented 1" in roadmap
+    assert "exact PubChem CID 176 neutral acetic-acid graph" in roadmap
+    assert "Henderson–Hasselbalch" in roadmap
+    assert "90% 이상" in roadmap
+    assert "system을 만들지 않고 abstain" in roadmap
+    assert "source-observed atom이 아닌\nexact generated hydroxyl H 하나만 제거" in roadmap
+    assert "resonance equivalence와 tautomer selection은 해석하지 않으며" in roadmap
+    assert "supported·abstention·failure를 모두 denominator에 남기며" in roadmap
+    assert "commercial\nredistribution 승인이나 법률 판단도 주장하지 않는다" in roadmap
     assert "Sage 2.2.1 unconstrained artifact" in roadmap
     assert "OFFXML을\n해석하거나" in roadmap
     assert "partial charge" in roadmap

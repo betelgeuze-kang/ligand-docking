@@ -114,9 +114,25 @@ claim status without revalidating the dependency and freshness chain.
   partial-charge-bit identity. It does not re-emit original mmCIF text or preserve
   token spelling, category order, comments, or whitespace, and makes no chemistry,
   parameter, scientific, or product promotion.
+- Keep the exact PubChem CID 176 pH-dependent protonation contract executable.
+  It binds reviewed factual structure identity, pKa 4.76, caller pH, and a 90%
+  dominant-population threshold; ambiguous populations abstain. A selected
+  deprotonated state removes only the exact generated hydroxyl hydrogen and
+  localizes formal charge without interpreting resonance or tautomer identity,
+  then verifies a byte-exact canonical JSON round trip. General acid/base,
+  multi-site, polyprotic, pKa prediction/calibration, partial-charge, parameter,
+  geometry, scientific, and product claims remain blocked. Exact graph matching
+  is a contract comparison and does not authenticate the input structure's
+  source identity.
+- Keep the separate 7-case PubChem-identity pH corpus executable. It retains two
+  selected states, one abstention, and four expected failures with factual
+  source identity, retrieval date, and source-specific license-review boundary.
+  It bundles no raw PubChem record, contributor text, or conformer and is not
+  parameter-fitting or scientific-validation data.
 - Keep the exact-input 30-case synthetic supported/failure contract corpus and
-  52-axis coverage ledger executable. It classifies 23 axes as supported, 27 as
-  explicitly unsupported, and 2 as not implemented; it is not parameter-fitting
+  the separate pH corpus bound to the 52-axis coverage ledger executable. It
+  classifies 24 axes as supported, 27 as explicitly unsupported, and 1 as not
+  implemented; neither corpus is parameter-fitting
   data and does not make V2-1 exit-ready.
 - Keep exact selected source assembly metadata, generation, and Cartesian-
   operation rows bound while blocking preparation whenever any selected assembly
@@ -148,10 +164,10 @@ claim status without revalidating the dependency and freshness chain.
 - Keep known nonpoly insertion-code markers exactly joined across scheme,
   atom-site, and connection endpoint identity. This does not interpret polymer
   insertion/deletion, canonical renumbering, or general author/label semantics.
-- Next, close the 2 remaining implementation-gap rows, pH-dependent protonation
-  and tautomer selection, by independent capability slices and
-  add a licensing/provenance-reviewed real-world supported/failure corpus. Do not
-  start production parameter fitting while either requirement remains open;
+- Next, close the one remaining implementation-gap row, tautomer selection, by
+  an independent capability slice and add a licensing/provenance-reviewed
+  real-world supported/failure corpus. Do not start production parameter fitting
+  while that requirement remains open;
   original mmCIF lexical re-emission remains explicitly outside the canonical
   identity round-trip receipt.
 - Freeze a licensing-compatible public benchmark manifest and failure-inclusive

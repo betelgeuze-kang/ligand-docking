@@ -26,7 +26,7 @@ Stable root surfaces currently cover:
 
 ### Provisional submodule APIs
 
-The following V2-G modules are intentionally importable but provisional:
+The following V2-H modules are intentionally importable but provisional:
 
 ```text
 betelgeuze_engine_v2.io

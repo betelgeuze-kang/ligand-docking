@@ -28,6 +28,8 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID,
     MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID,
     MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID,
+    MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID,
+    MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID,
     MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID,
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
@@ -48,7 +50,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 32
+    assert len(loaded["capabilities"]) == 34
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -80,6 +82,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID in rows
+    assert MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID in rows
     assert PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID in rows
     assert MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID in rows
     assert MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID in rows
@@ -334,6 +338,38 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         round_trip["blockers"]
     )
 
+    ph_protonation = rows[MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID]
+    assert ph_protonation["current_state"] == (
+        "bounded_pubchem_cid_176_dominant_ph_state_selection_with_abstention_"
+        "and_canonical_round_trip"
+    )
+    assert ph_protonation["internal_reference_execution_enabled"] is True
+    assert "exact_pubchem_cid_176_neutral_acetic_acid_graph_only" in (
+        ph_protonation["blockers"]
+    )
+    assert "source_structure_identity_not_authenticated" in (
+        ph_protonation["blockers"]
+    )
+    assert "ambiguous_population_abstains_below_90_percent_dominance" in (
+        ph_protonation["blockers"]
+    )
+    assert "tautomer_selection_not_implemented" in ph_protonation["blockers"]
+    assert ph_protonation["scientifically_validated"] is False
+    assert ph_protonation["claim_safe"] is False
+
+    ph_corpus = rows[MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID]
+    assert ph_corpus["current_state"] == (
+        "frozen_7_case_pubchem_identity_supported_abstention_and_failure_corpus"
+    )
+    assert ph_corpus["internal_reference_execution_enabled"] is True
+    assert "source_structure_identity_not_authenticated" in (
+        ph_corpus["blockers"]
+    )
+    assert "pubchem_source_specific_license_review_remains" in (
+        ph_corpus["blockers"]
+    )
+    assert "one_classified_implementation_gap_remains" in ph_corpus["blockers"]
+
     parameter_source = rows[PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID]
     assert parameter_source["current_state"] == (
         "reviewed_openff_sage_2_2_1_identity_license_scope_only"
@@ -356,8 +392,13 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "frozen_30_case_failure_complete_corpus_and_52_axis_coverage_ledger"
     )
     assert preparation_corpus["internal_reference_execution_enabled"] is True
-    assert "synthetic_contract_corpus_only" in preparation_corpus["blockers"]
-    assert "two_classified_implementation_gaps_remain" in (
+    assert "synthetic_base_corpus_plus_separate_real_world_ph_corpus" in (
+        preparation_corpus["blockers"]
+    )
+    assert "one_classified_implementation_gap_remains" in (
+        preparation_corpus["blockers"]
+    )
+    assert "real_world_tautomer_corpus_missing" in (
         preparation_corpus["blockers"]
     )
     assert "parameter_fitting_not_authorized" in preparation_corpus["blockers"]
@@ -420,6 +461,11 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_mmcif_nonpoly_coordinate_values.py",
         "test_engine_v2_mmcif_nonpoly_hydrogen_coordinates.py",
         "test_engine_v2_mmcif_nonpoly_all_atom_systems.py",
+        "test_engine_v2_mmcif_nonpoly_parameter_source_binding.py",
+        "test_engine_v2_mmcif_nonpoly_partial_charge_assignments.py",
+        "test_engine_v2_mmcif_nonpoly_all_atom_round_trip.py",
+        "test_engine_v2_mmcif_nonpoly_ph_protonation.py",
+        "test_engine_v2_mmcif_nonpoly_ph_protonation_corpus.py",
         "test_engine_v2_parameter_source_provenance.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
@@ -444,3 +490,4 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
+    assert '"v2_h_bounded_ph_protonation"' in source

@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_g_bounded_scientific_scaffolds"
+IMPLEMENTATION_STAGE = "v2_h_bounded_ph_protonation"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -74,6 +74,12 @@ MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID = (
 )
 MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID = (
     "v2_bounded_mmcif_nonpoly_all_atom_round_trip"
+)
+MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_ph_dependent_protonation"
+)
+MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID = (
+    "v2_bounded_mmcif_nonpoly_ph_protonation_corpus"
 )
 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = (
     "v2_reviewed_parameter_source_provenance"
@@ -244,7 +250,8 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "hydrogen_coordinate_geometry_not_validated",
         "reviewed_parameter_source_binding_is_separate",
         "aromatic_charged_stereo_and_extended_elements_not_supported",
-        "ph_tautomer_and_intercomponent_connections_not_prepared",
+        "general_ph_tautomer_and_intercomponent_connections_not_prepared",
+        "bounded_cid_176_ph_protonation_is_separate_capability",
         "canonical_all_atom_system_not_bound_to_preparation_report",
         "scientific_validation_missing",
         "product_integration_not_qualified",
@@ -326,10 +333,38 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "chemistry_force_energy_and_scientific_validation_missing",
         "product_integration_not_qualified",
     ),
+    MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID: (
+        "exact_pubchem_cid_176_neutral_acetic_acid_graph_only",
+        "source_structure_identity_not_authenticated",
+        "single_monoprotic_acid_site_only",
+        "fixed_reviewed_pka_not_predicted_or_calibrated",
+        "ambiguous_population_abstains_below_90_percent_dominance",
+        "localized_carboxylate_resonance_equivalence_not_interpreted",
+        "tautomer_selection_not_implemented",
+        "source_observed_acidic_hydrogen_removal_not_supported",
+        "partial_charge_assignment_not_performed",
+        "parameter_assignment_not_implemented",
+        "atom_masses_not_assigned",
+        "geometry_energy_and_force_not_validated",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID: (
+        "two_pubchem_structure_identities_only",
+        "manually_projected_mmcif_coordinates_are_contract_fixtures",
+        "source_structure_identity_not_authenticated",
+        "pubchem_source_specific_license_review_remains",
+        "raw_pubchem_records_not_bundled",
+        "one_classified_implementation_gap_remains",
+        "real_world_tautomer_corpus_missing",
+        "parameter_fitting_not_authorized",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: (
-        "synthetic_contract_corpus_only",
-        "two_classified_implementation_gaps_remain",
-        "real_world_supported_corpus_missing",
+        "synthetic_base_corpus_plus_separate_real_world_ph_corpus",
+        "one_classified_implementation_gap_remains",
+        "real_world_tautomer_corpus_missing",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
         "product_integration_not_qualified",
@@ -584,6 +619,24 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID,
+                current_state=(
+                    "bounded_pubchem_cid_176_dominant_ph_state_selection_"
+                    "with_abstention_and_canonical_round_trip"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID: _row(
+                MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID,
+                current_state=(
+                    "frozen_7_case_pubchem_identity_supported_abstention_"
+                    "and_failure_corpus"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID: _row(
                 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
                 current_state=(
@@ -689,6 +742,8 @@ __all__ = [
     "MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID",
     "MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID",
     "MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID",
+    "MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID",
+    "MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID",
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",

@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_g_bounded_scientific_scaffolds
+implementation_stage: v2_h_bounded_ph_protonation
 
 claim_policy:
   customer_execution_enabled: false
@@ -433,7 +433,8 @@ capabilities:
       - hydrogen_coordinate_geometry_not_validated
       - reviewed_parameter_source_binding_is_separate
       - aromatic_charged_stereo_and_extended_elements_not_supported
-      - ph_tautomer_and_intercomponent_connections_not_prepared
+      - general_ph_tautomer_and_intercomponent_connections_not_prepared
+      - bounded_cid_176_ph_protonation_is_separate_capability
       - canonical_all_atom_system_not_bound_to_preparation_report
       - scientific_validation_missing
       - product_integration_not_qualified
@@ -566,6 +567,60 @@ capabilities:
       - chemistry_force_energy_and_scientific_validation_missing
       - product_integration_not_qualified
 
+  v2_bounded_mmcif_nonpoly_ph_dependent_protonation:
+    current_state: bounded_pubchem_cid_176_dominant_ph_state_selection_with_abstention_and_canonical_round_trip
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - exact_pubchem_cid_176_neutral_acetic_acid_graph_only
+      - source_structure_identity_not_authenticated
+      - single_monoprotic_acid_site_only
+      - fixed_reviewed_pka_not_predicted_or_calibrated
+      - ambiguous_population_abstains_below_90_percent_dominance
+      - localized_carboxylate_resonance_equivalence_not_interpreted
+      - tautomer_selection_not_implemented
+      - source_observed_acidic_hydrogen_removal_not_supported
+      - partial_charge_assignment_not_performed
+      - parameter_assignment_not_implemented
+      - atom_masses_not_assigned
+      - geometry_energy_and_force_not_validated
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
+  v2_bounded_mmcif_nonpoly_ph_protonation_corpus:
+    current_state: frozen_7_case_pubchem_identity_supported_abstention_and_failure_corpus
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - two_pubchem_structure_identities_only
+      - manually_projected_mmcif_coordinates_are_contract_fixtures
+      - source_structure_identity_not_authenticated
+      - pubchem_source_specific_license_review_remains
+      - raw_pubchem_records_not_bundled
+      - one_classified_implementation_gap_remains
+      - real_world_tautomer_corpus_missing
+      - parameter_fitting_not_authorized
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
   v2_reviewed_parameter_source_provenance:
     current_state: reviewed_openff_sage_2_2_1_identity_license_scope_only
     implemented: true
@@ -607,9 +662,9 @@ capabilities:
     claim_safe: false
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
-      - synthetic_contract_corpus_only
-      - two_classified_implementation_gaps_remain
-      - real_world_supported_corpus_missing
+      - synthetic_base_corpus_plus_separate_real_world_ph_corpus
+      - one_classified_implementation_gap_remains
+      - real_world_tautomer_corpus_missing
       - parameter_fitting_not_authorized
       - scientific_validation_missing
       - product_integration_not_qualified

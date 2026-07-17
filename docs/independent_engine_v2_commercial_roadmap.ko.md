@@ -4,8 +4,9 @@
 
 문서 상태: current-main canonical planning reference; 비실행·비주장 문서
 
-현재 단계: V2-0 독립 CPU 스캐폴드와 V2-1의 bounded source-contract 조각을
-구현한 상태다. V2-1 all-atom preparation, V2-2 과학 힘장, V2-3 도킹,
+현재 단계: V2-0 독립 CPU 스캐폴드와 V2-1의 bounded source-contract 및 exact
+PubChem CID 176 pH-state 조각을 구현한 상태다. V2-1 all-atom preparation,
+V2-2 과학 힘장, V2-3 도킹,
 V2-4 MD, V2-5 production AI, V2-6 ROCm/HIP, V2-7 상용 제품은 완료되지 않았다.
 
 이 문서는 과거 donor PR의 구현 상태를 승계하지 않는다. 2026-07 donor 정리에서
@@ -133,8 +134,10 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_parameter_source_binding` | reviewed Sage source identity·immutable artifact SHA-256·license identity·candidate scope를 eligible canonical system hash와 별도 carrier로 결속 | artifact bundling·OFFXML parsing·parameter coverage/applicability·parameter/partial-charge/mass assignment·geometry·force/energy·과학 검증·parameterability |
 | `v2_bounded_mmcif_nonpoly_partial_charge_assignment` | caller가 제공한 explicit partial-charge vector를 exact parameter-bound system hash·atom order·finite binary64 bit·method provenance SHA-256·formal total-charge 보존과 결속해 `Atom.partial_charge_e`에 적용 | charge 생성·보정·과학적 method validation, parameter coverage/applicability, force-field parameter·mass assignment, geometry·force/energy 검증·parameterability |
 | `v2_bounded_mmcif_nonpoly_all_atom_round_trip` | charge-assigned system의 canonical Engine v2 JSON encode/decode/re-encode byte identity, atom·bond·residue·chain, topology·coordinate hash, source lineage metadata, parameter-source binding과 partial-charge binary64 bit 보존 receipt | original mmCIF text 재출력, source token spelling·category order·comment·whitespace 보존, chemistry·parameter·과학 검증·parameterability |
+| `v2_bounded_mmcif_nonpoly_ph_dependent_protonation` | 입력 graph가 reviewed PubChem CID 176 neutral acetic-acid graph contract와 정확히 일치할 때 pKa 4.76과 caller pH를 결속하고 Henderson–Hasselbalch 우세 population이 90% 이상이면 protonated/deprotonated canonical `AllAtomSystem` 선택; 경계 population은 abstain하고 선택 system은 canonical JSON byte round-trip 검증 | source structure identity 인증, general acid/base·multi-site·polyprotic chemistry, pKa prediction/calibration, source-observed H 제거, resonance equivalence·tautomer selection, partial charge·parameter·mass, geometry·energy·과학 검증·parameterability |
+| `v2_bounded_mmcif_nonpoly_ph_protonation_corpus` | PubChem CID 176·702 factual identity, source URL·retrieval date·license-review boundary를 결속한 7-case real-world-identity corpus; supported 2·abstention 1·failure 4를 모두 실행 | source structure identity 인증, raw PubChem record·contributor text·PubChem conformer bundling, general chemistry coverage, legal determination, parameter fitting·과학/benchmark/product 승격 |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
-| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 52-axis executable coverage ledger; supported 23·explicitly unsupported 27·not implemented 2 | real-world supported corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
+| `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 24·explicitly unsupported 27·not implemented 1 | real-world tautomer corpus·parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
 닫는다. observation capability는 그 identity를 selected source atom row와
@@ -262,6 +265,28 @@ original mmCIF text를 다시 쓰거나 source token spelling, category order, c
 whitespace를 보존하는 lexical round trip이 아니다. chemistry·parameter·scientific
 validation 또는 customer readiness도 승격하지 않는다.
 
+bounded pH-dependent protonation capability는 general protonation predictor가 아니라
+exact PubChem CID 176 neutral acetic-acid graph 하나에 대한 독립 contract layer다.
+PubChem PUG REST에서 검토한 CID·formula·connectivity SMILES·InChIKey와 PubChem
+page의 pKa 4.76, source URL·retrieval date·source-specific license-review boundary를
+고정한다. 입력 graph 일치는 contract 비교일 뿐 source structure identity를 인증하지
+않는다. raw PubChem response, contributor text와 PubChem conformer는 bundle하지
+않고 deterministic mmCIF 좌표는 contract fixture일 뿐이다. caller pH는 finite
+binary64와 bounded `[0, 14]` 범위로 결속하고, monoprotic Henderson–Hasselbalch
+population의 한 상태가 90% 이상일 때만 선택한다. 그보다 모호한 population은
+system을 만들지 않고 abstain한다. deprotonated state는 source-observed atom이 아닌
+exact generated hydroxyl H 하나만 제거하고 singly bonded O에 localized `-1` formal
+charge를 둔다. resonance equivalence와 tautomer selection은 해석하지 않으며 선택된
+system도 partial charge·parameter·mass, geometry·energy·과학 validation 없이
+`parameterable=false`, `claim_safe=false`를 유지한다.
+
+별도 real-world-identity pH corpus는 CID 176의 low-pH protonated, high-pH
+deprotonated, pKa 경계 abstention과 CID 702 ethanol graph mismatch, reference
+crosswire, pH range, source-observed acidic-H failure를 합계 7개 row로 고정한다.
+supported·abstention·failure를 모두 denominator에 남기며 parameter fitting data가
+아니다. PubChem download policy가 contributor별 제약 확인을 요구하므로 commercial
+redistribution 승인이나 법률 판단도 주장하지 않는다.
+
 reviewed parameter-source provenance capability는 OpenFF 공식 force-field repository의
 Sage 2.2.1 unconstrained artifact를 release tag `2024.09.0`과 exact commit에 고정하고,
 artifact byte size·SHA-256, `CC-BY-4.0` license identity와 license-text SHA-256,
@@ -274,8 +299,9 @@ molecule coverage, applicability domain, parameter calibration, force/energy 정
 bounded preparation corpus는 30개 입력과 기대 결과를 개별 SHA-256으로 고정한다.
 지원 그래프 4개, intercomponent preparation 차단 1개, 명시적 미지원 chemistry
 18개, upstream policy 차단 5개, invalid-source 2개를 모두 실행하고 failure row를
-denominator에서 제거하지 않는다. 52-axis coverage ledger는 23개 supported,
-27개 explicitly unsupported, 2개 `not_implemented`로 분류하며 unclassified
+denominator에서 제거하지 않는다. 별도 7-case pH real-world-identity corpus를
+결속한 52-axis coverage ledger는 24개 supported, 27개 explicitly unsupported,
+1개 `not_implemented`로 분류하며 unclassified
 row는 0이다. 이 분류 완전성은
 기능 완전성이나 과학적 corpus coverage가 아니다. 따라서
 `parameter_fitting_allowed=false`, `v2_1_exit_ready=false`를 유지한다.
@@ -333,13 +359,14 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    failure-complete parameterability report를 유지한다. 별도 deterministic
    coordinate-bearing hydrogen projection은 geometry validation과 분리한다.
    canonical `AllAtomSystem`과 reviewed parameter-source identity binding은 별도
-   carrier로 유지하며 parameter 값, pH·tautomer·aromatic/charged chemistry와
+   carrier로 유지하며 parameter 값, general pH·tautomer·aromatic/charged chemistry와
    계속 분리한다.
 6. 완료된 첫 contract layer로 exact ASCII 30-case synthetic supported/failure
    corpus와 52-axis coverage ledger를 유지한다. expectation mismatch, input hash
    drift, coverage row 누락과 evidence signal 누락은 모두 fail-closed다.
-7. 다음으로 남은 2개 `not_implemented` row인 pH-dependent protonation과
-   tautomer selection을 각각 독립 capability로 닫고,
+7. 완료된 exact PubChem CID 176 pH-dependent protonation과 7-case
+   real-world-identity supported/abstention/failure corpus를 유지한다. 다음으로 남은
+   1개 `not_implemented` row인 tautomer selection을 독립 capability로 닫고,
    licensing·provenance가 명시된 real-world supported/failure corpus를 추가한다.
    canonical all-atom identity round trip까지 완료된 뒤에도 original mmCIF lexical
    재출력은 별도 미지원으로 유지한다.

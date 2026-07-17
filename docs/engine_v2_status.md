@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_g_bounded_scientific_scaffolds
+v2_h_bounded_ph_protonation
 ```
 
 The current `main` branch contains:
@@ -70,10 +70,21 @@ The current `main` branch contains:
   plus canonical Engine v2 JSON identity round-trip receipts that re-execute
   encode/decode/re-encode and preserve topology, coordinates, lineage metadata,
   parameter-source binding, and charge bits without re-emitting original mmCIF,
+  plus an exact-graph pH-dependent protonation contract for PubChem CID 176
+  acetic acid that binds reviewed factual identity, pKa 4.76, caller pH, and a
+  90% dominant-population threshold, abstains near the pKa, removes only the
+  exact generated hydroxyl hydrogen for the deprotonated state, preserves a
+  localized formal-charge representation without claiming resonance or tautomer
+  interpretation, treats graph matching as a contract comparison rather than
+  source-structure identity authentication, and verifies the selected system by byte-exact JSON
+  round trip, plus a frozen 7-case PubChem-identity corpus with two selected
+  states, one abstention, and four expected failures whose source URLs,
+  retrieval dates, and source-specific license-review boundary are explicit
+  while raw PubChem records, contributor text, and conformers are not bundled,
   plus a frozen 30-case
   synthetic contract corpus that retains supported, explicitly unsupported, and
   2 invalid-source cases, plus a 52-axis executable coverage ledger classifying
-  23 supported, 27 explicitly unsupported, and 2 not-implemented rows,
+  24 supported, 27 explicitly unsupported, and 1 not-implemented row,
   including a nonpoly explicit-altloc preparation failure boundary and a known
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
@@ -87,8 +98,9 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
-- a licensing/provenance-reviewed real-world preparation corpus or authorization
-  to fit parameters from the synthetic contract corpus;
+- a general-chemistry or tautomer real-world preparation corpus, a legal
+  determination for source-specific PubChem content, or authorization to fit
+  parameters from either contract corpus;
 - general mmCIF coordinate geometry or symmetry-expanded topology, occupancy
   population or B-factor quality assessment, general charge chemistry, hydrogen
   model selection, ensemble/trajectory/averaging semantics, multi-model execution,
@@ -123,7 +135,7 @@ Each capability row separates four questions:
 3. **scientifically validated** — independent scientific evidence exists;
 4. **customer execution enabled** — the capability is admitted to a product route.
 
-Only the first two are true for selected V2-G surfaces. `claim_safe` remains
+Only the first two are true for selected V2-H surfaces. `claim_safe` remains
 false for every current capability row.
 
 ## Verification
