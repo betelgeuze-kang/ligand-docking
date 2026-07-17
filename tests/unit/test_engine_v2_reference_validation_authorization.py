@@ -25,6 +25,10 @@ from betelgeuze_engine_v2.physics.reference_validation_review import (
     build_signed_reference_validation_review_attestation,
     verify_signed_reference_validation_review_attestation,
 )
+from betelgeuze_engine_v2.physics.reference_validation_receipts import (
+    FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
+    FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
+)
 
 
 AUTHOR_IDENTITY = "a" * 64
@@ -45,8 +49,10 @@ EXPIRES_AT = ISSUED_AT + timedelta(hours=4)
 CHECKED_AT = ISSUED_AT + timedelta(hours=1)
 CODE_COMMIT_SHA = "1" * 40
 RUNNER_SOURCE_SHA256 = "2" * 64
-ENVIRONMENT_CONTRACT_SHA256 = "3" * 64
-RESULT_CONTRACT_SHA256 = "4" * 64
+ENVIRONMENT_CONTRACT_SHA256 = (
+    FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+)
+RESULT_CONTRACT_SHA256 = FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
 DEPENDENCY_ROWS = {
     "numpy-1.26.4-wheel": "5" * 64,
     "python-3.11-runtime": "6" * 64,

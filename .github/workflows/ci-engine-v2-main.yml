@@ -143,6 +143,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
             tests/unit/test_engine_v2_reference_validation_authorization.py
+            tests/unit/test_engine_v2_reference_validation_receipts.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -248,6 +249,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
             tests/unit/test_engine_v2_reference_validation_authorization.py \
+            tests/unit/test_engine_v2_reference_validation_receipts.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
@@ -357,6 +359,8 @@ jobs:
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
               FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
               cpu_reference_validation_authorization_decision,
               cpu_reference_validation_protocol_document,
@@ -367,6 +371,9 @@ jobs:
               reference_validation_review_contract_document,
               reference_validation_authorization_contract_decision,
               reference_validation_authorization_contract_document,
+              reference_validation_execution_environment_contract_document,
+              reference_validation_execution_readiness_decision,
+              reference_validation_result_receipt_contract_document,
               reviewed_parameter_source_provenance,
           )
 
@@ -375,7 +382,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_o_cpu_reference_validation_authorization_contract"
+          assert capability_snapshot()["implementation_stage"] == "v2_p_cpu_reference_validation_receipt_contracts"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
@@ -445,6 +452,22 @@ jobs:
           assert authorization_decision["authorization_receipt_present"] is False
           assert authorization_decision["authorization_nonce_reserved"] is False
           assert authorization_decision["validation_execution_authorized"] is False
+          environment_contract = reference_validation_execution_environment_contract_document()
+          assert environment_contract["contract_sha256"] == (
+              FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+          )
+          result_contract = reference_validation_result_receipt_contract_document()
+          assert result_contract["contract_sha256"] == (
+              FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+          )
+          readiness = reference_validation_execution_readiness_decision()
+          assert readiness["receipt_contracts_frozen"] is True
+          assert readiness["authorization_nonce_reserved"] is False
+          assert readiness["execution_environment_receipt_present"] is False
+          assert readiness["validation_runner_implemented"] is False
+          assert readiness["result_receipt_writer_implemented"] is False
+          assert readiness["validation_execution_authorized"] is False
+          assert readiness["validation_results_collected"] is False
           assert CANONICAL_SYSTEM_JSON_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_DECLARATION_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
           assert MMCIF_NONPOLY_COMPONENT_ROLE_DOCUMENT_SCHEMA_ID.endswith("/1.0.0")
