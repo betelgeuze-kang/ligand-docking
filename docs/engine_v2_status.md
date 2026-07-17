@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_i_bounded_tautomer_selection
+v2_j_frozen_public_benchmark_protocol
 ```
 
 The current `main` branch contains:
@@ -96,7 +96,18 @@ The current `main` branch contains:
   while unresolved nonpoly components are never guessed to be cofactors;
 - an independent physics-term registry contract;
 - deterministic bounded docking proposal/search scaffolds;
-- a benchmark manifest and one-row-per-case success/failure ledger.
+- a benchmark manifest and one-row-per-case success/failure ledger;
+- a frozen four-case public redocking protocol definition bound to the
+  PoseBusters packaged PDB examples at commit
+  `1a5f26aa7270fafba21b7fec8b3633f4c4e45ead`, exact external receptor/reference
+  SHA-256 values, MIT repository-license metadata, the RCSB CC0 usage-policy
+  identity, an exact ligand-graph identity seed whose coordinates are ignored,
+  predefined 2 Å symmetry-aware direct RMSD in the fixed receptor frame plus
+  bounded-validity endpoints,
+  all-case failure denominators, and exact scorer-source hashes. No raw data is
+  bundled, no network fetch or benchmark execution is implemented or authorized,
+  no result document exists, and the four fixtures do not establish statistical
+  representativeness or PoseBusters Benchmark equivalence.
 
 ## What the implementation does not establish
 
@@ -118,7 +129,9 @@ not currently establish:
   text/token/category-order/comment/whitespace round trip, or a
   parameterable `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
-- public CASF/PDBBind/LIT-PCBA holdout performance;
+- public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
+  representative public holdout; the frozen four-case protocol fixture is not a
+  benchmark result;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;
 - CUDA, ROCm, or HIP numerical/performance parity;
 - customer API integration for Engine v2;
@@ -141,7 +154,7 @@ Each capability row separates four questions:
 3. **scientifically validated** — independent scientific evidence exists;
 4. **customer execution enabled** — the capability is admitted to a product route.
 
-Only the first two are true for selected V2-I surfaces. `claim_safe` remains
+Only the first two are true for selected V2-J surfaces. `claim_safe` remains
 false for every current capability row.
 
 ## Verification

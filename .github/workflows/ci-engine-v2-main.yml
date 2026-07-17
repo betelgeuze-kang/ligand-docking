@@ -26,6 +26,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-tautomer-selection.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
+      - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
@@ -57,6 +58,7 @@ on:
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-tautomer-selection.yml"
       - ".github/workflows/ci-engine-v2-parameter-source-provenance.yml"
+      - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml"
       - ".github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml"
@@ -148,6 +150,7 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_benchmark_contracts.py
+            tests/unit/test_engine_v2_public_benchmark_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_external_baseline.py
             docs/engine_v2_pr_overlap_matrix.md
@@ -167,6 +170,7 @@ jobs:
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-round-trip.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-ph-protonation.yml
             .github/workflows/ci-engine-v2-parameter-source-provenance.yml
+            .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation-corpus.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-component-roles.yml
             .github/workflows/ci-engine-v2-mmcif-modified-residue-declarations.yml
@@ -244,6 +248,7 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_benchmark_contracts.py \
+            tests/unit/test_engine_v2_public_benchmark_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
           status=$?
@@ -294,8 +299,10 @@ jobs:
           import betelgeuze_engine_v2 as engine
           from betelgeuze_engine_v2.benchmark import (
               ExternalBaselineEngine,
+              FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256,
               MetricDefinition,
               MetricDirection,
+              frozen_public_benchmark_protocol,
           )
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.docking import DockingProblemIdentity
@@ -338,7 +345,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_i_bounded_tautomer_selection"
+          assert capability_snapshot()["implementation_stage"] == "v2_j_frozen_public_benchmark_protocol"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
@@ -351,6 +358,10 @@ jobs:
               direction=MetricDirection.MINIMIZE,
               bootstrap_samples=0,
           ).metric_id == "import_metric"
+          assert (
+              frozen_public_benchmark_protocol().protocol_sha256
+              == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
+          )
           assert ReferenceForceFieldParameters(
               parameter_set_id="import-only",
               parameter_set_version="1",

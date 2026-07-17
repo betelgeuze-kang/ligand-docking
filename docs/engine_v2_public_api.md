@@ -26,7 +26,7 @@ Stable root surfaces currently cover:
 
 ### Provisional submodule APIs
 
-The following V2-I modules are intentionally importable but provisional:
+The following V2-J modules are intentionally importable but provisional:
 
 ```text
 betelgeuze_engine_v2.io
@@ -36,6 +36,11 @@ betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.physics.registry
 betelgeuze_engine_v2.runtime
 ```
+
+The frozen public-benchmark protocol symbols under
+`betelgeuze_engine_v2.benchmark` define input identities, endpoint rules, and a
+failure-inclusive reporting contract only. They do not authorize data fetch,
+benchmark execution, result publication, or scientific promotion.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

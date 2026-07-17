@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_i_bounded_tautomer_selection
+implementation_stage: v2_j_frozen_public_benchmark_protocol
 
 claim_policy:
   customer_execution_enabled: false
@@ -773,6 +773,31 @@ capabilities:
       - benchmark_protocol_not_publicly_validated
       - public_holdout_results_missing
       - public_asymmetric_attestation_and_transparency_missing
+
+  v2_frozen_public_benchmark_protocol:
+    current_state: frozen_four_case_public_redocking_protocol_definition_without_execution_or_results
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: false
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - four_case_contract_cohort_not_statistically_representative
+      - posebusters_benchmark_equivalence_not_established
+      - symmetry_mapping_materializer_not_implemented
+      - reference_ligand_match_materializer_not_implemented
+      - public_benchmark_not_executed
+      - public_holdout_results_missing
+      - independent_attestation_missing
+      - legal_compliance_determination_not_made
+      - scientific_validation_missing
+      - product_integration_not_qualified
 
   v2_external_baseline_receipts:
     current_state: offline_work_order_and_verified_receipt_contract_ready

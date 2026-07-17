@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@7119ca421a36bdf49c2ad61c72e66a7749c8b5f9`
+Observed baseline: `main@14d900502d224b6a44a09ee3b73be48cebedf1fa`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -176,9 +176,12 @@ claim status without revalidating the dependency and freshness chain.
 - Preserve the now-closed tautomer implementation row and its bounded real-world
   identity corpus without treating it as scientific validation. Original mmCIF
   lexical re-emission remains explicitly outside the canonical identity receipt.
-- Freeze a licensing-compatible public benchmark manifest and failure-inclusive
-  reporting contract; do not run or publish a result as part of that protocol
-  definition PR.
+- Preserve the frozen four-case public redocking protocol definition and its
+  exact PoseBusters-commit input, license-metadata, endpoint, failure-denominator,
+  ligand-identity-seed, fixed-receptor-frame RMSD, and scorer-source identities.
+  Seed coordinates are ignored. It bundles and fetches no data, authorizes no
+  execution or publication, and is neither statistically representative nor a
+  public benchmark result or PoseBusters-equivalence claim.
 - Define independent parameter provenance and applicability-domain records for
   H5 reference physics before proposing any validation study.
 - Design CPU/GPU parity fixtures only after the CPU reference behavior and

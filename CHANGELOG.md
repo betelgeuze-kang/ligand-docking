@@ -20,6 +20,10 @@ scientific claim from a package version.
   metrics, pose-validity checks, and failure-complete bounded search ledgers.
 - Typed benchmark metrics, stable case seeds, artifact verification, deterministic
   confidence intervals, and optional signed reports.
+- Frozen four-case public redocking protocol identities, fixed-receptor-frame
+  symmetry-aware RMSD/validity endpoints, scorer-source hashes, and
+  failure-inclusive denominators without
+  data bundling, benchmark execution, results, or scientific promotion.
 - Explicit reference bond, angle, torsion, Lennard–Jones, and screened-Coulomb
   equations with autograd forces and fail-closed applicability contracts.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
