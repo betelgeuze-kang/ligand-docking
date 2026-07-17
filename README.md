@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_r_cpu_reference_validation_run_start_environment
+v2_s_cpu_reference_validation_bounded_runner
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -50,9 +50,15 @@ Implemented and GitHub-hosted CPU tested:
   a run-start primitive that re-verifies the full chain, observes the live
   CPU-only deterministic process, verifies a short-lived operator-signed
   network-isolation attestation, and atomically persists a secret-free
-  environment receipt. No trusted key, production receipt, reservation or
-  artifact root, production nonce reservation, environment receipt, runner,
-  result writer, or authorized execution is bundled;
+  environment receipt, followed by a bounded CPU float64 runner that re-reads
+  and re-verifies that receipt and its exact code, source, dependency, and
+  artifact bindings, atomically consumes a one-time runner-start marker, and
+  retains every result or failure for the exact 27-case/59-variant matrix in
+  memory under a 120-second evaluation budget. The direct CLI remains closed
+  and no result receipt is written. No trusted key, production receipt,
+  reservation or artifact root, production nonce reservation, production
+  environment receipt, runner start, authorized execution, or validation result
+  is bundled;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

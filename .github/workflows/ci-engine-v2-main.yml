@@ -146,6 +146,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_receipts.py
             tests/unit/test_engine_v2_reference_validation_nonce_reservation.py
             tests/unit/test_engine_v2_reference_validation_run_start.py
+            tests/unit/test_engine_v2_reference_validation_runner.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -254,6 +255,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_receipts.py \
             tests/unit/test_engine_v2_reference_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_validation_run_start.py \
+            tests/unit/test_engine_v2_reference_validation_runner.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
@@ -367,6 +369,7 @@ jobs:
               FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
               cpu_reference_validation_authorization_decision,
               cpu_reference_validation_protocol_document,
@@ -384,6 +387,8 @@ jobs:
               reference_validation_result_receipt_contract_document,
               reference_validation_run_start_contract_decision,
               reference_validation_run_start_contract_document,
+              reference_validation_runner_contract_decision,
+              reference_validation_runner_contract_document,
               reviewed_parameter_source_provenance,
           )
 
@@ -392,7 +397,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_r_cpu_reference_validation_run_start_environment"
+          assert capability_snapshot()["implementation_stage"] == "v2_s_cpu_reference_validation_bounded_runner"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
@@ -480,6 +485,16 @@ jobs:
           assert run_start_decision["production_environment_receipt_present"] is False
           assert run_start_decision["validation_runner_implemented"] is False
           assert run_start_decision["validation_execution_authorized"] is False
+          runner_contract = reference_validation_runner_contract_document()
+          assert runner_contract["contract_sha256"] == (
+              FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256
+          )
+          runner_decision = reference_validation_runner_contract_decision()
+          assert runner_decision["bounded_validation_runner_implemented"] is True
+          assert runner_decision["production_runner_start_consumed"] is False
+          assert runner_decision["production_validation_execution_authorized"] is False
+          assert runner_decision["production_validation_results_collected"] is False
+          assert runner_decision["result_receipt_writer_implemented"] is False
           environment_contract = reference_validation_execution_environment_contract_document()
           assert environment_contract["contract_sha256"] == (
               FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
