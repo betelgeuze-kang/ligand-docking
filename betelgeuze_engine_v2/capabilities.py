@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_q_cpu_reference_validation_nonce_reservation"
+IMPLEMENTATION_STAGE = "v2_r_cpu_reference_validation_run_start_environment"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -434,7 +434,6 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "trusted_authorization_operator_key_not_provided",
         "authorization_nonce_not_atomically_reserved",
         "execution_environment_receipt_missing",
-        "run_start_dependency_reverification_not_implemented",
         "validation_runner_not_implemented",
         "result_receipt_writer_not_implemented",
         "validation_execution_not_authorized",
@@ -768,8 +767,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "atomic_local_one_time_authorization_nonce_reservation_"
-                    "implemented_without_receipts_or_authorized_execution"
+                    "run_start_dependency_and_environment_receipt_primitive_"
+                    "implemented_without_production_receipt_runner_or_execution"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

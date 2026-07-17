@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_q_cpu_reference_validation_nonce_reservation
+v2_r_cpu_reference_validation_run_start_environment
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -46,9 +46,13 @@ Implemented and GitHub-hosted CPU tested:
   and one-time nonce semantics, plus frozen CPU execution-environment and
   failure-inclusive result-receipt schemas for all 27 cases and 59 variants,
   and a local POSIX `O_EXCL`/`fsync` one-time nonce-reservation primitive that
-  re-verifies both raw signed artifacts before durable consumption. No trusted
-  key, production receipt, reservation root, production nonce reservation,
-  environment receipt, runner, result writer, or authorized execution is present;
+  re-verifies both raw signed artifacts before durable consumption, followed by
+  a run-start primitive that re-verifies the full chain, observes the live
+  CPU-only deterministic process, verifies a short-lived operator-signed
+  network-isolation attestation, and atomically persists a secret-free
+  environment receipt. No trusted key, production receipt, reservation or
+  artifact root, production nonce reservation, environment receipt, runner,
+  result writer, or authorized execution is bundled;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

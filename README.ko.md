@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_q_cpu_reference_validation_nonce_reservation
+v2_r_cpu_reference_validation_run_start_environment
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -41,9 +41,11 @@ v2_q_cpu_reference_validation_nonce_reservation
   revocation 목록·one-time nonce를 요구하지만 receipt는 포함하지 않는 single-run
   execution-authorization 계약, 그리고 27개 case·59개 variant 전체의 CPU 실행 환경과
   failure-inclusive 결과 receipt 형식을 고정하고 raw signed artifact 두 개를 다시 검증한 뒤
-  POSIX `O_EXCL`/`fsync`로 one-time nonce를 로컬에서 소비하는 primitive. 실제 trusted key,
-  production receipt·reservation root·production nonce reservation·환경 receipt·runner·
-  result writer·승인된 실행은 포함하지 않음
+  POSIX `O_EXCL`/`fsync`로 one-time nonce를 로컬에서 소비하는 primitive, 이어서 전체
+  chain과 실제 CPU-only deterministic process를 다시 검증하고 짧은 수명의 operator-signed
+  network-isolation attestation을 확인한 뒤 secret-free 환경 receipt를 원자적으로 기록하는
+  run-start primitive. 실제 trusted key, production receipt·reservation/artifact root·
+  production nonce reservation·환경 receipt·runner·result writer·승인된 실행은 포함하지 않음
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 

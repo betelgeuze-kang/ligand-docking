@@ -333,7 +333,10 @@ class AuthorizationOperatorTrustAnchor:
 class ReferenceValidationAuthorizationVerification:
     receipt_sha256: str
     review_attestation_sha256: str
+    implementation_author_identity_sha256: str
+    independent_reviewer_identity_sha256: str
     authorization_operator_identity_sha256: str
+    authorization_key_id: str
     authorization_nonce_sha256: str
     code_commit_sha: str
     runner_source_sha256: str
@@ -353,9 +356,28 @@ class ReferenceValidationAuthorizationVerification:
         _require_sha256(self.receipt_sha256, name="authorization receipt")
         _require_sha256(self.review_attestation_sha256, name="authorization review attestation")
         _require_sha256(
+            self.implementation_author_identity_sha256,
+            name="authorization implementation author identity",
+        )
+        _require_sha256(
+            self.independent_reviewer_identity_sha256,
+            name="authorization independent reviewer identity",
+        )
+        _require_sha256(
             self.authorization_operator_identity_sha256,
             name="authorization operator identity",
         )
+        _require_key_id(self.authorization_key_id)
+        if len(
+            {
+                self.implementation_author_identity_sha256,
+                self.independent_reviewer_identity_sha256,
+                self.authorization_operator_identity_sha256,
+            }
+        ) != 3:
+            raise ReferenceValidationAuthorizationError(
+                "authorization verification identities must be pairwise distinct"
+            )
         _require_sha256(self.authorization_nonce_sha256, name="authorization nonce")
         _require_git_commit(self.code_commit_sha)
         _require_sha256(self.runner_source_sha256, name="authorization runner source")
@@ -410,7 +432,14 @@ class ReferenceValidationAuthorizationVerification:
         return {
             "receipt_sha256": self.receipt_sha256,
             "review_attestation_sha256": self.review_attestation_sha256,
+            "implementation_author_identity_sha256": (
+                self.implementation_author_identity_sha256
+            ),
+            "independent_reviewer_identity_sha256": (
+                self.independent_reviewer_identity_sha256
+            ),
             "authorization_operator_identity_sha256": self.authorization_operator_identity_sha256,
+            "authorization_key_id": self.authorization_key_id,
             "authorization_nonce_sha256": self.authorization_nonce_sha256,
             "code_commit_sha": self.code_commit_sha,
             "runner_source_sha256": self.runner_source_sha256,
@@ -831,7 +860,14 @@ def verify_signed_reference_validation_authorization_receipt(
     return ReferenceValidationAuthorizationVerification(
         receipt_sha256=receipt_sha256,
         review_attestation_sha256=review.attestation_sha256,
+        implementation_author_identity_sha256=(
+            review.implementation_author_identity_sha256
+        ),
+        independent_reviewer_identity_sha256=(
+            review.independent_reviewer_identity_sha256
+        ),
         authorization_operator_identity_sha256=operator_identity,
+        authorization_key_id=key_id,
         authorization_nonce_sha256=nonce,
         code_commit_sha=expected_projection["code_commit_sha"],
         runner_source_sha256=expected_projection["runner_source_sha256"],
