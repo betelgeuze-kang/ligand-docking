@@ -387,7 +387,9 @@ preflight child에서 만들고 남은 budget을 다시 확인한 뒤에만 mark
 unexpected evaluator failure와 미관측 metric까지 canonical in-memory observation에 모두
 보존한다. exact process command는 absolute checked-out bootstrap path만 사용하며
 `PYTHONPATH`·user-site override와 `sitecustomize`·`.pth` 실행을 무시하고 root-owned
-read-only dependency root만 허용한다. trust key가 없는 bounded canonical stdin 요청만 받고,
+read-only dependency root만 허용한다. Package initializer import 전에 bounded canonical
+stdin의 external operator HMAC, signed commit/source와 clean checkout을 검증하며 reservation/artifact root는
+checkout과 ancestry가 겹치지 않는 private 외부 directory만 허용한다. trust key가 없는 bounded canonical stdin 요청만 받고,
 reviewer/operator anchor는 저장소가 bundle하지 않는 고정 `/etc/betelgeuze/engine-v2/
 reference-validation-trust-anchors.json` root-owned mode-0600 외부 store에서만 읽는다.
 trust material을 stdin·argv·worker request·response에 남기지 않고 verified supervisor가

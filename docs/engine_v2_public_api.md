@@ -126,7 +126,11 @@ replacement refs, and atomically consume one nonce-bound mode-0600 runner-start
 marker. The bootstrap ignores `PYTHONPATH` and user-site overrides, skips
 `sitecustomize`/`.pth` execution, admits only root-owned read-only dependency
 roots, and binds both bootstrap and runner sources into the signed runner-source
-identity. Frozen manifest construction and
+identity. Before importing the package initializer it bounds and canonicalizes
+stdin, verifies the authorization operator HMAC against the external root-owned
+trust store, requires reservation and artifact roots outside the checkout, and
+uses root-owned Git to prove the exact signed commit, execution-source identity,
+and clean worktree. Frozen manifest construction and
 the exact 27-case/59-variant CPU float64 evaluation run in fixed supervised child
 processes with automatic site initialization disabled and only the verified
 runtime's dependency roots supplied. Remaining budget is rechecked before the

@@ -174,7 +174,10 @@ The current `main` branch contains:
   validation dependency is imported, and workers with automatic site
   initialization disabled and only root-owned read-only bootstrap-verified
   dependency roots supplied. The signed runner-source identity binds both the
-  bootstrap and runner files. Root-owned absolute-Git clean-checkout proof with replacement refs
+  bootstrap and runner files. The bootstrap bounds canonical stdin and verifies
+  the external operator signature, signed commit/source, and clean checkout
+  before the package initializer can run. Reservation and artifact roots must be private external directories
+  with no ancestry overlap with the checkout. Root-owned absolute-Git clean-checkout proof with replacement refs
   disabled and rejected for the observed `HEAD`, signed runner source, frozen
   reference-evaluator/materializer/oracle sources, and dependency identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact

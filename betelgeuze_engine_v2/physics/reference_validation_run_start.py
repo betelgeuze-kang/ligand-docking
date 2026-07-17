@@ -68,12 +68,12 @@ REFERENCE_VALIDATION_RUN_START_CONTRACT_ID = (
     "cpu_reference_validation_run_start_environment/1.0.0"
 )
 REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:20:00Z"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:45:00Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 REFERENCE_VALIDATION_APPLICATION_SEED_ENV = "BETELGEUZE_REFERENCE_VALIDATION_SEED"
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "946b939fcf6abd9b12958503bfe8d37e467760c70ae857aaab135c73f3a23658"
+    "14d67c1b352f91caea2ec8d05068bf469d8213d0cb7800f0dbff5f7b69702e23"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -278,6 +278,27 @@ def reference_validation_artifact_output_root_identity_sha256(
         )
     spelling = os.fspath(candidate)
     return hashlib.sha256(spelling.encode("utf-8")).hexdigest()
+
+
+def _require_reference_validation_root_outside_checkout(
+    root: str | os.PathLike[str],
+    *,
+    name: str,
+) -> Path:
+    """Reject roots that contain, equal, or sit beneath the source checkout."""
+
+    try:
+        candidate = Path(root).resolve(strict=True)
+        repository_root = Path(__file__).resolve(strict=True).parents[2]
+    except (OSError, TypeError, ValueError) as exc:
+        raise ReferenceValidationRunStartError(f"{name} is unavailable") from exc
+    if candidate.is_relative_to(repository_root) or repository_root.is_relative_to(
+        candidate
+    ):
+        raise ReferenceValidationRunStartError(
+            f"{name} must be outside the source checkout"
+        )
+    return candidate
 
 
 def _network_attestation_projection(
@@ -906,6 +927,7 @@ def _contract_projection() -> dict[str, Any]:
         },
         "persistence": {
             "caller_provisioned_private_posix_artifact_root_required": True,
+            "reservation_and_artifact_roots_outside_checkout_required": True,
             "artifact_root_path_stored_as_sha256_only": True,
             "receipt_filename": "<authorization_nonce_sha256>.environment.json",
             "exclusive_nofollow_create_and_file_directory_fsync_required": True,
@@ -1375,6 +1397,14 @@ def create_reference_validation_execution_environment_receipt(
 ) -> ReferenceValidationExecutionEnvironmentReceipt:
     """Reverify the full chain and persist one pre-evaluation receipt."""
 
+    _require_reference_validation_root_outside_checkout(
+        reservation_root,
+        name="reservation root",
+    )
+    _require_reference_validation_root_outside_checkout(
+        artifact_output_root,
+        name="artifact output root",
+    )
     nonce = _require_sha256(
         authorization_nonce_sha256,
         name="requested run-start authorization nonce",

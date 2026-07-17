@@ -29,6 +29,7 @@ from typing import Any, Mapping
 from .reference_validation_bootstrap import (
     REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
     reference_validation_bootstrap_path,
+    reference_validation_execution_source_sha256,
 )
 from .reference_validation_nonce_reservation import (
     ReferenceValidationNonceReservationError,
@@ -49,6 +50,7 @@ from .reference_validation_run_start import (
     REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
     ReferenceValidationExecutionEnvironmentReceipt,
     ReferenceValidationRunStartError,
+    _require_reference_validation_root_outside_checkout as _require_external_root,
     require_reference_validation_execution_environment_receipt_for_runner,
 )
 
@@ -66,7 +68,7 @@ REFERENCE_VALIDATION_RUNNER_CONTRACT_ID = (
     "cpu_reference_validation_bounded_runner/1.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:20:00Z"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:45:00Z"
 REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_VALIDATION_RUNNER_MAX_CASES = 27
@@ -94,7 +96,7 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "3c0dfe22af0496e3309aff8b226ebbda97c4e7bf40fcc30384ccf281775aa267"
+    "98f4b637aa07b0307b5af451374ebee793b995ef7e828b2726b876dda3a848e8"
 )
 
 _ROTATION_MATRIX = (
@@ -145,6 +147,19 @@ class ReferenceValidationRunnerAlreadyStartedError(ReferenceValidationRunnerErro
 
 class _ReferenceValidationDeadlineExceeded(Exception):
     """Internal, sanitized control flow for the frozen wall-clock deadline."""
+
+
+def _require_runner_root_outside_checkout(
+    root: str | os.PathLike[str],
+    *,
+    name: str,
+) -> None:
+    try:
+        _require_external_root(root, name=name)
+    except ReferenceValidationRunStartError as exc:
+        raise ReferenceValidationRunnerError(
+            f"{name} must be outside the source checkout"
+        ) from exc
 
 
 def _require_source_only_python_runtime() -> None:
@@ -381,49 +396,12 @@ def _normalize_dependency_rows(
 def reference_validation_runner_source_sha256() -> str:
     """Return the exact bootstrap-and-runner identity used by authorization."""
 
-    source_paths = (
-        (
-            "betelgeuze_engine_v2/physics/reference_validation_bootstrap.py",
-            Path(reference_validation_bootstrap_path()),
-        ),
-        (
-            "betelgeuze_engine_v2/physics/reference_validation_runner.py",
-            Path(__file__),
-        ),
-    )
-    source_rows: list[dict[str, str]] = []
-    for relative_path, source in source_paths:
-        if source.is_symlink():
-            raise ReferenceValidationRunnerError(
-                "runner source must not be a symlink"
-            )
-        try:
-            resolved = source.resolve(strict=True)
-            file_stat = resolved.stat()
-            digest = hashlib.sha256(resolved.read_bytes()).hexdigest()
-        except OSError as exc:
-            raise ReferenceValidationRunnerError(
-                "runner source is unavailable"
-            ) from exc
-        if (
-            resolved.name != Path(relative_path).name
-            or resolved.parent.name != "physics"
-            or resolved.parent.parent.name != "betelgeuze_engine_v2"
-            or not stat.S_ISREG(file_stat.st_mode)
-            or file_stat.st_nlink != 1
-        ):
-            raise ReferenceValidationRunnerError(
-                "runner source does not satisfy the regular-file policy"
-            )
-        source_rows.append({"path": relative_path, "sha256": digest})
-    return _sha256(
-        {
-            "schema_id": (
-                "betelgeuze.engine_v2_reference_validation_execution_sources/1.0.0"
-            ),
-            "sources": source_rows,
-        }
-    )
+    try:
+        return reference_validation_execution_source_sha256()
+    except RuntimeError as exc:
+        raise ReferenceValidationRunnerError(
+            "runner execution sources are unavailable"
+        ) from exc
 
 
 def _read_small_regular_text(
@@ -1202,6 +1180,7 @@ def _contract_projection() -> dict[str, Any]:
             "isolated_python_startup_required": True,
             "pythonpath_user_site_and_pth_startup_allowed": False,
             "bootstrap_source_bound_to_runner_source_sha256": True,
+            "signed_clean_checkout_verified_before_package_import": True,
             "git_replacement_refs_allowed": False,
             "one_time_runner_start_marker_required": True,
             "duplicate_runner_start_fails_closed": True,
@@ -1235,6 +1214,9 @@ def _contract_projection() -> dict[str, Any]:
         "entrypoint": {
             "logical_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
             "direct_stdlib_only_bootstrap_required": True,
+            "canonical_request_bounded_before_package_import": True,
+            "operator_signature_verified_before_package_import": True,
+            "expected_commit_and_source_verified_before_package_import": True,
             "isolated_python_flags": [
                 "-I",
                 "-S",
@@ -1245,6 +1227,7 @@ def _contract_projection() -> dict[str, Any]:
             "environment_import_path_overrides_honored": False,
             "automatic_site_initialization_allowed": False,
             "clean_source_checkout_with_git_metadata_required": True,
+            "reservation_and_artifact_roots_outside_checkout_required": True,
             "canonical_standard_input_request_schema_id": (
                 REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
             ),
@@ -2930,6 +2913,10 @@ def run_bounded_cpu_reference_validation(
 ) -> ReferenceValidationRunObservation:
     """Consume one runner start and evaluate the exact frozen synthetic matrix."""
 
+    _require_runner_root_outside_checkout(
+        artifact_output_root,
+        name="artifact output root",
+    )
     started = _utc_now()
     try:
         receipt = require_reference_validation_execution_environment_receipt_for_runner(
@@ -3641,6 +3628,14 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
         write_reference_validation_result_receipt,
     )
 
+    _require_runner_root_outside_checkout(
+        request["reservation_root"],
+        name="reservation root",
+    )
+    _require_runner_root_outside_checkout(
+        request["artifact_output_root"],
+        name="artifact output root",
+    )
     revoked_authorizations = _require_string_sequence(
         request["revoked_authorization_receipt_sha256s"],
         name="revoked authorization receipts",
@@ -3738,15 +3733,10 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _main_from_standard_streams() -> int:
-    input_stream = getattr(sys.stdin, "buffer", sys.stdin)
+def _main_from_canonical_request(raw: bytes) -> int:
+    """Execute one request already bounded and verified by the bootstrap."""
+
     output_stream = getattr(sys.stdout, "buffer", sys.stdout)
-    try:
-        raw = input_stream.read(REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES + 1)
-    except (AttributeError, OSError):
-        return 2
-    if not isinstance(raw, bytes):
-        return 2
     try:
         response = _execute_runner_request(_load_runner_request(raw))
         encoded = _canonical_bytes(response) + b"\n"
@@ -3755,6 +3745,17 @@ def _main_from_standard_streams() -> int:
     except Exception:
         return 2
     return 0
+
+
+def _main_from_standard_streams() -> int:
+    input_stream = getattr(sys.stdin, "buffer", sys.stdin)
+    try:
+        raw = input_stream.read(REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES + 1)
+    except (AttributeError, OSError):
+        return 2
+    if not isinstance(raw, bytes):
+        return 2
+    return _main_from_canonical_request(raw)
 
 
 def main() -> int:

@@ -4,6 +4,7 @@ import ast
 from copy import copy
 from datetime import datetime, timedelta, timezone
 import hashlib
+import hmac
 import io
 import inspect
 import json
@@ -40,6 +41,8 @@ from betelgeuze_engine_v2.physics.reference_validation_run_start import (
     build_signed_reference_validation_network_isolation_attestation,
     reference_validation_artifact_output_root_identity_sha256,
 )
+import betelgeuze_engine_v2.physics.reference_validation_bootstrap as bootstrap_module
+import betelgeuze_engine_v2.physics.reference_validation_run_start as run_start_module
 from betelgeuze_engine_v2.physics.reference_validation_runner import (
     FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256,
     REFERENCE_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID,
@@ -732,6 +735,25 @@ def test_isolated_bootstrap_ignores_pythonpath_user_site_and_sitecustomize(
             "PYTHONPYCACHEPREFIX": "/dev/null",
         }
     )
+    reservation_root = _private_root(tmp_path, "reservations")
+    artifact_root = _private_root(tmp_path, "artifacts")
+    request = {
+        "schema_id": module.REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID,
+        "reservation_root": os.fspath(reservation_root),
+        "artifact_output_root": os.fspath(artifact_root),
+        "authorization_nonce_sha256": AUTHORIZATION_NONCE,
+        "authorization_receipt": {},
+        "review_attestation": {},
+        "expected_implementation_author_identity_sha256": "9" * 64,
+        "network_isolation_attestation": {},
+        "expected_code_commit_sha": reference_validation_checked_out_code_commit_sha(),
+        "expected_runner_source_sha256": reference_validation_runner_source_sha256(),
+        "expected_dependency_artifact_sha256_rows": DEPENDENCY_ROWS,
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+    }
     completed = subprocess.run(
         [
             sys.executable,
@@ -744,7 +766,7 @@ def test_isolated_bootstrap_ignores_pythonpath_user_site_and_sitecustomize(
         ],
         cwd=tmp_path,
         env=environment,
-        input=b"{}\n",
+        input=module._canonical_bytes(request) + b"\n",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
@@ -764,6 +786,123 @@ def test_runner_rejects_execution_without_isolated_bootstrap() -> None:
         match="isolated dependency bootstrap",
     ):
         module._require_isolated_python_bootstrap_runtime()
+
+
+def test_bootstrap_verifies_signed_clean_checkout_before_package_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = (
+        bootstrap_module.reference_validation_bootstrap_path(),
+        os.fspath(Path(module.__file__).resolve().parents[2]),
+        ("/trusted/site-packages",),
+        ("/checkout", "/trusted/site-packages"),
+    )
+    seen: list[str] = []
+    monkeypatch.delattr(
+        bootstrap_module.sys,
+        bootstrap_module.REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "_prepare_isolated_import_boundary",
+        lambda: state,
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "_read_bootstrap_request",
+        lambda: (b"{}\n", {}),
+    )
+
+    def reject_before_import(*_args: object, **_kwargs: object) -> None:
+        seen.append("checkout_verified")
+        raise RuntimeError("stop before package import")
+
+    monkeypatch.setattr(
+        bootstrap_module,
+        "_require_signed_clean_checkout_before_import",
+        reject_before_import,
+    )
+
+    assert bootstrap_module.main() == 2
+    assert seen == ["checkout_verified"]
+    assert not hasattr(
+        bootstrap_module.sys,
+        bootstrap_module.REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+    )
+
+
+def test_bootstrap_trusts_only_operator_signed_commit_and_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    key_id = "bootstrap-operator"
+    operator_identity = "8" * 64
+    verification_key = b"bootstrap-operator-verification-key-material"
+    commit = reference_validation_checked_out_code_commit_sha()
+    source = reference_validation_runner_source_sha256()
+    projection = {
+        "authorization_key_id": key_id,
+        "authorization_operator_identity_sha256": operator_identity,
+        "code_commit_sha": commit,
+        "runner_source_sha256": source,
+    }
+    receipt = dict(projection)
+    receipt["receipt_sha256"] = hashlib.sha256(
+        bootstrap_module._canonical_bytes(projection)
+    ).hexdigest()
+    receipt["signature"] = {
+        "algorithm": "hmac-sha256",
+        "key_id": key_id,
+        "value": hmac.new(
+            verification_key,
+            bootstrap_module._canonical_bytes(receipt),
+            hashlib.sha256,
+        ).hexdigest(),
+    }
+    request: dict[str, object] = {"authorization_receipt": receipt}
+    monkeypatch.setattr(
+        bootstrap_module,
+        "_load_bootstrap_operator_keys",
+        lambda: {key_id: (operator_identity, verification_key)},
+    )
+
+    bootstrap_module._require_bootstrap_authorization_signature(
+        request,
+        expected_commit=commit,
+        expected_source=source,
+    )
+    with pytest.raises(
+        RuntimeError,
+        match="source binding is invalid",
+    ):
+        bootstrap_module._require_bootstrap_authorization_signature(
+            request,
+            expected_commit="f" * 40,
+            expected_source=source,
+        )
+
+
+def test_validation_roots_must_not_overlap_the_source_checkout() -> None:
+    repository_root = Path(module.__file__).resolve().parents[2]
+    with pytest.raises(
+        run_start_module.ReferenceValidationRunStartError,
+        match="outside the source checkout",
+    ):
+        run_start_module._require_reference_validation_root_outside_checkout(
+            repository_root,
+            name="artifact output root",
+        )
+    with pytest.raises(
+        ReferenceValidationRunnerError,
+        match="outside the source checkout",
+    ):
+        run_bounded_cpu_reference_validation(
+            repository_root,
+            AUTHORIZATION_NONCE,
+            expected_environment_receipt_sha256=ENVIRONMENT_RECEIPT_SHA256,
+            expected_code_commit_sha=CODE_COMMIT_SHA,
+            expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
+        )
 
 
 def test_source_only_import_runtime_ignores_a_valid_timestamp_cache(
