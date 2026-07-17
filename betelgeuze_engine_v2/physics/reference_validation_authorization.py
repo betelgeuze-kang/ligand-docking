@@ -335,6 +335,11 @@ class ReferenceValidationAuthorizationVerification:
     review_attestation_sha256: str
     authorization_operator_identity_sha256: str
     authorization_nonce_sha256: str
+    code_commit_sha: str
+    runner_source_sha256: str
+    execution_environment_contract_sha256: str
+    result_receipt_contract_sha256: str
+    dependency_artifact_sha256_rows: tuple[tuple[str, str], ...]
     issued_at_utc: str
     expires_at_utc: str
     receipt_authorization_verified: bool
@@ -352,6 +357,28 @@ class ReferenceValidationAuthorizationVerification:
             name="authorization operator identity",
         )
         _require_sha256(self.authorization_nonce_sha256, name="authorization nonce")
+        _require_git_commit(self.code_commit_sha)
+        _require_sha256(self.runner_source_sha256, name="authorization runner source")
+        _require_sha256(
+            self.execution_environment_contract_sha256,
+            name="authorization execution environment contract",
+        )
+        _require_sha256(
+            self.result_receipt_contract_sha256,
+            name="authorization result receipt contract",
+        )
+        if not self.dependency_artifact_sha256_rows:
+            raise ReferenceValidationAuthorizationError(
+                "authorization verification dependency rows must be non-empty"
+            )
+        dependency_ids: list[str] = []
+        for artifact_id, digest in self.dependency_artifact_sha256_rows:
+            normalized = _dependency_rows({artifact_id: digest})[0]
+            dependency_ids.append(normalized["artifact_id"])
+        if dependency_ids != sorted(set(dependency_ids)):
+            raise ReferenceValidationAuthorizationError(
+                "authorization verification dependency rows must be sorted and unique"
+            )
         issued_at = _parse_utc(self.issued_at_utc, name="authorization issued_at_utc")
         expires_at = _parse_utc(self.expires_at_utc, name="authorization expires_at_utc")
         if expires_at <= issued_at:
@@ -385,6 +412,16 @@ class ReferenceValidationAuthorizationVerification:
             "review_attestation_sha256": self.review_attestation_sha256,
             "authorization_operator_identity_sha256": self.authorization_operator_identity_sha256,
             "authorization_nonce_sha256": self.authorization_nonce_sha256,
+            "code_commit_sha": self.code_commit_sha,
+            "runner_source_sha256": self.runner_source_sha256,
+            "execution_environment_contract_sha256": (
+                self.execution_environment_contract_sha256
+            ),
+            "result_receipt_contract_sha256": self.result_receipt_contract_sha256,
+            "dependency_artifact_sha256_rows": [
+                {"artifact_id": artifact_id, "sha256": digest}
+                for artifact_id, digest in self.dependency_artifact_sha256_rows
+            ],
             "issued_at_utc": self.issued_at_utc,
             "expires_at_utc": self.expires_at_utc,
             "receipt_authorization_verified": self.receipt_authorization_verified,
@@ -796,6 +833,18 @@ def verify_signed_reference_validation_authorization_receipt(
         review_attestation_sha256=review.attestation_sha256,
         authorization_operator_identity_sha256=operator_identity,
         authorization_nonce_sha256=nonce,
+        code_commit_sha=expected_projection["code_commit_sha"],
+        runner_source_sha256=expected_projection["runner_source_sha256"],
+        execution_environment_contract_sha256=expected_projection[
+            "execution_environment_contract_sha256"
+        ],
+        result_receipt_contract_sha256=expected_projection[
+            "result_receipt_contract_sha256"
+        ],
+        dependency_artifact_sha256_rows=tuple(
+            (row["artifact_id"], row["sha256"])
+            for row in expected_projection["dependency_artifact_sha256_rows"]
+        ),
         issued_at_utc=payload["issued_at_utc"],
         expires_at_utc=payload["expires_at_utc"],
         receipt_authorization_verified=True,

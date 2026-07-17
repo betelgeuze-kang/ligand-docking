@@ -41,6 +41,7 @@ betelgeuze_engine_v2.physics.reference_validation_oracle
 betelgeuze_engine_v2.physics.reference_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_validation_review
 betelgeuze_engine_v2.physics.reference_validation_authorization
+betelgeuze_engine_v2.physics.reference_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_validation_receipts
 betelgeuze_engine_v2.runtime
 ```
@@ -93,6 +94,15 @@ identities, a maximum 24-hour lifetime, external revocation sets, and an unused
 one-time nonce. No key or receipt is bundled. Successful verification is only
 eligible for future atomic nonce reservation and still reports
 `validation_execution_authorized=false`.
+
+The nonce-reservation symbols re-verify the raw signed review and authorization
+artifacts and durably consume a nonce in a caller-provisioned private local
+POSIX directory using exclusive creation and file/directory synchronization.
+They provide no release/delete API and produce an execution-disabled,
+tamper-evident record only. No trusted key, receipt, reservation root, or
+production reservation is bundled. Filesystem locality and resistance to a
+same-UID attacker are not established; the primitive cannot create an
+environment receipt, authorize a run, collect results, or authorize fitting.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59

@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_p_cpu_reference_validation_receipt_contracts
+v2_q_cpu_reference_validation_nonce_reservation
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -44,8 +44,11 @@ Implemented and GitHub-hosted CPU tested:
   out-of-band trusted reviewer key, and a separate single-run authorization
   receipt contract with operator separation, 24-hour expiry, revocation inputs,
   and one-time nonce semantics, plus frozen CPU execution-environment and
-  failure-inclusive result-receipt schemas for all 27 cases and 59 variants.
-  No receipt, runner, result writer, or authorized execution is present;
+  failure-inclusive result-receipt schemas for all 27 cases and 59 variants,
+  and a local POSIX `O_EXCL`/`fsync` one-time nonce-reservation primitive that
+  re-verifies both raw signed artifacts before durable consumption. No trusted
+  key, production receipt, reservation root, production nonce reservation,
+  environment receipt, runner, result writer, or authorized execution is present;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

@@ -50,13 +50,19 @@ scientific claim from a package version.
   review to a pairwise-distinct operator identity, exact code/runner/environment/
   result/dependency hashes, HMAC-SHA256 integrity, a 24-hour maximum lifetime,
   external receipt/review revocation sets, and an unused one-time nonce. No
-  operator key or receipt is bundled, nonce reservation is not implemented, and
-  execution remains disabled.
+  operator key, receipt, reservation root, or production reservation is bundled,
+  and execution remains disabled.
 - Frozen CPU execution-environment and failure-inclusive result-receipt
   contracts binding the exact protocol, authorization, materialization, 27-case,
   59-variant, and 19-metric identities. They define future receipt fields only;
   no receipt, runner, writer, observed value, execution, or claim promotion is
   provided.
+- Atomic local POSIX one-time authorization-nonce reservation with raw signed
+  review and authorization re-verification, `O_EXCL` creation, file and
+  directory `fsync`, private owner/mode checks, canonical tamper-evident records,
+  concurrent duplicate rejection, and no release API. No key, receipt,
+  reservation root, production reservation, execution, result, or claim
+  promotion is bundled.
 - Exact-graph bounded PubChem CID 177/11199 reference-canonical tautomer
   selection, generated-hydrogen-only transfer, and a frozen failure-inclusive
   identity corpus without thermodynamic or scientific promotion.

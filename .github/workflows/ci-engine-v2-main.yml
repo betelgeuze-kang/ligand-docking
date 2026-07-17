@@ -144,6 +144,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_review.py
             tests/unit/test_engine_v2_reference_validation_authorization.py
             tests/unit/test_engine_v2_reference_validation_receipts.py
+            tests/unit/test_engine_v2_reference_validation_nonce_reservation.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py
@@ -250,6 +251,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_review.py \
             tests/unit/test_engine_v2_reference_validation_authorization.py \
             tests/unit/test_engine_v2_reference_validation_receipts.py \
+            tests/unit/test_engine_v2_reference_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_canonical_topology.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_preparation.py \
@@ -360,6 +362,7 @@ jobs:
               FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
               cpu_reference_validation_authorization_decision,
@@ -373,6 +376,8 @@ jobs:
               reference_validation_authorization_contract_document,
               reference_validation_execution_environment_contract_document,
               reference_validation_execution_readiness_decision,
+              reference_validation_nonce_reservation_contract_decision,
+              reference_validation_nonce_reservation_contract_document,
               reference_validation_result_receipt_contract_document,
               reviewed_parameter_source_provenance,
           )
@@ -382,7 +387,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_p_cpu_reference_validation_receipt_contracts"
+          assert capability_snapshot()["implementation_stage"] == "v2_q_cpu_reference_validation_nonce_reservation"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
@@ -452,6 +457,15 @@ jobs:
           assert authorization_decision["authorization_receipt_present"] is False
           assert authorization_decision["authorization_nonce_reserved"] is False
           assert authorization_decision["validation_execution_authorized"] is False
+          reservation_contract = reference_validation_nonce_reservation_contract_document()
+          assert reservation_contract["contract_sha256"] == (
+              FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
+          )
+          reservation_decision = reference_validation_nonce_reservation_contract_decision()
+          assert reservation_decision["atomic_nonce_reservation_primitive_implemented"] is True
+          assert reservation_decision["authorization_nonce_reserved"] is False
+          assert reservation_decision["validation_execution_authorized"] is False
+          assert reservation_decision["validation_results_collected"] is False
           environment_contract = reference_validation_execution_environment_contract_document()
           assert environment_contract["contract_sha256"] == (
               FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
