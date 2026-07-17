@@ -166,6 +166,7 @@ jobs:
             tests/unit/test_engine_v2_benchmark_contracts.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
             tests/unit/test_engine_v2_reference_diagnostics.py
+            tests/unit/test_engine_v2_reference_forcefield_v2.py
             tests/unit/test_engine_v2_reference_minimization.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_external_baseline.py
@@ -278,6 +279,7 @@ jobs:
             tests/unit/test_engine_v2_benchmark_contracts.py \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
             tests/unit/test_engine_v2_reference_diagnostics.py \
+            tests/unit/test_engine_v2_reference_forcefield_v2.py \
             tests/unit/test_engine_v2_reference_minimization.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
