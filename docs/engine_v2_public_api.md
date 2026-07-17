@@ -35,6 +35,11 @@ betelgeuze_engine_v2.docking
 betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.physics.registry
 betelgeuze_engine_v2.physics.reference_parameter_applicability
+betelgeuze_engine_v2.physics.reference_diagnostics
+betelgeuze_engine_v2.physics.reference_constrained_minimization
+betelgeuze_engine_v2.physics.reference_forcefield_v2
+betelgeuze_engine_v2.physics.reference_minimization
+betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
 betelgeuze_engine_v2.physics.reference_validation_oracle
@@ -69,6 +74,52 @@ closed authorization decision. They do not materialize fixtures, implement an
 oracle, run validation, approve caller-supplied parameter values, establish a
 scientific applicability domain, authorize parameter fitting, or promote a
 scientific or product claim.
+
+The bounded reference-minimization symbols accept only a single CPU `float64`
+model and caller-supplied explicit reference parameters. They expose fixed
+steepest-descent, Armijo-backtracking, capacity, displacement, and evaluation
+bounds; a failure-inclusive observation ledger; and canonical binary64
+checkpoints that bind source-system, topology, parameter, and configuration
+identities. Restart re-evaluates the stored state before continuation. These
+provisional symbols do not ship or assign parameters, establish chemical
+applicability, validate minimization accuracy, satisfy the frozen independent
+validation protocol, or enable a scientific/product/customer route.
+
+The bounded reference-diagnostics symbols leave the frozen evaluator source
+unchanged and numerically differentiate its five component energies over every
+coordinate of a single CPU `float64` model. They retain all expected plus/minus
+perturbation rows, suppress partial tensor outputs after any failed evaluation,
+check component-force sums against the analytic total force, and expose
+centered-coordinate configurational virials only for non-periodic systems.
+Periodic virial fails closed because a cell-strain derivative is not yet
+implemented. The outputs are provisional implementation diagnostics, not an
+independent scientific reference, pressure/stress, parameter validation, or a
+scientific/product/customer claim.
+
+The versioned reference-forcefield-v2 symbols wrap, rather than modify, the
+frozen v1 evaluator and explicit parameter object. They expose an ordered-star
+harmonic out-of-plane improper parameter/evaluator and a bounded deterministic
+simultaneous degree-relaxed equal-weight distance-constraint projector with per-
+iteration residual rows and minimum-image distances for supported orthorhombic
+PBC. The separate constrained-minimization symbols project every trial, use a
+bounded iterative tangent-force projection, apply Armijo decrease to actual
+projected displacement, retain nested projection failures, and bind source,
+topology, v2 parameters, configuration, observations, and binary64 coordinates
+into exact checkpoints. The constraint path does not use atomic masses.
+Parameters remain caller supplied; general assignment, independent validation,
+long-range physics, solvation, scientific promotion, and product/customer
+execution remain blocked.
+
+The fixed-Born solvation symbols expose a bounded non-periodic CPU `float64`
+polar dielectric-transfer term using the Still generalized-Born pair function.
+They require one caller-supplied fixed effective Born radius per atom, exact
+topology identity, a radius-source SHA-256, and the exact v2 charge-parameter
+fingerprint. A combined evaluator adds the polar term to the versioned v2 energy
+and force while remaining composition-disabled. The constrained minimizer may
+optionally include that combined energy/force and binds the solvation-parameter
+fingerprint into exact checkpoint/restart identity. The API does not estimate
+Born radii or implement nonpolar solvation, salt/ions, periodic solvent, or MD,
+and it carries no independent solvation/minimization or product validation.
 
 The separate validation-artifact symbols materialize the exact frozen fixtures
 and mutations into deterministic CPU float64 runtime inputs and provide a

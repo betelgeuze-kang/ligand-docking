@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_t_cpu_reference_validation_result_receipt_writer
+v2_z_bounded_cpu_fixed_born_constrained_minimization
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -32,6 +32,20 @@ v2_t_cpu_reference_validation_result_receipt_writer
 - Python 3.10–3.12용 독립 `betelgeuze-engine-v2` wheel
 - 단일 모델 PDB와 단일 분자 SDF V2000 제한형 파서
 - 독립 physics term registry 계약
+- failure row와 exact checkpoint/restart identity를 보존하는 bounded
+  deterministic CPU `float64` reference minimization; 과학·제품 승격은 없음
+- 모든 perturbation을 보존하는 bounded component-energy central-difference
+  force와 non-periodic configurational virial diagnostics; periodic virial은 fail-closed
+- 별도 versioned reference-forcefield 확장에 ordered-star harmonic out-of-plane
+  improper energy·force와 bounded deterministic symmetric degree-relaxed
+  equal-weight distance-constraint projection, tangent-force 수렴과 exact
+  checkpoint/restart를 갖는 projected Armijo minimization을 구현; mass weighting·
+  과학 검증·제품 활성화는 없음
+- caller-supplied fixed effective Born radius를 사용하는 bounded non-periodic
+  CPU `float64` polar Generalized Born transfer energy·exact force와 v2 결합
+  evaluator, solvation parameter identity를 결속한 optional constrained
+  minimization·exact checkpoint/restart를 구현; radius 추정·nonpolar·salt/ion·
+  periodic solvent·독립 검증·과학/제품 승격은 없음
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound

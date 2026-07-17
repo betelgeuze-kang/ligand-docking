@@ -213,8 +213,8 @@ jobs:
               )
           )
           assert loaded == capability_snapshot()
-          assert len(loaded["capabilities"]) == 39
-          assert loaded["implementation_stage"] == "v2_t_cpu_reference_validation_result_receipt_writer"
+          assert len(loaded["capabilities"]) == 43
+          assert loaded["implementation_stage"] == "v2_z_bounded_cpu_fixed_born_constrained_minimization"
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)
