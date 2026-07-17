@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_l_cpu_reference_validation_protocol
+v2_m_cpu_reference_validation_artifacts
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -37,7 +37,9 @@ Implemented and GitHub-hosted CPU tested:
 - independent physics-term registry contracts;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
-  a closed execution/parameter-fitting authorization gate;
+  a closed execution/parameter-fitting authorization gate, plus exact fixture
+  materialization and a source-bound standard-library-only analytic oracle that
+  collect no validation result and keep the gate closed;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds;
 - benchmark manifests with exactly one ordered success/failure row per case.
 

@@ -291,11 +291,13 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
         encoding="utf-8"
     )
 
-    assert "v2_l_cpu_reference_validation_protocol" in status
+    assert "v2_m_cpu_reference_validation_artifacts" in status
     assert "reference_validation_protocol" in public_api
+    assert "reference_validation_artifact_binding" in public_api
     assert "v2_cpu_reference_energy_force_validation_protocol" in roadmap
     assert "twenty-seven ordered pass/fail-closed cases" in scientific
     for source in (focused_workflow, main_workflow):
         assert "test_engine_v2_cpu_reference_validation_protocol.py" in source
+        assert "test_engine_v2_reference_validation_artifacts.py" in source
         assert 'python-version: ["3.10", "3.11", "3.12"]' in source
-    assert "cpu_reference_validation_authorization_decision" in main_workflow
+    assert "reference_validation_artifact_authorization_decision" in main_workflow

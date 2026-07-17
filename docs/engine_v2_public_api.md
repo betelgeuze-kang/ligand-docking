@@ -26,7 +26,7 @@ Stable root surfaces currently cover:
 
 ### Provisional submodule APIs
 
-The following V2-L modules are intentionally importable but provisional:
+The following V2-M modules are intentionally importable but provisional:
 
 ```text
 betelgeuze_engine_v2.io
@@ -36,6 +36,9 @@ betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.physics.registry
 betelgeuze_engine_v2.physics.reference_parameter_applicability
 betelgeuze_engine_v2.physics.reference_validation_protocol
+betelgeuze_engine_v2.physics.reference_validation_materializer
+betelgeuze_engine_v2.physics.reference_validation_oracle
+betelgeuze_engine_v2.physics.reference_validation_artifact_binding
 betelgeuze_engine_v2.runtime
 ```
 
@@ -59,6 +62,17 @@ closed authorization decision. They do not materialize fixtures, implement an
 oracle, run validation, approve caller-supplied parameter values, establish a
 scientific applicability domain, authorize parameter fitting, or promote a
 scientific or product claim.
+
+The separate validation-artifact symbols materialize the exact frozen fixtures
+and mutations into deterministic CPU float64 runtime inputs and provide a
+standard-library-only scalar analytic oracle with exact forward-mode forces.
+The binding record fixes both source SHA-256 identities, the materialization
+manifest, and an AST-enforced import boundary. These artifacts do not compare
+the oracle with the reference evaluator, execute the frozen validation study,
+create result or metric receipts, independently review parameter values or the
+oracle, establish chemical applicability, authorize fitting, or open customer
+execution. `require_reference_validation_execution_authorized()` always fails
+closed for the current binding.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

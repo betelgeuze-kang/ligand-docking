@@ -510,14 +510,22 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "frozen_cpu_reference_energy_force_contract_validation_protocol_"
-        "with_closed_execution_and_fitting_gate"
+        "frozen_cpu_reference_protocol_with_exact_fixture_materializer_"
+        "and_independent_oracle_source_binding_and_closed_execution_and_"
+        "fitting_gate"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
-    assert "fixture_materializer_not_implemented" in (validation_protocol["blockers"])
+    assert (
+        "fixture_materializer_not_implemented"
+        not in validation_protocol["blockers"]
+    )
     assert (
         "independent_analytic_oracle_not_implemented"
-        in (validation_protocol["blockers"])
+        not in validation_protocol["blockers"]
+    )
+    assert (
+        "independent_scientific_review_missing"
+        in validation_protocol["blockers"]
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
     assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
@@ -541,7 +549,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "runtime-envelope record" in status
     assert "scientifically validated\n  chemical applicability domain" in status
     assert "CPU reference energy/force contract-validation protocol" in status
-    assert "denies validation execution and parameter-\n  fitting proposals" in status
+    assert "denies validation execution and parameter-fitting proposals" in status
     assert "Stable within an Engine API major version" in policy
     assert "Provisional submodule APIs" in policy
     assert "reference_parameter_applicability" in policy
@@ -593,6 +601,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_parameter_source_provenance.py",
         "test_engine_v2_reference_parameter_applicability.py",
         "test_engine_v2_cpu_reference_validation_protocol.py",
+        "test_engine_v2_reference_validation_artifacts.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -617,6 +626,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_l_cpu_reference_validation_protocol"' in source
+    assert '"v2_m_cpu_reference_validation_artifacts"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
     assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
+    assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source
