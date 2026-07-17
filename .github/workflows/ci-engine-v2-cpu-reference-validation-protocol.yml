@@ -15,6 +15,7 @@ on:
       - "tests/unit/test_engine_v2_reference_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_validation_run_start.py"
       - "tests/unit/test_engine_v2_reference_validation_runner.py"
+      - "tests/unit/test_engine_v2_reference_validation_result_writer.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -42,6 +43,7 @@ on:
       - "tests/unit/test_engine_v2_reference_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_validation_run_start.py"
       - "tests/unit/test_engine_v2_reference_validation_runner.py"
+      - "tests/unit/test_engine_v2_reference_validation_result_writer.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -95,6 +97,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_nonce_reservation.py
             tests/unit/test_engine_v2_reference_validation_run_start.py
             tests/unit/test_engine_v2_reference_validation_runner.py
+            tests/unit/test_engine_v2_reference_validation_result_writer.py
             tests/unit/test_engine_v2_reference_parameter_applicability.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -137,6 +140,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_validation_nonce_reservation.py \
             betelgeuze_engine_v2/physics/reference_validation_run_start.py \
             betelgeuze_engine_v2/physics/reference_validation_runner.py \
+            betelgeuze_engine_v2/physics/reference_validation_result_writer.py \
             betelgeuze_engine_v2/physics/reference_validation_receipts.py \
             betelgeuze_engine_v2/physics/__init__.py \
             betelgeuze_engine_v2/capabilities.py \
@@ -148,6 +152,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_validation_run_start.py \
             tests/unit/test_engine_v2_reference_validation_runner.py \
+            tests/unit/test_engine_v2_reference_validation_result_writer.py \
             --config packaging/engine-v2/pyproject.toml
 
       - name: Verify frozen protocol, H5 dependency, and non-promotion
@@ -161,6 +166,7 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_validation_run_start.py \
             tests/unit/test_engine_v2_reference_validation_runner.py \
+            tests/unit/test_engine_v2_reference_validation_result_writer.py \
             tests/unit/test_engine_v2_reference_parameter_applicability.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -181,6 +187,7 @@ jobs:
               FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
               reference_validation_authorization_contract_decision,
               reference_validation_authorization_contract_document,
               reference_validation_execution_environment_contract_document,
@@ -192,6 +199,8 @@ jobs:
               reference_validation_run_start_contract_document,
               reference_validation_runner_contract_decision,
               reference_validation_runner_contract_document,
+              reference_validation_result_writer_contract_decision,
+              reference_validation_result_writer_contract_document,
               reference_validation_artifact_authorization_decision,
               reference_validation_artifact_binding_document,
               reference_validation_review_contract_authorization_decision,
@@ -205,7 +214,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 39
-          assert loaded["implementation_stage"] == "v2_s_cpu_reference_validation_bounded_runner"
+          assert loaded["implementation_stage"] == "v2_t_cpu_reference_validation_result_receipt_writer"
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)
@@ -258,6 +267,15 @@ jobs:
           assert runner_decision["production_validation_execution_authorized"] is False
           assert runner_decision["production_validation_results_collected"] is False
           assert runner_decision["result_receipt_writer_implemented"] is False
+          writer_contract = reference_validation_result_writer_contract_document()
+          assert writer_contract["contract_sha256"] == (
+              FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
+          )
+          writer_decision = reference_validation_result_writer_contract_decision()
+          assert writer_decision["result_receipt_writer_implemented"] is True
+          assert writer_decision["production_result_receipt_present"] is False
+          assert writer_decision["independent_result_review_complete"] is False
+          assert writer_decision["claim_safe"] is False
           environment_contract = reference_validation_execution_environment_contract_document()
           assert environment_contract["contract_sha256"] == (
               FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256

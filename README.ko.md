@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_s_cpu_reference_validation_bounded_runner
+v2_t_cpu_reference_validation_result_receipt_writer
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -47,9 +47,13 @@ v2_s_cpu_reference_validation_bounded_runner
   run-start primitive, 이어서 그 receipt와 exact code·source·dependency·artifact binding을
   다시 확인하고 one-time runner-start marker를 원자적으로 소비한 뒤 120초 평가 예산 안에서
   27개 case·59개 variant의 성공과 실패를 빠짐없이 메모리에 보존하는 제한형 CPU float64
-  runner. direct CLI는 닫혀 있고 result receipt는 기록하지 않음. 실제 trusted key,
-  production receipt·reservation/artifact root·production nonce reservation·production 환경
-  receipt·runner start·승인된 실행·validation result는 포함하지 않음
+  runner, 이어서 raw signed chain·live environment receipt·runner-start marker·exact
+  observation을 다시 검증하고 private artifact root에 canonical mode-0600 receipt 하나를
+  원자적으로 기록하는 failure-inclusive result writer. reader는 외부 exact receipt hash와
+  revocation/supersession 입력을 요구하며 receipt signature나 same-UID replacement resistance는
+  주장하지 않음. direct CLI는 닫혀 있음. 실제 trusted key, production receipt·reservation/
+  artifact root·production nonce reservation·production 환경 receipt·runner start/result
+  receipt·승인된 production 실행·independent result review·과학 acceptance는 포함하지 않음
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 

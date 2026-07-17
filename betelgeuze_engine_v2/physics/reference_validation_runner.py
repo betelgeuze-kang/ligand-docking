@@ -954,6 +954,153 @@ def _persist_runner_start(
     return payload["runner_start_record_sha256"]
 
 
+def read_reference_validation_runner_start_record(
+    artifact_output_root: str | os.PathLike[str],
+    authorization_nonce_sha256: str,
+    *,
+    expected_record_sha256: str,
+    expected_environment_receipt_sha256: str,
+    expected_runner_source_sha256: str,
+) -> dict[str, Any]:
+    """Read and verify the consumed runner-start marker without releasing it."""
+
+    nonce = _require_sha256(
+        authorization_nonce_sha256,
+        name="runner-start authorization nonce",
+    )
+    expected_record = _require_sha256(
+        expected_record_sha256,
+        name="expected runner-start record",
+    )
+    expected_environment = _require_sha256(
+        expected_environment_receipt_sha256,
+        name="expected runner-start environment receipt",
+    )
+    expected_source = _require_sha256(
+        expected_runner_source_sha256,
+        name="expected runner-start source",
+    )
+    try:
+        root_fd = _open_secure_reservation_root(artifact_output_root)
+    except ReferenceValidationNonceReservationError as exc:
+        raise ReferenceValidationRunnerError(
+            "runner-start artifact root does not satisfy the private POSIX policy"
+        ) from exc
+    descriptor: int | None = None
+    try:
+        try:
+            descriptor = os.open(
+                f"{nonce}.runner-start.json",
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=root_fd,
+            )
+            _validate_reservation_file_stat(os.fstat(descriptor))
+            chunks: list[bytes] = []
+            total = 0
+            while True:
+                chunk = os.read(descriptor, 8192)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                total += len(chunk)
+                if total > REFERENCE_VALIDATION_RUNNER_MAX_START_RECORD_BYTES:
+                    raise ReferenceValidationRunnerError(
+                        "runner-start record exceeds the size limit"
+                    )
+        except (OSError, ValueError, ReferenceValidationNonceReservationError) as exc:
+            raise ReferenceValidationRunnerError(
+                "runner-start record cannot be read securely"
+            ) from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        os.close(root_fd)
+    raw = b"".join(chunks)
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunnerError(
+                    "runner-start record contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        if not raw.endswith(b"\n"):
+            raise ReferenceValidationRunnerError(
+                "runner-start record is not canonical JSON"
+            )
+        payload = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "runner-start record is not canonical JSON"
+        ) from exc
+    if not isinstance(payload, dict) or _canonical_bytes(payload) + b"\n" != raw:
+        raise ReferenceValidationRunnerError(
+            "runner-start record is not canonical JSON"
+        )
+    observed_record = payload.pop("runner_start_record_sha256", None)
+    if (
+        observed_record != _sha256(payload)
+        or observed_record != expected_record
+    ):
+        raise ReferenceValidationRunnerError(
+            "runner-start record identity is cross-wired"
+        )
+    expected_keys = {
+        "schema_id",
+        "runner_contract_sha256",
+        "environment_receipt_sha256",
+        "environment_fingerprint_sha256",
+        "authorization_receipt_sha256",
+        "authorization_nonce_sha256",
+        "code_commit_sha",
+        "runner_source_sha256",
+        "dependency_artifact_sha256_rows",
+        "started_at_utc",
+        "one_time_runner_start_consumed",
+        "result_values_present",
+        "result_receipt_written",
+        "parameter_fitting_authorized",
+        "scientifically_validated",
+        "claim_safe",
+    }
+    if set(payload) != expected_keys:
+        raise ReferenceValidationRunnerError(
+            "runner-start record fields are invalid"
+        )
+    if (
+        payload["schema_id"] != REFERENCE_VALIDATION_RUNNER_START_SCHEMA_ID
+        or payload["runner_contract_sha256"]
+        != FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256
+        or payload["environment_receipt_sha256"] != expected_environment
+        or payload["authorization_nonce_sha256"] != nonce
+        or payload["runner_source_sha256"] != expected_source
+        or payload["one_time_runner_start_consumed"] is not True
+        or any(
+            payload[name] is not False
+            for name in (
+                "result_values_present",
+                "result_receipt_written",
+                "parameter_fitting_authorized",
+                "scientifically_validated",
+                "claim_safe",
+            )
+        )
+    ):
+        raise ReferenceValidationRunnerError(
+            "runner-start record does not match the bounded runner contract"
+        )
+    result = dict(payload)
+    result["runner_start_record_sha256"] = observed_record
+    return result
+
+
 def _normalize_physics_error(error: Exception) -> str:
     message = str(error)
     prefix = "reference parameter applicability failed: "
@@ -1523,6 +1670,168 @@ def reference_validation_runner_contract_decision() -> dict[str, Any]:
     }
 
 
+def require_reference_validation_run_observation_document(
+    payload: Mapping[str, Any],
+) -> ReferenceValidationRunObservation:
+    """Reconstruct and verify an exact canonical bounded-run observation."""
+
+    if not isinstance(payload, Mapping):
+        raise ReferenceValidationRunnerError(
+            "validation run observation document must be a mapping"
+        )
+    try:
+        observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
+        cases: list[ReferenceValidationCaseObservation] = []
+        for case_payload in observed["case_results"]:
+            metrics: list[ReferenceValidationMetricObservation] = []
+            for metric_payload in case_payload["metric_values"]:
+                if metric_payload["observed"]:
+                    metric_value = metric_payload["value"]
+                else:
+                    if metric_payload.get("error_code") != "metric_not_observed":
+                        raise ReferenceValidationRunnerError(
+                            "missing metric observation error is invalid"
+                        )
+                    metric_value = None
+                metrics.append(
+                    ReferenceValidationMetricObservation(
+                        metric_id=metric_payload["metric_id"],
+                        observed=metric_payload["observed"],
+                        value=metric_value,
+                        unit=metric_payload["unit"],
+                        threshold_operator=metric_payload["threshold_operator"],
+                        threshold_value=metric_payload["threshold_value"],
+                        passed=metric_payload["passed"],
+                    )
+                )
+            variants: list[ReferenceValidationVariantObservation] = []
+            for variant_payload in case_payload["variant_results"]:
+                success = variant_payload["observed_status"] == "success"
+                components = (
+                    tuple(
+                        (row["name"], row["value"])
+                        for row in variant_payload[
+                            "component_energy_values_and_units"
+                        ]
+                    )
+                    if success
+                    else ()
+                )
+                forces = (
+                    tuple(
+                        tuple(row)
+                        for row in variant_payload["force_array_values"]
+                    )
+                    if success
+                    else ()
+                )
+                oracle_forces = (
+                    tuple(
+                        tuple(row)
+                        for row in variant_payload["oracle_force_array_values"]
+                    )
+                    if success
+                    else ()
+                )
+                variants.append(
+                    ReferenceValidationVariantObservation(
+                        ordinal=variant_payload["ordinal"],
+                        variant_id=variant_payload["variant_id"],
+                        runtime_input_sha256=variant_payload[
+                            "runtime_input_sha256"
+                        ],
+                        oracle_input_sha256=variant_payload[
+                            "oracle_input_sha256"
+                        ],
+                        observed_status=variant_payload["observed_status"],
+                        observed_error_code=variant_payload[
+                            "observed_error_code"
+                        ],
+                        component_energies_kcal_per_mol=components,
+                        total_energy_kcal_per_mol=(
+                            variant_payload["total_energy_value"]
+                            if success
+                            else None
+                        ),
+                        forces_kcal_per_mol_angstrom=forces,
+                        force_array_sha256=(
+                            variant_payload["force_array_sha256"]
+                            if success
+                            else None
+                        ),
+                        oracle_total_energy_kcal_per_mol=(
+                            variant_payload["oracle_total_energy_value"]
+                            if success
+                            else None
+                        ),
+                        oracle_forces_kcal_per_mol_angstrom=oracle_forces,
+                        oracle_force_array_sha256=(
+                            variant_payload["oracle_force_array_sha256"]
+                            if success
+                            else None
+                        ),
+                    )
+                )
+            cases.append(
+                ReferenceValidationCaseObservation(
+                    ordinal=case_payload["ordinal"],
+                    case_id=case_payload["case_id"],
+                    case_input_sha256=case_payload["case_input_sha256"],
+                    materialization_sha256=case_payload[
+                        "materialization_sha256"
+                    ],
+                    expected_outcome=case_payload["expected_outcome"],
+                    observed_status=case_payload["observed_status"],
+                    expected_error_code=case_payload["expected_error_code"],
+                    observed_error_code=case_payload["observed_error_code"],
+                    variant_results=tuple(variants),
+                    metric_values=tuple(metrics),
+                    case_passed=case_payload["case_passed"],
+                )
+            )
+        dependencies = tuple(
+            (row["artifact_id"], row["sha256"])
+            for row in observed["dependency_artifact_sha256_rows"]
+        )
+        result = ReferenceValidationRunObservation(
+            runner_start_record_sha256=observed[
+                "runner_start_record_sha256"
+            ],
+            execution_environment_receipt_sha256=observed[
+                "execution_environment_receipt_sha256"
+            ],
+            environment_fingerprint_sha256=observed[
+                "environment_fingerprint_sha256"
+            ],
+            authorization_receipt_sha256=observed[
+                "authorization_receipt_sha256"
+            ],
+            authorization_nonce_sha256=observed[
+                "authorization_nonce_sha256"
+            ],
+            code_commit_sha=observed["code_commit_sha"],
+            runner_source_sha256=observed["runner_source_sha256"],
+            dependency_artifact_sha256_rows=dependencies,
+            command_argv=tuple(observed["command_argv"]),
+            seed=observed["seed"],
+            started_at_utc=observed["started_at_utc"],
+            completed_at_utc=observed["completed_at_utc"],
+            case_results=tuple(cases),
+            blockers=tuple(observed["blockers"]),
+        )
+    except ReferenceValidationRunnerError:
+        raise
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ReferenceValidationRunnerError(
+            "validation run observation document is invalid"
+        ) from exc
+    if result.to_dict() != observed:
+        raise ReferenceValidationRunnerError(
+            "validation run observation document is not canonical or exact"
+        )
+    return result
+
+
 def main() -> int:
     """Keep direct CLI execution closed; an in-process verified chain is required."""
 
@@ -1551,6 +1860,8 @@ __all__ = [
     "reference_validation_runner_contract_decision",
     "reference_validation_runner_contract_document",
     "reference_validation_runner_source_sha256",
+    "read_reference_validation_runner_start_record",
+    "require_reference_validation_run_observation_document",
     "require_reference_validation_runner_contract_document",
     "run_bounded_cpu_reference_validation",
 ]

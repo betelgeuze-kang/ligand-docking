@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_s_cpu_reference_validation_bounded_runner
+v2_t_cpu_reference_validation_result_receipt_writer
 ```
 
 The current `main` branch contains:
@@ -131,7 +131,7 @@ The current `main` branch contains:
   whose source is AST-audited to import neither the reference evaluator nor the
   protocol, Torch, NumPy, or an external molecular solver. Exact materializer,
   oracle, materialization-manifest, protocol, fixture-manifest, and H5 SHA-256
-  identities are bound. No result receipt, scientific holdout, independently
+  identities are bound. No production result receipt, scientific holdout, independently
   reviewed runtime parameter values, independent scientific acceptance, or
   signed authorization receipt exists. A separate frozen review-attestation
   contract now fixes the required review checks, acknowledged limitations,
@@ -150,10 +150,10 @@ The current `main` branch contains:
   twenty-seven protocol cases, fifty-nine materialized variants, and nineteen
   predefined metrics. They require exact authorization, nonce, code, runner,
   dependency, environment, artifact-path, reviewer, supersession, and revocation
-  identities. No production environment receipt, production nonce reservation,
-  runner start, result writer, durable observed energy/force/error/metric value,
-  or result receipt exists, so the production execution and fitting gates remain
-  closed.
+  identities. A separate result-writer contract and implementation now exist,
+  but no production environment receipt, production nonce reservation, runner
+  start, durable observed energy/force/error/metric value, or result receipt is
+  bundled, so the production execution and fitting gates remain closed.
   A separate atomic reservation primitive now re-verifies the raw review and
   authorization artifacts against out-of-band trust anchors and exact downstream
   hashes, then consumes one nonce in a caller-provisioned private local POSIX
@@ -173,11 +173,20 @@ The current `main` branch contains:
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
   twenty-seven cases and fifty-nine variants on CPU float64 under a 120-second
   evaluation budget. It returns one canonical failure-inclusive observation in
-  memory, including failed metrics and sanitized evaluator failures, but writes
-  no result receipt and exposes no direct execution CLI or marker release API.
-  Test-only signed artifacts exercise this primitive; no production key,
-  attestation, receipt, root, runner start, validation result, or scientific
-  acceptance is bundled.
+  memory, including failed metrics and sanitized evaluator failures, and exposes
+  no direct execution CLI or marker release API. A separate failure-inclusive
+  result writer re-verifies the raw signed review/authorization chain, persisted
+  environment receipt, live process, durable runner-start record, and exact
+  observation identities before creating one canonical private mode-0600
+  nonce-bound receipt with `O_EXCL`, `O_NOFOLLOW`, file `fsync`, and directory
+  `fsync`. It retains every case, variant, metric, and failure. Its verifier
+  requires an out-of-band exact receipt SHA-256 and current external revocation/
+  supersession inputs. The receipt is unsigned, private POSIX storage is not an
+  external authenticity proof, and same-UID replacement resistance is not
+  established. Test-only signed artifacts and receipts exercise these
+  primitives; no production key, attestation, receipt, root, runner start,
+  validation result, independent result review, or scientific acceptance is
+  bundled.
 
 ## What the implementation does not establish
 
@@ -186,9 +195,10 @@ not currently establish:
 
 - a calibrated independent force field;
 - an authorized, independently reviewed CPU reference validation study, an
-  accepted analytic oracle, a durable result receipt, or accepted energy/force
-  evidence; test-only in-memory synthetic observations are implementation
-  checks, not production validation results or parameter-fit data;
+  accepted analytic oracle, a production or independently accepted durable
+  result receipt, or accepted energy/force evidence; test-only synthetic
+  observations and receipts are implementation checks, not production
+  validation results or parameter-fit data;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime
