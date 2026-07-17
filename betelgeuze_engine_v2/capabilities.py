@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_n_cpu_reference_validation_review_contract"
+IMPLEMENTATION_STAGE = "v2_o_cpu_reference_validation_authorization_contract"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -430,8 +430,11 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "signed_independent_scientific_review_attestation_missing",
         "trusted_independent_scientific_reviewer_key_not_provided",
         "implementation_author_and_independent_reviewer_separation_not_attested",
-        "signed_execution_authorization_receipt_schema_not_frozen",
         "signed_execution_authorization_receipt_missing",
+        "trusted_authorization_operator_key_not_provided",
+        "authorization_nonce_not_atomically_reserved",
+        "execution_environment_contract_not_frozen",
+        "result_receipt_contract_not_frozen",
         "validation_execution_not_authorized",
         "validation_results_not_collected",
         "parameter_fitting_not_authorized",
@@ -763,9 +766,9 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_cpu_reference_protocol_with_source_bound_"
-                    "materializer_oracle_and_independent_review_attestation_"
-                    "contract_with_closed_execution_and_fitting_gates"
+                    "frozen_cpu_reference_validation_review_and_execution_"
+                    "authorization_contracts_with_no_receipts_and_closed_"
+                    "execution_and_fitting_gates"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

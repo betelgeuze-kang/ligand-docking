@@ -40,6 +40,7 @@ betelgeuze_engine_v2.physics.reference_validation_materializer
 betelgeuze_engine_v2.physics.reference_validation_oracle
 betelgeuze_engine_v2.physics.reference_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_validation_review
+betelgeuze_engine_v2.physics.reference_validation_authorization
 betelgeuze_engine_v2.runtime
 ```
 
@@ -82,6 +83,15 @@ distinct from the reviewer, complete ordered review checks and limitations, and
 a non-expired validity window. The package bundles no reviewer key or
 attestation. A verified review remains only an input to a future separately
 signed execution authorization and cannot open execution or fitting by itself.
+
+The authorization-contract symbols define and verify a separate future
+operator-signed single-run receipt. They require a still-valid verified review,
+pairwise-distinct implementation-author/reviewer/operator identities, an
+out-of-band trusted operator key, exact code/runner/environment/result/dependency
+identities, a maximum 24-hour lifetime, external revocation sets, and an unused
+one-time nonce. No key or receipt is bundled. Successful verification is only
+eligible for future atomic nonce reservation and still reports
+`validation_execution_authorized=false`.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

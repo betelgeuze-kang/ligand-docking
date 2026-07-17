@@ -262,7 +262,14 @@ class ScientificReviewerTrustAnchor:
 
 @dataclass(frozen=True, slots=True)
 class ReferenceValidationReviewVerification:
+    contract_sha256: str
+    artifact_binding_sha256: str
     attestation_sha256: str
+    implementation_author_identity_sha256: str
+    independent_reviewer_identity_sha256: str
+    reviewer_key_id: str
+    reviewed_at_utc: str
+    expires_at_utc: str
     independent_scientific_review_verified: bool
     implementation_author_separation_verified: bool
     validation_execution_authorized: bool
@@ -271,7 +278,28 @@ class ReferenceValidationReviewVerification:
     blockers: tuple[str, ...]
 
     def __post_init__(self) -> None:
+        _require_sha256(self.contract_sha256, name="review contract")
+        _require_sha256(self.artifact_binding_sha256, name="review artifact binding")
         _require_sha256(self.attestation_sha256, name="review attestation")
+        author = _require_sha256(
+            self.implementation_author_identity_sha256,
+            name="review implementation author identity",
+        )
+        reviewer = _require_sha256(
+            self.independent_reviewer_identity_sha256,
+            name="review independent reviewer identity",
+        )
+        if author == reviewer:
+            raise ReferenceValidationReviewError(
+                "review verification author and reviewer identities must differ"
+            )
+        _require_key_id(self.reviewer_key_id)
+        reviewed_at = _parse_utc(self.reviewed_at_utc, name="review verification reviewed_at_utc")
+        expires_at = _parse_utc(self.expires_at_utc, name="review verification expires_at_utc")
+        if expires_at <= reviewed_at:
+            raise ReferenceValidationReviewError(
+                "review verification expiry must follow review time"
+            )
         if not self.independent_scientific_review_verified:
             raise ReferenceValidationReviewError("verified review decision must retain review verification")
         if not self.implementation_author_separation_verified:
@@ -287,7 +315,14 @@ class ReferenceValidationReviewVerification:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "contract_sha256": self.contract_sha256,
+            "artifact_binding_sha256": self.artifact_binding_sha256,
             "attestation_sha256": self.attestation_sha256,
+            "implementation_author_identity_sha256": self.implementation_author_identity_sha256,
+            "independent_reviewer_identity_sha256": self.independent_reviewer_identity_sha256,
+            "reviewer_key_id": self.reviewer_key_id,
+            "reviewed_at_utc": self.reviewed_at_utc,
+            "expires_at_utc": self.expires_at_utc,
             "independent_scientific_review_verified": self.independent_scientific_review_verified,
             "implementation_author_separation_verified": self.implementation_author_separation_verified,
             "validation_execution_authorized": self.validation_execution_authorized,
@@ -496,7 +531,14 @@ def verify_signed_reference_validation_review_attestation(
     if payload != expected_projection:
         raise ReferenceValidationReviewError("review attestation fields do not match the frozen schema")
     return ReferenceValidationReviewVerification(
+        contract_sha256=contract["contract_sha256"],
+        artifact_binding_sha256=FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
         attestation_sha256=_require_sha256(attestation_sha256, name="review attestation"),
+        implementation_author_identity_sha256=expected_author,
+        independent_reviewer_identity_sha256=reviewer_identity,
+        reviewer_key_id=key_id,
+        reviewed_at_utc=payload["reviewed_at_utc"],
+        expires_at_utc=payload["expires_at_utc"],
         independent_scientific_review_verified=True,
         implementation_author_separation_verified=True,
         validation_execution_authorized=False,
