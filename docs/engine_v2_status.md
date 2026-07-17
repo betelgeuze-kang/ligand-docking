@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_l_cpu_reference_validation_protocol
+v2_m_cpu_reference_validation_artifacts
 ```
 
 The current `main` branch contains:
@@ -123,11 +123,18 @@ The current `main` branch contains:
   twenty-seven ordered cases (fifteen expected passes and twelve expected
   fail-closed rows), nineteen predefined float64 acceptance metrics, all-case
   denominators, independent-oracle separation, environment/result-receipt
-  requirements, and the exact H5 dependency. No fixture materializer,
-  independent oracle, result receipt, scientific holdout, independently
-  reviewed runtime parameter values, or signed authorization receipt exists;
-  the executable gate therefore denies validation execution and parameter-
-  fitting proposals.
+  requirements, and the exact H5 dependency. A separate frozen artifact binding
+  now materializes all seven fixtures, twenty mutations, and twenty-seven cases
+  into fifty-nine deterministic CPU float64 runtime variants without energy,
+  force, or metric values. It also binds a standard-library-only independent
+  scalar analytic oracle whose forces use forward-mode exact derivatives and
+  whose source is AST-audited to import neither the reference evaluator nor the
+  protocol, Torch, NumPy, or an external molecular solver. Exact materializer,
+  oracle, materialization-manifest, protocol, fixture-manifest, and H5 SHA-256
+  identities are bound. No result receipt, scientific holdout, independently
+  reviewed runtime parameter values, independent scientific acceptance, or
+  signed authorization receipt exists; the current artifact authorization gate
+  therefore denies validation execution and parameter-fitting proposals.
 
 ## What the implementation does not establish
 
@@ -135,9 +142,10 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
-- an executed CPU reference validation study, an independently reviewed
-  analytic oracle, or accepted energy/force evidence; the frozen protocol is a
-  pre-result contract and its synthetic values are not parameter-fit data;
+- an executed CPU reference validation study, an independently reviewed and
+  accepted analytic oracle, or accepted energy/force evidence; the frozen
+  protocol and source-bound implementation artifacts remain pre-result
+  contracts and their synthetic values are not parameter-fit data;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime
@@ -181,7 +189,7 @@ Each capability row separates four questions:
 3. **scientifically validated** — independent scientific evidence exists;
 4. **customer execution enabled** — the capability is admitted to a product route.
 
-Only the first two are true for selected V2-L surfaces. `claim_safe` remains
+Only the first two are true for selected V2-M surfaces. `claim_safe` remains
 false for every current capability row.
 
 ## Verification

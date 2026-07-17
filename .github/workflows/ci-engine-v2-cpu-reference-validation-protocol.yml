@@ -8,6 +8,7 @@ on:
       - "packaging/engine-v2/pyproject.toml"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -28,6 +29,7 @@ on:
       - "packaging/engine-v2/pyproject.toml"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -74,6 +76,7 @@ jobs:
             config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
+            tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_parameter_applicability.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -109,15 +112,20 @@ jobs:
           python tools/check_engine_v2_architecture.py
           ruff check \
             betelgeuze_engine_v2/physics/reference_validation_protocol.py \
+            betelgeuze_engine_v2/physics/reference_validation_materializer.py \
+            betelgeuze_engine_v2/physics/reference_validation_oracle.py \
+            betelgeuze_engine_v2/physics/reference_validation_artifact_binding.py \
             betelgeuze_engine_v2/physics/__init__.py \
             betelgeuze_engine_v2/capabilities.py \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_validation_artifacts.py \
             --config packaging/engine-v2/pyproject.toml
 
       - name: Verify frozen protocol, H5 dependency, and non-promotion
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_parameter_applicability.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -130,7 +138,9 @@ jobs:
 
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.physics import (
-              cpu_reference_validation_authorization_decision,
+              FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
+              reference_validation_artifact_authorization_decision,
+              reference_validation_artifact_binding_document,
           )
 
           loaded = yaml.safe_load(
@@ -140,7 +150,11 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 39
-          decision = cpu_reference_validation_authorization_decision()
+          assert loaded["implementation_stage"] == "v2_m_cpu_reference_validation_artifacts"
+          binding = reference_validation_artifact_binding_document()
+          assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
+          decision = reference_validation_artifact_authorization_decision(binding)
           assert decision.validation_execution_authorized is False
           assert decision.parameter_fitting_proposal_authorized is False
+          assert decision.parameter_fitting_authorized is False
           PY

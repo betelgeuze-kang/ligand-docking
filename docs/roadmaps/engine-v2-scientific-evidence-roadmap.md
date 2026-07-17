@@ -2,7 +2,7 @@
 
 Status: planned evidence program; no scientific or product promotion
 
-Observed baseline: `main@a14ca404692efec9e5733d47e4207c0a87698637`
+Observed baseline: `main@cf9bec1bd49be01ae598610e6361fd000287f022`
 
 This roadmap separates implemented source contracts from future scientific,
 benchmark, hardware, and product evidence. A green source-level test or CI job
@@ -193,15 +193,19 @@ claim status without revalidating the dependency and freshness chain.
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
   metrics, the exact H5 dependency, all-case denominators, future environment
   and result-receipt fields, and an executable closed authorization decision.
-  No fixtures or oracle are materialized, no result exists, synthetic values are
-  not fit data, and neither validation execution nor a parameter-fitting proposal
-  is authorized.
-- Implement the exact fixture materializer and an independently sourced analytic
-  oracle without importing the reference evaluator, bind both source identities,
-  then obtain independent scientific review and a signed authorization receipt
-  before collecting any result. The scientific parameterized-force-field lane
-  additionally requires reviewed runtime values, a frozen chemical applicability
-  domain, a complete holdout manifest, and independent reference artifacts.
+  A separate frozen binding now materializes every fixture, mutation, and case
+  into fifty-nine deterministic CPU float64 variants and binds both that source
+  and a standard-library-only analytic oracle. The oracle uses scalar equations
+  with forward-mode exact derivatives and an AST-enforced boundary forbidding
+  reference-evaluator, protocol, Torch, NumPy, and external-solver imports. No
+  comparison or metric result exists, synthetic values are not fit data, and
+  neither validation execution nor a parameter-fitting proposal is authorized.
+- Obtain independent scientific review with explicit implementation-author
+  separation, freeze and verify a signed non-expired authorization receipt, and
+  only then collect any synthetic implementation-mathematics result. The
+  scientific parameterized-force-field lane additionally requires reviewed
+  runtime values, a frozen chemical applicability domain, a complete holdout
+  manifest, and independent reference artifacts.
 - Design CPU/GPU parity fixtures only after the CPU reference behavior and
   tolerances are frozen.
 - Close the remaining same-UID artifact TOCTOU, unsigned ledger, and runtime

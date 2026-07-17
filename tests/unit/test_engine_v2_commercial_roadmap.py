@@ -76,7 +76,12 @@ def test_current_main_commercial_roadmap_tracks_v2_1_without_promotion() -> None
     assert "27개 ordered pass/fail-closed case·19개 float64 metric" in roadmap
     assert "same-environment determinism과 12개 fail-closed row" in roadmap
     assert "27개 case 전체가 denominator" in roadmap
-    assert "fixture materializer와 독립 analytic oracle은 구현되지 않았고" in roadmap
+    assert "59개 deterministic CPU\nfloat64 runtime variant로 materialize" in roadmap
+    assert "독립 analytic oracle을 exact source SHA-256으로 결속" in roadmap
+    assert (
+        "Torch·NumPy·외부 molecular\nsolver import가 없음을 AST로 검사"
+        in roadmap
+    )
     assert "synthetic 값은 parameter-fit data가 아니며" in roadmap
     assert "validation 실행과\nparameter-fitting proposal을 모두 거부" in roadmap
     assert (
