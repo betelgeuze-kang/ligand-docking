@@ -5,6 +5,7 @@ on:
     paths:
       - "betelgeuze_engine_v2/physics/**"
       - "tests/unit/test_engine_v2_reference_physics.py"
+      - "tests/unit/test_engine_v2_reference_diagnostics.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
       - ".github/workflows/ci-engine-v2-reference-physics.yml"
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - "betelgeuze_engine_v2/physics/**"
       - "tests/unit/test_engine_v2_reference_physics.py"
+      - "tests/unit/test_engine_v2_reference_diagnostics.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
       - ".github/workflows/ci-engine-v2-reference-physics.yml"
   workflow_dispatch:
@@ -45,6 +47,7 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_reference_physics.py
+            tests/unit/test_engine_v2_reference_diagnostics.py
             tests/unit/test_engine_v2_reference_minimization.py
             tests/unit/test_engine_v2_orchestrator_contract.py
           sparse-checkout-cone-mode: false
@@ -71,6 +74,7 @@ jobs:
           set +e
           python -m pytest -vv -x \
             tests/unit/test_engine_v2_orchestrator_contract.py \
+            tests/unit/test_engine_v2_reference_diagnostics.py \
             tests/unit/test_engine_v2_reference_minimization.py \
             tests/unit/test_engine_v2_reference_physics.py > reference-physics.log 2>&1
           status=$?
