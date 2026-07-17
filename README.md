@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_t_cpu_reference_validation_result_receipt_writer
+v2_z_bounded_cpu_fixed_born_constrained_minimization
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -35,6 +35,24 @@ Implemented and GitHub-hosted CPU tested:
 - independent `betelgeuze-engine-v2` wheel for Python 3.10–3.12;
 - bounded single-model PDB and single-molecule SDF V2000 parsers;
 - independent physics-term registry contracts;
+- bounded deterministic CPU `float64` reference minimization with retained
+  failure rows and exact checkpoint/restart identity, without scientific or
+  product promotion;
+- bounded component-energy central-difference force diagnostics and
+  non-periodic configurational virials, with every perturbation retained and
+  periodic virials fail-closed;
+- a separate versioned reference-forcefield extension with ordered-star
+  harmonic out-of-plane improper energy/forces and bounded deterministic
+  symmetric degree-relaxed equal-weight distance-constraint projection, plus
+  projected Armijo minimization with tangent-force convergence and exact
+  checkpoint/restart; it is not mass weighted, scientifically validated, or
+  product enabled;
+- bounded non-periodic CPU `float64` polar Generalized Born transfer energy and
+  exact forces using caller-supplied fixed effective Born radii, plus a combined
+  v2 evaluator and optional constrained-minimization integration with exact
+  solvation-parameter-bound checkpoint/restart; radius estimation, nonpolar
+  solvation, salt/ions, periodic solvent, independent validation, and product
+  promotion remain unavailable;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture

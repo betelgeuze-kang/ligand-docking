@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_t_cpu_reference_validation_result_receipt_writer
+v2_z_bounded_cpu_fixed_born_constrained_minimization
 ```
 
 The current `main` branch contains:
@@ -118,6 +118,57 @@ The current `main` branch contains:
   and no value from it is bound to the runtime parameter object. The code-
   enforced runtime envelope is explicitly not a scientifically validated
   chemical applicability domain and authorizes neither fitting nor validation.
+- a bounded deterministic CPU reference minimizer for one-model `float64`
+  systems with caller-supplied explicit parameters. It uses force-directed
+  steepest descent, Armijo backtracking, hard iteration/backtrack/displacement
+  and neighbor-capacity bounds, and retains every accepted, applicability-
+  rejected, non-finite, and insufficient-decrease evaluation. Canonical
+  checkpoints bind the original system, topology, parameter and config hashes,
+  exact little-endian binary64 coordinates, energies, maximum force, progress,
+  and the complete observation ledger. Restart re-evaluates the checkpoint
+  state and requires bit-exact stored energy and force before continuing. This
+  is an unvalidated internal numerical contract: it ships no parameter set,
+  performs no assignment, and establishes no scientific applicability,
+  minimization accuracy, product qualification, or customer execution claim.
+- bounded per-term numerical diagnostics layered around the unchanged frozen
+  reference evaluator. For a single CPU `float64` model it retains all `6N`
+  plus/minus coordinate perturbations, reconstructs each of the five component
+  forces by central difference, and checks their sum against the evaluator's
+  analytic total force plus each component's net-force residual. For
+  non-periodic systems it reports the explicit configurational convention
+  `sum((r-r_center) outer F)` and tests symmetry and uniform-strain energy
+  derivatives. Periodic virial is unavailable until a cell-strain derivative
+  is implemented and therefore fails closed rather than using wrapped Cartesian
+  coordinates. These diagnostics preserve the frozen evaluator source hash and
+  are implementation evidence only, not parameter, applicability, force,
+  virial, scientific, or product validation.
+- a separate versioned reference-forcefield extension that preserves the frozen
+  v1 evaluator and parameter sources. It adds an explicit ordered-star
+  out-of-plane `asin` improper definition with harmonic autograd energy/forces,
+  plus simultaneous equal-weight degree-relaxed Jacobi projection for caller-
+  supplied distance constraints under hard iteration, correction, and capacity
+  bounds. Every projection iteration retains all constraint residuals, including
+  degenerate and exhausted-budget failures. A separate constrained minimizer
+  projects the initial state and every trial, iteratively removes constraint-
+  normal force components, applies Armijo decrease to the actual projected
+  displacement, retains nested projection failure rows, and binds exact binary64
+  checkpoint/restart state. Rigid transforms and equivalent-outer-atom swaps are
+  tested. Atomic masses are ignored; neither the improper/constraint surface nor
+  constrained minimization has independent scientific validation, general
+  assignment, or product approval.
+- a bounded non-periodic CPU `float64` polar Generalized Born term using the
+  Still pair function from DOI `10.1021/ja00172a038`. Every atom must have one
+  caller-supplied fixed effective Born radius bound to a source digest, exact
+  topology, and the v2 charge-parameter fingerprint. The evaluator includes all
+  bounded self and pair contributions, derives exact coordinate forces by
+  autograd, can be combined with the versioned v2 force field, and can optionally
+  participate in constrained projected-Armijo minimization with its parameter
+  fingerprint bound into exact checkpoint/restart state. Analytic,
+  finite-difference, rigid-transform, atom-permutation, net-force, coverage,
+  identity, minimum-distance, and fail-closed PBC tests are present. Effective-
+  radius estimation, nonpolar solvation, salt/ions, periodic solvent,
+  independent solvation/minimization validation, and product approval remain
+  unavailable.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
   seven exact synthetic fixture profiles, twenty exact mutation contracts,
   twenty-seven ordered cases (fifteen expected passes and twelve expected
@@ -219,6 +270,9 @@ All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
 - a calibrated independent force field;
+- independently validated minimization or a scientific minimization protocol;
+  the bounded deterministic minimizer and its failure/checkpoint tests are
+  implementation evidence only;
 - an authorized, independently reviewed CPU reference validation study, an
   accepted analytic oracle, a production or independently accepted durable
   result receipt, or accepted energy/force evidence; test-only synthetic

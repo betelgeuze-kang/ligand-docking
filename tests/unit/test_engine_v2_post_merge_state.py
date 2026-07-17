@@ -11,6 +11,10 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     BENCHMARK_CAPABILITY_ID,
     CAPABILITY_SCHEMA_VERSION,
     CIF_SYNTAX_CAPABILITY_ID,
+    CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID,
+    CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID,
+    CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
+    CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
     CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
     H5_PARAMETER_APPLICABILITY_CAPABILITY_ID,
@@ -55,7 +59,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 39
+    assert len(loaded["capabilities"]) == 43
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -99,6 +103,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert EXTERNAL_BASELINE_CAPABILITY_ID in rows
     assert PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID in rows
     assert H5_PARAMETER_APPLICABILITY_CAPABILITY_ID in rows
+    assert CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID in rows
+    assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert (
         rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
@@ -508,6 +514,75 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert "parameter_fitting_not_authorized" in h5_record["blockers"]
 
+    minimization = rows[CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID]
+    assert minimization["current_state"] == (
+        "bounded_deterministic_cpu_float64_steepest_descent_with_"
+        "failure_ledger_and_checkpoint_restart"
+    )
+    assert minimization["internal_reference_execution_enabled"] is True
+    assert minimization["scientifically_validated"] is False
+    assert "reference_minimization_not_scientifically_validated" in (
+        minimization["blockers"]
+    )
+    assert "independent_reference_minimization_evidence_missing" in (
+        minimization["blockers"]
+    )
+    assert "public_minimization_validation_missing" in minimization["blockers"]
+
+    diagnostics = rows[CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID]
+    assert diagnostics["current_state"] == (
+        "bounded_cpu_float64_per_term_energy_central_difference_"
+        "force_and_nonperiodic_virial_diagnostics"
+    )
+    assert diagnostics["internal_reference_execution_enabled"] is True
+    assert diagnostics["scientifically_validated"] is False
+    assert "finite_difference_diagnostics_not_independent_scientific_validation" in (
+        diagnostics["blockers"]
+    )
+    assert "periodic_virial_cell_strain_derivative_not_implemented" in (
+        diagnostics["blockers"]
+    )
+    assert "public_force_virial_validation_missing" in diagnostics["blockers"]
+
+    improper_constraint = rows[CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID]
+    assert improper_constraint["current_state"] == (
+        "bounded_versioned_improper_symmetric_constraint_projection_"
+        "and_constrained_minimization_checkpoint_restart"
+    )
+    assert improper_constraint["internal_reference_execution_enabled"] is True
+    assert improper_constraint["scientifically_validated"] is False
+    assert "harmonic_out_of_plane_improper_not_scientifically_validated" in (
+        improper_constraint["blockers"]
+    )
+    assert "equal_weight_distance_constraints_ignore_atomic_masses" in (
+        improper_constraint["blockers"]
+    )
+    assert "equal_weight_constrained_minimization_not_scientifically_validated" in (
+        improper_constraint["blockers"]
+    )
+    assert "independent_constrained_minimization_evidence_missing" in (
+        improper_constraint["blockers"]
+    )
+
+    solvation = rows[CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID]
+    assert solvation["current_state"] == (
+        "bounded_nonperiodic_cpu_float64_fixed_effective_radius_"
+        "polar_gb_v2_evaluator_and_constrained_minimization_restart"
+    )
+    assert solvation["internal_reference_execution_enabled"] is True
+    assert solvation["scientifically_validated"] is False
+    assert "effective_born_radius_estimation_not_implemented" in (
+        solvation["blockers"]
+    )
+    assert "nonpolar_solvation_not_implemented" in solvation["blockers"]
+    assert "periodic_solvation_not_supported" in solvation["blockers"]
+    assert "solvated_constrained_minimization_not_scientifically_validated" in (
+        solvation["blockers"]
+    )
+    assert "independent_solvated_minimization_evidence_missing" in (
+        solvation["blockers"]
+    )
+
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
         "failure_inclusive_result_receipt_writer_implemented_"
@@ -572,6 +647,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
     assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
+    assert "minimization_validation_protocol_missing" in (
+        validation_protocol["blockers"]
+    )
     assert (
         "posebusters_benchmark_equivalence_not_established"
         in public_protocol["blockers"]
@@ -669,14 +747,19 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_docking_semantics.py",
         "test_engine_v2_benchmark_contracts.py",
         "test_engine_v2_public_benchmark_protocol.py",
+        "test_engine_v2_reference_constrained_minimization.py",
+        "test_engine_v2_reference_diagnostics.py",
+        "test_engine_v2_reference_forcefield_v2.py",
+        "test_engine_v2_reference_minimization.py",
         "test_engine_v2_reference_physics.py",
+        "test_engine_v2_reference_solvation.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source
     assert "pip check" in source
     assert "check_engine_v2_architecture.py" in source
     assert "docs/independent_engine_v2_commercial_roadmap.ko.md" in source
-    assert '"v2_t_cpu_reference_validation_result_receipt_writer"' in source
+    assert f'"{IMPLEMENTATION_STAGE}"' in source
     assert "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256" in source
     assert "FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source

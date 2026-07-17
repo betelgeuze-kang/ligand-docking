@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from betelgeuze_engine_v2.capabilities import IMPLEMENTATION_STAGE
 from betelgeuze_engine_v2.physics import (
     CPU_REFERENCE_VALIDATION_PROTOCOL_SCHEMA_ID,
     FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
@@ -291,7 +292,7 @@ def test_protocol_is_integrated_into_canonical_docs_and_ci() -> None:
         encoding="utf-8"
     )
 
-    assert "v2_t_cpu_reference_validation_result_receipt_writer" in status
+    assert IMPLEMENTATION_STAGE in status
     assert "reference_validation_protocol" in public_api
     assert "reference_validation_artifact_binding" in public_api
     assert "reference_validation_review" in public_api

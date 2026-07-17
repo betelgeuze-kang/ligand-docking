@@ -162,6 +162,10 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
 | `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 | `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
+| `v2_bounded_cpu_reference_minimization` | single-model CPU float64 입력과 caller-supplied explicit parameter에 한정한 deterministic force-steepest-descent, Armijo backtracking, iteration/backtrack/displacement/neighbor hard bound, failure-inclusive evaluation row, source/topology/parameter/config identity와 exact little-endian binary64 좌표를 결속한 checkpoint/restart | production parameter set·assignment, general chemistry/applicability, improper·constraint·long-range·solvation, 독립 minimization reference/validation, 과학·benchmark·product/customer 승격 |
+| `v2_bounded_cpu_reference_term_diagnostics` | unchanged frozen evaluator의 5개 component energy를 single-model CPU float64의 모든 `6N` plus/minus perturbation에서 중앙차분해 per-term force를 만들고 analytic total force 합계·component net force를 검증하며, non-periodic 입력에 `sum((r-r_center) outer F)` configurational virial·대칭성·uniform-strain derivative를 제공 | independent scientific reference, parameter/applicability validation, pressure/stress, periodic cell-strain virial, improper·constraint·long-range·solvation, 과학·benchmark·product/customer 승격 |
+| `v2_bounded_cpu_reference_improper_constraint_extension` | frozen v1 evaluator·parameter source를 변경하지 않는 별도 versioned schema에서 ordered-star `asin` out-of-plane harmonic improper energy·autograd force와 simultaneous equal-weight degree-relaxed Jacobi distance projection을 제공하고, single-model CPU float64에서 초기 상태와 모든 trial을 제약면에 투영한 뒤 bounded iterative tangent-force projection과 실제 projected displacement Armijo 감소를 적용하는 constrained minimization·exact checkpoint/restart를 제공; position/force iteration·pair correction·capacity hard bound, minimum-image PBC distance, 모든 nested residual/failure row와 identity digest를 보존 | reviewed parameter·general improper/constraint assignment와 coverage, atomic-mass-weighted constraints, independent force·constraint·constrained-minimization validation, long-range vacuum electrostatics·fixed-radius polar GB 이외 solvation, MD integrator 연계, 과학·benchmark·product/customer 승격 |
+| `v2_bounded_cpu_fixed_born_polar_solvation` | Still DOI `10.1021/ja00172a038`의 `sqrt(r² + alpha_i alpha_j exp(-r²/(4 alpha_i alpha_j)))` pair function을 고정하고, exact topology·v2 charge-parameter fingerprint·caller radius-source SHA-256에 결속된 전 원자 fixed effective Born radius로 non-periodic single-model CPU float64 polar dielectric-transfer self/pair energy와 autograd force를 계산하며 v2 energy/force 결합 evaluator와 solvation fingerprint를 결속한 optional constrained minimization·exact checkpoint/restart를 제공; 512 atom·130816 pair hard bound와 minimum-distance admission 적용 | effective Born radius geometry 추정·reviewed radius/charge parameter와 applicability, nonpolar solvation, salt·explicit ion, PBC solvent, MD 통합, independent solvation·solvated-minimization reference/validation, 과학·benchmark·product/customer 승격 |
 | `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·27개 ordered pass/fail-closed case·19개 float64 metric·H5 dependency·failure-inclusive denominator를 고정하고, 59개 deterministic CPU float64 variant의 exact materializer, frozen reference evaluator source, evaluator/protocol/third-party import를 금지한 standard-library analytic oracle, signed independent-review attestation, operator-signed single-run authorization, CPU execution-environment/result-receipt schema, oversized payload를 path 생성 전에 거부하는 local POSIX atomic nonce reservation, live CPU process와 짧은 수명의 signed network-isolation attestation을 재검증해 mode-0600 environment receipt를 기록하는 run-start primitive, source-only Python import와 Git replacement-ref 거부를 포함한 root-owned absolute Git read-only preflight로 실제 clean HEAD·signed runner source·frozen evaluator/materializer/oracle·dependency를 다시 확인하고 one-time start marker를 소비하며 manifest와 materialization/evaluator/oracle을 고정 supervised child에서 실행해 native stall까지 parent hard deadline으로 중단하고 모든 성공·실패를 메모리에 보존하는 120초 제한 CPU float64 runner, trust key를 받지 않는 bounded canonical stdin과 저장소가 bundle하지 않는 고정 `/etc` root-owned mode-0600 외부 trust store만 사용하는 exact module entrypoint, raw signed chain·live environment·runner-start·exact observation을 재검증하고 metric/status·filename/embedded nonce·special-file read를 fail-closed하며 실패 행 전체를 mode-0600 canonical receipt 하나에 원자적으로 보존하는 result writer/verifier를 유지 | 실제 independent scientific review와 independent result review, trusted reviewer/operator key 또는 production trust store/receipt bundling, production reservation/artifact root와 실제 nonce/environment receipt/runner start/result receipt, kernel-enforced network isolation과 same-UID replacement resistance, externally authenticated receipt signature, production validation result collection, reviewed runtime parameter values, scientific holdout/applicability, energy/force/minimization validation, parameter fitting·제품 승격 |
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
@@ -505,6 +509,22 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    production environment receipt·runner start/result receipt, kernel-enforced network
    isolation, external receipt authenticity와 independent result review가 없으므로
    실행과 parameter-fitting proposal은 계속 fail-closed한다.
+   별도 bounded CPU float64 minimizer는 deterministic backtracking, failure row와
+   checkpoint/restart 계약까지 구현됐지만 독립 minimization reference·검증 protocol과
+   reviewed parameter/applicability evidence가 아니므로 이 차단을 해제하지 않는다.
+   별도 bounded per-term diagnostics는 frozen evaluator를 보존한 채 component force와
+   non-periodic virial을 계산하지만 periodic cell-strain virial과 독립 reference가 없고
+   자체 중앙차분 구현 evidence이므로 같은 과학 차단을 해제하지 않는다.
+   별도 versioned improper·constraint 경로는 symmetric degree-relaxed position
+   projection, constraint-tangent force, projected Armijo minimization과 exact
+   checkpoint/restart까지 연결됐지만 atomic mass를 사용하지 않고 reviewed parameter·
+   general assignment·독립 constrained-minimization evidence가 없으므로 같은 과학
+   차단을 해제하지 않는다.
+   별도 fixed-effective-radius polar GB 경로는 Still pair function의 bounded
+   self/pair energy·exact force와 v2 결합 evaluator까지 구현됐지만 radius를
+   geometry에서 추정하지 않고 nonpolar·salt/ion·PBC·MD 통합과 independent
+   solvation·solvated-minimization evidence가 없으므로 명시된 제한 범위를 넘어
+   승격하지 않는다.
 11. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
 12. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행
@@ -523,7 +543,11 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
 
 종료에는 finite-difference force, translation/rotation/permutation invariance,
 parameter coverage, 독립 reference, minimization decrease/failure evidence가 모두
-필요하다. 현재 reference physics는 bounded unvalidated scaffold다.
+필요하다. 현재 reference physics, deterministic minimizer와 per-term numerical
+diagnostics는 bounded unvalidated scaffold이며, checkpoint/restart·central-difference
+force·non-periodic virial 구현 자체는 위 종료 evidence를 충족하지 않는다.
+fixed-radius polar GB 구현도 명시된 provisional solvation 범위일 뿐 radius estimation,
+nonpolar·salt/ion·PBC, parameter coverage와 독립 reference evidence를 충족하지 않는다.
 
 ### V2-3 — 구조분석·도킹
 
@@ -591,6 +615,10 @@ scientific validity, docking accuracy, MD, GPU parity 또는 commercial readines
 아니다.
 고정된 CPU reference validation protocol도 실행 결과가 아니며 force/energy accuracy,
 scientific applicability, minimization 또는 parameter fitting 승인을 뜻하지 않는다.
+bounded deterministic minimizer와 bit-exact restart test도 독립 minimization 검증이나
+과학적 applicability 증거가 아니다.
+per-term central-difference force와 non-periodic configurational virial diagnostics도
+independent reference, periodic pressure/stress 또는 과학 검증 증거가 아니다.
 
 ## 9. 제품 성숙도
 

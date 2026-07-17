@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_t_cpu_reference_validation_result_receipt_writer
+implementation_stage: v2_z_bounded_cpu_fixed_born_constrained_minimization
 
 claim_policy:
   customer_execution_enabled: false
@@ -763,6 +763,101 @@ capabilities:
       - parameter_fitting_not_authorized
       - independent_force_energy_validation_missing
       - scientific_validation_missing
+      - product_integration_not_qualified
+
+  v2_bounded_cpu_reference_minimization:
+    current_state: bounded_deterministic_cpu_float64_steepest_descent_with_failure_ledger_and_checkpoint_restart
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_parameter_values_not_independently_reviewed
+      - parameter_assignment_and_partial_charge_generation_not_implemented
+      - improper_torsions_constraints_long_range_and_solvation_not_supported
+      - runtime_capacity_envelope_is_not_scientific_applicability_evidence
+      - reference_minimization_not_scientifically_validated
+      - independent_reference_minimization_evidence_missing
+      - public_minimization_validation_missing
+      - product_integration_not_qualified
+
+  v2_bounded_cpu_reference_term_diagnostics:
+    current_state: bounded_cpu_float64_per_term_energy_central_difference_force_and_nonperiodic_virial_diagnostics
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_parameter_values_not_independently_reviewed
+      - finite_difference_diagnostics_not_independent_scientific_validation
+      - runtime_capacity_envelope_is_not_scientific_applicability_evidence
+      - periodic_virial_cell_strain_derivative_not_implemented
+      - improper_torsions_constraints_long_range_and_solvation_not_supported
+      - public_force_virial_validation_missing
+      - product_integration_not_qualified
+
+  v2_bounded_cpu_reference_improper_constraint_extension:
+    current_state: bounded_versioned_improper_symmetric_constraint_projection_and_constrained_minimization_checkpoint_restart
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_extension_parameters_not_independently_reviewed
+      - harmonic_out_of_plane_improper_not_scientifically_validated
+      - equal_weight_distance_constraints_ignore_atomic_masses
+      - equal_weight_constrained_minimization_not_scientifically_validated
+      - independent_constrained_minimization_evidence_missing
+      - general_improper_parameter_assignment_and_coverage_not_implemented
+      - independent_force_constraint_validation_missing
+      - long_range_vacuum_electrostatics_not_supported
+      - solvation_scope_limited_to_fixed_radius_polar_gb_capability
+      - product_integration_not_qualified
+
+  v2_bounded_cpu_fixed_born_polar_solvation:
+    current_state: bounded_nonperiodic_cpu_float64_fixed_effective_radius_polar_gb_v2_evaluator_and_constrained_minimization_restart
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_effective_born_radii_not_independently_reviewed
+      - effective_born_radius_estimation_not_implemented
+      - fixed_radius_polar_gb_not_scientifically_validated
+      - nonpolar_solvation_not_implemented
+      - salt_and_explicit_ion_effects_not_implemented
+      - periodic_solvation_not_supported
+      - solvated_constrained_minimization_not_scientifically_validated
+      - independent_solvation_reference_evidence_missing
+      - independent_solvated_minimization_evidence_missing
       - product_integration_not_qualified
 
   v2_cpu_reference_energy_force_validation_protocol:

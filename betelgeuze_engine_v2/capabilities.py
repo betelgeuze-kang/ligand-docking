@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_t_cpu_reference_validation_result_receipt_writer"
+IMPLEMENTATION_STAGE = "v2_z_bounded_cpu_fixed_born_constrained_minimization"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -92,6 +92,18 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = (
     "v2_h5_reference_physics_parameter_applicability_record"
+)
+CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = (
+    "v2_bounded_cpu_reference_minimization"
+)
+CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = (
+    "v2_bounded_cpu_reference_term_diagnostics"
+)
+CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = (
+    "v2_bounded_cpu_reference_improper_constraint_extension"
+)
+CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = (
+    "v2_bounded_cpu_fixed_born_polar_solvation"
 )
 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = (
     "v2_cpu_reference_energy_force_validation_protocol"
@@ -420,6 +432,49 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "parameter_fitting_not_authorized",
         "independent_force_energy_validation_missing",
         "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID: (
+        "caller_supplied_parameter_values_not_independently_reviewed",
+        "parameter_assignment_and_partial_charge_generation_not_implemented",
+        "improper_torsions_constraints_long_range_and_solvation_not_supported",
+        "runtime_capacity_envelope_is_not_scientific_applicability_evidence",
+        "reference_minimization_not_scientifically_validated",
+        "independent_reference_minimization_evidence_missing",
+        "public_minimization_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: (
+        "caller_supplied_parameter_values_not_independently_reviewed",
+        "finite_difference_diagnostics_not_independent_scientific_validation",
+        "runtime_capacity_envelope_is_not_scientific_applicability_evidence",
+        "periodic_virial_cell_strain_derivative_not_implemented",
+        "improper_torsions_constraints_long_range_and_solvation_not_supported",
+        "public_force_virial_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID: (
+        "caller_supplied_extension_parameters_not_independently_reviewed",
+        "harmonic_out_of_plane_improper_not_scientifically_validated",
+        "equal_weight_distance_constraints_ignore_atomic_masses",
+        "equal_weight_constrained_minimization_not_scientifically_validated",
+        "independent_constrained_minimization_evidence_missing",
+        "general_improper_parameter_assignment_and_coverage_not_implemented",
+        "independent_force_constraint_validation_missing",
+        "long_range_vacuum_electrostatics_not_supported",
+        "solvation_scope_limited_to_fixed_radius_polar_gb_capability",
+        "product_integration_not_qualified",
+    ),
+    CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID: (
+        "caller_supplied_effective_born_radii_not_independently_reviewed",
+        "effective_born_radius_estimation_not_implemented",
+        "fixed_radius_polar_gb_not_scientifically_validated",
+        "nonpolar_solvation_not_implemented",
+        "salt_and_explicit_ion_effects_not_implemented",
+        "periodic_solvation_not_supported",
+        "solvated_constrained_minimization_not_scientifically_validated",
+        "independent_solvation_reference_evidence_missing",
+        "independent_solvated_minimization_evidence_missing",
         "product_integration_not_qualified",
     ),
     CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: (
@@ -766,6 +821,42 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID: _row(
+                CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
+                current_state=(
+                    "bounded_deterministic_cpu_float64_steepest_descent_with_"
+                    "failure_ledger_and_checkpoint_restart"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: _row(
+                CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
+                current_state=(
+                    "bounded_cpu_float64_per_term_energy_central_difference_"
+                    "force_and_nonperiodic_virial_diagnostics"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID: _row(
+                CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID,
+                current_state=(
+                    "bounded_versioned_improper_symmetric_constraint_projection_"
+                    "and_constrained_minimization_checkpoint_restart"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID: _row(
+                CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID,
+                current_state=(
+                    "bounded_nonperiodic_cpu_float64_fixed_effective_radius_"
+                    "polar_gb_v2_evaluator_and_constrained_minimization_restart"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
@@ -843,6 +934,10 @@ __all__ = [
     "CAPABILITY_SCHEMA_VERSION",
     "CIF_SYNTAX_CAPABILITY_ID",
     "CPU_REFERENCE_CAPABILITY_ID",
+    "CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID",
+    "CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID",
+    "CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID",
+    "CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID",
     "CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID",
     "DISTRIBUTION_CAPABILITY_ID",
     "DOCKING_CAPABILITY_ID",

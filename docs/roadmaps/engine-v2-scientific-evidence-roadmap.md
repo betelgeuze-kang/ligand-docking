@@ -188,6 +188,49 @@ claim status without revalidating the dependency and freshness chain.
   are caller supplied and are not extracted from the reviewed Sage candidate.
   The runtime envelope is not a scientific chemical applicability domain, and
   the record authorizes neither parameter fitting nor a validation study.
+- Preserve the bounded deterministic CPU `float64` reference minimizer as an
+  implementation contract only. Its steepest-descent direction, Armijo
+  backtracking, iteration/backtrack/displacement and neighbor-capacity bounds,
+  failure-inclusive rows, and exact binary64 checkpoint/restart identities are
+  tested, including bit-exact resumed versus uninterrupted output. This is not
+  independent minimization evidence, a calibrated parameter set, chemical
+  applicability, or a scientific/product/customer promotion gate.
+- Preserve the bounded per-term diagnostics without changing the frozen
+  evaluator source. Every `6N` plus/minus perturbation is retained; failed
+  perturbations suppress partial force/virial tensors; five central-difference
+  component forces must sum to the analytic total within fixed tolerance; and
+  non-periodic centered-coordinate virials are checked for symmetry and against
+  uniform-strain energy derivatives. Periodic virials remain fail-closed until
+  a cell-strain derivative exists. This same-evaluator numerical check is not an
+  independent reference, pressure/stress evidence, or scientific validation.
+- Preserve the versioned improper/constraint extension without modifying the
+  frozen v1 evaluator or parameter source. Its ordered-star out-of-plane `asin`
+  definition, harmonic autograd forces, finite-difference/invariance tests, and
+  bounded simultaneous degree-relaxed equal-weight distance projection are
+  implementation contracts only. Projection retains every iteration and failure
+  residual and supports minimum-image distances for admitted orthorhombic PBC.
+  The constrained minimizer projects the initial state and every trial, iterates
+  a symmetric constraint-tangent force projection, applies Armijo decrease to
+  actual projected displacement, retains nested projection failures, and binds
+  exact checkpoint/restart identity. Rigid transforms and equivalent-outer-atom
+  swaps are tested. The path ignores atomic masses and is not integrated with MD.
+  General improper/constraint assignment and coverage, reviewed values,
+  independent force/constraint/minimization evidence, long-range physics,
+  solvation beyond the fixed-radius polar GB capability, and scientific/product
+  promotion remain open.
+- Preserve the bounded fixed-effective-radius polar Generalized Born term as an
+  explicit provisional solvation scope. It fixes the Still pair function and
+  primary DOI `10.1021/ja00172a038`, binds every caller-supplied radius and its
+  source digest to topology and the exact v2 charge-parameter fingerprint, sums
+  all bounded self/pair terms for one non-periodic CPU `float64` model, derives
+  exact forces, exposes a v2 combined evaluator, and optionally feeds that
+  energy/force into constrained minimization while binding the solvation
+  fingerprint into exact checkpoint/restart state. Analytic, finite-difference,
+  rigid-transform, atom-permutation, net-force, identity/coverage, and fail-
+  closed PBC checks are implementation evidence only. Effective-radius
+  estimation, reviewed parameter applicability, nonpolar solvation, salt/ions,
+  periodic solvent, MD integration, independent solvation and solvated-
+  minimization reference evidence, and scientific/product promotion remain open.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64

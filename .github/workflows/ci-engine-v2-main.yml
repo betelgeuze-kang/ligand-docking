@@ -165,10 +165,12 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
+            tests/unit/test_engine_v2_reference_constrained_minimization.py
             tests/unit/test_engine_v2_reference_diagnostics.py
             tests/unit/test_engine_v2_reference_forcefield_v2.py
             tests/unit/test_engine_v2_reference_minimization.py
             tests/unit/test_engine_v2_reference_physics.py
+            tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_external_baseline.py
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
@@ -278,10 +280,12 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_benchmark_contracts.py \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
+            tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_diagnostics.py \
             tests/unit/test_engine_v2_reference_forcefield_v2.py \
             tests/unit/test_engine_v2_reference_minimization.py \
             tests/unit/test_engine_v2_reference_physics.py \
+            tests/unit/test_engine_v2_reference_solvation.py \
             tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
@@ -408,7 +412,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_t_cpu_reference_validation_result_receipt_writer"
+          assert capability_snapshot()["implementation_stage"] == "v2_z_bounded_cpu_fixed_born_constrained_minimization"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",
