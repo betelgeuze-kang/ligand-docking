@@ -175,6 +175,8 @@ def _runtime_observation() -> module._RuntimeObservation:
                 ("MKL_NUM_THREADS", "1"),
                 ("OMP_NUM_THREADS", "1"),
                 ("OPENBLAS_NUM_THREADS", "1"),
+                ("PYTHONDONTWRITEBYTECODE", "1"),
+                ("PYTHONPYCACHEPREFIX", "/dev/null"),
                 ("TZ", "UTC"),
                 ("PYTHONHASHSEED", "123"),
                 (REFERENCE_VALIDATION_APPLICATION_SEED_ENV, "456"),

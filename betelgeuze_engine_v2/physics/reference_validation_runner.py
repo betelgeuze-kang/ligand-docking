@@ -69,6 +69,8 @@ REFERENCE_VALIDATION_RUNNER_MAX_CASES = 27
 REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS = 59
 REFERENCE_VALIDATION_RUNNER_MAX_START_RECORD_BYTES = 65_536
 REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES = 1_048_576
+REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES = 4_096
+REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES = 8 * 1_048_576
 REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM = 1.0e-5
 REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
@@ -76,6 +78,9 @@ REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
 )
 REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_runner_response/1.0.0"
+)
+REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_validation_case_worker_request/1.0.0"
 )
 REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_trust_store/1.0.0"
@@ -85,7 +90,7 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "57cc97a19d9da51cbc27285c1575018a38e3533cc279498262cc2f58029f80dd"
+    "e162991364925696c81a936977c677d80e836b89a8229417281aa85a12891f21"
 )
 
 _ROTATION_MATRIX = (
@@ -131,6 +136,36 @@ class ReferenceValidationRunnerAlreadyStartedError(ReferenceValidationRunnerErro
 
 class _ReferenceValidationDeadlineExceeded(Exception):
     """Internal, sanitized control flow for the frozen wall-clock deadline."""
+
+
+def _require_source_only_python_runtime() -> None:
+    """Reject startup modes that can execute ignored timestamp bytecode caches."""
+
+    if (
+        os.environ.get("PYTHONDONTWRITEBYTECODE") != "1"
+        or os.environ.get("PYTHONPYCACHEPREFIX") != "/dev/null"
+        or sys.flags.dont_write_bytecode != 1
+        or sys.dont_write_bytecode is not True
+        or sys.pycache_prefix != "/dev/null"
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation runner requires source-only Python imports"
+        )
+    try:
+        null_stat = os.lstat("/dev/null")
+    except OSError as exc:
+        raise ReferenceValidationRunnerError(
+            "source-only Python cache sink is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISCHR(null_stat.st_mode)
+        or null_stat.st_uid != 0
+        or os.major(null_stat.st_rdev) != 1
+        or os.minor(null_stat.st_rdev) != 3
+    ):
+        raise ReferenceValidationRunnerError(
+            "source-only Python cache sink is invalid"
+        )
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -351,6 +386,39 @@ def _packed_git_ref(common_git_dir: Path, ref_name: str) -> str:
     return matches[0]
 
 
+def _require_no_git_replacement_refs(git_dir: Path, common_git_dir: Path) -> None:
+    """Reject loose or packed replacement refs before trusting checkout state."""
+
+    for metadata_root in dict.fromkeys((git_dir, common_git_dir)):
+        replacement_root = metadata_root / "refs" / "replace"
+        if os.path.lexists(replacement_root):
+            raise ReferenceValidationRunnerError(
+                "Git replacement refs are not allowed for validation"
+            )
+    for metadata_root in dict.fromkeys((git_dir, common_git_dir)):
+        packed_refs_path = metadata_root / "packed-refs"
+        if not os.path.lexists(packed_refs_path):
+            continue
+        packed_refs = _read_small_regular_text(
+            packed_refs_path,
+            name="Git packed refs",
+            maximum_bytes=8 * 1024 * 1024,
+        )
+        for line in packed_refs.splitlines():
+            if not line or line.startswith(("#", "^")):
+                continue
+            try:
+                _commit_sha, ref_name = line.split(" ", 1)
+            except ValueError as exc:
+                raise ReferenceValidationRunnerError(
+                    "Git packed refs are invalid"
+                ) from exc
+            if ref_name.startswith("refs/replace/"):
+                raise ReferenceValidationRunnerError(
+                    "Git replacement refs are not allowed for validation"
+                )
+
+
 def reference_validation_checked_out_code_commit_sha() -> str:
     """Observe the Git HEAD containing the loaded runner without spawning Git."""
 
@@ -389,6 +457,8 @@ def reference_validation_checked_out_code_commit_sha() -> str:
         ).resolve(strict=True)
         if not common_git_dir.is_dir() or common_git_dir.is_symlink():
             raise ReferenceValidationRunnerError("Git common directory is invalid")
+
+    _require_no_git_replacement_refs(git_dir, common_git_dir)
 
     head = _read_small_regular_text(git_dir / "HEAD", name="Git HEAD")
     for _ in range(5):
@@ -440,6 +510,7 @@ def _require_clean_checked_out_code_commit(expected_commit_sha: str) -> None:
     repository_root = Path(__file__).resolve(strict=True).parents[2]
     environment = {
         "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_NO_REPLACE_OBJECTS": "1",
         "GIT_OPTIONAL_LOCKS": "0",
         "HOME": "/nonexistent",
         "LANG": "C.UTF-8",
@@ -1017,6 +1088,9 @@ def _contract_projection() -> dict[str, Any]:
             "actual_checked_out_git_head_required": True,
             "frozen_reference_evaluator_source_required": True,
             "frozen_artifact_binding_reverification_required": True,
+            "source_only_python_import_runtime_required": True,
+            "ignored_timestamp_bytecode_cache_execution_allowed": False,
+            "git_replacement_refs_allowed": False,
             "one_time_runner_start_marker_required": True,
             "duplicate_runner_start_fails_closed": True,
             "release_or_delete_api_provided": False,
@@ -1034,9 +1108,13 @@ def _contract_projection() -> dict[str, Any]:
             "network_access_allowed": False,
             "arbitrary_subprocess_execution_allowed": False,
             "root_owned_absolute_git_clean_checkout_preflight_required": True,
+            "git_no_replace_objects_environment_required": True,
             "case_materialization_under_posix_deadline_required": True,
-            "evaluator_or_oracle_subprocess_execution_allowed": False,
-            "posix_main_thread_deadline_interrupt_required": True,
+            "dedicated_manifest_preflight_worker_required": True,
+            "dedicated_case_worker_subprocess_required": True,
+            "case_worker_request_contains_trust_keys_or_receipts": False,
+            "case_worker_hard_kill_at_wall_deadline_required": True,
+            "in_worker_posix_deadline_interrupt_required": True,
         },
         "entrypoint": {
             "logical_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
@@ -1392,14 +1470,25 @@ def _failure_variant(
     )
 
 
-def _time_budget_case_from_frozen_manifest(
+def _failed_case_from_frozen_manifest(
     ordinal: int,
     case: CPUReferenceValidationCase,
     manifest_case: Mapping[str, Any],
     *,
     metric_map: Mapping[str, CPUReferenceValidationMetric],
+    observed_status: str,
+    observed_error_code: str,
 ) -> ReferenceValidationCaseObservation:
-    """Retain exact frozen variant identities when materialization times out."""
+    """Retain exact frozen variant identities after a supervised worker failure."""
+
+    if observed_status not in {"time_budget_exhausted", "unexpected_error"}:
+        raise ReferenceValidationRunnerError(
+            "supervised worker failure status is invalid"
+        )
+    if not observed_error_code:
+        raise ReferenceValidationRunnerError(
+            "supervised worker failure error is invalid"
+        )
 
     if not isinstance(manifest_case, Mapping) or (
         manifest_case.get("case_id"),
@@ -1450,8 +1539,8 @@ def _time_budget_case_from_frozen_manifest(
                     name="materialization manifest runtime input",
                 ),
                 oracle_input_sha256=oracle_input_sha256,
-                observed_status="time_budget_exhausted",
-                observed_error_code="runner_time_budget_exhausted",
+                observed_status=observed_status,
+                observed_error_code=observed_error_code,
             )
         )
     variant_rows = tuple(variants)
@@ -1469,12 +1558,29 @@ def _time_budget_case_from_frozen_manifest(
             name="materialization manifest case",
         ),
         expected_outcome=case.expected_outcome,
-        observed_status="time_budget_exhausted",
+        observed_status=observed_status,
         expected_error_code=case.expected_error_code,
-        observed_error_code="runner_time_budget_exhausted",
+        observed_error_code=observed_error_code,
         variant_results=variant_rows,
         metric_values=metrics,
         case_passed=False,
+    )
+
+
+def _time_budget_case_from_frozen_manifest(
+    ordinal: int,
+    case: CPUReferenceValidationCase,
+    manifest_case: Mapping[str, Any],
+    *,
+    metric_map: Mapping[str, CPUReferenceValidationMetric],
+) -> ReferenceValidationCaseObservation:
+    return _failed_case_from_frozen_manifest(
+        ordinal,
+        case,
+        manifest_case,
+        metric_map=metric_map,
+        observed_status="time_budget_exhausted",
+        observed_error_code="runner_time_budget_exhausted",
     )
 
 
@@ -1942,6 +2048,717 @@ def _evaluate_case(
     )
 
 
+def _load_frozen_case_manifest_document() -> tuple[Any, dict[str, Any]]:
+    from .reference_validation_artifact_binding import (
+        ReferenceValidationArtifactBindingError,
+        frozen_reference_validation_artifact_binding,
+    )
+    from .reference_validation_materializer import (
+        reference_validation_materialization_manifest_document,
+    )
+
+    try:
+        frozen_reference_validation_artifact_binding()
+    except ReferenceValidationArtifactBindingError as exc:
+        raise ReferenceValidationRunnerError(
+            "runner reference evaluator or validation artifact source drifted"
+        ) from exc
+    manifest = reference_validation_materialization_manifest_document()
+    if manifest["coverage"] != {
+        "fixture_count": 7,
+        "mutation_count": 20,
+        "case_count": REFERENCE_VALIDATION_RUNNER_MAX_CASES,
+        "variant_count": REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS,
+        "expected_pass_case_count": 15,
+        "expected_fail_closed_case_count": 12,
+    }:
+        raise ReferenceValidationRunnerError(
+            "runner materialization coverage drifted"
+        )
+    manifest_cases = manifest.get("cases")
+    if not isinstance(manifest_cases, list) or len(manifest_cases) != (
+        REFERENCE_VALIDATION_RUNNER_MAX_CASES
+    ):
+        raise ReferenceValidationRunnerError(
+            "runner materialization manifest cases drifted"
+        )
+    protocol = frozen_cpu_reference_validation_protocol()
+    if len(protocol.cases) != REFERENCE_VALIDATION_RUNNER_MAX_CASES:
+        raise ReferenceValidationRunnerError("runner protocol case bound drifted")
+    return protocol, manifest
+
+
+def _load_frozen_case_matrix() -> tuple[Any, list[Mapping[str, Any]]]:
+    protocol, manifest = _load_frozen_case_manifest_document()
+    return protocol, manifest["cases"]
+
+
+def _iter_case_matrix_in_process(
+    protocol: Any,
+    manifest_cases: list[Mapping[str, Any]],
+    *,
+    deadline: float,
+) -> Any:
+    """Yield frozen case rows inside the dedicated, killable worker only."""
+
+    from .reference_validation_materializer import (
+        materialize_frozen_reference_validation_case,
+    )
+    from .reference_validation_oracle import evaluate_independent_analytic_oracle
+    from .reference_forcefield import (
+        ReferencePhysicsApplicabilityError,
+        evaluate_reference_force_field,
+    )
+
+    metric_map = {row.metric_id: row for row in protocol.metrics}
+    for ordinal, (case, manifest_case) in enumerate(
+        zip(protocol.cases, manifest_cases, strict=True)
+    ):
+        try:
+            materialized = _call_before_deadline(
+                materialize_frozen_reference_validation_case,
+                case.case_id,
+                protocol,
+                deadline=deadline,
+            )
+        except _ReferenceValidationDeadlineExceeded:
+            yield _time_budget_case_from_frozen_manifest(
+                ordinal,
+                case,
+                manifest_case,
+                metric_map=metric_map,
+            )
+        else:
+            yield _evaluate_case(
+                ordinal,
+                case,
+                materialized,
+                metric_map=metric_map,
+                deadline=deadline,
+                evaluate_reference_force_field=evaluate_reference_force_field,
+                reference_error_type=ReferencePhysicsApplicabilityError,
+                evaluate_independent_analytic_oracle=(
+                    evaluate_independent_analytic_oracle
+                ),
+            )
+
+
+def _run_case_matrix_in_process(
+    protocol: Any,
+    manifest_cases: list[Mapping[str, Any]],
+    *,
+    deadline: float,
+) -> tuple[ReferenceValidationCaseObservation, ...]:
+    return tuple(
+        _iter_case_matrix_in_process(
+            protocol,
+            manifest_cases,
+            deadline=deadline,
+        )
+    )
+
+
+def _configure_deterministic_torch_runtime() -> None:
+    import torch
+
+    try:
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        torch.use_deterministic_algorithms(True)
+    except RuntimeError as exc:
+        raise ReferenceValidationRunnerError(
+            "runner deterministic single-thread runtime cannot be configured"
+        ) from exc
+
+
+def _load_case_worker_request(raw: bytes) -> dict[str, str]:
+    if (
+        not raw
+        or len(raw) > REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES
+        or not raw.endswith(b"\n")
+    ):
+        raise ReferenceValidationRunnerError(
+            "case-worker request size or framing is invalid"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunnerError(
+                    "case-worker request contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        request = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "case-worker request must be canonical ASCII JSON"
+        ) from exc
+    if (
+        not isinstance(request, dict)
+        or set(request)
+        != {
+            "schema_id",
+            "expected_code_commit_sha",
+            "expected_runner_source_sha256",
+        }
+        or request.get("schema_id")
+        != REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID
+        or _canonical_bytes(request) + b"\n" != raw
+    ):
+        raise ReferenceValidationRunnerError(
+            "case-worker request is not the exact canonical schema"
+        )
+    return {
+        "schema_id": request["schema_id"],
+        "expected_code_commit_sha": _require_commit_sha(
+            request["expected_code_commit_sha"],
+            name="case-worker expected commit",
+        ),
+        "expected_runner_source_sha256": _require_sha256(
+            request["expected_runner_source_sha256"],
+            name="case-worker expected source",
+        ),
+    }
+
+
+def _require_fixed_worker_preflight(request: Mapping[str, str]) -> None:
+    _require_source_only_python_runtime()
+    expected_commit = request["expected_code_commit_sha"]
+    if reference_validation_checked_out_code_commit_sha() != expected_commit:
+        raise ReferenceValidationRunnerError(
+            "validation worker commit does not match the checkout"
+        )
+    _require_clean_checked_out_code_commit(expected_commit)
+    if reference_validation_runner_source_sha256() != request[
+        "expected_runner_source_sha256"
+    ]:
+        raise ReferenceValidationRunnerError(
+            "validation worker source does not match the supervisor"
+        )
+    _require_deadline_timer_available()
+    _configure_deterministic_torch_runtime()
+
+
+def _case_worker_main_from_standard_streams() -> int:
+    input_stream = getattr(sys.stdin, "buffer", sys.stdin)
+    output_stream = getattr(sys.stdout, "buffer", sys.stdout)
+    try:
+        raw = input_stream.read(REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES + 1)
+        if not isinstance(raw, bytes):
+            return 2
+        request = _load_case_worker_request(raw)
+        _require_fixed_worker_preflight(request)
+        protocol, manifest_cases = _load_frozen_case_matrix()
+        deadline = time.monotonic() + REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS
+        for row in _iter_case_matrix_in_process(
+            protocol,
+            manifest_cases,
+            deadline=deadline,
+        ):
+            encoded = _canonical_bytes(row.to_dict()) + b"\n"
+            output_stream.write(encoded)
+            output_stream.flush()
+    except Exception:
+        return 2
+    return 0
+
+
+def _manifest_worker_main_from_standard_streams() -> int:
+    input_stream = getattr(sys.stdin, "buffer", sys.stdin)
+    output_stream = getattr(sys.stdout, "buffer", sys.stdout)
+    try:
+        raw = input_stream.read(REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES + 1)
+        if not isinstance(raw, bytes):
+            return 2
+        request = _load_case_worker_request(raw)
+        _require_fixed_worker_preflight(request)
+        _protocol, manifest = _load_frozen_case_manifest_document()
+        output_stream.write(_canonical_bytes(manifest) + b"\n")
+        output_stream.flush()
+    except Exception:
+        return 2
+    return 0
+
+
+def _case_worker_environment() -> dict[str, str]:
+    required_names = (
+        "BETELGEUZE_REFERENCE_VALIDATION_SEED",
+        "CUDA_VISIBLE_DEVICES",
+        "HIP_VISIBLE_DEVICES",
+        "LANG",
+        "LC_ALL",
+        "MKL_NUM_THREADS",
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "PYTHONDONTWRITEBYTECODE",
+        "PYTHONHASHSEED",
+        "PYTHONPYCACHEPREFIX",
+        "ROCR_VISIBLE_DEVICES",
+        "TZ",
+    )
+    environment: dict[str, str] = {}
+    for name in required_names:
+        value = os.environ.get(name)
+        if value is None:
+            raise ReferenceValidationRunnerError(
+                "case-worker deterministic environment is incomplete"
+            )
+        environment[name] = value
+    environment.update(
+        {
+            "HOME": "/nonexistent",
+            "PATH": "/usr/bin:/bin",
+        }
+    )
+    return environment
+
+
+def _decode_case_worker_line(raw: bytes) -> ReferenceValidationCaseObservation:
+    if not raw.endswith(b"\n"):
+        raise ReferenceValidationRunnerError(
+            "case-worker output line is not framed"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunnerError(
+                    "case-worker output contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        payload = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "case-worker output is not canonical ASCII JSON"
+        ) from exc
+    if (
+        not isinstance(payload, dict)
+        or _canonical_bytes(payload) + b"\n" != raw
+    ):
+        raise ReferenceValidationRunnerError(
+            "case-worker output is not canonical ASCII JSON"
+        )
+    return _case_observation_from_payload(payload)
+
+
+def _require_case_matches_frozen_matrix(
+    row: ReferenceValidationCaseObservation,
+    ordinal: int,
+    case: CPUReferenceValidationCase,
+    manifest_case: Mapping[str, Any],
+) -> None:
+    expected_identity = (
+        ordinal,
+        case.case_id,
+        case.input_sha256,
+        manifest_case.get("materialization_sha256"),
+        case.expected_outcome,
+        case.expected_error_code,
+    )
+    observed_identity = (
+        row.ordinal,
+        row.case_id,
+        row.case_input_sha256,
+        row.materialization_sha256,
+        row.expected_outcome,
+        row.expected_error_code,
+    )
+    variants = manifest_case.get("variants")
+    if not isinstance(variants, list):
+        raise ReferenceValidationRunnerError(
+            "frozen worker manifest variants are invalid"
+        )
+    expected_variants = tuple(
+        (
+            variant_ordinal,
+            payload.get("variant_id"),
+            payload.get("runtime_input_sha256"),
+            payload.get("oracle_input_sha256"),
+        )
+        for variant_ordinal, payload in enumerate(variants)
+    )
+    observed_variants = tuple(
+        (
+            variant.ordinal,
+            variant.variant_id,
+            variant.runtime_input_sha256,
+            variant.oracle_input_sha256,
+        )
+        for variant in row.variant_results
+    )
+    if (
+        observed_identity != expected_identity
+        or observed_variants != expected_variants
+        or tuple(metric.metric_id for metric in row.metric_values)
+        != case.required_metric_ids
+    ):
+        raise ReferenceValidationRunnerError(
+            "case-worker output is cross-wired to the frozen matrix"
+        )
+
+
+def _fixed_worker_request(
+    *,
+    expected_code_commit_sha: str,
+    expected_runner_source_sha256: str,
+) -> dict[str, str]:
+    return {
+        "schema_id": REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID,
+        "expected_code_commit_sha": _require_commit_sha(
+            expected_code_commit_sha,
+            name="validation-worker supervisor commit",
+        ),
+        "expected_runner_source_sha256": _require_sha256(
+            expected_runner_source_sha256,
+            name="validation-worker supervisor source",
+        ),
+    }
+
+
+def _start_fixed_validation_worker(worker_flag: str) -> Any:
+    import subprocess
+
+    if worker_flag not in {"--manifest-worker", "--case-worker"}:
+        raise ReferenceValidationRunnerError(
+            "validation-worker operation is invalid"
+        )
+    executable = Path(sys.executable)
+    try:
+        executable_stat = executable.stat()
+        running_stat = os.stat("/proc/self/exe")
+    except OSError as exc:
+        raise ReferenceValidationRunnerError(
+            "validation-worker Python executable is unavailable"
+        ) from exc
+    if (
+        not executable.is_absolute()
+        or not stat.S_ISREG(executable_stat.st_mode)
+        or (executable_stat.st_dev, executable_stat.st_ino)
+        != (running_stat.st_dev, running_stat.st_ino)
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker Python executable does not match the running interpreter"
+        )
+    repository_root = Path(__file__).resolve(strict=True).parents[2]
+    try:
+        return subprocess.Popen(
+            [
+                os.fspath(executable),
+                "-m",
+                "betelgeuze_engine_v2.physics.reference_validation_runner",
+                worker_flag,
+            ],
+            cwd=repository_root,
+            env=_case_worker_environment(),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except (OSError, ValueError) as exc:
+        raise ReferenceValidationRunnerError(
+            "validation-worker process could not be started"
+        ) from exc
+
+
+def _communicate_fixed_validation_worker(
+    process: Any,
+    request: Mapping[str, str],
+    *,
+    deadline: float,
+) -> tuple[bytes, bool, bool]:
+    import subprocess
+
+    timed_out = False
+    try:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0.0:
+            raise subprocess.TimeoutExpired(process.args, 0.0)
+        output, _stderr = process.communicate(
+            input=_canonical_bytes(dict(request)) + b"\n",
+            timeout=remaining,
+        )
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        process.kill()
+        try:
+            output, _stderr = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired as exc:
+            raise ReferenceValidationRunnerError(
+                "validation-worker process could not be reaped after termination"
+            ) from exc
+    if not isinstance(output, bytes) or len(output) > (
+        REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES
+    ):
+        return b"", False, False
+    return output, timed_out, process.returncode == 0
+
+
+def _manifest_cases_from_worker_output(
+    raw: bytes,
+    protocol: Any,
+) -> list[Mapping[str, Any]]:
+    if not raw.endswith(b"\n") or raw.count(b"\n") != 1:
+        raise ReferenceValidationRunnerError(
+            "manifest-worker output framing is invalid"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunnerError(
+                    "manifest-worker output contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        manifest = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "manifest-worker output is not canonical ASCII JSON"
+        ) from exc
+    expected_fields = {
+        "schema_id",
+        "materializer_id",
+        "materializer_version",
+        "materializer_source_sha256",
+        "protocol_sha256",
+        "fixture_manifest_sha256",
+        "materialization_policy",
+        "coverage",
+        "cases",
+        "result_collection_performed",
+        "energy_or_force_values_present",
+        "metric_values_present",
+        "validation_execution_authorized",
+        "scientifically_validated",
+        "claim_safe",
+        "materialization_manifest_sha256",
+    }
+    if (
+        not isinstance(manifest, dict)
+        or set(manifest) != expected_fields
+        or _canonical_bytes(manifest) + b"\n" != raw
+    ):
+        raise ReferenceValidationRunnerError(
+            "manifest-worker output is not the exact canonical schema"
+        )
+    manifest_projection = dict(manifest)
+    manifest_sha256 = manifest_projection.pop(
+        "materialization_manifest_sha256"
+    )
+    if manifest_sha256 != _sha256(manifest_projection):
+        raise ReferenceValidationRunnerError(
+            "manifest-worker output identity is invalid"
+        )
+    _require_sha256(
+        manifest.get("materializer_source_sha256"),
+        name="manifest-worker materializer source",
+    )
+    if (
+        manifest.get("schema_id")
+        != "betelgeuze.engine_v2_reference_validation_materializer/1.0.0"
+        or manifest.get("materializer_id")
+        != "cpu_reference_validation_exact_fixture_materializer/1.0.0"
+        or manifest.get("materializer_version") != "1.0.0"
+        or manifest.get("protocol_sha256")
+        != FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256
+        or manifest.get("fixture_manifest_sha256")
+        != protocol.fixture_manifest_sha256
+        or manifest.get("materialization_policy")
+        != {
+            "device": "cpu",
+            "coordinate_dtype": "float64",
+            "coordinate_unit": "angstrom",
+            "max_neighbors": 16,
+            "max_atoms_per_cell": 16,
+            "applicability_domain": {
+                "max_atoms": 16,
+                "max_bonds": 32,
+                "max_angles": 64,
+                "max_torsions": 128,
+                "max_nonbonded_pairs": 120,
+                "periodic_orthorhombic_supported": True,
+                "minimum_pair_distance_angstrom": 1.0e-6,
+            },
+            "case_order_matches_protocol": True,
+            "all_failure_rows_retained": True,
+            "skipped_cases_allowed": False,
+        }
+        or manifest.get("coverage")
+        != {
+            "fixture_count": 7,
+            "mutation_count": 20,
+            "case_count": REFERENCE_VALIDATION_RUNNER_MAX_CASES,
+            "variant_count": REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS,
+            "expected_pass_case_count": 15,
+            "expected_fail_closed_case_count": 12,
+        }
+        or any(
+            manifest.get(name) is not False
+            for name in (
+                "result_collection_performed",
+                "energy_or_force_values_present",
+                "metric_values_present",
+                "validation_execution_authorized",
+                "scientifically_validated",
+                "claim_safe",
+            )
+        )
+    ):
+        raise ReferenceValidationRunnerError(
+            "manifest-worker output contradicts the frozen validation policy"
+        )
+    manifest_cases = manifest.get("cases")
+    if not isinstance(manifest_cases, list) or len(manifest_cases) != (
+        REFERENCE_VALIDATION_RUNNER_MAX_CASES
+    ):
+        raise ReferenceValidationRunnerError(
+            "manifest-worker case coverage is invalid"
+        )
+    metric_map = {row.metric_id: row for row in protocol.metrics}
+    for ordinal, (case, manifest_case) in enumerate(
+        zip(protocol.cases, manifest_cases, strict=True)
+    ):
+        retained = _failed_case_from_frozen_manifest(
+            ordinal,
+            case,
+            manifest_case,
+            metric_map=metric_map,
+            observed_status="unexpected_error",
+            observed_error_code="manifest_preflight_validation",
+        )
+        _require_case_matches_frozen_matrix(
+            retained,
+            ordinal,
+            case,
+            manifest_case,
+        )
+    return manifest_cases
+
+
+def _run_supervised_frozen_case_matrix(
+    *,
+    expected_code_commit_sha: str,
+    expected_runner_source_sha256: str,
+    deadline: float,
+) -> tuple[Any, list[Mapping[str, Any]]]:
+    """Materialize frozen identities in a child before consuming the start marker."""
+
+    protocol = frozen_cpu_reference_validation_protocol()
+    request = _fixed_worker_request(
+        expected_code_commit_sha=expected_code_commit_sha,
+        expected_runner_source_sha256=expected_runner_source_sha256,
+    )
+    process = _start_fixed_validation_worker("--manifest-worker")
+    output, timed_out, succeeded = _communicate_fixed_validation_worker(
+        process,
+        request,
+        deadline=deadline,
+    )
+    if timed_out or not succeeded:
+        raise ReferenceValidationRunnerError(
+            "supervised materialization preflight did not complete"
+        )
+    return protocol, _manifest_cases_from_worker_output(output, protocol)
+
+
+def _run_supervised_case_matrix(
+    protocol: Any,
+    manifest_cases: list[Mapping[str, Any]],
+    *,
+    expected_code_commit_sha: str,
+    expected_runner_source_sha256: str,
+    deadline: float,
+) -> tuple[ReferenceValidationCaseObservation, ...]:
+    """Run the matrix in one fixed child and hard-kill native stalls at deadline."""
+
+    request = _fixed_worker_request(
+        expected_code_commit_sha=expected_code_commit_sha,
+        expected_runner_source_sha256=expected_runner_source_sha256,
+    )
+    process = _start_fixed_validation_worker("--case-worker")
+    output, timed_out, succeeded = _communicate_fixed_validation_worker(
+        process,
+        request,
+        deadline=deadline,
+    )
+    accepted: list[ReferenceValidationCaseObservation] = []
+    malformed = False
+    for raw_line in output.splitlines(keepends=True):
+        if len(accepted) >= REFERENCE_VALIDATION_RUNNER_MAX_CASES:
+            malformed = True
+            break
+        if not raw_line.endswith(b"\n"):
+            if timed_out:
+                break
+            malformed = True
+            break
+        ordinal = len(accepted)
+        try:
+            row = _decode_case_worker_line(raw_line)
+            _require_case_matches_frozen_matrix(
+                row,
+                ordinal,
+                protocol.cases[ordinal],
+                manifest_cases[ordinal],
+            )
+        except ReferenceValidationRunnerError:
+            malformed = True
+            break
+        accepted.append(row)
+    if (
+        not timed_out
+        and (
+            not succeeded
+            or malformed
+            or len(accepted) != REFERENCE_VALIDATION_RUNNER_MAX_CASES
+        )
+    ):
+        accepted.clear()
+        failure_status = "unexpected_error"
+        failure_code = "unexpected_case_worker_error"
+    elif timed_out:
+        if len(accepted) == REFERENCE_VALIDATION_RUNNER_MAX_CASES:
+            accepted.pop()
+        failure_status = "time_budget_exhausted"
+        failure_code = "runner_time_budget_exhausted"
+    else:
+        return tuple(accepted)
+    metric_map = {row.metric_id: row for row in protocol.metrics}
+    for ordinal in range(len(accepted), REFERENCE_VALIDATION_RUNNER_MAX_CASES):
+        accepted.append(
+            _failed_case_from_frozen_manifest(
+                ordinal,
+                protocol.cases[ordinal],
+                manifest_cases[ordinal],
+                metric_map=metric_map,
+                observed_status=failure_status,
+                observed_error_code=failure_code,
+            )
+        )
+    return tuple(accepted)
+
+
 def run_bounded_cpu_reference_validation(
     artifact_output_root: str | os.PathLike[str],
     authorization_nonce_sha256: str,
@@ -1983,6 +2800,7 @@ def run_bounded_cpu_reference_validation(
         raise ReferenceValidationRunnerError(
             "runner dependency artifact rows are cross-wired"
         )
+    _require_source_only_python_runtime()
     runner_source = reference_validation_runner_source_sha256()
     if receipt.runner_source_sha256 != runner_source:
         raise ReferenceValidationRunnerError(
@@ -1995,49 +2813,14 @@ def run_bounded_cpu_reference_validation(
         )
     _require_clean_checked_out_code_commit(expected_code_commit_sha)
     _require_deadline_timer_available()
-
-    from .reference_validation_artifact_binding import (
-        ReferenceValidationArtifactBindingError,
-        frozen_reference_validation_artifact_binding,
-    )
-    from .reference_validation_materializer import (
-        materialize_frozen_reference_validation_case,
-        reference_validation_materialization_manifest_document,
-    )
-    from .reference_validation_oracle import (
-        evaluate_independent_analytic_oracle,
+    deadline = time.monotonic() + REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS
+    protocol, manifest_cases = _run_supervised_frozen_case_matrix(
+        expected_code_commit_sha=expected_code_commit_sha,
+        expected_runner_source_sha256=runner_source,
+        deadline=deadline,
     )
 
-    try:
-        frozen_reference_validation_artifact_binding()
-    except ReferenceValidationArtifactBindingError as exc:
-        raise ReferenceValidationRunnerError(
-            "runner reference evaluator or validation artifact source drifted"
-        ) from exc
-    manifest = reference_validation_materialization_manifest_document()
-    if manifest["coverage"] != {
-        "fixture_count": 7,
-        "mutation_count": 20,
-        "case_count": REFERENCE_VALIDATION_RUNNER_MAX_CASES,
-        "variant_count": REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS,
-        "expected_pass_case_count": 15,
-        "expected_fail_closed_case_count": 12,
-    }:
-        raise ReferenceValidationRunnerError(
-            "runner materialization coverage drifted"
-        )
-    manifest_cases = manifest.get("cases")
-    if not isinstance(manifest_cases, list) or len(manifest_cases) != (
-        REFERENCE_VALIDATION_RUNNER_MAX_CASES
-    ):
-        raise ReferenceValidationRunnerError(
-            "runner materialization manifest cases drifted"
-        )
-    protocol = frozen_cpu_reference_validation_protocol()
-    if len(protocol.cases) != REFERENCE_VALIDATION_RUNNER_MAX_CASES:
-        raise ReferenceValidationRunnerError("runner protocol case bound drifted")
-
-    started_at_utc = _format_utc(started, name="runner started_at")
+    started_at_utc = _format_utc(_utc_now(), name="runner started_at")
     start_record_sha256 = _persist_runner_start(
         artifact_output_root,
         receipt,
@@ -2045,46 +2828,13 @@ def run_bounded_cpu_reference_validation(
         started_at_utc=started_at_utc,
     )
 
-    from .reference_forcefield import (
-        ReferencePhysicsApplicabilityError,
-        evaluate_reference_force_field,
+    case_results = _run_supervised_case_matrix(
+        protocol,
+        manifest_cases,
+        expected_code_commit_sha=expected_code_commit_sha,
+        expected_runner_source_sha256=runner_source,
+        deadline=deadline,
     )
-
-    deadline = time.monotonic() + REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS
-    metric_map = {row.metric_id: row for row in protocol.metrics}
-    case_results_list: list[ReferenceValidationCaseObservation] = []
-    for ordinal, (case, manifest_case) in enumerate(
-        zip(protocol.cases, manifest_cases, strict=True)
-    ):
-        try:
-            materialized = _call_before_deadline(
-                materialize_frozen_reference_validation_case,
-                case.case_id,
-                protocol,
-                deadline=deadline,
-            )
-        except _ReferenceValidationDeadlineExceeded:
-            case_result = _time_budget_case_from_frozen_manifest(
-                ordinal,
-                case,
-                manifest_case,
-                metric_map=metric_map,
-            )
-        else:
-            case_result = _evaluate_case(
-                ordinal,
-                case,
-                materialized,
-                metric_map=metric_map,
-                deadline=deadline,
-                evaluate_reference_force_field=evaluate_reference_force_field,
-                reference_error_type=ReferencePhysicsApplicabilityError,
-                evaluate_independent_analytic_oracle=(
-                    evaluate_independent_analytic_oracle
-                ),
-            )
-        case_results_list.append(case_result)
-    case_results = tuple(case_results_list)
     completed_at_utc = _format_utc(_utc_now(), name="runner completed_at")
     return ReferenceValidationRunObservation(
         runner_start_record_sha256=start_record_sha256,
@@ -2116,6 +2866,118 @@ def reference_validation_runner_contract_decision() -> dict[str, Any]:
         "parameter_fitting_authorized": False,
         "blockers": list(_CURRENT_BLOCKERS),
     }
+
+
+def _case_observation_from_payload(
+    case_payload: Mapping[str, Any],
+) -> ReferenceValidationCaseObservation:
+    """Reconstruct one exact canonical case row for the worker protocol."""
+
+    if not isinstance(case_payload, Mapping):
+        raise ReferenceValidationRunnerError(
+            "validation case observation must be a mapping"
+        )
+    try:
+        metrics: list[ReferenceValidationMetricObservation] = []
+        for metric_payload in case_payload["metric_values"]:
+            if metric_payload["observed"]:
+                metric_value = metric_payload["value"]
+            else:
+                if metric_payload.get("error_code") != "metric_not_observed":
+                    raise ReferenceValidationRunnerError(
+                        "missing metric observation error is invalid"
+                    )
+                metric_value = None
+            metrics.append(
+                ReferenceValidationMetricObservation(
+                    metric_id=metric_payload["metric_id"],
+                    observed=metric_payload["observed"],
+                    value=metric_value,
+                    unit=metric_payload["unit"],
+                    threshold_operator=metric_payload["threshold_operator"],
+                    threshold_value=metric_payload["threshold_value"],
+                    passed=metric_payload["passed"],
+                )
+            )
+        variants: list[ReferenceValidationVariantObservation] = []
+        for variant_payload in case_payload["variant_results"]:
+            success = variant_payload["observed_status"] == "success"
+            components = (
+                tuple(
+                    (row["name"], row["value"])
+                    for row in variant_payload[
+                        "component_energy_values_and_units"
+                    ]
+                )
+                if success
+                else ()
+            )
+            forces = (
+                tuple(tuple(row) for row in variant_payload["force_array_values"])
+                if success
+                else ()
+            )
+            oracle_forces = (
+                tuple(
+                    tuple(row)
+                    for row in variant_payload["oracle_force_array_values"]
+                )
+                if success
+                else ()
+            )
+            variants.append(
+                ReferenceValidationVariantObservation(
+                    ordinal=variant_payload["ordinal"],
+                    variant_id=variant_payload["variant_id"],
+                    runtime_input_sha256=variant_payload["runtime_input_sha256"],
+                    oracle_input_sha256=variant_payload["oracle_input_sha256"],
+                    observed_status=variant_payload["observed_status"],
+                    observed_error_code=variant_payload["observed_error_code"],
+                    component_energies_kcal_per_mol=components,
+                    total_energy_kcal_per_mol=(
+                        variant_payload["total_energy_value"] if success else None
+                    ),
+                    forces_kcal_per_mol_angstrom=forces,
+                    force_array_sha256=(
+                        variant_payload["force_array_sha256"] if success else None
+                    ),
+                    oracle_total_energy_kcal_per_mol=(
+                        variant_payload["oracle_total_energy_value"]
+                        if success
+                        else None
+                    ),
+                    oracle_forces_kcal_per_mol_angstrom=oracle_forces,
+                    oracle_force_array_sha256=(
+                        variant_payload["oracle_force_array_sha256"]
+                        if success
+                        else None
+                    ),
+                )
+            )
+        result = ReferenceValidationCaseObservation(
+            ordinal=case_payload["ordinal"],
+            case_id=case_payload["case_id"],
+            case_input_sha256=case_payload["case_input_sha256"],
+            materialization_sha256=case_payload["materialization_sha256"],
+            expected_outcome=case_payload["expected_outcome"],
+            observed_status=case_payload["observed_status"],
+            expected_error_code=case_payload["expected_error_code"],
+            observed_error_code=case_payload["observed_error_code"],
+            variant_results=tuple(variants),
+            metric_values=tuple(metrics),
+            case_passed=case_payload["case_passed"],
+        )
+    except ReferenceValidationRunnerError:
+        raise
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ReferenceValidationRunnerError(
+            "validation case observation is invalid"
+        ) from exc
+    if result.to_dict() != dict(case_payload):
+        raise ReferenceValidationRunnerError(
+            "validation case observation is not canonical or exact"
+        )
+    return result
 
 
 def require_reference_validation_run_observation_document(
@@ -2641,6 +3503,7 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
         raise ReferenceValidationRunnerError(
             "runner request code commit does not match the checkout"
         )
+    _require_source_only_python_runtime()
     _require_clean_checked_out_code_commit(expected_commit)
     if reference_validation_runner_source_sha256() != expected_source:
         raise ReferenceValidationRunnerError(
@@ -2648,16 +3511,7 @@ def _execute_runner_request(request: Mapping[str, Any]) -> dict[str, Any]:
         )
     reviewer_keys, operator_keys = _load_preconfigured_trust_anchors()
 
-    import torch
-
-    try:
-        torch.set_num_threads(1)
-        torch.set_num_interop_threads(1)
-        torch.use_deterministic_algorithms(True)
-    except RuntimeError as exc:
-        raise ReferenceValidationRunnerError(
-            "runner deterministic single-thread runtime cannot be configured"
-        ) from exc
+    _configure_deterministic_torch_runtime()
 
     environment = create_reference_validation_execution_environment_receipt(
         request["reservation_root"],
@@ -2741,18 +3595,25 @@ def main() -> int:
 
     canonical_name = "betelgeuze_engine_v2.physics.reference_validation_runner"
     canonical_module = sys.modules.get(canonical_name)
-    if (
+    delegate = (
         __name__ == "__main__"
         and canonical_module is not None
         and canonical_module is not sys.modules.get(__name__)
-    ):
-        return canonical_module._main_from_standard_streams()
-    return _main_from_standard_streams()
+    )
+    implementation = canonical_module if delegate else sys.modules[__name__]
+    if sys.argv[1:] == ["--manifest-worker"]:
+        return implementation._manifest_worker_main_from_standard_streams()
+    if sys.argv[1:] == ["--case-worker"]:
+        return implementation._case_worker_main_from_standard_streams()
+    return implementation._main_from_standard_streams()
 
 
 __all__ = [
     "FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM",
+    "REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES",
+    "REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES",
+    "REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID",
     "REFERENCE_VALIDATION_RUNNER_CONTRACT_ID",
     "REFERENCE_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID",
     "REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION",

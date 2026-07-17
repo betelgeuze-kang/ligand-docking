@@ -116,6 +116,33 @@ def _observation(
         "_require_clean_checked_out_code_commit",
         lambda _expected_commit: None,
     )
+    monkeypatch.setattr(
+        runner_module,
+        "_require_source_only_python_runtime",
+        lambda: None,
+    )
+
+    def run_in_process(
+        protocol: object,
+        manifest_cases: object,
+        **kwargs: object,
+    ):
+        return runner_module._run_case_matrix_in_process(
+            protocol,
+            manifest_cases,
+            deadline=kwargs["deadline"],
+        )
+
+    monkeypatch.setattr(
+        runner_module,
+        "_run_supervised_case_matrix",
+        run_in_process,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "_run_supervised_frozen_case_matrix",
+        lambda **_kwargs: runner_module._load_frozen_case_matrix(),
+    )
     return run_bounded_cpu_reference_validation(
         root,
         AUTHORIZATION_NONCE,

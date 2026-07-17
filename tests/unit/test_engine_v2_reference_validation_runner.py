@@ -9,6 +9,7 @@ import inspect
 import json
 import os
 from pathlib import Path
+import py_compile
 import subprocess
 import sys
 import time
@@ -116,6 +117,25 @@ def _install_verified_receipt(
         "_require_clean_checked_out_code_commit",
         lambda _expected_commit: None,
     )
+    monkeypatch.setattr(module, "_require_source_only_python_runtime", lambda: None)
+
+    def run_in_process(
+        protocol: object,
+        manifest_cases: object,
+        **kwargs: object,
+    ):
+        return module._run_case_matrix_in_process(
+            protocol,
+            manifest_cases,
+            deadline=kwargs["deadline"],
+        )
+
+    monkeypatch.setattr(module, "_run_supervised_case_matrix", run_in_process)
+    monkeypatch.setattr(
+        module,
+        "_run_supervised_frozen_case_matrix",
+        lambda **_kwargs: module._load_frozen_case_matrix(),
+    )
 
 
 def _run(root: Path):
@@ -197,6 +217,7 @@ def test_clean_checkout_preflight_uses_only_the_root_owned_absolute_git(
     assert kwargs["stdin"] is subprocess.DEVNULL
     assert kwargs["stderr"] is subprocess.DEVNULL
     assert kwargs["timeout"] == 10
+    assert kwargs["env"]["GIT_NO_REPLACE_OBJECTS"] == "1"
 
     monkeypatch.setattr(
         subprocess,
@@ -208,6 +229,27 @@ def test_clean_checkout_preflight_uses_only_the_root_owned_absolute_git(
     )
     with pytest.raises(ReferenceValidationRunnerError, match="not exactly clean"):
         module._require_clean_checked_out_code_commit(commit)
+
+
+def test_git_replacement_refs_are_rejected_loose_or_packed(tmp_path: Path) -> None:
+    git_dir = tmp_path / "git"
+    common_dir = tmp_path / "common"
+    git_dir.mkdir()
+    common_dir.mkdir()
+    module._require_no_git_replacement_refs(git_dir, common_dir)
+
+    loose = common_dir / "refs" / "replace"
+    loose.mkdir(parents=True)
+    with pytest.raises(ReferenceValidationRunnerError, match="replacement refs"):
+        module._require_no_git_replacement_refs(git_dir, common_dir)
+    loose.rmdir()
+
+    (common_dir / "packed-refs").write_text(
+        f"{'a' * 40} refs/replace/{'b' * 40}\n",
+        encoding="ascii",
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="replacement refs"):
+        module._require_no_git_replacement_refs(git_dir, common_dir)
 
 
 def test_bounded_runner_retains_exact_matrix_and_consumes_start_once(
@@ -482,6 +524,182 @@ def test_case_materialization_is_interrupted_and_all_variants_are_retained(
         variant.observed_status == "time_budget_exhausted"
         for variant in variants
     )
+
+
+def test_supervisor_hard_kills_a_case_worker_at_the_wall_deadline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    protocol, manifest_cases = module._load_frozen_case_matrix()
+    seen: dict[str, object] = {}
+
+    class StalledProcess:
+        args = [sys.executable, "--case-worker"]
+        returncode: int | None = None
+
+        def __init__(self) -> None:
+            self.communicate_calls = 0
+
+        def communicate(self, **kwargs: object):
+            self.communicate_calls += 1
+            if self.communicate_calls == 1:
+                raise subprocess.TimeoutExpired(self.args, kwargs["timeout"])
+            self.returncode = -9
+            return b"", None
+
+        def kill(self) -> None:
+            seen["killed"] = True
+
+    stalled = StalledProcess()
+
+    def popen(command: object, **kwargs: object) -> StalledProcess:
+        seen["command"] = command
+        seen["kwargs"] = kwargs
+        return stalled
+
+    monkeypatch.setattr(subprocess, "Popen", popen)
+    monkeypatch.setattr(
+        module,
+        "_case_worker_environment",
+        lambda: {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "/dev/null"},
+    )
+    rows = module._run_supervised_case_matrix(
+        protocol,
+        manifest_cases,
+        expected_code_commit_sha=reference_validation_checked_out_code_commit_sha(),
+        expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        deadline=time.monotonic() + 0.01,
+    )
+
+    assert seen["killed"] is True
+    assert seen["command"][-1] == "--case-worker"
+    assert seen["kwargs"]["stderr"] is subprocess.DEVNULL
+    assert len(rows) == REFERENCE_VALIDATION_RUNNER_MAX_CASES
+    assert all(row.observed_status == "time_budget_exhausted" for row in rows)
+    assert all(
+        variant.observed_status == "time_budget_exhausted"
+        for row in rows
+        for variant in row.variant_results
+    )
+
+
+def test_supervisor_hard_kills_manifest_materialization_before_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, object] = {}
+
+    class StalledProcess:
+        args = [sys.executable, "--manifest-worker"]
+        returncode: int | None = None
+
+        def __init__(self) -> None:
+            self.communicate_calls = 0
+
+        def communicate(self, **kwargs: object):
+            self.communicate_calls += 1
+            if self.communicate_calls == 1:
+                raise subprocess.TimeoutExpired(self.args, kwargs["timeout"])
+            self.returncode = -9
+            return b"", None
+
+        def kill(self) -> None:
+            seen["killed"] = True
+
+    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: StalledProcess())
+    monkeypatch.setattr(
+        module,
+        "_case_worker_environment",
+        lambda: {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "/dev/null"},
+    )
+    with pytest.raises(
+        ReferenceValidationRunnerError,
+        match="materialization preflight did not complete",
+    ):
+        module._run_supervised_frozen_case_matrix(
+            expected_code_commit_sha=reference_validation_checked_out_code_commit_sha(),
+            expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+            deadline=time.monotonic() + 0.01,
+        )
+    assert seen["killed"] is True
+
+
+def test_source_only_import_runtime_requires_redirected_disabled_bytecode() -> None:
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": "/dev/null",
+        }
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from betelgeuze_engine_v2.physics import "
+                "reference_validation_runner as runner; "
+                "runner._require_source_only_python_runtime()"
+            ),
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr.decode("utf-8", "replace")
+
+
+def test_source_only_import_runtime_ignores_a_valid_timestamp_cache(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "cached_target.py"
+    source.write_text("VALUE='cache!'\n", encoding="ascii")
+    original_stat = source.stat()
+    py_compile.compile(source, doraise=True)
+    source.write_text("VALUE='source'\n", encoding="ascii")
+    os.utime(
+        source,
+        ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns),
+    )
+    command = [
+        sys.executable,
+        "-c",
+        "import cached_target; print(cached_target.VALUE)",
+    ]
+    vulnerable_environment = os.environ.copy()
+    vulnerable_environment["PYTHONPATH"] = os.fspath(tmp_path)
+    vulnerable_environment.pop("PYTHONDONTWRITEBYTECODE", None)
+    vulnerable_environment.pop("PYTHONPYCACHEPREFIX", None)
+    vulnerable = subprocess.run(
+        command,
+        env=vulnerable_environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=30,
+    )
+    assert vulnerable.returncode == 0
+    assert vulnerable.stdout == b"cache!\n"
+
+    source_only_environment = dict(vulnerable_environment)
+    source_only_environment.update(
+        {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": "/dev/null",
+        }
+    )
+    source_only = subprocess.run(
+        command,
+        env=source_only_environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=30,
+    )
+    assert source_only.returncode == 0
+    assert source_only.stdout == b"source\n"
 
 
 def test_runner_public_surface_has_no_unsafe_clock_writer_or_evaluator() -> None:
@@ -760,6 +978,8 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
             "MKL_NUM_THREADS": "1",
             "OMP_NUM_THREADS": "1",
             "OPENBLAS_NUM_THREADS": "1",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPYCACHEPREFIX": "/dev/null",
             "TZ": "UTC",
             "PYTHONHASHSEED": "123",
             "BETELGEUZE_REFERENCE_VALIDATION_SEED": "456",

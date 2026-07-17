@@ -74,7 +74,7 @@ REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "e11155f66b0366417696389a535a263b2599f589298da6b18454cd5429ccf2b8"
+    "b0adacfcd5492f0e4960cebd37e7df00b4e08e39cfa2626f5083808ee2acea79"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -95,6 +95,8 @@ _REQUIRED_ENVIRONMENT_VALUES = (
     ("MKL_NUM_THREADS", "1"),
     ("OMP_NUM_THREADS", "1"),
     ("OPENBLAS_NUM_THREADS", "1"),
+    ("PYTHONDONTWRITEBYTECODE", "1"),
+    ("PYTHONPYCACHEPREFIX", "/dev/null"),
     ("TZ", "UTC"),
 )
 _POST_ENVIRONMENT_RECEIPT_BLOCKERS = (
@@ -868,6 +870,8 @@ def _contract_projection() -> dict[str, Any]:
             "cpu_identity_stored_as_sha256_only": True,
             "gpu_visibility_variables_present_and_empty": True,
             "locale_timezone_and_thread_environment_exact": True,
+            "source_only_python_import_environment_exact": True,
+            "ignored_timestamp_bytecode_cache_execution_allowed": False,
             "python_hash_and_application_seeds_exact": True,
             "torch_single_thread_and_deterministic_algorithms_required": True,
             "logical_runner_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
