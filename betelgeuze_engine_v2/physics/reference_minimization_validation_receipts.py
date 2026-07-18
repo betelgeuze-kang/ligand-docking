@@ -477,6 +477,7 @@ def reference_minimization_validation_execution_readiness_decision() -> dict[str
         "authorization_receipt_present": False,
         "trusted_reviewer_key_present": False,
         "trusted_operator_key_present": False,
+        "atomic_nonce_reservation_primitive_implemented": True,
         "authorization_nonce_reserved": False,
         "execution_environment_receipt_present": False,
         "validation_runner_implemented": False,

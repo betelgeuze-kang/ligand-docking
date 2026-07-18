@@ -175,6 +175,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_review.py
             tests/unit/test_engine_v2_reference_minimization_validation_receipts.py
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py
+            tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
@@ -297,6 +298,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_receipts.py \
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
@@ -387,6 +389,7 @@ jobs:
           from betelgeuze_engine_v2.physics import (
               AtomNonbondedParameter,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
               FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
               FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
@@ -421,6 +424,8 @@ jobs:
               reference_validation_result_writer_contract_document,
               reference_minimization_validation_authorization_contract_decision,
               reference_minimization_validation_authorization_contract_document,
+              reference_minimization_validation_nonce_reservation_contract_decision,
+              reference_minimization_validation_nonce_reservation_contract_document,
               reviewed_parameter_source_provenance,
           )
 
@@ -429,7 +434,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_af_minimization_validation_authorization_contract"
+          assert capability_snapshot()["implementation_stage"] == "v2_ag_minimization_validation_nonce_reservation"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
@@ -440,6 +445,16 @@ jobs:
           assert minimization_authorization_decision["authorization_receipt_present"] is False
           assert minimization_authorization_decision["authorization_nonce_reserved"] is False
           assert minimization_authorization_decision["validation_execution_authorized"] is False
+          minimization_reservation = reference_minimization_validation_nonce_reservation_contract_document()
+          assert minimization_reservation["contract_sha256"] == (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
+          )
+          minimization_reservation_decision = (
+              reference_minimization_validation_nonce_reservation_contract_decision()
+          )
+          assert minimization_reservation_decision["atomic_nonce_reservation_primitive_implemented"] is True
+          assert minimization_reservation_decision["authorization_nonce_reserved"] is False
+          assert minimization_reservation_decision["validation_execution_authorized"] is False
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",

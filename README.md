@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_af_minimization_validation_authorization_contract
+v2_ag_minimization_validation_nonce_reservation
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -76,6 +76,11 @@ Implemented and GitHub-hosted CPU tested:
   nonexpired review, pairwise-distinct operator, exact code/runner/dependencies,
   both receipt contracts, 24-hour maximum validity, revocation inputs, and a
   one-time nonce, but bundles no operator key, receipt, or nonce reservation;
+  a local POSIX reservation primitive now re-verifies the raw signed review and
+  authorization chain before consuming the nonce exactly once as a canonical
+  mode-0600 record beneath a caller-provisioned mode-0700 root using `O_EXCL`,
+  file `fsync`, and directory `fsync`; it has no release/delete API and bundles
+  no production root, key, signed artifact, reservation, or execution;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture

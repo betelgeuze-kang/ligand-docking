@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_af_minimization_validation_authorization_contract
+v2_ag_minimization_validation_nonce_reservation
 ```
 
 The current `main` branch contains:
@@ -197,16 +197,23 @@ The current `main` branch contains:
   CPU-only, network-disabled execution-environment and failure-inclusive result-
   receipt contracts bind all fourteen cases, both operational and independent
   input identities, all ten predefined metrics, and exact failure retention.
-  They bundle no authorization contract/receipt, environment/result receipt,
+  They bundle no authorization receipt, environment/result receipt,
   runner, writer, or observed value. A separate HMAC-SHA256 single-run
   authorization contract now requires a verified nonexpired review, pairwise-
   distinct author/reviewer/operator identities, exact code/runner/dependency and
   receipt-contract identities, at most 24 hours of validity, external revocation
   inputs, and a one-time nonce. It bundles no operator key, signed receipt, or
-  atomic nonce reservation and cannot open execution. No production result
-  receipt, independent
-  result review, scientific
-  applicability, or parameter-fitting approval exists, so minimization and
+  atomic nonce reservation and cannot open execution.
+  A separate local POSIX nonce-reservation primitive now re-verifies both raw
+  signed artifacts and their exact code/runner/dependency/receipt-contract
+  identities before consuming the one-time nonce as a canonical mode-0600 record
+  beneath a caller-provisioned effective-UID-owned mode-0700 root. It uses
+  `O_EXCL`/`O_NOFOLLOW`, file and directory `fsync`, rejects duplicate or
+  externally consumed nonces, and exposes no release/delete API. No production
+  root, key, signed artifact, or reservation is bundled, and reservation alone
+  cannot authorize run start, execution, fitting, or claims. No production result
+  receipt, independent result review, scientific applicability, or parameter-
+  fitting approval exists, so minimization and
   solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
   seven exact synthetic fixture profiles, twenty exact mutation contracts,
