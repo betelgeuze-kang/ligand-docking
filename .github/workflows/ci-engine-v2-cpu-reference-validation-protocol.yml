@@ -16,6 +16,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_run_start.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -53,6 +54,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_run_start.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -116,6 +118,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
@@ -189,6 +192,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -212,6 +216,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -236,6 +241,7 @@ jobs:
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256,
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
               FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
@@ -268,6 +274,8 @@ jobs:
               reference_minimization_validation_nonce_reservation_contract_document,
               reference_minimization_validation_run_start_contract_decision,
               reference_minimization_validation_run_start_contract_document,
+              reference_minimization_validation_runner_contract_decision,
+              reference_minimization_validation_runner_contract_document,
           )
 
           loaded = yaml.safe_load(
@@ -277,7 +285,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_ah_minimization_validation_run_start"
+          assert loaded["implementation_stage"] == "v2_ai_minimization_validation_runner"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
@@ -306,6 +314,14 @@ jobs:
           assert minimization_run_start_decision["run_start_environment_primitive_implemented"] is True
           assert minimization_run_start_decision["production_environment_receipt_present"] is False
           assert minimization_run_start_decision["validation_execution_authorized"] is False
+          minimization_runner = reference_minimization_validation_runner_contract_document()
+          assert minimization_runner["contract_sha256"] == (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
+          )
+          minimization_runner_decision = reference_minimization_validation_runner_contract_decision()
+          assert minimization_runner_decision["bounded_validation_runner_implemented"] is True
+          assert minimization_runner_decision["result_receipt_writer_implemented"] is False
+          assert minimization_runner_decision["claim_safe"] is False
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)

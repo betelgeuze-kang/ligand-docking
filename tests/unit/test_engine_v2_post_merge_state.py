@@ -656,8 +656,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
     ]
     assert minimization_protocol["current_state"] == (
-        "run_start_environment_receipt_primitive_without_production_receipt_"
-        "runner_execution_or_results"
+        "bounded_failure_inclusive_runner_without_production_result_receipt_"
+        "or_independent_result_review"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
     assert "materializer_definition_is_not_validation_result_evidence" in (
@@ -693,7 +693,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "run_start_dependency_reverification_not_implemented" not in (
         minimization_protocol["blockers"]
     )
-    assert "validation_runner_not_implemented" in minimization_protocol["blockers"]
+    assert "validation_runner_not_implemented" not in (
+        minimization_protocol["blockers"]
+    )
     assert "result_receipt_writer_not_implemented" in (
         minimization_protocol["blockers"]
     )
@@ -732,6 +734,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_authorization" in policy
     assert "reference_minimization_validation_nonce_reservation" in policy
     assert "reference_minimization_validation_run_start" in policy
+    assert "reference_minimization_validation_runner" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 

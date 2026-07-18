@@ -17,6 +17,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_run_start.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_solvation.py"
       - ".github/workflows/ci-engine-v2-reference-physics.yml"
@@ -37,6 +38,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_run_start.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_solvation.py"
       - ".github/workflows/ci-engine-v2-reference-physics.yml"
@@ -83,6 +85,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_orchestrator_contract.py
@@ -122,6 +125,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py > reference-physics.log 2>&1

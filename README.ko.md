@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_ah_minimization_validation_run_start
+v2_ai_minimization_validation_runner
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:

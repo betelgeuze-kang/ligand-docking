@@ -48,6 +48,7 @@ betelgeuze_engine_v2.physics.reference_minimization_validation_receipts
 betelgeuze_engine_v2.physics.reference_minimization_validation_authorization
 betelgeuze_engine_v2.physics.reference_minimization_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_minimization_validation_run_start
+betelgeuze_engine_v2.physics.reference_minimization_validation_runner
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
@@ -216,6 +217,17 @@ arguments. The library does not create a network namespace or establish
 same-UID replacement resistance. No trusted key, attestation, root, or
 production receipt is bundled, and a verified receipt authorizes neither a
 production run nor validation, fitting, or a scientific claim.
+
+The minimization bounded-runner symbols re-read and live-reverify that receipt,
+bind the stdlib-only bootstrap and runner sources, require the signed clean Git
+checkout and exact dependency identities, validate the frozen materialization
+manifest before consuming a nonce-bound mode-0600 start marker, and retain all
+fourteen ordered pass and fail-closed case observations in memory. The runner
+records predefined metric values, independent-oracle comparisons, and exact
+checkpoint/restart equality under a 120-second budget. It writes no validation
+result receipt and opens no scientific, benchmark, product, fitting, or customer
+execution claim; the direct process entrypoint remains fail-closed until the
+separate result-writer slice exists.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
 require exact code, runner-source, dependency, and frozen-artifact identities,

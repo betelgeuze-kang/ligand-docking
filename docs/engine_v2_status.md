@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ah_minimization_validation_run_start
+v2_ai_minimization_validation_runner
 ```
 
 The current `main` branch contains:
@@ -219,10 +219,18 @@ The current `main` branch contains:
   namespace identities. It verifies a maximum-five-minute operator-signed
   network-isolation attestation and atomically persists one canonical mode-0600
   secret-free environment receipt beneath a separate private caller root using
-  `O_EXCL`, `O_NOFOLLOW`, and file/directory `fsync`. The future bootstrap path
-  is frozen but no runner is bundled, and the primitive creates no network
+  `O_EXCL`, `O_NOFOLLOW`, and file/directory `fsync`. A separate stdlib-only
+  bootstrap and bounded runner now bind their exact combined source identity,
+  re-read the persisted receipt and live process, require the exact signed clean
+  checkout, dependencies, protocol, and materialization manifest, then consume
+  one durable mode-0600 nonce-bound runner-start marker. It evaluates the ordered
+  fourteen-case CPU float64 matrix, retains all success and failure observations,
+  compares operational endpoints with the import-separated independent oracle,
+  and verifies exact checkpoint/restart equality under a 120-second budget.
+  The primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
-  Its receipt remains non-authorizing. No production result
+  Its observation is in-memory only and the exact process entrypoint remains
+  fail-closed because no result writer is implemented. No production result
   receipt, independent result review, scientific applicability, or parameter-
   fitting approval exists, so minimization and
   solvated minimization remain unvalidated.
