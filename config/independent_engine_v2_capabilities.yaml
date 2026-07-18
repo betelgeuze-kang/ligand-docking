@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_af_minimization_validation_authorization_contract
+implementation_stage: v2_ag_minimization_validation_nonce_reservation
 
 claim_policy:
   customer_execution_enabled: false
@@ -897,7 +897,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_minimization_validation_protocol:
-    current_state: signed_single_run_authorization_contract_without_receipt_nonce_reservation_execution_or_results
+    current_state: local_posix_atomic_nonce_reservation_primitive_without_production_root_receipt_run_start_execution_or_results
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -923,6 +923,7 @@ capabilities:
       - trusted_authorization_operator_key_not_provided
       - authorization_nonce_not_atomically_reserved
       - execution_environment_receipt_missing
+      - run_start_dependency_reverification_not_implemented
       - validation_runner_not_implemented
       - result_receipt_writer_not_implemented
       - validation_execution_not_authorized

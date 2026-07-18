@@ -63,6 +63,13 @@ scientific claim from a package version.
   identities, a 24-hour maximum lifetime, external revocation sets, and a
   one-time nonce. No operator key, signed receipt, nonce reservation, execution,
   result, fitting authorization, or claim promotion is bundled.
+- Local POSIX atomic one-time nonce reservation for minimization validation that
+  re-verifies raw signed review and authorization artifacts before writing one
+  canonical mode-0600 record beneath a caller-provisioned effective-UID-owned
+  mode-0700 root with `O_EXCL`, `O_NOFOLLOW`, file `fsync`, and directory
+  `fsync`. Duplicate/external nonce consumption fails closed and no release or
+  delete API, production root, key, signed artifact, reservation, or execution
+  is bundled.
 - Frozen independent-review attestation contract binding the exact validation
   artifacts, ordered review checks and limitations, implementation-author and
   reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256
