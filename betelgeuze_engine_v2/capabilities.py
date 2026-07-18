@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_ad_minimization_validation_review_contract"
+IMPLEMENTATION_STAGE = "v2_ae_minimization_validation_receipt_contracts"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -513,8 +513,15 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "signed_independent_scientific_review_attestation_missing",
         "trusted_independent_scientific_reviewer_key_not_provided",
         "implementation_author_and_independent_reviewer_separation_not_attested",
+        "signed_execution_authorization_receipt_schema_not_frozen",
         "signed_execution_authorization_receipt_missing",
-        "trusted_runner_environment_not_bound",
+        "trusted_authorization_operator_key_not_provided",
+        "authorization_nonce_not_atomically_reserved",
+        "execution_environment_receipt_missing",
+        "validation_runner_not_implemented",
+        "result_receipt_writer_not_implemented",
+        "validation_execution_not_authorized",
+        "minimization_validation_results_not_collected",
         "production_result_receipt_missing",
         "independent_result_review_missing",
         "reviewed_runtime_parameter_values_not_bound",
@@ -892,8 +899,9 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "signed_independent_review_contract_without_attestation_"
-                    "authorization_execution_or_results"
+                    "frozen_execution_environment_and_failure_inclusive_result_"
+                    "receipt_contracts_without_receipts_authorization_execution_"
+                    "or_results"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

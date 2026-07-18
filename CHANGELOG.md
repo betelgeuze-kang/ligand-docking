@@ -51,6 +51,12 @@ scientific claim from a package version.
   author/reviewer separation, out-of-band trust, HMAC-SHA256 integrity, and a
   30-day maximum validity. No key, attestation, authorization, result, or claim
   promotion is bundled.
+- Frozen CPU-only, network-disabled execution-environment and failure-inclusive
+  result-receipt contracts for the exact fourteen-case minimization matrix and
+  ten predefined metrics. Both implementation input identities, all failure
+  rows, iteration/evaluation ledgers, and future review/authorization bindings
+  are required; no authorization contract or receipt, environment/result
+  receipt, runner, observed value, or claim promotion is bundled.
 - Frozen independent-review attestation contract binding the exact validation
   artifacts, ordered review checks and limitations, implementation-author and
   reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256

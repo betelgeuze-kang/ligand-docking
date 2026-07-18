@@ -656,8 +656,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
     ]
     assert minimization_protocol["current_state"] == (
-        "signed_independent_review_contract_without_attestation_"
-        "authorization_execution_or_results"
+        "frozen_execution_environment_and_failure_inclusive_result_receipt_"
+        "contracts_without_receipts_authorization_execution_or_results"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
     assert "materializer_definition_is_not_validation_result_evidence" in (
@@ -682,6 +682,16 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         minimization_protocol["blockers"]
     )
     assert "production_result_receipt_missing" in (
+        minimization_protocol["blockers"]
+    )
+    assert "signed_execution_authorization_receipt_schema_not_frozen" in (
+        minimization_protocol["blockers"]
+    )
+    assert "execution_environment_receipt_missing" in (
+        minimization_protocol["blockers"]
+    )
+    assert "validation_runner_not_implemented" in minimization_protocol["blockers"]
+    assert "result_receipt_writer_not_implemented" in (
         minimization_protocol["blockers"]
     )
     assert "scientific_validation_missing" in minimization_protocol["blockers"]
@@ -715,6 +725,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_independent_oracle" in policy
     assert "reference_minimization_validation_artifact_binding" in policy
     assert "reference_minimization_validation_review" in policy
+    assert "reference_minimization_validation_receipts" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -798,6 +809,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization_independent_oracle.py",
         "test_engine_v2_reference_minimization_validation_artifact_binding.py",
         "test_engine_v2_reference_minimization_validation_review.py",
+        "test_engine_v2_reference_minimization_validation_receipts.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source
