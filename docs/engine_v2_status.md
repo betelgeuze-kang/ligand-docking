@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_aj_minimization_validation_result_writer
+v2_ak_minimization_validation_ed25519_trust_boundary
 ```
 
 The current `main` branch contains:
@@ -187,18 +187,22 @@ The current `main` branch contains:
   and tangent-force projection, fixed-Born energy/forces, bounded backtracking,
   fail-closed identity/applicability outcomes, and exact checkpoint/restart.
   Test-only endpoint comparisons are implementation checks, not validation
-  result evidence. A frozen HMAC-SHA256 independent-review attestation contract
+  result evidence. A frozen Ed25519 independent-review attestation contract
   now binds the exact artifact and requires author/reviewer identity separation,
   complete ordered algorithm/projection/fixed-Born/backtracking/checkpoint/
   negative-case/import-boundary review checks, explicit limitation
   acknowledgements, an out-of-band trusted reviewer key, and bounded freshness.
+  Signing keys remain outside verifier trust stores; those stores hold only raw
+  Ed25519 public keys. The stdlib-only bootstrap verifies the first
+  authorization with trusted OpenSSL before importing Engine v2 or third-party
+  packages.
   It bundles no attestation or trusted key and cannot authorize execution. No
   independent scientific review or authorization exists. Separate frozen
   CPU-only, network-disabled execution-environment and failure-inclusive result-
   receipt contracts bind all fourteen cases, both operational and independent
   input identities, all ten predefined metrics, and exact failure retention.
   They bundle no authorization receipt, environment/result receipt,
-  runner, writer, or observed value. A separate HMAC-SHA256 single-run
+  runner, writer, or observed value. A separate Ed25519 single-run
   authorization contract now requires a verified nonexpired review, pairwise-
   distinct author/reviewer/operator identities, exact code/runner/dependency and
   receipt-contract identities, at most 24 hours of validity, external revocation

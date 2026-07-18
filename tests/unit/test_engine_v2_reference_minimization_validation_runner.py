@@ -17,6 +17,10 @@ import pytest
 
 import betelgeuze_engine_v2.physics.reference_minimization_validation_bootstrap as bootstrap
 import betelgeuze_engine_v2.physics.reference_minimization_validation_runner as module
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+    sign_ed25519,
+)
 from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol import (
     cpu_minimization_validation_protocol_document,
 )
@@ -151,7 +155,6 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
     assert imports == {
         "__future__",
         "hashlib",
-        "hmac",
         "json",
         "os",
         "betelgeuze_engine_v2.physics",
@@ -165,6 +168,20 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
     assert bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH == (
         "/etc/betelgeuze/engine-v2/"
         "reference-minimization-validation-trust-anchors.json"
+    )
+
+
+def test_stdlib_bootstrap_verifies_ed25519_without_importing_package_crypto() -> None:
+    private_key = bytes.fromhex("31" * 32)
+    public_key = ed25519_public_key_bytes(private_key)
+    message = b"canonical-bootstrap-authorization"
+    signature = sign_ed25519(message, private_key)
+
+    assert bootstrap._verify_ed25519_with_trusted_openssl(
+        message, signature, public_key
+    )
+    assert not bootstrap._verify_ed25519_with_trusted_openssl(
+        message + b"-tampered", signature, public_key
     )
 
 

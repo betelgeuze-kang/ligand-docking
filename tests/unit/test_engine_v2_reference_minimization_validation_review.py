@@ -8,6 +8,9 @@ import pytest
 from betelgeuze_engine_v2.physics.reference_minimization_validation_artifact_binding import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
 from betelgeuze_engine_v2.physics.reference_minimization_validation_review import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
@@ -29,8 +32,10 @@ REVIEWER_IDENTITY = "b" * 64
 OTHER_REVIEWER_IDENTITY = "c" * 64
 NONCE_SHA256 = "d" * 64
 KEY_ID = "independent-reviewer-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OTHER_KEY = b"other-key-material-is-test-only-32-bytes-minimum"
+REVIEW_KEY = bytes.fromhex("11" * 32)
+OTHER_KEY = bytes.fromhex("12" * 32)
+REVIEW_PUBLIC_KEY = ed25519_public_key_bytes(REVIEW_KEY)
+OTHER_PUBLIC_KEY = ed25519_public_key_bytes(OTHER_KEY)
 REVIEWED_AT = datetime(2026, 7, 17, 4, 0, 0, tzinfo=timezone.utc)
 EXPIRES_AT = REVIEWED_AT + timedelta(days=7)
 CHECKED_AT = REVIEWED_AT + timedelta(hours=1)
@@ -39,7 +44,7 @@ CHECKED_AT = REVIEWED_AT + timedelta(hours=1)
 def _anchor(
     *,
     identity: str = REVIEWER_IDENTITY,
-    key: bytes = REVIEW_KEY,
+    key: bytes = REVIEW_PUBLIC_KEY,
 ) -> MinimizationScientificReviewerTrustAnchor:
     return MinimizationScientificReviewerTrustAnchor(
         reviewer_identity_sha256=identity,
@@ -106,6 +111,8 @@ def test_review_contract_is_frozen_dependency_bound_and_result_free() -> None:
         is True
     )
     assert first["identity_policy"]["trusted_reviewer_key_supplied_out_of_band"] is True
+    assert first["identity_policy"]["verifier_trust_anchor_contains_public_key_only"] is True
+    assert first["attestation_schema"]["signature_algorithm"] == "ed25519"
     assert (
         first["identity_policy"][
             "repository_does_not_choose_or_bundle_trusted_reviewer_keys"
@@ -232,7 +239,7 @@ def test_signed_review_attestation_rejects_untrusted_or_mismatched_keys() -> Non
         ReferenceMinimizationValidationReviewError,
         match="signature verification failed",
     ):
-        _verify(attestation, anchor=_anchor(key=OTHER_KEY))
+        _verify(attestation, anchor=_anchor(key=OTHER_PUBLIC_KEY))
     with pytest.raises(
         ReferenceMinimizationValidationReviewError,
         match="does not match the trusted key",
@@ -306,7 +313,7 @@ def test_review_trust_anchor_redacts_key_from_repr_and_rejects_short_key() -> No
     anchor = _anchor()
     assert "review-key-material" not in repr(anchor)
     with pytest.raises(
-        ReferenceMinimizationValidationReviewError, match="at least 32 bytes"
+        ReferenceMinimizationValidationReviewError, match="exactly 32 bytes"
     ):
         MinimizationScientificReviewerTrustAnchor(
             reviewer_identity_sha256=REVIEWER_IDENTITY,

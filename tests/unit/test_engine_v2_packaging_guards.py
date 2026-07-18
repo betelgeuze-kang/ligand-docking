@@ -15,6 +15,7 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
     assert name and name.group(1) == DISTRIBUTION_NAME
     assert version and version.group(1) == DISTRIBUTION_VERSION
     assert python_range and python_range.group(1) == ">=3.10,<3.13"
+    assert '"cryptography==46.0.5"' in text
     assert '"torch==2.6.0"' in text
     assert '"numpy>=1.26,<3"' in text
     assert 'include = ["betelgeuze_engine_v2*"]' in text

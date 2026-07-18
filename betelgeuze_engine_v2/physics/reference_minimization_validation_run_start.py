@@ -27,6 +27,11 @@ import torch
 from .reference_minimization_validation_artifact_binding import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
+from .reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    sign_ed25519,
+    verify_ed25519,
+)
 from .reference_minimization_validation_authorization import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
@@ -88,7 +93,7 @@ REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
     REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "4c4841518e3b2e640bb42d8bf72a6f47cf17d53eee61bcf4e7f99c85a9bab2ec"
+    "d63ce7ca0e2b79b3d742fdaf8c8c101ccd8e4bec117a50e768d15b045c34b092"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -198,9 +203,9 @@ def _require_key_id(value: object) -> str:
 
 def _require_key(value: bytes | str) -> bytes:
     key = value.encode("utf-8") if isinstance(value, str) else value
-    if not isinstance(key, bytes) or len(key) < 32:
+    if not isinstance(key, bytes) or len(key) != 32:
         raise ReferenceMinimizationValidationRunStartError(
-            "network attestation signing key must contain at least 32 bytes"
+            "network attestation signing key must contain exactly 32 bytes"
         )
     return key
 
@@ -425,14 +430,18 @@ def build_signed_reference_minimization_validation_network_isolation_attestation
     )
     payload = dict(projection)
     payload["attestation_sha256"] = _sha256(projection)
+    try:
+        signature_value = sign_ed25519(
+            _canonical_bytes(payload), _require_key(signing_key)
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationRunStartError(
+            "network isolation attestation Ed25519 signing failed"
+        ) from exc
     payload["signature"] = {
         "algorithm": REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
         "key_id": authorization_key_id,
-        "value": hmac.new(
-            _require_key(signing_key),
-            _canonical_bytes(payload),
-            hashlib.sha256,
-        ).hexdigest(),
+        "value": signature_value,
     }
     return payload
 
@@ -549,15 +558,15 @@ def verify_signed_reference_minimization_validation_network_isolation_attestatio
             "network isolation attestation signature algorithm is invalid"
         )
     signature_value = signature.get("value")
-    expected_signature = hmac.new(
-        anchor.verification_key,
-        _canonical_bytes(payload),
-        hashlib.sha256,
-    ).hexdigest()
-    if not isinstance(signature_value, str) or not hmac.compare_digest(
-        signature_value,
-        expected_signature,
-    ):
+    try:
+        signature_verified = verify_ed25519(
+            _canonical_bytes(payload), signature_value, anchor.verification_key
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationRunStartError(
+            "network isolation attestation Ed25519 verifier is unavailable"
+        ) from exc
+    if not signature_verified:
         raise ReferenceMinimizationValidationRunStartError(
             "network isolation attestation signature verification failed"
         )
@@ -987,6 +996,10 @@ def _contract_projection() -> dict[str, Any]:
         },
         "network_isolation": {
             "operator_signed_short_lived_attestation_required": True,
+            "signature_algorithm": (
+                REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM
+            ),
+            "verifier_uses_operator_public_key_only": True,
             "maximum_attestation_validity_seconds": int(
                 REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY.total_seconds()
             ),

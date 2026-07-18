@@ -11,9 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import hashlib
-import hmac
 import json
 from typing import Any, Mapping, Sequence
+
+from .reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    sign_ed25519,
+    verify_ed25519,
+)
 
 from .reference_minimization_validation_artifact_binding import (
     FROZEN_CPU_MINIMIZATION_VALIDATION_MATERIALIZATION_MANIFEST_SHA256,
@@ -36,11 +41,11 @@ REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_ID = (
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "1.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-18T02:18:00Z"
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "hmac-sha256"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256 = (
-    "333dc381a34dd2a5984e57168ccb7d1f7faae25072fb4165db456461798b0dfc"
+    "4c38a0e8d2bd9733f2412b595d8a88e5da484fd54911146b9e3271bd6e17475f"
 )
 
 _REQUIRED_REVIEW_CHECK_IDS = (
@@ -162,9 +167,9 @@ def _require_key(value: bytes | str, *, name: str) -> bytes:
         raise ReferenceMinimizationValidationReviewError(
             f"{name} must be bytes or text"
         )
-    if len(key) < 32:
+    if len(key) != 32:
         raise ReferenceMinimizationValidationReviewError(
-            f"{name} must contain at least 32 bytes"
+            f"{name} must contain exactly 32 bytes"
         )
     return key
 
@@ -220,6 +225,8 @@ def _contract_projection() -> dict[str, Any]:
             "implementation_author_and_reviewer_must_differ": True,
             "reviewer_key_id_required": True,
             "trusted_reviewer_key_supplied_out_of_band": True,
+            "verifier_trust_anchor_contains_public_key_only": True,
+            "private_signing_key_remains_external_to_verifier": True,
             "repository_does_not_choose_or_bundle_trusted_reviewer_keys": True,
             "organizational_independence_requires_external_governance_review": True,
         },
@@ -298,7 +305,7 @@ def require_reference_minimization_validation_review_contract_document(
 
 @dataclass(frozen=True, slots=True)
 class MinimizationScientificReviewerTrustAnchor:
-    """Out-of-band reviewer identity and HMAC verification key."""
+    """Out-of-band reviewer identity and Ed25519 public key."""
 
     reviewer_identity_sha256: str
     verification_key: bytes = field(repr=False)
@@ -473,10 +480,16 @@ def build_signed_reference_minimization_validation_review_attestation(
     payload = dict(projection)
     payload["attestation_sha256"] = _sha256(projection)
     key = _require_key(signing_key, name="review signing key")
+    try:
+        signature = sign_ed25519(_canonical_bytes(payload), key)
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationReviewError(
+            "review attestation Ed25519 signing failed"
+        ) from exc
     payload["signature"] = {
         "algorithm": REFERENCE_MINIMIZATION_VALIDATION_REVIEW_SIGNATURE_ALGORITHM,
         "key_id": _require_key_id(reviewer_key_id),
-        "value": hmac.new(key, _canonical_bytes(payload), hashlib.sha256).hexdigest(),
+        "value": signature,
     }
     return payload
 
@@ -563,15 +576,16 @@ def verify_signed_reference_minimization_validation_review_attestation(
         raise ReferenceMinimizationValidationReviewError(
             "trusted reviewer entry has an invalid type"
         )
-    expected_signature = hmac.new(
-        anchor.verification_key,
-        _canonical_bytes(payload),
-        hashlib.sha256,
-    ).hexdigest()
     signature_value = signature.get("value")
-    if not isinstance(signature_value, str) or not hmac.compare_digest(
-        signature_value, expected_signature
-    ):
+    try:
+        verified = verify_ed25519(
+            _canonical_bytes(payload), signature_value, anchor.verification_key
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationReviewError(
+            "review attestation Ed25519 verifier is unavailable"
+        ) from exc
+    if not verified:
         raise ReferenceMinimizationValidationReviewError(
             "review attestation signature verification failed"
         )

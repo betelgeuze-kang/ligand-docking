@@ -64,6 +64,7 @@ jobs:
             setuptools==75.8.2 \
             wheel==0.45.1 \
             pytest==8.3.5 \
+            cryptography==46.0.5 \
             numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
@@ -88,6 +89,7 @@ jobs:
           python -m venv "$venv"
           grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
           "$venv/bin/python" -m pip install pip==25.0.1
+          "$venv/bin/python" -m pip install cryptography==46.0.5
           "$venv/bin/python" -m pip install numpy==1.26.4
           "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl

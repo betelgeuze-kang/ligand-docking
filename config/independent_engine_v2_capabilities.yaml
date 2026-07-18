@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_aj_minimization_validation_result_writer
+implementation_stage: v2_ak_minimization_validation_ed25519_trust_boundary
 
 claim_policy:
   customer_execution_enabled: false

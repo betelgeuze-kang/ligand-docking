@@ -226,6 +226,7 @@ jobs:
             wheel==0.45.1 \
             pytest==8.3.5 \
             PyYAML==6.0.3 \
+            cryptography==46.0.5 \
             numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
@@ -337,6 +338,7 @@ jobs:
           python -m venv "$venv"
           grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
           "$venv/bin/python" -m pip install pip==25.0.1
+          "$venv/bin/python" -m pip install cryptography==46.0.5
           "$venv/bin/python" -m pip install numpy==1.26.4
           "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
@@ -444,7 +446,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_aj_minimization_validation_result_writer"
+          assert capability_snapshot()["implementation_stage"] == "v2_ak_minimization_validation_ed25519_trust_boundary"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256

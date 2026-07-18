@@ -11,6 +11,9 @@ import stat
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
 from betelgeuze_engine_v2.physics.reference_minimization_validation_authorization import (
     MinimizationAuthorizationOperatorTrustAnchor,
     build_signed_reference_minimization_validation_authorization_receipt,
@@ -52,8 +55,10 @@ AUTHORIZATION_NONCE = "e" * 64
 NETWORK_NAMESPACE_IDENTITY = "f" * 64
 REVIEW_KEY_ID = "independent-reviewer-2026-07"
 OPERATOR_KEY_ID = "validation-operator-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OPERATOR_KEY = b"operator-key-material-is-test-only-32-bytes-minimum"
+REVIEW_KEY = bytes.fromhex("11" * 32)
+OPERATOR_KEY = bytes.fromhex("21" * 32)
+REVIEW_PUBLIC_KEY = ed25519_public_key_bytes(REVIEW_KEY)
+OPERATOR_PUBLIC_KEY = ed25519_public_key_bytes(OPERATOR_KEY)
 REVIEWED_AT = datetime(2026, 7, 17, 5, 0, 0, tzinfo=timezone.utc)
 REVIEW_EXPIRES_AT = REVIEWED_AT + timedelta(days=7)
 ISSUED_AT = REVIEWED_AT + timedelta(hours=1)
@@ -94,7 +99,7 @@ def _authorization_receipt(
         trusted_reviewer_keys={
             REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(
                 REVIEWER_IDENTITY,
-                REVIEW_KEY,
+                REVIEW_PUBLIC_KEY,
             )
         },
         expected_implementation_author_identity_sha256=AUTHOR_IDENTITY,
@@ -122,14 +127,14 @@ def _trust_inputs() -> dict[str, object]:
         "trusted_reviewer_keys": {
             REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(
                 REVIEWER_IDENTITY,
-                REVIEW_KEY,
+                REVIEW_PUBLIC_KEY,
             )
         },
         "expected_implementation_author_identity_sha256": AUTHOR_IDENTITY,
         "trusted_operator_keys": {
             OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(
                 OPERATOR_IDENTITY,
-                OPERATOR_KEY,
+                OPERATOR_PUBLIC_KEY,
             )
         },
         "expected_code_commit_sha": CODE_COMMIT_SHA,
@@ -273,6 +278,8 @@ def test_run_start_contract_is_frozen_and_current_decision_is_closed() -> None:
     assert first["contract_sha256"] == (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256
     )
+    assert first["network_isolation"]["signature_algorithm"] == "ed25519"
+    assert first["network_isolation"]["verifier_uses_operator_public_key_only"] is True
     assert (
         first["runtime_observation"]["arbitrary_or_secret_bearing_argv_allowed"]
         is False
