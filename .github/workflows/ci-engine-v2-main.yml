@@ -169,6 +169,7 @@ jobs:
             tests/unit/test_engine_v2_reference_diagnostics.py
             tests/unit/test_engine_v2_reference_forcefield_v2.py
             tests/unit/test_engine_v2_reference_minimization.py
+            tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_external_baseline.py
@@ -284,6 +285,7 @@ jobs:
             tests/unit/test_engine_v2_reference_diagnostics.py \
             tests/unit/test_engine_v2_reference_forcefield_v2.py \
             tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
             tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
@@ -412,7 +414,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_z_bounded_cpu_fixed_born_constrained_minimization"
+          assert capability_snapshot()["implementation_stage"] == "v2_aa_frozen_cpu_minimization_validation_protocol"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",

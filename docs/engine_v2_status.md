@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_z_bounded_cpu_fixed_born_constrained_minimization
+v2_aa_frozen_cpu_minimization_validation_protocol
 ```
 
 The current `main` branch contains:
@@ -169,6 +169,15 @@ The current `main` branch contains:
   radius estimation, nonpolar solvation, salt/ions, periodic solvent,
   independent solvation/minimization validation, and product approval remain
   unavailable.
+- a frozen CPU minimization contract-validation protocol. It binds fourteen
+  ordered unsolvated-v1, constrained-v2, fixed-Born-constrained-v2, checkpoint,
+  and fail-closed identity/applicability cases; ten predefined CPU float64
+  metrics; exact implementation-source SHA-256 identities; all-case failure
+  accounting; and an independent-reference import-separation policy. The
+  protocol is not executed. No fixture materializer, independent minimization
+  reference, trusted review/authorization, production result receipt,
+  independent result review, scientific applicability, or parameter-fitting
+  approval exists, so minimization and solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
   seven exact synthetic fixture profiles, twenty exact mutation contracts,
   twenty-seven ordered cases (fifteen expected passes and twelve expected

@@ -12,6 +12,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     CAPABILITY_SCHEMA_VERSION,
     CIF_SYNTAX_CAPABILITY_ID,
     CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID,
+    CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
     CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID,
     CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
     CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
@@ -59,7 +60,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 43
+    assert len(loaded["capabilities"]) == 44
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -106,6 +107,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID in rows
     assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
+    assert CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert (
         rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
         is False
@@ -647,9 +649,27 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
     assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
-    assert "minimization_validation_protocol_missing" in (
+    assert "minimization_validation_protocol_frozen_but_not_executed" in (
         validation_protocol["blockers"]
     )
+    minimization_protocol = rows[
+        CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
+    ]
+    assert minimization_protocol["current_state"] == (
+        "frozen_failure_inclusive_minimization_validation_protocol_"
+        "definition_without_execution_or_results"
+    )
+    assert minimization_protocol["internal_reference_execution_enabled"] is False
+    assert "fixture_materializer_not_implemented" in (
+        minimization_protocol["blockers"]
+    )
+    assert "independent_minimization_reference_not_bound" in (
+        minimization_protocol["blockers"]
+    )
+    assert "production_result_receipt_missing" in (
+        minimization_protocol["blockers"]
+    )
+    assert "scientific_validation_missing" in minimization_protocol["blockers"]
     assert (
         "posebusters_benchmark_equivalence_not_established"
         in public_protocol["blockers"]
@@ -675,6 +695,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "Provisional submodule APIs" in policy
     assert "reference_parameter_applicability" in policy
     assert "reference_validation_protocol" in policy
+    assert "reference_minimization_validation_protocol" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -753,6 +774,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization.py",
         "test_engine_v2_reference_physics.py",
         "test_engine_v2_reference_solvation.py",
+        "test_engine_v2_reference_minimization_validation_protocol.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source

@@ -231,6 +231,15 @@ claim status without revalidating the dependency and freshness chain.
   estimation, reviewed parameter applicability, nonpolar solvation, salt/ions,
   periodic solvent, MD integration, independent solvation and solvated-
   minimization reference evidence, and scientific/product promotion remain open.
+- Preserve the frozen CPU minimization validation protocol as a result-free
+  contract. It binds fourteen ordered unsolvated, constrained, fixed-Born
+  constrained, checkpoint/restart, and fail-closed cases; ten predefined CPU
+  float64 metrics; exact implementation-source identities; all-case failure
+  accounting; and an import-separated independent-reference requirement. No
+  fixture materializer, independent minimization implementation or artifact,
+  trusted review or execution authorization, production result receipt,
+  independent result review, parameter applicability, or validation result is
+  present. The protocol cannot authorize execution, fitting, or promotion.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
