@@ -656,8 +656,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
     ]
     assert minimization_protocol["current_state"] == (
-        "failure_inclusive_result_writer_without_production_result_receipt_"
-        "or_independent_result_review"
+        "failure_inclusive_result_writer_and_independent_result_review_"
+        "contract_without_production_result_receipt_or_review"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
     assert "materializer_definition_is_not_validation_result_evidence" in (
@@ -682,6 +682,12 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         minimization_protocol["blockers"]
     )
     assert "production_result_receipt_missing" in (
+        minimization_protocol["blockers"]
+    )
+    assert "signed_independent_result_review_attestation_missing" in (
+        minimization_protocol["blockers"]
+    )
+    assert "two_cpu_host_reproducibility_missing" in (
         minimization_protocol["blockers"]
     )
     assert "signed_execution_authorization_receipt_schema_not_frozen" not in (
@@ -736,6 +742,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_run_start" in policy
     assert "reference_minimization_validation_runner" in policy
     assert "reference_minimization_validation_result_writer" in policy
+    assert "reference_minimization_validation_result_review" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -824,6 +831,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization_validation_nonce_reservation.py",
         "test_engine_v2_reference_minimization_validation_run_start.py",
         "test_engine_v2_reference_minimization_validation_result_writer.py",
+        "test_engine_v2_reference_minimization_validation_result_review.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source
@@ -864,3 +872,28 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256"
         in source
     )
+    assert (
+        "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256"
+        in source
+    )
+
+
+def test_cpu_reference_validation_workflow_covers_minimization_result_review() -> None:
+    source = Path(
+        ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "test_engine_v2_reference_minimization_validation_result_review.py"
+        in source
+    )
+    assert "reference_minimization_validation_result_review.py" in source
+    assert (
+        "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256"
+        in source
+    )
+    assert (
+        "reference_minimization_validation_result_review_contract_decision"
+        in source
+    )
+    assert f'"{IMPLEMENTATION_STAGE}"' in source

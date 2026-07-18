@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_al_minimization_validation_runtime_byte_identity_rc2"
+IMPLEMENTATION_STAGE = "v2_am_minimization_validation_result_review_contract"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -521,6 +521,13 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "minimization_validation_results_not_collected",
         "production_result_receipt_missing",
         "independent_result_review_missing",
+        "signed_independent_result_review_attestation_missing",
+        "trusted_independent_result_reviewer_key_not_provided",
+        "implementation_author_and_independent_result_reviewer_separation_not_attested",
+        "coordinate_trace_not_retained_in_result_receipt",
+        "trajectory_level_minimization_comparison_missing",
+        "two_cpu_host_reproducibility_missing",
+        "independent_external_implementation_comparison_missing",
         "reviewed_runtime_parameter_values_not_bound",
         "scientific_parameter_applicability_not_established",
         "parameter_fitting_not_authorized",
@@ -896,8 +903,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "failure_inclusive_result_writer_without_production_"
-                    "result_receipt_or_independent_result_review"
+                    "failure_inclusive_result_writer_and_independent_result_"
+                    "review_contract_without_production_result_receipt_or_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

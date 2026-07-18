@@ -50,6 +50,7 @@ betelgeuze_engine_v2.physics.reference_minimization_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_minimization_validation_run_start
 betelgeuze_engine_v2.physics.reference_minimization_validation_runner
 betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer
+betelgeuze_engine_v2.physics.reference_minimization_validation_result_review
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
@@ -231,6 +232,25 @@ chain, persisted/live environment, durable runner-start marker, and canonical
 observation before private atomic persistence. The receipt is unsigned and
 pending independent result review, and the direct process entrypoint remains
 fail-closed until bootstrap integration exists.
+
+The minimization result-review symbols are a provisional, non-production
+Ed25519 verification surface. They first apply the full result-writer receipt
+validator, then bind the exact receipt and ordered fourteen-case evidence into
+deterministic per-metric, result-evidence, and fail-closed dispositions. Result
+evidence includes exact materialized runtime/oracle identities, operational and
+independent result hashes, allowed status/error pairs, exact nonnegative integer
+counts bounded by each case's frozen iteration/backtrack budgets, and finite
+count-consistent accepted-energy ledgers recomputed against retained energy
+metrics. The builder and
+verifier require the raw signed pre-execution review and authorization artifacts
+and reverify their Ed25519 chains before deriving the three upstream role
+identities. The signed outcome is explicitly `accepted` or `rejected`; signature
+verification proves review artifact integrity and reviewer-key identity, not
+result acceptance. Trust keys are caller-provided, all four governance roles
+must be pairwise distinct, text/byte transport must be canonical JSON, and every
+current external revocation/supersession input—including result-review
+supersession—is required. No key, attestation, production receipt, reviewer
+approval, or scientific claim is bundled.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
 require exact code, runner-source, dependency, and frozen-artifact identities,

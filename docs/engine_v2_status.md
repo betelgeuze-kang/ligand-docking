@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_al_minimization_validation_runtime_byte_identity_rc2
+v2_am_minimization_validation_result_review_contract
 ```
 
 The current `main` branch contains:
@@ -336,9 +336,22 @@ The current `main` branch contains:
   external authenticity proof, and same-UID pathname/inode replacement
   resistance is not established. Changed content is detected when the required
   out-of-band SHA-256 is supplied. Test-only signed artifacts and receipts exercise these
-  primitives; no production key, attestation, receipt, root, runner start,
-  validation result, independent result review, or scientific acceptance is
-  bundled.
+  primitives. A separate Ed25519 result-review contract now fully revalidates one
+  exact result-writer receipt, binds all fourteen ordered case outcomes and every
+  retained or missing metric disposition, verifies exact runtime/oracle/result
+  hashes, allowed status/error pairs, exact per-case-budgeted nonnegative counts,
+  and finite count-consistent energy ledgers recomputed against retained energy
+  metrics, and derives an explicit accepted or rejected
+  review outcome. Verification reverifies the raw signed pre-execution review and
+  authorization Ed25519 chain, requires canonical JSON byte transport, a
+  caller-provided result-reviewer public key, pairwise separation from the derived
+  implementation author, scientific reviewer, and authorization operator, plus
+  explicit current revocation/supersession state for the receipt chain and the
+  result-review attestation itself. A cryptographically verified
+  rejection remains a rejection, and even a verified acceptance keeps production,
+  scientific, fitting, and product gates closed. No production key, attestation,
+  receipt, root, runner start, validation result, independent result-review receipt,
+  or scientific acceptance is bundled.
 
 ## What the implementation does not establish
 
@@ -354,6 +367,10 @@ not currently establish:
   result receipt, or accepted energy/force evidence; test-only synthetic
   observations and receipts are implementation checks, not production
   validation results or parameter-fit data;
+- a complete coordinate trace, trajectory-level minimization comparison,
+  reproduction on two CPU hosts, or independent external-implementation
+  comparison; the current endpoint receipt retains the accepted energy ledger
+  but does not satisfy those S0 exit conditions;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime

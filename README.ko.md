@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_al_minimization_validation_runtime_byte_identity_rc2
+v2_am_minimization_validation_result_review_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -88,7 +88,15 @@ v2_al_minimization_validation_runtime_byte_identity_rc2
   signature나 same-UID pathname/inode replacement resistance는 주장하지 않음. direct CLI는
   닫혀 있음. 실제 trusted key, production receipt·reservation/
   artifact root·production nonce reservation·production 환경 receipt·runner start/result
-  receipt·승인된 production 실행·independent result review·과학 acceptance는 포함하지 않음
+  receipt·승인된 production 실행·independent result review·과학 acceptance는 포함하지 않음.
+  별도 Ed25519 result-review 계약은 exact 14-case receipt를 전체 writer schema로 재검증하고
+  모든 retained/missing metric, runtime/oracle/result hash, status/error, case별 iteration/backtrack
+  budget 안의 정확한 비음수 count, retained energy metric과 일치하는 finite energy ledger 및
+  fail-closed disposition에서 accepted/rejected 결과를 결정함. 원본
+  pre-execution review와 authorization의 Ed25519 chain으로 세 upstream 역할을 재검증하고,
+  canonical JSON byte transport·필수 최신 revocation/supersession 입력·네 governance 역할의
+  분리·caller-provided public key를 요구함. 실제 key, attestation, production receipt,
+  reviewer approval 또는 과학 evidence는 bundle하지 않음
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 

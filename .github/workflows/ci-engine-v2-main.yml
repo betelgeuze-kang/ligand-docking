@@ -179,6 +179,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py
+            tests/unit/test_engine_v2_reference_minimization_validation_result_review.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
@@ -306,6 +307,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_result_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
@@ -411,6 +413,7 @@ jobs:
               FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
               cpu_reference_validation_authorization_decision,
               cpu_reference_validation_protocol_document,
@@ -438,6 +441,8 @@ jobs:
               reference_minimization_validation_nonce_reservation_contract_document,
               reference_minimization_validation_run_start_contract_decision,
               reference_minimization_validation_run_start_contract_document,
+              reference_minimization_validation_result_review_contract_decision,
+              reference_minimization_validation_result_review_contract_document,
               reviewed_parameter_source_provenance,
           )
 
@@ -446,7 +451,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_al_minimization_validation_runtime_byte_identity_rc2"
+          assert capability_snapshot()["implementation_stage"] == "v2_am_minimization_validation_result_review_contract"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
@@ -475,6 +480,13 @@ jobs:
           assert minimization_run_start_decision["run_start_environment_primitive_implemented"] is True
           assert minimization_run_start_decision["production_environment_receipt_present"] is False
           assert minimization_run_start_decision["validation_execution_authorized"] is False
+          minimization_result_review = reference_minimization_validation_result_review_contract_document()
+          assert minimization_result_review["contract_sha256"] == (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
+          )
+          minimization_result_review_decision = reference_minimization_validation_result_review_contract_decision()
+          assert minimization_result_review_decision["result_review_attestation_present"] is False
+          assert minimization_result_review_decision["result_receipt_accepted"] is False
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",

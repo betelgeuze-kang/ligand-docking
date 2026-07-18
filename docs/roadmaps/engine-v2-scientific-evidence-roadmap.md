@@ -331,6 +331,23 @@ claim status without revalidating the dependency and freshness chain.
   external authenticity proof, same-UID replacement resistance is not
   established, and independent result review remains pending. No production
   receipt or scientific claim is bundled.
+- Preserve the separate minimization result-review contract. It applies the
+  full result-writer receipt validator before deriving deterministic accepted
+  or rejected dispositions for all fourteen ordered cases, every retained or
+  missing metric, exact runtime/oracle/result identities, allowed status/error
+  pairs, exact per-case-budgeted nonnegative counts, finite count-consistent
+  energy ledgers recomputed against retained energy metrics, and
+  each expected fail-closed outcome. Builder and verifier reverify the raw signed
+  pre-execution review and authorization chain before deriving the three upstream
+  roles. The Ed25519 verifier requires canonical JSON byte transport, an
+  out-of-band result-reviewer public key, pairwise separation across all four
+  roles, and explicit current revocation/supersession state for the receipt chain
+  and result-review attestation. A verified rejection is never promoted to acceptance,
+  and a verified test-only acceptance still leaves production receipt/review,
+  complete coordinate trace, trajectory comparison, two-host reproduction,
+  external-implementation comparison, applicability, fitting, and scientific
+  gates closed. No key, attestation, approval, or production evidence is
+  bundled.
 - Preserve the separate frozen execution-environment and result-receipt
   contracts. The environment contract fixes a CPU-only, network-disabled Linux
   lane, Python 3.10–3.12, Torch 2.6.0, NumPy 1.26.4, empty GPU visibility,

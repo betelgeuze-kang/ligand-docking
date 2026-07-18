@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_al_minimization_validation_runtime_byte_identity_rc2
+v2_am_minimization_validation_result_review_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -92,8 +92,13 @@ Implemented and GitHub-hosted CPU tested:
   `RECORD`-declared cryptography/NumPy/Torch payload before Engine v2 or those
   dependencies are imported, and run-start plus the runner remeasure the exact
   six signed rows; a bounded failure-inclusive runner and atomic
-  result writer exist as non-production primitives, while the direct bootstrap
-  entrypoint remains fail-closed until result finalization is wired into it;
+  result writer exist as non-production primitives. A separate Ed25519 result-
+  review contract fully revalidates one exact receipt, binds all fourteen case
+  outcomes and retained/missing metric dispositions, and preserves an explicit
+  accepted or rejected decision under a caller-provided, role-separated reviewer
+  public key. It bundles no key, attestation, receipt, approval, or scientific
+  evidence, while the direct bootstrap entrypoint remains fail-closed until
+  result finalization is wired into it;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture
@@ -130,7 +135,14 @@ Implemented and GitHub-hosted CPU tested:
   receipt creation, the run, and result finalization in the same verified process.
   It requires that trust store plus a clean
   source checkout with Git metadata and fails closed when invoked only from an
-  installed wheel.
+  installed wheel. A separate provisional minimization result-review contract
+  fully validates the fourteen-case writer receipt, reverifies the raw signed
+  pre-execution review and authorization role chain, and derives accepted or
+  rejected dispositions from exact status, runtime/oracle/result identities,
+  per-case-bounded nonnegative integer counts, finite energy ledgers recomputed
+  against retained energy metrics, and metric evidence. Its
+  verifier accepts only canonical JSON byte transport and requires explicit
+  current revocation and receipt/result-review supersession inputs.
   No trusted key, production receipt,
   reservation or artifact root, production nonce reservation, production
   environment receipt, runner start/result receipt, authorized production

@@ -23,6 +23,15 @@ scientific claim from a package version.
 - Authorization builders now round-trip their newly signed receipt through the
   public verifier before returning it, rejecting invalid lifetime, identity,
   dependency, or signature combinations at construction time.
+- A fail-closed Ed25519 minimization result-review contract that fully
+  revalidates one exact result-writer receipt, derives accepted or rejected
+  dispositions for all fourteen cases, every retained or missing metric, and
+  exact status, runtime/oracle/result identity, per-case count budgets, and
+  finite metric-consistent energy-ledger evidence. It cryptographically reverifies the raw pre-execution review and
+  authorization role chain, requires canonical byte transport and explicit
+  current revocation/supersession inputs, and enforces an out-of-band public key
+  plus four-way governance-role separation. No result-review attestation,
+  production receipt, or scientific acceptance is bundled.
 
 ### Changed
 
