@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_z_bounded_cpu_fixed_born_constrained_minimization"
+IMPLEMENTATION_STAGE = "v2_aa_frozen_cpu_minimization_validation_protocol"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -107,6 +107,9 @@ CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = (
 )
 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = (
     "v2_cpu_reference_energy_force_validation_protocol"
+)
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID = (
+    "v2_cpu_reference_minimization_validation_protocol"
 )
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -496,7 +499,22 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "validation_execution_not_authorized",
         "validation_results_not_collected",
         "parameter_fitting_not_authorized",
-        "minimization_validation_protocol_missing",
+        "minimization_validation_protocol_frozen_but_not_executed",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: (
+        "protocol_definition_is_not_validation_result_evidence",
+        "fixture_materializer_not_implemented",
+        "independent_minimization_reference_not_bound",
+        "independent_scientific_review_missing",
+        "signed_execution_authorization_receipt_missing",
+        "trusted_runner_environment_not_bound",
+        "production_result_receipt_missing",
+        "independent_result_review_missing",
+        "reviewed_runtime_parameter_values_not_bound",
+        "scientific_parameter_applicability_not_established",
+        "parameter_fitting_not_authorized",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -866,6 +884,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
+                CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
+                current_state=(
+                    "frozen_failure_inclusive_minimization_validation_protocol_"
+                    "definition_without_execution_or_results"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             DOCKING_CAPABILITY_ID: _row(
                 DOCKING_CAPABILITY_ID,
                 current_state="bounded_internal_scaffold",
@@ -939,6 +966,7 @@ __all__ = [
     "CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID",
     "CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID",
     "CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID",
+    "CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID",
     "DISTRIBUTION_CAPABILITY_ID",
     "DOCKING_CAPABILITY_ID",
     "ENGINE_ID",

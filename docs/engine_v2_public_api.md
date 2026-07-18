@@ -39,6 +39,7 @@ betelgeuze_engine_v2.physics.reference_diagnostics
 betelgeuze_engine_v2.physics.reference_constrained_minimization
 betelgeuze_engine_v2.physics.reference_forcefield_v2
 betelgeuze_engine_v2.physics.reference_minimization
+betelgeuze_engine_v2.physics.reference_minimization_validation_protocol
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
@@ -120,6 +121,16 @@ optionally include that combined energy/force and binds the solvation-parameter
 fingerprint into exact checkpoint/restart identity. The API does not estimate
 Born radii or implement nonpolar solvation, salt/ions, periodic solvent, or MD,
 and it carries no independent solvation/minimization or product validation.
+
+The minimization-validation-protocol symbols freeze fourteen ordered cases and
+ten predefined acceptance metrics across the unsolvated, constrained, fixed-
+Born constrained, checkpoint/restart, and fail-closed identity/applicability
+lanes. The document binds exact implementation-source identities, retains every
+case in the denominator, requires an independently implemented reference before
+execution, and exposes an authorization function that always fails closed. It
+does not materialize cases, implement the independent reference, authorize or
+run validation, collect results, validate parameters or minimization, or enable
+scientific/product/customer claims.
 
 The separate validation-artifact symbols materialize the exact frozen fixtures
 and mutations into deterministic CPU float64 runtime inputs and provide a

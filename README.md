@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_z_bounded_cpu_fixed_born_constrained_minimization
+v2_aa_frozen_cpu_minimization_validation_protocol
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -53,6 +53,12 @@ Implemented and GitHub-hosted CPU tested:
   solvation-parameter-bound checkpoint/restart; radius estimation, nonpolar
   solvation, salt/ions, periodic solvent, independent validation, and product
   promotion remain unavailable;
+- a frozen, execution-disabled CPU minimization validation protocol with 14
+  ordered unsolvated, constrained, fixed-Born constrained, checkpoint, and
+  fail-closed cases; 10 predefined metrics, all-case failure accounting, exact
+  implementation-source identities, and independent-reference requirements are
+  bound before results, but no materializer, independent reference, review,
+  authorization, execution, result receipt, or scientific promotion exists;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture

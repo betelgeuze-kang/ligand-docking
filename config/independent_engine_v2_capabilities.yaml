@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_z_bounded_cpu_fixed_born_constrained_minimization
+implementation_stage: v2_aa_frozen_cpu_minimization_validation_protocol
 
 claim_policy:
   customer_execution_enabled: false
@@ -892,7 +892,35 @@ capabilities:
       - validation_execution_not_authorized
       - validation_results_not_collected
       - parameter_fitting_not_authorized
-      - minimization_validation_protocol_missing
+      - minimization_validation_protocol_frozen_but_not_executed
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
+  v2_cpu_reference_minimization_validation_protocol:
+    current_state: frozen_failure_inclusive_minimization_validation_protocol_definition_without_execution_or_results
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: false
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - protocol_definition_is_not_validation_result_evidence
+      - fixture_materializer_not_implemented
+      - independent_minimization_reference_not_bound
+      - independent_scientific_review_missing
+      - signed_execution_authorization_receipt_missing
+      - trusted_runner_environment_not_bound
+      - production_result_receipt_missing
+      - independent_result_review_missing
+      - reviewed_runtime_parameter_values_not_bound
+      - scientific_parameter_applicability_not_established
+      - parameter_fitting_not_authorized
       - scientific_validation_missing
       - product_integration_not_qualified
 
