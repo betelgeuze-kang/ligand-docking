@@ -656,8 +656,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
     ]
     assert minimization_protocol["current_state"] == (
-        "source_bound_import_separated_independent_minimization_"
-        "reference_without_review_execution_or_results"
+        "signed_independent_review_contract_without_attestation_"
+        "authorization_execution_or_results"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
     assert "materializer_definition_is_not_validation_result_evidence" in (
@@ -670,6 +670,12 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         minimization_protocol["blockers"]
     )
     assert "independent_minimization_reference_not_independently_reviewed" in (
+        minimization_protocol["blockers"]
+    )
+    assert "signed_independent_scientific_review_attestation_missing" in (
+        minimization_protocol["blockers"]
+    )
+    assert "trusted_independent_scientific_reviewer_key_not_provided" in (
         minimization_protocol["blockers"]
     )
     assert "independent_minimization_reference_not_bound" not in (
@@ -708,6 +714,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_materializer" in policy
     assert "reference_minimization_independent_oracle" in policy
     assert "reference_minimization_validation_artifact_binding" in policy
+    assert "reference_minimization_validation_review" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -790,6 +797,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization_validation_materializer.py",
         "test_engine_v2_reference_minimization_independent_oracle.py",
         "test_engine_v2_reference_minimization_validation_artifact_binding.py",
+        "test_engine_v2_reference_minimization_validation_review.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source

@@ -43,6 +43,7 @@ betelgeuze_engine_v2.physics.reference_minimization_independent_oracle
 betelgeuze_engine_v2.physics.reference_minimization_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_minimization_validation_materializer
 betelgeuze_engine_v2.physics.reference_minimization_validation_protocol
+betelgeuze_engine_v2.physics.reference_minimization_validation_review
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
@@ -156,6 +157,13 @@ analytic-oracle, and minimization-oracle source identities and AST-audit the
 import boundary. These source and test artifacts are not production validation
 receipts, independent scientific review, execution authorization, parameter
 applicability evidence, or scientific/product promotion.
+
+The minimization-validation-review symbols freeze a signed independent-review
+attestation schema over the exact source binding. Verification requires a
+repository-external trusted reviewer key, a reviewer identity distinct from the
+implementation author, complete ordered checks and limitation acknowledgements,
+and a bounded validity interval. The repository bundles no key or attestation;
+even a valid review verification cannot authorize execution or fitting.
 
 The separate validation-artifact symbols materialize the exact frozen fixtures
 and mutations into deterministic CPU float64 runtime inputs and provide a

@@ -172,6 +172,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py
+            tests/unit/test_engine_v2_reference_minimization_validation_review.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
@@ -291,6 +292,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
@@ -420,7 +422,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_ac_source_bound_independent_minimization_reference"
+          assert capability_snapshot()["implementation_stage"] == "v2_ad_minimization_validation_review_contract"
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",

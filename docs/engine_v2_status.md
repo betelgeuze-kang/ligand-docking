@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ac_source_bound_independent_minimization_reference
+v2_ad_minimization_validation_review_contract
 ```
 
 The current `main` branch contains:
@@ -187,8 +187,14 @@ The current `main` branch contains:
   and tangent-force projection, fixed-Born energy/forces, bounded backtracking,
   fail-closed identity/applicability outcomes, and exact checkpoint/restart.
   Test-only endpoint comparisons are implementation checks, not validation
-  result evidence. No independent scientific review or authorization,
-  production result receipt, independent result review, scientific
+  result evidence. A frozen HMAC-SHA256 independent-review attestation contract
+  now binds the exact artifact and requires author/reviewer identity separation,
+  complete ordered algorithm/projection/fixed-Born/backtracking/checkpoint/
+  negative-case/import-boundary review checks, explicit limitation
+  acknowledgements, an out-of-band trusted reviewer key, and bounded freshness.
+  It bundles no attestation or trusted key and cannot authorize execution. No
+  independent scientific review or authorization, production result receipt,
+  independent result review, scientific
   applicability, or parameter-fitting approval exists, so minimization and
   solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
