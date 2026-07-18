@@ -26,18 +26,18 @@ from .reference_validation_oracle import (
 
 
 INDEPENDENT_MINIMIZATION_ORACLE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_independent_minimization_oracle/1.0.0"
+    "betelgeuze.engine_v2_independent_minimization_oracle/2.0.0"
 )
 INDEPENDENT_MINIMIZATION_ORACLE_INPUT_SCHEMA_ID = (
     "betelgeuze.engine_v2_independent_minimization_oracle_input/1.0.0"
 )
 INDEPENDENT_MINIMIZATION_ORACLE_CHECKPOINT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_independent_minimization_oracle_checkpoint/1.0.0"
+    "betelgeuze.engine_v2_independent_minimization_oracle_checkpoint/2.0.0"
 )
 INDEPENDENT_MINIMIZATION_ORACLE_ID = (
-    "cpu_reference_minimization_independent_oracle/1.0.0"
+    "cpu_reference_minimization_independent_oracle/2.0.0"
 )
-INDEPENDENT_MINIMIZATION_ORACLE_VERSION = "1.0.0"
+INDEPENDENT_MINIMIZATION_ORACLE_VERSION = "2.0.0"
 
 
 class IndependentMinimizationOracleError(ValueError):
@@ -129,6 +129,233 @@ def _coordinates(value: object, *, atom_count: int) -> Coordinates:
 
 def _coordinate_sha256(value: Coordinates) -> str:
     return _sha256([[float(item).hex() for item in row] for row in value])
+
+
+@dataclass(frozen=True, slots=True)
+class IndependentMinimizationCoordinateTraceStep:
+    """One exact independent-oracle evaluation coordinate state."""
+
+    evaluation_index: int
+    iteration: int
+    trial: int
+    outcome: str
+    raw_coordinates_angstrom: Coordinates
+    evaluated_coordinates_angstrom: Coordinates
+    energy_kcal_per_mol: float | None
+
+    def __post_init__(self) -> None:
+        _integer(self.evaluation_index, name="trace evaluation index", minimum=1)
+        _integer(self.iteration, name="trace iteration")
+        _integer(self.trial, name="trace trial")
+        if self.outcome not in {
+            "initial",
+            "accepted",
+            "rejected_constraint_projection",
+            "rejected_projected_displacement",
+            "rejected_force_projection",
+            "rejected_non_descent",
+            "rejected_armijo",
+        }:
+            raise IndependentMinimizationOracleError(
+                "coordinate trace outcome is invalid"
+            )
+        atom_count = len(self.raw_coordinates_angstrom)
+        if atom_count < 1:
+            raise IndependentMinimizationOracleError(
+                "coordinate trace must cover every atom"
+            )
+        object.__setattr__(
+            self,
+            "raw_coordinates_angstrom",
+            _coordinates(self.raw_coordinates_angstrom, atom_count=atom_count),
+        )
+        object.__setattr__(
+            self,
+            "evaluated_coordinates_angstrom",
+            _coordinates(self.evaluated_coordinates_angstrom, atom_count=atom_count),
+        )
+        if self.energy_kcal_per_mol is not None:
+            object.__setattr__(
+                self,
+                "energy_kcal_per_mol",
+                _finite(self.energy_kcal_per_mol, name="trace energy"),
+            )
+
+    def projection(self) -> dict[str, Any]:
+        raw_hex = [
+            [float(item).hex() for item in row]
+            for row in self.raw_coordinates_angstrom
+        ]
+        evaluated_hex = [
+            [float(item).hex() for item in row]
+            for row in self.evaluated_coordinates_angstrom
+        ]
+        return {
+            "evaluation_index": self.evaluation_index,
+            "iteration": self.iteration,
+            "trial": self.trial,
+            "outcome": self.outcome,
+            "raw_coordinates_angstrom_hex": raw_hex,
+            "raw_coordinates_sha256": _sha256(raw_hex),
+            "evaluated_coordinates_angstrom_hex": evaluated_hex,
+            "evaluated_coordinates_sha256": _sha256(evaluated_hex),
+            "energy_kcal_per_mol": self.energy_kcal_per_mol,
+        }
+
+    @property
+    def step_identity_sha256(self) -> str:
+        return _sha256(self.projection())
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            **self.projection(),
+            "step_identity_sha256": self.step_identity_sha256,
+        }
+
+
+_REJECTED_COORDINATE_TRACE_OUTCOMES = frozenset(
+    {
+        "rejected_constraint_projection",
+        "rejected_projected_displacement",
+        "rejected_force_projection",
+        "rejected_non_descent",
+        "rejected_armijo",
+    }
+)
+
+
+def _validate_coordinate_trace(
+    coordinate_trace: tuple[IndependentMinimizationCoordinateTraceStep, ...],
+    *,
+    accepted_iterations: int,
+    rejected_evaluations: int,
+    evaluation_count: int,
+    accepted_energy_trace_kcal_per_mol: tuple[float, ...],
+    state_coordinates_angstrom: Coordinates | None,
+    initial_energy_kcal_per_mol: float | None,
+    current_energy_kcal_per_mol: float | None,
+    context: str,
+) -> None:
+    """Validate trace order, counters, ledger, and current-state identity."""
+
+    _integer(accepted_iterations, name=f"{context} accepted iterations")
+    _integer(rejected_evaluations, name=f"{context} rejected evaluations")
+    _integer(evaluation_count, name=f"{context} evaluation count")
+    if not isinstance(coordinate_trace, tuple) or any(
+        not isinstance(row, IndependentMinimizationCoordinateTraceStep)
+        for row in coordinate_trace
+    ):
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate trace must contain exact trace steps"
+        )
+    if len(coordinate_trace) != evaluation_count or [
+        row.evaluation_index for row in coordinate_trace
+    ] != list(range(1, evaluation_count + 1)):
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate trace evaluation sequence is invalid"
+        )
+    if not coordinate_trace:
+        if (
+            accepted_iterations != 0
+            or rejected_evaluations != 0
+            or accepted_energy_trace_kcal_per_mol
+            or state_coordinates_angstrom is not None
+            or initial_energy_kcal_per_mol is not None
+            or current_energy_kcal_per_mol is not None
+        ):
+            raise IndependentMinimizationOracleError(
+                f"empty {context} coordinate trace disagrees with evaluation state"
+            )
+        return
+
+    initial = coordinate_trace[0]
+    if (
+        initial.outcome != "initial"
+        or initial.iteration != 0
+        or initial.trial != 0
+        or initial.energy_kcal_per_mol is None
+    ):
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate trace initial step is invalid"
+        )
+    atom_count = len(initial.evaluated_coordinates_angstrom)
+    expected_iteration = 1
+    expected_trial = 0
+    accepted_rows = [initial]
+    rejected_count = 0
+    for row in coordinate_trace[1:]:
+        if (
+            len(row.raw_coordinates_angstrom) != atom_count
+            or len(row.evaluated_coordinates_angstrom) != atom_count
+        ):
+            raise IndependentMinimizationOracleError(
+                f"{context} coordinate trace atom count drifted"
+            )
+        if row.iteration != expected_iteration or row.trial != expected_trial:
+            raise IndependentMinimizationOracleError(
+                f"{context} coordinate trace iteration or trial order is invalid"
+            )
+        if row.outcome == "accepted":
+            if row.energy_kcal_per_mol is None:
+                raise IndependentMinimizationOracleError(
+                    f"{context} accepted coordinate trace step requires energy"
+                )
+            accepted_rows.append(row)
+            expected_iteration += 1
+            expected_trial = 0
+        elif row.outcome in _REJECTED_COORDINATE_TRACE_OUTCOMES:
+            if row.outcome in {
+                "rejected_constraint_projection",
+                "rejected_projected_displacement",
+            }:
+                if row.energy_kcal_per_mol is not None:
+                    raise IndependentMinimizationOracleError(
+                        f"{context} pre-energy rejected trace step must omit energy"
+                    )
+            elif row.energy_kcal_per_mol is None:
+                raise IndependentMinimizationOracleError(
+                    f"{context} evaluated rejected trace step requires energy"
+                )
+            rejected_count += 1
+            expected_trial += 1
+        else:
+            raise IndependentMinimizationOracleError(
+                f"{context} coordinate trace contains a repeated initial step"
+            )
+    if len(accepted_rows) != accepted_iterations + 1:
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate trace accepted count is inconsistent"
+        )
+    if rejected_count != rejected_evaluations:
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate trace rejected count is inconsistent"
+        )
+    observed_energy_trace = tuple(
+        row.energy_kcal_per_mol for row in accepted_rows
+    )
+    if observed_energy_trace != accepted_energy_trace_kcal_per_mol:
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate and energy traces are inconsistent"
+        )
+    if (
+        initial_energy_kcal_per_mol != initial.energy_kcal_per_mol
+        or current_energy_kcal_per_mol != accepted_rows[-1].energy_kcal_per_mol
+    ):
+        raise IndependentMinimizationOracleError(
+            f"{context} coordinate trace energy endpoints are inconsistent"
+        )
+    if state_coordinates_angstrom is None:
+        raise IndependentMinimizationOracleError(
+            f"{context} evaluated coordinate trace requires current coordinates"
+        )
+    normalized_state = _coordinates(
+        state_coordinates_angstrom,
+        atom_count=atom_count,
+    )
+    if normalized_state != accepted_rows[-1].evaluated_coordinates_angstrom:
+        raise IndependentMinimizationOracleError(
+            f"{context} current coordinates do not match the last accepted trace step"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -389,6 +616,7 @@ class IndependentMinimizationCheckpoint:
     current_max_force_kcal_per_mol_angstrom: float
     current_constraint_residual_angstrom: float
     accepted_energy_trace_kcal_per_mol: tuple[float, ...]
+    coordinate_trace: tuple[IndependentMinimizationCoordinateTraceStep, ...]
     checkpoint_sha256: str
     schema_id: str = INDEPENDENT_MINIMIZATION_ORACLE_CHECKPOINT_SCHEMA_ID
 
@@ -419,6 +647,10 @@ class IndependentMinimizationCheckpoint:
             "accepted_energy_trace_kcal_per_mol": list(
                 self.accepted_energy_trace_kcal_per_mol
             ),
+            "coordinate_trace": [row.to_dict() for row in self.coordinate_trace],
+            "coordinate_trace_sha256": _sha256(
+                [row.to_dict() for row in self.coordinate_trace]
+            ),
         }
 
     def __post_init__(self) -> None:
@@ -428,6 +660,19 @@ class IndependentMinimizationCheckpoint:
             )
         _digest(self.compatibility_sha256, name="checkpoint compatibility")
         _digest(self.checkpoint_sha256, name="checkpoint identity")
+        _validate_coordinate_trace(
+            self.coordinate_trace,
+            accepted_iterations=self.accepted_iterations,
+            rejected_evaluations=self.rejected_evaluations,
+            evaluation_count=self.evaluation_count,
+            accepted_energy_trace_kcal_per_mol=(
+                self.accepted_energy_trace_kcal_per_mol
+            ),
+            state_coordinates_angstrom=self.coordinates_angstrom,
+            initial_energy_kcal_per_mol=self.initial_energy_kcal_per_mol,
+            current_energy_kcal_per_mol=self.current_energy_kcal_per_mol,
+            context="checkpoint",
+        )
         if _sha256(self.projection()) != self.checkpoint_sha256:
             raise IndependentMinimizationOracleError("checkpoint digest mismatch")
 
@@ -452,8 +697,40 @@ class IndependentMinimizationOracleResult:
     evaluation_count: int
     final_coordinates_angstrom: Coordinates | None
     accepted_energy_trace_kcal_per_mol: tuple[float, ...]
+    coordinate_trace: tuple[IndependentMinimizationCoordinateTraceStep, ...]
     checkpoint: IndependentMinimizationCheckpoint | None
     schema_id: str = INDEPENDENT_MINIMIZATION_ORACLE_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != INDEPENDENT_MINIMIZATION_ORACLE_SCHEMA_ID:
+            raise IndependentMinimizationOracleError(
+                "unsupported independent minimization result schema"
+            )
+        _validate_coordinate_trace(
+            self.coordinate_trace,
+            accepted_iterations=self.accepted_iterations,
+            rejected_evaluations=self.rejected_evaluations,
+            evaluation_count=self.evaluation_count,
+            accepted_energy_trace_kcal_per_mol=(
+                self.accepted_energy_trace_kcal_per_mol
+            ),
+            state_coordinates_angstrom=self.final_coordinates_angstrom,
+            initial_energy_kcal_per_mol=self.initial_energy_kcal_per_mol,
+            current_energy_kcal_per_mol=self.final_energy_kcal_per_mol,
+            context="result",
+        )
+        if self.checkpoint is not None and (
+            self.checkpoint.coordinate_trace != self.coordinate_trace
+            or self.checkpoint.coordinates_angstrom != self.final_coordinates_angstrom
+            or self.checkpoint.accepted_iterations != self.accepted_iterations
+            or self.checkpoint.rejected_evaluations != self.rejected_evaluations
+            or self.checkpoint.evaluation_count != self.evaluation_count
+            or self.checkpoint.accepted_energy_trace_kcal_per_mol
+            != self.accepted_energy_trace_kcal_per_mol
+        ):
+            raise IndependentMinimizationOracleError(
+                "result coordinate trace disagrees with its checkpoint"
+            )
 
     @property
     def converged(self) -> bool:
@@ -497,6 +774,10 @@ class IndependentMinimizationOracleResult:
             ),
             "accepted_energy_trace_kcal_per_mol": list(
                 self.accepted_energy_trace_kcal_per_mol
+            ),
+            "coordinate_trace": [row.to_dict() for row in self.coordinate_trace],
+            "coordinate_trace_sha256": _sha256(
+                [row.to_dict() for row in self.coordinate_trace]
             ),
             "checkpoint_sha256": (
                 None if self.checkpoint is None else self.checkpoint.checkpoint_sha256
@@ -779,6 +1060,7 @@ def _fail_closed(
     evaluation_count: int = 0,
     coordinates: Coordinates | None = None,
     energy_trace: tuple[float, ...] = (),
+    coordinate_trace: tuple[IndependentMinimizationCoordinateTraceStep, ...] = (),
 ) -> IndependentMinimizationOracleResult:
     return IndependentMinimizationOracleResult(
         input_sha256=source.input_sha256,
@@ -794,6 +1076,7 @@ def _fail_closed(
         evaluation_count=evaluation_count,
         final_coordinates_angstrom=coordinates,
         accepted_energy_trace_kcal_per_mol=energy_trace,
+        coordinate_trace=coordinate_trace,
         checkpoint=None,
     )
 
@@ -810,6 +1093,7 @@ def _checkpoint(
     current_max_force: float,
     constraint_residual: float,
     energy_trace: tuple[float, ...],
+    coordinate_trace: tuple[IndependentMinimizationCoordinateTraceStep, ...],
 ) -> IndependentMinimizationCheckpoint:
     values = {
         "compatibility_sha256": source.compatibility_sha256,
@@ -823,6 +1107,7 @@ def _checkpoint(
         "current_max_force_kcal_per_mol_angstrom": current_max_force,
         "current_constraint_residual_angstrom": constraint_residual,
         "accepted_energy_trace_kcal_per_mol": energy_trace,
+        "coordinate_trace": coordinate_trace,
     }
     projection = {
         "schema_id": INDEPENDENT_MINIMIZATION_ORACLE_CHECKPOINT_SCHEMA_ID,
@@ -841,6 +1126,10 @@ def _checkpoint(
         "current_max_force_kcal_per_mol_angstrom": current_max_force,
         "current_constraint_residual_angstrom": constraint_residual,
         "accepted_energy_trace_kcal_per_mol": list(energy_trace),
+        "coordinate_trace": [row.to_dict() for row in coordinate_trace],
+        "coordinate_trace_sha256": _sha256(
+            [row.to_dict() for row in coordinate_trace]
+        ),
     }
     return IndependentMinimizationCheckpoint(
         **values,
@@ -911,6 +1200,17 @@ def evaluate_independent_minimization_oracle(
         initial_energy = current_energy
         initial_max_force = current_max_force
         energy_trace = (current_energy,)
+        coordinate_trace = (
+            IndependentMinimizationCoordinateTraceStep(
+                evaluation_index=1,
+                iteration=0,
+                trial=0,
+                outcome="initial",
+                raw_coordinates_angstrom=source.energy_input.coordinates_angstrom,
+                evaluated_coordinates_angstrom=coordinates,
+                energy_kcal_per_mol=current_energy,
+            ),
+        )
     else:
         if not isinstance(checkpoint, IndependentMinimizationCheckpoint):
             raise IndependentMinimizationOracleError(
@@ -920,6 +1220,23 @@ def evaluate_independent_minimization_oracle(
             raise IndependentMinimizationOracleError(
                 "checkpoint compatibility identity mismatch"
             )
+        if checkpoint.coordinate_trace[-1].outcome.startswith("rejected_"):
+            raise IndependentMinimizationOracleError(
+                "terminal failed line-search checkpoint cannot be resumed"
+            )
+        replayed = evaluate_independent_minimization_oracle(
+            replace(
+                source,
+                pause_after_accepted_iterations=checkpoint.accepted_iterations,
+            )
+        )
+        if (
+            replayed.checkpoint is None
+            or replayed.checkpoint.to_dict() != checkpoint.to_dict()
+        ):
+            raise IndependentMinimizationOracleError(
+                "checkpoint history does not replay exactly from the source input"
+            )
         coordinates = checkpoint.coordinates_angstrom
         accepted_iterations = checkpoint.accepted_iterations
         rejected_evaluations = checkpoint.rejected_evaluations
@@ -927,6 +1244,7 @@ def evaluate_independent_minimization_oracle(
         initial_energy = checkpoint.initial_energy_kcal_per_mol
         initial_max_force = checkpoint.initial_max_force_kcal_per_mol_angstrom
         energy_trace = checkpoint.accepted_energy_trace_kcal_per_mol
+        coordinate_trace = checkpoint.coordinate_trace
         constraint_residual = checkpoint.current_constraint_residual_angstrom
         current_energy, raw_forces = _evaluate(source, coordinates)
         current_forces, current_max_force, force_projected = _project_forces(
@@ -973,7 +1291,8 @@ def evaluate_independent_minimization_oracle(
             _dot(force, row) for force, row in zip(current_forces, direction)
         )
         accepted = False
-        for _ in range(source.max_backtracks + 1):
+        iteration = accepted_iterations + 1
+        for trial in range(source.max_backtracks + 1):
             raw_coordinates = tuple(
                 _add(row, _scale(delta, step))
                 for row, delta in zip(coordinates, direction)
@@ -983,6 +1302,18 @@ def evaluate_independent_minimization_oracle(
             )
             evaluation_count += 1
             if not projected:
+                coordinate_trace = (
+                    *coordinate_trace,
+                    IndependentMinimizationCoordinateTraceStep(
+                        evaluation_index=evaluation_count,
+                        iteration=iteration,
+                        trial=trial,
+                        outcome="rejected_constraint_projection",
+                        raw_coordinates_angstrom=raw_coordinates,
+                        evaluated_coordinates_angstrom=trial_coordinates,
+                        energy_kcal_per_mol=None,
+                    ),
+                )
                 rejected_evaluations += 1
                 step *= source.backtrack_factor
                 continue
@@ -996,6 +1327,18 @@ def evaluate_independent_minimization_oracle(
             if maximum_displacement > (
                 source.maximum_atom_displacement_angstrom + 1.0e-12
             ):
+                coordinate_trace = (
+                    *coordinate_trace,
+                    IndependentMinimizationCoordinateTraceStep(
+                        evaluation_index=evaluation_count,
+                        iteration=iteration,
+                        trial=trial,
+                        outcome="rejected_projected_displacement",
+                        raw_coordinates_angstrom=raw_coordinates,
+                        evaluated_coordinates_angstrom=trial_coordinates,
+                        energy_kcal_per_mol=None,
+                    ),
+                )
                 rejected_evaluations += 1
                 step *= source.backtrack_factor
                 continue
@@ -1004,6 +1347,18 @@ def evaluate_independent_minimization_oracle(
                 source, trial_coordinates, raw_trial_forces
             )
             if not force_projected:
+                coordinate_trace = (
+                    *coordinate_trace,
+                    IndependentMinimizationCoordinateTraceStep(
+                        evaluation_index=evaluation_count,
+                        iteration=iteration,
+                        trial=trial,
+                        outcome="rejected_force_projection",
+                        raw_coordinates_angstrom=raw_coordinates,
+                        evaluated_coordinates_angstrom=trial_coordinates,
+                        energy_kcal_per_mol=trial_energy,
+                    ),
+                )
                 rejected_evaluations += 1
                 step *= source.backtrack_factor
                 continue
@@ -1026,6 +1381,18 @@ def evaluate_independent_minimization_oracle(
                 )
                 descent = True
             if descent and trial_energy <= armijo_limit:
+                coordinate_trace = (
+                    *coordinate_trace,
+                    IndependentMinimizationCoordinateTraceStep(
+                        evaluation_index=evaluation_count,
+                        iteration=iteration,
+                        trial=trial,
+                        outcome="accepted",
+                        raw_coordinates_angstrom=raw_coordinates,
+                        evaluated_coordinates_angstrom=trial_coordinates,
+                        energy_kcal_per_mol=trial_energy,
+                    ),
+                )
                 coordinates = trial_coordinates
                 constraint_residual = trial_residual
                 current_energy = trial_energy
@@ -1035,6 +1402,20 @@ def evaluate_independent_minimization_oracle(
                 energy_trace = (*energy_trace, current_energy)
                 accepted = True
                 break
+            coordinate_trace = (
+                *coordinate_trace,
+                IndependentMinimizationCoordinateTraceStep(
+                    evaluation_index=evaluation_count,
+                    iteration=iteration,
+                    trial=trial,
+                    outcome=(
+                        "rejected_armijo" if descent else "rejected_non_descent"
+                    ),
+                    raw_coordinates_angstrom=raw_coordinates,
+                    evaluated_coordinates_angstrom=trial_coordinates,
+                    energy_kcal_per_mol=trial_energy,
+                ),
+            )
             rejected_evaluations += 1
             step *= source.backtrack_factor
         if not accepted:
@@ -1052,6 +1433,7 @@ def evaluate_independent_minimization_oracle(
                     evaluation_count=evaluation_count,
                     coordinates=coordinates,
                     energy_trace=energy_trace,
+                    coordinate_trace=coordinate_trace,
                 )
             status = "line_search_failed"
             failure_code = (
@@ -1078,6 +1460,7 @@ def evaluate_independent_minimization_oracle(
         current_max_force,
         constraint_residual,
         energy_trace,
+        coordinate_trace,
     )
     return IndependentMinimizationOracleResult(
         input_sha256=source.input_sha256,
@@ -1093,6 +1476,7 @@ def evaluate_independent_minimization_oracle(
         evaluation_count=evaluation_count,
         final_coordinates_angstrom=coordinates,
         accepted_energy_trace_kcal_per_mol=energy_trace,
+        coordinate_trace=coordinate_trace,
         checkpoint=state,
     )
 
@@ -1104,6 +1488,7 @@ __all__ = [
     "INDEPENDENT_MINIMIZATION_ORACLE_SCHEMA_ID",
     "INDEPENDENT_MINIMIZATION_ORACLE_VERSION",
     "IndependentMinimizationCheckpoint",
+    "IndependentMinimizationCoordinateTraceStep",
     "IndependentMinimizationOracleError",
     "IndependentMinimizationOracleInput",
     "IndependentMinimizationOracleResult",

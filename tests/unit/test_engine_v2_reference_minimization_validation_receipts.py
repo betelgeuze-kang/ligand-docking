@@ -82,8 +82,23 @@ def test_result_contract_is_exact_failure_inclusive_and_result_free() -> None:
     assert contract["metric_contract"]["metrics"] == protocol["numerical_protocol"]["metrics"]
     assert contract["purpose"]["result_receipt_present"] is False
     assert contract["purpose"]["result_values_present"] is False
-    assert contract["current_state"]["validation_runner_implemented"] is False
-    assert contract["current_state"]["result_receipt_writer_implemented"] is False
+    assert contract["current_state"]["validation_runner_implemented"] is True
+    assert contract["current_state"]["result_receipt_writer_implemented"] is True
+    assert contract["current_state"][
+        "complete_coordinate_trace_contract_implemented"
+    ] is True
+    trace_contract = contract["coordinate_trace_contract"]
+    assert trace_contract["trace_sources_in_order"] == [
+        "operational",
+        "independent_oracle",
+    ]
+    assert trace_contract["complete_raw_and_evaluated_coordinates_required_per_evaluation"] is True
+    assert trace_contract["whole_trace_canonical_sha256_required"] is True
+    assert trace_contract["missing_empty_or_reordered_trace_is_failure"] is True
+    assert "coordinate_traces" in contract["receipt_schema"]["required_case_fields"]
+    assert "step_identity_sha256" in contract["receipt_schema"][
+        "required_coordinate_trace_step_fields"
+    ]
     assert contract["claim_policy"]["minimization_validated"] is False
     assert require_reference_minimization_validation_result_receipt_contract_document(contract) == contract
 

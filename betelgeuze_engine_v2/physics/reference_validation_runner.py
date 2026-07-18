@@ -24,11 +24,17 @@ import stat
 import sys
 import threading
 import time
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .reference_validation_bootstrap import (
+    REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
     REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+    REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV,
+    REFERENCE_VALIDATION_CONTROLLED_INNER_STATE,
+    REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+    REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV,
     reference_validation_bootstrap_path,
+    reference_validation_controlled_inner_environment,
     reference_validation_execution_source_sha256,
 )
 from .reference_validation_nonce_reservation import (
@@ -47,7 +53,6 @@ from .reference_validation_receipts import (
 )
 from .reference_validation_run_start import (
     FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256,
-    REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
     ReferenceValidationExecutionEnvironmentReceipt,
     ReferenceValidationRunStartError,
     _require_reference_validation_root_outside_checkout as _require_external_root,
@@ -86,7 +91,7 @@ REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_runner_response/1.0.0"
 )
 REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_case_worker_request/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_case_worker_request/2.0.0"
 )
 REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_trust_store/1.0.0"
@@ -96,7 +101,7 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "98f4b637aa07b0307b5af451374ebee793b995ef7e828b2726b876dda3a848e8"
+    "c9c3ca36f9afcda451f41848605bcc141e99520e262894d24013a2fabda9ef33"
 )
 
 _ROTATION_MATRIX = (
@@ -110,6 +115,27 @@ _REFERENCE_VALIDATION_FIXED_WORKER_BOOTSTRAP = (
     "import sys;"
     "from betelgeuze_engine_v2.physics import reference_validation_runner as worker;"
     "raise SystemExit(worker._fixed_worker_main(sys.argv[1:]))"
+)
+_REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES = frozenset(
+    {
+        REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
+        "CUDA_VISIBLE_DEVICES",
+        "HIP_VISIBLE_DEVICES",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "MKL_NUM_THREADS",
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "PATH",
+        "PYTHONDONTWRITEBYTECODE",
+        "PYTHONHASHSEED",
+        "PYTHONNOUSERSITE",
+        "PYTHONPATH",
+        "PYTHONPYCACHEPREFIX",
+        "ROCR_VISIBLE_DEVICES",
+        "TZ",
+    }
 )
 _POST_RUN_BLOCKERS = (
     "production_validation_result_not_collected",
@@ -187,9 +213,7 @@ def _require_source_only_python_runtime() -> None:
         or os.major(null_stat.st_rdev) != 1
         or os.minor(null_stat.st_rdev) != 3
     ):
-        raise ReferenceValidationRunnerError(
-            "source-only Python cache sink is invalid"
-        )
+        raise ReferenceValidationRunnerError("source-only Python cache sink is invalid")
 
 
 def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
@@ -199,22 +223,40 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
     expected_bootstrap = Path(reference_validation_bootstrap_path())
     expected_repository = Path(__file__).resolve(strict=True).parents[2]
     if (
-        sys.flags.isolated != 1
-        or sys.flags.ignore_environment != 1
+        sys.flags.isolated != 0
+        or sys.flags.ignore_environment != 0
         or sys.flags.no_site != 1
         or sys.flags.no_user_site != 1
         or sys.flags.dont_write_bytecode != 1
         or sys.dont_write_bytecode is not True
         or sys.pycache_prefix != "/dev/null"
         or not isinstance(state, tuple)
-        or len(state) != 4
+        or len(state) != 5
     ):
         raise ReferenceValidationRunnerError(
-            "validation runner requires the isolated dependency bootstrap"
+            "validation runner requires the seeded controlled dependency bootstrap"
         )
-    bootstrap_path, repository_root, raw_dependency_roots, frozen_sys_path = state
+    (
+        state_marker,
+        bootstrap_path,
+        repository_root,
+        raw_dependency_roots,
+        frozen_sys_path,
+    ) = state
+    expected_orig_argv = (
+        os.path.realpath(sys.executable),
+        *REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        os.fspath(expected_bootstrap),
+    )
+    try:
+        expected_environment = reference_validation_controlled_inner_environment()
+    except Exception as exc:
+        raise ReferenceValidationRunnerError(
+            "validation runner controlled environment is invalid"
+        ) from exc
     if (
-        bootstrap_path != os.fspath(expected_bootstrap)
+        state_marker != REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+        or bootstrap_path != os.fspath(expected_bootstrap)
         or repository_root != os.fspath(expected_repository)
         or not isinstance(raw_dependency_roots, tuple)
         or not raw_dependency_roots
@@ -222,6 +264,12 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         or tuple(sys.path) != frozen_sys_path
         or not sys.path
         or sys.path[0] != os.fspath(expected_repository)
+        or tuple(getattr(sys, "orig_argv", ())) != expected_orig_argv
+        or sys.argv != [os.fspath(expected_bootstrap)]
+        or os.getcwd() != "/"
+        or dict(os.environ) != expected_environment
+        or os.environ.get(REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV)
+        != REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
     ):
         raise ReferenceValidationRunnerError(
             "validation runner bootstrap state is invalid"
@@ -362,12 +410,8 @@ def _normalize_dependency_rows(
                 "runner dependency rows must contain text identities and digests"
             )
         normalized_rows.append((artifact_id, digest))
-    normalized = tuple(
-        sorted(normalized_rows) if canonicalize else normalized_rows
-    )
-    if not normalized or (
-        not canonicalize and tuple(sorted(normalized)) != normalized
-    ):
+    normalized = tuple(sorted(normalized_rows) if canonicalize else normalized_rows)
+    if not normalized or (not canonicalize and tuple(sorted(normalized)) != normalized):
         raise ReferenceValidationRunnerError(
             "runner dependency rows must be non-empty and sorted"
         )
@@ -381,8 +425,7 @@ def _normalize_dependency_rows(
             or not artifact_id
             or len(artifact_id) > 200
             or not all(
-                character.isascii()
-                and (character.isalnum() or character in "._-")
+                character.isascii() and (character.isalnum() or character in "._-")
                 for character in artifact_id
             )
         ):
@@ -440,8 +483,7 @@ def _require_safe_git_ref(value: str) -> str:
         or ".." in value
         or "//" in value
         or not all(
-            character.isascii()
-            and (character.isalnum() or character in "/._-")
+            character.isascii() and (character.isalnum() or character in "/._-")
             for character in value
         )
     ):
@@ -555,9 +597,7 @@ def reference_validation_checked_out_code_commit_sha() -> str:
         existing = tuple(dict.fromkeys(path for path in ref_paths if path.exists()))
         if existing:
             if len(existing) != 1:
-                raise ReferenceValidationRunnerError(
-                    "checked-out Git ref is ambiguous"
-                )
+                raise ReferenceValidationRunnerError("checked-out Git ref is ambiguous")
             head = _read_small_regular_text(existing[0], name="checked-out Git ref")
         else:
             head = _packed_git_ref(common_git_dir, ref_name)
@@ -853,8 +893,7 @@ class ReferenceValidationVariantObservation:
                     "oracle_total_energy_unit": "kcal/mol",
                     "oracle_force_array_sha256": self.oracle_force_array_sha256,
                     "oracle_force_array_values": [
-                        list(row)
-                        for row in self.oracle_forces_kcal_per_mol_angstrom
+                        list(row) for row in self.oracle_forces_kcal_per_mol_angstrom
                     ],
                 }
             )
@@ -917,9 +956,7 @@ class ReferenceValidationCaseObservation:
                     "fail-closed case expectation is incomplete"
                 )
         else:
-            raise ReferenceValidationRunnerError(
-                "case expected outcome is invalid"
-            )
+            raise ReferenceValidationRunnerError("case expected outcome is invalid")
         if self.observed_status not in {
             "metrics_passed",
             "metric_threshold_failed",
@@ -928,9 +965,7 @@ class ReferenceValidationCaseObservation:
             "unexpected_error",
             "time_budget_exhausted",
         }:
-            raise ReferenceValidationRunnerError(
-                "case observation status is invalid"
-            )
+            raise ReferenceValidationRunnerError("case observation status is invalid")
         if self.case_passed != (
             self.observed_status in {"metrics_passed", "fail_closed_as_expected"}
         ):
@@ -945,12 +980,8 @@ class ReferenceValidationCaseObservation:
             metrics_passed = all(
                 row.observed and row.passed for row in self.metric_values
             )
-            if (
-                self.observed_status == "metrics_passed"
-                and not metrics_passed
-            ) or (
-                self.observed_status == "metric_threshold_failed"
-                and metrics_passed
+            if (self.observed_status == "metrics_passed" and not metrics_passed) or (
+                self.observed_status == "metric_threshold_failed" and metrics_passed
             ):
                 raise ReferenceValidationRunnerError(
                     "metric case status contradicts its retained metric rows"
@@ -1024,9 +1055,7 @@ class ReferenceValidationRunObservation:
         started = _parse_utc(self.started_at_utc, name="run started_at")
         completed = _parse_utc(self.completed_at_utc, name="run completed_at")
         if completed < started:
-            raise ReferenceValidationRunnerError(
-                "run completion precedes its start"
-            )
+            raise ReferenceValidationRunnerError("run completion precedes its start")
         if len(self.case_results) != REFERENCE_VALIDATION_RUNNER_MAX_CASES:
             raise ReferenceValidationRunnerError(
                 "run observation must retain all twenty-seven cases"
@@ -1034,9 +1063,7 @@ class ReferenceValidationRunObservation:
         if tuple(row.ordinal for row in self.case_results) != tuple(
             range(REFERENCE_VALIDATION_RUNNER_MAX_CASES)
         ):
-            raise ReferenceValidationRunnerError(
-                "run observation case order drifted"
-            )
+            raise ReferenceValidationRunnerError("run observation case order drifted")
         protocol_cases = frozen_cpu_reference_validation_protocol().cases
         expected_case_rows = tuple(
             (
@@ -1177,7 +1204,9 @@ def _contract_projection() -> dict[str, Any]:
             "source_only_python_import_runtime_required": True,
             "ignored_timestamp_bytecode_cache_execution_allowed": False,
             "stdlib_only_bootstrap_before_dependency_imports_required": True,
-            "isolated_python_startup_required": True,
+            "trusted_isolated_outer_launcher_required": True,
+            "seeded_controlled_inner_exec_required": True,
+            "python_hash_seed_applied_at_interpreter_initialization": True,
             "pythonpath_user_site_and_pth_startup_allowed": False,
             "bootstrap_source_bound_to_runner_source_sha256": True,
             "signed_clean_checkout_verified_before_package_import": True,
@@ -1208,21 +1237,36 @@ def _contract_projection() -> dict[str, Any]:
             "worker_dependency_paths_derived_from_verified_runtime": True,
             "worker_dependency_paths_derived_from_isolated_bootstrap": True,
             "case_worker_request_contains_trust_keys_or_receipts": False,
+            "worker_environment_derived_from_verified_receipt": True,
+            "worker_python_hash_seed_uint32_bound_to_receipt": True,
+            "worker_application_seed_bound_to_receipt": True,
+            "parent_child_python_hash_probe_equality_required": True,
+            "worker_exact_argv_cwd_and_environment_reverified": True,
             "case_worker_hard_kill_at_wall_deadline_required": True,
             "in_worker_posix_deadline_interrupt_required": True,
         },
         "entrypoint": {
             "logical_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
+            "trusted_outer_launcher_argv": list(
+                REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV
+            ),
             "direct_stdlib_only_bootstrap_required": True,
             "canonical_request_bounded_before_package_import": True,
             "operator_signature_verified_before_package_import": True,
             "expected_commit_and_source_verified_before_package_import": True,
-            "isolated_python_flags": [
+            "trusted_outer_launcher_flags": [
                 "-I",
                 "-S",
                 "-B",
                 "-X",
                 "pycache_prefix=/dev/null",
+            ],
+            "seeded_controlled_inner_flags": [
+                "-S",
+                "-B",
+                "-X",
+                "pycache_prefix=/dev/null",
+                "-c",
             ],
             "environment_import_path_overrides_honored": False,
             "automatic_site_initialization_allowed": False,
@@ -1350,11 +1394,7 @@ def _persist_runner_start(
         try:
             descriptor = os.open(
                 filename,
-                os.O_WRONLY
-                | os.O_CREAT
-                | os.O_EXCL
-                | os.O_NOFOLLOW
-                | os.O_CLOEXEC,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
                 0o600,
                 dir_fd=root_fd,
             )
@@ -1485,10 +1525,7 @@ def read_reference_validation_runner_start_record(
             "runner-start record is not canonical JSON"
         )
     observed_record = payload.pop("runner_start_record_sha256", None)
-    if (
-        observed_record != _sha256(payload)
-        or observed_record != expected_record
-    ):
+    if observed_record != _sha256(payload) or observed_record != expected_record:
         raise ReferenceValidationRunnerError(
             "runner-start record identity is cross-wired"
         )
@@ -1511,9 +1548,7 @@ def read_reference_validation_runner_start_record(
         "claim_safe",
     }
     if set(payload) != expected_keys:
-        raise ReferenceValidationRunnerError(
-            "runner-start record fields are invalid"
-        )
+        raise ReferenceValidationRunnerError("runner-start record fields are invalid")
     if (
         payload["schema_id"] != REFERENCE_VALIDATION_RUNNER_START_SCHEMA_ID
         or payload["runner_contract_sha256"]
@@ -1772,10 +1807,12 @@ def _oracle_metric_values(
     if not successes:
         return {}
     energies = [float(row.total_energy_kcal_per_mol) for row in successes]
-    oracle_energies = [
-        float(row.oracle_total_energy_kcal_per_mol) for row in successes
+    oracle_energies = [float(row.oracle_total_energy_kcal_per_mol) for row in successes]
+    forces = [
+        value
+        for row in successes
+        for value in _flatten_force(row.forces_kcal_per_mol_angstrom)
     ]
-    forces = [value for row in successes for value in _flatten_force(row.forces_kcal_per_mol_angstrom)]
     oracle_forces = [
         value
         for row in successes
@@ -1829,9 +1866,7 @@ def _case_metric_values(
         baseline = by_id["baseline"]
         numerical: list[float] = []
         reference: list[float] = []
-        for atom_index, force_row in enumerate(
-            baseline.forces_kcal_per_mol_angstrom
-        ):
+        for atom_index, force_row in enumerate(baseline.forces_kcal_per_mol_angstrom):
             for axis_name, axis in _AXIS_INDEX.items():
                 minus = by_id[f"atom-{atom_index}-{axis_name}-minus"]
                 plus = by_id[f"atom-{atom_index}-{axis_name}-plus"]
@@ -1898,15 +1933,21 @@ def _case_metric_values(
         )
     elif case.case_id == "same_environment_repeat_determinism" and len(by_id) == 3:
         ordered = [by_id[f"repeat-{index}"] for index in (1, 2, 3)]
-        values["repeat_energy_bitwise_equal"] = len(
-            {float(row.total_energy_kcal_per_mol).hex() for row in ordered}
-        ) == 1
-        values["repeat_force_bitwise_equal"] = len(
-            {
-                tuple(value.hex() for value in _flatten_force(row.forces_kcal_per_mol_angstrom))
-                for row in ordered
-            }
-        ) == 1
+        values["repeat_energy_bitwise_equal"] = (
+            len({float(row.total_energy_kcal_per_mol).hex() for row in ordered}) == 1
+        )
+        values["repeat_force_bitwise_equal"] = (
+            len(
+                {
+                    tuple(
+                        value.hex()
+                        for value in _flatten_force(row.forces_kcal_per_mol_angstrom)
+                    )
+                    for row in ordered
+                }
+            )
+            == 1
+        )
     return values
 
 
@@ -1936,7 +1977,9 @@ def _metric_observations(
         if metric.threshold_operator == "equal":
             passed = isinstance(value, bool) and value == bool(metric.threshold_value)
         else:
-            passed = not isinstance(value, bool) and float(value) <= metric.threshold_value
+            passed = (
+                not isinstance(value, bool) and float(value) <= metric.threshold_value
+            )
         observations.append(
             ReferenceValidationMetricObservation(
                 metric_id=metric_id,
@@ -2101,14 +2144,15 @@ def _evaluate_case(
     variant_rows = tuple(rows)
     if case.expected_outcome == "fail_closed":
         error_codes = {row.observed_error_code for row in variant_rows}
-        expected = (
-            all(row.observed_status == "fail_closed" for row in variant_rows)
-            and error_codes == {case.expected_error_code}
-        )
+        expected = all(
+            row.observed_status == "fail_closed" for row in variant_rows
+        ) and error_codes == {case.expected_error_code}
         if expected:
             status = "fail_closed_as_expected"
             observed_error = case.expected_error_code
-        elif any(row.observed_status == "time_budget_exhausted" for row in variant_rows):
+        elif any(
+            row.observed_status == "time_budget_exhausted" for row in variant_rows
+        ):
             status = "time_budget_exhausted"
             observed_error = "runner_time_budget_exhausted"
         elif any(row.observed_status == "unexpected_success" for row in variant_rows):
@@ -2116,8 +2160,10 @@ def _evaluate_case(
             observed_error = "expected_fail_closed_variant_executed"
         else:
             status = "unexpected_error"
-            observed_error = next(iter(error_codes)) if len(error_codes) == 1 else (
-                "multiple_or_unexpected_error_codes"
+            observed_error = (
+                next(iter(error_codes))
+                if len(error_codes) == 1
+                else ("multiple_or_unexpected_error_codes")
             )
         metrics: tuple[ReferenceValidationMetricObservation, ...] = ()
     else:
@@ -2181,9 +2227,7 @@ def _load_frozen_case_manifest_document() -> tuple[Any, dict[str, Any]]:
         "expected_pass_case_count": 15,
         "expected_fail_closed_case_count": 12,
     }:
-        raise ReferenceValidationRunnerError(
-            "runner materialization coverage drifted"
-        )
+        raise ReferenceValidationRunnerError("runner materialization coverage drifted")
     manifest_cases = manifest.get("cases")
     if not isinstance(manifest_cases, list) or len(manifest_cases) != (
         REFERENCE_VALIDATION_RUNNER_MAX_CASES
@@ -2267,10 +2311,34 @@ def _run_case_matrix_in_process(
     )
 
 
-def _configure_deterministic_torch_runtime() -> None:
+def _python_hash_probe_sha256() -> str:
+    return _sha256(
+        {
+            "bytes": hash(b"betelgeuze-engine-v2-worker-seed-probe"),
+            "string": hash("betelgeuze-engine-v2-worker-seed-probe"),
+            "tuple": hash(("betelgeuze-engine-v2-worker-seed-probe", 17)),
+        }
+    )
+
+
+def _require_worker_seed(value: object, *, name: str, maximum: int) -> int:
+    if type(value) is not int or not 0 <= value <= maximum:
+        raise ReferenceValidationRunnerError(f"{name} is outside the frozen range")
+    return value
+
+
+def _configure_deterministic_torch_runtime(application_seed: int | None = None) -> None:
     import torch
 
     try:
+        if application_seed is not None:
+            torch.manual_seed(
+                _require_worker_seed(
+                    application_seed,
+                    name="worker application seed",
+                    maximum=2**63 - 1,
+                )
+            )
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
         torch.use_deterministic_algorithms(True)
@@ -2280,7 +2348,7 @@ def _configure_deterministic_torch_runtime() -> None:
         ) from exc
 
 
-def _load_case_worker_request(raw: bytes) -> dict[str, str]:
+def _load_case_worker_request(raw: bytes) -> dict[str, Any]:
     if (
         not raw
         or len(raw) > REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES
@@ -2314,8 +2382,16 @@ def _load_case_worker_request(raw: bytes) -> dict[str, str]:
         or set(request)
         != {
             "schema_id",
+            "worker_kind",
             "expected_code_commit_sha",
             "expected_runner_source_sha256",
+            "expected_environment_receipt_sha256",
+            "expected_environment_fingerprint_sha256",
+            "expected_python_hash_seed",
+            "expected_application_seed",
+            "expected_worker_environment",
+            "expected_worker_environment_sha256",
+            "expected_python_hash_probe_sha256",
         }
         or request.get("schema_id")
         != REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID
@@ -2324,8 +2400,21 @@ def _load_case_worker_request(raw: bytes) -> dict[str, str]:
         raise ReferenceValidationRunnerError(
             "case-worker request is not the exact canonical schema"
         )
+    worker_kind = request["worker_kind"]
+    worker_environment = request["expected_worker_environment"]
+    if (
+        worker_kind not in {"manifest", "case"}
+        or not isinstance(worker_environment, dict)
+        or set(worker_environment) != _REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES
+        or any(
+            not isinstance(name, str) or not isinstance(value, str)
+            for name, value in worker_environment.items()
+        )
+    ):
+        raise ReferenceValidationRunnerError("case-worker runtime binding is invalid")
     return {
         "schema_id": request["schema_id"],
+        "worker_kind": worker_kind,
         "expected_code_commit_sha": _require_commit_sha(
             request["expected_code_commit_sha"],
             name="case-worker expected commit",
@@ -2334,18 +2423,105 @@ def _load_case_worker_request(raw: bytes) -> dict[str, str]:
             request["expected_runner_source_sha256"],
             name="case-worker expected source",
         ),
+        "expected_environment_receipt_sha256": _require_sha256(
+            request["expected_environment_receipt_sha256"],
+            name="case-worker environment receipt",
+        ),
+        "expected_environment_fingerprint_sha256": _require_sha256(
+            request["expected_environment_fingerprint_sha256"],
+            name="case-worker environment fingerprint",
+        ),
+        "expected_python_hash_seed": _require_worker_seed(
+            request["expected_python_hash_seed"],
+            name="case-worker Python hash seed",
+            maximum=2**32 - 1,
+        ),
+        "expected_application_seed": _require_worker_seed(
+            request["expected_application_seed"],
+            name="case-worker application seed",
+            maximum=2**63 - 1,
+        ),
+        "expected_worker_environment": dict(worker_environment),
+        "expected_worker_environment_sha256": _require_sha256(
+            request["expected_worker_environment_sha256"],
+            name="case-worker environment identity",
+        ),
+        "expected_python_hash_probe_sha256": _require_sha256(
+            request["expected_python_hash_probe_sha256"],
+            name="case-worker hash probe",
+        ),
     }
 
 
-def _require_fixed_worker_preflight(request: Mapping[str, str]) -> None:
+def _read_worker_process_argv() -> tuple[str, ...]:
+    try:
+        raw = Path("/proc/self/cmdline").read_bytes()
+        decoded = tuple(
+            token.decode("utf-8") for token in raw.rstrip(b"\0").split(b"\0")
+        )
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            "validation worker process argv is unavailable"
+        ) from exc
+    if not raw.endswith(b"\0") or not decoded or any(not token for token in decoded):
+        raise ReferenceValidationRunnerError(
+            "validation worker process argv is invalid"
+        )
+    return decoded
+
+
+def _require_fixed_worker_preflight(request: Mapping[str, Any]) -> None:
     _require_source_only_python_runtime()
+    worker_kind = request["worker_kind"]
+    worker_flag = f"--{worker_kind}-worker"
+    executable = os.path.realpath(sys.executable)
+    expected_argv = (
+        executable,
+        "-S",
+        "-B",
+        "-X",
+        "pycache_prefix=/dev/null",
+        "-c",
+        _REFERENCE_VALIDATION_FIXED_WORKER_BOOTSTRAP,
+        worker_flag,
+    )
+    expected_environment = request["expected_worker_environment"]
+    python_hash_seed = request["expected_python_hash_seed"]
+    application_seed = request["expected_application_seed"]
+    repository_root = Path(__file__).resolve(strict=True).parents[2]
+    try:
+        executable_stat = os.lstat(executable)
+        running_stat = os.stat("/proc/self/exe")
+    except OSError as exc:
+        raise ReferenceValidationRunnerError(
+            "validation worker Python executable is unavailable"
+        ) from exc
     if (
-        sys.flags.no_site != 1
-        or os.environ.get("PYTHONNOUSERSITE") != "1"
-        or not os.environ.get("PYTHONPATH")
+        not stat.S_ISREG(executable_stat.st_mode)
+        or executable_stat.st_uid != 0
+        or stat.S_IMODE(executable_stat.st_mode) & 0o022
+        or (executable_stat.st_dev, executable_stat.st_ino)
+        != (running_stat.st_dev, running_stat.st_ino)
+        or sys.flags.isolated != 0
+        or sys.flags.ignore_environment != 0
+        or sys.flags.no_site != 1
+        or sys.flags.no_user_site != 1
+        or sys.flags.dont_write_bytecode != 1
+        or sys.flags.hash_randomization != (0 if python_hash_seed == 0 else 1)
+        or tuple(getattr(sys, "orig_argv", ())) != expected_argv
+        or _read_worker_process_argv() != expected_argv
+        or sys.argv != ["-c", worker_flag]
+        or Path.cwd().resolve(strict=True) != repository_root
+        or dict(os.environ) != expected_environment
+        or _sha256(expected_environment)
+        != request["expected_worker_environment_sha256"]
+        or expected_environment.get("PYTHONHASHSEED") != str(python_hash_seed)
+        or expected_environment.get(REFERENCE_VALIDATION_APPLICATION_SEED_ENV)
+        != str(application_seed)
+        or _python_hash_probe_sha256() != request["expected_python_hash_probe_sha256"]
     ):
         raise ReferenceValidationRunnerError(
-            "validation worker requires isolated site initialization"
+            "validation worker fixed runtime is invalid"
         )
     expected_commit = request["expected_code_commit_sha"]
     if reference_validation_checked_out_code_commit_sha() != expected_commit:
@@ -2353,14 +2529,15 @@ def _require_fixed_worker_preflight(request: Mapping[str, str]) -> None:
             "validation worker commit does not match the checkout"
         )
     _require_clean_checked_out_code_commit(expected_commit)
-    if reference_validation_runner_source_sha256() != request[
-        "expected_runner_source_sha256"
-    ]:
+    if (
+        reference_validation_runner_source_sha256()
+        != request["expected_runner_source_sha256"]
+    ):
         raise ReferenceValidationRunnerError(
             "validation worker source does not match the supervisor"
         )
     _require_deadline_timer_available()
-    _configure_deterministic_torch_runtime()
+    _configure_deterministic_torch_runtime(application_seed)
 
 
 def _case_worker_main_from_standard_streams() -> int:
@@ -2412,36 +2589,32 @@ def _fixed_worker_main(arguments: list[str]) -> int:
     return 2
 
 
-def _case_worker_environment() -> dict[str, str]:
-    required_names = (
-        "BETELGEUZE_REFERENCE_VALIDATION_SEED",
-        "CUDA_VISIBLE_DEVICES",
-        "HIP_VISIBLE_DEVICES",
-        "LANG",
-        "LC_ALL",
-        "MKL_NUM_THREADS",
-        "OMP_NUM_THREADS",
-        "OPENBLAS_NUM_THREADS",
-        "PYTHONDONTWRITEBYTECODE",
-        "PYTHONHASHSEED",
-        "PYTHONPYCACHEPREFIX",
-        "ROCR_VISIBLE_DEVICES",
-        "TZ",
-    )
-    environment: dict[str, str] = {}
-    for name in required_names:
-        value = os.environ.get(name)
-        if value is None:
-            raise ReferenceValidationRunnerError(
-                "case-worker deterministic environment is incomplete"
-            )
-        environment[name] = value
+def _case_worker_environment(
+    environment_variable_rows: Sequence[tuple[str, str]],
+    *,
+    dependency_python_path: str,
+) -> dict[str, str]:
+    environment = dict(environment_variable_rows)
+    expected_receipt_names = _REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES - {
+        "HOME",
+        "PATH",
+        "PYTHONNOUSERSITE",
+        "PYTHONPATH",
+    }
+    if (
+        set(environment) != expected_receipt_names
+        or len(environment) != len(environment_variable_rows)
+        or not dependency_python_path
+    ):
+        raise ReferenceValidationRunnerError(
+            "case-worker receipt environment is incomplete"
+        )
     environment.update(
         {
             "HOME": "/nonexistent",
             "PATH": "/usr/bin:/bin",
             "PYTHONNOUSERSITE": "1",
-            "PYTHONPATH": _fixed_worker_dependency_python_path(),
+            "PYTHONPATH": dependency_python_path,
         }
     )
     return environment
@@ -2465,9 +2638,7 @@ def _fixed_worker_dependency_python_path() -> str:
 
 def _decode_case_worker_line(raw: bytes) -> ReferenceValidationCaseObservation:
     if not raw.endswith(b"\n"):
-        raise ReferenceValidationRunnerError(
-            "case-worker output line is not framed"
-        )
+        raise ReferenceValidationRunnerError("case-worker output line is not framed")
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -2488,10 +2659,7 @@ def _decode_case_worker_line(raw: bytes) -> ReferenceValidationCaseObservation:
         raise ReferenceValidationRunnerError(
             "case-worker output is not canonical ASCII JSON"
         ) from exc
-    if (
-        not isinstance(payload, dict)
-        or _canonical_bytes(payload) + b"\n" != raw
-    ):
+    if not isinstance(payload, dict) or _canonical_bytes(payload) + b"\n" != raw:
         raise ReferenceValidationRunnerError(
             "case-worker output is not canonical ASCII JSON"
         )
@@ -2556,11 +2724,19 @@ def _require_case_matches_frozen_matrix(
 
 def _fixed_worker_request(
     *,
+    worker_kind: str,
     expected_code_commit_sha: str,
     expected_runner_source_sha256: str,
-) -> dict[str, str]:
-    return {
+    environment_receipt: ReferenceValidationExecutionEnvironmentReceipt,
+    worker_environment: Mapping[str, str],
+) -> dict[str, Any]:
+    if worker_kind not in {"manifest", "case"}:
+        raise ReferenceValidationRunnerError("validation-worker kind is invalid")
+    if set(worker_environment) != _REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES:
+        raise ReferenceValidationRunnerError("validation-worker environment is invalid")
+    request: dict[str, Any] = {
         "schema_id": REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID,
+        "worker_kind": worker_kind,
         "expected_code_commit_sha": _require_commit_sha(
             expected_code_commit_sha,
             name="validation-worker supervisor commit",
@@ -2569,17 +2745,58 @@ def _fixed_worker_request(
             expected_runner_source_sha256,
             name="validation-worker supervisor source",
         ),
+        "expected_environment_receipt_sha256": _require_sha256(
+            environment_receipt.receipt_sha256,
+            name="validation-worker environment receipt",
+        ),
+        "expected_environment_fingerprint_sha256": _require_sha256(
+            environment_receipt.environment_fingerprint_sha256,
+            name="validation-worker environment fingerprint",
+        ),
+        "expected_python_hash_seed": _require_worker_seed(
+            environment_receipt.python_hash_seed,
+            name="validation-worker Python hash seed",
+            maximum=2**32 - 1,
+        ),
+        "expected_application_seed": _require_worker_seed(
+            environment_receipt.application_seed,
+            name="validation-worker application seed",
+            maximum=2**63 - 1,
+        ),
+        "expected_worker_environment": dict(worker_environment),
+        "expected_worker_environment_sha256": _sha256(dict(worker_environment)),
+        "expected_python_hash_probe_sha256": _python_hash_probe_sha256(),
     }
+    if (
+        len(_canonical_bytes(request)) + 1
+        > REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker runtime binding exceeds the request limit"
+        )
+    return request
 
 
-def _start_fixed_validation_worker(worker_flag: str) -> Any:
+def _start_fixed_validation_worker(
+    worker_flag: str,
+    request: Mapping[str, Any],
+) -> Any:
     import subprocess
 
     if worker_flag not in {"--manifest-worker", "--case-worker"}:
+        raise ReferenceValidationRunnerError("validation-worker operation is invalid")
+    expected_kind = worker_flag.removeprefix("--").removesuffix("-worker")
+    raw_environment = request.get("expected_worker_environment")
+    if (
+        request.get("worker_kind") != expected_kind
+        or not isinstance(raw_environment, Mapping)
+        or set(raw_environment) != _REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES
+        or any(not isinstance(value, str) for value in raw_environment.values())
+    ):
         raise ReferenceValidationRunnerError(
-            "validation-worker operation is invalid"
+            "validation-worker launch binding is invalid"
         )
-    executable = Path(sys.executable)
+    executable = Path(os.path.realpath(sys.executable))
     try:
         executable_stat = executable.stat()
         running_stat = os.stat("/proc/self/exe")
@@ -2590,6 +2807,8 @@ def _start_fixed_validation_worker(worker_flag: str) -> Any:
     if (
         not executable.is_absolute()
         or not stat.S_ISREG(executable_stat.st_mode)
+        or executable_stat.st_uid != 0
+        or stat.S_IMODE(executable_stat.st_mode) & 0o022
         or (executable_stat.st_dev, executable_stat.st_ino)
         != (running_stat.st_dev, running_stat.st_ino)
     ):
@@ -2602,12 +2821,15 @@ def _start_fixed_validation_worker(worker_flag: str) -> Any:
             [
                 os.fspath(executable),
                 "-S",
+                "-B",
+                "-X",
+                "pycache_prefix=/dev/null",
                 "-c",
                 _REFERENCE_VALIDATION_FIXED_WORKER_BOOTSTRAP,
                 worker_flag,
             ],
             cwd=repository_root,
-            env=_case_worker_environment(),
+            env=dict(raw_environment),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -2707,9 +2929,7 @@ def _manifest_cases_from_worker_output(
             "manifest-worker output is not the exact canonical schema"
         )
     manifest_projection = dict(manifest)
-    manifest_sha256 = manifest_projection.pop(
-        "materialization_manifest_sha256"
-    )
+    manifest_sha256 = manifest_projection.pop("materialization_manifest_sha256")
     if manifest_sha256 != _sha256(manifest_projection):
         raise ReferenceValidationRunnerError(
             "manifest-worker output identity is invalid"
@@ -2726,8 +2946,7 @@ def _manifest_cases_from_worker_output(
         or manifest.get("materializer_version") != "1.0.0"
         or manifest.get("protocol_sha256")
         != FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256
-        or manifest.get("fixture_manifest_sha256")
-        != protocol.fixture_manifest_sha256
+        or manifest.get("fixture_manifest_sha256") != protocol.fixture_manifest_sha256
         or manifest.get("materialization_policy")
         != {
             "device": "cpu",
@@ -2776,9 +2995,7 @@ def _manifest_cases_from_worker_output(
     if not isinstance(manifest_cases, list) or len(manifest_cases) != (
         REFERENCE_VALIDATION_RUNNER_MAX_CASES
     ):
-        raise ReferenceValidationRunnerError(
-            "manifest-worker case coverage is invalid"
-        )
+        raise ReferenceValidationRunnerError("manifest-worker case coverage is invalid")
     metric_map = {row.metric_id: row for row in protocol.metrics}
     for ordinal, (case, manifest_case) in enumerate(
         zip(protocol.cases, manifest_cases, strict=True)
@@ -2804,16 +3021,21 @@ def _run_supervised_frozen_case_matrix(
     *,
     expected_code_commit_sha: str,
     expected_runner_source_sha256: str,
+    environment_receipt: ReferenceValidationExecutionEnvironmentReceipt,
+    worker_environment: Mapping[str, str],
     deadline: float,
 ) -> tuple[Any, list[Mapping[str, Any]]]:
     """Materialize frozen identities in a child before consuming the start marker."""
 
     protocol = frozen_cpu_reference_validation_protocol()
     request = _fixed_worker_request(
+        worker_kind="manifest",
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=expected_runner_source_sha256,
+        environment_receipt=environment_receipt,
+        worker_environment=worker_environment,
     )
-    process = _start_fixed_validation_worker("--manifest-worker")
+    process = _start_fixed_validation_worker("--manifest-worker", request)
     output, timed_out, succeeded = _communicate_fixed_validation_worker(
         process,
         request,
@@ -2832,15 +3054,20 @@ def _run_supervised_case_matrix(
     *,
     expected_code_commit_sha: str,
     expected_runner_source_sha256: str,
+    environment_receipt: ReferenceValidationExecutionEnvironmentReceipt,
+    worker_environment: Mapping[str, str],
     deadline: float,
 ) -> tuple[ReferenceValidationCaseObservation, ...]:
     """Run the matrix in one fixed child and hard-kill native stalls at deadline."""
 
     request = _fixed_worker_request(
+        worker_kind="case",
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=expected_runner_source_sha256,
+        environment_receipt=environment_receipt,
+        worker_environment=worker_environment,
     )
-    process = _start_fixed_validation_worker("--case-worker")
+    process = _start_fixed_validation_worker("--case-worker", request)
     output, timed_out, succeeded = _communicate_fixed_validation_worker(
         process,
         request,
@@ -2870,13 +3097,10 @@ def _run_supervised_case_matrix(
             malformed = True
             break
         accepted.append(row)
-    if (
-        not timed_out
-        and (
-            not succeeded
-            or malformed
-            or len(accepted) != REFERENCE_VALIDATION_RUNNER_MAX_CASES
-        )
+    if not timed_out and (
+        not succeeded
+        or malformed
+        or len(accepted) != REFERENCE_VALIDATION_RUNNER_MAX_CASES
     ):
         accepted.clear()
         failure_status = "unexpected_error"
@@ -2932,8 +3156,10 @@ def run_bounded_cpu_reference_validation(
         receipt.started_at_utc,
         name="environment receipt started_at",
     )
-    if not receipt_started <= started <= (
-        receipt_started + REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE
+    if (
+        not receipt_started
+        <= started
+        <= (receipt_started + REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE)
     ):
         raise ReferenceValidationRunnerError(
             "execution environment receipt is not fresh enough for the runner"
@@ -2941,9 +3167,7 @@ def run_bounded_cpu_reference_validation(
     _require_commit_sha(expected_code_commit_sha, name="expected runner code commit")
     if receipt.code_commit_sha != expected_code_commit_sha:
         raise ReferenceValidationRunnerError("runner code commit is cross-wired")
-    dependencies = _normalize_dependency_rows(
-        expected_dependency_artifact_sha256_rows
-    )
+    dependencies = _normalize_dependency_rows(expected_dependency_artifact_sha256_rows)
     if receipt.dependency_artifact_sha256_rows != dependencies:
         raise ReferenceValidationRunnerError(
             "runner dependency artifact rows are cross-wired"
@@ -2962,10 +3186,16 @@ def run_bounded_cpu_reference_validation(
         )
     _require_clean_checked_out_code_commit(expected_code_commit_sha)
     _require_deadline_timer_available()
+    worker_environment = _case_worker_environment(
+        receipt.environment_variable_rows,
+        dependency_python_path=_fixed_worker_dependency_python_path(),
+    )
     deadline = time.monotonic() + REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS
     protocol, manifest_cases = _run_supervised_frozen_case_matrix(
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=runner_source,
+        environment_receipt=receipt,
+        worker_environment=worker_environment,
         deadline=deadline,
     )
     if time.monotonic() >= deadline:
@@ -2986,6 +3216,8 @@ def run_bounded_cpu_reference_validation(
         manifest_cases,
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=runner_source,
+        environment_receipt=receipt,
+        worker_environment=worker_environment,
         deadline=deadline,
     )
     completed_at_utc = _format_utc(_utc_now(), name="runner completed_at")
@@ -3058,9 +3290,7 @@ def _case_observation_from_payload(
             components = (
                 tuple(
                     (row["name"], row["value"])
-                    for row in variant_payload[
-                        "component_energy_values_and_units"
-                    ]
+                    for row in variant_payload["component_energy_values_and_units"]
                 )
                 if success
                 else ()
@@ -3072,8 +3302,7 @@ def _case_observation_from_payload(
             )
             oracle_forces = (
                 tuple(
-                    tuple(row)
-                    for row in variant_payload["oracle_force_array_values"]
+                    tuple(row) for row in variant_payload["oracle_force_array_values"]
                 )
                 if success
                 else ()
@@ -3173,18 +3402,13 @@ def require_reference_validation_run_observation_document(
                 components = (
                     tuple(
                         (row["name"], row["value"])
-                        for row in variant_payload[
-                            "component_energy_values_and_units"
-                        ]
+                        for row in variant_payload["component_energy_values_and_units"]
                     )
                     if success
                     else ()
                 )
                 forces = (
-                    tuple(
-                        tuple(row)
-                        for row in variant_payload["force_array_values"]
-                    )
+                    tuple(tuple(row) for row in variant_payload["force_array_values"])
                     if success
                     else ()
                 )
@@ -3200,27 +3424,17 @@ def require_reference_validation_run_observation_document(
                     ReferenceValidationVariantObservation(
                         ordinal=variant_payload["ordinal"],
                         variant_id=variant_payload["variant_id"],
-                        runtime_input_sha256=variant_payload[
-                            "runtime_input_sha256"
-                        ],
-                        oracle_input_sha256=variant_payload[
-                            "oracle_input_sha256"
-                        ],
+                        runtime_input_sha256=variant_payload["runtime_input_sha256"],
+                        oracle_input_sha256=variant_payload["oracle_input_sha256"],
                         observed_status=variant_payload["observed_status"],
-                        observed_error_code=variant_payload[
-                            "observed_error_code"
-                        ],
+                        observed_error_code=variant_payload["observed_error_code"],
                         component_energies_kcal_per_mol=components,
                         total_energy_kcal_per_mol=(
-                            variant_payload["total_energy_value"]
-                            if success
-                            else None
+                            variant_payload["total_energy_value"] if success else None
                         ),
                         forces_kcal_per_mol_angstrom=forces,
                         force_array_sha256=(
-                            variant_payload["force_array_sha256"]
-                            if success
-                            else None
+                            variant_payload["force_array_sha256"] if success else None
                         ),
                         oracle_total_energy_kcal_per_mol=(
                             variant_payload["oracle_total_energy_value"]
@@ -3240,9 +3454,7 @@ def require_reference_validation_run_observation_document(
                     ordinal=case_payload["ordinal"],
                     case_id=case_payload["case_id"],
                     case_input_sha256=case_payload["case_input_sha256"],
-                    materialization_sha256=case_payload[
-                        "materialization_sha256"
-                    ],
+                    materialization_sha256=case_payload["materialization_sha256"],
                     expected_outcome=case_payload["expected_outcome"],
                     observed_status=case_payload["observed_status"],
                     expected_error_code=case_payload["expected_error_code"],
@@ -3257,21 +3469,13 @@ def require_reference_validation_run_observation_document(
             for row in observed["dependency_artifact_sha256_rows"]
         )
         result = ReferenceValidationRunObservation(
-            runner_start_record_sha256=observed[
-                "runner_start_record_sha256"
-            ],
+            runner_start_record_sha256=observed["runner_start_record_sha256"],
             execution_environment_receipt_sha256=observed[
                 "execution_environment_receipt_sha256"
             ],
-            environment_fingerprint_sha256=observed[
-                "environment_fingerprint_sha256"
-            ],
-            authorization_receipt_sha256=observed[
-                "authorization_receipt_sha256"
-            ],
-            authorization_nonce_sha256=observed[
-                "authorization_nonce_sha256"
-            ],
+            environment_fingerprint_sha256=observed["environment_fingerprint_sha256"],
+            authorization_receipt_sha256=observed["authorization_receipt_sha256"],
+            authorization_nonce_sha256=observed["authorization_nonce_sha256"],
             code_commit_sha=observed["code_commit_sha"],
             runner_source_sha256=observed["runner_source_sha256"],
             dependency_artifact_sha256_rows=dependencies,
@@ -3553,7 +3757,9 @@ def _load_runner_request(raw: bytes) -> dict[str, Any]:
         or len(raw) > REFERENCE_VALIDATION_RUNNER_MAX_REQUEST_BYTES
         or not raw.endswith(b"\n")
     ):
-        raise ReferenceValidationRunnerError("runner request size or framing is invalid")
+        raise ReferenceValidationRunnerError(
+            "runner request size or framing is invalid"
+        )
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -3574,10 +3780,7 @@ def _load_runner_request(raw: bytes) -> dict[str, Any]:
         raise ReferenceValidationRunnerError(
             "runner request must be canonical ASCII JSON"
         ) from exc
-    if (
-        not isinstance(request, dict)
-        or _canonical_bytes(request) + b"\n" != raw
-    ):
+    if not isinstance(request, dict) or _canonical_bytes(request) + b"\n" != raw:
         raise ReferenceValidationRunnerError(
             "runner request must be exact canonical JSON"
         )
@@ -3607,9 +3810,11 @@ def _load_runner_request(raw: bytes) -> dict[str, Any]:
             raise ReferenceValidationRunnerError(
                 f"runner request {name} must be non-empty text"
             )
-    if not isinstance(request["authorization_receipt"], dict) or not isinstance(
-        request["review_attestation"], dict
-    ) or not isinstance(request["network_isolation_attestation"], dict):
+    if (
+        not isinstance(request["authorization_receipt"], dict)
+        or not isinstance(request["review_attestation"], dict)
+        or not isinstance(request["network_isolation_attestation"], dict)
+    ):
         raise ReferenceValidationRunnerError(
             "runner request signed artifacts must be JSON objects"
         )

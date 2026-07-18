@@ -33,15 +33,15 @@ from . import (
 
 
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_cpu_minimization_validation_protocol/1.0.0"
+    "betelgeuze.engine_v2_cpu_minimization_validation_protocol/2.0.0"
 )
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_ID = (
-    "cpu_reference_minimization_contract_validation/1.0.0"
+    "cpu_reference_minimization_contract_validation/2.0.0"
 )
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION = "1.0.0"
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-18T00:00:00Z"
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION = "2.0.0"
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-19T06:00:00Z"
 FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 = (
-    "c8145a700e78e6d5a947e85935f7550e7d823fb64a566297a06ec96a1fa782c5"
+    "46c775ea0c815b4414f02d6613984ad7117aa488787fb7f9b23889c591f0812c"
 )
 
 CPU_MINIMIZATION_VALIDATION_SCIENTIFIC_BLOCKERS = (
@@ -854,6 +854,47 @@ def cpu_minimization_validation_protocol_document() -> dict[str, Any]:
     return {**projection, "protocol_sha256": digest}
 
 
+def cpu_minimization_validation_case_atom_count(case_id: str) -> int:
+    """Return the atom count bound by one frozen case's fixture chain."""
+
+    if not isinstance(case_id, str):
+        raise CPUMinimizationValidationProtocolError("case_id must be text")
+    cases = {case.case_id: case for case in _cases()}
+    try:
+        fixture_id = cases[case_id].canonical_input["fixture"]
+    except KeyError as exc:
+        raise CPUMinimizationValidationProtocolError(
+            f"unknown CPU minimization validation case: {case_id}"
+        ) from exc
+    visited: set[str] = set()
+    while True:
+        if fixture_id in visited:
+            raise CPUMinimizationValidationProtocolError(
+                "fixture inheritance contains a cycle"
+            )
+        visited.add(fixture_id)
+        payload = _FIXTURE_PAYLOADS[fixture_id]
+        coordinates = payload.get("coordinates_angstrom")
+        atoms = payload.get("atoms")
+        if coordinates is not None or atoms is not None:
+            if (
+                not isinstance(coordinates, list)
+                or not isinstance(atoms, list)
+                or not coordinates
+                or len(coordinates) != len(atoms)
+            ):
+                raise CPUMinimizationValidationProtocolError(
+                    "fixture atom and coordinate coverage is invalid"
+                )
+            return len(coordinates)
+        base_fixture = payload.get("base_fixture")
+        if not isinstance(base_fixture, str) or base_fixture not in _FIXTURE_PAYLOADS:
+            raise CPUMinimizationValidationProtocolError(
+                "fixture does not resolve to atomic coordinates"
+            )
+        fixture_id = base_fixture
+
+
 def cpu_minimization_validation_protocol_json_bytes() -> bytes:
     """Return canonical ASCII JSON with one trailing newline."""
 
@@ -961,6 +1002,7 @@ __all__ = [
     "CPUMinimizationValidationMetric",
     "CPUMinimizationValidationProtocolError",
     "cpu_minimization_validation_authorization_decision",
+    "cpu_minimization_validation_case_atom_count",
     "cpu_minimization_validation_protocol_document",
     "cpu_minimization_validation_protocol_json_bytes",
     "require_cpu_minimization_validation_execution_authorized",

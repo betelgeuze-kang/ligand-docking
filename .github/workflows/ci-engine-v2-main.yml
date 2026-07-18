@@ -451,7 +451,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_am_minimization_validation_result_review_contract"
+          assert capability_snapshot()["implementation_stage"] == "v2_ao_minimization_validation_production_entrypoint"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256

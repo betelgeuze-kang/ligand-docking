@@ -523,11 +523,13 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert minimization["internal_reference_execution_enabled"] is True
     assert minimization["scientifically_validated"] is False
-    assert "reference_minimization_not_scientifically_validated" in (
-        minimization["blockers"]
+    assert (
+        "reference_minimization_not_scientifically_validated"
+        in (minimization["blockers"])
     )
-    assert "independent_reference_minimization_evidence_missing" in (
-        minimization["blockers"]
+    assert (
+        "independent_reference_minimization_evidence_missing"
+        in (minimization["blockers"])
     )
     assert "public_minimization_validation_missing" in minimization["blockers"]
 
@@ -538,11 +540,13 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert diagnostics["internal_reference_execution_enabled"] is True
     assert diagnostics["scientifically_validated"] is False
-    assert "finite_difference_diagnostics_not_independent_scientific_validation" in (
-        diagnostics["blockers"]
+    assert (
+        "finite_difference_diagnostics_not_independent_scientific_validation"
+        in (diagnostics["blockers"])
     )
-    assert "periodic_virial_cell_strain_derivative_not_implemented" in (
-        diagnostics["blockers"]
+    assert (
+        "periodic_virial_cell_strain_derivative_not_implemented"
+        in (diagnostics["blockers"])
     )
     assert "public_force_virial_validation_missing" in diagnostics["blockers"]
 
@@ -553,17 +557,21 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert improper_constraint["internal_reference_execution_enabled"] is True
     assert improper_constraint["scientifically_validated"] is False
-    assert "harmonic_out_of_plane_improper_not_scientifically_validated" in (
-        improper_constraint["blockers"]
+    assert (
+        "harmonic_out_of_plane_improper_not_scientifically_validated"
+        in (improper_constraint["blockers"])
     )
-    assert "equal_weight_distance_constraints_ignore_atomic_masses" in (
-        improper_constraint["blockers"]
+    assert (
+        "equal_weight_distance_constraints_ignore_atomic_masses"
+        in (improper_constraint["blockers"])
     )
-    assert "equal_weight_constrained_minimization_not_scientifically_validated" in (
-        improper_constraint["blockers"]
+    assert (
+        "equal_weight_constrained_minimization_not_scientifically_validated"
+        in (improper_constraint["blockers"])
     )
-    assert "independent_constrained_minimization_evidence_missing" in (
-        improper_constraint["blockers"]
+    assert (
+        "independent_constrained_minimization_evidence_missing"
+        in (improper_constraint["blockers"])
     )
 
     solvation = rows[CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID]
@@ -573,16 +581,15 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     )
     assert solvation["internal_reference_execution_enabled"] is True
     assert solvation["scientifically_validated"] is False
-    assert "effective_born_radius_estimation_not_implemented" in (
-        solvation["blockers"]
-    )
+    assert "effective_born_radius_estimation_not_implemented" in (solvation["blockers"])
     assert "nonpolar_solvation_not_implemented" in solvation["blockers"]
     assert "periodic_solvation_not_supported" in solvation["blockers"]
-    assert "solvated_constrained_minimization_not_scientifically_validated" in (
-        solvation["blockers"]
+    assert (
+        "solvated_constrained_minimization_not_scientifically_validated"
+        in (solvation["blockers"])
     )
-    assert "independent_solvated_minimization_evidence_missing" in (
-        solvation["blockers"]
+    assert (
+        "independent_solvated_minimization_evidence_missing" in (solvation["blockers"])
     )
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
@@ -591,18 +598,12 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "without_production_receipt_or_independent_result_review"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
-    assert (
-        "fixture_materializer_not_implemented"
-        not in validation_protocol["blockers"]
-    )
+    assert "fixture_materializer_not_implemented" not in validation_protocol["blockers"]
     assert (
         "independent_analytic_oracle_not_implemented"
         not in validation_protocol["blockers"]
     )
-    assert (
-        "independent_scientific_review_missing"
-        in validation_protocol["blockers"]
-    )
+    assert "independent_scientific_review_missing" in validation_protocol["blockers"]
     assert (
         "signed_independent_scientific_review_attestation_missing"
         in validation_protocol["blockers"]
@@ -624,86 +625,102 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         not in validation_protocol["blockers"]
     )
     assert (
-        "authorization_nonce_not_atomically_reserved"
-        in validation_protocol["blockers"]
+        "authorization_nonce_not_atomically_reserved" in validation_protocol["blockers"]
     )
-    assert "execution_environment_contract_not_frozen" not in (
-        validation_protocol["blockers"]
+    assert (
+        "execution_environment_contract_not_frozen"
+        not in (validation_protocol["blockers"])
     )
-    assert "result_receipt_contract_not_frozen" not in (
-        validation_protocol["blockers"]
-    )
-    assert "execution_environment_receipt_missing" in (
-        validation_protocol["blockers"]
-    )
+    assert "result_receipt_contract_not_frozen" not in (validation_protocol["blockers"])
+    assert "execution_environment_receipt_missing" in (validation_protocol["blockers"])
     assert "validation_runner_not_implemented" not in validation_protocol["blockers"]
-    assert "result_receipt_writer_not_implemented" not in (
-        validation_protocol["blockers"]
+    assert (
+        "result_receipt_writer_not_implemented" not in (validation_protocol["blockers"])
     )
-    assert "production_validation_result_receipt_missing" in (
-        validation_protocol["blockers"]
+    assert (
+        "production_validation_result_receipt_missing"
+        in (validation_protocol["blockers"])
     )
     assert "independent_result_review_missing" in validation_protocol["blockers"]
-    assert "result_receipt_external_authenticity_not_established" in (
-        validation_protocol["blockers"]
+    assert (
+        "result_receipt_external_authenticity_not_established"
+        in (validation_protocol["blockers"])
     )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
     assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
-    assert "minimization_validation_protocol_frozen_but_not_executed" in (
-        validation_protocol["blockers"]
+    assert (
+        "minimization_validation_protocol_frozen_but_not_executed"
+        in (validation_protocol["blockers"])
     )
-    minimization_protocol = rows[
-        CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
-    ]
+    minimization_protocol = rows[CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert minimization_protocol["current_state"] == (
-        "failure_inclusive_result_writer_and_independent_result_review_"
-        "contract_without_production_result_receipt_or_review"
+        "failure_inclusive_complete_coordinate_trace_production_entrypoint_"
+        "result_writer_and_independent_result_review_contract_without_"
+        "production_result_receipt_or_review"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
-    assert "materializer_definition_is_not_validation_result_evidence" in (
-        minimization_protocol["blockers"]
+    assert (
+        "materializer_definition_is_not_validation_result_evidence"
+        in (minimization_protocol["blockers"])
     )
-    assert "fixture_materializer_not_implemented" not in (
-        minimization_protocol["blockers"]
+    assert (
+        "fixture_materializer_not_implemented"
+        not in (minimization_protocol["blockers"])
     )
-    assert "independent_minimization_reference_is_not_validation_result_evidence" in (
-        minimization_protocol["blockers"]
+    assert (
+        "independent_minimization_reference_is_not_validation_result_evidence"
+        in (minimization_protocol["blockers"])
     )
-    assert "independent_minimization_reference_not_independently_reviewed" in (
-        minimization_protocol["blockers"]
+    assert (
+        "independent_minimization_reference_not_independently_reviewed"
+        in (minimization_protocol["blockers"])
     )
-    assert "signed_independent_scientific_review_attestation_missing" in (
-        minimization_protocol["blockers"]
+    assert (
+        "signed_independent_scientific_review_attestation_missing"
+        in (minimization_protocol["blockers"])
     )
-    assert "trusted_independent_scientific_reviewer_key_not_provided" in (
-        minimization_protocol["blockers"]
+    assert (
+        "trusted_independent_scientific_reviewer_key_not_provided"
+        in (minimization_protocol["blockers"])
     )
-    assert "independent_minimization_reference_not_bound" not in (
-        minimization_protocol["blockers"]
+    assert (
+        "production_trust_store_not_provisioned" in (minimization_protocol["blockers"])
     )
-    assert "production_result_receipt_missing" in (
-        minimization_protocol["blockers"]
+    assert (
+        "independent_minimization_reference_not_bound"
+        not in (minimization_protocol["blockers"])
     )
-    assert "signed_independent_result_review_attestation_missing" in (
-        minimization_protocol["blockers"]
+    assert "production_result_receipt_missing" in (minimization_protocol["blockers"])
+    assert (
+        "signed_independent_result_review_attestation_missing"
+        in (minimization_protocol["blockers"])
     )
-    assert "two_cpu_host_reproducibility_missing" in (
-        minimization_protocol["blockers"]
+    assert "two_cpu_host_reproducibility_missing" in (minimization_protocol["blockers"])
+    assert (
+        "coordinate_trace_not_retained_in_result_receipt"
+        not in (minimization_protocol["blockers"])
     )
-    assert "signed_execution_authorization_receipt_schema_not_frozen" not in (
-        minimization_protocol["blockers"]
+    assert (
+        "trajectory_level_minimization_comparison_missing"
+        in (minimization_protocol["blockers"])
     )
-    assert "execution_environment_receipt_missing" in (
-        minimization_protocol["blockers"]
+    assert (
+        "signed_execution_authorization_receipt_schema_not_frozen"
+        not in (minimization_protocol["blockers"])
     )
-    assert "run_start_dependency_reverification_not_implemented" not in (
-        minimization_protocol["blockers"]
+    assert (
+        "execution_environment_receipt_missing" in (minimization_protocol["blockers"])
     )
-    assert "validation_runner_not_implemented" not in (
-        minimization_protocol["blockers"]
+    assert (
+        "run_start_dependency_reverification_not_implemented"
+        not in (minimization_protocol["blockers"])
     )
-    assert "result_receipt_writer_not_implemented" not in (
-        minimization_protocol["blockers"]
+    assert (
+        "validation_runner_not_implemented" not in (minimization_protocol["blockers"])
+    )
+    assert (
+        "result_receipt_writer_not_implemented"
+        not in (minimization_protocol["blockers"])
     )
     assert "scientific_validation_missing" in minimization_protocol["blockers"]
     assert (
@@ -743,6 +760,8 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_runner" in policy
     assert "reference_minimization_validation_result_writer" in policy
     assert "reference_minimization_validation_result_review" in policy
+    assert "fixed external root-owned mode-0600 trust store" in policy
+    assert "child-preflighted fourteen-case run" in status
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -830,6 +849,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization_validation_authorization.py",
         "test_engine_v2_reference_minimization_validation_nonce_reservation.py",
         "test_engine_v2_reference_minimization_validation_run_start.py",
+        "test_engine_v2_reference_minimization_validation_runner.py",
         "test_engine_v2_reference_minimization_validation_result_writer.py",
         "test_engine_v2_reference_minimization_validation_result_review.py",
         "test_engine_v2_external_baseline.py",
@@ -844,15 +864,9 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256" in source
-    assert (
-        "FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256"
-        in source
-    )
+    assert "FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256" in source
-    assert (
-        "FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256"
-        in source
-    )
+    assert "FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256" in source
@@ -865,8 +879,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         in source
     )
     assert (
-        "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256"
-        in source
+        "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256" in source
     )
     assert (
         "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256"
@@ -883,17 +896,11 @@ def test_cpu_reference_validation_workflow_covers_minimization_result_review() -
         ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml"
     ).read_text(encoding="utf-8")
 
-    assert (
-        "test_engine_v2_reference_minimization_validation_result_review.py"
-        in source
-    )
+    assert "test_engine_v2_reference_minimization_validation_result_review.py" in source
     assert "reference_minimization_validation_result_review.py" in source
     assert (
         "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256"
         in source
     )
-    assert (
-        "reference_minimization_validation_result_review_contract_decision"
-        in source
-    )
+    assert "reference_minimization_validation_result_review_contract_decision" in source
     assert f'"{IMPLEMENTATION_STAGE}"' in source

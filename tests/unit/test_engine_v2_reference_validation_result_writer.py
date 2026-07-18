@@ -62,6 +62,28 @@ RAW_REVIEW = {"raw_signed_review": True}
 RAW_AUTHORIZATION = {"raw_signed_authorization": True}
 
 
+def _environment_rows() -> tuple[tuple[str, str], ...]:
+    return tuple(
+        sorted(
+            {
+                runner_module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV: "456",
+                "CUDA_VISIBLE_DEVICES": "",
+                "HIP_VISIBLE_DEVICES": "",
+                "LANG": "C.UTF-8",
+                "LC_ALL": "C.UTF-8",
+                "MKL_NUM_THREADS": "1",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONHASHSEED": "123",
+                "PYTHONPYCACHEPREFIX": "/dev/null",
+                "ROCR_VISIBLE_DEVICES": "",
+                "TZ": "UTC",
+            }.items()
+        )
+    )
+
+
 def _private_root(tmp_path: Path, name: str = "outputs") -> Path:
     root = tmp_path / name
     root.mkdir(mode=0o700)
@@ -83,6 +105,8 @@ def _environment(root: Path, **overrides: object) -> SimpleNamespace:
         "code_commit_sha": CODE_COMMIT_SHA,
         "runner_source_sha256": reference_validation_runner_source_sha256(),
         "dependency_artifact_sha256_rows": tuple(sorted(DEPENDENCY_ROWS.items())),
+        "environment_variable_rows": _environment_rows(),
+        "python_hash_seed": 123,
         "application_seed": 456,
         "command_argv": REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
         "artifact_output_root_identity_sha256": (
@@ -125,6 +149,11 @@ def _observation(
         runner_module,
         "_require_source_only_python_runtime",
         lambda: None,
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "_fixed_worker_dependency_python_path",
+        lambda: "/trusted",
     )
 
     def run_in_process(
@@ -233,9 +262,7 @@ def _write(root: Path, observation: object):
         review_attestation=RAW_REVIEW,
         authorization_receipt=RAW_AUTHORIZATION,
         trusted_reviewer_keys={},
-        expected_implementation_author_identity_sha256=(
-            AUTHOR_IDENTITY_SHA256
-        ),
+        expected_implementation_author_identity_sha256=(AUTHOR_IDENTITY_SHA256),
         trusted_operator_keys={},
         revoked_authorization_receipt_sha256s=("c" * 64,),
         revoked_review_attestation_sha256s=("d" * 64,),
@@ -299,9 +326,7 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     authorization_kwargs = seen["authorization_kwargs"]
     assert isinstance(authorization_kwargs, dict)
     assert authorization_kwargs["revoked_receipt_sha256s"] == ("c" * 64,)
-    assert authorization_kwargs["revoked_review_attestation_sha256s"] == (
-        "d" * 64,
-    )
+    assert authorization_kwargs["revoked_review_attestation_sha256s"] == ("d" * 64,)
     assert authorization_kwargs["consumed_nonce_sha256s"] == ("f" * 64,)
 
     assert result_path.is_file()
@@ -336,24 +361,35 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     assert payload["scientifically_validated"] is False
     assert payload["claim_safe"] is False
     assert payload["artifact_path_confinement_verification"]["path_disclosed"] is False
-    assert payload["artifact_path_confinement_verification"][
-        "same_uid_replacement_resistance_established"
-    ] is False
+    assert (
+        payload["artifact_path_confinement_verification"][
+            "same_uid_replacement_resistance_established"
+        ]
+        is False
+    )
     assert "test-only-32-bytes" not in json.dumps(payload, sort_keys=True)
 
-    assert read_reference_validation_result_receipt(root, AUTHORIZATION_NONCE) == receipt
-    assert verify_reference_validation_result_receipt(
-        root,
-        AUTHORIZATION_NONCE,
-        expected_receipt_sha256=receipt.receipt_sha256,
-        revoked_review_attestation_sha256s=(),
-        revoked_authorization_receipt_sha256s=(),
-        revoked_result_receipt_sha256s=(),
-        superseded_result_receipt_sha256s=(),
-    ) == receipt
-    assert require_reference_validation_run_observation_document(
-        payload["run_observation"]
-    ) == observation
+    assert (
+        read_reference_validation_result_receipt(root, AUTHORIZATION_NONCE) == receipt
+    )
+    assert (
+        verify_reference_validation_result_receipt(
+            root,
+            AUTHORIZATION_NONCE,
+            expected_receipt_sha256=receipt.receipt_sha256,
+            revoked_review_attestation_sha256s=(),
+            revoked_authorization_receipt_sha256s=(),
+            revoked_result_receipt_sha256s=(),
+            superseded_result_receipt_sha256s=(),
+        )
+        == receipt
+    )
+    assert (
+        require_reference_validation_run_observation_document(
+            payload["run_observation"]
+        )
+        == observation
+    )
 
     with pytest.raises(ReferenceValidationResultReceiptAlreadyExistsError):
         _write(root, observation)
@@ -581,9 +617,7 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
             AUTHORIZATION_NONCE,
             expected_receipt_sha256=receipt.receipt_sha256,
             revoked_review_attestation_sha256s=(),
-            revoked_authorization_receipt_sha256s=(
-                AUTHORIZATION_RECEIPT_SHA256,
-            ),
+            revoked_authorization_receipt_sha256s=(AUTHORIZATION_RECEIPT_SHA256,),
             revoked_result_receipt_sha256s=(),
             superseded_result_receipt_sha256s=(),
         )
@@ -656,9 +690,7 @@ def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() ->
     source = inspect.getsource(module)
     tree = ast.parse(source)
     top_level_imports = [
-        node
-        for node in tree.body
-        if isinstance(node, (ast.Import, ast.ImportFrom))
+        node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
     ]
     imported_modules = {
         alias.name.split(".", 1)[0]

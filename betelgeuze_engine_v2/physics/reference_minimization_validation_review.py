@@ -31,21 +31,21 @@ from .reference_minimization_validation_artifact_binding import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_review_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_review_contract/2.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/2.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_review_contract/1.0.0"
+    "cpu_reference_minimization_validation_independent_review_contract/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "1.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-18T02:18:00Z"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-19T06:20:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256 = (
-    "4c38a0e8d2bd9733f2412b595d8a88e5da484fd54911146b9e3271bd6e17475f"
+    "324b9feebe12ba0f4056686a36fb9c62104604fb0be7c0e508a630105d8f448a"
 )
 
 _REQUIRED_REVIEW_CHECK_IDS = (
@@ -55,6 +55,7 @@ _REQUIRED_REVIEW_CHECK_IDS = (
     "constraint_tangent_force_projection_reviewed",
     "fixed_born_energy_and_force_equations_reviewed",
     "bounded_backtracking_and_failure_ledger_reviewed",
+    "complete_coordinate_trace_retention_and_identity_reviewed",
     "checkpoint_restart_identity_and_reproducibility_reviewed",
     "negative_case_error_mapping_reviewed",
     "oracle_import_and_operational_implementation_separation_reviewed",

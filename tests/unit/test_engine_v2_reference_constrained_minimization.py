@@ -4,6 +4,7 @@ from dataclasses import replace
 import hashlib
 import json
 import math
+import struct
 
 import pytest
 
@@ -550,6 +551,111 @@ def test_checkpoint_tampering_and_parameter_crosswire_fail_closed() -> None:
     with pytest.raises(ReferenceConstrainedMinimizationError, match="digest mismatch"):
         require_reference_constrained_minimization_checkpoint_document(payload)
 
+    shortened_trace = result.checkpoint.to_dict()
+    first_observation = shortened_trace["observations"][0]
+    for coordinates_key, digest_key in (
+        ("raw_coordinates_angstrom_hex", "raw_coordinates_sha256"),
+        ("projected_coordinates_angstrom_hex", "projected_coordinates_sha256"),
+    ):
+        first_observation[coordinates_key] = first_observation[coordinates_key][:-1]
+        first_observation[digest_key] = hashlib.sha256(
+            b"".join(
+                struct.pack("<d", float.fromhex(item))
+                for row in first_observation[coordinates_key]
+                for item in row
+            )
+        ).hexdigest()
+    shortened_projection = {
+        key: value
+        for key, value in shortened_trace.items()
+        if key != "checkpoint_sha256"
+    }
+    shortened_trace["checkpoint_sha256"] = hashlib.sha256(
+        json.dumps(
+            shortened_projection,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+    with pytest.raises(ReferenceConstrainedMinimizationError, match="atom count"):
+        require_reference_constrained_minimization_checkpoint_document(
+            shortened_trace
+        )
+
+    repeated_initial = result.checkpoint.to_dict()
+    repeated_row = next(
+        row
+        for row in repeated_initial["observations"][1:]
+        if row["outcome"] == "accepted"
+    )
+    repeated_row["outcome"] = "initial"
+    repeated_row["failure_code"] = None
+    repeated_initial_projection = {
+        key: value
+        for key, value in repeated_initial.items()
+        if key != "checkpoint_sha256"
+    }
+    repeated_initial["checkpoint_sha256"] = hashlib.sha256(
+        json.dumps(
+            repeated_initial_projection,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+    with pytest.raises(
+        ReferenceConstrainedMinimizationError,
+        match="repeats the initial state",
+    ):
+        require_reference_constrained_minimization_checkpoint_document(
+            repeated_initial
+        )
+
+    source_drifted_trace = result.checkpoint.to_dict()
+    initial_coordinates = source_drifted_trace["observations"][0][
+        "raw_coordinates_angstrom_hex"
+    ]
+    initial_coordinates[0][0] = float(123.0).hex()
+    source_drifted_trace["observations"][0]["raw_coordinates_sha256"] = (
+        hashlib.sha256(
+            b"".join(
+                struct.pack("<d", float.fromhex(item))
+                for row in initial_coordinates
+                for item in row
+            )
+        ).hexdigest()
+    )
+    source_drifted_projection = {
+        key: value
+        for key, value in source_drifted_trace.items()
+        if key != "checkpoint_sha256"
+    }
+    source_drifted_trace["checkpoint_sha256"] = hashlib.sha256(
+        json.dumps(
+            source_drifted_projection,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+    require_reference_constrained_minimization_checkpoint_document(
+        source_drifted_trace
+    )
+    with pytest.raises(
+        ReferenceConstrainedMinimizationError,
+        match="history does not replay exactly from the source system",
+    ):
+        minimize_reference_force_field_v2_constrained(
+            system,
+            parameters,
+            config,
+            checkpoint=source_drifted_trace,
+        )
+
     nested_payload = result.checkpoint.to_dict()
     nested_payload["observations"][0]["max_constraint_residual_angstrom"] += 1.0e-6
     projection = {
@@ -583,6 +689,67 @@ def test_checkpoint_tampering_and_parameter_crosswire_fail_closed() -> None:
             _angle_parameters(system, metadata={"different": True}),
             config,
             checkpoint=result.checkpoint,
+        )
+
+
+def test_rehashed_initial_projected_coordinate_tamper_fails_source_replay() -> None:
+    system = _angle_system()
+    parameters = _angle_parameters(system)
+    config = _config(max_iterations=4, force_tolerance=1.0e-12)
+    result = minimize_reference_force_field_v2_constrained(
+        system, parameters, config
+    )
+    payload = result.checkpoint.to_dict()
+    initial = payload["observations"][0]
+    projected_coordinates = initial["projected_coordinates_angstrom_hex"]
+    projected_coordinates[0][0] = float(123.0).hex()
+    projected_digest = hashlib.sha256(
+        b"".join(
+            struct.pack("<d", float.fromhex(item))
+            for row in projected_coordinates
+            for item in row
+        )
+    ).hexdigest()
+    initial["projected_coordinates_sha256"] = projected_digest
+    constraint_projection = initial["constraint_projection"]
+    constraint_projection["final_coordinates_sha256"] = projected_digest
+    constraint_projection_payload = {
+        key: value
+        for key, value in constraint_projection.items()
+        if key != "projection_sha256"
+    }
+    constraint_projection["projection_sha256"] = hashlib.sha256(
+        json.dumps(
+            constraint_projection_payload,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+    checkpoint_projection = {
+        key: value for key, value in payload.items() if key != "checkpoint_sha256"
+    }
+    payload["checkpoint_sha256"] = hashlib.sha256(
+        json.dumps(
+            checkpoint_projection,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+
+    require_reference_constrained_minimization_checkpoint_document(payload)
+    with pytest.raises(
+        ReferenceConstrainedMinimizationError,
+        match="history does not replay exactly from the source system",
+    ):
+        minimize_reference_force_field_v2_constrained(
+            system,
+            parameters,
+            config,
+            checkpoint=payload,
         )
 
 

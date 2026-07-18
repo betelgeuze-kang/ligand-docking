@@ -46,10 +46,10 @@ REFERENCE_CONSTRAINED_MINIMIZATION_CONFIG_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_constrained_minimization_config/1.0.0"
 )
 REFERENCE_CONSTRAINED_MINIMIZATION_CHECKPOINT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_constrained_minimization_checkpoint/2.0.0"
+    "betelgeuze.engine_v2_reference_constrained_minimization_checkpoint/3.0.0"
 )
 REFERENCE_CONSTRAINED_MINIMIZATION_RESULT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_constrained_minimization_result/2.0.0"
+    "betelgeuze.engine_v2_reference_constrained_minimization_result/3.0.0"
 )
 REFERENCE_CONSTRAINED_MINIMIZATION_MAX_FORCE_PROJECTION_SWEEPS = 1_000
 REFERENCE_CONSTRAINED_MINIMIZATION_SCIENTIFIC_BLOCKERS = (
@@ -193,6 +193,68 @@ def _coordinate_bytes(coordinates: torch.Tensor) -> bytes:
 
 def _coordinate_digest(coordinates: torch.Tensor) -> str:
     return hashlib.sha256(_coordinate_bytes(coordinates)).hexdigest()
+
+
+def _coordinate_hex_rows(
+    coordinates: torch.Tensor,
+) -> tuple[tuple[str, str, str], ...]:
+    if coordinates.device.type != "cpu" or coordinates.dtype != torch.float64:
+        raise ReferenceConstrainedMinimizationError(
+            "trace coordinates must be CPU float64"
+        )
+    rows = coordinates.detach().contiguous()
+    if rows.ndim != 3 or rows.shape[0] != 1 or rows.shape[2] != 3:
+        raise ReferenceConstrainedMinimizationError(
+            "trace coordinates must have shape [1,N,3]"
+        )
+    return tuple(
+        tuple(float(value).hex() for value in row)  # type: ignore[misc]
+        for row in rows[0].tolist()
+    )
+
+
+def _require_coordinate_hex_rows(
+    value: object,
+) -> tuple[tuple[str, str, str], ...]:
+    if not isinstance(value, list) or not value:
+        raise ReferenceConstrainedMinimizationError(
+            "observation coordinate trace must cover every atom"
+        )
+    normalized: list[tuple[str, str, str]] = []
+    for row in value:
+        if not isinstance(row, list) or len(row) != 3:
+            raise ReferenceConstrainedMinimizationError(
+                "observation coordinates must have [atom,3] shape"
+            )
+        values: list[str] = []
+        for item in row:
+            if not isinstance(item, str):
+                raise ReferenceConstrainedMinimizationError(
+                    "observation coordinate must be canonical binary64 hex"
+                )
+            try:
+                number = float.fromhex(item)
+            except ValueError as exc:
+                raise ReferenceConstrainedMinimizationError(
+                    "observation coordinate must be canonical binary64 hex"
+                ) from exc
+            if not math.isfinite(number) or number.hex() != item:
+                raise ReferenceConstrainedMinimizationError(
+                    "observation coordinate must be canonical finite binary64 hex"
+                )
+            values.append(item)
+        normalized.append((values[0], values[1], values[2]))
+    return tuple(normalized)
+
+
+def _coordinate_hex_digest(
+    rows: tuple[tuple[str, str, str], ...],
+) -> str:
+    raw = bytearray()
+    for row in rows:
+        for item in row:
+            raw.extend(struct.pack("<d", float.fromhex(item)))
+    return hashlib.sha256(raw).hexdigest()
 
 
 def _same_float(first: float, second: float) -> bool:
@@ -418,7 +480,9 @@ class ReferenceConstrainedMinimizationObservation:
     trial: int
     evaluation_index: int
     outcome: str
+    raw_coordinates_angstrom_hex: tuple[tuple[str, str, str], ...]
     raw_coordinates_sha256: str
+    projected_coordinates_angstrom_hex: tuple[tuple[str, str, str], ...]
     projected_coordinates_sha256: str
     step_size_angstrom2_mol_per_kcal: float
     energy_kcal_per_mol: float | None
@@ -435,7 +499,13 @@ class ReferenceConstrainedMinimizationObservation:
             "trial": self.trial,
             "evaluation_index": self.evaluation_index,
             "outcome": self.outcome,
+            "raw_coordinates_angstrom_hex": [
+                list(row) for row in self.raw_coordinates_angstrom_hex
+            ],
             "raw_coordinates_sha256": self.raw_coordinates_sha256,
+            "projected_coordinates_angstrom_hex": [
+                list(row) for row in self.projected_coordinates_angstrom_hex
+            ],
             "projected_coordinates_sha256": self.projected_coordinates_sha256,
             "step_size_angstrom2_mol_per_kcal": (
                 self.step_size_angstrom2_mol_per_kcal
@@ -462,8 +532,14 @@ class ReferenceConstrainedMinimizationObservation:
         if not isinstance(value, Mapping):
             raise ReferenceConstrainedMinimizationError(
                 "checkpoint observation must be a mapping"
-            )
+        )
         try:
+            raw_coordinate_rows = _require_coordinate_hex_rows(
+                value["raw_coordinates_angstrom_hex"]
+            )
+            projected_coordinate_rows = _require_coordinate_hex_rows(
+                value["projected_coordinates_angstrom_hex"]
+            )
             force_sweeps = value["force_projection_sweeps"]
             force_residual = value[
                 "max_constraint_force_residual_kcal_per_mol_angstrom"
@@ -482,10 +558,12 @@ class ReferenceConstrainedMinimizationObservation:
                     maximum=65_001,
                 ),
                 outcome=str(value["outcome"]),
+                raw_coordinates_angstrom_hex=raw_coordinate_rows,
                 raw_coordinates_sha256=_digest(
                     value["raw_coordinates_sha256"],
                     name="raw_coordinates_sha256",
                 ),
+                projected_coordinates_angstrom_hex=projected_coordinate_rows,
                 projected_coordinates_sha256=_digest(
                     value["projected_coordinates_sha256"],
                     name="projected_coordinates_sha256",
@@ -550,6 +628,14 @@ class ReferenceConstrainedMinimizationObservation:
             raise ReferenceConstrainedMinimizationError(
                 f"checkpoint observation is missing {exc.args[0]}"
             ) from None
+        if _coordinate_hex_digest(row.raw_coordinates_angstrom_hex) != (
+            row.raw_coordinates_sha256
+        ) or _coordinate_hex_digest(row.projected_coordinates_angstrom_hex) != (
+            row.projected_coordinates_sha256
+        ):
+            raise ReferenceConstrainedMinimizationError(
+                "checkpoint observation coordinate payload digest mismatch"
+            )
         allowed = {
             "initial",
             "accepted",
@@ -759,6 +845,14 @@ def require_reference_constrained_minimization_checkpoint_document(
         ReferenceConstrainedMinimizationObservation.from_dict(row)
         for row in observations_payload
     )
+    if any(
+        len(row.raw_coordinates_angstrom_hex) != shape[1]
+        or len(row.projected_coordinates_angstrom_hex) != shape[1]
+        for row in observations
+    ):
+        raise ReferenceConstrainedMinimizationError(
+            "checkpoint observation atom count does not match coordinate shape"
+        )
     if [row.evaluation_index for row in observations] != list(
         range(1, len(observations) + 1)
     ):
@@ -785,8 +879,12 @@ def require_reference_constrained_minimization_checkpoint_document(
         if row.outcome == "accepted":
             expected_iteration += 1
             expected_trial = 0
-        else:
+        elif row.outcome.startswith("rejected_"):
             expected_trial += 1
+        else:
+            raise ReferenceConstrainedMinimizationError(
+                "checkpoint observation ledger repeats the initial state"
+            )
     accepted_rows = [row for row in observations if row.outcome == "accepted"]
     accepted = _exact_int(
         value["accepted_iterations"],
@@ -1174,6 +1272,11 @@ class ReferenceConstrainedMinimizationResult:
             "rejected_evaluations": self.rejected_evaluations,
             "evaluation_count": self.evaluation_count,
             "checkpoint_sha256": self.checkpoint.checkpoint_sha256,
+            "observations": [row.to_dict() for row in self.observations],
+            "coordinate_trace_length": len(self.observations),
+            "coordinate_trace_sha256": _sha256(
+                [row.to_dict() for row in self.observations]
+            ),
             "solvation_parameter_fingerprint_sha256": (
                 self.solvation_parameter_fingerprint_sha256
             ),
@@ -1280,7 +1383,13 @@ def minimize_reference_force_field_v2_constrained(
                 trial=0,
                 evaluation_index=1,
                 outcome="initial",
+                raw_coordinates_angstrom_hex=_coordinate_hex_rows(
+                    system.coordinates
+                ),
                 raw_coordinates_sha256=_coordinate_digest(system.coordinates),
+                projected_coordinates_angstrom_hex=_coordinate_hex_rows(
+                    coordinates
+                ),
                 projected_coordinates_sha256=_coordinate_digest(coordinates),
                 step_size_angstrom2_mol_per_kcal=0.0,
                 energy_kcal_per_mol=current_energy,
@@ -1321,6 +1430,21 @@ def minimize_reference_force_field_v2_constrained(
             )
         if checkpoint_row.coordinate_shape != (1, system.atom_count, 3):
             raise ReferenceConstrainedMinimizationError("checkpoint atom count mismatch")
+        if checkpoint_row.observations[-1].outcome.startswith("rejected_"):
+            raise ReferenceConstrainedMinimizationError(
+                "terminal failed line-search checkpoint cannot be resumed"
+            )
+        replayed = minimize_reference_force_field_v2_constrained(
+            system,
+            parameters,
+            config,
+            solvation_parameters=solvation_parameters,
+            pause_after_accepted_iterations=checkpoint_row.accepted_iterations,
+        )
+        if replayed.checkpoint.to_dict() != checkpoint_row.to_dict():
+            raise ReferenceConstrainedMinimizationError(
+                "checkpoint history does not replay exactly from the source system"
+            )
         coordinates = checkpoint_row.coordinates()
         verification_projection = project_distance_constraints(
             system.with_coordinates(
@@ -1376,10 +1500,6 @@ def minimize_reference_force_field_v2_constrained(
         accepted_iterations = checkpoint_row.accepted_iterations
         evaluation_count = checkpoint_row.evaluation_count
         observations = list(checkpoint_row.observations)
-        if observations[-1].outcome.startswith("rejected_"):
-            raise ReferenceConstrainedMinimizationError(
-                "terminal failed line-search checkpoint cannot be resumed"
-            )
         initial_energy = checkpoint_row.initial_energy_kcal_per_mol
         initial_max_force = (
             checkpoint_row.initial_max_tangent_force_kcal_per_mol_angstrom
@@ -1457,7 +1577,13 @@ def minimize_reference_force_field_v2_constrained(
                         trial=trial,
                         evaluation_index=evaluation_count,
                         outcome=outcome,
+                        raw_coordinates_angstrom_hex=_coordinate_hex_rows(
+                            raw_coordinates
+                        ),
                         raw_coordinates_sha256=raw_digest,
+                        projected_coordinates_angstrom_hex=_coordinate_hex_rows(
+                            trial_coordinates
+                        ),
                         projected_coordinates_sha256=trial_digest,
                         step_size_angstrom2_mol_per_kcal=step,
                         energy_kcal_per_mol=energy,
@@ -1569,7 +1695,13 @@ def minimize_reference_force_field_v2_constrained(
                     trial=trial,
                     evaluation_index=evaluation_count,
                     outcome="accepted",
+                    raw_coordinates_angstrom_hex=_coordinate_hex_rows(
+                        raw_coordinates
+                    ),
                     raw_coordinates_sha256=raw_digest,
+                    projected_coordinates_angstrom_hex=_coordinate_hex_rows(
+                        trial_coordinates
+                    ),
                     projected_coordinates_sha256=trial_digest,
                     step_size_angstrom2_mol_per_kcal=step,
                     energy_kcal_per_mol=trial_energy,

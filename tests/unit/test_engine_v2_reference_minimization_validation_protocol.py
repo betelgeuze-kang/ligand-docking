@@ -13,6 +13,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol imp
     FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
     CPUMinimizationValidationProtocolError,
     cpu_minimization_validation_authorization_decision,
+    cpu_minimization_validation_case_atom_count,
     cpu_minimization_validation_protocol_document,
     cpu_minimization_validation_protocol_json_bytes,
     require_cpu_minimization_validation_execution_authorized,
@@ -41,7 +42,7 @@ def test_protocol_freezes_exact_source_case_and_metric_identities() -> None:
         FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
     )
     assert FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 == (
-        "c8145a700e78e6d5a947e85935f7550e7d823fb64a566297a06ec96a1fa782c5"
+        "46c775ea0c815b4414f02d6613984ad7117aa488787fb7f9b23889c591f0812c"
     )
     assert document["dependencies"]["exact_source_identity_required_at_execution"]
     source_hashes = document["dependencies"]["source_sha256"]
@@ -56,6 +57,10 @@ def test_protocol_freezes_exact_source_case_and_metric_identities() -> None:
     assert document["dependencies"]["source_set_sha256"] == _canonical_sha256(
         source_hashes
     )
+    assert tuple(
+        cpu_minimization_validation_case_atom_count(row["case_id"])
+        for row in document["case_manifest"]["cases"]
+    ) == (2, 4, 4, 2, 3, 3, 3, 3, 4, 4, 3, 3, 4, 3)
 
 
 def test_fixture_manifest_freezes_exact_payloads_and_binds_every_case() -> None:

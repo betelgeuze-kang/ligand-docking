@@ -284,8 +284,14 @@ def test_run_start_contract_is_frozen_and_current_decision_is_closed() -> None:
     assert first["contract_sha256"] == (
         FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256
     )
-    assert first["runtime_observation"]["arbitrary_or_secret_bearing_argv_allowed"] is False
-    assert first["network_isolation"]["kernel_network_isolation_enforced_by_this_library"] is False
+    assert (
+        first["runtime_observation"]["arbitrary_or_secret_bearing_argv_allowed"]
+        is False
+    )
+    assert (
+        first["network_isolation"]["kernel_network_isolation_enforced_by_this_library"]
+        is False
+    )
     assert first["persistence"]["release_or_delete_api_provided"] is False
     assert require_reference_validation_run_start_contract_document(first) == first
 
@@ -294,6 +300,40 @@ def test_run_start_contract_is_frozen_and_current_decision_is_closed() -> None:
     assert decision["validation_runner_implemented"] is False
     assert decision["validation_execution_authorized"] is False
     assert decision["validation_results_collected"] is False
+
+
+@pytest.mark.parametrize("value", ["0", "4294967295"])
+def test_python_hash_seed_uint32_boundaries_are_accepted(value: str) -> None:
+    assert module._parse_seed(
+        value,
+        name="PYTHONHASHSEED",
+        maximum=2**32 - 1,
+    ) == int(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, "", "00", "+1", "-1", "random", "４", "4294967296"],
+)
+def test_python_hash_seed_outside_canonical_uint32_is_rejected(
+    value: object,
+) -> None:
+    with pytest.raises(ReferenceValidationRunStartError):
+        module._parse_seed(
+            value,
+            name="PYTHONHASHSEED",
+            maximum=2**32 - 1,
+        )
+
+
+def test_application_seed_retains_signed_int63_upper_bound() -> None:
+    assert (
+        module._parse_seed(
+            str(2**63 - 1),
+            name=REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
+        )
+        == 2**63 - 1
+    )
 
 
 def test_run_start_contract_rejects_tamper() -> None:
@@ -349,7 +389,9 @@ def test_network_attestation_rejects_tamper_crosswire_expiry_and_revocation(
 
     tampered = deepcopy(attestation)
     tampered["network_access_disabled"] = False
-    with pytest.raises(ReferenceValidationRunStartError, match="signature verification"):
+    with pytest.raises(
+        ReferenceValidationRunStartError, match="signature verification"
+    ):
         verify_signed_reference_validation_network_isolation_attestation(  # type: ignore[arg-type]
             tampered,
             **kwargs,
@@ -410,18 +452,34 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
     assert created.command_argv == REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV
     assert created.python_hash_seed == 123
     assert created.application_seed == 456
+    overflow_rows = tuple(
+        (name, str(2**32) if name == "PYTHONHASHSEED" else value)
+        for name, value in created.environment_variable_rows
+    )
+    with pytest.raises(ReferenceValidationRunStartError, match="seeds"):
+        replace(
+            created,
+            python_hash_seed=2**32,
+            environment_variable_rows=overflow_rows,
+        )
     assert path.is_file()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert path.stat().st_nlink == 1
-    assert read_reference_validation_execution_environment_receipt(
-        output_root,
-        AUTHORIZATION_NONCE,
-    ) == created
-    assert require_reference_validation_execution_environment_receipt_for_runner(
-        output_root,
-        AUTHORIZATION_NONCE,
-        expected_receipt_sha256=created.receipt_sha256,
-    ) == created
+    assert (
+        read_reference_validation_execution_environment_receipt(
+            output_root,
+            AUTHORIZATION_NONCE,
+        )
+        == created
+    )
+    assert (
+        require_reference_validation_execution_environment_receipt_for_runner(
+            output_root,
+            AUTHORIZATION_NONCE,
+            expected_receipt_sha256=created.receipt_sha256,
+        )
+        == created
+    )
 
     payload = json.loads(path.read_text(encoding="ascii"))
     assert payload["schema_id"] == (
@@ -510,7 +568,10 @@ def _mutate_gpu_environment(observation: module._RuntimeObservation):
         (
             lambda row: replace(
                 row,
-                thread_count_rows=(*row.thread_count_rows[:-1], ("torch_num_threads", 2)),
+                thread_count_rows=(
+                    *row.thread_count_rows[:-1],
+                    ("torch_num_threads", 2),
+                ),
             ),
             "thread counts",
         ),
@@ -579,7 +640,9 @@ def test_duplicate_environment_receipt_is_fail_closed(
             receipt=receipt,
             network=network,
         )
-    assert (output_root / f"{AUTHORIZATION_NONCE}.environment.json").read_bytes() == original
+    assert (
+        output_root / f"{AUTHORIZATION_NONCE}.environment.json"
+    ).read_bytes() == original
     assert first.to_dict()["validation_execution_authorized"] is False
 
 

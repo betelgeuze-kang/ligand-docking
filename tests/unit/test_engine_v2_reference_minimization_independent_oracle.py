@@ -13,7 +13,9 @@ from betelgeuze_engine_v2.physics.reference_minimization import (
     minimize_reference_force_field,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_independent_oracle import (
+    IndependentMinimizationCoordinateTraceStep,
     IndependentMinimizationOracleError,
+    _checkpoint,
     evaluate_independent_minimization_oracle,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_materializer import (
@@ -151,6 +153,14 @@ def test_checkpoint_resume_is_exact_for_independent_reference(case_id: str) -> N
         checkpoint=paused.checkpoint,
     )
     assert resumed.result_sha256 == uninterrupted.result_sha256
+    assert [row.to_dict() for row in resumed.coordinate_trace] == [
+        row.to_dict() for row in uninterrupted.coordinate_trace
+    ]
+    assert all(
+        len(row.raw_coordinates_angstrom) == case.system.atom_count
+        and len(row.evaluated_coordinates_angstrom) == case.system.atom_count
+        for row in resumed.coordinate_trace
+    )
     assert resumed.checkpoint is not None
     assert uninterrupted.checkpoint is not None
     assert (
@@ -174,8 +184,18 @@ def test_frozen_negative_cases_fail_closed_with_exact_code(
         assert result.rejected_evaluations > 0
         assert result.final_coordinates_angstrom is not None
         assert result.accepted_energy_trace_kcal_per_mol
+        assert len(result.coordinate_trace) == result.evaluation_count
+        assert sum(
+            row.outcome.startswith("rejected_") for row in result.coordinate_trace
+        ) == result.rejected_evaluations
+        assert all(
+            len(row.raw_coordinates_angstrom) == case.system.atom_count
+            and len(row.evaluated_coordinates_angstrom) == case.system.atom_count
+            for row in result.coordinate_trace
+        )
     else:
         assert result.checkpoint is None
+        assert result.coordinate_trace == ()
 
 
 def test_checkpoint_digest_and_compatibility_fail_closed() -> None:
@@ -195,6 +215,67 @@ def test_checkpoint_digest_and_compatibility_fail_closed() -> None:
                 pause_after_accepted_iterations=None,
             ),
             checkpoint=paused.checkpoint,
+        )
+
+
+@pytest.mark.parametrize("coordinate_kind", ("raw", "evaluated"))
+def test_rehashed_independent_checkpoint_initial_coordinate_tamper_fails_replay(
+    coordinate_kind: str,
+) -> None:
+    case = materialize_frozen_cpu_minimization_validation_case(
+        "v1_checkpoint_restart_exact"
+    )
+    paused = evaluate_independent_minimization_oracle(case.independent_oracle_input)
+    assert paused.checkpoint is not None
+    checkpoint = paused.checkpoint
+    initial = checkpoint.coordinate_trace[0]
+    raw_coordinates = initial.raw_coordinates_angstrom
+    evaluated_coordinates = initial.evaluated_coordinates_angstrom
+    if coordinate_kind == "raw":
+        raw_coordinates = (
+            (123.0, *raw_coordinates[0][1:]),
+            *raw_coordinates[1:],
+        )
+    else:
+        evaluated_coordinates = (
+            (123.0, *evaluated_coordinates[0][1:]),
+            *evaluated_coordinates[1:],
+        )
+    tampered_initial = IndependentMinimizationCoordinateTraceStep(
+        evaluation_index=initial.evaluation_index,
+        iteration=initial.iteration,
+        trial=initial.trial,
+        outcome=initial.outcome,
+        raw_coordinates_angstrom=raw_coordinates,
+        evaluated_coordinates_angstrom=evaluated_coordinates,
+        energy_kcal_per_mol=initial.energy_kcal_per_mol,
+    )
+    tampered_trace = (tampered_initial, *checkpoint.coordinate_trace[1:])
+    tampered_checkpoint = _checkpoint(
+        case.independent_oracle_input,
+        checkpoint.coordinates_angstrom,
+        checkpoint.accepted_iterations,
+        checkpoint.rejected_evaluations,
+        checkpoint.evaluation_count,
+        checkpoint.initial_energy_kcal_per_mol,
+        checkpoint.initial_max_force_kcal_per_mol_angstrom,
+        checkpoint.current_energy_kcal_per_mol,
+        checkpoint.current_max_force_kcal_per_mol_angstrom,
+        checkpoint.current_constraint_residual_angstrom,
+        checkpoint.accepted_energy_trace_kcal_per_mol,
+        tampered_trace,
+    )
+
+    with pytest.raises(
+        IndependentMinimizationOracleError,
+        match="history does not replay exactly from the source input",
+    ):
+        evaluate_independent_minimization_oracle(
+            replace(
+                case.independent_oracle_input,
+                pause_after_accepted_iterations=None,
+            ),
+            checkpoint=tampered_checkpoint,
         )
 
 

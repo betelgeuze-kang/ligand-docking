@@ -74,6 +74,32 @@ DEPENDENCY_ROWS = {
 }
 
 
+def _environment_rows(
+    *,
+    python_hash_seed: int = 123,
+    application_seed: int = 456,
+) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        sorted(
+            {
+                module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV: str(application_seed),
+                "CUDA_VISIBLE_DEVICES": "",
+                "HIP_VISIBLE_DEVICES": "",
+                "LANG": "C.UTF-8",
+                "LC_ALL": "C.UTF-8",
+                "MKL_NUM_THREADS": "1",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONHASHSEED": str(python_hash_seed),
+                "PYTHONPYCACHEPREFIX": "/dev/null",
+                "ROCR_VISIBLE_DEVICES": "",
+                "TZ": "UTC",
+            }.items()
+        )
+    )
+
+
 def _private_root(tmp_path: Path, name: str = "outputs") -> Path:
     root = tmp_path / name
     root.mkdir(mode=0o700)
@@ -91,6 +117,8 @@ def _receipt(**overrides: object) -> SimpleNamespace:
         "code_commit_sha": CODE_COMMIT_SHA,
         "runner_source_sha256": reference_validation_runner_source_sha256(),
         "dependency_artifact_sha256_rows": tuple(sorted(DEPENDENCY_ROWS.items())),
+        "environment_variable_rows": _environment_rows(),
+        "python_hash_seed": 123,
         "application_seed": 456,
         "command_argv": module.REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
     }
@@ -126,6 +154,11 @@ def _install_verified_receipt(
         lambda: (),
     )
     monkeypatch.setattr(module, "_require_source_only_python_runtime", lambda: None)
+    monkeypatch.setattr(
+        module,
+        "_fixed_worker_dependency_python_path",
+        lambda: "/trusted",
+    )
 
     def run_in_process(
         protocol: object,
@@ -203,26 +236,27 @@ def test_runner_contract_rejects_tamper_and_source_identity_is_exact() -> None:
         "sources": [
             {
                 "path": (
-                    "betelgeuze_engine_v2/physics/"
-                    "reference_validation_bootstrap.py"
+                    "betelgeuze_engine_v2/physics/reference_validation_bootstrap.py"
                 ),
                 "sha256": hashlib.sha256(bootstrap_source.read_bytes()).hexdigest(),
             },
             {
-                "path": (
-                    "betelgeuze_engine_v2/physics/reference_validation_runner.py"
-                ),
+                "path": ("betelgeuze_engine_v2/physics/reference_validation_runner.py"),
                 "sha256": hashlib.sha256(runner_source.read_bytes()).hexdigest(),
             },
         ],
     }
-    assert reference_validation_runner_source_sha256() == hashlib.sha256(
-        module._canonical_bytes(expected_source_identity)
-    ).hexdigest()
-    assert reference_validation_checked_out_code_commit_sha() == subprocess.check_output(
-        ["git", "rev-parse", "HEAD"],
-        text=True,
-    ).strip()
+    assert (
+        reference_validation_runner_source_sha256()
+        == hashlib.sha256(module._canonical_bytes(expected_source_identity)).hexdigest()
+    )
+    assert (
+        reference_validation_checked_out_code_commit_sha()
+        == subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+    )
 
 
 def test_clean_checkout_preflight_uses_only_the_root_owned_absolute_git(
@@ -339,9 +373,7 @@ def test_bounded_runner_retains_exact_matrix_and_consumes_start_once(
     assert payload["claim_safe"] is False
 
     paths = list(root.iterdir())
-    assert [path.name for path in paths] == [
-        f"{AUTHORIZATION_NONCE}.runner-start.json"
-    ]
+    assert [path.name for path in paths] == [f"{AUTHORIZATION_NONCE}.runner-start.json"]
     assert paths[0].stat().st_nlink == 1
     assert paths[0].stat().st_mode & 0o777 == 0o600
     start = json.loads(paths[0].read_text(encoding="ascii"))
@@ -461,9 +493,7 @@ def test_unexpected_evaluator_failures_are_sanitized_and_fully_retained(
     )
     observation = _run(root)
     variants = [
-        variant
-        for case in observation.case_results
-        for variant in case.variant_results
+        variant for case in observation.case_results for variant in case.variant_results
     ]
 
     assert len(variants) == REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
@@ -501,15 +531,12 @@ def test_evaluator_is_interrupted_at_the_frozen_wall_clock_deadline(
     elapsed = time.monotonic() - started
 
     variants = [
-        variant
-        for case in observation.case_results
-        for variant in case.variant_results
+        variant for case in observation.case_results for variant in case.variant_results
     ]
     assert elapsed < 1.0
     assert len(variants) == REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
     assert all(
-        variant.observed_status == "time_budget_exhausted"
-        for variant in variants
+        variant.observed_status == "time_budget_exhausted" for variant in variants
     )
 
 
@@ -556,15 +583,12 @@ def test_case_materialization_is_interrupted_and_all_variants_are_retained(
     elapsed = time.monotonic() - started
 
     variants = [
-        variant
-        for case in observation.case_results
-        for variant in case.variant_results
+        variant for case in observation.case_results for variant in case.variant_results
     ]
     assert elapsed < 1.0
     assert len(variants) == REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
     assert all(
-        variant.observed_status == "time_budget_exhausted"
-        for variant in variants
+        variant.observed_status == "time_budget_exhausted" for variant in variants
     )
 
 
@@ -616,16 +640,18 @@ def test_supervisor_hard_kills_a_case_worker_at_the_wall_deadline(
         return stalled
 
     monkeypatch.setattr(subprocess, "Popen", popen)
-    monkeypatch.setattr(
-        module,
-        "_case_worker_environment",
-        lambda: {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "/dev/null"},
+    receipt = _receipt()
+    worker_environment = module._case_worker_environment(
+        receipt.environment_variable_rows,
+        dependency_python_path="/trusted",
     )
     rows = module._run_supervised_case_matrix(
         protocol,
         manifest_cases,
         expected_code_commit_sha=reference_validation_checked_out_code_commit_sha(),
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        environment_receipt=receipt,
+        worker_environment=worker_environment,
         deadline=time.monotonic() + 0.01,
     )
 
@@ -664,10 +690,10 @@ def test_supervisor_hard_kills_manifest_materialization_before_start(
             seen["killed"] = True
 
     monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: StalledProcess())
-    monkeypatch.setattr(
-        module,
-        "_case_worker_environment",
-        lambda: {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPYCACHEPREFIX": "/dev/null"},
+    receipt = _receipt()
+    worker_environment = module._case_worker_environment(
+        receipt.environment_variable_rows,
+        dependency_python_path="/trusted",
     )
     with pytest.raises(
         ReferenceValidationRunnerError,
@@ -676,9 +702,85 @@ def test_supervisor_hard_kills_manifest_materialization_before_start(
         module._run_supervised_frozen_case_matrix(
             expected_code_commit_sha=reference_validation_checked_out_code_commit_sha(),
             expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+            environment_receipt=receipt,
+            worker_environment=worker_environment,
             deadline=time.monotonic() + 0.01,
         )
     assert seen["killed"] is True
+
+
+def test_worker_launch_uses_receipt_bound_environment_after_live_env_tamper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    receipt = _receipt()
+    worker_environment = module._case_worker_environment(
+        receipt.environment_variable_rows,
+        dependency_python_path="/trusted",
+    )
+    request = module._fixed_worker_request(
+        worker_kind="case",
+        expected_code_commit_sha=CODE_COMMIT_SHA,
+        expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        environment_receipt=receipt,
+        worker_environment=worker_environment,
+    )
+    seen: dict[str, object] = {}
+    sentinel = object()
+
+    def popen(command: list[str], **kwargs: object) -> object:
+        seen.update(command=command, kwargs=kwargs)
+        return sentinel
+
+    monkeypatch.setenv("PYTHONHASHSEED", "124")
+    monkeypatch.setenv(module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV, "999")
+    monkeypatch.setattr(subprocess, "Popen", popen)
+
+    assert module._start_fixed_validation_worker("--case-worker", request) is sentinel
+    assert seen["command"] == [
+        os.path.realpath(sys.executable),
+        "-S",
+        "-B",
+        "-X",
+        "pycache_prefix=/dev/null",
+        "-c",
+        module._REFERENCE_VALIDATION_FIXED_WORKER_BOOTSTRAP,
+        "--case-worker",
+    ]
+    kwargs = seen["kwargs"]
+    assert isinstance(kwargs, dict)
+    assert kwargs["env"] == worker_environment
+    assert kwargs["env"]["PYTHONHASHSEED"] == "123"
+    assert kwargs["env"][module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV] == "456"
+
+
+def test_worker_request_enforces_uint32_python_hash_seed() -> None:
+    receipt = _receipt(
+        python_hash_seed=2**32 - 1,
+        environment_variable_rows=_environment_rows(python_hash_seed=2**32 - 1),
+    )
+    environment = module._case_worker_environment(
+        receipt.environment_variable_rows,
+        dependency_python_path="/trusted",
+    )
+    accepted = module._fixed_worker_request(
+        worker_kind="manifest",
+        expected_code_commit_sha=CODE_COMMIT_SHA,
+        expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        environment_receipt=receipt,
+        worker_environment=environment,
+    )
+    assert accepted["expected_python_hash_seed"] == 2**32 - 1
+
+    rejected = dict(accepted)
+    rejected["expected_python_hash_seed"] = 2**32
+    rejected_environment = dict(environment)
+    rejected_environment["PYTHONHASHSEED"] = str(2**32)
+    rejected["expected_worker_environment"] = rejected_environment
+    rejected["expected_worker_environment_sha256"] = module._sha256(
+        rejected_environment
+    )
+    with pytest.raises(ReferenceValidationRunnerError, match="hash seed"):
+        module._load_case_worker_request(module._canonical_bytes(rejected) + b"\n")
 
 
 def test_source_only_import_runtime_requires_redirected_disabled_bytecode() -> None:
@@ -732,7 +834,9 @@ def test_isolated_bootstrap_ignores_pythonpath_user_site_and_sitecustomize(
             "PYTHONPATH": os.fspath(shadow_root),
             "PYTHONUSERBASE": os.fspath(shadow_root),
             "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONHASHSEED": "123",
             "PYTHONPYCACHEPREFIX": "/dev/null",
+            module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV: "456",
         }
     )
     reservation_root = _private_root(tmp_path, "reservations")
@@ -780,10 +884,136 @@ def test_isolated_bootstrap_ignores_pythonpath_user_site_and_sitecustomize(
     assert not site_marker.exists()
 
 
+def test_bootstrap_outer_reexecs_before_reading_request_with_minimal_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected_bootstrap = bootstrap_module.reference_validation_bootstrap_path()
+    executable = os.path.realpath(sys.executable)
+    seen: dict[str, object] = {}
+    monkeypatch.delenv(
+        bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV,
+        raising=False,
+    )
+    monkeypatch.setenv("PYTHONHASHSEED", "4294967295")
+    monkeypatch.setenv(module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV, "456")
+    monkeypatch.setenv("PYTHONPATH", "/hostile")
+    monkeypatch.setenv("LD_PRELOAD", "/hostile.so")
+    monkeypatch.setattr(
+        bootstrap_module,
+        "_prepare_isolated_outer_launcher",
+        lambda: (executable, expected_bootstrap),
+    )
+    monkeypatch.setattr(
+        bootstrap_module,
+        "_read_bootstrap_request",
+        lambda: (_ for _ in ()).throw(AssertionError("stdin read before exec")),
+    )
+    monkeypatch.setattr(
+        bootstrap_module.os,
+        "chdir",
+        lambda path: seen.setdefault("cwd", path),
+    )
+
+    def reject_execve(
+        path: str,
+        argv: tuple[str, ...],
+        environment: dict[str, str],
+    ) -> None:
+        seen.update(path=path, argv=argv, environment=environment)
+        raise OSError("stop after capture")
+
+    monkeypatch.setattr(bootstrap_module.os, "execve", reject_execve)
+
+    assert bootstrap_module.main() == 2
+    assert seen["cwd"] == "/"
+    assert seen["path"] == executable
+    assert seen["argv"] == (
+        executable,
+        *bootstrap_module.REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        expected_bootstrap,
+    )
+    environment = seen["environment"]
+    assert isinstance(environment, dict)
+    assert environment == {
+        **bootstrap_module._CONTROLLED_INNER_FIXED_ENVIRONMENT,
+        "PYTHONHASHSEED": "4294967295",
+        module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV: "456",
+        bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV: (
+            bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+        ),
+    }
+    assert "PYTHONPATH" not in environment
+    assert "LD_PRELOAD" not in environment
+
+
+@pytest.mark.parametrize("seed", ["0", "4294967295"])
+def test_controlled_inner_environment_accepts_python_hash_seed_boundaries(
+    monkeypatch: pytest.MonkeyPatch,
+    seed: str,
+) -> None:
+    monkeypatch.setenv("PYTHONHASHSEED", seed)
+    monkeypatch.setenv(module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV, str(2**63 - 1))
+    assert (
+        bootstrap_module.reference_validation_controlled_inner_environment()[
+            "PYTHONHASHSEED"
+        ]
+        == seed
+    )
+
+
+@pytest.mark.parametrize("seed", ["-1", "01", "random", "4294967296"])
+def test_controlled_inner_environment_rejects_invalid_python_hash_seed(
+    monkeypatch: pytest.MonkeyPatch,
+    seed: str,
+) -> None:
+    monkeypatch.setenv("PYTHONHASHSEED", seed)
+    monkeypatch.setenv(module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV, "456")
+    with pytest.raises(
+        bootstrap_module._ReferenceValidationBootstrapError,
+        match="PYTHONHASHSEED",
+    ):
+        bootstrap_module.reference_validation_controlled_inner_environment()
+
+
+def test_seeded_inner_loader_produces_stable_hashes_in_fresh_processes(
+    tmp_path: Path,
+) -> None:
+    probe = tmp_path / "hash_probe.py"
+    probe.write_text(
+        "print(repr((hash('betelgeuze-seed-probe'),"
+        "hash(b'betelgeuze-seed-probe'),"
+        "hash(('betelgeuze-seed-probe',17)))))\n",
+        encoding="ascii",
+    )
+
+    def run(seed: str) -> bytes:
+        environment = {
+            **bootstrap_module._CONTROLLED_INNER_FIXED_ENVIRONMENT,
+            "PYTHONHASHSEED": seed,
+            module.REFERENCE_VALIDATION_APPLICATION_SEED_ENV: "456",
+            bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV: (
+                bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+            ),
+        }
+        return subprocess.check_output(
+            [
+                os.path.realpath(sys.executable),
+                *bootstrap_module.REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+                os.fspath(probe),
+            ],
+            cwd="/",
+            env=environment,
+        )
+
+    same_seed = [run("123") for _ in range(3)]
+    assert same_seed[0] == same_seed[1] == same_seed[2]
+    assert run("124") != same_seed[0]
+
+
 def test_runner_rejects_execution_without_isolated_bootstrap() -> None:
     with pytest.raises(
         ReferenceValidationRunnerError,
-        match="isolated dependency bootstrap",
+        match="seeded controlled dependency bootstrap",
     ):
         module._require_isolated_python_bootstrap_runtime()
 
@@ -792,6 +1022,7 @@ def test_bootstrap_verifies_signed_clean_checkout_before_package_import(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     state = (
+        bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STATE,
         bootstrap_module.reference_validation_bootstrap_path(),
         os.fspath(Path(module.__file__).resolve().parents[2]),
         ("/trusted/site-packages",),
@@ -805,8 +1036,12 @@ def test_bootstrap_verifies_signed_clean_checkout_before_package_import(
     )
     monkeypatch.setattr(
         bootstrap_module,
-        "_prepare_isolated_import_boundary",
+        "_prepare_seeded_controlled_import_boundary",
         lambda: state,
+    )
+    monkeypatch.setenv(
+        bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV,
+        bootstrap_module.REFERENCE_VALIDATION_CONTROLLED_INNER_STATE,
     )
     monkeypatch.setattr(
         bootstrap_module,
@@ -968,13 +1203,10 @@ def test_runner_public_surface_has_no_unsafe_clock_writer_or_evaluator() -> None
     source = inspect.getsource(module)
     tree = ast.parse(source)
     top_level_imports = [
-        node
-        for node in tree.body
-        if isinstance(node, (ast.Import, ast.ImportFrom))
+        node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
     ]
     assert not any(
-        isinstance(node, ast.ImportFrom)
-        and node.module == "reference_forcefield"
+        isinstance(node, ast.ImportFrom) and node.module == "reference_forcefield"
         for node in top_level_imports
     )
     imported_modules = {
@@ -1196,9 +1428,7 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
         code_commit_sha=code_commit,
         runner_source_sha256=runner_source,
         artifact_output_root_identity_sha256=(
-            reference_validation_artifact_output_root_identity_sha256(
-                artifact_root
-            )
+            reference_validation_artifact_output_root_identity_sha256(artifact_root)
         ),
         network_namespace_identity_sha256=namespace_identity,
         observed_at=now,

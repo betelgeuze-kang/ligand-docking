@@ -53,10 +53,10 @@ REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "1.0.0"
 REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-17T05:38:00Z"
 
 FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "1e0ad1aa30f000fb0c6f53a6646519f844b20b53e4e5dfa55b3492e12852086e"
+    "f4d9bea26c38a009c96c2cfc31d1b00abcac8991468406a433d6ad2c4bbde5ec"
 )
 FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
-    "efce21a7fd79ee50e1e4afd9d1e0189c0ad9f9e579ca78161d5c10abfad5c1a5"
+    "3cd5b4c269895baac36c374c8698a36cdfc4424afcaa2772cb5ef60a9f1860f6"
 )
 
 _CURRENT_BLOCKERS = (
@@ -103,9 +103,7 @@ def _sha256(value: object) -> str:
 
 def _environment_contract_projection() -> dict[str, Any]:
     return {
-        "schema_id": (
-            REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID
-        ),
+        "schema_id": (REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID),
         "contract_id": REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC,
@@ -165,10 +163,15 @@ def _environment_contract_projection() -> dict[str, Any]:
                 "TZ": "UTC",
             },
             "python_hash_seed_required": True,
+            "python_hash_seed_uint32_required": True,
+            "python_hash_seed_applied_at_interpreter_initialization": True,
+            "isolated_outer_launcher_then_seeded_controlled_inner_required": True,
             "application_seed_required": True,
             "torch_num_threads": 1,
             "torch_num_interop_threads": 1,
             "torch_deterministic_algorithms_required": True,
+            "worker_seed_and_environment_receipt_binding_required": True,
+            "parent_child_python_hash_probe_equality_required": True,
             "command_argv_required_as_exact_utf8_sequence": True,
             "shell_interpolation_allowed": False,
             "clean_checkout_required": True,
@@ -176,9 +179,7 @@ def _environment_contract_projection() -> dict[str, Any]:
             "secrets_allowed_in_receipt": False,
         },
         "receipt_schema": {
-            "schema_id": (
-                REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID
-            ),
+            "schema_id": (REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID),
             "canonical_json_required": True,
             "duplicate_json_keys_allowed": False,
             "receipt_sha256_required": True,
@@ -248,9 +249,7 @@ def _ordered_case_contract_rows() -> list[dict[str, Any]]:
                 "ordinal": ordinal,
                 "case_id": protocol_case["case_id"],
                 "case_input_sha256": materialized_case["case_input_sha256"],
-                "materialization_sha256": materialized_case[
-                    "materialization_sha256"
-                ],
+                "materialization_sha256": materialized_case["materialization_sha256"],
                 "expected_outcome": protocol_case["expected_outcome"],
                 "expected_error_code": protocol_case["expected_error_code"],
                 "required_metric_ids": list(protocol_case["required_metric_ids"]),
@@ -262,9 +261,7 @@ def _ordered_case_contract_rows() -> list[dict[str, Any]]:
                         "runtime_input_sha256": variant["runtime_input_sha256"],
                         "oracle_input_sha256": variant["oracle_input_sha256"],
                         "coordinate_sha256": variant["coordinate_sha256"],
-                        "neighbor_graph_sha256": variant[
-                            "neighbor_graph_sha256"
-                        ],
+                        "neighbor_graph_sha256": variant["neighbor_graph_sha256"],
                         "parameter_fingerprint_sha256": variant[
                             "parameter_fingerprint_sha256"
                         ],
@@ -332,9 +329,7 @@ def _result_contract_projection() -> dict[str, Any]:
             "ordered_cases": _ordered_case_contract_rows(),
         },
         "metric_contract": {
-            "coordinate_dtype": protocol["numerical_protocol"][
-                "coordinate_dtype"
-            ],
+            "coordinate_dtype": protocol["numerical_protocol"]["coordinate_dtype"],
             "energy_unit": protocol["numerical_protocol"]["energy_unit"],
             "force_unit": protocol["numerical_protocol"]["force_unit"],
             "missing_metric_is_failure": True,
@@ -547,8 +542,7 @@ def require_reference_validation_execution_ready() -> NoReturn:
     decision = reference_validation_execution_readiness_decision()
     blockers = ", ".join(decision["blockers"])
     raise ReferenceValidationReceiptContractError(
-        "CPU reference validation execution is not authorized; blockers: "
-        f"{blockers}"
+        f"CPU reference validation execution is not authorized; blockers: {blockers}"
     )
 
 

@@ -252,7 +252,12 @@ claim status without revalidating the dependency and freshness chain.
   Reviewer/operator signing keys remain external, verifier trust stores contain
   only Ed25519 public keys, and the stdlib bootstrap verifies authorization via
   a trusted OpenSSL executable before importing Engine v2 or third-party code.
-  No key or attestation is bundled. No independent scientific review or
+  The exact canonical-input entrypoint additionally binds the signed nonce,
+  author, source, and dependency rows before import, reloads both reviewer and
+  operator anchors from the fixed external root-owned mode-0600 trust store,
+  rechecks the fixed supervised evaluator subprocess source/dependency/deterministic runtime, and
+  finalizes the result receipt in the same verified process. No key, trust
+  store, or attestation is bundled. No independent scientific review or
   execution authorization, production result receipt, independent
   result review, parameter applicability, or validation result is present. The
   protocol, materializer, and reference cannot authorize execution, fitting, or
@@ -344,10 +349,14 @@ claim status without revalidating the dependency and freshness chain.
   roles, and explicit current revocation/supersession state for the receipt chain
   and result-review attestation. A verified rejection is never promoted to acceptance,
   and a verified test-only acceptance still leaves production receipt/review,
-  complete coordinate trace, trajectory comparison, two-host reproduction,
-  external-implementation comparison, applicability, fitting, and scientific
-  gates closed. No key, attestation, approval, or production evidence is
-  bundled.
+  trajectory comparison, two-host reproduction, external-implementation
+  comparison, applicability, fitting, and scientific gates closed. Complete
+  ordered operational and independent-oracle coordinate traces, including every
+  canonical binary64 raw/evaluated coordinate, per-step identities and digests,
+  whole-trace digests, exact counts, accepted-energy-ledger consistency, and
+  trace/step review dispositions, are now implemented as contract-integrity
+  evidence. They are not trajectory-level scientific comparison or production
+  evidence. No key, attestation, approval, or production evidence is bundled.
 - Preserve the separate frozen execution-environment and result-receipt
   contracts. The environment contract fixes a CPU-only, network-disabled Linux
   lane, Python 3.10–3.12, Torch 2.6.0, NumPy 1.26.4, empty GPU visibility,

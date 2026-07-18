@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 import hashlib
 import json
+import struct
 
 import pytest
 
@@ -115,6 +116,16 @@ def _rehash(document: dict[str, object]) -> None:
             separators=(",", ":"),
             sort_keys=True,
         ).encode("ascii")
+    ).hexdigest()
+
+
+def _coordinate_hex_digest(rows: list[list[str]]) -> str:
+    return hashlib.sha256(
+        b"".join(
+            struct.pack("<d", float.fromhex(item))
+            for row in rows
+            for item in row
+        )
     ).hexdigest()
 
 
@@ -242,6 +253,35 @@ def test_bounded_line_search_retains_rejected_failure_row_and_original_state() -
     assert torch.equal(result.system.coordinates, system.coordinates)
 
 
+def test_rehashed_checkpoint_line_search_order_tampering_fails_closed() -> None:
+    system = _system()
+    result = minimize_reference_force_field(
+        system,
+        _parameters(system),
+        _config(
+            max_iterations=2,
+            max_backtracks=12,
+            initial_step_size_angstrom2_mol_per_kcal=0.01,
+            maximum_atom_displacement_angstrom=1_000.0,
+        ),
+    )
+    assert result.observations[1].outcome == "rejected_armijo"
+    assert result.observations[1].trial == 0
+    tampered = result.checkpoint.to_dict()
+    tampered["observations"][1]["trial"] = 1
+    _rehash(tampered)
+
+    with pytest.raises(ReferenceMinimizationError, match="line-search sequence"):
+        require_reference_minimization_checkpoint_document(tampered)
+
+    repeated_initial = result.checkpoint.to_dict()
+    repeated_initial["observations"][1]["outcome"] = "initial"
+    repeated_initial["observations"][1]["failure_code"] = None
+    _rehash(repeated_initial)
+    with pytest.raises(ReferenceMinimizationError, match="repeats the initial state"):
+        require_reference_minimization_checkpoint_document(repeated_initial)
+
+
 def test_checkpoint_tampering_identity_drift_and_recomputed_value_drift_fail_closed() -> None:
     system = _system()
     parameters = _parameters(system)
@@ -260,6 +300,39 @@ def test_checkpoint_tampering_identity_drift_and_recomputed_value_drift_fail_clo
     with pytest.raises(ReferenceMinimizationError, match="checkpoint SHA-256 mismatch"):
         require_reference_minimization_checkpoint_document(tampered)
 
+    shortened_trace = deepcopy(document)
+    first_observation = shortened_trace["observations"][0]
+    first_observation["coordinates_angstrom_hex"] = first_observation[
+        "coordinates_angstrom_hex"
+    ][:-1]
+    first_observation["coordinates_sha256"] = _coordinate_hex_digest(
+        first_observation["coordinates_angstrom_hex"]
+    )
+    _rehash(shortened_trace)
+    with pytest.raises(ReferenceMinimizationError, match="atom count"):
+        require_reference_minimization_checkpoint_document(shortened_trace)
+
+    source_drifted_trace = deepcopy(document)
+    initial_coordinates = source_drifted_trace["observations"][0][
+        "coordinates_angstrom_hex"
+    ]
+    initial_coordinates[0][0] = float(123.0).hex()
+    source_drifted_trace["observations"][0]["coordinates_sha256"] = (
+        _coordinate_hex_digest(initial_coordinates)
+    )
+    _rehash(source_drifted_trace)
+    require_reference_minimization_checkpoint_document(source_drifted_trace)
+    with pytest.raises(
+        ReferenceMinimizationError,
+        match="history does not replay exactly from the source system",
+    ):
+        minimize_reference_force_field(
+            system,
+            parameters,
+            config,
+            checkpoint=source_drifted_trace,
+        )
+
     drifted = deepcopy(document)
     drifted["current_energy_kcal_per_mol"] = float(
         drifted["current_energy_kcal_per_mol"]
@@ -268,7 +341,7 @@ def test_checkpoint_tampering_identity_drift_and_recomputed_value_drift_fail_clo
         drifted["observations"][-1]["energy_kcal_per_mol"]
     ) + 1.0
     _rehash(drifted)
-    with pytest.raises(ReferenceMinimizationError, match="does not reproduce"):
+    with pytest.raises(ReferenceMinimizationError, match="history does not replay"):
         minimize_reference_force_field(system, parameters, config, checkpoint=drifted)
 
     with pytest.raises(ReferenceMinimizationError, match="config fingerprint mismatch"):

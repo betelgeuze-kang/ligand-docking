@@ -64,6 +64,28 @@ RAW_REVIEW = {"raw_signed_review": True}
 RAW_AUTHORIZATION = {"raw_signed_authorization": True}
 
 
+def _environment_rows() -> tuple[tuple[str, str], ...]:
+    return tuple(
+        sorted(
+            {
+                runner_module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV: "456",
+                "CUDA_VISIBLE_DEVICES": "",
+                "HIP_VISIBLE_DEVICES": "",
+                "LANG": "C.UTF-8",
+                "LC_ALL": "C.UTF-8",
+                "MKL_NUM_THREADS": "1",
+                "OMP_NUM_THREADS": "1",
+                "OPENBLAS_NUM_THREADS": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "PYTHONHASHSEED": "123",
+                "PYTHONPYCACHEPREFIX": "/dev/null",
+                "ROCR_VISIBLE_DEVICES": "",
+                "TZ": "UTC",
+            }.items()
+        )
+    )
+
+
 def _private_root(tmp_path: Path, name: str = "outputs") -> Path:
     root = tmp_path / name
     root.mkdir(mode=0o700)
@@ -85,6 +107,8 @@ def _environment(root: Path, **overrides: object) -> SimpleNamespace:
         "code_commit_sha": CODE_COMMIT_SHA,
         "runner_source_sha256": reference_minimization_validation_runner_source_sha256(),
         "dependency_artifact_sha256_rows": tuple(sorted(DEPENDENCY_ROWS.items())),
+        "environment_variable_rows": _environment_rows(),
+        "python_hash_seed": 123,
         "application_seed": 456,
         "command_argv": REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV,
         "artifact_output_root_identity_sha256": (
@@ -116,7 +140,7 @@ def _observation(
     monkeypatch.setattr(
         runner_module,
         "_require_isolated_python_bootstrap_runtime",
-        lambda: (),
+        lambda: (Path("/trusted"),),
     )
     monkeypatch.setattr(
         runner_module,
@@ -321,6 +345,16 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
         row["observed_status"] == "fail_closed" for row in payload["case_results"]
     )
     assert all(row["case_passed"] for row in payload["case_results"])
+    assert all(len(row["coordinate_traces"]) == 2 for row in payload["case_results"])
+    assert all(
+        trace["trace_length"] == len(trace["steps"])
+        and len(trace["trace_sha256"]) == 64
+        for row in payload["case_results"]
+        for trace in row["coordinate_traces"]
+    )
+    assert (
+        payload["case_results"][12]["coordinate_traces"][1]["rejected_step_count"] > 0
+    )
     assert payload["independent_result_review_state"] == "pending_independent_review"
     assert payload["review_scope"] == (
         "implementation_and_artifact_review_pre_execution"
@@ -367,6 +401,20 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
         )
         == observation
     )
+
+    crosswired_trace = deepcopy(payload)
+    crosswired_trace["case_results"][0]["coordinate_traces"][0]["trace_sha256"] = (
+        "0" * 64
+    )
+    crosswired_trace.pop("receipt_sha256")
+    crosswired_trace["receipt_sha256"] = hashlib.sha256(
+        module._canonical_bytes(crosswired_trace)
+    ).hexdigest()
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError,
+        match="run observation are cross-wired",
+    ):
+        module._validate_result_receipt_payload(crosswired_trace)
 
     with pytest.raises(ReferenceMinimizationValidationResultReceiptAlreadyExistsError):
         _write(root, observation)

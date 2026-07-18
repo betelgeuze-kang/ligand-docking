@@ -23,15 +23,38 @@ scientific claim from a package version.
 - Authorization builders now round-trip their newly signed receipt through the
   public verifier before returning it, rejecting invalid lifetime, identity,
   dependency, or signature combinations at construction time.
+- The exact fourteen-case minimization process entrypoint now binds signed
+  nonce, implementation-author, source, and dependency identities before
+  package import; reloads Ed25519 reviewer/operator anchors only from a fixed
+  external root-owned mode-0600 trust store; rechecks source, dependencies, and
+  deterministic single-thread Torch state inside the spawned evaluator; and
+  finalizes the failure-inclusive result receipt before returning a hash-only,
+  closed-claim response. No production trust store or signed run is bundled.
+- Both synthetic entrypoints now use a root-owned isolated outer launcher only
+  to validate and sanitize startup, then re-exec the same interpreter as a
+  source-bound, no-site controlled inner process so canonical uint32
+  `PYTHONHASHSEED` is applied during interpreter initialization. The 27/59 and
+  14-case workers receive environment and application/hash seeds only from the
+  verified execution receipt, recheck exact argv, cwd, flags, environment, and
+  a parent/child hash probe, and no longer copy mutable live supervisor state.
+- Complete ordered CPU `float64` minimization coordinate traces now flow from
+  operational checkpoints and the independent oracle through the bounded runner
+  into the result-writer receipt. Every evaluation retains canonical binary64
+  raw/evaluated coordinates, source/case/evaluation identity, coordinate and
+  step digests, a whole-trace digest, exact accepted/rejected/evaluation counts,
+  and accepted-energy-ledger consistency. Expected pre-evaluation failures use
+  an explicit canonical empty trace.
 - A fail-closed Ed25519 minimization result-review contract that fully
   revalidates one exact result-writer receipt, derives accepted or rejected
-  dispositions for all fourteen cases, every retained or missing metric, and
-  exact status, runtime/oracle/result identity, per-case count budgets, and
-  finite metric-consistent energy-ledger evidence. It cryptographically reverifies the raw pre-execution review and
-  authorization role chain, requires canonical byte transport and explicit
-  current revocation/supersession inputs, and enforces an out-of-band public key
-  plus four-way governance-role separation. No result-review attestation,
-  production receipt, or scientific acceptance is bundled.
+  dispositions for all fourteen cases, every retained or missing metric, every
+  ordered coordinate trace and step, and exact status, runtime/oracle/result
+  identity, per-case count budgets, finite metric-consistent energy-ledger
+  evidence, and recomputed coordinate/step/trace digests. It cryptographically
+  reverifies the raw pre-execution review and authorization role chain, requires
+  canonical byte transport and explicit current revocation/supersession inputs,
+  and enforces an out-of-band public key plus four-way governance-role
+  separation. No result-review attestation, production receipt, or scientific
+  acceptance is bundled.
 
 ### Changed
 
@@ -97,8 +120,9 @@ ranking validity, public benchmark performance, or customer readiness.
   materializer and a separately source-bound standard-library reference for
   constraint/tangent-force projection, fixed-Born energy/forces, bounded
   backtracking, fail-closed identities, and checkpoint/restart. Test-only
-  endpoint comparisons are implementation checks, not validation results or
-  scientific promotion.
+  endpoint comparisons and complete coordinate-trace integrity checks are
+  implementation evidence, not trajectory-level validation results or scientific
+  promotion.
 - Frozen independent-review attestation contract for the minimization artifacts,
   with exact source-binding identity, ordered technical checks and limitations,
   author/reviewer separation, out-of-band Ed25519 public-key trust, and a
@@ -164,9 +188,10 @@ ranking validity, public benchmark performance, or customer readiness.
   an atomic one-time runner-start marker, a 120-second evaluation budget, and a
   canonical in-memory observation retaining every success, expected failure,
   unexpected failure, and failed metric across the exact 27 cases and 59
-  variants. The direct CLI remains closed and no production key, receipt, start,
-  durable production result receipt, fitting authorization, or scientific
-  promotion is bundled.
+  variants. Its exact CLI requires the fixed external root-owned trust store and
+  remains fail-closed without production trust and signed artifacts; no key,
+  receipt, start, durable production result receipt, fitting authorization, or
+  scientific promotion is bundled.
 - Failure-inclusive result-receipt writer and verifier that re-verify the raw
   signed chain, live/persisted environment, durable runner-start marker, and
   exact bounded observation before one `O_EXCL`/`O_NOFOLLOW` mode-0600 canonical

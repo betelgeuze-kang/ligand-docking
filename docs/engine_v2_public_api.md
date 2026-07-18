@@ -90,10 +90,15 @@ scientific or product claim.
 The bounded reference-minimization symbols accept only a single CPU `float64`
 model and caller-supplied explicit reference parameters. They expose fixed
 steepest-descent, Armijo-backtracking, capacity, displacement, and evaluation
-bounds; a failure-inclusive observation ledger; and canonical binary64
-checkpoints that bind source-system, topology, parameter, and configuration
-identities. Restart re-evaluates the stored state before continuation. These
-provisional symbols do not ship or assign parameters, establish chemical
+bounds; a failure-inclusive observation ledger with complete canonical binary64
+coordinates for every evaluation; and canonical binary64 checkpoints that bind
+source-system, topology, parameter, configuration, and ordered coordinate-trace
+identities. Restart first reproduces the complete checkpoint from the trusted
+source input and requires exact history equality, then re-evaluates the stored
+state before continuation. Standalone checkpoint parsing verifies canonical
+form and internal self-hash consistency; source authenticity is established by
+that trusted-input replay boundary. These provisional symbols do not ship or
+assign parameters, establish chemical
 applicability, validate minimization accuracy, satisfy the frozen independent
 validation protocol, or enable a scientific/product/customer route.
 
@@ -116,8 +121,10 @@ iteration residual rows and minimum-image distances for supported orthorhombic
 PBC. The separate constrained-minimization symbols project every trial, use a
 bounded iterative tangent-force projection, apply Armijo decrease to actual
 projected displacement, retain nested projection failures, and bind source,
-topology, v2 parameters, configuration, observations, and binary64 coordinates
-into exact checkpoints. The constraint path does not use atomic masses.
+topology, v2 parameters, configuration, observations, and complete raw/projected
+binary64 coordinate traces into exact checkpoints. Constrained restart applies
+the same trusted-source full-history replay before continuing. The constraint
+path does not use atomic masses.
 Parameters remain caller supplied; general assignment, independent validation,
 long-range physics, solvation, scientific promotion, and product/customer
 execution remain blocked.
@@ -225,23 +232,35 @@ bind the stdlib-only bootstrap and runner sources, require the signed clean Git
 checkout and exact dependency identities, validate the frozen materialization
 manifest before consuming a nonce-bound mode-0600 start marker, and retain all
 fourteen ordered pass and fail-closed case observations in memory. The runner
-records predefined metric values, independent-oracle comparisons, and exact
-checkpoint/restart equality under a 120-second budget. It writes no validation
-result receipt itself. The separate result-writer symbols re-verify the signed
-chain, persisted/live environment, durable runner-start marker, and canonical
+records predefined metric values, independent-oracle comparisons, exact
+checkpoint/restart equality, and complete ordered operational/independent
+coordinate traces under a 120-second budget. Each trace binds every canonical
+binary64 raw/evaluated coordinate row, source/case/evaluation identity,
+raw/evaluated coordinate-payload and per-step digests, a whole-trace digest,
+exact counts, and the accepted-energy ledger; expected pre-evaluation failures
+use a canonical explicit empty trace. It writes no validation result receipt
+itself. The separate result-writer symbols re-verify the signed chain,
+persisted/live environment, durable runner-start marker, and canonical
 observation before private atomic persistence. The receipt is unsigned and
-pending independent result review, and the direct process entrypoint remains
-fail-closed until bootstrap integration exists.
+pending independent result review. The exact process entrypoint is wired through
+the stdlib-only bootstrap to the environment receipt, bounded runner, and result
+writer. It accepts no caller trust keys, reloads reviewer/operator anchors only
+from the fixed external root-owned mode-0600 trust store, revalidates the fixed
+supervised worker subprocess source/dependency/deterministic runtime before evaluation, and returns
+only artifact hashes plus closed claim flags. It fails closed when external
+production trust, signed artifacts, private roots, or nonce reservation are
+absent.
 
 The minimization result-review symbols are a provisional, non-production
 Ed25519 verification surface. They first apply the full result-writer receipt
 validator, then bind the exact receipt and ordered fourteen-case evidence into
-deterministic per-metric, result-evidence, and fail-closed dispositions. Result
-evidence includes exact materialized runtime/oracle identities, operational and
-independent result hashes, allowed status/error pairs, exact nonnegative integer
-counts bounded by each case's frozen iteration/backtrack budgets, and finite
-count-consistent accepted-energy ledgers recomputed against retained energy
-metrics. The builder and
+deterministic per-metric, result-evidence, fail-closed, coordinate-trace, and
+coordinate-step dispositions. Result evidence includes exact materialized
+runtime/oracle identities, operational and independent result hashes, allowed
+status/error pairs, exact nonnegative integer counts bounded by each case's
+frozen iteration/backtrack budgets, finite count-consistent accepted-energy
+ledgers recomputed against retained energy metrics, and recomputed coordinate,
+step-identity, and whole-trace digests. The builder and
 verifier require the raw signed pre-execution review and authorization artifacts
 and reverify their Ed25519 chains before deriving the three upstream role
 identities. The signed outcome is explicitly `accepted` or `rejected`; signature
@@ -254,21 +273,30 @@ approval, or scientific claim is bundled.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
 require exact code, runner-source, dependency, and frozen-artifact identities,
-require a source-only stdlib bootstrap launched with `-I -S -B -X
-pycache_prefix=/dev/null` before any validation dependency import, reject Git
+require a root-owned source-only stdlib outer bootstrap launched with `-I -S -B
+-X pycache_prefix=/dev/null` before any validation dependency import, reject Git
 replacement refs, and atomically consume one nonce-bound mode-0600 runner-start
-marker. The bootstrap ignores `PYTHONPATH` and user-site overrides, skips
-`sitecustomize`/`.pth` execution, admits only root-owned read-only dependency
-roots, and binds both bootstrap and runner sources into the signed runner-source
-identity. Before importing the package initializer it bounds and canonicalizes
-stdin, verifies the authorization operator HMAC against the external root-owned
-trust store, requires reservation and artifact roots outside the checkout, and
-uses root-owned Git to prove the exact signed commit, execution-source identity,
-and clean worktree. Frozen manifest construction and
+marker. The outer stage validates its exact executable, flags, argv, cwd, and
+source without reading stdin, constructs an allowlisted environment from the
+request, and re-execs the same interpreter as a fixed source-bound `-S -B -X
+pycache_prefix=/dev/null` controlled inner loader. The inner stage verifies the
+complete process identity before reading bounded canonical stdin, so the
+canonical uint32 `PYTHONHASHSEED` is applied during interpreter initialization
+instead of merely being recorded after startup. Both stages ignore `PYTHONPATH`
+and user-site overrides, skip `sitecustomize`/`.pth` execution, admit only
+root-owned read-only dependency roots, and bind both bootstrap and runner
+sources into the signed runner-source identity. Before importing the package
+initializer the inner stage verifies the authorization operator HMAC against
+the external root-owned trust store, requires reservation and artifact roots
+outside the checkout, and uses root-owned Git to prove the exact signed commit,
+execution-source identity, and clean worktree. Frozen manifest construction and
 the exact 27-case/59-variant CPU float64 evaluation run in fixed supervised child
-processes with automatic site initialization disabled and only the verified
-runtime's dependency roots supplied. Remaining budget is rechecked before the
-start marker is consumed, and a parent hard deadline can terminate
+processes with automatic site initialization disabled. Worker argv, cwd,
+flags, complete environment, uint32 hash seed, application seed, and a
+parent/child hash probe are derived only from the verified receipt and checked
+before evaluation; mutable live supervisor environment is not copied. Only the
+verified runtime's dependency roots are supplied. Remaining budget is rechecked
+before the start marker is consumed, and a parent hard deadline can terminate
 blocked native code. The result
 is a canonical in-memory observation that retains
 successes, expected failures, unexpected failures, missing metrics, and failed

@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_am_minimization_validation_result_review_contract"
+IMPLEMENTATION_STAGE = "v2_ao_minimization_validation_production_entrypoint"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -93,9 +93,7 @@ PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = (
     "v2_h5_reference_physics_parameter_applicability_record"
 )
-CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = (
-    "v2_bounded_cpu_reference_minimization"
-)
+CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = "v2_bounded_cpu_reference_minimization"
 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = (
     "v2_bounded_cpu_reference_term_diagnostics"
 )
@@ -490,6 +488,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "implementation_author_and_independent_reviewer_separation_not_attested",
         "signed_execution_authorization_receipt_missing",
         "trusted_authorization_operator_key_not_provided",
+        "production_trust_store_not_provisioned",
         "authorization_nonce_not_atomically_reserved",
         "execution_environment_receipt_missing",
         "production_validation_result_receipt_missing",
@@ -515,6 +514,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "implementation_author_and_independent_reviewer_separation_not_attested",
         "signed_execution_authorization_receipt_missing",
         "trusted_authorization_operator_key_not_provided",
+        "production_trust_store_not_provisioned",
         "authorization_nonce_not_atomically_reserved",
         "execution_environment_receipt_missing",
         "validation_execution_not_authorized",
@@ -524,7 +524,6 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "signed_independent_result_review_attestation_missing",
         "trusted_independent_result_reviewer_key_not_provided",
         "implementation_author_and_independent_result_reviewer_separation_not_attested",
-        "coordinate_trace_not_retained_in_result_receipt",
         "trajectory_level_minimization_comparison_missing",
         "two_cpu_host_reproducibility_missing",
         "independent_external_implementation_comparison_missing",
@@ -903,8 +902,9 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "failure_inclusive_result_writer_and_independent_result_"
-                    "review_contract_without_production_result_receipt_or_review"
+                    "failure_inclusive_complete_coordinate_trace_production_"
+                    "entrypoint_result_writer_and_independent_result_review_"
+                    "contract_without_production_result_receipt_or_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

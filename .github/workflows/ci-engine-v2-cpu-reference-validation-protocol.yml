@@ -8,6 +8,8 @@ on:
       - "packaging/engine-v2/pyproject.toml"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py"
@@ -48,6 +50,8 @@ on:
       - "packaging/engine-v2/pyproject.toml"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py"
@@ -114,6 +118,8 @@ jobs:
             config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
+            tests/unit/test_engine_v2_reference_minimization.py
+            tests/unit/test_engine_v2_reference_constrained_minimization.py
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py
@@ -170,6 +176,8 @@ jobs:
           python tools/check_engine_v2_architecture.py
           ruff check \
             betelgeuze_engine_v2/physics/reference_validation_protocol.py \
+            betelgeuze_engine_v2/physics/reference_minimization.py \
+            betelgeuze_engine_v2/physics/reference_constrained_minimization.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_artifact_binding.py \
@@ -180,6 +188,8 @@ jobs:
             betelgeuze_engine_v2/physics/reference_minimization_validation_authorization.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_nonce_reservation.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_run_start.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_result_writer.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_result_review.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_validation_materializer.py \
@@ -194,6 +204,8 @@ jobs:
             betelgeuze_engine_v2/physics/__init__.py \
             betelgeuze_engine_v2/capabilities.py \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
@@ -220,6 +232,8 @@ jobs:
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
@@ -305,7 +319,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_am_minimization_validation_result_review_contract"
+          assert loaded["implementation_stage"] == "v2_ao_minimization_validation_production_entrypoint"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
@@ -340,6 +354,8 @@ jobs:
           )
           minimization_runner_decision = reference_minimization_validation_runner_contract_decision()
           assert minimization_runner_decision["bounded_validation_runner_implemented"] is True
+          assert minimization_runner_decision["production_process_entrypoint_wired"] is True
+          assert minimization_runner_decision["preconfigured_trust_store_present"] is False
           assert minimization_runner_decision["result_receipt_writer_implemented"] is True
           assert minimization_runner_decision["claim_safe"] is False
           minimization_writer = reference_minimization_validation_result_writer_contract_document()

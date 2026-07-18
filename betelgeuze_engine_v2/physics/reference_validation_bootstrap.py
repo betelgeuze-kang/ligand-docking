@@ -1,9 +1,10 @@
 """Stdlib-only bootstrap for the bounded reference-validation process.
 
-This file is executed directly, before importing the Engine v2 package.  The
-frozen command uses isolated Python startup with automatic ``site`` loading
-disabled, so ``PYTHONPATH``, user-site packages, ``sitecustomize``, and ``.pth``
-files cannot run before the validation trust boundary is established.
+This file is executed directly, before importing the Engine v2 package.  An
+isolated outer launcher verifies the executable and command, then re-executes
+the same interpreter with a minimal environment so ``PYTHONHASHSEED`` is
+applied during interpreter initialization.  Automatic ``site`` loading stays
+disabled throughout the bootstrap.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ import sysconfig
 REFERENCE_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
     "betelgeuze_engine_v2/physics/reference_validation_bootstrap.py"
 )
-REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
+REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV = (
     "python",
     "-I",
     "-S",
@@ -30,6 +31,24 @@ REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
     "pycache_prefix=/dev/null",
     REFERENCE_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
 )
+REFERENCE_VALIDATION_FIXED_RUNPY_LOADER = (
+    'import runpy,sys;p=sys.argv.pop();runpy.run_path(p,run_name="__main__")'
+)
+REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
+    "python",
+    "-S",
+    "-B",
+    "-X",
+    "pycache_prefix=/dev/null",
+    "-c",
+    REFERENCE_VALIDATION_FIXED_RUNPY_LOADER,
+    REFERENCE_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+)
+REFERENCE_VALIDATION_CONTROLLED_INNER_STATE = "seeded-controlled-inner/1"
+REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV = (
+    "BETELGEUZE_REFERENCE_VALIDATION_BOOTSTRAP_STAGE"
+)
+REFERENCE_VALIDATION_APPLICATION_SEED_ENV = "BETELGEUZE_REFERENCE_VALIDATION_SEED"
 REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
     "_betelgeuze_reference_validation_bootstrap_state"
 )
@@ -66,6 +85,24 @@ _BOOTSTRAP_REQUEST_FIELDS = {
 
 class _ReferenceValidationBootstrapError(RuntimeError):
     """The interpreter did not establish the frozen import boundary."""
+
+
+_CONTROLLED_INNER_FIXED_ENVIRONMENT = {
+    "CUDA_VISIBLE_DEVICES": "",
+    "HIP_VISIBLE_DEVICES": "",
+    "HOME": "/nonexistent",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "MKL_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "PATH": "/usr/bin:/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONNOUSERSITE": "1",
+    "PYTHONPYCACHEPREFIX": "/dev/null",
+    "ROCR_VISIBLE_DEVICES": "",
+    "TZ": "UTC",
+}
 
 
 def reference_validation_bootstrap_path() -> str:
@@ -126,8 +163,7 @@ def reference_validation_execution_source_sha256() -> str:
         _canonical_bytes(
             {
                 "schema_id": (
-                    "betelgeuze.engine_v2_reference_validation_execution_sources/"
-                    "1.0.0"
+                    "betelgeuze.engine_v2_reference_validation_execution_sources/1.0.0"
                 ),
                 "sources": source_rows,
             }
@@ -159,6 +195,116 @@ def _require_root_owned_read_only_directory(raw_path: str) -> str:
             )
         current = os.path.dirname(current)
     return resolved
+
+
+def _parse_canonical_seed(
+    value: object,
+    *,
+    name: str,
+    maximum: int,
+) -> int:
+    if not isinstance(value, str) or not value.isascii() or not value.isdigit():
+        raise _ReferenceValidationBootstrapError(
+            f"validation bootstrap {name} must be a canonical ASCII integer"
+        )
+    parsed = int(value)
+    if not 0 <= parsed <= maximum or str(parsed) != value:
+        raise _ReferenceValidationBootstrapError(
+            f"validation bootstrap {name} is outside the frozen range"
+        )
+    return parsed
+
+
+def reference_validation_controlled_inner_environment() -> dict[str, str]:
+    """Return the exact secret-free environment for the seeded inner process."""
+
+    python_hash_seed = _parse_canonical_seed(
+        os.environ.get("PYTHONHASHSEED"),
+        name="PYTHONHASHSEED",
+        maximum=2**32 - 1,
+    )
+    application_seed = _parse_canonical_seed(
+        os.environ.get(REFERENCE_VALIDATION_APPLICATION_SEED_ENV),
+        name=REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
+        maximum=2**63 - 1,
+    )
+    return {
+        **_CONTROLLED_INNER_FIXED_ENVIRONMENT,
+        "PYTHONHASHSEED": str(python_hash_seed),
+        REFERENCE_VALIDATION_APPLICATION_SEED_ENV: str(application_seed),
+        REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV: (
+            REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+        ),
+    }
+
+
+def _require_trusted_root_working_directory() -> str:
+    try:
+        root_stat = os.lstat("/")
+    except OSError as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap trusted working directory is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISDIR(root_stat.st_mode)
+        or root_stat.st_uid != 0
+        or stat.S_IMODE(root_stat.st_mode) & 0o022
+    ):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap trusted working directory is invalid"
+        )
+    return "/"
+
+
+def _require_trusted_running_interpreter() -> str:
+    raw_executable = sys.executable
+    if not raw_executable or not os.path.isabs(raw_executable):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap Python executable is invalid"
+        )
+    executable = os.path.realpath(raw_executable)
+    if executable != os.path.abspath(executable):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap Python executable is not canonical"
+        )
+    try:
+        executable_stat = os.lstat(executable)
+        running_stat = os.stat("/proc/self/exe")
+    except OSError as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap Python executable is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISREG(executable_stat.st_mode)
+        or executable_stat.st_uid != 0
+        or stat.S_IMODE(executable_stat.st_mode) & 0o022
+        or executable_stat.st_nlink != 1
+        or (executable_stat.st_dev, executable_stat.st_ino)
+        != (running_stat.st_dev, running_stat.st_ino)
+    ):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap Python executable is not trusted"
+        )
+    _require_root_owned_read_only_directory(os.path.dirname(executable))
+    _require_trusted_root_working_directory()
+    return executable
+
+
+def _read_process_argv() -> tuple[str, ...]:
+    try:
+        with open("/proc/self/cmdline", "rb") as stream:
+            raw = stream.read(65_536)
+        tokens = raw.rstrip(b"\0").split(b"\0")
+        decoded = tuple(token.decode("utf-8") for token in tokens)
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap process argv is unavailable"
+        ) from exc
+    if not raw.endswith(b"\0") or not decoded or any(not token for token in decoded):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap process argv is invalid"
+        )
+    return decoded
 
 
 def _trusted_standard_library_roots() -> tuple[str, ...]:
@@ -246,8 +392,7 @@ def _read_bootstrap_request() -> tuple[bytes, dict[str, object]]:
         not isinstance(request, dict)
         or _canonical_bytes(request) + b"\n" != raw
         or set(request) != _BOOTSTRAP_REQUEST_FIELDS
-        or request.get("schema_id")
-        != _REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
+        or request.get("schema_id") != _REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
     ):
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap request is not the exact canonical schema"
@@ -336,9 +481,9 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
         or initial_stat.st_uid != 0
         or stat.S_IMODE(initial_stat.st_mode) != 0o600
         or initial_stat.st_nlink != 1
-        or not 0 < initial_stat.st_size <= (
-            REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES
-        )
+        or not 0
+        < initial_stat.st_size
+        <= (REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES)
         or (initial_stat.st_dev, initial_stat.st_ino, initial_stat.st_size)
         != (final_stat.st_dev, final_stat.st_ino, final_stat.st_size)
         or len(raw) != initial_stat.st_size
@@ -465,8 +610,7 @@ def _require_bootstrap_authorization_signature(
     if (
         receipt_sha256 != hashlib.sha256(_canonical_bytes(payload)).hexdigest()
         or payload.get("authorization_key_id") != key_id
-        or payload.get("authorization_operator_identity_sha256")
-        != operator_identity
+        or payload.get("authorization_operator_identity_sha256") != operator_identity
         or payload.get("code_commit_sha") != expected_commit
         or payload.get("runner_source_sha256") != expected_source
     ):
@@ -578,7 +722,7 @@ def _require_signed_clean_checkout_before_import(
         )
 
 
-def _prepare_isolated_import_boundary() -> tuple[object, ...]:
+def _require_canonical_bootstrap_source() -> str:
     expected_bootstrap = reference_validation_bootstrap_path()
     try:
         bootstrap_stat = os.lstat(__file__)
@@ -594,14 +738,24 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap source is not a canonical regular file"
         )
+    return expected_bootstrap
+
+
+def _prepare_isolated_outer_launcher() -> tuple[str, str]:
+    expected_bootstrap = _require_canonical_bootstrap_source()
     expected_tail = (
-        *REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        *REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV[1:-1],
         expected_bootstrap,
     )
     observed_argv = tuple(getattr(sys, "orig_argv", ()))
+    process_argv = _read_process_argv()
+    interpreter = _require_trusted_running_interpreter()
     if (
-        len(observed_argv) != len(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV)
+        len(observed_argv) != len(REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV)
         or observed_argv[1:] != expected_tail
+        or process_argv != observed_argv
+        or not os.path.isabs(observed_argv[0])
+        or os.path.realpath(observed_argv[0]) != interpreter
         or sys.argv != [expected_bootstrap]
         or sys.flags.isolated != 1
         or sys.flags.ignore_environment != 1
@@ -613,6 +767,64 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     ):
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap requires the frozen isolated Python command"
+        )
+    if hasattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap state exists before the controlled inner process"
+        )
+    return interpreter, expected_bootstrap
+
+
+def _reexec_seeded_controlled_inner(
+    interpreter: str,
+    expected_bootstrap: str,
+) -> None:
+    environment = reference_validation_controlled_inner_environment()
+    command = (
+        interpreter,
+        *REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        expected_bootstrap,
+    )
+    os.chdir(_require_trusted_root_working_directory())
+    os.execve(interpreter, command, environment)
+    raise _ReferenceValidationBootstrapError(
+        "validation bootstrap controlled inner exec unexpectedly returned"
+    )
+
+
+def _prepare_seeded_controlled_import_boundary() -> tuple[object, ...]:
+    expected_bootstrap = _require_canonical_bootstrap_source()
+    interpreter = _require_trusted_running_interpreter()
+    expected_argv = (
+        interpreter,
+        *REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        expected_bootstrap,
+    )
+    observed_argv = tuple(getattr(sys, "orig_argv", ()))
+    process_argv = _read_process_argv()
+    expected_environment = reference_validation_controlled_inner_environment()
+    python_hash_seed = int(expected_environment["PYTHONHASHSEED"])
+    if (
+        observed_argv != expected_argv
+        or process_argv != expected_argv
+        or sys.argv != [expected_bootstrap]
+        or os.getcwd() != "/"
+        or dict(os.environ) != expected_environment
+        or sys.flags.isolated != 0
+        or sys.flags.ignore_environment != 0
+        or sys.flags.no_site != 1
+        or sys.flags.no_user_site != 1
+        or sys.flags.dont_write_bytecode != 1
+        or sys.flags.hash_randomization != (0 if python_hash_seed == 0 else 1)
+        or sys.dont_write_bytecode is not True
+        or sys.pycache_prefix != "/dev/null"
+    ):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap requires the frozen seeded inner command"
+        )
+    if hasattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap state exists before trust verification"
         )
 
     repository_root = os.path.dirname(
@@ -632,6 +844,7 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     )
     sys.path[:] = list(dict.fromkeys(sanitized_path))
     return (
+        REFERENCE_VALIDATION_CONTROLLED_INNER_STATE,
         expected_bootstrap,
         repository_root,
         dependency_roots,
@@ -643,9 +856,20 @@ def main() -> int:
     """Establish the import boundary and delegate canonical stdin handling."""
 
     try:
-        state = _prepare_isolated_import_boundary()
+        stage = os.environ.get(REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV)
+        if stage is None:
+            interpreter, expected_bootstrap = _prepare_isolated_outer_launcher()
+            _reexec_seeded_controlled_inner(interpreter, expected_bootstrap)
+            raise _ReferenceValidationBootstrapError(
+                "validation bootstrap controlled inner process did not start"
+            )
+        if stage != REFERENCE_VALIDATION_CONTROLLED_INNER_STATE:
+            raise _ReferenceValidationBootstrapError(
+                "validation bootstrap stage marker is invalid"
+            )
+        state = _prepare_seeded_controlled_import_boundary()
         raw_request, request = _read_bootstrap_request()
-        _require_signed_clean_checkout_before_import(state[1], request)
+        _require_signed_clean_checkout_before_import(state[2], request)
         setattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
         from betelgeuze_engine_v2.physics import reference_validation_runner
 

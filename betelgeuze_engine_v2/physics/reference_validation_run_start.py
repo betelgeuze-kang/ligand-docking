@@ -25,7 +25,9 @@ from typing import Any, Mapping, Sequence
 import torch
 
 from .reference_validation_bootstrap import (
+    REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
     REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+    REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV,
     reference_validation_bootstrap_path,
 )
 from .reference_validation_artifact_binding import (
@@ -71,9 +73,8 @@ REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "1.0.0"
 REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:45:00Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
-REFERENCE_VALIDATION_APPLICATION_SEED_ENV = "BETELGEUZE_REFERENCE_VALIDATION_SEED"
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "14d67c1b352f91caea2ec8d05068bf469d8213d0cb7800f0dbff5f7b69702e23"
+    "9ee69b7a0424a409cf15bd6df7450c2d1307afa37b7ea1c5b1d89b372a44f73a"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -189,17 +190,13 @@ def _format_utc(value: datetime, *, name: str) -> str:
         raise ReferenceValidationRunStartError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
-        raise ReferenceValidationRunStartError(
-            f"{name} must use second resolution"
-        )
+        raise ReferenceValidationRunStartError(f"{name} must use second resolution")
     return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
-        raise ReferenceValidationRunStartError(
-            f"{name} must be second-resolution UTC"
-        )
+        raise ReferenceValidationRunStartError(f"{name} must be second-resolution UTC")
     try:
         return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
             tzinfo=timezone.utc
@@ -266,7 +263,9 @@ def reference_validation_artifact_output_root_identity_sha256(
     try:
         candidate = Path(root)
     except (TypeError, ValueError) as exc:
-        raise ReferenceValidationRunStartError("artifact output root is invalid") from exc
+        raise ReferenceValidationRunStartError(
+            "artifact output root is invalid"
+        ) from exc
     if (
         os.name != "posix"
         or not candidate.is_absolute()
@@ -387,15 +386,11 @@ def build_signed_reference_validation_network_isolation_attestation(
     projection = _network_attestation_projection(
         authorization_receipt_sha256=authorization_receipt_sha256,
         authorization_nonce_sha256=authorization_nonce_sha256,
-        authorization_operator_identity_sha256=(
-            authorization_operator_identity_sha256
-        ),
+        authorization_operator_identity_sha256=(authorization_operator_identity_sha256),
         authorization_key_id=authorization_key_id,
         code_commit_sha=code_commit_sha,
         runner_source_sha256=runner_source_sha256,
-        artifact_output_root_identity_sha256=(
-            artifact_output_root_identity_sha256
-        ),
+        artifact_output_root_identity_sha256=(artifact_output_root_identity_sha256),
         network_namespace_identity_sha256=network_namespace_identity_sha256,
         observed_at_utc=observed_at_utc,
         expires_at_utc=expires_at_utc,
@@ -472,7 +467,9 @@ def _load_json_artifact(
         return result
 
     try:
-        loaded = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate_keys)
+        loaded = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=reject_duplicate_keys
+        )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ReferenceValidationRunStartError(f"{name} is not valid JSON") from exc
     if not isinstance(loaded, dict):
@@ -547,7 +544,9 @@ def verify_signed_reference_validation_network_isolation_attestation(
         )
     observed_at = _parse_utc(payload.get("observed_at_utc"), name="network observed_at")
     expires_at = _parse_utc(payload.get("expires_at_utc"), name="network expires_at")
-    checked = _parse_utc(_format_utc(checked_at, name="network checked_at"), name="network checked_at")
+    checked = _parse_utc(
+        _format_utc(checked_at, name="network checked_at"), name="network checked_at"
+    )
     if not observed_at <= checked < expires_at:
         raise ReferenceValidationRunStartError(
             "network isolation attestation is not currently valid"
@@ -558,9 +557,7 @@ def verify_signed_reference_validation_network_isolation_attestation(
         )
     expected_projection = _network_attestation_projection(
         authorization_receipt_sha256=expected_authorization.receipt_sha256,
-        authorization_nonce_sha256=(
-            expected_authorization.authorization_nonce_sha256
-        ),
+        authorization_nonce_sha256=(expected_authorization.authorization_nonce_sha256),
         authorization_operator_identity_sha256=(
             expected_authorization.authorization_operator_identity_sha256
         ),
@@ -570,9 +567,7 @@ def verify_signed_reference_validation_network_isolation_attestation(
         artifact_output_root_identity_sha256=(
             expected_artifact_output_root_identity_sha256
         ),
-        network_namespace_identity_sha256=(
-            expected_network_namespace_identity_sha256
-        ),
+        network_namespace_identity_sha256=(expected_network_namespace_identity_sha256),
         observed_at_utc=payload["observed_at_utc"],
         expires_at_utc=payload["expires_at_utc"],
     )
@@ -590,9 +585,7 @@ def verify_signed_reference_validation_network_isolation_attestation(
         attestation_sha256=attestation_sha256,
         authorization_operator_identity_sha256=anchor.operator_identity_sha256,
         authorization_key_id=key_id,
-        network_namespace_identity_sha256=(
-            expected_network_namespace_identity_sha256
-        ),
+        network_namespace_identity_sha256=(expected_network_namespace_identity_sha256),
         artifact_output_root_identity_sha256=(
             expected_artifact_output_root_identity_sha256
         ),
@@ -646,8 +639,7 @@ class _RuntimeObservation:
             "python_hash_seed": self.python_hash_seed,
             "application_seed": self.application_seed,
             "thread_count_rows": [
-                {"name": name, "value": value}
-                for name, value in self.thread_count_rows
+                {"name": name, "value": value} for name, value in self.thread_count_rows
             ],
             "torch_deterministic_algorithms_enabled": (
                 self.torch_deterministic_algorithms_enabled
@@ -658,11 +650,16 @@ class _RuntimeObservation:
         }
 
 
-def _parse_seed(value: object, *, name: str) -> int:
+def _parse_seed(
+    value: object,
+    *,
+    name: str,
+    maximum: int = 2**63 - 1,
+) -> int:
     if not isinstance(value, str) or not value.isascii() or not value.isdigit():
         raise ReferenceValidationRunStartError(f"{name} must be an ASCII integer")
     parsed = int(value)
-    if not 0 <= parsed <= 2**63 - 1 or str(parsed) != value:
+    if not 0 <= parsed <= maximum or str(parsed) != value:
         raise ReferenceValidationRunStartError(f"{name} is outside the frozen range")
     return parsed
 
@@ -731,9 +728,7 @@ def _observe_current_runtime() -> _RuntimeObservation:
         operating_system=platform.system().lower(),
         operating_system_release=platform.release(),
         machine_architecture=platform.machine().lower(),
-        cpu_identity_sha256=hashlib.sha256(
-            cpu_identity.encode("utf-8")
-        ).hexdigest(),
+        cpu_identity_sha256=hashlib.sha256(cpu_identity.encode("utf-8")).hexdigest(),
         python_version=platform.python_version(),
         torch_version=str(torch.__version__).split("+", 1)[0],
         numpy_version=str(np.__version__),
@@ -745,6 +740,7 @@ def _observe_current_runtime() -> _RuntimeObservation:
         python_hash_seed=_parse_seed(
             os.environ.get("PYTHONHASHSEED"),
             name="PYTHONHASHSEED",
+            maximum=2**32 - 1,
         ),
         application_seed=_parse_seed(
             os.environ.get(REFERENCE_VALIDATION_APPLICATION_SEED_ENV),
@@ -906,11 +902,17 @@ def _contract_projection() -> dict[str, Any]:
             "locale_timezone_and_thread_environment_exact": True,
             "source_only_python_import_environment_exact": True,
             "ignored_timestamp_bytecode_cache_execution_allowed": False,
-            "isolated_python_startup_required": True,
+            "trusted_isolated_outer_launcher_required": True,
+            "trusted_outer_launcher_argv": list(
+                REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV
+            ),
+            "seeded_controlled_inner_exec_required": True,
             "automatic_site_initialization_allowed": False,
-            "python_import_path_environment_ignored": True,
+            "python_import_path_environment_removed_before_inner_exec": True,
             "user_site_packages_allowed": False,
             "python_hash_and_application_seeds_exact": True,
+            "python_hash_seed_uint32_required": True,
+            "python_hash_seed_applied_at_interpreter_initialization": True,
             "torch_single_thread_and_deterministic_algorithms_required": True,
             "logical_runner_argv": list(REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV),
             "arbitrary_or_secret_bearing_argv_allowed": False,
@@ -1030,22 +1032,28 @@ class ReferenceValidationExecutionEnvironmentReceipt:
         ):
             _require_sha256(value, name=name)
         _require_git_commit(self.code_commit_sha)
-        if len(
-            {
-                self.implementation_author_identity_sha256,
-                self.independent_reviewer_identity_sha256,
-                self.authorization_operator_identity_sha256,
-            }
-        ) != 3:
+        if (
+            len(
+                {
+                    self.implementation_author_identity_sha256,
+                    self.independent_reviewer_identity_sha256,
+                    self.authorization_operator_identity_sha256,
+                }
+            )
+            != 3
+        ):
             raise ReferenceValidationRunStartError(
                 "environment receipt identities must be pairwise distinct"
             )
-        if _normalize_dependency_rows(
-            [
-                {"artifact_id": artifact_id, "sha256": digest}
-                for artifact_id, digest in self.dependency_artifact_sha256_rows
-            ]
-        ) != self.dependency_artifact_sha256_rows:
+        if (
+            _normalize_dependency_rows(
+                [
+                    {"artifact_id": artifact_id, "sha256": digest}
+                    for artifact_id, digest in self.dependency_artifact_sha256_rows
+                ]
+            )
+            != self.dependency_artifact_sha256_rows
+        ):
             raise ReferenceValidationRunStartError(
                 "environment receipt dependency rows are not canonical"
             )
@@ -1083,7 +1091,7 @@ class ReferenceValidationExecutionEnvironmentReceipt:
         if (
             type(self.python_hash_seed) is not int
             or type(self.application_seed) is not int
-            or not 0 <= self.python_hash_seed <= 2**63 - 1
+            or not 0 <= self.python_hash_seed <= 2**32 - 1
             or not 0 <= self.application_seed <= 2**63 - 1
             or environment.get("PYTHONHASHSEED") != str(self.python_hash_seed)
             or environment.get(REFERENCE_VALIDATION_APPLICATION_SEED_ENV)
@@ -1120,9 +1128,7 @@ class ReferenceValidationExecutionEnvironmentReceipt:
             torch_version=self.torch_version,
             numpy_version=self.numpy_version,
             environment_variable_rows=self.environment_variable_rows,
-            network_namespace_identity_sha256=(
-                self.network_namespace_identity_sha256
-            ),
+            network_namespace_identity_sha256=(self.network_namespace_identity_sha256),
             command_argv=self.command_argv,
             python_hash_seed=self.python_hash_seed,
             application_seed=self.application_seed,
@@ -1205,8 +1211,7 @@ class ReferenceValidationExecutionEnvironmentReceipt:
             "python_hash_seed": self.python_hash_seed,
             "application_seed": self.application_seed,
             "thread_count_rows": [
-                {"name": name, "value": value}
-                for name, value in self.thread_count_rows
+                {"name": name, "value": value} for name, value in self.thread_count_rows
             ],
             "artifact_output_root": {
                 "absolute_path_sha256": self.artifact_output_root_identity_sha256,
@@ -1254,9 +1259,7 @@ def _assert_reservation_matches_authorization(
         "execution_environment_contract_sha256": (
             verification.execution_environment_contract_sha256
         ),
-        "result_receipt_contract_sha256": (
-            verification.result_receipt_contract_sha256
-        ),
+        "result_receipt_contract_sha256": (verification.result_receipt_contract_sha256),
         "dependency_artifact_sha256_rows": (
             verification.dependency_artifact_sha256_rows
         ),
@@ -1279,9 +1282,7 @@ def _build_environment_receipt(
 ) -> ReferenceValidationExecutionEnvironmentReceipt:
     fingerprint = _sha256(
         observation.fingerprint_projection(
-            artifact_output_root_identity_sha256=(
-                artifact_output_root_identity_sha256
-            )
+            artifact_output_root_identity_sha256=(artifact_output_root_identity_sha256)
         )
     )
     values = {
@@ -1318,9 +1319,7 @@ def _build_environment_receipt(
         "python_hash_seed": observation.python_hash_seed,
         "application_seed": observation.application_seed,
         "thread_count_rows": observation.thread_count_rows,
-        "artifact_output_root_identity_sha256": (
-            artifact_output_root_identity_sha256
-        ),
+        "artifact_output_root_identity_sha256": (artifact_output_root_identity_sha256),
         "environment_fingerprint_sha256": fingerprint,
         "started_at_utc": started_at_utc,
         "blockers": _POST_ENVIRONMENT_RECEIPT_BLOCKERS,
@@ -1432,9 +1431,7 @@ def create_reference_validation_execution_environment_receipt(
                 expected_dependency_artifact_sha256_rows
             ),
             revoked_receipt_sha256s=revoked_receipt_sha256s,
-            revoked_review_attestation_sha256s=(
-                revoked_review_attestation_sha256s
-            ),
+            revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
             consumed_nonce_sha256s=externally_conflicting_nonce_sha256s,
         )
     except ReferenceValidationAuthorizationError as exc:
@@ -1586,9 +1583,11 @@ def _receipt_from_payload(
         raise ReferenceValidationRunStartError(
             "environment receipt network verification fields are invalid"
         )
-    if network.get("operator_signed") is not True or network.get(
-        "network_access_disabled"
-    ) is not True or network.get("kernel_enforced_by_this_library") is not False:
+    if (
+        network.get("operator_signed") is not True
+        or network.get("network_access_disabled") is not True
+        or network.get("kernel_enforced_by_this_library") is not False
+    ):
         raise ReferenceValidationRunStartError(
             "environment receipt network verification state drifted"
         )
@@ -1596,9 +1595,10 @@ def _receipt_from_payload(
         raise ReferenceValidationRunStartError(
             "environment receipt artifact root fields are invalid"
         )
-    if not isinstance(confinement, Mapping) or confinement.get(
-        "secure_dir_fd_traversal"
-    ) is not True:
+    if (
+        not isinstance(confinement, Mapping)
+        or confinement.get("secure_dir_fd_traversal") is not True
+    ):
         raise ReferenceValidationRunStartError(
             "environment receipt confinement fields are invalid"
         )
@@ -1667,9 +1667,7 @@ def _receipt_from_payload(
             command_argv=tuple(projection["command_argv"]),
             python_hash_seed=projection["python_hash_seed"],
             application_seed=projection["application_seed"],
-            thread_count_rows=tuple(
-                (row["name"], row["value"]) for row in thread_rows
-            ),
+            thread_count_rows=tuple((row["name"], row["value"]) for row in thread_rows),
             artifact_output_root_identity_sha256=_require_sha256(
                 artifact_root.get("absolute_path_sha256"),
                 name="environment receipt artifact root",
@@ -1725,7 +1723,11 @@ def read_reference_validation_execution_environment_receipt(
         try:
             file_stat = os.fstat(descriptor)
             _validate_reservation_file_stat(file_stat)
-            if not 0 < file_stat.st_size <= REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES:
+            if (
+                not 0
+                < file_stat.st_size
+                <= REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES
+            ):
                 raise ReferenceValidationRunStartError(
                     "environment receipt size is invalid"
                 )

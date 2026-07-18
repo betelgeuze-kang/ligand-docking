@@ -18,7 +18,10 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 impo
     sign_ed25519,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_result_review import (
+    COORDINATE_TRACE_ACCEPTED,
+    COORDINATE_TRACE_STEP_ACCEPTED,
     EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED,
+    EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID,
     REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID,
@@ -133,6 +136,121 @@ def _tampered_first_case_receipt(
     tampered["case_results"] = deepcopy(observed_cases)
     tampered["observation_sha256"] = _sha256(run_observation)
     return _rehash_receipt(tampered)  # type: ignore[return-value]
+
+
+def _rehash_trace_step(step: dict[str, object]) -> None:
+    step.pop("step_identity_sha256", None)
+    step["step_identity_sha256"] = _sha256(step)
+
+
+def _rehash_trace(trace: dict[str, object]) -> None:
+    trace.pop("trace_sha256", None)
+    trace["trace_sha256"] = _sha256(trace)
+
+
+def _finalize_observation_tamper(
+    tampered: _ResultEvidence,
+) -> _ResultEvidence:
+    run_observation = tampered["run_observation"]
+    assert isinstance(run_observation, dict)
+    cases = run_observation["case_results"]
+    assert isinstance(cases, list)
+    tampered["case_results"] = deepcopy(cases)
+    tampered["observation_sha256"] = _sha256(run_observation)
+    return _rehash_receipt(tampered)  # type: ignore[return-value]
+
+
+def _replace_selected_trace_energy_ledger(
+    case: dict[str, object],
+    ledger: list[float],
+) -> None:
+    traces = case["coordinate_traces"]
+    assert isinstance(traces, list)
+    source_index = 1 if case["expected_outcome"] == "fail_closed" else 0
+    trace = traces[source_index]
+    assert isinstance(trace, dict)
+    steps = trace["steps"]
+    assert isinstance(steps, list)
+    accepted_steps = [
+        step
+        for step in steps
+        if isinstance(step, dict) and step["outcome"] in {"initial", "accepted"}
+    ]
+    assert len(accepted_steps) == len(ledger)
+    for step, energy in zip(accepted_steps, ledger, strict=True):
+        step["energy_kcal_per_mol"] = energy
+        _rehash_trace_step(step)
+    trace["accepted_energy_ledger"] = ledger
+    case["accepted_energy_ledger"] = ledger
+    _rehash_trace(trace)
+
+
+def _append_accepted_trace_step(case: dict[str, object]) -> None:
+    traces = case["coordinate_traces"]
+    assert isinstance(traces, list)
+    trace = traces[0]
+    assert isinstance(trace, dict)
+    steps = trace["steps"]
+    ledger = trace["accepted_energy_ledger"]
+    assert isinstance(steps, list) and isinstance(ledger, list)
+    step = deepcopy(steps[-1])
+    assert isinstance(step, dict)
+    step.update(
+        {
+            "trace_ordinal": len(steps) + 1,
+            "evaluation_index": len(steps) + 1,
+            "iteration": int(trace["accepted_iteration_count"]) + 1,
+            "trial": 0,
+            "outcome": "accepted",
+            "energy_kcal_per_mol": ledger[-1],
+        }
+    )
+    _rehash_trace_step(step)
+    steps.append(step)
+    trace["trace_length"] = len(steps)
+    trace["accepted_iteration_count"] = int(
+        trace["accepted_iteration_count"]
+    ) + 1
+    trace["energy_force_evaluation_count"] = len(steps)
+    trace["accepted_energy_ledger"] = [*ledger, ledger[-1]]
+    _rehash_trace(trace)
+    case["accepted_iteration_count"] = trace["accepted_iteration_count"]
+    case["energy_force_evaluation_count"] = len(steps)
+    case["accepted_energy_ledger"] = deepcopy(trace["accepted_energy_ledger"])
+
+
+def _append_rejected_trace_steps(
+    case: dict[str, object],
+    *,
+    count: int,
+) -> None:
+    traces = case["coordinate_traces"]
+    assert isinstance(traces, list)
+    trace = traces[0]
+    assert isinstance(trace, dict)
+    steps = trace["steps"]
+    assert isinstance(steps, list) and len(steps) == 1
+    initial = steps[0]
+    assert isinstance(initial, dict)
+    for trial in range(count):
+        step = deepcopy(initial)
+        step.update(
+            {
+                "trace_ordinal": len(steps) + 1,
+                "evaluation_index": len(steps) + 1,
+                "iteration": 1,
+                "trial": trial,
+                "outcome": "rejected_armijo",
+            }
+        )
+        _rehash_trace_step(step)
+        steps.append(step)
+    trace["trace_length"] = len(steps)
+    trace["rejected_step_count"] = count
+    trace["energy_force_evaluation_count"] = len(steps)
+    _rehash_trace(trace)
+    case["rejected_step_count"] = count
+    case["energy_force_evaluation_count"] = len(steps)
 
 
 @pytest.fixture(scope="module")
@@ -413,6 +531,22 @@ def test_signed_accepted_review_verifies_exact_receipt_and_all_rows(
         for row in rows
         if row["expected_outcome"] == "fail_closed"
     )
+    assert all(len(row["coordinate_trace_dispositions"]) == 2 for row in rows)
+    assert all(
+        trace["disposition"]
+        in {
+            COORDINATE_TRACE_ACCEPTED,
+            EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
+        }
+        and not trace["rejection_reasons"]
+        and all(
+            step["disposition"] == COORDINATE_TRACE_STEP_ACCEPTED
+            and not step["rejection_reasons"]
+            for step in trace["step_dispositions"]
+        )
+        for row in rows
+        for trace in row["coordinate_trace_dispositions"]
+    )
     assert verification.independent_result_review_verified is True
     assert verification.implementation_author_separation_verified is True
     assert verification.result_receipt_review_outcome == RESULT_REVIEW_OUTCOME_ACCEPTED
@@ -420,7 +554,8 @@ def test_signed_accepted_review_verifies_exact_receipt_and_all_rows(
     assert verification.scientifically_validated is False
     assert verification.parameter_fitting_authorized is False
     assert "independent_result_review_missing" in verification.blockers
-    assert "coordinate_trace_not_retained_in_result_receipt" in verification.blockers
+    assert "coordinate_trace_not_retained_in_result_receipt" not in verification.blockers
+    assert "trajectory_level_minimization_comparison_missing" in verification.blockers
     assert verification.to_dict()["result_receipt_accepted"] is True
 
 
@@ -611,6 +746,33 @@ def test_verifier_rejects_crosswired_receipt_and_validly_signed_false_dispositio
     ):
         _verify(false_review, result_receipt)
 
+    false_trace_review = deepcopy(attestation)
+    false_trace_review.pop("signature")
+    false_trace_review.pop("attestation_sha256")
+    trace_rows = false_trace_review["case_review_rows"]
+    assert isinstance(trace_rows, list)
+    trace_rows[0]["coordinate_trace_dispositions"][0]["disposition"] = (
+        "coordinate_trace_rejected"
+    )
+    false_trace_review["result_receipt_review_outcome"] = (
+        RESULT_REVIEW_OUTCOME_REJECTED
+    )
+    false_trace_review["result_receipt_accepted"] = False
+    false_trace_review["attestation_sha256"] = _sha256(false_trace_review)
+    false_trace_review["signature"] = {
+        "algorithm": "ed25519",
+        "key_id": RESULT_REVIEW_KEY_ID,
+        "value": sign_ed25519(
+            _canonical_bytes(false_trace_review),
+            RESULT_REVIEW_KEY,
+        ),
+    }
+    with pytest.raises(
+        ReferenceMinimizationValidationResultReviewError,
+        match="case dispositions",
+    ):
+        _verify(false_trace_review, result_receipt)
+
 
 @pytest.mark.parametrize(
     "updates",
@@ -618,8 +780,6 @@ def test_verifier_rejects_crosswired_receipt_and_validly_signed_false_dispositio
         {"observed_status": "arbitrary_status"},
         {"operational_result_sha256": None},
         {"independent_result_sha256": None},
-        {"accepted_iteration_count": -1},
-        {"accepted_energy_ledger": []},
         {"runtime_input_sha256": "0" * 64},
         {"independent_oracle_input_sha256": "0" * 64},
     ],
@@ -657,6 +817,93 @@ def test_non_exact_integer_count_fails_closed_at_writer_validation(
         _attestation(tampered)
 
 
+@pytest.mark.parametrize(
+    "updates",
+    [
+        {"accepted_iteration_count": -1},
+        {"accepted_energy_ledger": []},
+    ],
+)
+def test_trace_bound_count_or_ledger_tampering_fails_writer_validation(
+    result_receipt: _ResultEvidence,
+    updates: dict[str, object],
+) -> None:
+    tampered = _tampered_first_case_receipt(result_receipt, **updates)
+    with pytest.raises(
+        ReferenceMinimizationValidationResultReviewError,
+        match="full result-writer contract validation",
+    ):
+        _attestation(tampered)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_trace",
+        "reordered_traces",
+        "missing_step",
+        "reordered_steps",
+        "coordinate_payload",
+        "step_digest",
+        "trace_digest",
+        "source_crosswire",
+    ],
+)
+def test_coordinate_trace_tampering_fails_closed_before_review(
+    result_receipt: _ResultEvidence,
+    mutation: str,
+) -> None:
+    tampered = deepcopy(result_receipt)
+    run_observation = tampered["run_observation"]
+    assert isinstance(run_observation, dict)
+    cases = run_observation["case_results"]
+    assert isinstance(cases, list)
+    first_case = cases[0]
+    assert isinstance(first_case, dict)
+    traces = first_case["coordinate_traces"]
+    assert isinstance(traces, list)
+    operational = traces[0]
+    assert isinstance(operational, dict)
+    steps = operational["steps"]
+    assert isinstance(steps, list) and len(steps) > 1
+
+    if mutation == "missing_trace":
+        traces.pop()
+    elif mutation == "reordered_traces":
+        traces.reverse()
+    elif mutation == "missing_step":
+        steps.pop()
+        _rehash_trace(operational)
+    elif mutation == "reordered_steps":
+        steps[0], steps[1] = steps[1], steps[0]
+        _rehash_trace(operational)
+    elif mutation == "coordinate_payload":
+        first_step = steps[0]
+        assert isinstance(first_step, dict)
+        coordinates = first_step["evaluated_coordinates_angstrom_hex"]
+        assert isinstance(coordinates, list)
+        coordinates[0][0] = (float.fromhex(coordinates[0][0]) + 1.0).hex()
+    elif mutation == "step_digest":
+        first_step = steps[0]
+        assert isinstance(first_step, dict)
+        first_step["step_identity_sha256"] = "0" * 64
+        _rehash_trace(operational)
+    elif mutation == "trace_digest":
+        operational["trace_sha256"] = "0" * 64
+    elif mutation == "source_crosswire":
+        operational["trace_source"] = "independent_oracle"
+        _rehash_trace(operational)
+    else:  # pragma: no cover - parametrization is closed above
+        raise AssertionError(mutation)
+
+    _finalize_observation_tamper(tampered)
+    with pytest.raises(
+        ReferenceMinimizationValidationResultReviewError,
+        match="full result-writer contract validation",
+    ):
+        _attestation(tampered)
+
+
 def test_energy_ledger_is_recomputed_against_monotonic_and_energy_metrics(
     result_receipt: _ResultEvidence,
 ) -> None:
@@ -669,10 +916,8 @@ def test_energy_ledger_is_recomputed_against_monotonic_and_energy_metrics(
     assert isinstance(first_case, dict)
     ledger = first_case["accepted_energy_ledger"]
     assert isinstance(ledger, list)
-    first_case["accepted_energy_ledger"] = list(reversed(ledger))
-    tampered["case_results"] = deepcopy(case_results)
-    tampered["observation_sha256"] = _sha256(run_observation)
-    _rehash_receipt(tampered)
+    _replace_selected_trace_energy_ledger(first_case, list(reversed(ledger)))
+    _finalize_observation_tamper(tampered)
 
     attestation = _attestation(tampered)
     first_row = attestation["case_review_rows"][0]
@@ -698,10 +943,11 @@ def test_fail_closed_energy_ledger_must_also_be_monotonic(
     assert isinstance(line_search_exhausted, dict)
     ledger = line_search_exhausted["accepted_energy_ledger"]
     assert isinstance(ledger, list)
-    line_search_exhausted["accepted_energy_ledger"] = list(reversed(ledger))
-    tampered["case_results"] = deepcopy(case_results)
-    tampered["observation_sha256"] = _sha256(run_observation)
-    _rehash_receipt(tampered)
+    _replace_selected_trace_energy_ledger(
+        line_search_exhausted,
+        list(reversed(ledger)),
+    )
+    _finalize_observation_tamper(tampered)
 
     attestation = _attestation(tampered)
     reasons = attestation["case_review_rows"][12]["result_evidence_rejection_reasons"]
@@ -719,14 +965,8 @@ def test_case_count_budget_cannot_be_extended_with_a_self_consistent_ledger(
     assert isinstance(case_results, list)
     first_case = case_results[0]
     assert isinstance(first_case, dict)
-    ledger = first_case["accepted_energy_ledger"]
-    assert isinstance(ledger, list)
-    first_case["accepted_iteration_count"] = 65
-    first_case["energy_force_evaluation_count"] = 66
-    first_case["accepted_energy_ledger"] = [*ledger, ledger[-1]]
-    tampered["case_results"] = deepcopy(case_results)
-    tampered["observation_sha256"] = _sha256(run_observation)
-    _rehash_receipt(tampered)
+    _append_accepted_trace_step(first_case)
+    _finalize_observation_tamper(tampered)
 
     attestation = _attestation(tampered)
     first_row = attestation["case_review_rows"][0]
@@ -747,21 +987,13 @@ def test_line_search_failure_status_is_lane_specific_and_requires_full_backtrack
     assert isinstance(case_results, list)
     first_case = case_results[0]
     assert isinstance(first_case, dict)
-    ledger = first_case["accepted_energy_ledger"]
-    assert isinstance(ledger, list)
     first_case.update(
         {
             "observed_status": "line_search_failed",
             "observed_error_code": "bounded_projected_backtracking_exhausted",
-            "accepted_iteration_count": 1,
-            "rejected_step_count": 1,
-            "energy_force_evaluation_count": 3,
-            "accepted_energy_ledger": [ledger[0], ledger[-1]],
         }
     )
-    tampered["case_results"] = deepcopy(case_results)
-    tampered["observation_sha256"] = _sha256(run_observation)
-    _rehash_receipt(tampered)
+    _finalize_observation_tamper(tampered)
 
     attestation = _attestation(tampered)
     reasons = attestation["case_review_rows"][0]["result_evidence_rejection_reasons"]
@@ -780,11 +1012,8 @@ def test_converged_case_rejections_are_bound_to_accepted_progress(
     assert isinstance(case_results, list)
     initially_converged = case_results[3]
     assert isinstance(initially_converged, dict)
-    initially_converged["rejected_step_count"] = 100
-    initially_converged["energy_force_evaluation_count"] = 101
-    tampered["case_results"] = deepcopy(case_results)
-    tampered["observation_sha256"] = _sha256(run_observation)
-    _rehash_receipt(tampered)
+    _append_rejected_trace_steps(initially_converged, count=100)
+    _finalize_observation_tamper(tampered)
 
     attestation = _attestation(tampered)
     reasons = attestation["case_review_rows"][3]["result_evidence_rejection_reasons"]

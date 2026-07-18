@@ -1,9 +1,10 @@
 """Stdlib-only bootstrap for the bounded reference-validation process.
 
-This file is executed directly, before importing the Engine v2 package.  The
-frozen command uses isolated Python startup with automatic ``site`` loading
-disabled, so ``PYTHONPATH``, user-site packages, ``sitecustomize``, and ``.pth``
-files cannot run before the validation trust boundary is established.
+This file is executed directly, before importing the Engine v2 package.  An
+isolated outer launcher verifies the executable and command, then re-executes
+the same interpreter with a minimal environment so ``PYTHONHASHSEED`` is
+applied during interpreter initialization.  Automatic ``site`` loading stays
+disabled throughout the bootstrap.
 """
 
 from __future__ import annotations
@@ -21,10 +22,8 @@ import sysconfig
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
     "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py"
 )
-REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH = (
-    "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py"
-)
-REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
+REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH = "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py"
+REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV = (
     "python",
     "-I",
     "-S",
@@ -32,6 +31,26 @@ REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
     "-X",
     "pycache_prefix=/dev/null",
     REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+)
+REFERENCE_MINIMIZATION_VALIDATION_FIXED_RUNPY_LOADER = (
+    'import runpy,sys;p=sys.argv.pop();runpy.run_path(p,run_name="__main__")'
+)
+REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
+    "python",
+    "-S",
+    "-B",
+    "-X",
+    "pycache_prefix=/dev/null",
+    "-c",
+    REFERENCE_MINIMIZATION_VALIDATION_FIXED_RUNPY_LOADER,
+    REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+)
+REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE = "seeded-controlled-inner/1"
+REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STAGE_ENV = (
+    "BETELGEUZE_REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STAGE"
+)
+REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV = (
+    "BETELGEUZE_REFERENCE_MINIMIZATION_VALIDATION_SEED"
 )
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
     "_betelgeuze_reference_minimization_validation_bootstrap_state"
@@ -41,15 +60,13 @@ REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH = (
     "/etc/betelgeuze/engine-v2/reference-minimization-validation-trust-anchors.json"
 )
-_REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID = (
+REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_trust_store/1.0.0"
 )
 _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 _REFERENCE_MINIMIZATION_VALIDATION_OPENSSL_EXECUTABLE = "/usr/bin/openssl"
-_ED25519_SUBJECT_PUBLIC_KEY_INFO_PREFIX = bytes.fromhex(
-    "302a300506032b6570032100"
-)
-_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
+_ED25519_SUBJECT_PUBLIC_KEY_INFO_PREFIX = bytes.fromhex("302a300506032b6570032100")
+REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RUNNER_REQUEST_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_runner_request/1.1.0"
 )
 _BOOTSTRAP_REQUEST_FIELDS = {
@@ -73,6 +90,24 @@ _BOOTSTRAP_REQUEST_FIELDS = {
 
 class _ReferenceMinimizationValidationBootstrapError(RuntimeError):
     """The interpreter did not establish the frozen import boundary."""
+
+
+_CONTROLLED_INNER_FIXED_ENVIRONMENT = {
+    "CUDA_VISIBLE_DEVICES": "",
+    "HIP_VISIBLE_DEVICES": "",
+    "HOME": "/nonexistent",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "MKL_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "PATH": "/usr/bin:/bin",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONNOUSERSITE": "1",
+    "PYTHONPYCACHEPREFIX": "/dev/null",
+    "ROCR_VISIBLE_DEVICES": "",
+    "TZ": "UTC",
+}
 
 
 def reference_minimization_validation_bootstrap_path() -> str:
@@ -185,10 +220,14 @@ def _require_observed_dependency_artifact_rows_before_import(
 
 def _require_root_owned_read_only_directory(raw_path: str) -> str:
     if not raw_path or not os.path.isabs(raw_path) or os.pathsep in raw_path:
-        raise _ReferenceMinimizationValidationBootstrapError("bootstrap path is invalid")
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap path is invalid"
+        )
     resolved = os.path.realpath(raw_path)
     if resolved != os.path.abspath(raw_path):
-        raise _ReferenceMinimizationValidationBootstrapError("bootstrap path is not canonical")
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap path is not canonical"
+        )
     current = resolved
     while current != os.path.dirname(current):
         try:
@@ -207,6 +246,116 @@ def _require_root_owned_read_only_directory(raw_path: str) -> str:
             )
         current = os.path.dirname(current)
     return resolved
+
+
+def _parse_canonical_seed(
+    value: object,
+    *,
+    name: str,
+    maximum: int,
+) -> int:
+    if not isinstance(value, str) or not value.isascii() or not value.isdigit():
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"validation bootstrap {name} must be a canonical ASCII integer"
+        )
+    parsed = int(value)
+    if not 0 <= parsed <= maximum or str(parsed) != value:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"validation bootstrap {name} is outside the frozen range"
+        )
+    return parsed
+
+
+def reference_minimization_validation_controlled_inner_environment() -> dict[str, str]:
+    """Return the exact secret-free environment for the seeded inner process."""
+
+    python_hash_seed = _parse_canonical_seed(
+        os.environ.get("PYTHONHASHSEED"),
+        name="PYTHONHASHSEED",
+        maximum=2**32 - 1,
+    )
+    application_seed = _parse_canonical_seed(
+        os.environ.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV),
+        name=REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV,
+        maximum=2**63 - 1,
+    )
+    return {
+        **_CONTROLLED_INNER_FIXED_ENVIRONMENT,
+        "PYTHONHASHSEED": str(python_hash_seed),
+        REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV: str(application_seed),
+        REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STAGE_ENV: (
+            REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE
+        ),
+    }
+
+
+def _require_trusted_root_working_directory() -> str:
+    try:
+        root_stat = os.lstat("/")
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap trusted working directory is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISDIR(root_stat.st_mode)
+        or root_stat.st_uid != 0
+        or stat.S_IMODE(root_stat.st_mode) & 0o022
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap trusted working directory is invalid"
+        )
+    return "/"
+
+
+def _require_trusted_running_interpreter() -> str:
+    raw_executable = sys.executable
+    if not raw_executable or not os.path.isabs(raw_executable):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap Python executable is invalid"
+        )
+    executable = os.path.realpath(raw_executable)
+    if executable != os.path.abspath(executable):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap Python executable is not canonical"
+        )
+    try:
+        executable_stat = os.lstat(executable)
+        running_stat = os.stat("/proc/self/exe")
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap Python executable is unavailable"
+        ) from exc
+    if (
+        not stat.S_ISREG(executable_stat.st_mode)
+        or executable_stat.st_uid != 0
+        or stat.S_IMODE(executable_stat.st_mode) & 0o022
+        or executable_stat.st_nlink != 1
+        or (executable_stat.st_dev, executable_stat.st_ino)
+        != (running_stat.st_dev, running_stat.st_ino)
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap Python executable is not trusted"
+        )
+    _require_root_owned_read_only_directory(os.path.dirname(executable))
+    _require_trusted_root_working_directory()
+    return executable
+
+
+def _read_process_argv() -> tuple[str, ...]:
+    try:
+        with open("/proc/self/cmdline", "rb") as stream:
+            raw = stream.read(65_536)
+        tokens = raw.rstrip(b"\0").split(b"\0")
+        decoded = tuple(token.decode("utf-8") for token in tokens)
+    except (OSError, UnicodeDecodeError) as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap process argv is unavailable"
+        ) from exc
+    if not raw.endswith(b"\0") or not decoded or any(not token for token in decoded):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap process argv is invalid"
+        )
+    return decoded
 
 
 def _trusted_standard_library_roots() -> tuple[str, ...]:
@@ -256,7 +405,9 @@ def _trusted_dependency_roots() -> tuple[str, ...]:
 def _read_bootstrap_request() -> tuple[bytes, dict[str, object]]:
     input_stream = getattr(sys.stdin, "buffer", sys.stdin)
     try:
-        raw = input_stream.read(REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES + 1)
+        raw = input_stream.read(
+            REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES + 1
+        )
     except (AttributeError, OSError) as exc:
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap request cannot be read"
@@ -295,7 +446,7 @@ def _read_bootstrap_request() -> tuple[bytes, dict[str, object]]:
         or _canonical_bytes(request) + b"\n" != raw
         or set(request) != _BOOTSTRAP_REQUEST_FIELDS
         or request.get("schema_id")
-        != _REFERENCE_MINIMIZATION_VALIDATION_RUNNER_REQUEST_SCHEMA_ID
+        != REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RUNNER_REQUEST_SCHEMA_ID
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap request is not the exact canonical schema"
@@ -327,7 +478,9 @@ def _require_external_private_root(
         file_stat = os.lstat(value)
         common = os.path.commonpath((resolved, repository_root))
     except (OSError, ValueError) as exc:
-        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is unavailable") from exc
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} is unavailable"
+        ) from exc
     if (
         candidate != resolved
         or not stat.S_ISDIR(file_stat.st_mode)
@@ -367,7 +520,10 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
                 break
             chunks.append(chunk)
             total += len(chunk)
-            if total > REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES:
+            if (
+                total
+                > REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES
+            ):
                 raise _ReferenceMinimizationValidationBootstrapError(
                     "bootstrap trust store exceeds the size limit"
                 )
@@ -384,9 +540,9 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
         or initial_stat.st_uid != 0
         or stat.S_IMODE(initial_stat.st_mode) != 0o600
         or initial_stat.st_nlink != 1
-        or not 0 < initial_stat.st_size <= (
-            REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES
-        )
+        or not 0
+        < initial_stat.st_size
+        <= (REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES)
         or (initial_stat.st_dev, initial_stat.st_ino, initial_stat.st_size)
         != (final_stat.st_dev, final_stat.st_ino, final_stat.st_size)
         or len(raw) != initial_stat.st_size
@@ -418,7 +574,8 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
     if (
         not isinstance(payload, dict)
         or set(payload) != {"schema_id", "reviewer_keys", "operator_keys"}
-        or payload.get("schema_id") != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID
+        or payload.get("schema_id")
+        != REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID
         or _canonical_bytes(payload) + b"\n" != raw
         or not isinstance(payload.get("operator_keys"), list)
     ):
@@ -613,13 +770,46 @@ def _require_bootstrap_authorization_signature(
             "bootstrap authorization signature verification failed"
         )
     receipt_sha256 = payload.pop("receipt_sha256", None)
+    expected_nonce = _require_lower_hex(
+        request.get("authorization_nonce_sha256"),
+        length=64,
+        name="bootstrap authorization nonce",
+    )
+    expected_author = _require_lower_hex(
+        request.get("expected_implementation_author_identity_sha256"),
+        length=64,
+        name="bootstrap implementation author",
+    )
+    raw_dependencies = request.get("expected_dependency_artifact_sha256_rows")
+    if not isinstance(raw_dependencies, dict) or not raw_dependencies:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap dependency artifact rows are invalid"
+        )
+    expected_dependencies: list[dict[str, str]] = []
+    for artifact_id, digest in sorted(raw_dependencies.items()):
+        if not isinstance(artifact_id, str) or not artifact_id:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "bootstrap dependency artifact rows are invalid"
+            )
+        expected_dependencies.append(
+            {
+                "artifact_id": artifact_id,
+                "sha256": _require_lower_hex(
+                    digest,
+                    length=64,
+                    name=f"bootstrap dependency {artifact_id}",
+                ),
+            }
+        )
     if (
         receipt_sha256 != hashlib.sha256(_canonical_bytes(payload)).hexdigest()
         or payload.get("authorization_key_id") != key_id
-        or payload.get("authorization_operator_identity_sha256")
-        != operator_identity
+        or payload.get("authorization_operator_identity_sha256") != operator_identity
+        or payload.get("authorization_nonce_sha256") != expected_nonce
+        or payload.get("implementation_author_identity_sha256") != expected_author
         or payload.get("code_commit_sha") != expected_commit
         or payload.get("runner_source_sha256") != expected_source
+        or payload.get("dependency_artifact_sha256_rows") != expected_dependencies
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap authorization source binding is invalid"
@@ -719,14 +909,15 @@ def _require_signed_clean_checkout_before_import(
         or observed_status.stdout
         or observed_replacements.returncode != 0
         or observed_replacements.stdout
-        or reference_minimization_validation_execution_source_sha256() != expected_source
+        or reference_minimization_validation_execution_source_sha256()
+        != expected_source
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap checkout is not the signed clean source"
         )
 
 
-def _prepare_isolated_import_boundary() -> tuple[object, ...]:
+def _require_canonical_bootstrap_source() -> str:
     expected_bootstrap = reference_minimization_validation_bootstrap_path()
     try:
         bootstrap_stat = os.lstat(__file__)
@@ -742,14 +933,25 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap source is not a canonical regular file"
         )
+    return expected_bootstrap
+
+
+def _prepare_isolated_outer_launcher() -> tuple[str, str]:
+    expected_bootstrap = _require_canonical_bootstrap_source()
     expected_tail = (
-        *REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        *REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV[1:-1],
         expected_bootstrap,
     )
     observed_argv = tuple(getattr(sys, "orig_argv", ()))
+    process_argv = _read_process_argv()
+    interpreter = _require_trusted_running_interpreter()
     if (
-        len(observed_argv) != len(REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV)
+        len(observed_argv)
+        != len(REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV)
         or observed_argv[1:] != expected_tail
+        or process_argv != observed_argv
+        or not os.path.isabs(observed_argv[0])
+        or os.path.realpath(observed_argv[0]) != interpreter
         or sys.argv != [expected_bootstrap]
         or sys.flags.isolated != 1
         or sys.flags.ignore_environment != 1
@@ -761,6 +963,66 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap requires the frozen isolated Python command"
+        )
+    if hasattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap state exists before the controlled inner process"
+        )
+    return interpreter, expected_bootstrap
+
+
+def _reexec_seeded_controlled_inner(
+    interpreter: str,
+    expected_bootstrap: str,
+) -> None:
+    environment = reference_minimization_validation_controlled_inner_environment()
+    command = (
+        interpreter,
+        *REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        expected_bootstrap,
+    )
+    os.chdir(_require_trusted_root_working_directory())
+    os.execve(interpreter, command, environment)
+    raise _ReferenceMinimizationValidationBootstrapError(
+        "validation bootstrap controlled inner exec unexpectedly returned"
+    )
+
+
+def _prepare_seeded_controlled_import_boundary() -> tuple[object, ...]:
+    expected_bootstrap = _require_canonical_bootstrap_source()
+    interpreter = _require_trusted_running_interpreter()
+    expected_argv = (
+        interpreter,
+        *REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
+        expected_bootstrap,
+    )
+    observed_argv = tuple(getattr(sys, "orig_argv", ()))
+    process_argv = _read_process_argv()
+    expected_environment = (
+        reference_minimization_validation_controlled_inner_environment()
+    )
+    python_hash_seed = int(expected_environment["PYTHONHASHSEED"])
+    if (
+        observed_argv != expected_argv
+        or process_argv != expected_argv
+        or sys.argv != [expected_bootstrap]
+        or os.getcwd() != "/"
+        or dict(os.environ) != expected_environment
+        or sys.flags.isolated != 0
+        or sys.flags.ignore_environment != 0
+        or sys.flags.no_site != 1
+        or sys.flags.no_user_site != 1
+        or sys.flags.dont_write_bytecode != 1
+        or sys.flags.hash_randomization != (0 if python_hash_seed == 0 else 1)
+        or sys.dont_write_bytecode is not True
+        or sys.pycache_prefix != "/dev/null"
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap requires the frozen seeded inner command"
+        )
+    if hasattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation bootstrap state exists before trust verification"
         )
 
     repository_root = os.path.dirname(
@@ -780,6 +1042,7 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     )
     sys.path[:] = list(dict.fromkeys(sanitized_path))
     return (
+        REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE,
         expected_bootstrap,
         repository_root,
         dependency_roots,
@@ -791,16 +1054,33 @@ def main() -> int:
     """Establish the import boundary and delegate canonical stdin handling."""
 
     try:
-        state = _prepare_isolated_import_boundary()
+        stage = os.environ.get(
+            REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STAGE_ENV
+        )
+        if stage is None:
+            interpreter, expected_bootstrap = _prepare_isolated_outer_launcher()
+            _reexec_seeded_controlled_inner(interpreter, expected_bootstrap)
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation bootstrap controlled inner process did not start"
+            )
+        if stage != REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation bootstrap stage marker is invalid"
+            )
+        state = _prepare_seeded_controlled_import_boundary()
         raw_request, request = _read_bootstrap_request()
-        _require_signed_clean_checkout_before_import(state[1], request)
+        _require_signed_clean_checkout_before_import(state[2], request)
         _require_observed_dependency_artifact_rows_before_import(
-            state[1], state[2], request
+            state[2], state[3], request
         )
         setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
-        from betelgeuze_engine_v2.physics import reference_minimization_validation_runner
+        from betelgeuze_engine_v2.physics import (
+            reference_minimization_validation_runner,
+        )
 
-        return reference_minimization_validation_runner._main_from_canonical_request(raw_request)
+        return reference_minimization_validation_runner._main_from_canonical_request(
+            raw_request
+        )
     except Exception:
         return 2
 

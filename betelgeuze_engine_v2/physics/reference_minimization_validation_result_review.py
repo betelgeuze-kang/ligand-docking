@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import math
+import struct
 from typing import Any, Mapping, Sequence
 
 from .reference_minimization_validation_artifact_binding import (
@@ -34,6 +35,7 @@ from .reference_minimization_validation_materializer import (
 )
 from .reference_minimization_validation_protocol import (
     FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
+    cpu_minimization_validation_case_atom_count,
     cpu_minimization_validation_protocol_document,
 )
 from .reference_minimization_validation_receipts import (
@@ -55,14 +57,14 @@ from .reference_minimization_validation_runner import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/1.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_result_review_contract/1.0.0"
+    "cpu_reference_minimization_validation_independent_result_review_contract/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T10:00:00Z"
+    "2026-07-19T07:30:00Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
@@ -77,9 +79,13 @@ EXPECTED_FAIL_CLOSED_OUTCOME_REJECTED = "expected_fail_closed_outcome_rejected"
 PASS_CASE_OUTCOME_REJECTED = "pass_case_outcome_rejected"
 REQUIRED_RESULT_EVIDENCE_ACCEPTED = "required_result_evidence_accepted"
 REQUIRED_RESULT_EVIDENCE_REJECTED = "required_result_evidence_rejected"
+COORDINATE_TRACE_ACCEPTED = "coordinate_trace_accepted"
+EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED = "expected_empty_coordinate_trace_accepted"
+COORDINATE_TRACE_REJECTED = "coordinate_trace_rejected"
+COORDINATE_TRACE_STEP_ACCEPTED = "coordinate_trace_step_accepted"
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256 = (
-    "9cd92eb499a807e89c38e3c324d2c94e3380ef9cd779673a3b5884b55f426002"
+    "2ad7c25661e4192eb988237a0c351a0e30fdde9c16854f825134b4148744eb82"
 )
 
 _REQUIRED_RESULT_REVIEW_CHECK_IDS = (
@@ -88,6 +94,7 @@ _REQUIRED_RESULT_REVIEW_CHECK_IDS = (
     "ordered_fourteen_case_coverage_and_failure_inclusion_reviewed",
     "retained_metric_dispositions_complete_and_ordered_reviewed",
     "iteration_rejection_evaluation_and_energy_trace_reviewed",
+    "complete_ordered_coordinate_traces_and_step_identities_reviewed",
     "cryptographic_pre_execution_review_authorization_and_role_chain_reviewed",
     "supersession_and_external_revocation_state_reviewed",
     "source_dependency_and_environment_identity_rows_reviewed",
@@ -97,7 +104,6 @@ _REQUIRED_LIMITATION_IDS = (
     "synthetic_fixture_values_are_not_reviewed_runtime_parameter_values",
     "contract_result_review_is_not_scientific_minimization_validation",
     "test_only_endpoint_comparisons_are_not_validation_results",
-    "endpoint_receipt_does_not_bind_complete_coordinate_trace",
     "result_review_does_not_establish_two_host_reproducibility",
     "result_review_does_not_establish_external_implementation_comparison",
     "result_review_does_not_establish_chemical_applicability",
@@ -113,7 +119,6 @@ _CLOSED_GATE_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
-    "coordinate_trace_not_retained_in_result_receipt",
     "trajectory_level_minimization_comparison_missing",
     "two_cpu_host_reproducibility_missing",
     "independent_external_implementation_comparison_missing",
@@ -129,7 +134,6 @@ _POST_ATTESTATION_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
-    "coordinate_trace_not_retained_in_result_receipt",
     "trajectory_level_minimization_comparison_missing",
     "two_cpu_host_reproducibility_missing",
     "independent_external_implementation_comparison_missing",
@@ -370,12 +374,190 @@ def _ordered_protocol_case_rows() -> list[dict[str, Any]]:
                 "maximum_backtracks": protocol_case["canonical_input"][
                     "maximum_backtracks"
                 ],
+                "atom_count": cpu_minimization_validation_case_atom_count(
+                    protocol_case["case_id"]
+                ),
                 "expected_outcome": protocol_case["expected_outcome"],
                 "expected_error_code": protocol_case["expected_error_code"],
                 "required_metric_ids": list(protocol_case["required_metric_ids"]),
             }
         )
     return rows
+
+
+def _coordinate_payload_f64le_sha256(
+    value: object,
+    *,
+    atom_count: int,
+) -> str | None:
+    if not isinstance(value, list) or len(value) != atom_count:
+        return None
+    raw = bytearray()
+    for row in value:
+        if not isinstance(row, list) or len(row) != 3:
+            return None
+        for item in row:
+            if not isinstance(item, str):
+                return None
+            try:
+                number = float.fromhex(item)
+            except ValueError:
+                return None
+            if not math.isfinite(number) or number.hex() != item:
+                return None
+            raw.extend(struct.pack("<d", number))
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _coordinate_trace_review_dispositions(
+    case_row: Mapping[str, Any],
+    template: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    traces = case_row.get("coordinate_traces")
+    if not isinstance(traces, list) or len(traces) != 2:
+        raise ReferenceMinimizationValidationResultReviewError(
+            "result receipt coordinate traces are incomplete"
+        )
+    expected_sources = ("operational", "independent_oracle")
+    dispositions: list[dict[str, Any]] = []
+    for source_ordinal, (trace, expected_source) in enumerate(
+        zip(traces, expected_sources, strict=True), start=1
+    ):
+        if not isinstance(trace, Mapping):
+            raise ReferenceMinimizationValidationResultReviewError(
+                "result receipt coordinate trace must be a mapping"
+            )
+        steps = trace.get("steps")
+        if not isinstance(steps, list):
+            raise ReferenceMinimizationValidationResultReviewError(
+                "result receipt coordinate trace steps must be a list"
+            )
+        trace_reasons: list[str] = []
+        if trace.get("case_id") != template["case_id"]:
+            trace_reasons.append("coordinate_trace_case_identity_mismatch")
+        if trace.get("trace_source") != expected_source:
+            trace_reasons.append("coordinate_trace_source_reordered_or_crosswired")
+        if trace.get("trace_length") != len(steps):
+            trace_reasons.append("coordinate_trace_length_mismatch")
+        if trace.get("energy_force_evaluation_count") != len(steps):
+            trace_reasons.append("coordinate_trace_evaluation_count_mismatch")
+        trace_projection = {
+            key: value for key, value in trace.items() if key != "trace_sha256"
+        }
+        if not _is_sha256(trace.get("trace_sha256")) or _sha256(
+            trace_projection
+        ) != trace.get("trace_sha256"):
+            trace_reasons.append("coordinate_trace_canonical_digest_mismatch")
+        step_dispositions: list[dict[str, Any]] = []
+        for step_ordinal, step in enumerate(steps, start=1):
+            if not isinstance(step, Mapping):
+                raise ReferenceMinimizationValidationResultReviewError(
+                    "result receipt coordinate trace step must be a mapping"
+                )
+            step_reasons: list[str] = []
+            if (
+                step.get("case_id") != template["case_id"]
+                or step.get("trace_source") != expected_source
+            ):
+                step_reasons.append("coordinate_trace_step_identity_crosswire")
+            if (
+                step.get("trace_ordinal") != step_ordinal
+                or step.get("evaluation_index") != step_ordinal
+            ):
+                step_reasons.append("coordinate_trace_step_order_mismatch")
+            raw_sha256 = _coordinate_payload_f64le_sha256(
+                step.get("raw_coordinates_angstrom_hex"),
+                atom_count=template["atom_count"],
+            )
+            evaluated_sha256 = _coordinate_payload_f64le_sha256(
+                step.get("evaluated_coordinates_angstrom_hex"),
+                atom_count=template["atom_count"],
+            )
+            if raw_sha256 is None or raw_sha256 != step.get(
+                "raw_coordinates_f64le_sha256"
+            ):
+                step_reasons.append("coordinate_trace_raw_coordinate_digest_mismatch")
+            if evaluated_sha256 is None or evaluated_sha256 != step.get(
+                "evaluated_coordinates_f64le_sha256"
+            ):
+                step_reasons.append(
+                    "coordinate_trace_evaluated_coordinate_digest_mismatch"
+                )
+            step_projection = {
+                key: value
+                for key, value in step.items()
+                if key != "step_identity_sha256"
+            }
+            if not _is_sha256(step.get("step_identity_sha256")) or _sha256(
+                step_projection
+            ) != step.get("step_identity_sha256"):
+                step_reasons.append("coordinate_trace_step_digest_mismatch")
+            step_disposition = (
+                COORDINATE_TRACE_STEP_ACCEPTED
+                if not step_reasons
+                else COORDINATE_TRACE_REJECTED
+            )
+            if step_reasons:
+                trace_reasons.append(f"coordinate_trace_step_{step_ordinal}_rejected")
+            step_dispositions.append(
+                {
+                    "trace_ordinal": step_ordinal,
+                    "evaluation_index": step.get("evaluation_index"),
+                    "iteration": step.get("iteration"),
+                    "trial": step.get("trial"),
+                    "outcome": step.get("outcome"),
+                    "step_identity_sha256": step.get("step_identity_sha256"),
+                    "raw_coordinates_f64le_sha256": step.get(
+                        "raw_coordinates_f64le_sha256"
+                    ),
+                    "evaluated_coordinates_f64le_sha256": step.get(
+                        "evaluated_coordinates_f64le_sha256"
+                    ),
+                    "disposition": step_disposition,
+                    "rejection_reasons": step_reasons,
+                }
+            )
+        trace_state = trace.get("trace_state")
+        expected_empty = template["expected_outcome"] == "fail_closed" and (
+            expected_source == "operational"
+            or trace.get("energy_force_evaluation_count") == 0
+        )
+        if steps:
+            if trace_state != "evaluated":
+                trace_reasons.append("coordinate_trace_nonempty_state_invalid")
+            disposition = (
+                COORDINATE_TRACE_ACCEPTED
+                if not trace_reasons
+                else COORDINATE_TRACE_REJECTED
+            )
+        else:
+            if not expected_empty or trace_state != (
+                "not_evaluated_expected_fail_closed"
+            ):
+                trace_reasons.append("coordinate_trace_unexpected_empty")
+            disposition = (
+                EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED
+                if not trace_reasons
+                else COORDINATE_TRACE_REJECTED
+            )
+        dispositions.append(
+            {
+                "source_ordinal": source_ordinal,
+                "trace_source": expected_source,
+                "trace_state": trace_state,
+                "trace_length": len(steps),
+                "trace_sha256": trace.get("trace_sha256"),
+                "accepted_iteration_count": trace.get("accepted_iteration_count"),
+                "rejected_step_count": trace.get("rejected_step_count"),
+                "energy_force_evaluation_count": trace.get(
+                    "energy_force_evaluation_count"
+                ),
+                "disposition": disposition,
+                "rejection_reasons": trace_reasons,
+                "step_dispositions": step_dispositions,
+            }
+        )
+    return dispositions
 
 
 def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, Any]:
@@ -655,6 +837,18 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
                     evidence_rejection_reasons.append(
                         "fail_closed_evaluation_count_mismatch"
                     )
+    coordinate_trace_dispositions = _coordinate_trace_review_dispositions(
+        case_row, template
+    )
+    if any(
+        row["disposition"]
+        not in {
+            COORDINATE_TRACE_ACCEPTED,
+            EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
+        }
+        for row in coordinate_trace_dispositions
+    ):
+        evidence_rejection_reasons.append("coordinate_trace_disposition_rejected")
     if type(case_row.get("case_passed")) is not bool:
         evidence_rejection_reasons.append("case_passed_flag_invalid")
     evidence_disposition = (
@@ -679,6 +873,7 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
         "energy_force_evaluation_count": energy_force_evaluation_count,
         "accepted_energy_ledger_length": len(ledger_for_digest),
         "accepted_energy_ledger_sha256": _sha256(ledger_for_digest),
+        "coordinate_trace_dispositions": coordinate_trace_dispositions,
         "result_evidence_disposition": evidence_disposition,
         "result_evidence_rejection_reasons": evidence_rejection_reasons,
         "case_passed": case_passed,
@@ -710,6 +905,23 @@ def _result_review_outcome(case_review_rows: Sequence[Mapping[str, Any]]) -> str
         and row.get("result_evidence_disposition") == REQUIRED_RESULT_EVIDENCE_ACCEPTED
         and not row.get("result_evidence_rejection_reasons")
         and not row.get("missing_metric_dispositions")
+        and len(row.get("coordinate_trace_dispositions", ())) == 2
+        and all(
+            trace.get("disposition")
+            in {
+                COORDINATE_TRACE_ACCEPTED,
+                EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
+            }
+            and not trace.get("rejection_reasons")
+            and all(
+                step.get("disposition") == COORDINATE_TRACE_STEP_ACCEPTED
+                and not step.get("rejection_reasons")
+                for step in trace.get("step_dispositions", ())
+                if isinstance(step, Mapping)
+            )
+            for trace in row.get("coordinate_trace_dispositions", ())
+            if isinstance(trace, Mapping)
+        )
         and all(
             metric.get("disposition") == RETAINED_METRIC_VALUE_ACCEPTED
             for metric in row.get("metric_dispositions", ())
@@ -991,6 +1203,10 @@ def _contract_projection() -> dict[str, Any]:
             "line_search_failure_code_is_lane_and_evaluator_specific": True,
             "line_search_failure_requires_complete_final_backtrack_budget": True,
             "energy_ledger_and_retained_energy_metrics_must_be_consistent": True,
+            "complete_operational_and_independent_coordinate_traces_required": True,
+            "canonical_empty_trace_required_for_pre_evaluation_failure": True,
+            "coordinate_trace_step_and_whole_trace_digests_recomputed": True,
+            "coordinate_trace_counts_and_energy_ledger_must_be_consistent": True,
             "dependency_claim_status_inherited": False,
         },
         "identity_policy": {
@@ -1022,12 +1238,16 @@ def _contract_projection() -> dict[str, Any]:
             "retained_metric_dispositions_required_for_all_cases": True,
             "missing_required_metric_dispositions_required": True,
             "retained_failure_dispositions_required_for_all_rejected_cases": True,
+            "ordered_coordinate_trace_dispositions_required_for_all_cases": True,
+            "ordered_coordinate_trace_step_dispositions_required": True,
+            "expected_empty_coordinate_trace_disposition_is_explicit": True,
             "review_outcomes": [
                 RESULT_REVIEW_OUTCOME_ACCEPTED,
                 RESULT_REVIEW_OUTCOME_REJECTED,
             ],
             "review_outcome_derived_from_frozen_case_semantics": True,
             "accepted_outcome_requires_complete_result_evidence_disposition": True,
+            "accepted_outcome_requires_all_trace_and_step_dispositions": True,
             "verified_review_does_not_imply_result_acceptance": True,
             "external_revocation_rechecks_required_for_entire_receipt_chain": True,
             "all_external_lifecycle_inputs_are_required_verifier_arguments": True,
@@ -1943,6 +2163,10 @@ def reference_minimization_validation_result_review_contract_decision() -> dict[
 
 
 __all__ = [
+    "COORDINATE_TRACE_ACCEPTED",
+    "COORDINATE_TRACE_REJECTED",
+    "COORDINATE_TRACE_STEP_ACCEPTED",
+    "EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID",

@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_am_minimization_validation_result_review_contract
+v2_ao_minimization_validation_production_entrypoint
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -91,14 +91,24 @@ Implemented and GitHub-hosted CPU tested:
   active Python executable and standard library, OpenSSL executable, and every
   `RECORD`-declared cryptography/NumPy/Torch payload before Engine v2 or those
   dependencies are imported, and run-start plus the runner remeasure the exact
-  six signed rows; a bounded failure-inclusive runner and atomic
-  result writer exist as non-production primitives. A separate Ed25519 result-
+  six signed rows; a bounded failure-inclusive runner and atomic result writer
+  retain complete ordered operational and independent-oracle coordinate traces
+  in the receipt, including canonical binary64 raw/evaluated coordinates for
+  every evaluation, per-step identities and coordinate digests, whole-trace
+  digests, exact counts, and accepted-energy ledgers. A separate Ed25519 result-
   review contract fully revalidates one exact receipt, binds all fourteen case
-  outcomes and retained/missing metric dispositions, and preserves an explicit
-  accepted or rejected decision under a caller-provided, role-separated reviewer
-  public key. It bundles no key, attestation, receipt, approval, or scientific
-  evidence, while the direct bootstrap entrypoint remains fail-closed until
-  result finalization is wired into it;
+  outcomes and retained/missing metric dispositions, and derives ordered trace-
+  and step-level dispositions before preserving an explicit accepted or rejected
+  decision under a caller-provided, role-separated reviewer public key. These
+  implementation contracts do not establish a trajectory-level scientific
+  comparison. They bundle no key, attestation, production receipt, human
+  approval, or scientific evidence. The exact bootstrap entrypoint now accepts
+  only bounded canonical input, rebinds the signed nonce, author, source, and
+  dependency identities before import, reloads reviewer/operator anchors only
+  from the fixed external root-owned mode-0600 trust store, rechecks the fixed
+  supervised evaluator subprocess runtime, and finalizes the result receipt in the same verified
+  process. It remains fail-closed without externally provisioned production
+  trust, signed artifacts, private roots, and a reserved nonce;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture
@@ -140,7 +150,9 @@ Implemented and GitHub-hosted CPU tested:
   pre-execution review and authorization role chain, and derives accepted or
   rejected dispositions from exact status, runtime/oracle/result identities,
   per-case-bounded nonnegative integer counts, finite energy ledgers recomputed
-  against retained energy metrics, and metric evidence. Its
+  against retained energy metrics, metric evidence, and complete ordered
+  operational/independent coordinate traces with per-step identity and digest
+  dispositions. Its
   verifier accepts only canonical JSON byte transport and requires explicit
   current revocation and receipt/result-review supersession inputs.
   No trusted key, production receipt,

@@ -25,6 +25,7 @@ from .reference_minimization_validation_dependency_identity import (
 )
 from .reference_minimization_validation_protocol import (
     FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
+    cpu_minimization_validation_case_atom_count,
     cpu_minimization_validation_protocol_document,
 )
 from .reference_minimization_validation_review import (
@@ -32,33 +33,29 @@ from .reference_minimization_validation_review import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/1.0.0"
-)
-REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_receipt/1.0.0"
-)
+REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_receipt/2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_execution_environment_contract/1.0.0"
+    "cpu_reference_minimization_validation_execution_environment_contract/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/1.0.0"
-)
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt/2.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_contract/1.0.0"
+    "cpu_reference_minimization_validation_result_receipt_contract/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION = "1.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-18T03:05:00Z"
+REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION = "2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = (
+    "2026-07-19T06:30:00Z"
+)
 
 # Filled only after the complete canonical projections have been reviewed.
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "e7cd74c0ac704dd69b17839cd34e74522e901469d91404b676daf415a6cf984f"
+    "a3022f345d99dfc84eb0f539d72a75f1e533c61789d770baa8a0aa9a789f51cb"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
-    "274168f6a47b1d399cd6c8357bea9d24ff5a281fd4864c6d8e2ee3caf3af1726"
+    "d4d27679f6d658bbc22b35ae9a4d7c588f41aa3e18633eb0bff5ad4c25b38897"
 )
 
 _CURRENT_BLOCKERS = (
@@ -183,10 +180,15 @@ def _environment_contract_projection() -> dict[str, Any]:
                 "TZ": "UTC",
             },
             "python_hash_seed_required": True,
+            "python_hash_seed_uint32_required": True,
+            "python_hash_seed_applied_at_interpreter_initialization": True,
+            "isolated_outer_launcher_then_seeded_controlled_inner_required": True,
             "application_seed_required": True,
             "torch_num_threads": 1,
             "torch_num_interop_threads": 1,
             "torch_deterministic_algorithms_required": True,
+            "worker_seed_and_environment_receipt_binding_required": True,
+            "parent_child_python_hash_probe_equality_required": True,
             "command_argv_required_as_exact_utf8_sequence": True,
             "shell_interpolation_allowed": False,
             "clean_checkout_required": True,
@@ -249,9 +251,13 @@ def _ordered_case_contract_rows() -> list[dict[str, Any]]:
     protocol_cases = protocol["case_manifest"]["cases"]
     materialized_cases = materialization["cases"]
     if len(protocol_cases) != len(materialized_cases):
-        raise ReferenceMinimizationValidationReceiptContractError("protocol and materialization case counts diverged")
+        raise ReferenceMinimizationValidationReceiptContractError(
+            "protocol and materialization case counts diverged"
+        )
     rows: list[dict[str, Any]] = []
-    for ordinal, (protocol_case, materialized_case) in enumerate(zip(protocol_cases, materialized_cases, strict=True)):
+    for ordinal, (protocol_case, materialized_case) in enumerate(
+        zip(protocol_cases, materialized_cases, strict=True)
+    ):
         if protocol_case["case_id"] != materialized_case["case_id"]:
             raise ReferenceMinimizationValidationReceiptContractError(
                 "protocol and materialization case order diverged"
@@ -260,9 +266,14 @@ def _ordered_case_contract_rows() -> list[dict[str, Any]]:
             {
                 "ordinal": ordinal,
                 "case_id": protocol_case["case_id"],
+                "atom_count": cpu_minimization_validation_case_atom_count(
+                    protocol_case["case_id"]
+                ),
                 "case_input_sha256": materialized_case["case_input_sha256"],
                 "runtime_input_sha256": materialized_case["runtime_input_sha256"],
-                "independent_oracle_input_sha256": materialized_case["independent_oracle_input_sha256"],
+                "independent_oracle_input_sha256": materialized_case[
+                    "independent_oracle_input_sha256"
+                ],
                 "expected_outcome": protocol_case["expected_outcome"],
                 "expected_error_code": protocol_case["expected_error_code"],
                 "required_metric_ids": list(protocol_case["required_metric_ids"]),
@@ -296,9 +307,13 @@ def _result_contract_projection() -> dict[str, Any]:
             "artifact_binding_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
             "review_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256,
             "execution_environment_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
-            "fixture_manifest_sha256": protocol["fixture_manifest"]["fixture_manifest_sha256"],
+            "fixture_manifest_sha256": protocol["fixture_manifest"][
+                "fixture_manifest_sha256"
+            ],
             "case_manifest_sha256": cases["case_manifest_sha256"],
-            "materialization_manifest_sha256": materialization["materialization_manifest_sha256"],
+            "materialization_manifest_sha256": materialization[
+                "materialization_manifest_sha256"
+            ],
             "exact_review_attestation_sha256_required": True,
             "exact_authorization_contract_sha256_required": True,
             "exact_authorization_receipt_sha256_required": True,
@@ -325,6 +340,22 @@ def _result_contract_projection() -> dict[str, Any]:
             "thresholds_predefined_before_results": True,
             "metrics": deepcopy(numerical["metrics"]),
         },
+        "coordinate_trace_contract": {
+            "trace_sources_in_order": ["operational", "independent_oracle"],
+            "coordinate_dtype": "float64",
+            "coordinate_unit": "angstrom",
+            "coordinate_encoding": "python_float_hex",
+            "coordinate_digest_algorithm": "sha256_f64le",
+            "complete_raw_and_evaluated_coordinates_required_per_evaluation": True,
+            "trace_length_must_equal_evaluation_count": True,
+            "evaluation_indices_must_be_contiguous": True,
+            "iteration_and_trial_identity_must_be_contiguous": True,
+            "step_identity_must_bind_case_source_outcome_and_coordinates": True,
+            "whole_trace_canonical_sha256_required": True,
+            "accepted_energy_ledger_must_match_initial_and_accepted_steps": True,
+            "expected_pre_evaluation_failure_uses_canonical_empty_trace": True,
+            "missing_empty_or_reordered_trace_is_failure": True,
+        },
         "receipt_schema": {
             "schema_id": REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID,
             "canonical_json_required": True,
@@ -333,16 +364,18 @@ def _result_contract_projection() -> dict[str, Any]:
             "required_top_level_fields": [
                 "schema_id",
                 "result_contract_sha256",
+                "result_writer_contract_sha256",
+                "runner_contract_sha256",
                 "protocol_sha256",
                 "artifact_binding_sha256",
-                "review_contract_sha256",
-                "review_attestation_sha256",
                 "authorization_contract_sha256",
                 "authorization_receipt_sha256",
                 "authorization_nonce_sha256",
                 "execution_environment_contract_sha256",
                 "execution_environment_receipt_sha256",
                 "environment_fingerprint_sha256",
+                "runner_start_record_sha256",
+                "observation_sha256",
                 "code_commit_sha",
                 "runner_source_sha256",
                 "dependency_artifact_sha256_rows",
@@ -352,11 +385,27 @@ def _result_contract_projection() -> dict[str, Any]:
                 "completed_at_utc",
                 "case_results",
                 "coverage_summary",
+                "run_observation",
                 "artifact_path_confinement_verification",
-                "independent_result_reviewer_identity_sha256",
+                "review_attestation_sha256",
+                "independent_reviewer_identity_sha256",
                 "reviewed_at_utc",
+                "review_scope",
+                "independent_result_review_state",
                 "supersession_state",
                 "revocation_state",
+                "result_values_present",
+                "result_receipt_written",
+                "validation_results_collected",
+                "production_validation_results_collected",
+                "parameter_fitting_proposal_authorized",
+                "parameter_fitting_authorized",
+                "scientifically_validated",
+                "benchmark_validated",
+                "product_qualified",
+                "customer_execution_enabled",
+                "claim_safe",
+                "blockers",
                 "receipt_sha256",
             ],
             "required_case_fields": [
@@ -375,8 +424,41 @@ def _result_contract_projection() -> dict[str, Any]:
                 "rejected_step_count",
                 "energy_force_evaluation_count",
                 "accepted_energy_ledger",
+                "coordinate_traces",
                 "metric_values",
                 "case_passed",
+            ],
+            "required_coordinate_trace_fields": [
+                "case_id",
+                "trace_source",
+                "trace_state",
+                "coordinate_dtype",
+                "coordinate_unit",
+                "coordinate_encoding",
+                "coordinate_digest_algorithm",
+                "atom_count",
+                "accepted_iteration_count",
+                "rejected_step_count",
+                "energy_force_evaluation_count",
+                "trace_length",
+                "accepted_energy_ledger",
+                "steps",
+                "trace_sha256",
+            ],
+            "required_coordinate_trace_step_fields": [
+                "case_id",
+                "trace_source",
+                "trace_ordinal",
+                "evaluation_index",
+                "iteration",
+                "trial",
+                "outcome",
+                "raw_coordinates_angstrom_hex",
+                "raw_coordinates_f64le_sha256",
+                "evaluated_coordinates_angstrom_hex",
+                "evaluated_coordinates_f64le_sha256",
+                "energy_kcal_per_mol",
+                "step_identity_sha256",
             ],
             "passing_case_expected_and_observed_error_codes_must_be_null": True,
             "failing_case_observed_error_code_must_equal_expected": True,
@@ -400,8 +482,9 @@ def _result_contract_projection() -> dict[str, Any]:
         "current_state": {
             "contract_frozen": True,
             "result_receipt_present": False,
-            "result_receipt_writer_implemented": False,
-            "validation_runner_implemented": False,
+            "result_receipt_writer_implemented": True,
+            "validation_runner_implemented": True,
+            "complete_coordinate_trace_contract_implemented": True,
             "validation_execution_authorized": False,
             "validation_results_collected": False,
         },
@@ -409,24 +492,32 @@ def _result_contract_projection() -> dict[str, Any]:
     }
 
 
-def reference_minimization_validation_execution_environment_contract_document() -> dict[str, Any]:
+def reference_minimization_validation_execution_environment_contract_document() -> dict[
+    str, Any
+]:
     """Return the frozen environment contract; no environment receipt exists."""
 
     document = _environment_contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256):
+    if document["contract_sha256"] != (
+        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+    ):
         raise ReferenceMinimizationValidationReceiptContractError(
             "frozen minimization execution environment contract SHA-256 drifted"
         )
     return document
 
 
-def reference_minimization_validation_result_receipt_contract_document() -> dict[str, Any]:
+def reference_minimization_validation_result_receipt_contract_document() -> dict[
+    str, Any
+]:
     """Return the frozen result schema; no result values are evaluated."""
 
     document = _result_contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256):
+    if document["contract_sha256"] != (
+        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+    ):
         raise ReferenceMinimizationValidationReceiptContractError(
             "frozen minimization result receipt contract SHA-256 drifted"
         )
@@ -440,13 +531,19 @@ def _require_exact_contract_document(
     name: str,
 ) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
-        raise ReferenceMinimizationValidationReceiptContractError(f"{name} must be a mapping")
+        raise ReferenceMinimizationValidationReceiptContractError(
+            f"{name} must be a mapping"
+        )
     try:
         observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationReceiptContractError(f"{name} is invalid") from exc
+        raise ReferenceMinimizationValidationReceiptContractError(
+            f"{name} is invalid"
+        ) from exc
     if observed != expected:
-        raise ReferenceMinimizationValidationReceiptContractError(f"{name} does not match the frozen record")
+        raise ReferenceMinimizationValidationReceiptContractError(
+            f"{name} does not match the frozen record"
+        )
     return observed
 
 
@@ -473,7 +570,9 @@ def require_reference_minimization_validation_result_receipt_contract_document(
 def reference_minimization_validation_execution_readiness_decision() -> dict[str, Any]:
     """Return the current fail-closed decision without evaluating results."""
 
-    environment = reference_minimization_validation_execution_environment_contract_document()
+    environment = (
+        reference_minimization_validation_execution_environment_contract_document()
+    )
     result = reference_minimization_validation_result_receipt_contract_document()
     return {
         "review_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256,

@@ -26,6 +26,14 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
+from .reference_minimization_validation_bootstrap import (
+    REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV,
+    REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+    REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+    REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE,
+    REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV,
+    REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV,
+)
 from .reference_minimization_validation_artifact_binding import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -70,40 +78,22 @@ from .reference_minimization_validation_review import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_run_start_environment/1.0.0"
+    "cpu_reference_minimization_validation_run_start_environment/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION = "1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION = "2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T05:00:00Z"
+    "2026-07-19T07:00:00Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(
     minutes=5
 )
-REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV = (
-    "BETELGEUZE_REFERENCE_MINIMIZATION_VALIDATION_SEED"
-)
-REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
-    "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py"
-)
-REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
-    "_betelgeuze_reference_minimization_validation_bootstrap_state"
-)
-REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
-    "python",
-    "-I",
-    "-S",
-    "-B",
-    "-X",
-    "pycache_prefix=/dev/null",
-    REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
-)
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "6b285c0e3226258a62809e4317b513be09c2cf0aef1e500f8f8f51b9cb982f63"
+    "b985228f02c43cf0a7161d824f06bc1cd25ab217b02f537597b5de73a0987073"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -129,8 +119,6 @@ _REQUIRED_ENVIRONMENT_VALUES = (
     ("TZ", "UTC"),
 )
 _POST_ENVIRONMENT_RECEIPT_BLOCKERS = (
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -148,8 +136,6 @@ _CURRENT_BLOCKERS = (
     "authorization_nonce_not_atomically_reserved",
     "network_isolation_attestation_missing",
     "execution_environment_receipt_missing",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -708,13 +694,18 @@ class _RuntimeObservation:
         }
 
 
-def _parse_seed(value: object, *, name: str) -> int:
+def _parse_seed(
+    value: object,
+    *,
+    name: str,
+    maximum: int = 2**63 - 1,
+) -> int:
     if not isinstance(value, str) or not value.isascii() or not value.isdigit():
         raise ReferenceMinimizationValidationRunStartError(
             f"{name} must be an ASCII integer"
         )
     parsed = int(value)
-    if not 0 <= parsed <= 2**63 - 1 or str(parsed) != value:
+    if not 0 <= parsed <= maximum or str(parsed) != value:
         raise ReferenceMinimizationValidationRunStartError(
             f"{name} is outside the frozen range"
         )
@@ -813,6 +804,7 @@ def _observe_current_runtime() -> _RuntimeObservation:
         python_hash_seed=_parse_seed(
             os.environ.get("PYTHONHASHSEED"),
             name="PYTHONHASHSEED",
+            maximum=2**32 - 1,
         ),
         application_seed=_parse_seed(
             os.environ.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV),
@@ -857,9 +849,10 @@ def _observe_dependency_artifact_sha256_rows() -> dict[str, str]:
     )
     if (
         not isinstance(state, tuple)
-        or len(state) != 4
-        or not isinstance(state[2], tuple)
-        or not state[2]
+        or len(state) != 5
+        or state[0] != REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE
+        or not isinstance(state[3], tuple)
+        or not state[3]
     ):
         raise ReferenceMinimizationValidationRunStartError(
             "dependency identity requires the isolated trust bootstrap"
@@ -867,7 +860,7 @@ def _observe_dependency_artifact_sha256_rows() -> dict[str, str]:
     try:
         return (
             observed_reference_minimization_validation_dependency_artifact_sha256_rows(
-                state[2]
+                state[3]
             )
         )
     except ReferenceMinimizationValidationDependencyIdentityError as exc:
@@ -1025,11 +1018,17 @@ def _contract_projection() -> dict[str, Any]:
             "locale_timezone_and_thread_environment_exact": True,
             "source_only_python_import_environment_exact": True,
             "ignored_timestamp_bytecode_cache_execution_allowed": False,
-            "isolated_python_startup_required": True,
+            "trusted_isolated_outer_launcher_required": True,
+            "trusted_outer_launcher_argv": list(
+                REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV
+            ),
+            "seeded_controlled_inner_exec_required": True,
             "automatic_site_initialization_allowed": False,
-            "python_import_path_environment_ignored": True,
+            "python_import_path_environment_removed_before_inner_exec": True,
             "user_site_packages_allowed": False,
             "python_hash_and_application_seeds_exact": True,
+            "python_hash_seed_uint32_required": True,
+            "python_hash_seed_applied_at_interpreter_initialization": True,
             "torch_single_thread_and_deterministic_algorithms_required": True,
             "logical_runner_argv": list(
                 REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV
@@ -1214,7 +1213,7 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
         if (
             type(self.python_hash_seed) is not int
             or type(self.application_seed) is not int
-            or not 0 <= self.python_hash_seed <= 2**63 - 1
+            or not 0 <= self.python_hash_seed <= 2**32 - 1
             or not 0 <= self.application_seed <= 2**63 - 1
             or environment.get("PYTHONHASHSEED") != str(self.python_hash_seed)
             or environment.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV)

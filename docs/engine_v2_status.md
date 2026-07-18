@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_am_minimization_validation_result_review_contract
+v2_ao_minimization_validation_production_entrypoint
 ```
 
 The current `main` branch contains:
@@ -125,8 +125,12 @@ The current `main` branch contains:
   rejected, non-finite, and insufficient-decrease evaluation. Canonical
   checkpoints bind the original system, topology, parameter and config hashes,
   exact little-endian binary64 coordinates, energies, maximum force, progress,
-  and the complete observation ledger. Restart re-evaluates the checkpoint
-  state and requires bit-exact stored energy and force before continuing. This
+  and the complete observation ledger. Restart deterministically reproduces the
+  entire checkpoint from the trusted source input, requires exact history
+  equality, then re-evaluates the current checkpoint state and requires
+  bit-exact stored energy and force before continuing. Standalone parsing checks
+  canonical structure and internal self-hash consistency; trusted-input replay
+  is the source-authentication boundary. This
   is an unvalidated internal numerical contract: it ships no parameter set,
   performs no assignment, and establishes no scientific applicability,
   minimization accuracy, product qualification, or customer execution claim.
@@ -225,24 +229,36 @@ The current `main` branch contains:
   namespace identities. It verifies a maximum-five-minute operator-signed
   network-isolation attestation and atomically persists one canonical mode-0600
   secret-free environment receipt beneath a separate private caller root using
-  `O_EXCL`, `O_NOFOLLOW`, and file/directory `fsync`. A separate stdlib-only
-  bootstrap and bounded runner now bind their exact combined source identity,
-  re-read the persisted receipt and live process, require the exact signed clean
-  checkout, dependencies, protocol, and materialization manifest, then consume
+  `O_EXCL`, `O_NOFOLLOW`, and file/directory `fsync`. A separate isolated outer
+  launcher and fixed no-site controlled inner bootstrap now apply canonical
+  uint32 `PYTHONHASHSEED` during interpreter initialization without consuming
+  request stdin in the outer process. The bounded runner binds the exact
+  bootstrap/runner source identity, re-reads the persisted receipt and live
+  process, and gives the child only receipt-derived seeds and environment plus
+  a parent/child hash probe. It requires the exact signed clean checkout,
+  dependencies, protocol, and materialization manifest, then consumes
   one durable mode-0600 nonce-bound runner-start marker. It evaluates the ordered
   fourteen-case CPU float64 matrix, retains all success and failure observations,
-  compares operational endpoints with the import-separated independent oracle,
-  and verifies exact checkpoint/restart equality under a 120-second budget.
+  preserves complete ordered operational and independent-oracle coordinate
+  traces with canonical binary64 raw/evaluated coordinates, per-step coordinate
+  and identity digests, whole-trace digests, exact counts, and accepted-energy
+  ledgers, compares operational endpoints with the import-separated independent
+  oracle, and verifies exact checkpoint/restart equality under a 120-second budget.
   The primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
   environment receipt, runner-start record, and canonical observation before
   atomically persisting one nonce-bound mode-0600 receipt. Its reader requires
   an out-of-band exact receipt hash and current revocation/supersession inputs.
-  The exact process entrypoint remains fail-closed until this writer is wired
-  into the externally provisioned bootstrap. No production result
-  receipt, independent result review, scientific applicability, or parameter-
-  fitting approval exists, so minimization and
+  The exact process entrypoint now accepts only bounded canonical input, binds
+  the signed nonce, implementation author, clean source, and dependency bytes
+  before package import, reloads reviewer/operator anchors only from the fixed
+  external root-owned mode-0600 trust store, and connects environment receipt,
+  a child-preflighted fourteen-case run, and result finalization in one verified
+  process. It remains fail-closed because no production trust store, signed
+  chain, private roots, reserved nonce, or production result receipt is
+  provisioned. No independent result review, scientific applicability, or
+  parameter-fitting approval exists, so minimization and
   solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
   seven exact synthetic fixture profiles, twenty exact mutation contracts,
@@ -294,13 +310,18 @@ The current `main` branch contains:
   persists one mode-0600 secret-free environment receipt beneath a private
   caller root. It provides neither kernel network isolation nor execution
   authorization, and the receipt never authorizes execution or fitting. A
-  separate bounded runner now re-reads that persisted receipt, re-verifies the
-  live process, a direct stdlib-only `-I -S -B -X pycache_prefix=/dev/null`
-  bootstrap that ignores environment/user-site import paths before any
-  validation dependency is imported, and workers with automatic site
-  initialization disabled and only root-owned read-only bootstrap-verified
-  dependency roots supplied. The signed runner-source identity binds both the
-  bootstrap and runner files. The bootstrap bounds canonical stdin and verifies
+  separate bounded runner now re-reads that persisted receipt and re-verifies
+  the live process. A root-owned stdlib-only `-I -S -B -X
+  pycache_prefix=/dev/null` outer launcher validates startup without consuming
+  stdin, removes environment/user-site import paths, and re-execs the same
+  interpreter as the fixed no-site controlled inner command so canonical
+  uint32 `PYTHONHASHSEED` is applied during interpreter initialization. Workers
+  receive exact seeds and deterministic environment only from the verified
+  receipt and recheck exact argv, cwd, flags, environment identity, and a
+  parent/child hash probe; they no longer copy mutable live supervisor state.
+  Only root-owned read-only bootstrap-verified dependency roots are supplied.
+  The signed runner-source identity binds both the bootstrap and runner files.
+  The inner bootstrap bounds canonical stdin and verifies
   the external operator signature, signed commit/source, and clean checkout
   before the package initializer can run. Reservation and artifact roots must be private external directories
   with no ancestry overlap with the checkout. Root-owned absolute-Git clean-checkout proof with replacement refs
@@ -313,10 +334,11 @@ The current `main` branch contains:
   work runs in a separate fixed child whose process is hard-killed at the deadline;
   POSIX timers remain an inner defense. It
   returns one canonical failure-inclusive observation in memory, including
-  failed metrics and sanitized evaluator failures. The exact process command
-  executes the absolute checked-out bootstrap path with the frozen isolated
-  Python flags and accepts only a bounded canonical stdin request that cannot
-  contain trust keys. Reviewer/operator anchors load only from the externally provisioned
+  failed metrics and sanitized evaluator failures. The exact process chain
+  executes the absolute checked-out bootstrap path first with the frozen
+  isolated outer flags and then with the frozen controlled inner loader; only
+  the inner accepts the bounded canonical stdin request, which cannot contain
+  trust keys. Reviewer/operator anchors load only from the externally provisioned
   fixed `/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json`
   root-owned mode-0600 store; the repository does not bundle that store or keys.
   Trust material never enters stdin, argv, the worker requests, or the response;
@@ -340,8 +362,9 @@ The current `main` branch contains:
   exact result-writer receipt, binds all fourteen ordered case outcomes and every
   retained or missing metric disposition, verifies exact runtime/oracle/result
   hashes, allowed status/error pairs, exact per-case-budgeted nonnegative counts,
-  and finite count-consistent energy ledgers recomputed against retained energy
-  metrics, and derives an explicit accepted or rejected
+  finite count-consistent energy ledgers recomputed against retained energy
+  metrics, and both ordered coordinate traces, and derives trace- and step-level
+  dispositions plus an explicit accepted or rejected
   review outcome. Verification reverifies the raw signed pre-execution review and
   authorization Ed25519 chain, requires canonical JSON byte transport, a
   caller-provided result-reviewer public key, pairwise separation from the derived
@@ -367,10 +390,11 @@ not currently establish:
   result receipt, or accepted energy/force evidence; test-only synthetic
   observations and receipts are implementation checks, not production
   validation results or parameter-fit data;
-- a complete coordinate trace, trajectory-level minimization comparison,
-  reproduction on two CPU hosts, or independent external-implementation
-  comparison; the current endpoint receipt retains the accepted energy ledger
-  but does not satisfy those S0 exit conditions;
+- a trajectory-level minimization comparison, reproduction on two CPU hosts, or
+  independent external-implementation comparison; complete ordered coordinate
+  traces are now retained and dispositioned in the test-only receipt/review
+  contract, but that integrity evidence alone does not satisfy the remaining S0
+  scientific or production exit conditions;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime

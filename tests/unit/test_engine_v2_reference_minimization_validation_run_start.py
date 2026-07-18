@@ -313,6 +313,40 @@ def test_run_start_contract_is_frozen_and_current_decision_is_closed() -> None:
     assert decision["validation_results_collected"] is False
 
 
+@pytest.mark.parametrize("value", ["0", "4294967295"])
+def test_python_hash_seed_uint32_boundaries_are_accepted(value: str) -> None:
+    assert module._parse_seed(
+        value,
+        name="PYTHONHASHSEED",
+        maximum=2**32 - 1,
+    ) == int(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [None, "", "00", "+1", "-1", "random", "４", "4294967296"],
+)
+def test_python_hash_seed_outside_canonical_uint32_is_rejected(
+    value: object,
+) -> None:
+    with pytest.raises(ReferenceMinimizationValidationRunStartError):
+        module._parse_seed(
+            value,
+            name="PYTHONHASHSEED",
+            maximum=2**32 - 1,
+        )
+
+
+def test_application_seed_retains_signed_int63_upper_bound() -> None:
+    assert (
+        module._parse_seed(
+            str(2**63 - 1),
+            name=REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV,
+        )
+        == 2**63 - 1
+    )
+
+
 def test_run_start_contract_rejects_tamper() -> None:
     tampered = deepcopy(reference_minimization_validation_run_start_contract_document())
     tampered["current_state"]["validation_execution_authorized"] = True
@@ -468,6 +502,19 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
     assert created.command_argv == REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV
     assert created.python_hash_seed == 123
     assert created.application_seed == 456
+    overflow_rows = tuple(
+        (name, str(2**32) if name == "PYTHONHASHSEED" else value)
+        for name, value in created.environment_variable_rows
+    )
+    with pytest.raises(
+        ReferenceMinimizationValidationRunStartError,
+        match="seeds",
+    ):
+        replace(
+            created,
+            python_hash_seed=2**32,
+            environment_variable_rows=overflow_rows,
+        )
     assert path.is_file()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert path.stat().st_nlink == 1

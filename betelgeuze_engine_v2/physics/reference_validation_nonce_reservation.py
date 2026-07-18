@@ -46,13 +46,11 @@ REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_ID = (
     "cpu_reference_validation_atomic_nonce_reservation/1.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-17T06:18:00Z"
-)
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-17T06:18:00Z"
 REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
-    "5528d2ed4f8b05905cc9d776510bc38aa5a0a870d02a83a4f2db86f12ea92880"
+    "fcaa1c9fe02b8bbab83eb8a128f9188bc299e161af1371a6c3dd2b377f6246c1"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -137,9 +135,7 @@ def _require_git_commit(value: object) -> str:
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceValidationNonceReservationError(
-            f"{name} must be timezone-aware"
-        )
+        raise ReferenceValidationNonceReservationError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
         raise ReferenceValidationNonceReservationError(
@@ -253,9 +249,7 @@ def _contract_projection() -> dict[str, Any]:
             "authorization_contract_sha256": (
                 FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
             ),
-            "observed_authorization_contract_sha256": authorization[
-                "contract_sha256"
-            ],
+            "observed_authorization_contract_sha256": authorization["contract_sha256"],
             "execution_environment_contract_sha256": (
                 FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
             ),
@@ -517,9 +511,7 @@ def _reservation_from_verified_authorization(
         "execution_environment_contract_sha256": (
             verification.execution_environment_contract_sha256
         ),
-        "result_receipt_contract_sha256": (
-            verification.result_receipt_contract_sha256
-        ),
+        "result_receipt_contract_sha256": (verification.result_receipt_contract_sha256),
         "dependency_artifact_sha256_rows": (
             verification.dependency_artifact_sha256_rows
         ),
@@ -644,20 +636,16 @@ def _write_all(descriptor: int, payload: bytes) -> None:
         remaining = remaining[written:]
 
 
-def _persist_reservation(root_fd: int, reservation: ReferenceValidationNonceReservation) -> None:
+def _persist_reservation(
+    root_fd: int, reservation: ReferenceValidationNonceReservation
+) -> None:
     filename = f"{reservation.authorization_nonce_sha256}.json"
     encoded = _canonical_bytes(reservation.to_dict()) + b"\n"
     if len(encoded) > REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES:
         raise ReferenceValidationNonceReservationError(
             "nonce reservation record exceeds the size limit"
         )
-    flags = (
-        os.O_WRONLY
-        | os.O_CREAT
-        | os.O_EXCL
-        | os.O_NOFOLLOW
-        | os.O_CLOEXEC
-    )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
         descriptor = os.open(filename, flags, 0o600, dir_fd=root_fd)
     except FileExistsError as exc:
@@ -728,9 +716,7 @@ def reserve_reference_validation_authorization_nonce(
                 expected_dependency_artifact_sha256_rows
             ),
             revoked_receipt_sha256s=revoked_receipt_sha256s,
-            revoked_review_attestation_sha256s=(
-                revoked_review_attestation_sha256s
-            ),
+            revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
             consumed_nonce_sha256s=externally_consumed_nonce_sha256s,
         )
     except ReferenceValidationAuthorizationError as exc:
@@ -897,9 +883,7 @@ def _reservation_from_record(
         execution_environment_contract_sha256=payload[
             "execution_environment_contract_sha256"
         ],
-        result_receipt_contract_sha256=payload[
-            "result_receipt_contract_sha256"
-        ],
+        result_receipt_contract_sha256=payload["result_receipt_contract_sha256"],
         dependency_artifact_sha256_rows=_normalize_dependency_rows(
             payload["dependency_artifact_sha256_rows"]
         ),
@@ -927,10 +911,7 @@ def read_reference_validation_nonce_reservation(
     root_fd = _open_secure_reservation_root(reservation_root)
     try:
         flags = (
-            os.O_RDONLY
-            | os.O_NOFOLLOW
-            | os.O_CLOEXEC
-            | getattr(os, "O_NONBLOCK", 0)
+            os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | getattr(os, "O_NONBLOCK", 0)
         )
         try:
             descriptor = os.open(f"{nonce}.json", flags, dir_fd=root_fd)

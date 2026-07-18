@@ -36,10 +36,10 @@ REFERENCE_MINIMIZATION_CONFIG_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_config/1.0.0"
 )
 REFERENCE_MINIMIZATION_CHECKPOINT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_checkpoint/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_checkpoint/2.0.0"
 )
 REFERENCE_MINIMIZATION_RESULT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_result/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_result/2.0.0"
 )
 REFERENCE_MINIMIZATION_MAX_ITERATIONS = 1_000
 REFERENCE_MINIMIZATION_MAX_BACKTRACKS = 64
@@ -137,6 +137,70 @@ def _coordinate_bytes(coordinates: torch.Tensor) -> bytes:
 
 def _coordinate_digest(coordinates: torch.Tensor) -> str:
     return hashlib.sha256(_coordinate_bytes(coordinates)).hexdigest()
+
+
+def _coordinate_hex_rows(
+    coordinates: torch.Tensor,
+) -> tuple[tuple[str, str, str], ...]:
+    if coordinates.device.type != "cpu" or coordinates.dtype != torch.float64:
+        raise ReferenceMinimizationError(
+            "trace coordinates must be CPU float64"
+        )
+    rows = coordinates.detach().contiguous()
+    if rows.ndim != 3 or rows.shape[0] != 1 or rows.shape[2] != 3:
+        raise ReferenceMinimizationError(
+            "trace coordinates must have shape [1,N,3]"
+        )
+    return tuple(
+        tuple(float(value).hex() for value in row)  # type: ignore[misc]
+        for row in rows[0].tolist()
+    )
+
+
+def _require_coordinate_hex_rows(
+    value: object,
+) -> tuple[tuple[str, str, str], ...]:
+    if not isinstance(value, list) or not value:
+        raise ReferenceMinimizationError(
+            "observation coordinate trace must cover every atom"
+        )
+    normalized: list[tuple[str, str, str]] = []
+    raw = bytearray()
+    for row in value:
+        if not isinstance(row, list) or len(row) != 3:
+            raise ReferenceMinimizationError(
+                "observation coordinates must have [atom,3] shape"
+            )
+        values: list[str] = []
+        for item in row:
+            if not isinstance(item, str):
+                raise ReferenceMinimizationError(
+                    "observation coordinate must be canonical binary64 hex"
+                )
+            try:
+                number = float.fromhex(item)
+            except ValueError as exc:
+                raise ReferenceMinimizationError(
+                    "observation coordinate must be canonical binary64 hex"
+                ) from exc
+            if not math.isfinite(number) or number.hex() != item:
+                raise ReferenceMinimizationError(
+                    "observation coordinate must be canonical finite binary64 hex"
+                )
+            raw.extend(struct.pack("<d", number))
+            values.append(item)
+        normalized.append((values[0], values[1], values[2]))
+    return tuple(normalized)
+
+
+def _coordinate_hex_digest(
+    rows: tuple[tuple[str, str, str], ...],
+) -> str:
+    raw = bytearray()
+    for row in rows:
+        for item in row:
+            raw.extend(struct.pack("<d", float.fromhex(item)))
+    return hashlib.sha256(raw).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -264,6 +328,7 @@ class ReferenceMinimizationObservation:
     trial: int
     evaluation_index: int
     outcome: str
+    coordinates_angstrom_hex: tuple[tuple[str, str, str], ...]
     coordinates_sha256: str
     step_size_angstrom2_mol_per_kcal: float
     energy_kcal_per_mol: float | None
@@ -276,6 +341,9 @@ class ReferenceMinimizationObservation:
             "trial": self.trial,
             "evaluation_index": self.evaluation_index,
             "outcome": self.outcome,
+            "coordinates_angstrom_hex": [
+                list(row) for row in self.coordinates_angstrom_hex
+            ],
             "coordinates_sha256": self.coordinates_sha256,
             "step_size_angstrom2_mol_per_kcal": (
                 self.step_size_angstrom2_mol_per_kcal
@@ -292,6 +360,9 @@ class ReferenceMinimizationObservation:
         if not isinstance(value, Mapping):
             raise ReferenceMinimizationError("checkpoint observation must be a mapping")
         try:
+            coordinate_rows = _require_coordinate_hex_rows(
+                value["coordinates_angstrom_hex"]
+            )
             row = cls(
                 iteration=_exact_int(
                     value["iteration"],
@@ -312,6 +383,7 @@ class ReferenceMinimizationObservation:
                     maximum=(REFERENCE_MINIMIZATION_MAX_ITERATIONS * 65 + 1),
                 ),
                 outcome=str(value["outcome"]),
+                coordinates_angstrom_hex=coordinate_rows,
                 coordinates_sha256=_digest(
                     value["coordinates_sha256"], name="coordinates_sha256"
                 ),
@@ -360,6 +432,10 @@ class ReferenceMinimizationObservation:
             raise ReferenceMinimizationError("rejected observation requires failure_code")
         if row.failure_code and not row.outcome.startswith("rejected_"):
             raise ReferenceMinimizationError("accepted observation cannot carry failure_code")
+        if _coordinate_hex_digest(row.coordinates_angstrom_hex) != row.coordinates_sha256:
+            raise ReferenceMinimizationError(
+                "checkpoint observation coordinate payload digest mismatch"
+            )
         if row.to_dict() != dict(value):
             raise ReferenceMinimizationError("checkpoint observation is not canonical")
         return row
@@ -491,6 +567,10 @@ class ReferenceMinimizationResult:
             "evaluation_count": self.evaluation_count,
             "checkpoint_sha256": self.checkpoint.checkpoint_sha256,
             "observations": [row.to_dict() for row in self.observations],
+            "coordinate_trace_length": len(self.observations),
+            "coordinate_trace_sha256": _sha256(
+                [row.to_dict() for row in self.observations]
+            ),
             "scientific_blockers": list(self.scientific_blockers),
         }
 
@@ -586,6 +666,13 @@ def require_reference_minimization_checkpoint_document(
     observations = tuple(
         ReferenceMinimizationObservation.from_dict(row) for row in rows_value
     )
+    if any(
+        len(row.coordinates_angstrom_hex) != shape[1]
+        for row in observations
+    ):
+        raise ReferenceMinimizationError(
+            "checkpoint observation atom count does not match coordinate shape"
+        )
     accepted = _exact_int(
         value["accepted_iterations"],
         name="accepted_iterations",
@@ -607,10 +694,35 @@ def require_reference_minimization_checkpoint_document(
             "checkpoint observation evaluation indices are not contiguous"
         )
     initial_row = observations[0]
-    if initial_row.outcome != "initial" or initial_row.iteration != 0:
+    if (
+        initial_row.outcome != "initial"
+        or initial_row.iteration != 0
+        or initial_row.trial != 0
+    ):
         raise ReferenceMinimizationError(
             "checkpoint must begin with the initial evaluation"
         )
+    expected_iteration = 1
+    expected_trial = 0
+    for row in observations[1:]:
+        if (
+            row.iteration != expected_iteration
+            or row.trial != expected_trial
+            or row.iteration > config.max_iterations
+            or row.trial > config.max_backtracks
+        ):
+            raise ReferenceMinimizationError(
+                "checkpoint line-search sequence is invalid"
+            )
+        if row.outcome == "accepted":
+            expected_iteration += 1
+            expected_trial = 0
+        elif row.outcome.startswith("rejected_"):
+            expected_trial += 1
+        else:
+            raise ReferenceMinimizationError(
+                "checkpoint observation ledger repeats the initial state"
+            )
     accepted_rows = tuple(row for row in observations if row.outcome == "accepted")
     if sum(row.outcome == "accepted" for row in observations) != accepted:
         raise ReferenceMinimizationError("checkpoint accepted iteration count mismatch")
@@ -834,6 +946,7 @@ def minimize_reference_force_field(
                 trial=0,
                 evaluation_index=1,
                 outcome="initial",
+                coordinates_angstrom_hex=_coordinate_hex_rows(coordinates),
                 coordinates_sha256=_coordinate_digest(coordinates),
                 step_size_angstrom2_mol_per_kcal=0.0,
                 energy_kcal_per_mol=current_energy,
@@ -851,6 +964,20 @@ def minimize_reference_force_field(
             raise ReferenceMinimizationError("checkpoint config fingerprint mismatch")
         if checkpoint_row.coordinate_shape != (1, system.atom_count, 3):
             raise ReferenceMinimizationError("checkpoint atom count mismatch")
+        if checkpoint_row.observations[-1].outcome.startswith("rejected_"):
+            raise ReferenceMinimizationError(
+                "terminal failed line-search checkpoint cannot be resumed"
+            )
+        replayed = minimize_reference_force_field(
+            system,
+            parameters,
+            config,
+            pause_after_accepted_iterations=checkpoint_row.accepted_iterations,
+        )
+        if replayed.checkpoint.to_dict() != checkpoint_row.to_dict():
+            raise ReferenceMinimizationError(
+                "checkpoint history does not replay exactly from the source system"
+            )
         coordinates = checkpoint_row.coordinates()
         accepted_iterations = checkpoint_row.accepted_iterations
         evaluation_count = checkpoint_row.evaluation_count
@@ -936,6 +1063,9 @@ def minimize_reference_force_field(
                         trial=trial,
                         evaluation_index=evaluation_count,
                         outcome="rejected_applicability",
+                        coordinates_angstrom_hex=_coordinate_hex_rows(
+                            trial_coordinates
+                        ),
                         coordinates_sha256=coordinate_sha256,
                         step_size_angstrom2_mol_per_kcal=step,
                         energy_kcal_per_mol=None,
@@ -953,6 +1083,9 @@ def minimize_reference_force_field(
                         trial=trial,
                         evaluation_index=evaluation_count,
                         outcome="rejected_nonfinite",
+                        coordinates_angstrom_hex=_coordinate_hex_rows(
+                            trial_coordinates
+                        ),
                         coordinates_sha256=coordinate_sha256,
                         step_size_angstrom2_mol_per_kcal=step,
                         energy_kcal_per_mol=None,
@@ -972,6 +1105,9 @@ def minimize_reference_force_field(
                             trial=trial,
                             evaluation_index=evaluation_count,
                             outcome="accepted",
+                            coordinates_angstrom_hex=_coordinate_hex_rows(
+                                trial_coordinates
+                            ),
                             coordinates_sha256=coordinate_sha256,
                             step_size_angstrom2_mol_per_kcal=step,
                             energy_kcal_per_mol=trial_energy,
@@ -991,6 +1127,9 @@ def minimize_reference_force_field(
                         trial=trial,
                         evaluation_index=evaluation_count,
                         outcome="rejected_armijo",
+                        coordinates_angstrom_hex=_coordinate_hex_rows(
+                            trial_coordinates
+                        ),
                         coordinates_sha256=coordinate_sha256,
                         step_size_angstrom2_mol_per_kcal=step,
                         energy_kcal_per_mol=trial_energy,

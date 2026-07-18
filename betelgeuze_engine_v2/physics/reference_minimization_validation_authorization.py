@@ -41,22 +41,22 @@ from .reference_minimization_validation_review import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/2.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_execution_authorization_contract/1.0.0"
+    "cpu_reference_minimization_validation_execution_authorization_contract/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T03:40:00Z"
+    "2026-07-19T06:40:00Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
-    "33885bb99acd96dd5f431f8e74e59d578ef31a248bb8c72609690b119607e60c"
+    "cd60c50e4403ece77c98975fcbc4c45d71b2f4213944e4b48b8ec48691e940a9"
 )
 
 _GIT_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -69,8 +69,6 @@ _CURRENT_BLOCKERS = (
     "trusted_authorization_operator_key_not_provided",
     "authorization_nonce_not_atomically_reserved",
     "execution_environment_receipt_missing",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
     "validation_execution_not_authorized",
     "minimization_validation_results_not_collected",
     "reviewed_runtime_parameter_values_not_bound",
@@ -83,8 +81,6 @@ _CURRENT_BLOCKERS = (
 _POST_RECEIPT_BLOCKERS = (
     "authorization_nonce_not_atomically_reserved",
     "execution_environment_not_reverified_at_run_start",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
     "validation_execution_not_authorized",
     "minimization_validation_results_not_collected",
     "independent_result_review_missing",

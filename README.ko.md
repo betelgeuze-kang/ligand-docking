@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_am_minimization_validation_result_review_contract
+v2_ao_minimization_validation_production_entrypoint
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -64,8 +64,18 @@ v2_am_minimization_validation_result_review_contract
   원자적으로 기록하는 run-start primitive, failure-inclusive bounded runner와 result
   writer까지 구현됨. stdlib-only bootstrap은 Engine v2/Torch/NumPy import 전에 Python
   executable·stdlib·OpenSSL·cryptography·NumPy·Torch의 실제 payload byte를 측정하고,
-  run-start와 runner가 exact 6개 signed identity를 다시 측정함. 실제 attestation·trusted
-  key·production root/receipt·승인된 실행·독립 result review·과학 승격은 없음
+  run-start와 runner가 exact 6개 signed identity를 다시 측정함. bounded runner와
+  atomic writer는 모든 evaluation의 canonical binary64 raw/evaluated 좌표, step별
+  identity·좌표 digest, 전체 trace digest, 정확한 count와 accepted-energy ledger를
+  operational·independent-oracle source별 complete ordered trace로 receipt에 보존함.
+  exact bootstrap entrypoint는 bounded canonical request만 받고 package import 전에
+  signed nonce·작성자·source·dependency를 결속하며, 고정된 외부 root-owned mode-0600
+  trust store에서만 reviewer/operator 공개키를 다시 읽음. 같은 검증 프로세스에서
+  environment receipt→14-case 고정 supervised subprocess→result receipt를 연결하고 worker도
+  source·dependency·deterministic single-thread runtime을 평가 전에 재검증함.
+  실제 attestation·trusted key·production root/receipt·승인된 실행·독립 인간 result
+  review·trajectory-level 과학 비교·과학 승격은 없으며, 외부 trust store와 signed
+  artifact·private root·reserved nonce가 없으면 entrypoint는 fail-closed함
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound
@@ -85,13 +95,15 @@ v2_am_minimization_validation_result_review_contract
   observation을 다시 검증하고 private artifact root에 canonical mode-0600 receipt 하나를
   원자적으로 기록하는 failure-inclusive result writer. reader는 외부 exact receipt hash와
   revocation/supersession 입력을 요구하며 변경된 content는 외부 hash로 탐지하지만 receipt
-  signature나 same-UID pathname/inode replacement resistance는 주장하지 않음. direct CLI는
-  닫혀 있음. 실제 trusted key, production receipt·reservation/
+  signature나 same-UID pathname/inode replacement resistance는 주장하지 않음. exact
+  module entrypoint는 외부 trust store가 없으면 fail-closed함. 실제 trusted key,
+  production receipt·reservation/
   artifact root·production nonce reservation·production 환경 receipt·runner start/result
   receipt·승인된 production 실행·independent result review·과학 acceptance는 포함하지 않음.
   별도 Ed25519 result-review 계약은 exact 14-case receipt를 전체 writer schema로 재검증하고
   모든 retained/missing metric, runtime/oracle/result hash, status/error, case별 iteration/backtrack
-  budget 안의 정확한 비음수 count, retained energy metric과 일치하는 finite energy ledger 및
+  budget 안의 정확한 비음수 count, retained energy metric과 일치하는 finite energy ledger,
+  complete ordered operational/independent coordinate trace와 모든 trace/step disposition 및
   fail-closed disposition에서 accepted/rejected 결과를 결정함. 원본
   pre-execution review와 authorization의 Ed25519 chain으로 세 upstream 역할을 재검증하고,
   canonical JSON byte transport·필수 최신 revocation/supersession 입력·네 governance 역할의

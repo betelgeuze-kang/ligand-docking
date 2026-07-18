@@ -58,18 +58,18 @@ from .reference_minimization_validation_runner import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_writer/1.0.0"
+    "cpu_reference_minimization_validation_result_receipt_writer/2.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "1.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "2.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T06:40:00Z"
+    "2026-07-19T07:20:00Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
-    "c43d771a23554b7675ee450708caa3ce11f57090897c6016ebae0a775370608f"
+    "69c7dcb183194c8d8197ca99474536d2a6e4dc6efba020535c0765e4e53153c8"
 )
 
 _RECEIPT_BLOCKERS = (
@@ -202,6 +202,24 @@ def _contract_projection() -> dict[str, Any]:
             "production_result_receipt_bundled": False,
             "independent_result_review_performed": False,
         },
+        "dependencies": {
+            "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
+            "artifact_binding_sha256": (
+                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
+            ),
+            "authorization_contract_sha256": (
+                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+            ),
+            "execution_environment_contract_sha256": (
+                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+            ),
+            "result_receipt_contract_sha256": (
+                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+            ),
+            "runner_contract_sha256": (
+                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
+            ),
+        },
         "pre_finalize_reverification": {
             "raw_signed_review_required": True,
             "raw_signed_authorization_required": True,
@@ -229,10 +247,16 @@ def _contract_projection() -> dict[str, Any]:
             "private_posix_storage_is_not_external_authenticity": True,
             "same_uid_content_mutation_detected_by_out_of_band_sha256": True,
             "same_uid_replacement_resistance_established": False,
+            "complete_coordinate_traces_reverified_by_runner_schema": True,
+            "trace_step_and_whole_trace_digests_recomputed": True,
+            "trace_counts_and_energy_ledgers_crosschecked": True,
         },
         "coverage": {
             "case_count": 14,
             "failed_cases_and_metrics_retained": True,
+            "operational_and_independent_coordinate_traces_retained": True,
+            "raw_and_evaluated_coordinates_retained_for_every_evaluation": True,
+            "canonical_empty_trace_retained_for_pre_evaluation_failure": True,
             "partial_or_skipped_results_allowed": False,
             "result_review_state": "pending_independent_review",
         },
@@ -241,6 +265,7 @@ def _contract_projection() -> dict[str, Any]:
             "production_result_receipt_present": False,
             "production_validation_results_collected": False,
             "independent_result_review_complete": False,
+            "complete_coordinate_trace_receipt_schema_implemented": True,
         },
         "claim_policy": _closed_claim_policy(),
         "blockers": list(_CURRENT_BLOCKERS),
