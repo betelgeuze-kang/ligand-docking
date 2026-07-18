@@ -16,6 +16,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_run_start.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -188,7 +189,8 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_receipts.py \
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py \
-            tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
+          tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
+          tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \

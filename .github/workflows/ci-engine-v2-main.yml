@@ -177,6 +177,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
@@ -301,6 +302,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_nonce_reservation.py \
             tests/unit/test_engine_v2_reference_minimization_validation_run_start.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
@@ -439,7 +441,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_ah_minimization_validation_run_start"
+          assert capability_snapshot()["implementation_stage"] == "v2_ai_minimization_validation_runner"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
