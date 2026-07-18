@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ai_minimization_validation_runner
+v2_aj_minimization_validation_result_writer
 ```
 
 The current `main` branch contains:
@@ -229,8 +229,12 @@ The current `main` branch contains:
   and verifies exact checkpoint/restart equality under a 120-second budget.
   The primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
-  Its observation is in-memory only and the exact process entrypoint remains
-  fail-closed because no result writer is implemented. No production result
+  A separate failure-inclusive writer now re-verifies the signed chain, live
+  environment receipt, runner-start record, and canonical observation before
+  atomically persisting one nonce-bound mode-0600 receipt. Its reader requires
+  an out-of-band exact receipt hash and current revocation/supersession inputs.
+  The exact process entrypoint remains fail-closed until this writer is wired
+  into the externally provisioned bootstrap. No production result
   receipt, independent result review, scientific applicability, or parameter-
   fitting approval exists, so minimization and
   solvated minimization remain unvalidated.

@@ -49,6 +49,7 @@ betelgeuze_engine_v2.physics.reference_minimization_validation_authorization
 betelgeuze_engine_v2.physics.reference_minimization_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_minimization_validation_run_start
 betelgeuze_engine_v2.physics.reference_minimization_validation_runner
+betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
@@ -225,9 +226,11 @@ manifest before consuming a nonce-bound mode-0600 start marker, and retain all
 fourteen ordered pass and fail-closed case observations in memory. The runner
 records predefined metric values, independent-oracle comparisons, and exact
 checkpoint/restart equality under a 120-second budget. It writes no validation
-result receipt and opens no scientific, benchmark, product, fitting, or customer
-execution claim; the direct process entrypoint remains fail-closed until the
-separate result-writer slice exists.
+result receipt itself. The separate result-writer symbols re-verify the signed
+chain, persisted/live environment, durable runner-start marker, and canonical
+observation before private atomic persistence. The receipt is unsigned and
+pending independent result review, and the direct process entrypoint remains
+fail-closed until bootstrap integration exists.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
 require exact code, runner-source, dependency, and frozen-artifact identities,

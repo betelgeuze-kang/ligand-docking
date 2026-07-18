@@ -936,6 +936,168 @@ def _case_observation_from_payload(
     return row
 
 
+def require_reference_minimization_validation_run_observation_document(
+    value: object,
+) -> ReferenceMinimizationValidationRunObservation:
+    """Reconstruct and verify one canonical, failure-inclusive observation."""
+
+    if not isinstance(value, Mapping):
+        raise ReferenceMinimizationValidationRunnerError(
+            "run observation must be a mapping"
+        )
+    expected_fields = {
+        "schema_id",
+        "protocol_sha256",
+        "runner_contract_sha256",
+        "authorization_nonce_sha256",
+        "environment_receipt_sha256",
+        "environment_fingerprint_sha256",
+        "code_commit_sha",
+        "runner_source_sha256",
+        "dependency_artifact_sha256_rows",
+        "command_argv",
+        "seed",
+        "started_at_utc",
+        "completed_at_utc",
+        "runner_start_record_sha256",
+        "case_results",
+        "coverage_summary",
+        "in_memory_only",
+        "result_receipt_written",
+        "claim_policy",
+    }
+    if set(value) != expected_fields:
+        raise ReferenceMinimizationValidationRunnerError(
+            "run observation fields are invalid"
+        )
+    rows = value.get("case_results")
+    dependencies = value.get("dependency_artifact_sha256_rows")
+    command = value.get("command_argv")
+    if (
+        not isinstance(rows, list)
+        or not isinstance(dependencies, list)
+        or any(
+            not isinstance(row, Mapping)
+            or set(row) != {"artifact_id", "sha256"}
+            for row in dependencies
+        )
+        or not isinstance(command, list)
+        or any(not isinstance(item, str) for item in command)
+    ):
+        raise ReferenceMinimizationValidationRunnerError(
+            "run observation collections are invalid"
+        )
+    case_results = tuple(_case_observation_from_payload(row) for row in rows)
+    dependency_rows = tuple(
+        (str(row["artifact_id"]), str(row["sha256"])) for row in dependencies
+    )
+    if dependency_rows != tuple(sorted(dependency_rows)):
+        raise ReferenceMinimizationValidationRunnerError(
+            "run observation dependency rows are not canonical"
+        )
+    try:
+        observation = ReferenceMinimizationValidationRunObservation(
+            authorization_nonce_sha256=_require_sha256(
+                value["authorization_nonce_sha256"], name="authorization nonce"
+            ),
+            environment_receipt_sha256=_require_sha256(
+                value["environment_receipt_sha256"], name="environment receipt"
+            ),
+            environment_fingerprint_sha256=_require_sha256(
+                value["environment_fingerprint_sha256"],
+                name="environment fingerprint",
+            ),
+            code_commit_sha=_require_commit(value["code_commit_sha"], name="code commit"),
+            runner_source_sha256=_require_sha256(
+                value["runner_source_sha256"], name="runner source"
+            ),
+            dependency_artifact_sha256_rows=dependency_rows,
+            command_argv=tuple(command),
+            seed=value["seed"],
+            started_at_utc=value["started_at_utc"],
+            completed_at_utc=value["completed_at_utc"],
+            runner_start_record_sha256=_require_sha256(
+                value["runner_start_record_sha256"], name="runner-start record"
+            ),
+            case_results=case_results,
+            all_cases_observed=value["coverage_summary"]["all_cases_observed"] is True,
+            all_cases_passed=value["coverage_summary"]["all_cases_passed"] is True,
+            claim_policy=dict(value["claim_policy"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "run observation is invalid"
+        ) from exc
+    started = _parse_utc(observation.started_at_utc, name="observation start")
+    completed = _parse_utc(observation.completed_at_utc, name="observation completion")
+    protocol = cpu_minimization_validation_protocol_document()
+    protocol_rows = protocol["case_manifest"]["cases"]
+    metric_contract = {
+        row["metric_id"]: row
+        for row in protocol["numerical_protocol"]["metrics"]
+    }
+    for row, expected in zip(case_results, protocol_rows):
+        required = tuple(expected["required_metric_ids"])
+        observed_metric_ids = tuple(metric_id for metric_id, _ in row.metric_values)
+        if (
+            row.case_id != expected["case_id"]
+            or row.case_input_sha256 != expected["input_sha256"]
+            or row.expected_outcome != expected["expected_outcome"]
+            or row.expected_error_code != expected.get("expected_error_code")
+        ):
+            raise ReferenceMinimizationValidationRunnerError(
+                "run observation case identity is cross-wired"
+            )
+        if row.expected_outcome == "fail_closed":
+            semantic_pass = (
+                row.observed_status == "fail_closed"
+                and row.observed_error_code == row.expected_error_code
+                and not row.metric_values
+            )
+        else:
+            semantic_pass = (
+                observed_metric_ids == required
+                and all(
+                    math.isfinite(value)
+                    and _threshold_pass(
+                        metric_contract[metric_id]["threshold_operator"],
+                        value,
+                        float(metric_contract[metric_id]["threshold_value"]),
+                    )
+                    for metric_id, value in row.metric_values
+                )
+            )
+        if row.case_passed is not semantic_pass:
+            raise ReferenceMinimizationValidationRunnerError(
+                "run observation case status contradicts retained metrics"
+            )
+    if (
+        completed < started
+        or type(observation.seed) is not int
+        or not 0 <= observation.seed <= 2**63 - 1
+        or len(case_results) != REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+        or tuple(row.ordinal for row in case_results) != tuple(range(1, 15))
+        or len({row.case_id for row in case_results}) != 14
+        or value.get("schema_id")
+        != REFERENCE_MINIMIZATION_VALIDATION_RUN_OBSERVATION_SCHEMA_ID
+        or value.get("protocol_sha256")
+        != FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
+        or value.get("runner_contract_sha256")
+        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
+        or value.get("in_memory_only") is not True
+        or value.get("result_receipt_written") is not False
+        or observation.claim_policy != _closed_claim_policy()
+        or observation.all_cases_observed is not (len(case_results) == 14)
+        or observation.all_cases_passed
+        is not all(row.case_passed for row in case_results)
+        or observation.to_dict() != dict(value)
+    ):
+        raise ReferenceMinimizationValidationRunnerError(
+            "run observation does not match the bounded runner contract"
+        )
+    return observation
+
+
 def _matrix_worker_main(connection: Any) -> None:
     try:
         payload = _canonical_bytes(
@@ -1291,7 +1453,7 @@ def reference_minimization_validation_runner_contract_decision() -> dict[str, An
         "production_runner_start_consumed": False,
         "production_validation_execution_authorized": False,
         "production_validation_results_collected": False,
-        "result_receipt_writer_implemented": False,
+        "result_receipt_writer_implemented": True,
         **_closed_claim_policy(),
     }
 
@@ -1328,6 +1490,7 @@ __all__ = [
     "reference_minimization_validation_runner_contract_document",
     "reference_minimization_validation_runner_source_sha256",
     "read_reference_minimization_validation_runner_start_record",
+    "require_reference_minimization_validation_run_observation_document",
     "require_reference_minimization_validation_runner_contract_document",
     "run_bounded_cpu_reference_minimization_validation",
 ]

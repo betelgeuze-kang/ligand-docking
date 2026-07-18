@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_ai_minimization_validation_runner
+implementation_stage: v2_aj_minimization_validation_result_writer
 
 claim_policy:
   customer_execution_enabled: false
@@ -897,7 +897,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_minimization_validation_protocol:
-    current_state: bounded_failure_inclusive_runner_without_production_result_receipt_or_independent_result_review
+    current_state: failure_inclusive_result_writer_without_production_result_receipt_or_independent_result_review
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -923,7 +923,6 @@ capabilities:
       - trusted_authorization_operator_key_not_provided
       - authorization_nonce_not_atomically_reserved
       - execution_environment_receipt_missing
-      - result_receipt_writer_not_implemented
       - validation_execution_not_authorized
       - minimization_validation_results_not_collected
       - production_result_receipt_missing

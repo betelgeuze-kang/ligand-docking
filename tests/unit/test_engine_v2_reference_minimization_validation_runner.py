@@ -106,7 +106,7 @@ def test_contract_is_frozen_and_all_claims_remain_closed() -> None:
         document
     ) == document
     assert decision["bounded_validation_runner_implemented"] is True
-    assert decision["result_receipt_writer_implemented"] is False
+    assert decision["result_receipt_writer_implemented"] is True
     assert decision["claim_safe"] is False
 
 
