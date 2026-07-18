@@ -70,6 +70,13 @@ scientific claim from a package version.
   `fsync`. Duplicate/external nonce consumption fails closed and no release or
   delete API, production root, key, signed artifact, reservation, or execution
   is bundled.
+- Fail-closed minimization-validation run-start re-verification that binds the
+  raw signed review and authorization, durable nonce record, exact CPU-only
+  deterministic runtime, a maximum-five-minute operator-signed network-
+  isolation attestation, and one canonical mode-0600 secret-free environment
+  receipt persisted with exclusive no-follow creation and file/directory
+  `fsync`. No key, attestation, production root/receipt, bootstrap runner,
+  execution, result, fitting authorization, or claim promotion is bundled.
 - Frozen independent-review attestation contract binding the exact validation
   artifacts, ordered review checks and limitations, implementation-author and
   reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256
