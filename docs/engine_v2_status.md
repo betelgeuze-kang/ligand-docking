@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ad_minimization_validation_review_contract
+v2_ae_minimization_validation_receipt_contracts
 ```
 
 The current `main` branch contains:
@@ -193,8 +193,13 @@ The current `main` branch contains:
   negative-case/import-boundary review checks, explicit limitation
   acknowledgements, an out-of-band trusted reviewer key, and bounded freshness.
   It bundles no attestation or trusted key and cannot authorize execution. No
-  independent scientific review or authorization, production result receipt,
-  independent result review, scientific
+  independent scientific review or authorization exists. Separate frozen
+  CPU-only, network-disabled execution-environment and failure-inclusive result-
+  receipt contracts bind all fourteen cases, both operational and independent
+  input identities, all ten predefined metrics, and exact failure retention.
+  They bundle no authorization contract/receipt, environment/result receipt,
+  runner, writer, or observed value. No production result receipt, independent
+  result review, scientific
   applicability, or parameter-fitting approval exists, so minimization and
   solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds

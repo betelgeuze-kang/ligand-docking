@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ad_minimization_validation_review_contract
+v2_ae_minimization_validation_receipt_contracts
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -67,8 +67,11 @@ Implemented and GitHub-hosted CPU tested:
   validation results; a frozen HMAC-SHA256 independent-review attestation
   contract now requires author/reviewer identity separation, complete ordered
   checks and limitation acknowledgements, an out-of-band trusted reviewer key,
-  and bounded freshness, but no attestation, trusted key, authorization,
-  production result receipt, or scientific promotion exists;
+  and bounded freshness; separate frozen CPU-only, network-disabled execution-
+  environment and failure-inclusive result-receipt contracts bind the exact
+  14-case/10-metric order and both operational/independent input identities,
+  but no attestation, trusted key, authorization contract or receipt,
+  environment/result receipt, runner, result, or scientific promotion exists;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture
