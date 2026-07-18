@@ -58,9 +58,7 @@ from .reference_minimization_validation_runner import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/1.0.0"
-)
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/1.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
     "cpu_reference_minimization_validation_result_receipt_writer/1.0.0"
 )
@@ -71,7 +69,7 @@ REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = (
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
-    "572f40b960db70e95bd327d69a35872eefb4b542fa94c37c190feec62eadeb0d"
+    "c43d771a23554b7675ee450708caa3ce11f57090897c6016ebae0a775370608f"
 )
 
 _RECEIPT_BLOCKERS = (
@@ -146,7 +144,9 @@ def _require_sha256(value: object, *, name: str) -> str:
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceMinimizationValidationResultWriterError(f"{name} must be timezone-aware")
+        raise ReferenceMinimizationValidationResultWriterError(
+            f"{name} must be timezone-aware"
+        )
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
         raise ReferenceMinimizationValidationResultWriterError(
@@ -157,7 +157,9 @@ def _format_utc(value: datetime, *, name: str) -> str:
 
 def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str):
-        raise ReferenceMinimizationValidationResultWriterError(f"{name} must be UTC text")
+        raise ReferenceMinimizationValidationResultWriterError(
+            f"{name} must be UTC text"
+        )
     try:
         return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
             tzinfo=timezone.utc
@@ -225,6 +227,7 @@ def _contract_projection() -> dict[str, Any]:
             "underlying_review_and_authorization_revocation_rechecked": True,
             "receipt_signature_implemented": False,
             "private_posix_storage_is_not_external_authenticity": True,
+            "same_uid_content_mutation_detected_by_out_of_band_sha256": True,
             "same_uid_replacement_resistance_established": False,
         },
         "coverage": {
@@ -244,7 +247,9 @@ def _contract_projection() -> dict[str, Any]:
     }
 
 
-def reference_minimization_validation_result_writer_contract_document() -> dict[str, Any]:
+def reference_minimization_validation_result_writer_contract_document() -> dict[
+    str, Any
+]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
     if document["contract_sha256"] != (
@@ -357,9 +362,7 @@ def _result_projection(
         "execution_environment_receipt_sha256": (
             observation.environment_receipt_sha256
         ),
-        "environment_fingerprint_sha256": (
-            observation.environment_fingerprint_sha256
-        ),
+        "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
         "runner_start_record_sha256": observation.runner_start_record_sha256,
         "observation_sha256": _sha256(run_document),
         "code_commit_sha": observation.code_commit_sha,
@@ -382,12 +385,11 @@ def _result_projection(
             "caller_owned_private_posix_root_verified": True,
             "receipt_file_mode": "0600",
             "path_disclosed": False,
+            "same_uid_content_mutation_detected_by_out_of_band_sha256": True,
             "same_uid_replacement_resistance_established": False,
         },
         "review_attestation_sha256": review_attestation_sha256,
-        "independent_reviewer_identity_sha256": (
-            independent_reviewer_identity_sha256
-        ),
+        "independent_reviewer_identity_sha256": (independent_reviewer_identity_sha256),
         "reviewed_at_utc": reviewed_at_utc,
         "review_scope": "implementation_and_artifact_review_pre_execution",
         "independent_result_review_state": "pending_independent_review",
@@ -479,8 +481,10 @@ def _validate_result_receipt_payload(
             "result receipt fields are invalid"
         )
     try:
-        observation = require_reference_minimization_validation_run_observation_document(
-            payload["run_observation"]
+        observation = (
+            require_reference_minimization_validation_run_observation_document(
+                payload["run_observation"]
+            )
         )
     except ReferenceMinimizationValidationRunnerError as exc:
         raise ReferenceMinimizationValidationResultWriterError(
@@ -533,9 +537,7 @@ def _validate_result_receipt_payload(
         "execution_environment_receipt_sha256": (
             observation.environment_receipt_sha256
         ),
-        "environment_fingerprint_sha256": (
-            observation.environment_fingerprint_sha256
-        ),
+        "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
         "runner_start_record_sha256": observation.runner_start_record_sha256,
         "observation_sha256": _sha256(run_document),
         "code_commit_sha": observation.code_commit_sha,
@@ -594,13 +596,15 @@ def _validate_result_receipt_payload(
             "caller_owned_private_posix_root_verified",
             "receipt_file_mode",
             "path_disclosed",
+            "same_uid_content_mutation_detected_by_out_of_band_sha256",
             "same_uid_replacement_resistance_established",
         }
         or confinement.get("caller_owned_private_posix_root_verified") is not True
         or confinement.get("receipt_file_mode") != "0600"
         or confinement.get("path_disclosed") is not False
-        or confinement.get("same_uid_replacement_resistance_established")
-        is not False
+        or confinement.get("same_uid_content_mutation_detected_by_out_of_band_sha256")
+        is not True
+        or confinement.get("same_uid_replacement_resistance_established") is not False
     ):
         raise ReferenceMinimizationValidationResultWriterError(
             "result receipt lifecycle or path confinement state is invalid"
@@ -612,7 +616,9 @@ def _validate_result_receipt_payload(
     return observation
 
 
-def _receipt_from_payload(payload: Mapping[str, Any]) -> ReferenceMinimizationValidationResultReceipt:
+def _receipt_from_payload(
+    payload: Mapping[str, Any],
+) -> ReferenceMinimizationValidationResultReceipt:
     document = dict(payload)
     _validate_result_receipt_payload(document)
     return ReferenceMinimizationValidationResultReceipt(
@@ -642,11 +648,7 @@ def _persist_result_receipt(
         try:
             descriptor = os.open(
                 f"{authorization_nonce_sha256}.result.json",
-                os.O_WRONLY
-                | os.O_CREAT
-                | os.O_EXCL
-                | os.O_NOFOLLOW
-                | os.O_CLOEXEC,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
                 0o600,
                 dir_fd=root_fd,
             )
@@ -706,8 +708,10 @@ def write_reference_minimization_validation_result_receipt(
             "result writer requires a bounded run observation"
         )
     try:
-        observation = require_reference_minimization_validation_run_observation_document(
-            observation.to_dict()
+        observation = (
+            require_reference_minimization_validation_run_observation_document(
+                observation.to_dict()
+            )
         )
     except ReferenceMinimizationValidationRunnerError as exc:
         raise ReferenceMinimizationValidationResultWriterError(
@@ -747,15 +751,14 @@ def write_reference_minimization_validation_result_receipt(
             expected_dependency_artifact_sha256_rows=dict(
                 observation.dependency_artifact_sha256_rows
             ),
-            revoked_receipt_sha256s=(
-                revoked_authorization_receipt_sha256s
-            ),
-            revoked_review_attestation_sha256s=(
-                revoked_review_attestation_sha256s
-            ),
+            revoked_receipt_sha256s=(revoked_authorization_receipt_sha256s),
+            revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
             consumed_nonce_sha256s=externally_conflicting_nonce_sha256s,
         )
-    except (ReferenceMinimizationValidationReviewError, ReferenceMinimizationValidationAuthorizationError) as exc:
+    except (
+        ReferenceMinimizationValidationReviewError,
+        ReferenceMinimizationValidationAuthorizationError,
+    ) as exc:
         raise ReferenceMinimizationValidationResultWriterError(
             "result writer signed-chain re-verification failed"
         ) from exc
@@ -783,14 +786,10 @@ def write_reference_minimization_validation_result_receipt(
             "result writer authorization and observation are cross-wired"
         )
     try:
-        environment = (
-            require_reference_minimization_validation_execution_environment_receipt_for_runner(
-                artifact_output_root,
-                nonce,
-                expected_receipt_sha256=(
-                    observation.environment_receipt_sha256
-                ),
-            )
+        environment = require_reference_minimization_validation_execution_environment_receipt_for_runner(
+            artifact_output_root,
+            nonce,
+            expected_receipt_sha256=(observation.environment_receipt_sha256),
         )
     except ReferenceMinimizationValidationRunStartError as exc:
         raise ReferenceMinimizationValidationResultWriterError(
@@ -815,9 +814,7 @@ def write_reference_minimization_validation_result_receipt(
         "dependency_artifact_sha256_rows": (
             observation.dependency_artifact_sha256_rows
         ),
-        "environment_fingerprint_sha256": (
-            observation.environment_fingerprint_sha256
-        ),
+        "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
     }
     if any(
         getattr(environment, name) != value
@@ -898,10 +895,7 @@ def _read_result_receipt_bytes(
         try:
             descriptor = os.open(
                 f"{nonce}.result.json",
-                os.O_RDONLY
-                | os.O_NONBLOCK
-                | os.O_NOFOLLOW
-                | os.O_CLOEXEC,
+                os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC,
                 dir_fd=root_fd,
             )
             _validate_record_stat(os.fstat(descriptor))
@@ -917,7 +911,11 @@ def _read_result_receipt_bytes(
                     raise ReferenceMinimizationValidationResultWriterError(
                         "result receipt exceeds the size limit"
                     )
-        except (OSError, ValueError, ReferenceMinimizationValidationNonceReservationError) as exc:
+        except (
+            OSError,
+            ValueError,
+            ReferenceMinimizationValidationNonceReservationError,
+        ) as exc:
             raise ReferenceMinimizationValidationResultWriterError(
                 "result receipt cannot be read securely"
             ) from exc
@@ -1038,7 +1036,9 @@ def verify_reference_minimization_validation_result_receipt(
     return receipt
 
 
-def reference_minimization_validation_result_writer_contract_decision() -> dict[str, Any]:
+def reference_minimization_validation_result_writer_contract_decision() -> dict[
+    str, Any
+]:
     contract = reference_minimization_validation_result_writer_contract_document()
     return {
         "contract_sha256": contract["contract_sha256"],

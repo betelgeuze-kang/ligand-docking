@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ak_minimization_validation_ed25519_trust_boundary
+v2_al_minimization_validation_runtime_byte_identity_rc2
 ```
 
 The current `main` branch contains:
@@ -195,7 +195,9 @@ The current `main` branch contains:
   Signing keys remain outside verifier trust stores; those stores hold only raw
   Ed25519 public keys. The stdlib-only bootstrap verifies the first
   authorization with trusted OpenSSL before importing Engine v2 or third-party
-  packages.
+  packages. It also measures exact byte manifests for Python, the standard
+  library, OpenSSL, cryptography, NumPy, and Torch before those imports;
+  run-start and the bounded runner remeasure the same six signed identities.
   It bundles no attestation or trusted key and cannot authorize execution. No
   independent scientific review or authorization exists. Separate frozen
   CPU-only, network-disabled execution-environment and failure-inclusive result-
@@ -331,8 +333,9 @@ The current `main` branch contains:
   filename, and opens special files nonblocking before rejecting them. Its verifier
   requires an out-of-band exact receipt SHA-256 and current external revocation/
   supersession inputs. The receipt is unsigned, private POSIX storage is not an
-  external authenticity proof, and same-UID replacement resistance is not
-  established. Test-only signed artifacts and receipts exercise these
+  external authenticity proof, and same-UID pathname/inode replacement
+  resistance is not established. Changed content is detected when the required
+  out-of-band SHA-256 is supplied. Test-only signed artifacts and receipts exercise these
   primitives; no production key, attestation, receipt, root, runner start,
   validation result, independent result review, or scientific acceptance is
   bundled.

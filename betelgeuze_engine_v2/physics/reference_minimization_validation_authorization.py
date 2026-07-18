@@ -20,8 +20,12 @@ from .reference_minimization_validation_artifact_binding import (
 )
 from .reference_minimization_validation_ed25519 import (
     ReferenceMinimizationValidationEd25519Error,
+    ed25519_public_key_bytes,
     sign_ed25519,
     verify_ed25519,
+)
+from .reference_minimization_validation_dependency_identity import (
+    REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
 )
 from .reference_minimization_validation_receipts import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
@@ -37,9 +41,7 @@ from .reference_minimization_validation_review import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/1.0.0"
-)
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/1.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/1.0.0"
 )
@@ -47,12 +49,14 @@ REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
     "cpu_reference_minimization_validation_execution_authorization_contract/1.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "1.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-18T03:40:00Z"
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = (
+    "2026-07-18T03:40:00Z"
+)
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
-    "3d544cfeb627ee6388a5fdeb0ba86be87541d6b06029f3120571e46b7d2d5a52"
+    "33885bb99acd96dd5f431f8e74e59d578ef31a248bb8c72609690b119607e60c"
 )
 
 _GIT_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -119,7 +123,9 @@ def _require_sha256(value: object, *, name: str) -> str:
         or len(value) != 64
         or any(character not in "0123456789abcdef" for character in value)
     ):
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must be a lowercase SHA-256")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must be a lowercase SHA-256"
+        )
     return value
 
 
@@ -133,10 +139,14 @@ def _require_git_commit(value: object) -> str:
 
 def _require_key_id(value: object) -> str:
     if not isinstance(value, str) or not value or len(value) > 128:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization key id must contain 1 to 128 characters")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization key id must contain 1 to 128 characters"
+        )
     allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
     if any(character not in allowed for character in value):
-        raise ReferenceMinimizationValidationAuthorizationError("authorization key id contains unsupported characters")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization key id contains unsupported characters"
+        )
     return value
 
 
@@ -146,33 +156,55 @@ def _require_key(value: bytes | str, *, name: str) -> bytes:
     elif isinstance(value, bytes):
         key = value
     else:
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must be bytes or text")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must be bytes or text"
+        )
     if len(key) != 32:
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must contain exactly 32 bytes")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must contain exactly 32 bytes"
+        )
     return key
 
 
 def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must be second-resolution UTC")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must be second-resolution UTC"
+        )
     try:
-        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
     except ValueError as exc:
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must be second-resolution UTC") from exc
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must be second-resolution UTC"
+        ) from exc
 
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must be timezone-aware")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must be timezone-aware"
+        )
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must use second resolution")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            f"{name} must use second resolution"
+        )
     return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _dependency_rows(rows: Mapping[str, str]) -> list[dict[str, str]]:
     if not isinstance(rows, Mapping) or not rows:
-        raise ReferenceMinimizationValidationAuthorizationError("dependency artifact rows must be a non-empty mapping")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "dependency artifact rows must be a non-empty mapping"
+        )
+    if tuple(sorted(rows)) != (
+        REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+    ):
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "dependency artifact rows do not match the required byte identities"
+        )
     normalized: list[dict[str, str]] = []
     allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
     for artifact_id, digest in sorted(rows.items()):
@@ -219,6 +251,10 @@ def _contract_projection() -> dict[str, Any]:
             "exact_code_commit_required": True,
             "exact_runner_source_sha256_required": True,
             "dependency_artifact_sha256_rows_required": True,
+            "actual_dependency_byte_measurement_required": True,
+            "required_dependency_artifact_ids": list(
+                REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+            ),
         },
         "identity_policy": {
             "implementation_author_identity_required": True,
@@ -243,6 +279,7 @@ def _contract_projection() -> dict[str, Any]:
             "one_time_nonce_required": True,
             "external_revocation_sets_required": True,
             "atomic_nonce_reservation_required_before_execution": True,
+            "builder_round_trip_verification_required": True,
             "scientific_parameterized_force_field_lane_authorized": False,
             "parameter_fitting_proposal_authorized": False,
             "parameter_fitting_authorized": False,
@@ -250,7 +287,7 @@ def _contract_projection() -> dict[str, Any]:
         "current_state": {
             "authorization_receipt_present": False,
             "trusted_operator_key_present": False,
-            "nonce_reservation_implemented": False,
+            "nonce_reservation_implemented": True,
             "execution_environment_contract_frozen": True,
             "result_receipt_contract_frozen": True,
             "validation_execution_authorized": False,
@@ -271,10 +308,14 @@ def _contract_projection() -> dict[str, Any]:
     }
 
 
-def reference_minimization_validation_authorization_contract_document() -> dict[str, Any]:
+def reference_minimization_validation_authorization_contract_document() -> dict[
+    str, Any
+]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256):
+    if document["contract_sha256"] != (
+        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+    ):
         raise ReferenceMinimizationValidationAuthorizationError(
             "frozen minimization authorization contract SHA-256 drifted"
         )
@@ -285,7 +326,9 @@ def require_reference_minimization_validation_authorization_contract_document(
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
-        raise ReferenceMinimizationValidationAuthorizationError("authorization contract document must be a mapping")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization contract document must be a mapping"
+        )
     observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     expected = reference_minimization_validation_authorization_contract_document()
     if observed != expected:
@@ -377,7 +420,9 @@ class ReferenceMinimizationValidationAuthorizationVerification:
                 "authorization verification dependency rows must be non-empty"
             )
         normalized = _dependency_rows(dict(self.dependency_artifact_sha256_rows))
-        if tuple((row["artifact_id"], row["sha256"]) for row in normalized) != (self.dependency_artifact_sha256_rows):
+        if tuple((row["artifact_id"], row["sha256"]) for row in normalized) != (
+            self.dependency_artifact_sha256_rows
+        ):
             raise ReferenceMinimizationValidationAuthorizationError(
                 "authorization verification dependency rows must be sorted and unique"
             )
@@ -387,7 +432,9 @@ class ReferenceMinimizationValidationAuthorizationVerification:
             raise ReferenceMinimizationValidationAuthorizationError(
                 "authorization verification expiry must follow issue time"
             )
-        if not self.receipt_authorization_verified or not (self.eligible_for_atomic_execution_reservation):
+        if not self.receipt_authorization_verified or not (
+            self.eligible_for_atomic_execution_reservation
+        ):
             raise ReferenceMinimizationValidationAuthorizationError(
                 "authorization verification must retain receipt eligibility"
             )
@@ -416,7 +463,9 @@ def _verify_review(
         review = verify_signed_reference_minimization_validation_review_attestation(
             source,
             trusted_reviewer_keys=trusted_reviewer_keys,
-            expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
+            expected_implementation_author_identity_sha256=(
+                expected_implementation_author_identity_sha256
+            ),
             checked_at=checked_at,
         )
     except ReferenceMinimizationValidationReviewError as exc:
@@ -426,10 +475,14 @@ def _verify_review(
     if (
         not review.independent_scientific_review_verified
         or not review.implementation_author_separation_verified
-        or review.contract_sha256 != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256
-        or review.artifact_binding_sha256 != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
+        or review.contract_sha256
+        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256
+        or review.artifact_binding_sha256
+        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
     ):
-        raise ReferenceMinimizationValidationAuthorizationError("authorization independent review dependency drifted")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization independent review dependency drifted"
+        )
     return review
 
 
@@ -461,12 +514,18 @@ def _receipt_projection(
         "authorization_key_id": _require_key_id(authorization_key_id),
         "issued_at_utc": issued_at_utc,
         "expires_at_utc": expires_at_utc,
-        "authorization_nonce_sha256": _require_sha256(authorization_nonce_sha256, name="authorization nonce"),
+        "authorization_nonce_sha256": _require_sha256(
+            authorization_nonce_sha256, name="authorization nonce"
+        ),
         "code_commit_sha": _require_git_commit(code_commit_sha),
-        "runner_source_sha256": _require_sha256(runner_source_sha256, name="validation runner source"),
+        "runner_source_sha256": _require_sha256(
+            runner_source_sha256, name="validation runner source"
+        ),
         "execution_environment_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
         "result_receipt_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
-        "dependency_artifact_sha256_rows": _dependency_rows(dependency_artifact_sha256_rows),
+        "dependency_artifact_sha256_rows": _dependency_rows(
+            dependency_artifact_sha256_rows
+        ),
         "authorization_scope": {
             "lane": "synthetic_minimization_implementation_mathematics_only",
             "cpu_only": True,
@@ -506,7 +565,9 @@ def build_signed_reference_minimization_validation_authorization_receipt(
     review = _verify_review(
         review_attestation,
         trusted_reviewer_keys=trusted_reviewer_keys,
-        expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
+        expected_implementation_author_identity_sha256=(
+            expected_implementation_author_identity_sha256
+        ),
         checked_at=issued_at,
     )
     projection = _receipt_projection(
@@ -534,6 +595,32 @@ def build_signed_reference_minimization_validation_authorization_receipt(
         "key_id": _require_key_id(authorization_key_id),
         "value": signature_value,
     }
+    try:
+        public_key = ed25519_public_key_bytes(key)
+        verify_signed_reference_minimization_validation_authorization_receipt(
+            payload,
+            review_attestation=review_attestation,
+            trusted_reviewer_keys=trusted_reviewer_keys,
+            expected_implementation_author_identity_sha256=(
+                expected_implementation_author_identity_sha256
+            ),
+            trusted_operator_keys={
+                authorization_key_id: MinimizationAuthorizationOperatorTrustAnchor(
+                    authorization_operator_identity_sha256,
+                    public_key,
+                )
+            },
+            checked_at=issued_at,
+            expected_code_commit_sha=code_commit_sha,
+            expected_runner_source_sha256=runner_source_sha256,
+            expected_dependency_artifact_sha256_rows=(dependency_artifact_sha256_rows),
+        )
+    except ReferenceMinimizationValidationAuthorizationError:
+        raise
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt self-verification failed"
+        ) from exc
     return payload
 
 
@@ -557,11 +644,17 @@ def _load_receipt(source: str | bytes | Mapping[str, Any]) -> dict[str, Any]:
         return result
 
     try:
-        loaded = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate_keys)
+        loaded = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=reject_duplicate_keys
+        )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt must be UTF-8 JSON") from exc
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt must be UTF-8 JSON"
+        ) from exc
     if not isinstance(loaded, dict):
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt root must be an object")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt root must be an object"
+        )
     return loaded
 
 
@@ -589,7 +682,9 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
     review = _verify_review(
         review_attestation,
         trusted_reviewer_keys=trusted_reviewer_keys,
-        expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
+        expected_implementation_author_identity_sha256=(
+            expected_implementation_author_identity_sha256
+        ),
         checked_at=checked_at,
     )
     payload = _load_receipt(source)
@@ -599,14 +694,21 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
         "key_id",
         "value",
     }:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt signature fields are invalid")
-    if signature.get("algorithm") != REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM:
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt signature fields are invalid"
+        )
+    if (
+        signature.get("algorithm")
+        != REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM
+    ):
         raise ReferenceMinimizationValidationAuthorizationError(
             "authorization receipt signature algorithm is unsupported"
         )
     key_id = _require_key_id(signature.get("key_id"))
     if key_id not in trusted_operator_keys:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization operator key id is not trusted")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization operator key id is not trusted"
+        )
     anchor = trusted_operator_keys[key_id]
     if not isinstance(anchor, MinimizationAuthorizationOperatorTrustAnchor):
         raise ReferenceMinimizationValidationAuthorizationError(
@@ -621,17 +723,25 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
             "authorization receipt Ed25519 verifier is unavailable"
         ) from exc
     if not signature_verified:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt signature verification failed")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt signature verification failed"
+        )
     receipt_sha256 = payload.pop("receipt_sha256", None)
     if receipt_sha256 != _sha256(payload):
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt SHA-256 verification failed")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt SHA-256 verification failed"
+        )
     receipt_sha256 = _require_sha256(receipt_sha256, name="authorization receipt")
     if receipt_sha256 in {
-        _require_sha256(value, name="revoked authorization receipt") for value in revoked_receipt_sha256s
+        _require_sha256(value, name="revoked authorization receipt")
+        for value in revoked_receipt_sha256s
     }:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt is externally revoked")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt is externally revoked"
+        )
     if review.attestation_sha256 in {
-        _require_sha256(value, name="revoked review attestation") for value in revoked_review_attestation_sha256s
+        _require_sha256(value, name="revoked review attestation")
+        for value in revoked_review_attestation_sha256s
     }:
         raise ReferenceMinimizationValidationAuthorizationError(
             "authorization review attestation is externally revoked"
@@ -652,28 +762,55 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
             "authorization operator must differ from author and reviewer"
         )
     if payload.get("authorization_key_id") != key_id:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization operator key id is cross-wired")
-    issued = _parse_utc(payload.get("issued_at_utc"), name="authorization issued_at_utc")
-    expires = _parse_utc(payload.get("expires_at_utc"), name="authorization expires_at_utc")
-    review_start = _parse_utc(review.reviewed_at_utc, name="authorization review reviewed_at_utc")
-    review_expires = _parse_utc(review.expires_at_utc, name="authorization review expires_at_utc")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization operator key id is cross-wired"
+        )
+    issued = _parse_utc(
+        payload.get("issued_at_utc"), name="authorization issued_at_utc"
+    )
+    expires = _parse_utc(
+        payload.get("expires_at_utc"), name="authorization expires_at_utc"
+    )
+    review_start = _parse_utc(
+        review.reviewed_at_utc, name="authorization review reviewed_at_utc"
+    )
+    review_expires = _parse_utc(
+        review.expires_at_utc, name="authorization review expires_at_utc"
+    )
     if expires <= issued:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt expiry must follow issue time")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt expiry must follow issue time"
+        )
     if expires - issued > REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_MAX_VALIDITY:
         raise ReferenceMinimizationValidationAuthorizationError(
             "authorization receipt validity exceeds the frozen maximum"
         )
     if issued < review_start:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt predates the independent review")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt predates the independent review"
+        )
     if expires > review_expires:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt outlives the independent review")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt outlives the independent review"
+        )
     if checked < issued:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt is not yet valid")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt is not yet valid"
+        )
     if checked >= expires:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization receipt is expired")
-    nonce = _require_sha256(payload.get("authorization_nonce_sha256"), name="authorization nonce")
-    if nonce in {_require_sha256(value, name="consumed authorization nonce") for value in consumed_nonce_sha256s}:
-        raise ReferenceMinimizationValidationAuthorizationError("authorization nonce was already consumed")
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt is expired"
+        )
+    nonce = _require_sha256(
+        payload.get("authorization_nonce_sha256"), name="authorization nonce"
+    )
+    if nonce in {
+        _require_sha256(value, name="consumed authorization nonce")
+        for value in consumed_nonce_sha256s
+    }:
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization nonce was already consumed"
+        )
     expected_projection = _receipt_projection(
         review=review,
         authorization_operator_identity_sha256=operator,
@@ -702,10 +839,15 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
         authorization_nonce_sha256=nonce,
         code_commit_sha=expected_projection["code_commit_sha"],
         runner_source_sha256=expected_projection["runner_source_sha256"],
-        execution_environment_contract_sha256=expected_projection["execution_environment_contract_sha256"],
-        result_receipt_contract_sha256=expected_projection["result_receipt_contract_sha256"],
+        execution_environment_contract_sha256=expected_projection[
+            "execution_environment_contract_sha256"
+        ],
+        result_receipt_contract_sha256=expected_projection[
+            "result_receipt_contract_sha256"
+        ],
         dependency_artifact_sha256_rows=tuple(
-            (row["artifact_id"], row["sha256"]) for row in expected_projection["dependency_artifact_sha256_rows"]
+            (row["artifact_id"], row["sha256"])
+            for row in expected_projection["dependency_artifact_sha256_rows"]
         ),
         issued_at_utc=payload["issued_at_utc"],
         expires_at_utc=payload["expires_at_utc"],
@@ -718,7 +860,9 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
     )
 
 
-def reference_minimization_validation_authorization_contract_decision() -> dict[str, Any]:
+def reference_minimization_validation_authorization_contract_decision() -> dict[
+    str, Any
+]:
     """Return the closed decision; no operator key or receipt is bundled."""
 
     contract = reference_minimization_validation_authorization_contract_document()

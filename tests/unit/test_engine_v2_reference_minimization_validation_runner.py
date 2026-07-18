@@ -16,6 +16,7 @@ from types import SimpleNamespace
 import pytest
 
 import betelgeuze_engine_v2.physics.reference_minimization_validation_bootstrap as bootstrap
+import betelgeuze_engine_v2.physics.reference_minimization_validation_dependency_identity as dependency_identity
 import betelgeuze_engine_v2.physics.reference_minimization_validation_runner as module
 from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
     ed25519_public_key_bytes,
@@ -42,7 +43,14 @@ NONCE = "a" * 64
 RECEIPT_SHA256 = "b" * 64
 FINGERPRINT_SHA256 = "c" * 64
 COMMIT_SHA = "d" * 40
-DEPENDENCIES = (("numpy-wheel", "e" * 64), ("torch-cpu-wheel", "f" * 64))
+DEPENDENCIES = (
+    ("cryptography-distribution", "a" * 64),
+    ("numpy-distribution", "b" * 64),
+    ("openssl-executable", "c" * 64),
+    ("python-runtime-executable", "d" * 64),
+    ("python-standard-library", "e" * 64),
+    ("torch-distribution", "f" * 64),
+)
 
 
 def _root(tmp_path: Path) -> Path:
@@ -76,8 +84,15 @@ def _install_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         module, "_require_clean_checked_out_code_commit", lambda expected: None
     )
-    monkeypatch.setattr(module, "_require_isolated_python_bootstrap_runtime", lambda: ())
+    monkeypatch.setattr(
+        module, "_require_isolated_python_bootstrap_runtime", lambda: ()
+    )
     monkeypatch.setattr(module, "_require_source_only_python_runtime", lambda: None)
+    monkeypatch.setattr(
+        module,
+        "_observe_dependency_artifact_sha256_rows",
+        lambda roots: dict(DEPENDENCIES),
+    )
 
 
 def _run(root: Path):
@@ -106,9 +121,10 @@ def test_contract_is_frozen_and_all_claims_remain_closed() -> None:
     assert document["observation"]["failure_inclusive"] is True
     assert document["observation"]["result_receipt_written"] is False
     assert all(value is False for value in document["claim_policy"].values())
-    assert require_reference_minimization_validation_runner_contract_document(
-        document
-    ) == document
+    assert (
+        require_reference_minimization_validation_runner_contract_document(document)
+        == document
+    )
     assert decision["bounded_validation_runner_implemented"] is True
     assert decision["result_receipt_writer_implemented"] is True
     assert decision["claim_safe"] is False
@@ -134,14 +150,25 @@ def test_contract_rejects_tamper_and_source_binds_bootstrap_and_runner() -> None
                 "sha256": hashlib.sha256(bootstrap_path.read_bytes()).hexdigest(),
             },
             {
+                "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py",
+                "sha256": hashlib.sha256(
+                    Path(module.__file__)
+                    .with_name(
+                        "reference_minimization_validation_dependency_identity.py"
+                    )
+                    .read_bytes()
+                ).hexdigest(),
+            },
+            {
                 "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
                 "sha256": hashlib.sha256(runner_path.read_bytes()).hexdigest(),
             },
         ],
     }
-    assert reference_minimization_validation_runner_source_sha256() == hashlib.sha256(
-        module._canonical_bytes(source_identity)
-    ).hexdigest()
+    assert (
+        reference_minimization_validation_runner_source_sha256()
+        == hashlib.sha256(module._canonical_bytes(source_identity)).hexdigest()
+    )
 
 
 def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
@@ -155,6 +182,7 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
     assert imports == {
         "__future__",
         "hashlib",
+        "importlib.util",
         "json",
         "os",
         "betelgeuze_engine_v2.physics",
@@ -166,8 +194,41 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
     assert "torch" not in imports
     assert "numpy" not in imports
     assert bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH == (
-        "/etc/betelgeuze/engine-v2/"
-        "reference-minimization-validation-trust-anchors.json"
+        "/etc/betelgeuze/engine-v2/reference-minimization-validation-trust-anchors.json"
+    )
+
+
+def test_dependency_byte_identity_helper_is_stdlib_only_and_exactly_scoped() -> None:
+    tree = ast.parse(Path(dependency_identity.__file__).read_text(encoding="utf-8"))
+    imports: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            imports.add(node.module or "")
+    assert imports == {
+        "__future__",
+        "base64",
+        "hashlib",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "stat",
+        "sys",
+        "sysconfig",
+        "typing",
+    }
+    assert (
+        dependency_identity.REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+        == (
+            "cryptography-distribution",
+            "numpy-distribution",
+            "openssl-executable",
+            "python-runtime-executable",
+            "python-standard-library",
+            "torch-distribution",
+        )
     )
 
 
@@ -207,10 +268,7 @@ def test_exact_matrix_retains_all_success_and_fail_closed_rows() -> None:
     assert all(row.case_passed for row in rows)
     assert sum(row.expected_outcome == "pass" for row in rows) == 8
     assert sum(row.expected_outcome == "fail_closed" for row in rows) == 6
-    assert all(
-        row.observed_error_code == row.expected_error_code
-        for row in rows[8:]
-    )
+    assert all(row.observed_error_code == row.expected_error_code for row in rows[8:])
     checkpoint_rows = {row.case_id: dict(row.metric_values) for row in rows}
     for case_id in (
         "v1_checkpoint_restart_exact",
@@ -243,7 +301,10 @@ def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(
     _install_preflight(monkeypatch)
     root = _root(tmp_path)
     observation = _run(root)
-    marker = root / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
+    marker = (
+        root
+        / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
+    )
     payload = marker.read_bytes()
     assert stat.S_IMODE(marker.stat().st_mode) == 0o600
     assert marker.stat().st_nlink == 1
@@ -280,7 +341,10 @@ def test_marker_reader_rejects_hardlink_and_tamper(
     _install_preflight(monkeypatch)
     root = _root(tmp_path)
     observation = _run(root)
-    marker = root / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
+    marker = (
+        root
+        / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
+    )
     document = module.read_reference_minimization_validation_runner_start_record(
         root,
         NONCE,
@@ -337,7 +401,7 @@ def test_direct_entrypoint_remains_closed_until_result_writer_exists() -> None:
         module._main_from_canonical_request(b"{}")
     source = Path(module.__file__).read_text(encoding="utf-8")
     assert "reference_minimization_validation_result_writer" not in source
-    assert "validation_receipt\": True" not in source
+    assert 'validation_receipt": True' not in source
 
 
 def test_direct_library_run_requires_external_trust_bootstrap(

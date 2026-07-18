@@ -53,9 +53,12 @@ AUTHOR_IDENTITY_SHA256 = "6" * 64
 REVIEWER_IDENTITY_SHA256 = "7" * 64
 OPERATOR_IDENTITY_SHA256 = "8" * 64
 DEPENDENCY_ROWS = {
-    "numpy-1.26.4-wheel": "9" * 64,
-    "python-3.11-runtime": "a" * 64,
-    "torch-2.6.0-cpu-wheel": "b" * 64,
+    "cryptography-distribution": "9" * 64,
+    "numpy-distribution": "a" * 64,
+    "openssl-executable": "b" * 64,
+    "python-runtime-executable": "c" * 64,
+    "python-standard-library": "d" * 64,
+    "torch-distribution": "e" * 64,
 }
 RAW_REVIEW = {"raw_signed_review": True}
 RAW_AUTHORIZATION = {"raw_signed_authorization": True}
@@ -114,6 +117,11 @@ def _observation(
         runner_module,
         "_require_isolated_python_bootstrap_runtime",
         lambda: (),
+    )
+    monkeypatch.setattr(
+        runner_module,
+        "_observe_dependency_artifact_sha256_rows",
+        lambda _roots: dict(DEPENDENCY_ROWS),
     )
     monkeypatch.setattr(
         runner_module,
@@ -216,9 +224,7 @@ def _write(root: Path, observation: object):
         review_attestation=RAW_REVIEW,
         authorization_receipt=RAW_AUTHORIZATION,
         trusted_reviewer_keys={},
-        expected_implementation_author_identity_sha256=(
-            AUTHOR_IDENTITY_SHA256
-        ),
+        expected_implementation_author_identity_sha256=(AUTHOR_IDENTITY_SHA256),
         trusted_operator_keys={},
         revoked_authorization_receipt_sha256s=("c" * 64,),
         revoked_review_attestation_sha256s=("d" * 64,),
@@ -232,15 +238,24 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
     decision = reference_minimization_validation_result_writer_contract_decision()
 
     assert first == second
-    assert first["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID
+    assert (
+        first["schema_id"]
+        == REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID
+    )
     assert first["contract_sha256"] == (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
     )
-    assert first["coverage"]["case_count"] == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+    assert (
+        first["coverage"]["case_count"]
+        == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+    )
     assert first["coverage"]["failed_cases_and_metrics_retained"] is True
     assert first["verification"]["receipt_signature_implemented"] is False
     assert first["claim_policy"]["claim_safe"] is False
-    assert require_reference_minimization_validation_result_writer_contract_document(first) == first
+    assert (
+        require_reference_minimization_validation_result_writer_contract_document(first)
+        == first
+    )
 
     assert decision["result_receipt_writer_implemented"] is True
     assert decision["production_result_receipt_present"] is False
@@ -251,13 +266,17 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
 
 
 def test_result_writer_contract_rejects_tamper() -> None:
-    tampered = deepcopy(reference_minimization_validation_result_writer_contract_document())
+    tampered = deepcopy(
+        reference_minimization_validation_result_writer_contract_document()
+    )
     tampered["claim_policy"]["claim_safe"] = True
     with pytest.raises(
         ReferenceMinimizationValidationResultWriterError,
         match="does not match the frozen record",
     ):
-        require_reference_minimization_validation_result_writer_contract_document(tampered)
+        require_reference_minimization_validation_result_writer_contract_document(
+            tampered
+        )
 
 
 def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
@@ -279,9 +298,7 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     authorization_kwargs = seen["authorization_kwargs"]
     assert isinstance(authorization_kwargs, dict)
     assert authorization_kwargs["revoked_receipt_sha256s"] == ("c" * 64,)
-    assert authorization_kwargs["revoked_review_attestation_sha256s"] == (
-        "d" * 64,
-    )
+    assert authorization_kwargs["revoked_review_attestation_sha256s"] == ("d" * 64,)
     assert authorization_kwargs["consumed_nonce_sha256s"] == ("f" * 64,)
 
     assert result_path.is_file()
@@ -296,8 +313,13 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     assert payload["coverage_summary"] == {
         **observation.to_dict()["coverage_summary"],
     }
-    assert len(payload["case_results"]) == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
-    assert any(row["observed_status"] == "fail_closed" for row in payload["case_results"])
+    assert (
+        len(payload["case_results"])
+        == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+    )
+    assert any(
+        row["observed_status"] == "fail_closed" for row in payload["case_results"]
+    )
     assert all(row["case_passed"] for row in payload["case_results"])
     assert payload["independent_result_review_state"] == "pending_independent_review"
     assert payload["review_scope"] == (
@@ -309,24 +331,42 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     assert payload["scientifically_validated"] is False
     assert payload["claim_safe"] is False
     assert payload["artifact_path_confinement_verification"]["path_disclosed"] is False
-    assert payload["artifact_path_confinement_verification"][
-        "same_uid_replacement_resistance_established"
-    ] is False
+    assert (
+        payload["artifact_path_confinement_verification"][
+            "same_uid_content_mutation_detected_by_out_of_band_sha256"
+        ]
+        is True
+    )
+    assert (
+        payload["artifact_path_confinement_verification"][
+            "same_uid_replacement_resistance_established"
+        ]
+        is False
+    )
     assert "test-only-32-bytes" not in json.dumps(payload, sort_keys=True)
 
-    assert read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE) == receipt
-    assert verify_reference_minimization_validation_result_receipt(
-        root,
-        AUTHORIZATION_NONCE,
-        expected_receipt_sha256=receipt.receipt_sha256,
-        revoked_review_attestation_sha256s=(),
-        revoked_authorization_receipt_sha256s=(),
-        revoked_result_receipt_sha256s=(),
-        superseded_result_receipt_sha256s=(),
-    ) == receipt
-    assert require_reference_minimization_validation_run_observation_document(
-        payload["run_observation"]
-    ) == observation
+    assert (
+        read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
+        == receipt
+    )
+    assert (
+        verify_reference_minimization_validation_result_receipt(
+            root,
+            AUTHORIZATION_NONCE,
+            expected_receipt_sha256=receipt.receipt_sha256,
+            revoked_review_attestation_sha256s=(),
+            revoked_authorization_receipt_sha256s=(),
+            revoked_result_receipt_sha256s=(),
+            superseded_result_receipt_sha256s=(),
+        )
+        == receipt
+    )
+    assert (
+        require_reference_minimization_validation_run_observation_document(
+            payload["run_observation"]
+        )
+        == observation
+    )
 
     with pytest.raises(ReferenceMinimizationValidationResultReceiptAlreadyExistsError):
         _write(root, observation)
@@ -484,12 +524,16 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
         json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
         encoding="ascii",
     )
-    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="SHA-256"):
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError, match="SHA-256"
+    ):
         read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
 
     path.write_bytes(original)
     path.chmod(0o644)
-    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="securely"):
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError, match="securely"
+    ):
         read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
 
     path.chmod(0o600)
@@ -498,11 +542,15 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
         os.link(path, hardlink)
     except OSError:
         pytest.skip("hard links unavailable")
-    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="securely"):
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError, match="securely"
+    ):
         read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
     hardlink.unlink()
 
-    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="cross-wired"):
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError, match="cross-wired"
+    ):
         verify_reference_minimization_validation_result_receipt(
             root,
             AUTHORIZATION_NONCE,
@@ -512,7 +560,9 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
             revoked_result_receipt_sha256s=(),
             superseded_result_receipt_sha256s=(),
         )
-    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="revoked"):
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError, match="revoked"
+    ):
         verify_reference_minimization_validation_result_receipt(
             root,
             AUTHORIZATION_NONCE,
@@ -544,13 +594,13 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
             AUTHORIZATION_NONCE,
             expected_receipt_sha256=receipt.receipt_sha256,
             revoked_review_attestation_sha256s=(),
-            revoked_authorization_receipt_sha256s=(
-                AUTHORIZATION_RECEIPT_SHA256,
-            ),
+            revoked_authorization_receipt_sha256s=(AUTHORIZATION_RECEIPT_SHA256,),
             revoked_result_receipt_sha256s=(),
             superseded_result_receipt_sha256s=(),
         )
-    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="superseded"):
+    with pytest.raises(
+        ReferenceMinimizationValidationResultWriterError, match="superseded"
+    ):
         verify_reference_minimization_validation_result_receipt(
             root,
             AUTHORIZATION_NONCE,
@@ -593,7 +643,9 @@ def test_result_reader_binds_filename_nonce_and_opens_special_files_nonblocking(
 
 
 def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() -> None:
-    signature = inspect.signature(write_reference_minimization_validation_result_receipt)
+    signature = inspect.signature(
+        write_reference_minimization_validation_result_receipt
+    )
     assert "checked_at" not in signature.parameters
     for name in (
         "revoked_authorization_receipt_sha256s",
@@ -601,7 +653,9 @@ def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() ->
         "externally_conflicting_nonce_sha256s",
     ):
         assert signature.parameters[name].default is inspect.Parameter.empty
-    verify_signature = inspect.signature(verify_reference_minimization_validation_result_receipt)
+    verify_signature = inspect.signature(
+        verify_reference_minimization_validation_result_receipt
+    )
     for name in (
         "expected_receipt_sha256",
         "revoked_review_attestation_sha256s",
@@ -619,9 +673,7 @@ def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() ->
     source = inspect.getsource(module)
     tree = ast.parse(source)
     top_level_imports = [
-        node
-        for node in tree.body
-        if isinstance(node, (ast.Import, ast.ImportFrom))
+        node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
     ]
     imported_modules = {
         alias.name.split(".", 1)[0]

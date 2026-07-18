@@ -170,6 +170,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_artifact_binding.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_ed25519.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_review.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_receipts.py \
@@ -295,7 +296,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_ak_minimization_validation_ed25519_trust_boundary"
+          assert loaded["implementation_stage"] == "v2_al_minimization_validation_runtime_byte_identity_rc2"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256

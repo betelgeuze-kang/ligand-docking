@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ak_minimization_validation_ed25519_trust_boundary
+v2_al_minimization_validation_runtime_byte_identity_rc2
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -87,7 +87,11 @@ Implemented and GitHub-hosted CPU tested:
   and atomically persists one canonical mode-0600 secret-free environment
   receipt under a separate private caller root; it creates no isolation,
   bundles no production key/attestation/root/receipt and authorizes no
-  validation, fitting, or claim; a bounded failure-inclusive runner and atomic
+  validation, fitting, or claim; the stdlib-only bootstrap now measures the
+  active Python executable and standard library, OpenSSL executable, and every
+  `RECORD`-declared cryptography/NumPy/Torch payload before Engine v2 or those
+  dependencies are imported, and run-start plus the runner remeasure the exact
+  six signed rows; a bounded failure-inclusive runner and atomic
   result writer exist as non-production primitives, while the direct bootstrap
   entrypoint remains fail-closed until result finalization is wired into it;
 - a frozen CPU reference energy/force contract-validation protocol with exact
@@ -117,7 +121,8 @@ Implemented and GitHub-hosted CPU tested:
   runner-start marker, and exact observation before atomically persisting one
   canonical private mode-0600 receipt. Its reader requires an out-of-band exact
   receipt hash plus external revocation/supersession inputs; no receipt signature
-  or same-UID replacement resistance is claimed. The exact module command accepts
+  or same-UID pathname/inode replacement resistance is claimed, although changed
+  content is detected against the out-of-band hash. The exact module command accepts
   only a bounded canonical JSON request without trust keys on standard input;
   reviewer/operator anchors come only from an externally provisioned, fixed-path,
   root-owned mode-0600 trust store that the repository does not bundle. It keeps

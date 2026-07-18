@@ -4,6 +4,38 @@ This changelog tracks the independent `betelgeuze-engine-v2` distribution. The
 legacy/product monorepo has separate operational evidence and does not inherit a
 scientific claim from a package version.
 
+## 0.2.0rc2 — Runtime identity release candidate
+
+### Added
+
+- A standard-library-only runtime byte-identity materializer for the active
+  Python executable and standard library, the root-owned OpenSSL executable,
+  and every `RECORD`-declared cryptography, NumPy, and Torch distribution
+  payload. The isolated bootstrap measures these bytes before package or
+  third-party imports; run-start and the bounded runner remeasure the exact six
+  signed rows before evaluation.
+- Explicit result-receipt semantics that distinguish content-mutation detection
+  through a required out-of-band SHA-256 from same-UID pathname/inode
+  replacement resistance, which remains unestablished without privileged or
+  immutable storage.
+- Sensitive-path CODEOWNERS coverage and a documented branch-protection review
+  policy for independent human approval and unresolved-thread closure.
+- Authorization builders now round-trip their newly signed receipt through the
+  public verifier before returning it, rejecting invalid lifetime, identity,
+  dependency, or signature combinations at construction time.
+
+### Changed
+
+- The distribution version is `0.2.0rc2`, separating the runtime-byte-identity
+  and Ed25519 trust boundary from the accumulated `0.2.0rc1` surface.
+
+### Scientific boundary
+
+`0.2.0rc2` remains an internal CPU reference release candidate. Runtime byte
+identity, signatures, packaging reproducibility, and governance policy do not
+establish calibrated force-field accuracy, minimization validity, docking or
+ranking validity, public benchmark performance, or customer readiness.
+
 ## 0.2.0rc1 — Release candidate
 
 ### Added

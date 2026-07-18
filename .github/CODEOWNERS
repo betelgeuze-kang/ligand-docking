@@ -16,11 +16,13 @@
 
 # Independent Engine v2 architecture, packaging, and machine-readable claims.
 /betelgeuze_engine_v2/ @betelgeuze-kang
+/betelgeuze_engine_v2/physics/reference_minimization_validation_* @betelgeuze-kang
 /packaging/engine-v2/ @betelgeuze-kang
 /config/independent_engine_v2_capabilities.yaml @betelgeuze-kang
 /tools/check_engine_v2_architecture.py @betelgeuze-kang
 /tools/build_engine_v2_wheel.py @betelgeuze-kang
 /docs/engine_v2_*.md @betelgeuze-kang
+/docs/engine_v2_review_governance.md @betelgeuze-kang
 
 # Legacy scientific/runtime surfaces and training/checkpoint contracts.
 /betelgeuze_engine/ @betelgeuze-kang

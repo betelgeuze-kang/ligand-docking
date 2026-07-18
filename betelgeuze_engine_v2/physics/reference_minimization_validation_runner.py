@@ -36,6 +36,11 @@ from .reference_minimization_validation_bootstrap import (
     reference_minimization_validation_bootstrap_path,
     reference_minimization_validation_execution_source_sha256,
 )
+from .reference_minimization_validation_dependency_identity import (
+    REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
+    ReferenceMinimizationValidationDependencyIdentityError,
+    observed_reference_minimization_validation_dependency_artifact_sha256_rows,
+)
 from .reference_minimization_validation_materializer import (
     cpu_minimization_validation_materialization_manifest_document,
     materialize_frozen_cpu_minimization_validation_case,
@@ -81,7 +86,7 @@ REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX = (
     "reference-minimization-validation-runner-start-"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "26e3ad464ee57111f75d7e6e2d497d7c9b78db87f8e0dcd50b15746ba4eedfb1"
+    "2e922c1a00fdb01e7c1b9a370434907831518aad1ef9138a17fd32fd42a25a53"
 )
 
 
@@ -263,6 +268,19 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
     return tuple(dependency_roots)
 
 
+def _observe_dependency_artifact_sha256_rows(
+    dependency_roots: tuple[Path, ...],
+) -> dict[str, str]:
+    try:
+        return observed_reference_minimization_validation_dependency_artifact_sha256_rows(
+            dependency_roots
+        )
+    except ReferenceMinimizationValidationDependencyIdentityError as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "runner dependency bytes cannot be measured"
+        ) from exc
+
+
 def reference_minimization_validation_checked_out_code_commit_sha() -> str:
     """Resolve HEAD without accepting Git replacement objects."""
 
@@ -408,6 +426,10 @@ def _contract_projection() -> dict[str, Any]:
             "git_replacement_refs_rejected": True,
             "bootstrap_and_runner_source_identity_measured": True,
             "dependency_roots_root_owned_read_only": True,
+            "dependency_payload_bytes_remeasured_before_evaluation": True,
+            "required_dependency_artifact_ids": list(
+                REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+            ),
         },
         "worker": {
             "fresh_spawn_process": True,
@@ -1378,7 +1400,7 @@ def run_bounded_cpu_reference_minimization_validation(
         expected_environment_receipt_sha256, name="environment receipt"
     )
     expected_commit = _require_commit(expected_code_commit_sha, name="code commit")
-    _require_isolated_python_bootstrap_runtime()
+    dependency_roots = _require_isolated_python_bootstrap_runtime()
     _require_source_only_python_runtime()
     receipt = require_reference_minimization_validation_execution_environment_receipt_for_runner(
         artifact_output_root,
@@ -1399,6 +1421,12 @@ def run_bounded_cpu_reference_minimization_validation(
     if receipt.dependency_artifact_sha256_rows != expected_rows:
         raise ReferenceMinimizationValidationRunnerError(
             "environment receipt dependency artifacts are cross-wired"
+        )
+    if tuple(
+        sorted(_observe_dependency_artifact_sha256_rows(dependency_roots).items())
+    ) != expected_rows:
+        raise ReferenceMinimizationValidationRunnerError(
+            "live runner dependency bytes do not match the signed receipt"
         )
     source_sha256 = reference_minimization_validation_runner_source_sha256()
     if receipt.runner_source_sha256 != source_sha256:

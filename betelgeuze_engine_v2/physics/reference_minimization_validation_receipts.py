@@ -20,6 +20,9 @@ from .reference_minimization_validation_artifact_binding import (
 from .reference_minimization_validation_materializer import (
     cpu_minimization_validation_materialization_manifest_document,
 )
+from .reference_minimization_validation_dependency_identity import (
+    REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
+)
 from .reference_minimization_validation_protocol import (
     FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
     cpu_minimization_validation_protocol_document,
@@ -52,10 +55,10 @@ REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-18T
 
 # Filled only after the complete canonical projections have been reviewed.
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "10342a2718d87f5693d53885be90473eb47153bc25dc2b738de1e5d6e50af789"
+    "e7cd74c0ac704dd69b17839cd34e74522e901469d91404b676daf415a6cf984f"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
-    "02ddaf112a6cc15109452223d1205b24dbd09c1cb44318c950eb7a4b1659debd"
+    "274168f6a47b1d399cd6c8357bea9d24ff5a281fd4864c6d8e2ee3caf3af1726"
 )
 
 _CURRENT_BLOCKERS = (
@@ -141,6 +144,11 @@ def _environment_contract_projection() -> dict[str, Any]:
             "exact_code_commit_required": True,
             "exact_runner_source_sha256_required": True,
             "dependency_artifact_sha256_rows_required": True,
+            "dependency_artifact_bytes_observed_before_engine_import": True,
+            "required_dependency_artifact_ids": list(
+                REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+            ),
+            "distribution_record_payload_hashes_required": True,
         },
         "runtime_contract": {
             "operating_system": "linux",
@@ -149,6 +157,8 @@ def _environment_contract_projection() -> dict[str, Any]:
             "cpu_only": True,
             "supported_python_minor_versions": ["3.10", "3.11", "3.12"],
             "exact_python_patch_version_required_in_receipt": True,
+            "python_executable_and_stdlib_byte_manifests_required": True,
+            "openssl_executable_byte_manifest_required": True,
             "torch_version": "2.6.0",
             "numpy_version": "1.26.4",
             "coordinate_dtype": "float64",
