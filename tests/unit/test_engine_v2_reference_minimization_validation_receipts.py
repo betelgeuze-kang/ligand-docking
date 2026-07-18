@@ -121,7 +121,7 @@ def test_readiness_remains_closed_and_execution_raises() -> None:
     decision = reference_minimization_validation_execution_readiness_decision()
 
     assert decision["receipt_contracts_frozen"] is True
-    assert decision["authorization_contract_frozen"] is False
+    assert decision["authorization_contract_frozen"] is True
     assert decision["independent_review_attestation_present"] is False
     assert decision["authorization_receipt_present"] is False
     assert decision["execution_environment_receipt_present"] is False
@@ -129,7 +129,7 @@ def test_readiness_remains_closed_and_execution_raises() -> None:
     assert decision["result_receipt_writer_implemented"] is False
     assert decision["validation_execution_authorized"] is False
     assert decision["validation_results_collected"] is False
-    assert "signed_execution_authorization_receipt_schema_not_frozen" in decision["blockers"]
+    assert "signed_execution_authorization_receipt_schema_not_frozen" not in decision["blockers"]
     assert "independent_result_review_missing" in decision["blockers"]
     with pytest.raises(
         ReferenceMinimizationValidationReceiptContractError,

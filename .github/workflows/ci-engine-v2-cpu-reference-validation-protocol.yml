@@ -13,6 +13,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_review.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_receipts.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -47,6 +48,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_review.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_receipts.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_authorization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -107,6 +109,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py
             tests/unit/test_engine_v2_reference_minimization_validation_review.py
             tests/unit/test_engine_v2_reference_minimization_validation_receipts.py
+            tests/unit/test_engine_v2_reference_minimization_validation_authorization.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
@@ -156,6 +159,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_minimization_validation_artifact_binding.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_review.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_receipts.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_authorization.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_validation_oracle.py \
@@ -174,6 +178,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
             tests/unit/test_engine_v2_reference_minimization_validation_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_receipts.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -194,6 +199,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
             tests/unit/test_engine_v2_reference_minimization_validation_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_receipts.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_authorization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -215,6 +221,7 @@ jobs:
 
           from betelgeuze_engine_v2.capabilities import capability_snapshot
           from betelgeuze_engine_v2.physics import (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
               FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
@@ -241,6 +248,8 @@ jobs:
               reference_validation_artifact_binding_document,
               reference_validation_review_contract_authorization_decision,
               reference_validation_review_contract_document,
+              reference_minimization_validation_authorization_contract_decision,
+              reference_minimization_validation_authorization_contract_document,
           )
 
           loaded = yaml.safe_load(
@@ -250,7 +259,17 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_ae_minimization_validation_receipt_contracts"
+          assert loaded["implementation_stage"] == "v2_af_minimization_validation_authorization_contract"
+          minimization_authorization = reference_minimization_validation_authorization_contract_document()
+          assert minimization_authorization["contract_sha256"] == (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+          )
+          minimization_authorization_decision = (
+              reference_minimization_validation_authorization_contract_decision()
+          )
+          assert minimization_authorization_decision["authorization_receipt_present"] is False
+          assert minimization_authorization_decision["authorization_nonce_reserved"] is False
+          assert minimization_authorization_decision["validation_execution_authorized"] is False
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)
