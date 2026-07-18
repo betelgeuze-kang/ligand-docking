@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ah_minimization_validation_run_start
+v2_ai_minimization_validation_runner
 ```
 
 Implemented and GitHub-hosted CPU tested:
