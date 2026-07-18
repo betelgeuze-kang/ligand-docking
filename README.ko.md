@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_ak_minimization_validation_ed25519_trust_boundary
+v2_al_minimization_validation_runtime_byte_identity_rc2
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -61,8 +61,11 @@ v2_ak_minimization_validation_ed25519_trust_boundary
   그리고 raw signed chain·durable nonce·실제 CPU-only deterministic process·network
   namespace를 다시 검증하고 최대 5분 operator-signed network-isolation attestation을
   확인한 뒤 별도 private root에 canonical mode-0600 secret-free 환경 receipt 하나를
-  원자적으로 기록하는 run-start primitive까지 구현했지만 실제 attestation·trusted
-  key·production root/receipt·runner·실행 승인·결과·과학 승격은 없음
+  원자적으로 기록하는 run-start primitive, failure-inclusive bounded runner와 result
+  writer까지 구현됨. stdlib-only bootstrap은 Engine v2/Torch/NumPy import 전에 Python
+  executable·stdlib·OpenSSL·cryptography·NumPy·Torch의 실제 payload byte를 측정하고,
+  run-start와 runner가 exact 6개 signed identity를 다시 측정함. 실제 attestation·trusted
+  key·production root/receipt·승인된 실행·독립 result review·과학 승격은 없음
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound
@@ -81,8 +84,9 @@ v2_ak_minimization_validation_ed25519_trust_boundary
   runner, 이어서 raw signed chain·live environment receipt·runner-start marker·exact
   observation을 다시 검증하고 private artifact root에 canonical mode-0600 receipt 하나를
   원자적으로 기록하는 failure-inclusive result writer. reader는 외부 exact receipt hash와
-  revocation/supersession 입력을 요구하며 receipt signature나 same-UID replacement resistance는
-  주장하지 않음. direct CLI는 닫혀 있음. 실제 trusted key, production receipt·reservation/
+  revocation/supersession 입력을 요구하며 변경된 content는 외부 hash로 탐지하지만 receipt
+  signature나 same-UID pathname/inode replacement resistance는 주장하지 않음. direct CLI는
+  닫혀 있음. 실제 trusted key, production receipt·reservation/
   artifact root·production nonce reservation·production 환경 receipt·runner start/result
   receipt·승인된 production 실행·independent result review·과학 acceptance는 포함하지 않음
 - 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold

@@ -70,10 +70,22 @@ NETWORK_EXPIRES_AT = NOW + timedelta(minutes=4)
 CODE_COMMIT_SHA = "1" * 40
 RUNNER_SOURCE_SHA256 = "2" * 64
 DEPENDENCY_ROWS = {
-    "numpy-1.26.4-wheel": "3" * 64,
-    "python-3.11-runtime": "4" * 64,
-    "torch-2.6.0-cpu-wheel": "5" * 64,
+    "cryptography-distribution": "3" * 64,
+    "numpy-distribution": "4" * 64,
+    "openssl-executable": "5" * 64,
+    "python-runtime-executable": "6" * 64,
+    "python-standard-library": "7" * 64,
+    "torch-distribution": "8" * 64,
 }
+
+
+@pytest.fixture(autouse=True)
+def _fixed_dependency_byte_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        module,
+        "_observe_dependency_artifact_sha256_rows",
+        lambda: dict(DEPENDENCY_ROWS),
+    )
 
 
 def _review_attestation() -> dict[str, object]:

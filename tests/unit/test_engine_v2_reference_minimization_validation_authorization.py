@@ -55,9 +55,12 @@ CHECKED_AT = ISSUED_AT + timedelta(hours=1)
 CODE_COMMIT = "1" * 40
 RUNNER_SOURCE = "2" * 64
 DEPENDENCIES = {
-    "numpy-1.26.4-wheel": "3" * 64,
-    "python-3.11-runtime": "4" * 64,
-    "torch-2.6.0-cpu-wheel": "5" * 64,
+    "cryptography-distribution": "3" * 64,
+    "numpy-distribution": "4" * 64,
+    "openssl-executable": "5" * 64,
+    "python-runtime-executable": "6" * 64,
+    "python-standard-library": "7" * 64,
+    "torch-distribution": "8" * 64,
 }
 
 
@@ -76,7 +79,11 @@ def _review() -> dict[str, object]:
 def _receipt(**overrides: object) -> dict[str, object]:
     values: dict[str, object] = {
         "review_attestation": _review(),
-        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
+        "trusted_reviewer_keys": {
+            REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(
+                REVIEWER, REVIEW_PUBLIC_KEY
+            )
+        },
         "expected_implementation_author_identity_sha256": AUTHOR,
         "authorization_operator_identity_sha256": OPERATOR,
         "authorization_key_id": OPERATOR_KEY_ID,
@@ -98,10 +105,16 @@ def _verify(source: object, **overrides: object):
     values: dict[str, object] = {
         "source": source,
         "review_attestation": _review(),
-        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
+        "trusted_reviewer_keys": {
+            REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(
+                REVIEWER, REVIEW_PUBLIC_KEY
+            )
+        },
         "expected_implementation_author_identity_sha256": AUTHOR,
         "trusted_operator_keys": {
-            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_PUBLIC_KEY)
+            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(
+                OPERATOR, OPERATOR_PUBLIC_KEY
+            )
         },
         "checked_at": CHECKED_AT,
         "expected_code_commit_sha": CODE_COMMIT,
@@ -118,17 +131,31 @@ def test_contract_is_frozen_receipt_free_and_binds_receipt_contracts() -> None:
     contract = reference_minimization_validation_authorization_contract_document()
     decision = reference_minimization_validation_authorization_contract_decision()
 
-    assert contract["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID
-    assert contract["contract_sha256"] == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+    assert (
+        contract["schema_id"]
+        == REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID
+    )
+    assert (
+        contract["contract_sha256"]
+        == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+    )
     assert contract["dependencies"]["execution_environment_contract_sha256"] == (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
     )
     assert contract["dependencies"]["result_receipt_contract_sha256"] == (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
     )
-    assert contract["identity_policy"]["all_three_identities_must_be_pairwise_distinct"] is True
-    assert contract["identity_policy"]["verifier_trust_anchor_contains_public_key_only"] is True
-    assert REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM == "ed25519"
+    assert (
+        contract["identity_policy"]["all_three_identities_must_be_pairwise_distinct"]
+        is True
+    )
+    assert (
+        contract["identity_policy"]["verifier_trust_anchor_contains_public_key_only"]
+        is True
+    )
+    assert (
+        REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM == "ed25519"
+    )
     assert contract["receipt_schema"]["signature_algorithm"] == "ed25519"
     assert contract["receipt_schema"]["maximum_execution_count"] == 1
     assert contract["receipt_schema"]["one_time_nonce_required"] is True
@@ -136,26 +163,38 @@ def test_contract_is_frozen_receipt_free_and_binds_receipt_contracts() -> None:
     assert contract["current_state"]["authorization_receipt_present"] is False
     assert contract["claim_policy"]["minimization_validated"] is False
     assert contract["claim_policy"]["claim_safe"] is False
-    assert require_reference_minimization_validation_authorization_contract_document(contract) == contract
+    assert (
+        require_reference_minimization_validation_authorization_contract_document(
+            contract
+        )
+        == contract
+    )
     assert decision["authorization_receipt_present"] is False
     assert decision["validation_execution_authorized"] is False
 
 
 def test_contract_rejects_tamper() -> None:
-    contract = deepcopy(reference_minimization_validation_authorization_contract_document())
+    contract = deepcopy(
+        reference_minimization_validation_authorization_contract_document()
+    )
     contract["claim_policy"]["claim_safe"] = True
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
         match="does not match the frozen record",
     ):
-        require_reference_minimization_validation_authorization_contract_document(contract)
+        require_reference_minimization_validation_authorization_contract_document(
+            contract
+        )
 
 
 def test_signed_receipt_verifies_eligibility_but_cannot_open_execution() -> None:
     receipt = _receipt()
     verified = _verify(receipt)
 
-    assert receipt["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+    assert (
+        receipt["schema_id"]
+        == REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+    )
     assert receipt["authorization_scope"]["maximum_execution_count"] == 1
     assert receipt["authorization_scope"]["network_access_allowed"] is False
     assert receipt["execution_environment_contract_sha256"] == (
@@ -194,7 +233,9 @@ def test_receipt_rejects_duplicate_json_and_unsigned_tamper() -> None:
 
 def test_receipt_requires_trusted_matching_operator_key() -> None:
     receipt = _receipt()
-    with pytest.raises(ReferenceMinimizationValidationAuthorizationError, match="not trusted"):
+    with pytest.raises(
+        ReferenceMinimizationValidationAuthorizationError, match="not trusted"
+    ):
         _verify(receipt, trusted_operator_keys={})
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
@@ -202,7 +243,11 @@ def test_receipt_requires_trusted_matching_operator_key() -> None:
     ):
         _verify(
             receipt,
-            trusted_operator_keys={OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OTHER_PUBLIC_KEY)},
+            trusted_operator_keys={
+                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(
+                    OPERATOR, OTHER_PUBLIC_KEY
+                )
+            },
         )
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
@@ -211,24 +256,20 @@ def test_receipt_requires_trusted_matching_operator_key() -> None:
         _verify(
             receipt,
             trusted_operator_keys={
-                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OTHER_OPERATOR, OPERATOR_PUBLIC_KEY)
+                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(
+                    OTHER_OPERATOR, OPERATOR_PUBLIC_KEY
+                )
             },
         )
 
 
 @pytest.mark.parametrize("identity", (AUTHOR, REVIEWER))
 def test_operator_must_differ_from_author_and_reviewer(identity: str) -> None:
-    receipt = _receipt(authorization_operator_identity_sha256=identity)
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
         match="must differ from author and reviewer",
     ):
-        _verify(
-            receipt,
-            trusted_operator_keys={
-                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(identity, OPERATOR_PUBLIC_KEY)
-            },
-        )
+        _receipt(authorization_operator_identity_sha256=identity)
 
 
 def test_receipt_enforces_24_hour_and_review_lifetimes() -> None:
@@ -243,9 +284,13 @@ def test_receipt_enforces_24_hour_and_review_lifetimes() -> None:
                 + timedelta(seconds=1)
             )
         )
-    with pytest.raises(ReferenceMinimizationValidationAuthorizationError, match="not yet valid"):
+    with pytest.raises(
+        ReferenceMinimizationValidationAuthorizationError, match="not yet valid"
+    ):
         _verify(_receipt(), checked_at=ISSUED_AT - timedelta(seconds=1))
-    with pytest.raises(ReferenceMinimizationValidationAuthorizationError, match="is expired"):
+    with pytest.raises(
+        ReferenceMinimizationValidationAuthorizationError, match="is expired"
+    ):
         _verify(_receipt(), checked_at=EXPIRES_AT)
 
 
@@ -280,10 +325,15 @@ def test_receipt_enforces_revocation_and_nonce_consumption() -> None:
         ("expected_dependency_artifact_sha256_rows", {"python": "8" * 64}),
     ),
 )
-def test_receipt_rejects_expected_dependency_crosswire(argument: str, replacement: object) -> None:
+def test_receipt_rejects_expected_dependency_crosswire(
+    argument: str, replacement: object
+) -> None:
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
-        match="do not match the frozen schema or expected dependencies",
+        match=(
+            "do not match the frozen schema or expected dependencies|"
+            "do not match the required byte identities"
+        ),
     ):
         _verify(_receipt(), **{argument: replacement})
 

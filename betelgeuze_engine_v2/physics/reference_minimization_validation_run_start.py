@@ -3,8 +3,9 @@
 The primitive re-verifies raw signed review and authorization artifacts, reads
 the durable one-time nonce record, observes the current CPU process, verifies a
 short-lived operator-signed network-isolation attestation, and writes one
-canonical execution-environment receipt before any evaluator is imported or
-called.  It bundles no key, attestation, receipt, reservation root, artifact
+canonical execution-environment receipt before any evaluator is called. The
+separate stdlib bootstrap admits Engine v2 imports only after trust, source, and
+dependency-byte verification. It bundles no key, attestation, receipt, reservation root, artifact
 root, runner, result writer, observed physics value, or scientific claim.
 """
 
@@ -20,6 +21,7 @@ from pathlib import Path
 import platform
 import re
 import stat
+import sys
 from typing import Any, Mapping, Sequence
 
 import torch
@@ -31,6 +33,11 @@ from .reference_minimization_validation_ed25519 import (
     ReferenceMinimizationValidationEd25519Error,
     sign_ed25519,
     verify_ed25519,
+)
+from .reference_minimization_validation_dependency_identity import (
+    REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
+    ReferenceMinimizationValidationDependencyIdentityError,
+    observed_reference_minimization_validation_dependency_artifact_sha256_rows,
 )
 from .reference_minimization_validation_authorization import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
@@ -83,6 +90,9 @@ REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV = (
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
     "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py"
 )
+REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
+    "_betelgeuze_reference_minimization_validation_bootstrap_state"
+)
 REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
     "python",
     "-I",
@@ -93,7 +103,7 @@ REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
     REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256 = (
-    "d63ce7ca0e2b79b3d742fdaf8c8c101ccd8e4bec117a50e768d15b045c34b092"
+    "6b285c0e3226258a62809e4317b513be09c2cf0aef1e500f8f8f51b9cb982f63"
 )
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -839,6 +849,33 @@ def _observe_current_runtime() -> _RuntimeObservation:
     )
 
 
+def _observe_dependency_artifact_sha256_rows() -> dict[str, str]:
+    state = getattr(
+        sys,
+        REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+        None,
+    )
+    if (
+        not isinstance(state, tuple)
+        or len(state) != 4
+        or not isinstance(state[2], tuple)
+        or not state[2]
+    ):
+        raise ReferenceMinimizationValidationRunStartError(
+            "dependency identity requires the isolated trust bootstrap"
+        )
+    try:
+        return (
+            observed_reference_minimization_validation_dependency_artifact_sha256_rows(
+                state[2]
+            )
+        )
+    except ReferenceMinimizationValidationDependencyIdentityError as exc:
+        raise ReferenceMinimizationValidationRunStartError(
+            "live dependency bytes cannot be measured"
+        ) from exc
+
+
 def _require_runtime_observation(observation: _RuntimeObservation) -> None:
     if not isinstance(observation, _RuntimeObservation):
         raise ReferenceMinimizationValidationRunStartError(
@@ -971,6 +1008,11 @@ def _contract_projection() -> dict[str, Any]:
             "raw_signed_review_and_authorization_reverification_required": True,
             "durable_nonce_record_reverification_required": True,
             "exact_code_runner_and_dependency_rows_required": True,
+            "dependency_payload_bytes_observed_before_package_import": True,
+            "dependency_payload_bytes_remeasured_at_run_start": True,
+            "required_dependency_artifact_ids": list(
+                REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+            ),
         },
         "runtime_observation": {
             "linux_x86_64_only": True,
@@ -1025,8 +1067,8 @@ def _contract_projection() -> dict[str, Any]:
             "production_authorization_receipt_present": False,
             "production_nonce_reserved": False,
             "production_environment_receipt_present": False,
-            "validation_runner_implemented": False,
-            "result_receipt_writer_implemented": False,
+            "validation_runner_implemented": True,
+            "result_receipt_writer_implemented": True,
             "validation_execution_authorized": False,
             "validation_results_collected": False,
         },
@@ -1522,6 +1564,13 @@ def create_reference_minimization_validation_execution_environment_receipt(
     if verification.authorization_nonce_sha256 != nonce:
         raise ReferenceMinimizationValidationRunStartError(
             "requested nonce and signed authorization are cross-wired"
+        )
+    observed_dependency_rows = _observe_dependency_artifact_sha256_rows()
+    if tuple(sorted(observed_dependency_rows.items())) != (
+        verification.dependency_artifact_sha256_rows
+    ):
+        raise ReferenceMinimizationValidationRunStartError(
+            "live dependency bytes do not match the signed authorization"
         )
     try:
         reservation = read_reference_minimization_validation_nonce_reservation(

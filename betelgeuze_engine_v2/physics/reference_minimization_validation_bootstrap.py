@@ -9,6 +9,7 @@ files cannot run before the validation trust boundary is established.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import stat
@@ -19,6 +20,9 @@ import sysconfig
 
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
     "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py"
+)
+REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH = (
+    "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py"
 )
 REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
     "python",
@@ -99,6 +103,7 @@ def reference_minimization_validation_execution_source_sha256() -> str:
     source_rows: list[dict[str, str]] = []
     for relative_path in (
         REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+        REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
         "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
     ):
         source = os.path.join(physics_root, os.path.basename(relative_path))
@@ -136,6 +141,46 @@ def reference_minimization_validation_execution_source_sha256() -> str:
             }
         )
     ).hexdigest()
+
+
+def _require_observed_dependency_artifact_rows_before_import(
+    repository_root: str,
+    dependency_roots: tuple[str, ...],
+    request: dict[str, object],
+) -> None:
+    expected = request.get("expected_dependency_artifact_sha256_rows")
+    if not isinstance(expected, dict) or any(
+        not isinstance(key, str)
+        or _require_lower_hex(value, length=64, name=f"dependency {key}") != value
+        for key, value in expected.items()
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap dependency artifact rows are invalid"
+        )
+    helper_path = os.path.join(
+        repository_root,
+        REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
+    )
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_betelgeuze_reference_minimization_validation_dependency_identity",
+            helper_path,
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError("dependency identity loader is unavailable")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        observed = helper.observed_reference_minimization_validation_dependency_artifact_sha256_rows(
+            dependency_roots
+        )
+    except Exception as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap dependency bytes cannot be measured"
+        ) from exc
+    if observed != expected:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap dependency bytes do not match the signed authorization"
+        )
 
 
 def _require_root_owned_read_only_directory(raw_path: str) -> str:
@@ -749,6 +794,9 @@ def main() -> int:
         state = _prepare_isolated_import_boundary()
         raw_request, request = _read_bootstrap_request()
         _require_signed_clean_checkout_before_import(state[1], request)
+        _require_observed_dependency_artifact_rows_before_import(
+            state[1], state[2], request
+        )
         setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
         from betelgeuze_engine_v2.physics import reference_minimization_validation_runner
 
