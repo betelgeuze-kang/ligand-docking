@@ -10,6 +10,9 @@ import stat
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
 from betelgeuze_engine_v2.physics.reference_minimization_validation_authorization import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
     MinimizationAuthorizationOperatorTrustAnchor,
@@ -40,8 +43,10 @@ REVIEW_NONCE = "d" * 64
 AUTH_NONCE = "e" * 64
 REVIEW_KEY_ID = "minimization-reviewer-2026-07"
 OPERATOR_KEY_ID = "minimization-operator-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OPERATOR_KEY = b"operator-key-material-is-test-only-32-bytes-minimum"
+REVIEW_KEY = bytes.fromhex("11" * 32)
+OPERATOR_KEY = bytes.fromhex("21" * 32)
+REVIEW_PUBLIC_KEY = ed25519_public_key_bytes(REVIEW_KEY)
+OPERATOR_PUBLIC_KEY = ed25519_public_key_bytes(OPERATOR_KEY)
 REVIEWED_AT = datetime(2026, 7, 18, 1, 0, tzinfo=timezone.utc)
 REVIEW_EXPIRES = REVIEWED_AT + timedelta(days=7)
 ISSUED_AT = REVIEWED_AT + timedelta(hours=2)
@@ -71,7 +76,7 @@ def _review() -> dict[str, object]:
 def _receipt(review: object | None = None) -> dict[str, object]:
     return build_signed_reference_minimization_validation_authorization_receipt(
         review_attestation=review or _review(),  # type: ignore[arg-type]
-        trusted_reviewer_keys={REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_KEY)},
+        trusted_reviewer_keys={REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
         expected_implementation_author_identity_sha256=AUTHOR,
         authorization_operator_identity_sha256=OPERATOR,
         authorization_key_id=OPERATOR_KEY_ID,
@@ -97,10 +102,10 @@ def _reserve(root: Path, **overrides: object):
         "reservation_root": root,
         "authorization_receipt": _receipt(),
         "review_attestation": _review(),
-        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_KEY)},
+        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
         "expected_implementation_author_identity_sha256": AUTHOR,
         "trusted_operator_keys": {
-            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_KEY)
+            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_PUBLIC_KEY)
         },
         "reserved_at": RESERVED_AT,
         "expected_code_commit_sha": CODE_COMMIT,

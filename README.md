@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_aj_minimization_validation_result_writer
+v2_ak_minimization_validation_ed25519_trust_boundary
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -64,15 +64,15 @@ Implemented and GitHub-hosted CPU tested:
   independently implements constraint/tangent-force projection, fixed-Born,
   bounded backtracking, fail-closed identities, and exact checkpoint/restart,
   while test-only comparisons remain implementation checks rather than
-  validation results; a frozen HMAC-SHA256 independent-review attestation
+  validation results; a frozen Ed25519 independent-review attestation
   contract now requires author/reviewer identity separation, complete ordered
   checks and limitation acknowledgements, an out-of-band trusted reviewer key,
   and bounded freshness; separate frozen CPU-only, network-disabled execution-
   environment and failure-inclusive result-receipt contracts bind the exact
   14-case/10-metric order and both operational/independent input identities,
-  but no attestation, trusted reviewer key, authorization receipt,
-  environment/result receipt, runner, result, or scientific promotion exists;
-  a separate single-run HMAC-SHA256 authorization contract now binds a verified
+  but no production attestation, trusted reviewer key, authorization receipt,
+  environment/result receipt, result, or scientific promotion exists;
+  a separate single-run Ed25519 authorization contract now binds a verified
   nonexpired review, pairwise-distinct operator, exact code/runner/dependencies,
   both receipt contracts, 24-hour maximum validity, revocation inputs, and a
   one-time nonce, but bundles no operator key, receipt, or nonce reservation;
@@ -86,8 +86,10 @@ Implemented and GitHub-hosted CPU tested:
   verifies a maximum-five-minute operator-signed network-isolation attestation,
   and atomically persists one canonical mode-0600 secret-free environment
   receipt under a separate private caller root; it creates no isolation,
-  bundles no production key/attestation/root/receipt/runner, and authorizes no
-  validation, fitting, or claim;
+  bundles no production key/attestation/root/receipt and authorizes no
+  validation, fitting, or claim; a bounded failure-inclusive runner and atomic
+  result writer exist as non-production primitives, while the direct bootstrap
+  entrypoint remains fail-closed until result finalization is wired into it;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture

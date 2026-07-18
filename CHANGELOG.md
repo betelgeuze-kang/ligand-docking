@@ -8,6 +8,12 @@ scientific claim from a package version.
 
 ### Added
 
+- Ed25519 public-key verification for minimization-validation review,
+  authorization, and network-isolation attestations. Signing uses external raw
+  32-byte private seeds while verifier trust anchors contain only raw public
+  keys; the isolated stdlib bootstrap verifies the first authorization with a
+  root-owned OpenSSL executable before importing package or third-party code.
+
 - Failure-inclusive minimization-validation result writer and reader with raw
   signed-chain, live environment, runner-start, and canonical observation
   re-verification; atomic private nonce-bound persistence; exact external hash,
@@ -54,7 +60,7 @@ scientific claim from a package version.
   scientific promotion.
 - Frozen independent-review attestation contract for the minimization artifacts,
   with exact source-binding identity, ordered technical checks and limitations,
-  author/reviewer separation, out-of-band trust, HMAC-SHA256 integrity, and a
+  author/reviewer separation, out-of-band Ed25519 public-key trust, and a
   30-day maximum validity. No key, attestation, authorization, result, or claim
   promotion is bundled.
 - Frozen CPU-only, network-disabled execution-environment and failure-inclusive
@@ -63,7 +69,7 @@ scientific claim from a package version.
   rows, iteration/evaluation ledgers, and future review/authorization bindings
   are required; no authorization contract or receipt, environment/result
   receipt, runner, observed value, or claim promotion is bundled.
-- Frozen HMAC-SHA256 single-run minimization-validation authorization contract
+- Frozen Ed25519 single-run minimization-validation authorization contract
   binding a verified nonexpired review, pairwise-distinct author/reviewer/
   operator identities, exact code/runner/dependency and receipt-contract
   identities, a 24-hour maximum lifetime, external revocation sets, and a

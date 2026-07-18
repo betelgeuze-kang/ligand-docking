@@ -63,6 +63,7 @@ python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2
 
 python -m venv /tmp/engine-v2-rc
 /tmp/engine-v2-rc/bin/python -m pip install --upgrade pip
+/tmp/engine-v2-rc/bin/python -m pip install cryptography==46.0.5
 /tmp/engine-v2-rc/bin/python -m pip install numpy==1.26.4
 /tmp/engine-v2-rc/bin/python -m pip install \
   torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu

@@ -157,6 +157,7 @@ jobs:
             pytest==8.3.5 \
             PyYAML==6.0.3 \
             ruff==0.12.4 \
+            cryptography==46.0.5 \
             numpy==1.26.4
           python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
@@ -169,6 +170,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_artifact_binding.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_ed25519.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_review.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_receipts.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_authorization.py \

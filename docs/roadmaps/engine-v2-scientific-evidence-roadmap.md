@@ -245,10 +245,13 @@ claim status without revalidating the dependency and freshness chain.
   projection, fixed-Born energy/forces, bounded backtracking, fail-closed
   identity/applicability outcomes, and exact checkpoint/restart while importing
   only the audited analytic oracle. Test-only endpoint comparisons are
-  implementation checks, not validation results. A frozen HMAC-SHA256 review
+  implementation checks, not validation results. A frozen Ed25519 review
   attestation contract binds the exact artifacts and requires author/reviewer
   separation, complete ordered technical checks and limitation
   acknowledgements, an out-of-band trusted reviewer key, and bounded freshness.
+  Reviewer/operator signing keys remain external, verifier trust stores contain
+  only Ed25519 public keys, and the stdlib bootstrap verifies authorization via
+  a trusted OpenSSL executable before importing Engine v2 or third-party code.
   No key or attestation is bundled. No independent scientific review or
   execution authorization, production result receipt, independent
   result review, parameter applicability, or validation result is present. The

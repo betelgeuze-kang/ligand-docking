@@ -6,11 +6,15 @@ import json
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
 from betelgeuze_engine_v2.physics.reference_minimization_validation_authorization import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID,
     REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_MAX_VALIDITY,
     REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID,
+    REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
     MinimizationAuthorizationOperatorTrustAnchor,
     ReferenceMinimizationValidationAuthorizationError,
     build_signed_reference_minimization_validation_authorization_receipt,
@@ -37,9 +41,12 @@ REVIEW_NONCE = "e" * 64
 AUTH_NONCE = "f" * 64
 REVIEW_KEY_ID = "minimization-reviewer-2026-07"
 OPERATOR_KEY_ID = "minimization-operator-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OPERATOR_KEY = b"operator-key-material-is-test-only-32-bytes-minimum"
-OTHER_KEY = b"other-key-material-is-test-only-32-bytes-minimum"
+REVIEW_KEY = bytes.fromhex("11" * 32)
+OPERATOR_KEY = bytes.fromhex("21" * 32)
+OTHER_KEY = bytes.fromhex("22" * 32)
+REVIEW_PUBLIC_KEY = ed25519_public_key_bytes(REVIEW_KEY)
+OPERATOR_PUBLIC_KEY = ed25519_public_key_bytes(OPERATOR_KEY)
+OTHER_PUBLIC_KEY = ed25519_public_key_bytes(OTHER_KEY)
 REVIEWED_AT = datetime(2026, 7, 18, 1, 0, tzinfo=timezone.utc)
 REVIEW_EXPIRES = REVIEWED_AT + timedelta(days=7)
 ISSUED_AT = REVIEWED_AT + timedelta(hours=2)
@@ -69,7 +76,7 @@ def _review() -> dict[str, object]:
 def _receipt(**overrides: object) -> dict[str, object]:
     values: dict[str, object] = {
         "review_attestation": _review(),
-        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_KEY)},
+        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
         "expected_implementation_author_identity_sha256": AUTHOR,
         "authorization_operator_identity_sha256": OPERATOR,
         "authorization_key_id": OPERATOR_KEY_ID,
@@ -91,10 +98,10 @@ def _verify(source: object, **overrides: object):
     values: dict[str, object] = {
         "source": source,
         "review_attestation": _review(),
-        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_KEY)},
+        "trusted_reviewer_keys": {REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
         "expected_implementation_author_identity_sha256": AUTHOR,
         "trusted_operator_keys": {
-            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_KEY)
+            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_PUBLIC_KEY)
         },
         "checked_at": CHECKED_AT,
         "expected_code_commit_sha": CODE_COMMIT,
@@ -120,6 +127,9 @@ def test_contract_is_frozen_receipt_free_and_binds_receipt_contracts() -> None:
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
     )
     assert contract["identity_policy"]["all_three_identities_must_be_pairwise_distinct"] is True
+    assert contract["identity_policy"]["verifier_trust_anchor_contains_public_key_only"] is True
+    assert REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM == "ed25519"
+    assert contract["receipt_schema"]["signature_algorithm"] == "ed25519"
     assert contract["receipt_schema"]["maximum_execution_count"] == 1
     assert contract["receipt_schema"]["one_time_nonce_required"] is True
     assert contract["receipt_schema"]["external_revocation_sets_required"] is True
@@ -192,7 +202,7 @@ def test_receipt_requires_trusted_matching_operator_key() -> None:
     ):
         _verify(
             receipt,
-            trusted_operator_keys={OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OTHER_KEY)},
+            trusted_operator_keys={OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OTHER_PUBLIC_KEY)},
         )
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
@@ -201,7 +211,7 @@ def test_receipt_requires_trusted_matching_operator_key() -> None:
         _verify(
             receipt,
             trusted_operator_keys={
-                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OTHER_OPERATOR, OPERATOR_KEY)
+                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OTHER_OPERATOR, OPERATOR_PUBLIC_KEY)
             },
         )
 
@@ -216,7 +226,7 @@ def test_operator_must_differ_from_author_and_reviewer(identity: str) -> None:
         _verify(
             receipt,
             trusted_operator_keys={
-                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(identity, OPERATOR_KEY)
+                OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(identity, OPERATOR_PUBLIC_KEY)
             },
         )
 
@@ -279,10 +289,10 @@ def test_receipt_rejects_expected_dependency_crosswire(argument: str, replacemen
 
 
 def test_trust_anchor_redacts_key_and_rejects_short_key() -> None:
-    anchor = MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_KEY)
+    anchor = MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_PUBLIC_KEY)
     assert "operator-key-material" not in repr(anchor)
     with pytest.raises(
         ReferenceMinimizationValidationAuthorizationError,
-        match="at least 32 bytes",
+        match="exactly 32 bytes",
     ):
         MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, b"short")

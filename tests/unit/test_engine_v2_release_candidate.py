@@ -36,6 +36,7 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
     assert metadata["project"]["version"] == DISTRIBUTION_VERSION
     assert metadata["project"]["requires-python"] == ">=3.10,<3.13"
     assert set(metadata["project"]["dependencies"]) == {
+        "cryptography==46.0.5",
         "numpy>=1.26,<3",
         "torch==2.6.0",
     }

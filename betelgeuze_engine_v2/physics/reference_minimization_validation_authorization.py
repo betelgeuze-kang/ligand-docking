@@ -11,13 +11,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import hashlib
-import hmac
 import json
 import re
 from typing import Any, Mapping, Sequence
 
 from .reference_minimization_validation_artifact_binding import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
+)
+from .reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    sign_ed25519,
+    verify_ed25519,
 )
 from .reference_minimization_validation_receipts import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
@@ -44,11 +48,11 @@ REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
 )
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "1.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-18T03:40:00Z"
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "hmac-sha256"
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
-    "3a77b4454bf95f2177966638449995ac19adc40a45332d64dac6ab9086ca9e82"
+    "3d544cfeb627ee6388a5fdeb0ba86be87541d6b06029f3120571e46b7d2d5a52"
 )
 
 _GIT_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -143,8 +147,8 @@ def _require_key(value: bytes | str, *, name: str) -> bytes:
         key = value
     else:
         raise ReferenceMinimizationValidationAuthorizationError(f"{name} must be bytes or text")
-    if len(key) < 32:
-        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must contain at least 32 bytes")
+    if len(key) != 32:
+        raise ReferenceMinimizationValidationAuthorizationError(f"{name} must contain exactly 32 bytes")
     return key
 
 
@@ -222,6 +226,8 @@ def _contract_projection() -> dict[str, Any]:
             "authorization_operator_identity_required": True,
             "all_three_identities_must_be_pairwise_distinct": True,
             "trusted_operator_key_supplied_out_of_band": True,
+            "verifier_trust_anchor_contains_public_key_only": True,
+            "private_signing_key_remains_external_to_verifier": True,
             "repository_does_not_choose_or_bundle_trusted_operator_keys": True,
         },
         "receipt_schema": {
@@ -291,7 +297,7 @@ def require_reference_minimization_validation_authorization_contract_document(
 
 @dataclass(frozen=True, slots=True)
 class MinimizationAuthorizationOperatorTrustAnchor:
-    """Out-of-band operator identity and HMAC verification key."""
+    """Out-of-band operator identity and Ed25519 public key."""
 
     operator_identity_sha256: str
     verification_key: bytes = field(repr=False)
@@ -517,10 +523,16 @@ def build_signed_reference_minimization_validation_authorization_receipt(
     payload = dict(projection)
     payload["receipt_sha256"] = _sha256(projection)
     key = _require_key(signing_key, name="authorization signing key")
+    try:
+        signature_value = sign_ed25519(_canonical_bytes(payload), key)
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt Ed25519 signing failed"
+        ) from exc
     payload["signature"] = {
         "algorithm": REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
         "key_id": _require_key_id(authorization_key_id),
-        "value": hmac.new(key, _canonical_bytes(payload), hashlib.sha256).hexdigest(),
+        "value": signature_value,
     }
     return payload
 
@@ -600,8 +612,15 @@ def verify_signed_reference_minimization_validation_authorization_receipt(
         raise ReferenceMinimizationValidationAuthorizationError(
             "trusted authorization operator entry has an invalid type"
         )
-    expected_signature = hmac.new(anchor.verification_key, _canonical_bytes(payload), hashlib.sha256).hexdigest()
-    if not isinstance(signature.get("value"), str) or not hmac.compare_digest(signature["value"], expected_signature):
+    try:
+        signature_verified = verify_ed25519(
+            _canonical_bytes(payload), signature.get("value"), anchor.verification_key
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceMinimizationValidationAuthorizationError(
+            "authorization receipt Ed25519 verifier is unavailable"
+        ) from exc
+    if not signature_verified:
         raise ReferenceMinimizationValidationAuthorizationError("authorization receipt signature verification failed")
     receipt_sha256 = payload.pop("receipt_sha256", None)
     if receipt_sha256 != _sha256(payload):
