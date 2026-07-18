@@ -168,6 +168,18 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
     )
 
 
+def test_runner_defers_numpy_and_torch_imports_until_bootstrap_verification() -> None:
+    tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
+    top_level_imports: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            top_level_imports.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            top_level_imports.add(node.module or "")
+    assert "numpy" not in top_level_imports
+    assert "torch" not in top_level_imports
+
+
 def test_exact_matrix_retains_all_success_and_fail_closed_rows() -> None:
     rows = module._run_case_matrix_in_process()
     protocol = cpu_minimization_validation_protocol_document()

@@ -23,9 +23,6 @@ import sys
 import time
 from typing import Any, Mapping, Sequence
 
-import numpy
-import torch
-
 from .reference_constrained_minimization import (
     minimize_reference_force_field_v2_constrained,
 )
@@ -254,6 +251,9 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
                 "minimization runner dependency root is not trusted"
             )
         dependency_roots.append(resolved)
+    import numpy
+    import torch
+
     for dependency, name in ((numpy, "NumPy"), (torch, "Torch")):
         module_path = Path(dependency.__file__).resolve(strict=True)
         if not any(module_path.is_relative_to(root) for root in dependency_roots):
