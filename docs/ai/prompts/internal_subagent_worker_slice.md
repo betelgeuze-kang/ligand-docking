@@ -1,6 +1,6 @@
 # Internal Subagent Worker Slice Template
 
-Use this only when Cursor/OpenCode-named workers are unavailable, non-responsive, or unsuitable for the current environment.
+Use this only for bounded, disjoint work where an internal subagent materially improves speed or review quality.
 
 For code implementation, Codex must spawn the internal subagent as:
 

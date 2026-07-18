@@ -2,10 +2,11 @@
 
 ## Role Contract
 
-This repository is operated with Codex native goal mode, Kiro design planning, optional Cursor/OpenCode implementation workers, plus Codex internal subagents only when external worker routes are unavailable.
+This repository is operated with Codex native goal mode. Codex performs design, implementation, review, verification, and final acceptance directly, with optional Codex internal subagents for bounded parallel work.
 
 - Codex owns goal tracking through its native goal feature, plus design, task slicing, review, verification, and final acceptance.
-- Kiro may be used only for design planning. Cursor Agent, OpenCode-named wrappers, and Codex internal subagents may be used only as scoped implementation workers.
+- Kiro/Opus, Cursor, and Cursor-routed OpenCode wrappers are not part of the active agent workflow and must not be invoked by repository policy.
+- Codex internal subagents may be used only for scoped, disjoint work; Codex remains responsible for all review and acceptance.
 - The human owner owns push, merge, deployment, publication, external submission, billing changes, production mutation, and final accountability.
 
 ## Project Context
@@ -30,45 +31,33 @@ This repository is operated with Codex native goal mode, Kiro design planning, o
 - Use `docs/ai/prompts/codex_pursue_goal_start.md` as the start-prompt shape for future goal-mode work.
 - Use `docs/ai/tasks/TASK-TEMPLATE.md` for R1+ task specs when the scope is not already clear from a linked issue or work queue.
 - Keep Codex-authored task specs short: goal, scope, likely files, and verification only.
-- For next-code-improvement goals, use the default lane: Cursor Composer 2.5 implementation -> Codex GPT-5.5 xhigh verification and acceptance.
-- For Kiro design planning, use `docs/ai/prompts/kiro_design_slice.md` and call `./scripts/ai-design-kiro.sh <prompt-file>`. Kiro must be Opus 4.8; if Kiro Opus 4.8 is not active, stop instead of substituting another model. Kiro output is advisory design input only; Codex must review, trim, and convert it into the accepted task spec before implementation.
-- For Cursor delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-cursor.sh <prompt-file>`.
-- For OpenCode-named delegation, create a run-specific prompt under `docs/ai/dispatch/` and call `./scripts/ai-worker-opencode.sh <prompt-file>`; this compatibility wrapper currently routes the assignment to Cursor Composer 2.5 instead of invoking OpenCode.
-- If Cursor workers are unavailable or non-responsive and Codex invokes an internal subagent for code implementation, use `agent_type=worker`, `model=gpt-5.4-mini`, and `reasoning_effort=xhigh`.
-- Use one worker slice at a time. Codex reviews the worker summary first and opens full logs/diffs only when the summary, risk level, or tests require it.
+- For next-code-improvement goals, Codex defines one scoped slice, implements it directly, and verifies it before proceeding.
+- Codex may use one or more internal subagents only when parallel, disjoint work materially improves speed or review quality.
+- Codex reviews internal-subagent summaries first and opens full logs/diffs only when the summary, risk level, or tests require it.
 
-## Delegation Bias
+## Implementation Bias
 
-- At the start of each non-trivial task, Codex should explicitly choose one path: direct implementation, Kiro design then Cursor implementation, Cursor worker slice, OpenCode-named worker slice, or internal subagent worker slice.
-- Bias toward using a worker when the work is broad, repetitive, uncertain, or likely to benefit from independent exploration before Codex final review.
-- Consider Cursor as the default implementation worker for scoped code/test changes, repeated test repair, multi-file edits, and work where IDE-attached context may help.
-- OpenCode-named broad repository exploration, broad grep/sweep, long-log review, large mechanical documentation/code updates, or other large-context passes currently run through Cursor Composer 2.5 via the compatibility wrapper.
-- Codex may still handle narrow single-file fixes, obvious docs edits, tiny tests, and urgent safety corrections directly.
-- Delegation does not change ownership: Codex still defines the slice, preserves safety boundaries, reviews the worker summary, inspects targeted hunks when needed, runs verification, and decides completion.
+- At the start of each non-trivial task, Codex explicitly chooses direct implementation or a bounded internal-subagent slice.
+- Prefer direct implementation for code, tests, docs, repair loops, and security-sensitive evidence contracts.
+- Use internal subagents for disjoint exploration, mechanical work, or independent review only when that materially helps.
+- Delegation never changes ownership: Codex defines the slice, preserves safety boundaries, reviews targeted hunks, runs verification, and decides completion.
 
-## Worker Selection
+## Internal Subagent Selection
 
-- Prefer Cursor for most scoped implementation slices, especially code/test edits, local repair loops, and IDE-attached edits where open files, selections, and current editor state matter.
-- Prefer Kiro Opus 4.8, fixed and not substituted, for design-only planning when the scope is broad or ambiguous enough to need architecture/options review before task slicing. Kiro must not edit files or decide completion.
-- Treat OpenCode-named broad repository sweeps, long logs/docs, large mechanical edits, and large-context exploration as Cursor Composer 2.5 assignments unless the human owner explicitly restores direct OpenCode execution.
-- Use an internal Codex subagent only when Cursor/OpenCode-named workers are unavailable, non-responsive, or unsuitable for the current environment; for code implementation, run that subagent as GPT 5.4 Mini with xhigh reasoning.
-- Do not delegate truly small tasks: simple docs, tiny tests, obvious single-file fixes, or changes that Codex can safely complete faster than creating and reviewing a worker slice.
-- Delegate broad exploration, repeated test repair, multi-file refactors, and mechanical work once it crosses the Delegation Bias thresholds.
-- Workers implement; they do not redesign, broaden scope, decide completion, or change safety boundaries.
-- Workers own local exploration, implementation, focused tests, and a concise return summary.
-- Worker returns must not include full logs. They should include changed files, tests run, failed test names, key diff summary, and blockers.
-- Codex should avoid reading full logs or full diffs by default; inspect targeted files or hunks only after the worker summary identifies a reason.
+- Do not delegate simple docs, tiny tests, obvious single-file fixes, or security-sensitive final decisions.
+- Internal subagents do not redesign, broaden scope, decide completion, or change safety boundaries.
+- Internal subagents return changed files, tests run, failed test names, a concise diff summary, and blockers without full logs.
+- Keep write scopes disjoint when multiple internal subagents run concurrently.
 
-## Worker Web Access
+## Web Access
 
-- OpenCode and Cursor worker prompts must declare whether web access is disabled or enabled for the slice.
 - Use web search/fetch only for scoped research, standards, dependency/API documentation, or commercial-readiness evidence collection.
 - Do not use web search/fetch for active CASP17 target lookup, public/template/native structures, other-team models, secrets, `.env` content, author codes, or external mutation.
-- Worker web findings are advisory evidence only until Codex reviews the sources and incorporates them into the accepted diff or audit.
+- Internal-subagent web findings are advisory until Codex reviews the sources and incorporates them into the accepted diff or audit.
 
 ## Verification
 
-- Run `./scripts/ai-verify.sh` before marking orchestration or worker-driven work complete.
+- Run `./scripts/ai-verify.sh` before marking orchestration or code work complete.
 - For code changes, also run focused tests matching the changed files.
 - Use `AI_VERIFY_MODE=product ./scripts/ai-verify.sh` for product-readiness smoke checks.
 - Use `AI_VERIFY_MODE=full ./scripts/ai-verify.sh` only when a full local pytest run is appropriate.
