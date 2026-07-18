@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ab_exact_cpu_minimization_validation_materializer
+v2_ac_source_bound_independent_minimization_reference
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -60,8 +60,12 @@ Implemented and GitHub-hosted CPU tested:
   bound before results; a separate exact materializer converts all 11 fixtures
   and 14 cases to deterministic CPU float64 v1/v2/fixed-Born runtime inputs,
   checkpoint-pause plans, and failure injections without evaluating physics or
-  collecting results, but no independent reference, review, authorization,
-  execution, result receipt, or scientific promotion exists;
+  collecting results; a separately source-bound standard-library reference now
+  independently implements constraint/tangent-force projection, fixed-Born,
+  bounded backtracking, fail-closed identities, and exact checkpoint/restart,
+  while test-only comparisons remain implementation checks rather than
+  validation results; no independent scientific review, authorization,
+  production result receipt, or scientific promotion exists;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture

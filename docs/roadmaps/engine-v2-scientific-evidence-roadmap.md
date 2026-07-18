@@ -240,11 +240,16 @@ claim status without revalidating the dependency and freshness chain.
   all fourteen cases into deterministic CPU float64 systems, v1/v2/fixed-Born
   parameters, bounded configurations, checkpoint-pause plans, and fail-closed
   identity injections. It imports no evaluator or minimizer entrypoint and
-  collects no physics value, checkpoint, metric, or result. No independent
-  minimization implementation or artifact, trusted review or execution
-  authorization, production result receipt, independent result review,
-  parameter applicability, or validation result is present. The protocol and
-  materializer cannot authorize execution, fitting, or promotion.
+  collects no physics value, checkpoint, metric, or result. A separate
+  source-bound standard-library reference implements constraint/tangent-force
+  projection, fixed-Born energy/forces, bounded backtracking, fail-closed
+  identity/applicability outcomes, and exact checkpoint/restart while importing
+  only the audited analytic oracle. Test-only endpoint comparisons are
+  implementation checks, not validation results. No independent scientific
+  review or execution authorization, production result receipt, independent
+  result review, parameter applicability, or validation result is present. The
+  protocol, materializer, and reference cannot authorize execution, fitting, or
+  promotion.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
