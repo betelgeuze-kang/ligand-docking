@@ -39,6 +39,7 @@ betelgeuze_engine_v2.physics.reference_diagnostics
 betelgeuze_engine_v2.physics.reference_constrained_minimization
 betelgeuze_engine_v2.physics.reference_forcefield_v2
 betelgeuze_engine_v2.physics.reference_minimization
+betelgeuze_engine_v2.physics.reference_minimization_validation_materializer
 betelgeuze_engine_v2.physics.reference_minimization_validation_protocol
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
@@ -131,6 +132,18 @@ execution, and exposes an authorization function that always fails closed. It
 does not materialize cases, implement the independent reference, authorize or
 run validation, collect results, validate parameters or minimization, or enable
 scientific/product/customer claims.
+
+The separate minimization-validation-materializer symbols resolve all eleven
+frozen fixture payloads and project all fourteen cases into deterministic CPU
+`float64` `AllAtomSystem`, v1/v2 parameter, fixed-Born parameter, bounded
+minimization configuration, checkpoint-pause-plan, and fail-closed identity
+injection objects. Its canonical manifest binds every runtime input identity
+and retains every failure case. The module imports configuration and parameter
+contracts but no evaluator or minimizer entrypoint; it neither evaluates
+physics nor creates checkpoints, metrics, validation results, or promotion
+evidence. The original frozen protocol document remains byte-identical and
+therefore still records its historical materializer-missing blocker; the
+separate manifest does not mutate or open that protocol's authorization gate.
 
 The separate validation-artifact symbols materialize the exact frozen fixtures
 and mutations into deterministic CPU float64 runtime inputs and provide a

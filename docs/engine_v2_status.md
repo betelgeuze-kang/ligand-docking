@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_aa_frozen_cpu_minimization_validation_protocol
+v2_ab_exact_cpu_minimization_validation_materializer
 ```
 
 The current `main` branch contains:
@@ -174,10 +174,18 @@ The current `main` branch contains:
   and fail-closed identity/applicability cases; ten predefined CPU float64
   metrics; exact implementation-source SHA-256 identities; all-case failure
   accounting; and an independent-reference import-separation policy. The
-  protocol is not executed. No fixture materializer, independent minimization
-  reference, trusted review/authorization, production result receipt,
-  independent result review, scientific applicability, or parameter-fitting
-  approval exists, so minimization and solvated minimization remain unvalidated.
+  protocol is not executed. A separate exact materializer now resolves all
+  eleven fixture payloads and maps all fourteen cases to deterministic CPU
+  `float64` systems, v1/v2/fixed-Born parameters, bounded configurations,
+  checkpoint-pause plans, and fail-closed identity injections. It imports no
+  evaluator or minimizer entrypoint and records no physics value, checkpoint,
+  metric, or result. The original protocol document remains byte-identical and
+  retains its historical materializer-missing authorization blocker; the
+  separate manifest does not open that frozen gate. No independent
+  minimization reference, trusted review or authorization, production result
+  receipt, independent result review, scientific applicability, or parameter-
+  fitting approval exists, so minimization and solvated minimization remain
+  unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
   seven exact synthetic fixture profiles, twenty exact mutation contracts,
   twenty-seven ordered cases (fifteen expected passes and twelve expected

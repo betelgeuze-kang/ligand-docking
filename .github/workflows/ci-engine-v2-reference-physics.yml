@@ -9,6 +9,7 @@ on:
       - "tests/unit/test_engine_v2_reference_diagnostics.py"
       - "tests/unit/test_engine_v2_reference_forcefield_v2.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_solvation.py"
       - ".github/workflows/ci-engine-v2-reference-physics.yml"
@@ -21,6 +22,7 @@ on:
       - "tests/unit/test_engine_v2_reference_diagnostics.py"
       - "tests/unit/test_engine_v2_reference_forcefield_v2.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_solvation.py"
       - ".github/workflows/ci-engine-v2-reference-physics.yml"
@@ -59,6 +61,7 @@ jobs:
             tests/unit/test_engine_v2_reference_diagnostics.py
             tests/unit/test_engine_v2_reference_forcefield_v2.py
             tests/unit/test_engine_v2_reference_minimization.py
+            tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_orchestrator_contract.py
@@ -90,6 +93,7 @@ jobs:
             tests/unit/test_engine_v2_reference_diagnostics.py \
             tests/unit/test_engine_v2_reference_forcefield_v2.py \
             tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py > reference-physics.log 2>&1

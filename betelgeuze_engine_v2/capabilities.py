@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_aa_frozen_cpu_minimization_validation_protocol"
+IMPLEMENTATION_STAGE = "v2_ab_exact_cpu_minimization_validation_materializer"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -505,7 +505,8 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: (
         "protocol_definition_is_not_validation_result_evidence",
-        "fixture_materializer_not_implemented",
+        "materializer_definition_is_not_validation_result_evidence",
+        "materializer_source_identity_not_independently_reviewed",
         "independent_minimization_reference_not_bound",
         "independent_scientific_review_missing",
         "signed_execution_authorization_receipt_missing",
@@ -887,8 +888,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_failure_inclusive_minimization_validation_protocol_"
-                    "definition_without_execution_or_results"
+                    "frozen_protocol_with_exact_cpu_float64_fixture_materializer_"
+                    "without_independent_reference_execution_or_results"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
