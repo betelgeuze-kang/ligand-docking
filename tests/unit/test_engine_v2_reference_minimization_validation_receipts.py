@@ -127,7 +127,7 @@ def test_readiness_remains_closed_and_execution_raises() -> None:
     assert decision["run_start_environment_receipt_primitive_implemented"] is True
     assert decision["execution_environment_receipt_present"] is False
     assert decision["validation_runner_implemented"] is True
-    assert decision["result_receipt_writer_implemented"] is False
+    assert decision["result_receipt_writer_implemented"] is True
     assert decision["validation_execution_authorized"] is False
     assert decision["validation_results_collected"] is False
     assert "signed_execution_authorization_receipt_schema_not_frozen" not in decision["blockers"]

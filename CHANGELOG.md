@@ -8,6 +8,12 @@ scientific claim from a package version.
 
 ### Added
 
+- Failure-inclusive minimization-validation result writer and reader with raw
+  signed-chain, live environment, runner-start, and canonical observation
+  re-verification; atomic private nonce-bound persistence; exact external hash,
+  revocation, and supersession checks; and no production result or claim
+  promotion.
+
 - Versioned all-atom contracts, canonical system/topology/coordinate identities,
   and provenance invalidation on coordinate changes.
 - Bounded sparse neighbor geometry with periodic image-shift gradients.
