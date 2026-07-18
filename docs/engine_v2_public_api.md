@@ -39,6 +39,8 @@ betelgeuze_engine_v2.physics.reference_diagnostics
 betelgeuze_engine_v2.physics.reference_constrained_minimization
 betelgeuze_engine_v2.physics.reference_forcefield_v2
 betelgeuze_engine_v2.physics.reference_minimization
+betelgeuze_engine_v2.physics.reference_minimization_independent_oracle
+betelgeuze_engine_v2.physics.reference_minimization_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_minimization_validation_materializer
 betelgeuze_engine_v2.physics.reference_minimization_validation_protocol
 betelgeuze_engine_v2.physics.reference_solvation
@@ -144,6 +146,16 @@ physics nor creates checkpoints, metrics, validation results, or promotion
 evidence. The original frozen protocol document remains byte-identical and
 therefore still records its historical materializer-missing blocker; the
 separate manifest does not mutate or open that protocol's authorization gate.
+
+The independent-minimization-oracle symbols consume only primitive materialized
+inputs and the already audited standard-library analytic oracle. They separately
+implement constraint and tangent-force projection, fixed-Born energy/forces,
+bounded backtracking, fail-closed identity/applicability outcomes, and canonical
+checkpoint/restart. The artifact-binding symbols freeze the exact materializer,
+analytic-oracle, and minimization-oracle source identities and AST-audit the
+import boundary. These source and test artifacts are not production validation
+receipts, independent scientific review, execution authorization, parameter
+applicability evidence, or scientific/product promotion.
 
 The separate validation-artifact symbols materialize the exact frozen fixtures
 and mutations into deterministic CPU float64 runtime inputs and provide a

@@ -41,6 +41,9 @@ from .reference_forcefield_v2 import (
     ReferenceForceFieldV2Parameters,
 )
 from .reference_minimization import ReferenceMinimizationConfig
+from .reference_minimization_independent_oracle import (
+    IndependentMinimizationOracleInput,
+)
 from .reference_minimization_validation_protocol import (
     FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
     cpu_minimization_validation_protocol_document,
@@ -59,6 +62,7 @@ from .reference_solvation import (
     FixedBornAtomParameter,
     FixedBornPolarSolvationParameters,
 )
+from .reference_validation_oracle import IndependentAnalyticOracleInput
 
 
 CPU_MINIMIZATION_VALIDATION_MATERIALIZER_SCHEMA_ID = (
@@ -447,9 +451,7 @@ def _base_parameters(
         cutoff_angstrom=nonbonded.get("cutoff_angstrom", 4.0),
         switch_start_angstrom=nonbonded.get("switch_distance_angstrom", 3.0),
         dielectric=nonbonded.get("dielectric", 1.0),
-        screening_kappa_per_angstrom=nonbonded.get(
-            "screening_kappa_per_angstrom", 0.0
-        ),
+        screening_kappa_per_angstrom=nonbonded.get("screening_kappa_per_angstrom", 0.0),
         applicability_domain=ReferenceApplicabilityDomain(
             max_atoms=MATERIALIZER_MAX_ATOMS,
             max_bonds=MATERIALIZER_MAX_BONDS,
@@ -520,14 +522,11 @@ def _solvation_parameters(
         topology_sha256=canonical_topology_sha256(system),
         charge_parameter_fingerprint_sha256=parameters.fingerprint_sha256,
         atom_parameters=tuple(
-            FixedBornAtomParameter(index, radius)
-            for index, radius in enumerate(radii)
+            FixedBornAtomParameter(index, radius) for index, radius in enumerate(radii)
         ),
         solute_dielectric=fixed_born["solute_dielectric"],
         solvent_dielectric=fixed_born["solvent_dielectric"],
-        minimum_pair_distance_angstrom=(
-            MATERIALIZER_MINIMUM_PAIR_DISTANCE_ANGSTROM
-        ),
+        minimum_pair_distance_angstrom=(MATERIALIZER_MINIMUM_PAIR_DISTANCE_ANGSTROM),
         max_atoms=MATERIALIZER_MAX_ATOMS,
         metadata={
             "fixture_id": fixture_id,
@@ -580,14 +579,175 @@ def _constrained_config(
         minimization=minimization,
         constraint_projection=DistanceConstraintProjectionConfig(
             max_iterations=projection_iterations,
-            max_pair_correction_angstrom=(
-                MATERIALIZER_MAX_PAIR_CORRECTION_ANGSTROM
-            ),
+            max_pair_correction_angstrom=(MATERIALIZER_MAX_PAIR_CORRECTION_ANGSTROM),
         ),
         force_projection_max_sweeps=MATERIALIZER_FORCE_PROJECTION_MAX_SWEEPS,
         force_projection_tolerance_kcal_per_mol_angstrom=(
             MATERIALIZER_FORCE_PROJECTION_TOLERANCE
         ),
+    )
+
+
+def _independent_oracle_input(
+    *,
+    case_id: str,
+    case_input_sha256: str,
+    expected_outcome: str,
+    expected_error_code: str | None,
+    system: AllAtomSystem,
+    base_parameters: ReferenceForceFieldParameters,
+    v2_parameters: ReferenceForceFieldV2Parameters | None,
+    solvation_parameters: FixedBornPolarSolvationParameters | None,
+    minimization_config: ReferenceMinimizationConfig,
+    constrained_config: ReferenceConstrainedMinimizationConfig | None,
+    pause_after_accepted_iterations: int | None,
+    failure_injection: Mapping[str, Any],
+) -> IndependentMinimizationOracleInput:
+    coordinates = tuple(
+        tuple(float(value) for value in row) for row in system.coordinates[0].tolist()
+    )
+    cell = system.cell
+    orthorhombic_cell = (
+        None
+        if cell is None
+        else tuple(float(cell.vectors[index, index].item()) for index in range(3))
+    )
+    periodic_axes = (False, False, False) if cell is None else cell.periodic
+    energy_input = IndependentAnalyticOracleInput(
+        coordinates_angstrom=coordinates,
+        topology_bonds=tuple((row.atom_i, row.atom_j) for row in system.bonds),
+        atom_nonbonded=tuple(
+            (
+                row.atom_index,
+                row.sigma_angstrom,
+                row.epsilon_kcal_per_mol,
+                row.charge_e,
+            )
+            for row in base_parameters.atom_parameters
+        ),
+        bonds=tuple(
+            (
+                row.atom_i,
+                row.atom_j,
+                row.equilibrium_angstrom,
+                row.force_constant_kcal_per_mol_angstrom2,
+            )
+            for row in base_parameters.bonds
+        ),
+        angles=tuple(
+            (
+                row.atom_i,
+                row.atom_j,
+                row.atom_k,
+                row.equilibrium_radians,
+                row.force_constant_kcal_per_mol_radian2,
+            )
+            for row in base_parameters.angles
+        ),
+        torsions=tuple(
+            (
+                row.atom_i,
+                row.atom_j,
+                row.atom_k,
+                row.atom_l,
+                row.periodicity,
+                row.phase_radians,
+                row.amplitude_kcal_per_mol,
+            )
+            for row in base_parameters.torsions
+        ),
+        excluded_pairs=base_parameters.excluded_pairs,
+        scaled_pairs=tuple(
+            (row.atom_i, row.atom_j, row.lj_scale, row.electrostatic_scale)
+            for row in base_parameters.scaled_pairs
+        ),
+        cutoff_angstrom=base_parameters.cutoff_angstrom,
+        switch_start_angstrom=base_parameters.switch_start_angstrom,
+        dielectric=base_parameters.dielectric,
+        screening_kappa_per_angstrom=(base_parameters.screening_kappa_per_angstrom),
+        orthorhombic_cell_angstrom=orthorhombic_cell,
+        periodic_axes=periodic_axes,
+        minimum_pair_distance_angstrom=(
+            base_parameters.applicability_domain.minimum_pair_distance_angstrom
+        ),
+    )
+    constraints = (
+        ()
+        if v2_parameters is None
+        else tuple(
+            (
+                row.atom_i,
+                row.atom_j,
+                row.target_distance_angstrom,
+                row.tolerance_angstrom,
+            )
+            for row in v2_parameters.constraints
+        )
+    )
+    radii = (
+        None
+        if solvation_parameters is None
+        else tuple(
+            row.effective_born_radius_angstrom
+            for row in solvation_parameters.atom_parameters
+        )
+    )
+    projection_config = (
+        None if constrained_config is None else constrained_config.constraint_projection
+    )
+    return IndependentMinimizationOracleInput(
+        case_id=case_id,
+        case_input_sha256=case_input_sha256,
+        expected_outcome=expected_outcome,
+        expected_error_code=expected_error_code,
+        energy_input=energy_input,
+        constraints=constraints,
+        fixed_born_radii_angstrom=radii,
+        fixed_born_solute_dielectric=(
+            1.0
+            if solvation_parameters is None
+            else solvation_parameters.solute_dielectric
+        ),
+        fixed_born_solvent_dielectric=(
+            78.5
+            if solvation_parameters is None
+            else solvation_parameters.solvent_dielectric
+        ),
+        max_iterations=minimization_config.max_iterations,
+        max_backtracks=minimization_config.max_backtracks,
+        initial_step_size_angstrom2_mol_per_kcal=(
+            minimization_config.initial_step_size_angstrom2_mol_per_kcal
+        ),
+        backtrack_factor=minimization_config.backtrack_factor,
+        armijo_constant=minimization_config.armijo_constant,
+        maximum_atom_displacement_angstrom=(
+            minimization_config.maximum_atom_displacement_angstrom
+        ),
+        force_tolerance_kcal_per_mol_angstrom=(
+            minimization_config.force_tolerance_kcal_per_mol_angstrom
+        ),
+        constraint_projection_max_iterations=(
+            MATERIALIZER_MAX_CONSTRAINT_PROJECTION_ITERATIONS
+            if projection_config is None
+            else projection_config.max_iterations
+        ),
+        constraint_max_pair_correction_angstrom=(
+            MATERIALIZER_MAX_PAIR_CORRECTION_ANGSTROM
+            if projection_config is None
+            else projection_config.max_pair_correction_angstrom
+        ),
+        force_projection_max_sweeps=(
+            MATERIALIZER_FORCE_PROJECTION_MAX_SWEEPS
+            if constrained_config is None
+            else constrained_config.force_projection_max_sweeps
+        ),
+        force_projection_tolerance_kcal_per_mol_angstrom=(
+            MATERIALIZER_FORCE_PROJECTION_TOLERANCE
+            if constrained_config is None
+            else constrained_config.force_projection_tolerance_kcal_per_mol_angstrom
+        ),
+        pause_after_accepted_iterations=pause_after_accepted_iterations,
+        **{key: failure_injection.get(key) for key in _CROSSWIRE_KEYS},
     )
 
 
@@ -612,6 +772,7 @@ class MaterializedCPUMinimizationValidationCase:
     constrained_config: ReferenceConstrainedMinimizationConfig | None
     pause_after_accepted_iterations: int | None
     failure_injection: Mapping[str, Any]
+    independent_oracle_input: IndependentMinimizationOracleInput
 
     def __post_init__(self) -> None:
         if self.system.coordinates.dtype != torch.float64:
@@ -645,6 +806,14 @@ class MaterializedCPUMinimizationValidationCase:
             "failure_injection",
             _freeze_mapping(dict(self.failure_injection)),
         )
+        if self.independent_oracle_input.case_id != self.case_id:
+            raise CPUMinimizationValidationMaterializationError(
+                "independent oracle case identity does not match"
+            )
+        if self.independent_oracle_input.case_input_sha256 != self.case_input_sha256:
+            raise CPUMinimizationValidationMaterializationError(
+                "independent oracle input identity does not match"
+            )
 
     def projection(self) -> dict[str, Any]:
         return {
@@ -681,10 +850,11 @@ class MaterializedCPUMinimizationValidationCase:
                 if self.constrained_config is None
                 else self.constrained_config.fingerprint_sha256
             ),
-            "pause_after_accepted_iterations": (
-                self.pause_after_accepted_iterations
-            ),
+            "pause_after_accepted_iterations": (self.pause_after_accepted_iterations),
             "failure_injection": _thaw(self.failure_injection),
+            "independent_oracle_input_sha256": (
+                self.independent_oracle_input.input_sha256
+            ),
             "coordinate_dtype": "float64",
             "device": "cpu",
             "minimization_executed": False,
@@ -712,9 +882,7 @@ def materialize_frozen_cpu_minimization_validation_case(
 
     document = _protocol_document(protocol_document)
     fixtures = _fixture_map(document)
-    cases = {
-        str(row["case_id"]): row for row in document["case_manifest"]["cases"]
-    }
+    cases = {str(row["case_id"]): row for row in document["case_manifest"]["cases"]}
     try:
         case = cases[case_id]
     except KeyError as exc:
@@ -740,17 +908,16 @@ def materialize_frozen_cpu_minimization_validation_case(
         else _v2_parameters(base, payload)
     )
     solvation = (
-        None
-        if v2 is None
-        else _solvation_parameters(fixture_id, system, v2, payload)
+        None if v2 is None else _solvation_parameters(fixture_id, system, v2, payload)
     )
     minimization = _minimization_config(case_input, payload)
     constrained = (
-        None
-        if v2 is None
-        else _constrained_config(minimization, case_input, payload)
+        None if v2 is None else _constrained_config(minimization, case_input, payload)
     )
-    if "atom_count" in case_input and int(case_input["atom_count"]) != system.atom_count:
+    if (
+        "atom_count" in case_input
+        and int(case_input["atom_count"]) != system.atom_count
+    ):
         raise CPUMinimizationValidationMaterializationError(
             "case atom count does not match the materialized system"
         )
@@ -762,9 +929,21 @@ def materialize_frozen_cpu_minimization_validation_case(
     pause = case_input.get("pause_after_iterations")
     if pause is not None:
         pause = int(pause)
-    failure_injection = {
-        key: payload[key] for key in _CROSSWIRE_KEYS if key in payload
-    }
+    failure_injection = {key: payload[key] for key in _CROSSWIRE_KEYS if key in payload}
+    independent_oracle_input = _independent_oracle_input(
+        case_id=str(case["case_id"]),
+        case_input_sha256=str(case["input_sha256"]),
+        expected_outcome=str(case["expected_outcome"]),
+        expected_error_code=case["expected_error_code"],
+        system=system,
+        base_parameters=base,
+        v2_parameters=v2,
+        solvation_parameters=solvation,
+        minimization_config=minimization,
+        constrained_config=constrained,
+        pause_after_accepted_iterations=pause,
+        failure_injection=failure_injection,
+    )
     return MaterializedCPUMinimizationValidationCase(
         case_id=str(case["case_id"]),
         case_input_sha256=str(case["input_sha256"]),
@@ -783,6 +962,7 @@ def materialize_frozen_cpu_minimization_validation_case(
         constrained_config=constrained,
         pause_after_accepted_iterations=pause,
         failure_injection=failure_injection,
+        independent_oracle_input=independent_oracle_input,
     )
 
 
@@ -809,9 +989,7 @@ def cpu_minimization_validation_materialization_manifest_document(
         "fixture_manifest_sha256": document["fixture_manifest"][
             "fixture_manifest_sha256"
         ],
-        "case_manifest_sha256": document["case_manifest"][
-            "case_manifest_sha256"
-        ],
+        "case_manifest_sha256": document["case_manifest"]["case_manifest_sha256"],
         "materialization_policy": {
             "device": "cpu",
             "coordinate_dtype": "float64",
@@ -858,7 +1036,7 @@ def cpu_minimization_validation_materialization_manifest_document(
         },
         "cases": [row.to_dict() for row in cases],
         "fixture_materializer_implemented": True,
-        "independent_minimization_reference_implemented": False,
+        "independent_minimization_reference_implemented": True,
         "minimization_executed": False,
         "checkpoint_created": False,
         "energy_or_force_values_present": False,
@@ -880,9 +1058,12 @@ def cpu_minimization_validation_materialization_manifest_document(
 def cpu_minimization_validation_materialization_manifest_json_bytes() -> bytes:
     """Return canonical ASCII JSON for the exact materialization manifest."""
 
-    return _canonical_bytes(
-        cpu_minimization_validation_materialization_manifest_document()
-    ) + b"\n"
+    return (
+        _canonical_bytes(
+            cpu_minimization_validation_materialization_manifest_document()
+        )
+        + b"\n"
+    )
 
 
 def write_cpu_minimization_validation_materialization_manifest_json(

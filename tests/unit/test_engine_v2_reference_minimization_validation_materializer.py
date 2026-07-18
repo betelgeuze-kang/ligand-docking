@@ -55,7 +55,7 @@ def test_manifest_materializes_every_frozen_case_without_results() -> None:
         cpu_minimization_validation_materializer_source_sha256()
     )
     assert manifest["materializer_source_sha256"] == (
-        "add96991d96255280f6ba0fe5158a7b6a9971333494b34d36809769689b78f58"
+        "b27bf9858811ff967bb54726616a66149edf44544b2cb1bdf9f57ba410345b26"
     )
     assert len(manifest["materializer_source_sha256"]) == 64
     assert manifest["coverage"] == {
@@ -76,7 +76,6 @@ def test_manifest_materializes_every_frozen_case_without_results() -> None:
         "authorization_gate"
     ]["current_blockers"]
     for key in (
-        "independent_minimization_reference_implemented",
         "minimization_executed",
         "checkpoint_created",
         "energy_or_force_values_present",
@@ -90,6 +89,7 @@ def test_manifest_materializes_every_frozen_case_without_results() -> None:
         "claim_safe",
     ):
         assert manifest[key] is False
+    assert manifest["independent_minimization_reference_implemented"] is True
     projection = {
         key: value
         for key, value in manifest.items()
@@ -99,7 +99,7 @@ def test_manifest_materializes_every_frozen_case_without_results() -> None:
         projection
     )
     assert manifest["materialization_manifest_sha256"] == (
-        "3857ad25e1004a36b3543bc1f01dbf91498a840efc531ea64a47a5e340adf480"
+        "100d218ab412088c8c4913f70757547b80b77b0d17155739b52e4e27121b22b7"
     )
 
 

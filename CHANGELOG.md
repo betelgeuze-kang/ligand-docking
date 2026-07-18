@@ -40,6 +40,12 @@ scientific claim from a package version.
   variants, plus a source-bound standard-library-only analytic oracle with
   forward-mode exact forces and an AST-enforced evaluator/protocol/third-party
   import boundary. No comparison result or scientific promotion is created.
+- Frozen fourteen-case CPU minimization-validation inputs with an exact
+  materializer and a separately source-bound standard-library reference for
+  constraint/tangent-force projection, fixed-Born energy/forces, bounded
+  backtracking, fail-closed identities, and checkpoint/restart. Test-only
+  endpoint comparisons are implementation checks, not validation results or
+  scientific promotion.
 - Frozen independent-review attestation contract binding the exact validation
   artifacts, ordered review checks and limitations, implementation-author and
   reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256

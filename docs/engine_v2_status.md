@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ab_exact_cpu_minimization_validation_materializer
+v2_ac_source_bound_independent_minimization_reference
 ```
 
 The current `main` branch contains:
@@ -181,11 +181,16 @@ The current `main` branch contains:
   evaluator or minimizer entrypoint and records no physics value, checkpoint,
   metric, or result. The original protocol document remains byte-identical and
   retains its historical materializer-missing authorization blocker; the
-  separate manifest does not open that frozen gate. No independent
-  minimization reference, trusted review or authorization, production result
-  receipt, independent result review, scientific applicability, or parameter-
-  fitting approval exists, so minimization and solvated minimization remain
-  unvalidated.
+  separate manifest does not open that frozen gate. A separate source binding
+  now fixes an import-separated standard-library minimization reference and its
+  analytic-oracle dependency. The reference independently implements distance
+  and tangent-force projection, fixed-Born energy/forces, bounded backtracking,
+  fail-closed identity/applicability outcomes, and exact checkpoint/restart.
+  Test-only endpoint comparisons are implementation checks, not validation
+  result evidence. No independent scientific review or authorization,
+  production result receipt, independent result review, scientific
+  applicability, or parameter-fitting approval exists, so minimization and
+  solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
   seven exact synthetic fixture profiles, twenty exact mutation contracts,
   twenty-seven ordered cases (fifteen expected passes and twelve expected
