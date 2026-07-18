@@ -46,6 +46,11 @@ scientific claim from a package version.
   backtracking, fail-closed identities, and checkpoint/restart. Test-only
   endpoint comparisons are implementation checks, not validation results or
   scientific promotion.
+- Frozen independent-review attestation contract for the minimization artifacts,
+  with exact source-binding identity, ordered technical checks and limitations,
+  author/reviewer separation, out-of-band trust, HMAC-SHA256 integrity, and a
+  30-day maximum validity. No key, attestation, authorization, result, or claim
+  promotion is bundled.
 - Frozen independent-review attestation contract binding the exact validation
   artifacts, ordered review checks and limitations, implementation-author and
   reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256

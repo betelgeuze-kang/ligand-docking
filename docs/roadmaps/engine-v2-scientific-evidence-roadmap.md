@@ -245,8 +245,12 @@ claim status without revalidating the dependency and freshness chain.
   projection, fixed-Born energy/forces, bounded backtracking, fail-closed
   identity/applicability outcomes, and exact checkpoint/restart while importing
   only the audited analytic oracle. Test-only endpoint comparisons are
-  implementation checks, not validation results. No independent scientific
-  review or execution authorization, production result receipt, independent
+  implementation checks, not validation results. A frozen HMAC-SHA256 review
+  attestation contract binds the exact artifacts and requires author/reviewer
+  separation, complete ordered technical checks and limitation
+  acknowledgements, an out-of-band trusted reviewer key, and bounded freshness.
+  No key or attestation is bundled. No independent scientific review or
+  execution authorization, production result receipt, independent
   result review, parameter applicability, or validation result is present. The
   protocol, materializer, and reference cannot authorize execution, fitting, or
   promotion.

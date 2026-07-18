@@ -11,6 +11,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_review.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -43,6 +44,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_review.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -101,6 +103,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py
+            tests/unit/test_engine_v2_reference_minimization_validation_review.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
@@ -148,6 +151,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_artifact_binding.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_review.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_validation_oracle.py \
@@ -164,6 +168,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -182,6 +187,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
             tests/unit/test_engine_v2_reference_minimization_validation_artifact_binding.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_review.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -238,7 +244,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_ac_source_bound_independent_minimization_reference"
+          assert loaded["implementation_stage"] == "v2_ad_minimization_validation_review_contract"
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)

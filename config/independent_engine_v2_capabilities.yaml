@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_ac_source_bound_independent_minimization_reference
+implementation_stage: v2_ad_minimization_validation_review_contract
 
 claim_policy:
   customer_execution_enabled: false
@@ -897,7 +897,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_minimization_validation_protocol:
-    current_state: source_bound_import_separated_independent_minimization_reference_without_review_execution_or_results
+    current_state: signed_independent_review_contract_without_attestation_authorization_execution_or_results
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -916,6 +916,9 @@ capabilities:
       - independent_minimization_reference_is_not_validation_result_evidence
       - independent_minimization_reference_not_independently_reviewed
       - independent_scientific_review_missing
+      - signed_independent_scientific_review_attestation_missing
+      - trusted_independent_scientific_reviewer_key_not_provided
+      - implementation_author_and_independent_reviewer_separation_not_attested
       - signed_execution_authorization_receipt_missing
       - trusted_runner_environment_not_bound
       - production_result_receipt_missing

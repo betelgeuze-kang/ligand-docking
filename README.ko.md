@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_ac_source_bound_independent_minimization_reference
+v2_ad_minimization_validation_review_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -55,7 +55,10 @@ v2_ac_source_bound_independent_minimization_reference
   constraint/tangent-force projection·fixed-Born·bounded backtracking·fail-closed
   identity·exact checkpoint/restart를 별도로 구현하고 source/import 경계를 고정한
   표준 라이브러리 독립 reference; test-only 비교는 구현 검증일 뿐 validation 결과가
-  아니며 독립 과학 review·승인·production 결과 receipt·과학 승격은 없음
+  아니며, author/reviewer identity 분리·ordered review check와 limitation 확인·외부
+  trusted reviewer key·bounded freshness를 요구하는 HMAC-SHA256 독립 review
+  attestation 계약까지 고정했지만 실제 attestation·trusted key·승인·production 결과
+  receipt·과학 승격은 없음
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound

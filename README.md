@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ac_source_bound_independent_minimization_reference
+v2_ad_minimization_validation_review_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -64,7 +64,10 @@ Implemented and GitHub-hosted CPU tested:
   independently implements constraint/tangent-force projection, fixed-Born,
   bounded backtracking, fail-closed identities, and exact checkpoint/restart,
   while test-only comparisons remain implementation checks rather than
-  validation results; no independent scientific review, authorization,
+  validation results; a frozen HMAC-SHA256 independent-review attestation
+  contract now requires author/reviewer identity separation, complete ordered
+  checks and limitation acknowledgements, an out-of-band trusted reviewer key,
+  and bounded freshness, but no attestation, trusted key, authorization,
   production result receipt, or scientific promotion exists;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
