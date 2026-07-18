@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_ag_minimization_validation_nonce_reservation
+v2_ah_minimization_validation_run_start
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -57,8 +57,12 @@ v2_ag_minimization_validation_nonce_reservation
   표준 라이브러리 독립 reference; test-only 비교는 구현 검증일 뿐 validation 결과가
   아니며, author/reviewer identity 분리·ordered review check와 limitation 확인·외부
   trusted reviewer key·bounded freshness를 요구하는 HMAC-SHA256 독립 review
-  attestation 계약까지 고정했지만 실제 attestation·trusted key·승인·production 결과
-  receipt·과학 승격은 없음
+  attestation 계약, single-run authorization, local POSIX one-time nonce reservation,
+  그리고 raw signed chain·durable nonce·실제 CPU-only deterministic process·network
+  namespace를 다시 검증하고 최대 5분 operator-signed network-isolation attestation을
+  확인한 뒤 별도 private root에 canonical mode-0600 secret-free 환경 receipt 하나를
+  원자적으로 기록하는 run-start primitive까지 구현했지만 실제 attestation·trusted
+  key·production root/receipt·runner·실행 승인·결과·과학 승격은 없음
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound

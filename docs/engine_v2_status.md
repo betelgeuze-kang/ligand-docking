@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ag_minimization_validation_nonce_reservation
+v2_ah_minimization_validation_run_start
 ```
 
 The current `main` branch contains:
@@ -211,7 +211,18 @@ The current `main` branch contains:
   `O_EXCL`/`O_NOFOLLOW`, file and directory `fsync`, rejects duplicate or
   externally consumed nonces, and exposes no release/delete API. No production
   root, key, signed artifact, or reservation is bundled, and reservation alone
-  cannot authorize run start, execution, fitting, or claims. No production result
+  cannot authorize run start, execution, fitting, or claims. A separate
+  minimization run-start primitive now re-verifies the raw review and
+  authorization artifacts plus the durable nonce record before observing the
+  exact Linux x86_64 CPU process, Python/Torch/NumPy versions, GPU visibility,
+  locale, seed, thread, deterministic-algorithm, logical-argv, and network-
+  namespace identities. It verifies a maximum-five-minute operator-signed
+  network-isolation attestation and atomically persists one canonical mode-0600
+  secret-free environment receipt beneath a separate private caller root using
+  `O_EXCL`, `O_NOFOLLOW`, and file/directory `fsync`. The future bootstrap path
+  is frozen but no runner is bundled, and the primitive creates no network
+  namespace, kernel isolation, production key, attestation, root, or receipt.
+  Its receipt remains non-authorizing. No production result
   receipt, independent result review, scientific applicability, or parameter-
   fitting approval exists, so minimization and
   solvated minimization remain unvalidated.

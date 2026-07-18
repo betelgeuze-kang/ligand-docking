@@ -656,8 +656,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
     ]
     assert minimization_protocol["current_state"] == (
-        "local_posix_atomic_nonce_reservation_primitive_without_production_"
-        "root_receipt_run_start_execution_or_results"
+        "run_start_environment_receipt_primitive_without_production_receipt_"
+        "runner_execution_or_results"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
     assert "materializer_definition_is_not_validation_result_evidence" in (
@@ -690,7 +690,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "execution_environment_receipt_missing" in (
         minimization_protocol["blockers"]
     )
-    assert "run_start_dependency_reverification_not_implemented" in (
+    assert "run_start_dependency_reverification_not_implemented" not in (
         minimization_protocol["blockers"]
     )
     assert "validation_runner_not_implemented" in minimization_protocol["blockers"]
@@ -731,6 +731,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_receipts" in policy
     assert "reference_minimization_validation_authorization" in policy
     assert "reference_minimization_validation_nonce_reservation" in policy
+    assert "reference_minimization_validation_run_start" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -817,6 +818,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization_validation_receipts.py",
         "test_engine_v2_reference_minimization_validation_authorization.py",
         "test_engine_v2_reference_minimization_validation_nonce_reservation.py",
+        "test_engine_v2_reference_minimization_validation_run_start.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source
@@ -847,5 +849,9 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     )
     assert (
         "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256"
+        in source
+    )
+    assert (
+        "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256"
         in source
     )

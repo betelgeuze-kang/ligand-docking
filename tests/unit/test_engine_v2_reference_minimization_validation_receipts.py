@@ -124,6 +124,7 @@ def test_readiness_remains_closed_and_execution_raises() -> None:
     assert decision["authorization_contract_frozen"] is True
     assert decision["independent_review_attestation_present"] is False
     assert decision["authorization_receipt_present"] is False
+    assert decision["run_start_environment_receipt_primitive_implemented"] is True
     assert decision["execution_environment_receipt_present"] is False
     assert decision["validation_runner_implemented"] is False
     assert decision["result_receipt_writer_implemented"] is False

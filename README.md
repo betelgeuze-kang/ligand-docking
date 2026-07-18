@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ag_minimization_validation_nonce_reservation
+v2_ah_minimization_validation_run_start
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -80,7 +80,14 @@ Implemented and GitHub-hosted CPU tested:
   authorization chain before consuming the nonce exactly once as a canonical
   mode-0600 record beneath a caller-provisioned mode-0700 root using `O_EXCL`,
   file `fsync`, and directory `fsync`; it has no release/delete API and bundles
-  no production root, key, signed artifact, reservation, or execution;
+  no production root, key, signed artifact, reservation, or execution; a
+  separate run-start primitive re-verifies that full chain and durable record,
+  observes the exact CPU-only deterministic process and network namespace,
+  verifies a maximum-five-minute operator-signed network-isolation attestation,
+  and atomically persists one canonical mode-0600 secret-free environment
+  receipt under a separate private caller root; it creates no isolation,
+  bundles no production key/attestation/root/receipt/runner, and authorizes no
+  validation, fitting, or claim;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture
