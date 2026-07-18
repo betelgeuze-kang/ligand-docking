@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_aa_frozen_cpu_minimization_validation_protocol
+implementation_stage: v2_ab_exact_cpu_minimization_validation_materializer
 
 claim_policy:
   customer_execution_enabled: false
@@ -897,7 +897,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_minimization_validation_protocol:
-    current_state: frozen_failure_inclusive_minimization_validation_protocol_definition_without_execution_or_results
+    current_state: frozen_protocol_with_exact_cpu_float64_fixture_materializer_without_independent_reference_execution_or_results
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -911,7 +911,8 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - protocol_definition_is_not_validation_result_evidence
-      - fixture_materializer_not_implemented
+      - materializer_definition_is_not_validation_result_evidence
+      - materializer_source_identity_not_independently_reviewed
       - independent_minimization_reference_not_bound
       - independent_scientific_review_missing
       - signed_execution_authorization_receipt_missing

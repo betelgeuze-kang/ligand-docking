@@ -656,11 +656,14 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID
     ]
     assert minimization_protocol["current_state"] == (
-        "frozen_failure_inclusive_minimization_validation_protocol_"
-        "definition_without_execution_or_results"
+        "frozen_protocol_with_exact_cpu_float64_fixture_materializer_"
+        "without_independent_reference_execution_or_results"
     )
     assert minimization_protocol["internal_reference_execution_enabled"] is False
-    assert "fixture_materializer_not_implemented" in (
+    assert "materializer_definition_is_not_validation_result_evidence" in (
+        minimization_protocol["blockers"]
+    )
+    assert "fixture_materializer_not_implemented" not in (
         minimization_protocol["blockers"]
     )
     assert "independent_minimization_reference_not_bound" in (
@@ -696,6 +699,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_parameter_applicability" in policy
     assert "reference_validation_protocol" in policy
     assert "reference_minimization_validation_protocol" in policy
+    assert "reference_minimization_validation_materializer" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
 
 
@@ -775,6 +779,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_physics.py",
         "test_engine_v2_reference_solvation.py",
         "test_engine_v2_reference_minimization_validation_protocol.py",
+        "test_engine_v2_reference_minimization_validation_materializer.py",
         "test_engine_v2_external_baseline.py",
     ):
         assert test_file in source

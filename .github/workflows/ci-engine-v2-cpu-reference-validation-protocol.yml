@@ -8,6 +8,7 @@ on:
       - "packaging/engine-v2/pyproject.toml"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -37,6 +38,7 @@ on:
       - "packaging/engine-v2/pyproject.toml"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -92,6 +94,7 @@ jobs:
             config/independent_engine_v2_capabilities.yaml
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
+            tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
@@ -136,6 +139,7 @@ jobs:
           python tools/check_engine_v2_architecture.py
           ruff check \
             betelgeuze_engine_v2/physics/reference_validation_protocol.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_validation_oracle.py \
@@ -149,6 +153,7 @@ jobs:
             betelgeuze_engine_v2/physics/__init__.py \
             betelgeuze_engine_v2/capabilities.py \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -164,6 +169,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -220,7 +226,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_aa_frozen_cpu_minimization_validation_protocol"
+          assert loaded["implementation_stage"] == "v2_ab_exact_cpu_minimization_validation_materializer"
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)

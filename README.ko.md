@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_aa_frozen_cpu_minimization_validation_protocol
+v2_ab_exact_cpu_minimization_validation_materializer
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -49,8 +49,10 @@ v2_aa_frozen_cpu_minimization_validation_protocol
 - unsolvated·constrained·fixed-Born constrained·checkpoint·fail-closed 범위의
   ordered 14-case와 사전 10개 metric, 전 case failure denominator, exact 구현 source
   identity와 independent-reference 요구사항을 결과 전에 고정한 execution-disabled
-  CPU minimization validation protocol; materializer·독립 reference·review·승인·실행·
-  결과 receipt·과학 승격은 없음
+  CPU minimization validation protocol, 그리고 11개 fixture·14개 case를 실제 CPU
+  float64 v1/v2/fixed-Born runtime input·checkpoint pause plan·failure injection으로
+  투영하되 physics를 평가하거나 결과를 수집하지 않는 exact materializer; 독립
+  reference·review·승인·실행·결과 receipt·과학 승격은 없음
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,
   그리고 결과를 수집하지 않는 exact fixture materializer와 source-bound

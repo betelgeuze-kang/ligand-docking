@@ -235,11 +235,16 @@ claim status without revalidating the dependency and freshness chain.
   contract. It binds fourteen ordered unsolvated, constrained, fixed-Born
   constrained, checkpoint/restart, and fail-closed cases; ten predefined CPU
   float64 metrics; exact implementation-source identities; all-case failure
-  accounting; and an import-separated independent-reference requirement. No
-  fixture materializer, independent minimization implementation or artifact,
-  trusted review or execution authorization, production result receipt,
-  independent result review, parameter applicability, or validation result is
-  present. The protocol cannot authorize execution, fitting, or promotion.
+  accounting; and an import-separated independent-reference requirement. A
+  separate exact materializer resolves all eleven fixture payloads and projects
+  all fourteen cases into deterministic CPU float64 systems, v1/v2/fixed-Born
+  parameters, bounded configurations, checkpoint-pause plans, and fail-closed
+  identity injections. It imports no evaluator or minimizer entrypoint and
+  collects no physics value, checkpoint, metric, or result. No independent
+  minimization implementation or artifact, trusted review or execution
+  authorization, production result receipt, independent result review,
+  parameter applicability, or validation result is present. The protocol and
+  materializer cannot authorize execution, fitting, or promotion.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
