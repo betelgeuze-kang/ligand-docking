@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ae_minimization_validation_receipt_contracts
+v2_af_minimization_validation_authorization_contract
 ```
 
 The current `main` branch contains:
@@ -198,7 +198,13 @@ The current `main` branch contains:
   receipt contracts bind all fourteen cases, both operational and independent
   input identities, all ten predefined metrics, and exact failure retention.
   They bundle no authorization contract/receipt, environment/result receipt,
-  runner, writer, or observed value. No production result receipt, independent
+  runner, writer, or observed value. A separate HMAC-SHA256 single-run
+  authorization contract now requires a verified nonexpired review, pairwise-
+  distinct author/reviewer/operator identities, exact code/runner/dependency and
+  receipt-contract identities, at most 24 hours of validity, external revocation
+  inputs, and a one-time nonce. It bundles no operator key, signed receipt, or
+  atomic nonce reservation and cannot open execution. No production result
+  receipt, independent
   result review, scientific
   applicability, or parameter-fitting approval exists, so minimization and
   solvated minimization remain unvalidated.

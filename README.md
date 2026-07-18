@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ae_minimization_validation_receipt_contracts
+v2_af_minimization_validation_authorization_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -70,8 +70,12 @@ Implemented and GitHub-hosted CPU tested:
   and bounded freshness; separate frozen CPU-only, network-disabled execution-
   environment and failure-inclusive result-receipt contracts bind the exact
   14-case/10-metric order and both operational/independent input identities,
-  but no attestation, trusted key, authorization contract or receipt,
+  but no attestation, trusted reviewer key, authorization receipt,
   environment/result receipt, runner, result, or scientific promotion exists;
+  a separate single-run HMAC-SHA256 authorization contract now binds a verified
+  nonexpired review, pairwise-distinct operator, exact code/runner/dependencies,
+  both receipt contracts, 24-hour maximum validity, revocation inputs, and a
+  one-time nonce, but bundles no operator key, receipt, or nonce reservation;
 - a frozen CPU reference energy/force contract-validation protocol with exact
   synthetic case identities, predefined tolerances, retained failure rows, and
   a closed execution/parameter-fitting authorization gate, plus exact fixture

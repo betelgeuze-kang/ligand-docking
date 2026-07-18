@@ -57,6 +57,12 @@ scientific claim from a package version.
   rows, iteration/evaluation ledgers, and future review/authorization bindings
   are required; no authorization contract or receipt, environment/result
   receipt, runner, observed value, or claim promotion is bundled.
+- Frozen HMAC-SHA256 single-run minimization-validation authorization contract
+  binding a verified nonexpired review, pairwise-distinct author/reviewer/
+  operator identities, exact code/runner/dependency and receipt-contract
+  identities, a 24-hour maximum lifetime, external revocation sets, and a
+  one-time nonce. No operator key, signed receipt, nonce reservation, execution,
+  result, fitting authorization, or claim promotion is bundled.
 - Frozen independent-review attestation contract binding the exact validation
   artifacts, ordered review checks and limitations, implementation-author and
   reviewer identity separation, out-of-band reviewer trust, HMAC-SHA256
