@@ -25,6 +25,7 @@ from betelgeuze_engine_v2.physics.reference_validation_nonce_reservation import 
     reference_validation_nonce_reservation_contract_document,
     require_reference_validation_nonce_reservation_contract_document,
     reserve_reference_validation_authorization_nonce,
+    verify_reference_validation_nonce_reservation_record,
 )
 from betelgeuze_engine_v2.physics.reference_validation_receipts import (
     FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
@@ -425,6 +426,20 @@ def test_read_rejects_tamper_unsafe_mode_and_hardlink(tmp_path: Path) -> None:
         read_reference_validation_nonce_reservation(link_root, AUTHORIZATION_NONCE)
 
 
+def test_reader_rejects_fifo_without_blocking(tmp_path: Path) -> None:
+    root = _reservation_root(tmp_path)
+    path = root / f"{AUTHORIZATION_NONCE}.json"
+    try:
+        os.mkfifo(path, mode=0o600)
+    except (AttributeError, OSError):
+        pytest.skip("POSIX FIFO creation unavailable")
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="regular file",
+    ):
+        read_reference_validation_nonce_reservation(root, AUTHORIZATION_NONCE)
+
+
 def test_persistence_failure_poison_consumes_nonce_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -447,6 +462,91 @@ def test_persistence_failure_poison_consumes_nonce_path(
     monkeypatch.setattr(module, "_write_all", original_write_all)
     with pytest.raises(ReferenceValidationNonceAlreadyReservedError):
         _reserve(root)
+
+
+def test_exact_raw_record_verifier_rejects_nonbytes_and_bool_integer_alias(
+    tmp_path: Path,
+) -> None:
+    root = _reservation_root(tmp_path)
+    expected = _reserve(root)
+    raw = (root / f"{AUTHORIZATION_NONCE}.json").read_bytes()
+    assert (
+        verify_reference_validation_nonce_reservation_record(
+            raw,
+            expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        )
+        == expected
+    )
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="must be bytes",
+    ):
+        verify_reference_validation_nonce_reservation_record(  # type: ignore[arg-type]
+            raw.decode("ascii"),
+            expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        )
+    payload = json.loads(raw)
+    payload["reservation_persisted"] = 1
+    aliased = (
+        json.dumps(
+            payload,
+            ensure_ascii=True,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("ascii")
+        + b"\n"
+    )
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="fixed fields drifted",
+    ):
+        verify_reference_validation_nonce_reservation_record(
+            aliased,
+            expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        )
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b'{"value":' + b"1" * 5_000 + b"}\n",
+        b'{"value":' + b"[" * 1_100 + b"0" + b"]" * 1_100 + b"}\n",
+    ],
+)
+def test_exact_raw_record_verifier_wraps_json_decoder_limits(raw: bytes) -> None:
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="must be canonical ASCII JSON",
+    ):
+        verify_reference_validation_nonce_reservation_record(
+            raw,
+            expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        )
+
+
+def test_contract_rejects_bool_integer_alias() -> None:
+    document = reference_validation_nonce_reservation_contract_document()
+    document["claim_policy"]["claim_safe"] = 0
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="does not match",
+    ):
+        require_reference_validation_nonce_reservation_contract_document(document)
+
+    deeply_nested: dict[str, object] = {}
+    cursor = deeply_nested
+    for _ in range(1_200):
+        child: dict[str, object] = {}
+        cursor["next"] = child
+        cursor = child
+    with pytest.raises(
+        ReferenceValidationNonceReservationError,
+        match="contract document is invalid",
+    ):
+        require_reference_validation_nonce_reservation_contract_document(
+            deeply_nested
+        )
 
 
 def test_module_exposes_no_release_delete_runner_or_result_writer_api() -> None:

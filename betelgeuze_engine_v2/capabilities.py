@@ -556,7 +556,28 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "production_review_authorization_custody_events_not_provisioned",
         "trusted_production_review_key_not_provisioned",
         "trusted_production_authorization_key_not_provisioned",
-        "reservation_and_later_custody_stages_not_implemented",
+        "environment_and_later_custody_stages_not_implemented",
+        "external_serializable_reservation_registry_not_provisioned",
+        "external_registry_transaction_proof_not_provisioned",
+        "external_registry_backend_key_not_provisioned",
+        "external_registry_head_observer_key_not_provisioned",
+        "out_of_band_current_registry_head_not_provisioned",
+        "authenticated_external_head_status_receipt_not_provisioned",
+        "trusted_external_head_receipt_authority_key_not_provisioned",
+        "caller_head_receipt_challenge_not_provisioned",
+        "post_receipt_current_status_descendant_not_provisioned",
+        "post_consistency_current_status_descendant_not_provisioned",
+        "caller_challenge_freshness_and_one_use_not_independently_verified",
+        "global_latest_registry_head_not_independently_verified",
+        "global_latest_status_head_not_independently_verified",
+        "later_head_consistency_proof_not_provisioned",
+        "status_head_compare_and_set_not_independently_verified",
+        "reservation_registry_authority_key_not_provisioned",
+        "reservation_checkpoint_witness_key_not_provisioned",
+        "production_reservation_intent_not_provisioned",
+        "production_atomic_reservation_commit_not_provisioned",
+        "external_registry_non_equivocation_proof_not_provisioned",
+        "registry_epoch_transition_continuity_not_provisioned",
         "process_launch_identity_not_bound_to_worker_carriers",
         "same_tick_pid_reuse_collision_not_excluded",
         "external_worker_launch_custody_missing",
@@ -948,8 +969,11 @@ def capability_snapshot() -> dict[str, Any]:
                 VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID,
                 current_state=(
                     "claim_closed_ed25519_permit_status_review_authorization_"
-                    "four_event_custody_and_process_identity_foundation_"
-                    "without_external_chain"
+                    "four_event_custody_process_identity_seq5_attestation_and_"
+                    "same_epoch_external_registry_proof_and_authenticated_head_"
+                    "status_receipt_and_later_head_consistency_verifiers_"
+                    "without_provisioned_receipt_registry_consistency_proof_"
+                    "or_global_non_equivocation"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

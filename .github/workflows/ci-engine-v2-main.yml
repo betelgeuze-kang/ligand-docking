@@ -154,6 +154,10 @@ jobs:
             tests/unit/test_engine_v2_validation_process_launch_identity.py
             tests/unit/test_engine_v2_validation_production_evidence_custody.py
             tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py
+            tests/unit/test_engine_v2_validation_production_reservation_custody_extension.py
+            tests/unit/test_engine_v2_validation_production_reservation_registry_proof.py
+            tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py
+            tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py
             tests/unit/test_engine_v2_validation_source_identity.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
@@ -290,6 +294,10 @@ jobs:
             tests/unit/test_engine_v2_validation_process_launch_identity.py \
             tests/unit/test_engine_v2_validation_production_evidence_custody.py \
             tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py \
+            tests/unit/test_engine_v2_validation_production_reservation_custody_extension.py \
+            tests/unit/test_engine_v2_validation_production_reservation_registry_proof.py \
+            tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py \
+            tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py \
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
             tests/unit/test_engine_v2_validation_source_identity.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
@@ -432,8 +440,16 @@ jobs:
               FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
@@ -473,6 +489,14 @@ jobs:
               validation_production_evidence_custody_decision,
               validation_production_review_authorization_custody_extension_contract_document,
               validation_production_review_authorization_custody_extension_decision,
+              validation_production_reservation_custody_extension_contract_document,
+              validation_production_reservation_custody_extension_decision,
+              validation_production_reservation_registry_proof_contract_document,
+              validation_production_reservation_registry_proof_decision,
+              validation_production_reservation_authenticated_head_receipt_contract_document,
+              validation_production_reservation_authenticated_head_receipt_decision,
+              validation_production_reservation_later_head_consistency_contract_document,
+              validation_production_reservation_later_head_consistency_decision,
               validation_runtime_integrity_contract_document,
               reviewed_parameter_source_provenance,
           )
@@ -534,6 +558,105 @@ jobs:
           assert custody_extension_decision["production_validation_execution_authorized"] is False
           assert custody_extension_decision["production_validation_results_collected"] is False
           assert custody_extension_decision["claim_safe"] is False
+          reservation_extension = (
+              validation_production_reservation_custody_extension_contract_document()
+          )
+          assert reservation_extension["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_reservation_custody_extension_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+          )
+          reservation_extension_decision = (
+              validation_production_reservation_custody_extension_decision()
+          )
+          assert reservation_extension_decision[
+              "actual_atomic_reservation_commit_present"
+          ] is False
+          assert reservation_extension_decision[
+              "external_serializable_registry_commit_verified"
+          ] is False
+          assert reservation_extension_decision["permit_one_use_slot_consumed"] is False
+          registry_proof_contract = (
+              validation_production_reservation_registry_proof_contract_document()
+          )
+          assert registry_proof_contract["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_reservation_registry_proof_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+          )
+          assert registry_proof_contract["purpose"]["verifier_only"] is True
+          registry_proof_decision = (
+              validation_production_reservation_registry_proof_decision()
+          )
+          assert registry_proof_decision["verifier_implemented"] is True
+          assert registry_proof_decision[
+              "external_registry_transaction_proof_present"
+          ] is False
+          assert registry_proof_decision[
+              "external_serializable_registry_commit_verified"
+          ] is False
+          assert registry_proof_decision["claim_safe"] is False
+          head_receipt_contract = (
+              validation_production_reservation_authenticated_head_receipt_contract_document()
+          )
+          assert head_receipt_contract["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_reservation_authenticated_head_receipt_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+          )
+          head_receipt_decision = (
+              validation_production_reservation_authenticated_head_receipt_decision()
+          )
+          assert head_receipt_decision["verifier_implemented"] is True
+          assert head_receipt_decision[
+              "external_authenticated_receipt_present"
+          ] is False
+          assert head_receipt_decision[
+              "authenticated_external_head_status_receipt_verified"
+          ] is False
+          assert head_receipt_decision["claim_safe"] is False
+          later_head_contract = (
+              validation_production_reservation_later_head_consistency_contract_document()
+          )
+          assert later_head_contract["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_reservation_later_head_consistency_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+          )
+          later_head_decision = (
+              validation_production_reservation_later_head_consistency_decision()
+          )
+          assert later_head_decision["verifier_implemented"] is True
+          assert later_head_decision["external_consistency_proof_present"] is False
+          assert later_head_decision["later_head_consistency_verified"] is False
+          assert later_head_decision[
+              "external_registry_non_equivocation_verified"
+          ] is False
+          assert later_head_decision["claim_safe"] is False
+          assert reservation_extension_decision[
+              "custody_successor_uniqueness_enforced"
+          ] is False
+          assert reservation_extension_decision["claim_safe"] is False
           assert custody["permit"]["one_use_enforced"] is False
           assert custody["custody_event"]["verified_stage_sequence"] == [
               "production_permit",

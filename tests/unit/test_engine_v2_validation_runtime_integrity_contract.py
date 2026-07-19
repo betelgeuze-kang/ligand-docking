@@ -13,11 +13,27 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
 from betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension import (
     FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
 )
+from betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_reservation_authenticated_head_receipt import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_reservation_later_head_consistency import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_reservation_registry_proof import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
+)
 from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
     FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+    VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+    VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
+    VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
+    VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION,
     ValidationRuntimeIntegrityContractError,
     require_validation_runtime_integrity_contract_document,
@@ -38,7 +54,7 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert (
         first["contract_version"]
         == VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION
-        == "5.0.0"
+        == "9.0.0"
     )
     assert (
         first["bound_contracts"]["production_evidence_custody_contract_sha256"]
@@ -59,6 +75,52 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert (
         decision["bound_review_authorization_custody_extension_contract_sha256"]
         == FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+    )
+    assert (
+        first["bound_contracts"][
+            "production_reservation_custody_extension_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+    )
+    assert (
+        decision["bound_reservation_custody_extension_contract_sha256"]
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+    )
+    assert (
+        first["bound_contracts"][
+            "production_reservation_registry_proof_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+    )
+    assert (
+        decision["bound_reservation_registry_proof_contract_sha256"]
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+    )
+    assert (
+        first["bound_contracts"][
+            "production_reservation_authenticated_head_receipt_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+    )
+    assert (
+        decision[
+            "bound_reservation_authenticated_head_receipt_contract_sha256"
+        ]
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+    )
+    assert (
+        first["bound_contracts"][
+            "production_reservation_later_head_consistency_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+    )
+    assert (
+        decision["bound_reservation_later_head_consistency_contract_sha256"]
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
     )
     assert (
         first["bound_contracts"]["process_launch_identity_contract_sha256"]
@@ -157,6 +219,78 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         ]
         is False
     )
+    assert (
+        first["implemented_enforcement"][
+            "production_reservation_custody_extension_implemented"
+        ]
+        is True
+    )
+    assert (
+        first["implemented_enforcement"][
+            "reservation_intent_and_commit_attestation_primitives_implemented"
+        ]
+        is True
+    )
+    assert (
+        first["implemented_enforcement"][
+            "external_same_epoch_registry_transaction_proof_verifier_implemented"
+        ]
+        is True
+    )
+    assert (
+        first["implemented_enforcement"][
+            "sparse_merkle_three_slot_transition_verification_implemented"
+        ]
+        is True
+    )
+    assert first["implemented_enforcement"][
+        "caller_expected_exact_registry_head_required"
+    ] is True
+    assert first["implemented_enforcement"][
+        "authenticated_external_head_status_receipt_verifier_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "exact_registry_head_status_tail_and_challenge_binding_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "post_receipt_current_status_descendant_reverification_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "receipt_reverification_inputs_snapshotted_before_use"
+    ] is True
+    assert first["implemented_enforcement"][
+        "same_epoch_later_head_consistency_proof_verifier_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "adjacent_registry_checkpoint_lineage_verification_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "original_consumed_slot_retention_verification_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "post_consistency_current_status_descendant_reverification_implemented"
+    ] is True
+    assert first["implemented_enforcement"][
+        "one_fork_consistency_does_not_prove_global_non_equivocation"
+    ] is True
+    assert first["implemented_enforcement"][
+        "authenticated_out_of_band_registry_head_receipt_verified"
+    ] is False
+    assert first["implemented_enforcement"][
+        "caller_challenge_freshness_verified"
+    ] is False
+    assert first["implemented_enforcement"][
+        "caller_challenge_one_use_verified"
+    ] is False
+    assert first["implemented_enforcement"][
+        "global_latest_registry_head_verified"
+    ] is False
+    assert first["implemented_enforcement"][
+        "global_latest_status_head_verified"
+    ] is False
+    assert first["implemented_enforcement"][
+        "later_head_consistency_verified"
+    ] is False
     assert "legacy_frozen_contract_version_migration_missing" not in first["blockers"]
     assert "durable_source_per_file_manifest_missing" not in first["blockers"]
     assert "bounded_streaming_preflight_traversal_missing" not in first["blockers"]
@@ -172,7 +306,45 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert (
         "custody_stages_after_status_snapshot_not_implemented" not in first["blockers"]
     )
-    assert "reservation_and_later_custody_stages_not_implemented" in first["blockers"]
+    assert (
+        "reservation_and_later_custody_stages_not_implemented"
+        not in first["blockers"]
+    )
+    assert "environment_and_later_custody_stages_not_implemented" in first["blockers"]
+    assert (
+        "external_serializable_reservation_registry_not_provisioned"
+        in first["blockers"]
+    )
+    assert "external_registry_transaction_proof_not_provisioned" in first["blockers"]
+    assert "external_registry_backend_key_not_provisioned" in first["blockers"]
+    assert "external_registry_head_observer_key_not_provisioned" in first["blockers"]
+    assert "out_of_band_current_registry_head_not_provisioned" in first["blockers"]
+    assert "authenticated_external_head_status_receipt_not_provisioned" in first[
+        "blockers"
+    ]
+    assert "trusted_external_head_receipt_authority_key_not_provisioned" in first[
+        "blockers"
+    ]
+    assert "post_receipt_current_status_descendant_not_provisioned" in first[
+        "blockers"
+    ]
+    assert (
+        "caller_challenge_freshness_and_one_use_not_independently_verified"
+        in first["blockers"]
+    )
+    assert "global_latest_registry_head_not_independently_verified" in first[
+        "blockers"
+    ]
+    assert "global_latest_status_head_not_independently_verified" in first[
+        "blockers"
+    ]
+    assert "later_head_consistency_proof_not_provisioned" in first["blockers"]
+    assert "post_consistency_current_status_descendant_not_provisioned" in first[
+        "blockers"
+    ]
+    assert "status_head_compare_and_set_not_independently_verified" in first["blockers"]
+    assert "production_reservation_intent_not_provisioned" in first["blockers"]
+    assert "production_atomic_reservation_commit_not_provisioned" in first["blockers"]
     assert (
         "production_review_authorization_carriers_not_provisioned" in first["blockers"]
     )
@@ -293,20 +465,86 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         "status_snapshot",
         "pre_execution_review",
         "authorization",
+        "atomic_reservation_commit_attestation",
     ]
-    assert first["external_custody"]["maximum_verified_custody_sequence"] == 4
+    assert first["external_custody"]["maximum_verified_custody_sequence"] == 5
     assert first["external_custody"]["production_permit_one_use_enforced"] is False
+    assert (
+        first["external_custody"][
+            "external_same_epoch_registry_transaction_proof_verifier_implemented"
+        ]
+        is True
+    )
+    assert (
+        first["external_custody"][
+            "sparse_merkle_permit_nonce_predecessor_transition_verification_implemented"
+        ]
+        is True
+    )
+    assert first["external_custody"][
+        "caller_expected_exact_current_registry_head_required"
+    ] is True
+    assert first["external_custody"][
+        "authenticated_external_head_status_receipt_verifier_implemented"
+    ] is True
+    assert first["external_custody"][
+        "exact_registry_head_status_tail_and_challenge_binding_implemented"
+    ] is True
+    assert first["external_custody"][
+        "post_receipt_current_status_descendant_reverification_implemented"
+    ] is True
+    assert first["external_custody"][
+        "authenticated_out_of_band_current_registry_head_receipt_verified"
+    ] is False
+    assert first["external_custody"][
+        "authenticated_external_head_status_receipt_provisioned"
+    ] is False
+    assert first["external_custody"][
+        "post_receipt_current_status_descendant_provisioned"
+    ] is False
+    assert first["external_custody"]["caller_challenge_freshness_verified"] is False
+    assert first["external_custody"]["caller_challenge_one_use_verified"] is False
+    assert first["external_custody"]["global_latest_registry_head_verified"] is False
+    assert first["external_custody"]["global_latest_status_head_verified"] is False
+    assert first["external_custody"]["later_head_consistency_verified"] is False
+    assert first["external_custody"][
+        "same_epoch_later_head_consistency_proof_verifier_implemented"
+    ] is True
+    assert first["external_custody"][
+        "later_head_consistency_proof_provisioned"
+    ] is False
+    assert first["external_custody"][
+        "post_consistency_current_status_descendant_provisioned"
+    ] is False
+    assert first["external_custody"]["external_registry_transaction_proof_provisioned"] is False
+    assert first["external_custody"]["out_of_band_current_registry_head_provisioned"] is False
     assert (
         first["external_custody"]["custody_stages_after_status_snapshot_implemented"]
         is True
     )
     assert (
         first["external_custody"]["custody_stages_after_authorization_implemented"]
+        is True
+    )
+    assert (
+        first["external_custody"][
+            "custody_stages_after_reservation_commit_implemented"
+        ]
         is False
     )
+    for field in (
+        "external_serializable_registry_commit_verified",
+        "status_head_compare_and_set_committed",
+        "permit_one_use_slot_consumed",
+        "authorization_nonce_slot_consumed",
+        "predecessor_successor_slot_consumed",
+        "custody_successor_uniqueness_enforced",
+        "external_registry_non_equivocation_verified",
+        "registry_epoch_transition_continuity_verified",
+    ):
+        assert first["external_custody"][field] is False
     assert first["external_custody"]["custody_successor_uniqueness_enforced"] is False
     assert first["signed_carrier_compatibility"]["planned_only_custody_stages"] == [
-        "reservation",
         "environment",
         "runner_start",
         "worker_transcript",
@@ -362,10 +600,71 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     )
     assert decision["process_launch_identity_authenticity_established"] is False
     assert decision["production_permit_one_use_enforced"] is False
-    assert decision["maximum_verified_custody_sequence"] == 4
+    assert decision["production_reservation_custody_extension_implemented"] is True
+    assert (
+        decision["reservation_intent_and_commit_attestation_primitives_implemented"]
+        is True
+    )
+    assert (
+        decision[
+            "external_same_epoch_registry_transaction_proof_verifier_implemented"
+        ]
+        is True
+    )
+    assert decision["sparse_merkle_three_slot_transition_verification_implemented"] is True
+    assert decision["caller_expected_exact_registry_head_required"] is True
+    assert decision[
+        "authenticated_external_head_status_receipt_verifier_implemented"
+    ] is True
+    assert decision[
+        "exact_registry_head_status_tail_and_challenge_binding_implemented"
+    ] is True
+    assert decision[
+        "post_receipt_current_status_descendant_reverification_implemented"
+    ] is True
+    assert decision["receipt_reverification_inputs_snapshotted_before_use"] is True
+    assert decision[
+        "same_epoch_later_head_consistency_proof_verifier_implemented"
+    ] is True
+    assert decision[
+        "adjacent_registry_checkpoint_lineage_verification_implemented"
+    ] is True
+    assert decision[
+        "original_consumed_slot_retention_verification_implemented"
+    ] is True
+    assert decision[
+        "post_consistency_current_status_descendant_reverification_implemented"
+    ] is True
+    assert decision[
+        "one_fork_consistency_does_not_prove_global_non_equivocation"
+    ] is True
+    assert decision["authenticated_out_of_band_registry_head_receipt_verified"] is False
+    assert decision["authenticated_external_head_status_receipt_provisioned"] is False
+    assert decision["post_receipt_current_status_descendant_provisioned"] is False
+    assert decision["later_head_consistency_proof_provisioned"] is False
+    assert decision[
+        "post_consistency_current_status_descendant_provisioned"
+    ] is False
+    assert decision["caller_challenge_freshness_verified"] is False
+    assert decision["caller_challenge_one_use_verified"] is False
+    assert decision["global_latest_registry_head_verified"] is False
+    assert decision["global_latest_status_head_verified"] is False
+    assert decision["later_head_consistency_verified"] is False
+    assert decision["maximum_verified_custody_sequence"] == 5
     assert decision["custody_stages_after_status_snapshot_implemented"] is True
-    assert decision["custody_stages_after_authorization_implemented"] is False
-    assert decision["custody_successor_uniqueness_enforced"] is False
+    assert decision["custody_stages_after_authorization_implemented"] is True
+    assert decision["custody_stages_after_reservation_commit_implemented"] is False
+    for field in (
+        "external_serializable_registry_commit_verified",
+        "status_head_compare_and_set_committed",
+        "permit_one_use_slot_consumed",
+        "authorization_nonce_slot_consumed",
+        "predecessor_successor_slot_consumed",
+        "custody_successor_uniqueness_enforced",
+        "external_registry_non_equivocation_verified",
+        "registry_epoch_transition_continuity_verified",
+    ):
+        assert decision[field] is False
     assert decision["final_production_carrier_family_implemented"] is False
     assert decision["production_custody_chain_provisioned"] is False
     assert decision["external_worker_launch_authenticity_implemented"] is False

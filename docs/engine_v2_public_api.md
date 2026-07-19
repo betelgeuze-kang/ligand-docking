@@ -71,6 +71,10 @@ betelgeuze_engine_v2.physics.validation_native_runtime_identity
 betelgeuze_engine_v2.physics.validation_process_launch_identity
 betelgeuze_engine_v2.physics.validation_production_evidence_custody
 betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension
+betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension
+betelgeuze_engine_v2.physics.validation_production_reservation_registry_proof
+betelgeuze_engine_v2.physics.validation_production_reservation_authenticated_head_receipt
+betelgeuze_engine_v2.physics.validation_production_reservation_later_head_consistency
 betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
 betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.runtime
@@ -220,6 +224,9 @@ eligible for future atomic nonce reservation and still reports
 The nonce-reservation symbols re-verify the raw signed review and authorization
 artifacts and durably consume a nonce in a caller-provisioned private local
 POSIX directory using exclusive creation and file/directory synchronization.
+Their exact-raw byte verifiers expose canonical record validation without a
+pathname read, while deliberately making no independent claim that exclusive
+creation or synchronization occurred.
 They provide no release/delete API and produce an execution-disabled,
 tamper-evident record only. No trusted key, receipt, reservation root, or
 production reservation is bundled. Filesystem locality and resistance to a
@@ -437,14 +444,88 @@ permit/status ancestry, causal time ordering, global role/key/material separatio
 and logical plus raw revocation/supersession state. The energy-force upstream
 review/authorization remains symmetric HMAC, the supplied process identity digest
 is not external process authenticity, and neither carriers, events, keys nor an
-append-only successor registry are provisioned. Reservation and every later stage
-remain unimplemented; the companion is not eligible for atomic execution
-reservation and cannot enforce successor uniqueness. Consequently these contracts
+append-only successor registry are provisioned. Consequently these contracts
 neither authorize execution nor record
 production results and every scientific, fitting, benchmark, product, and claim
-flag remains false. Runtime-integrity companion v5 binds the exact frozen SHA-256
-of custody-v1, this extension, and the process-launch-identity contract. Runtime
-v4 remains available only through the read-only legacy-contract registry.
+flag remains false.
+
+`validation_production_reservation_custody_extension` is the additive sequence-5
+companion. It re-verifies the complete exact raw sequence-1-through-4 prefix and
+the lane-local canonical reservation record, then binds a short-lived
+sequence-4-custodian-signed intent to realm-global permit, authorization-nonce,
+and predecessor slots plus exact registry/witness identities, keys, epoch, and
+prior checkpoint. A second artifact verifies registry and independent witness
+Ed25519 signatures over a claimed commit, continuing custody identity, and a
+strictly newer post-commit status descendant. These signatures verify an
+attestation only: they do not independently prove serializable compare-and-set,
+one-use slot consumption, append-only non-equivocation, epoch continuity, or a
+unique custody successor. Same-prior-head sibling attestations therefore remain
+possible and all corresponding actual-fact fields stay false. No registry,
+keys, intent, commit proof, production chain, execution, or result is bundled.
+
+`validation_production_reservation_registry_proof` adds a verifier-only external
+same-epoch transaction-proof boundary. It freshly re-verifies sequence 5 and
+uses one identical sibling path per step to verify a fixed-order chain of exactly
+three adjacent sparse-Merkle leaf updates for the permit, authorization nonce,
+and predecessor slots. It binds backend binary/schema/configuration/deployment
+identity, requires distinct backend and head-observer Ed25519 signatures, applies
+the supplied freshly reverified sequence-5 status-lineage tail denials, and
+requires the backend-native checkpoint to equal a caller-supplied expected
+sequence/checkpoint. A supplied proof verifies only that the backend attested a
+serializable committed outcome, that the exact three transaction-tagged leaf
+transitions are internally consistent, that the observer signed the native
+checkpoint, and that it matches the caller expectation. The verifier does not
+authenticate that expectation's provenance or prove that the supplied status
+tail is the global latest head. Separate sibling expectations can therefore
+validate different siblings. This does not prove actual external CAS, global
+one-use consumption, status-head CAS, realm-wide non-equivocation, epoch
+continuity, later-head consistency, or a unique custody successor. Those
+actual-fact fields, execution, and every scientific/product claim remain false;
+the package bundles no proof, keys, backend, or authenticated head receipt.
+
+`validation_production_reservation_authenticated_head_receipt` adds a second
+verifier-only boundary for an externally signed, challenge-bound exact registry
+head/status receipt. It snapshots both nested reverification inputs before use,
+freshly reproduces the same raw registry proof twice, binds the proof and
+sequence-5 logical/raw identities, realm/epoch/sequence/native checkpoint/state
+root, the receipt-time status tail, service identities, causal times, and caller
+challenge, and requires a separately reverified strict status descendant issued
+after the receipt. Revocation and supersession from that post-receipt tail apply
+to the exact signed receipt, authority key/material, proof, checkpoints, and
+service identities. This proves only the bounded authority signature, exact
+binding, and caller-supplied challenge equality. It does not establish challenge
+freshness/one-use, a globally latest head, CAS, global slot consumption,
+non-equivocation, later-head consistency, epoch continuity, or successor
+uniqueness. No receipt, authority key, caller challenge, or post-receipt status
+descendant is provisioned, so all actual and promotion fields remain false.
+
+`validation_production_reservation_later_head_consistency` adds a verifier-only
+same-epoch path from that freshly reverified receipt to one caller-pinned later
+registry head. Every adjacent checkpoint/state-root transition is signed by the
+existing external backend trust domain, the existing head observer signs the
+complete ordered path, and sparse-Merkle inclusion proofs require the original
+permit, authorization-nonce, and predecessor-successor consumed leaves to remain
+in the later state root. A strict status descendant issued after the proof
+applies revocation and supersession to the proof, transitions, keys, checkpoints,
+roots, and service identities. This proves consistency of the supplied fork
+only: independently pinned siblings can each verify, so global latest,
+realm-wide non-equivocation, epoch continuity, CAS, execution, and every
+scientific/product claim remain false. No proof, keys, or post-proof status is
+provisioned. `later_head_observed_at_utc` is the observer countersign-completion
+time. The DTO explicitly preserves
+`caller_challenge_freshness_verified=false` and
+`caller_challenge_one_use_verified=false`. Also,
+`original_consumed_slots_retained_verified=true` means only that the three
+transaction-tagged consumed-leaf encodings attested by the anchor proof are
+included in the selected later root; it does not independently establish actual
+global slot consumption or one-use enforcement.
+
+Runtime-integrity companion v9 binds the exact frozen SHA-256 of custody-v1,
+the review/authorization extension, the sequence-5 reservation companion, the
+external registry-proof verifier, the authenticated head/status receipt
+verifier, the same-epoch later-head consistency verifier, and the
+process-launch-identity contract. Runtime v8 is retained only in the read-only
+legacy-contract registry.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
@@ -472,7 +553,7 @@ The active energy-force base carrier chain uses v2 identities with a v4 runner
 and result writer. The active minimization base chain uses v3 identities with a
 v6 runner and v5 result writer/result review. Current hashes are frozen over the
 complete upstream contract DAG. The read-only legacy-contract verifier
-recognizes 31 superseded contract documents by canonical projection hash and
+recognizes 35 superseded contract documents by canonical projection hash and
 fixed identity metadata. It does not verify or claim compatibility with
 superseded signed attestations, receipts, run records, or observations.
 

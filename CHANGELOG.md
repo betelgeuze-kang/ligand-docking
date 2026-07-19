@@ -67,16 +67,67 @@ scientific claim from a package version.
   and four. No key, carrier/event, external chain, atomic permit consumption,
   successor uniqueness, execution authorization, or production result is
   provisioned.
+- An additive sequence-5 reservation-custody companion that re-verifies the
+  complete exact raw sequence-1-through-4 ancestry and lane-local reservation
+  record, binds a custodian-signed intent to realm-global uniqueness slots and
+  exact registry/witness authority material, and verifies dual signatures over
+  a claimed commit plus a strictly newer post-commit status snapshot. The
+  signatures are attestation evidence only: external serializable CAS, one-use
+  slot consumption, non-equivocation, epoch continuity, and unique successor
+  enforcement remain explicitly false. Exact-raw nonce-record verification is
+  also public for both lanes without claiming independent proof of local
+  exclusive-create or fsync history.
+- A verifier-only external same-epoch reservation-registry proof contract. It
+  freshly re-verifies sequence 5, validates 256-level sparse-Merkle
+  transaction-tagged leaf updates for the permit, authorization nonce, and
+  predecessor as one fixed-order adjacent-root chain, binds exact backend runtime
+  identities, verifies separate backend and head-observer Ed25519 signatures and
+  supplied freshly reverified status-lineage-tail denials, and requires the
+  native checkpoint to equal a caller-supplied expectation. This verifies scoped
+  backend-attestation, exact-transition, observer-signature, and caller-match
+  facts only; it does not authenticate that expectation or a globally latest
+  status head. Actual external CAS, global one-use consumption,
+  non-equivocation, epoch continuity, status-head CAS, successor uniqueness,
+  execution, and promotion remain false; no backend, proof, keys, or head is
+  bundled, and no authenticated head receipt is present.
+- A verifier-only authenticated external registry-head/status-tail receipt
+  contract. It snapshots both nested reverification inputs, reproduces the same
+  raw proof against the receipt-bound and strict post-receipt status lineages,
+  verifies a role-separated Ed25519 authority signature over exact
+  proof/sequence-5/head/status/service/time/challenge identities, and applies
+  the later tail's revocation and supersession rows to the receipt itself and
+  its trust/runtime dependencies. It verifies bounded authenticity, exact
+  binding, and caller challenge equality only. Challenge freshness/one-use,
+  global latest, CAS, global slot consumption, non-equivocation, later-head
+  consistency, epoch continuity, execution, and promotion stay false; no
+  receipt, authority key, challenge, or current-status descendant is bundled.
+- A verifier-only same-epoch later-head consistency contract. It freshly
+  re-verifies the authenticated anchor receipt, requires a bounded ordered path
+  of adjacent backend-signed checkpoint/state-root transitions, verifies the
+  existing independent head observer over the complete path, and reconstructs
+  sparse-Merkle inclusion of the original permit, authorization-nonce, and
+  predecessor-successor transaction-tagged consumed-leaf encodings in the
+  caller-pinned later root. Proof issue cannot predate the anchor receipt, the
+  signed later-head observation is observer countersign completion, and a status
+  descendant issued after the proof supplies revocation and supersession denial.
+  The DTO preserves false caller-challenge freshness/one-use and actual slot-
+  consumption fields. This is one supplied fork only: sibling pins can each verify, so
+  global latest, external non-equivocation, epoch continuity, CAS, execution,
+  and promotion remain false; no proof, keys, or post-proof status is bundled.
 
 ### Changed
 
 - The distribution version is `0.2.0rc2`, separating the runtime-byte-identity
   and Ed25519 trust boundary from the accumulated `0.2.0rc1` surface.
-- Runtime-integrity contract v5 now binds the exact frozen custody-v1,
-  review/authorization-extension, and process-launch-identity hashes while
-  keeping reservation, external process authenticity/custody, production
-  execution/results, and every scientific/product promotion flag false. The v4
-  runtime document is retained as a read-only legacy identity.
+- Runtime-integrity contract v9 now binds the exact frozen custody-v1,
+  review/authorization-extension, reservation-extension, external
+  registry-proof-verifier, authenticated head/status-receipt verifier, and
+  same-epoch later-head consistency verifier plus process-launch-identity hashes
+  while keeping
+  provisioned external registry CAS,
+  slot consumption, successor uniqueness, external process authenticity/custody,
+  production execution/results, and every scientific/product promotion flag
+  false. The v8 runtime document is retained as a read-only legacy identity.
 
 ### Scientific boundary
 

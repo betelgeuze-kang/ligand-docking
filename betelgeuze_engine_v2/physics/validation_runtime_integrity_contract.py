@@ -23,15 +23,27 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
 from betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension import (
     FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
 )
+from betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_reservation_authenticated_head_receipt import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_reservation_later_head_consistency import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_reservation_registry_proof import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
+)
 
 VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_validation_runtime_integrity_contract/5.0.0"
+    "betelgeuze.engine_v2_validation_runtime_integrity_contract/9.0.0"
 )
 VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID = (
-    "engine_v2_synthetic_validation_runtime_integrity/5.0.0"
+    "engine_v2_synthetic_validation_runtime_integrity/9.0.0"
 )
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "5.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-19T05:40:00Z"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "9.0.0"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-20T01:25:00Z"
 VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256 = (
     FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
 )
@@ -39,8 +51,12 @@ VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRA
 VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256 = (
     FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
 )
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
 FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256 = (
-    "a93386f2be7a68c65684d25a057c5291f9d0374e2fc3c984e53a98fc5e29e8c1"
+    "dcc7f0901a235b13afe8d71df3b806e2c2a623b8e1d362c04a8e4008665686e6"
 )
 
 _BLOCKERS = (
@@ -59,7 +75,26 @@ _BLOCKERS = (
     "production_review_authorization_carriers_not_provisioned",
     "production_review_authorization_custody_events_not_provisioned",
     "production_permit_one_use_consumption_not_enforced",
-    "reservation_and_later_custody_stages_not_implemented",
+    "environment_and_later_custody_stages_not_implemented",
+    "external_serializable_reservation_registry_not_provisioned",
+    "external_registry_transaction_proof_not_provisioned",
+    "external_registry_backend_key_not_provisioned",
+    "external_registry_head_observer_key_not_provisioned",
+    "out_of_band_current_registry_head_not_provisioned",
+    "authenticated_external_head_status_receipt_not_provisioned",
+    "trusted_external_head_receipt_authority_key_not_provisioned",
+    "caller_head_receipt_challenge_not_provisioned",
+    "post_receipt_current_status_descendant_not_provisioned",
+    "post_consistency_current_status_descendant_not_provisioned",
+    "caller_challenge_freshness_and_one_use_not_independently_verified",
+    "global_latest_registry_head_not_independently_verified",
+    "global_latest_status_head_not_independently_verified",
+    "later_head_consistency_proof_not_provisioned",
+    "status_head_compare_and_set_not_independently_verified",
+    "production_reservation_intent_not_provisioned",
+    "production_atomic_reservation_commit_not_provisioned",
+    "external_registry_non_equivocation_proof_not_provisioned",
+    "registry_epoch_transition_continuity_not_provisioned",
     "external_custody_successor_uniqueness_not_provisioned",
     "external_runtime_integrity_manifest_store_missing",
     "energy_force_independent_result_review_missing",
@@ -109,6 +144,18 @@ def _contract_projection() -> dict[str, Any]:
             "production_review_authorization_custody_extension_contract_sha256": (
                 VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
             ),
+            "production_reservation_custody_extension_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+            ),
+            "production_reservation_registry_proof_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
+            ),
+            "production_reservation_authenticated_head_receipt_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+            ),
+            "production_reservation_later_head_consistency_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+            ),
             "process_launch_identity_contract_sha256": (
                 VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
             ),
@@ -144,6 +191,29 @@ def _contract_projection() -> dict[str, Any]:
             "claim_closed_production_permit_status_four_event_custody_primitives_implemented": True,
             "production_pre_execution_review_and_authorization_carriers_implemented": True,
             "production_review_authorization_custody_extension_implemented": True,
+            "production_reservation_custody_extension_implemented": True,
+            "reservation_intent_and_commit_attestation_primitives_implemented": True,
+            "reservation_registry_and_witness_signature_verification_implemented": True,
+            "external_same_epoch_registry_transaction_proof_verifier_implemented": True,
+            "sparse_merkle_three_slot_transition_verification_implemented": True,
+            "caller_expected_exact_registry_head_required": True,
+            "authenticated_external_head_status_receipt_verifier_implemented": True,
+            "exact_registry_head_status_tail_and_challenge_binding_implemented": True,
+            "post_receipt_current_status_descendant_reverification_implemented": True,
+            "receipt_reverification_inputs_snapshotted_before_use": True,
+            "same_epoch_later_head_consistency_proof_verifier_implemented": True,
+            "adjacent_registry_checkpoint_lineage_verification_implemented": True,
+            "original_consumed_slot_retention_verification_implemented": True,
+            "post_consistency_current_status_descendant_reverification_implemented": True,
+            "one_fork_consistency_does_not_prove_global_non_equivocation": True,
+            "authenticated_out_of_band_registry_head_receipt_verified": False,
+            "caller_challenge_freshness_verified": False,
+            "caller_challenge_one_use_verified": False,
+            "supplied_status_lineage_tail_denials_enforced": True,
+            "global_latest_registry_head_verified": False,
+            "global_latest_status_head_verified": False,
+            "later_head_consistency_verified": False,
+            "selected_external_signing_keys_valid_at_check_required": True,
             "raw_base_and_review_authorization_prefix_internally_reverified": True,
             "frozen_ancestor_exact_json_scalar_type_preflight_implemented": True,
             "base_status_lineage_not_before_permit_enforced": True,
@@ -155,9 +225,17 @@ def _contract_projection() -> dict[str, Any]:
                 "status_snapshot",
                 "pre_execution_review",
                 "authorization",
+                "atomic_reservation_commit_attestation",
             ],
-            "maximum_verified_custody_sequence": 4,
+            "maximum_verified_custody_sequence": 5,
+            "external_serializable_registry_commit_verified": False,
+            "status_head_compare_and_set_committed": False,
+            "permit_one_use_slot_consumed": False,
+            "authorization_nonce_slot_consumed": False,
+            "predecessor_successor_slot_consumed": False,
             "custody_successor_uniqueness_enforced": False,
+            "external_registry_non_equivocation_verified": False,
+            "registry_epoch_transition_continuity_verified": False,
         },
         "bounded_preflight": {
             "bootstrap_source_and_dependency_cooperative_deadline_seconds": 180.0,
@@ -191,15 +269,20 @@ def _contract_projection() -> dict[str, Any]:
             "production_evidence_class_common_four_event_foundation_implemented": True,
             "production_review_authorization_carriers_implemented": True,
             "production_review_authorization_custody_extension_implemented": True,
+            "production_reservation_custody_extension_implemented": True,
+            "reservation_commit_artifact_is_attestation_only": True,
+            "external_same_epoch_registry_transaction_proof_verifier_implemented": True,
+            "authenticated_external_head_status_receipt_verifier_implemented": True,
+            "same_epoch_later_head_consistency_proof_verifier_implemented": True,
             "production_permit_one_use_enforced": False,
             "verified_custody_stage_sequence": [
                 "production_permit",
                 "status_snapshot",
                 "pre_execution_review",
                 "authorization",
+                "atomic_reservation_commit_attestation",
             ],
             "planned_only_custody_stages": [
-                "reservation",
                 "environment",
                 "runner_start",
                 "worker_transcript",
@@ -246,6 +329,26 @@ def _contract_projection() -> dict[str, Any]:
             "exact_raw_byte_dual_signed_four_event_custody_primitive_implemented": True,
             "production_pre_execution_review_and_authorization_carriers_implemented": True,
             "review_authorization_custody_extension_implemented": True,
+            "reservation_custody_extension_implemented": True,
+            "reservation_intent_and_commit_attestation_primitives_implemented": True,
+            "external_same_epoch_registry_transaction_proof_verifier_implemented": True,
+            "authenticated_external_head_status_receipt_verifier_implemented": True,
+            "same_epoch_later_head_consistency_proof_verifier_implemented": True,
+            "sparse_merkle_permit_nonce_predecessor_transition_verification_implemented": True,
+            "caller_expected_exact_current_registry_head_required": True,
+            "exact_registry_head_status_tail_and_challenge_binding_implemented": True,
+            "post_receipt_current_status_descendant_reverification_implemented": True,
+            "adjacent_registry_checkpoint_lineage_verification_implemented": True,
+            "original_consumed_slot_retention_verification_implemented": True,
+            "post_consistency_current_status_descendant_reverification_implemented": True,
+            "one_fork_consistency_does_not_prove_global_non_equivocation": True,
+            "authenticated_out_of_band_current_registry_head_receipt_verified": False,
+            "caller_challenge_freshness_verified": False,
+            "caller_challenge_one_use_verified": False,
+            "supplied_status_lineage_tail_denials_enforced": True,
+            "global_latest_registry_head_verified": False,
+            "global_latest_status_head_verified": False,
+            "later_head_consistency_verified": False,
             "frozen_ancestor_exact_json_scalar_type_preflight_implemented": True,
             "base_status_lineage_not_before_permit_enforced": True,
             "verified_custody_stage_sequence": [
@@ -253,16 +356,33 @@ def _contract_projection() -> dict[str, Any]:
                 "status_snapshot",
                 "pre_execution_review",
                 "authorization",
+                "atomic_reservation_commit_attestation",
             ],
-            "maximum_verified_custody_sequence": 4,
+            "maximum_verified_custody_sequence": 5,
             "production_permit_one_use_enforced": False,
             "custody_stages_after_status_snapshot_implemented": True,
-            "custody_stages_after_authorization_implemented": False,
+            "custody_stages_after_authorization_implemented": True,
+            "custody_stages_after_reservation_commit_implemented": False,
+            "external_serializable_registry_commit_verified": False,
+            "status_head_compare_and_set_committed": False,
+            "permit_one_use_slot_consumed": False,
+            "authorization_nonce_slot_consumed": False,
+            "predecessor_successor_slot_consumed": False,
             "custody_successor_uniqueness_enforced": False,
+            "external_registry_non_equivocation_verified": False,
+            "registry_epoch_transition_continuity_verified": False,
             "production_evidence_class_exact_value": "synthetic_validation_production",
             "actual_production_permit_provisioned": False,
             "external_status_log_provisioned": False,
             "production_custody_chain_provisioned": False,
+            "external_reservation_registry_provisioned": False,
+            "external_registry_transaction_proof_provisioned": False,
+            "out_of_band_current_registry_head_provisioned": False,
+            "authenticated_external_head_status_receipt_provisioned": False,
+            "post_receipt_current_status_descendant_provisioned": False,
+            "later_head_consistency_proof_provisioned": False,
+            "post_consistency_current_status_descendant_provisioned": False,
+            "actual_production_reservation_commit_present": False,
             "root_owned_source_snapshot_provisioned": False,
             "root_owned_dependency_runtime_provisioned": False,
             "external_runtime_integrity_manifest_store_provisioned": False,
@@ -321,6 +441,26 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
                 "production_review_authorization_custody_extension_contract_sha256"
             ]
         ),
+        "bound_reservation_custody_extension_contract_sha256": (
+            contract["bound_contracts"][
+                "production_reservation_custody_extension_contract_sha256"
+            ]
+        ),
+        "bound_reservation_registry_proof_contract_sha256": (
+            contract["bound_contracts"][
+                "production_reservation_registry_proof_contract_sha256"
+            ]
+        ),
+        "bound_reservation_authenticated_head_receipt_contract_sha256": (
+            contract["bound_contracts"][
+                "production_reservation_authenticated_head_receipt_contract_sha256"
+            ]
+        ),
+        "bound_reservation_later_head_consistency_contract_sha256": (
+            contract["bound_contracts"][
+                "production_reservation_later_head_consistency_contract_sha256"
+            ]
+        ),
         "bound_process_launch_identity_contract_sha256": contract["bound_contracts"][
             "process_launch_identity_contract_sha256"
         ],
@@ -346,15 +486,48 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
         "claim_closed_production_evidence_four_event_custody_foundation_implemented": True,
         "production_review_authorization_carriers_implemented": True,
         "production_review_authorization_custody_extension_implemented": True,
+        "production_reservation_custody_extension_implemented": True,
+        "reservation_intent_and_commit_attestation_primitives_implemented": True,
+        "external_same_epoch_registry_transaction_proof_verifier_implemented": True,
+        "sparse_merkle_three_slot_transition_verification_implemented": True,
+        "caller_expected_exact_registry_head_required": True,
+        "authenticated_external_head_status_receipt_verifier_implemented": True,
+        "exact_registry_head_status_tail_and_challenge_binding_implemented": True,
+        "post_receipt_current_status_descendant_reverification_implemented": True,
+        "receipt_reverification_inputs_snapshotted_before_use": True,
+        "same_epoch_later_head_consistency_proof_verifier_implemented": True,
+        "adjacent_registry_checkpoint_lineage_verification_implemented": True,
+        "original_consumed_slot_retention_verification_implemented": True,
+        "post_consistency_current_status_descendant_reverification_implemented": True,
+        "one_fork_consistency_does_not_prove_global_non_equivocation": True,
+        "authenticated_out_of_band_registry_head_receipt_verified": False,
+        "authenticated_external_head_status_receipt_provisioned": False,
+        "post_receipt_current_status_descendant_provisioned": False,
+        "later_head_consistency_proof_provisioned": False,
+        "post_consistency_current_status_descendant_provisioned": False,
+        "caller_challenge_freshness_verified": False,
+        "caller_challenge_one_use_verified": False,
+        "supplied_status_lineage_tail_denials_enforced": True,
+        "global_latest_registry_head_verified": False,
+        "global_latest_status_head_verified": False,
+        "later_head_consistency_verified": False,
         "frozen_ancestor_exact_json_scalar_type_preflight_implemented": True,
         "base_status_lineage_not_before_permit_enforced": True,
         "process_launch_identity_digest_bound_by_review_authorization_carriers": True,
         "process_launch_identity_authenticity_established": False,
         "production_permit_one_use_enforced": False,
-        "maximum_verified_custody_sequence": 4,
+        "maximum_verified_custody_sequence": 5,
         "custody_stages_after_status_snapshot_implemented": True,
-        "custody_stages_after_authorization_implemented": False,
+        "custody_stages_after_authorization_implemented": True,
+        "custody_stages_after_reservation_commit_implemented": False,
+        "external_serializable_registry_commit_verified": False,
+        "status_head_compare_and_set_committed": False,
+        "permit_one_use_slot_consumed": False,
+        "authorization_nonce_slot_consumed": False,
+        "predecessor_successor_slot_consumed": False,
         "custody_successor_uniqueness_enforced": False,
+        "external_registry_non_equivocation_verified": False,
+        "registry_epoch_transition_continuity_verified": False,
         "final_production_carrier_family_implemented": False,
         "production_custody_chain_provisioned": False,
         "energy_force_ed25519_post_result_review_contract_implemented": True,
@@ -377,6 +550,10 @@ __all__ = [
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256",
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256",
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256",
     "ValidationRuntimeIntegrityContractError",
     "require_validation_runtime_integrity_contract_document",
     "validation_runtime_integrity_contract_document",

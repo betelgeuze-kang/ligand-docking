@@ -29,6 +29,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_nonce_reserv
     reference_minimization_validation_nonce_reservation_contract_document,
     require_reference_minimization_validation_nonce_reservation_contract_document,
     reserve_reference_minimization_validation_authorization_nonce,
+    verify_reference_minimization_validation_nonce_reservation_record,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_review import (
     MinimizationScientificReviewerTrustAnchor,
@@ -364,6 +365,110 @@ def test_reader_rejects_symlink_and_noncanonical_record(tmp_path: Path) -> None:
     ):
         read_reference_minimization_validation_nonce_reservation(
             root, authorization_nonce_sha256=AUTH_NONCE
+        )
+
+
+def test_reader_rejects_fifo_without_blocking(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    path = root / f"{AUTH_NONCE}.json"
+    try:
+        os.mkfifo(path, mode=0o600)
+    except (AttributeError, OSError):
+        pytest.skip("POSIX FIFO creation unavailable")
+    with pytest.raises(
+        ReferenceMinimizationValidationNonceReservationError,
+        match="single-link regular file",
+    ):
+        read_reference_minimization_validation_nonce_reservation(
+            root,
+            authorization_nonce_sha256=AUTH_NONCE,
+        )
+
+
+def test_exact_raw_record_verifier_rejects_nonbytes_and_bool_integer_alias(
+    tmp_path: Path,
+) -> None:
+    root = _root(tmp_path)
+    expected = _reserve(root)
+    raw = (root / f"{AUTH_NONCE}.json").read_bytes()
+    assert (
+        verify_reference_minimization_validation_nonce_reservation_record(
+            raw,
+            expected_authorization_nonce_sha256=AUTH_NONCE,
+        )
+        == expected
+    )
+    with pytest.raises(
+        ReferenceMinimizationValidationNonceReservationError,
+        match="must be bytes",
+    ):
+        verify_reference_minimization_validation_nonce_reservation_record(  # type: ignore[arg-type]
+            raw.decode("ascii"),
+            expected_authorization_nonce_sha256=AUTH_NONCE,
+        )
+    payload = json.loads(raw)
+    payload["reservation_persisted"] = 1
+    aliased = (
+        json.dumps(
+            payload,
+            ensure_ascii=True,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("ascii")
+        + b"\n"
+    )
+    with pytest.raises(
+        ReferenceMinimizationValidationNonceReservationError,
+        match="fixed fields drifted",
+    ):
+        verify_reference_minimization_validation_nonce_reservation_record(
+            aliased,
+            expected_authorization_nonce_sha256=AUTH_NONCE,
+        )
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b'{"value":' + b"1" * 5_000 + b"}\n",
+        b'{"value":' + b"[" * 1_100 + b"0" + b"]" * 1_100 + b"}\n",
+    ],
+)
+def test_exact_raw_record_verifier_wraps_json_decoder_limits(raw: bytes) -> None:
+    with pytest.raises(
+        ReferenceMinimizationValidationNonceReservationError,
+        match="must be canonical ASCII JSON",
+    ):
+        verify_reference_minimization_validation_nonce_reservation_record(
+            raw,
+            expected_authorization_nonce_sha256=AUTH_NONCE,
+        )
+
+
+def test_contract_rejects_bool_integer_alias() -> None:
+    document = reference_minimization_validation_nonce_reservation_contract_document()
+    document["claim_policy"]["claim_safe"] = 0
+    with pytest.raises(
+        ReferenceMinimizationValidationNonceReservationError,
+        match="does not match",
+    ):
+        require_reference_minimization_validation_nonce_reservation_contract_document(
+            document
+        )
+
+    deeply_nested: dict[str, object] = {}
+    cursor = deeply_nested
+    for _ in range(1_200):
+        child: dict[str, object] = {}
+        cursor["next"] = child
+        cursor = child
+    with pytest.raises(
+        ReferenceMinimizationValidationNonceReservationError,
+        match="not canonical JSON",
+    ):
+        require_reference_minimization_validation_nonce_reservation_contract_document(
+            deeply_nested
         )
 
 

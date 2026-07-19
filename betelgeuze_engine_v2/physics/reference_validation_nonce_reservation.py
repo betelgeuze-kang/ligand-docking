@@ -108,7 +108,7 @@ def _canonical_bytes(value: object) -> bytes:
             sort_keys=True,
             separators=(",", ":"),
         ).encode("ascii")
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, RecursionError) as exc:
         raise ReferenceValidationNonceReservationError(
             "nonce reservation artifact is not canonical JSON"
         ) from exc
@@ -348,7 +348,7 @@ def require_reference_validation_nonce_reservation_contract_document(
             "nonce reservation contract document is invalid"
         ) from exc
     expected = reference_validation_nonce_reservation_contract_document()
-    if observed != expected:
+    if _canonical_bytes(observed) != _canonical_bytes(expected):
         raise ReferenceValidationNonceReservationError(
             "nonce reservation contract document does not match the frozen record"
         )
@@ -628,6 +628,20 @@ def _validate_reservation_file_stat(file_stat: os.stat_result) -> None:
         )
 
 
+def _stable_reservation_file_identity(file_stat: os.stat_result) -> tuple[int, ...]:
+    return (
+        file_stat.st_dev,
+        file_stat.st_ino,
+        file_stat.st_mode,
+        file_stat.st_uid,
+        file_stat.st_gid,
+        file_stat.st_nlink,
+        file_stat.st_size,
+        file_stat.st_mtime_ns,
+        file_stat.st_ctime_ns,
+    )
+
+
 def _write_all(descriptor: int, payload: bytes) -> None:
     remaining = memoryview(payload)
     while remaining:
@@ -761,7 +775,9 @@ def _load_reservation_record(raw: bytes) -> dict[str, Any]:
             raw.decode("ascii"),
             object_pairs_hook=reject_duplicate_keys,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except ReferenceValidationNonceReservationError:
+        raise
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
         raise ReferenceValidationNonceReservationError(
             "nonce reservation record must be canonical ASCII JSON"
         ) from exc
@@ -840,7 +856,10 @@ def _reservation_from_record(
         "claim_safe": False,
         "blockers": list(_POST_RESERVATION_BLOCKERS),
     }
-    if any(payload.get(key) != value for key, value in fixed_expectations.items()):
+    if any(
+        _canonical_bytes(payload.get(key)) != _canonical_bytes(value)
+        for key, value in fixed_expectations.items()
+    ):
         raise ReferenceValidationNonceReservationError(
             "nonce reservation record fixed fields drifted"
         )
@@ -899,6 +918,27 @@ def _reservation_from_record(
     )
 
 
+def verify_reference_validation_nonce_reservation_record(
+    source: bytes,
+    *,
+    expected_authorization_nonce_sha256: str,
+) -> ReferenceValidationNonceReservation:
+    """Verify exact canonical raw reservation bytes without reading a path."""
+
+    if type(source) is not bytes:
+        raise ReferenceValidationNonceReservationError(
+            "raw nonce reservation record must be bytes"
+        )
+    nonce = _require_sha256(
+        expected_authorization_nonce_sha256,
+        name="expected authorization nonce",
+    )
+    return _reservation_from_record(
+        _load_reservation_record(source),
+        expected_nonce_sha256=nonce,
+    )
+
+
 def read_reference_validation_nonce_reservation(
     reservation_root: str | os.PathLike[str],
     authorization_nonce_sha256: str,
@@ -943,13 +983,19 @@ def read_reference_validation_nonce_reservation(
                     raise ReferenceValidationNonceReservationError(
                         "nonce reservation record exceeds the size limit"
                     )
+            if _stable_reservation_file_identity(os.fstat(descriptor)) != (
+                _stable_reservation_file_identity(file_stat)
+            ):
+                raise ReferenceValidationNonceReservationError(
+                    "nonce reservation record changed while it was read"
+                )
         finally:
             os.close(descriptor)
     finally:
         os.close(root_fd)
-    return _reservation_from_record(
-        _load_reservation_record(b"".join(chunks)),
-        expected_nonce_sha256=nonce,
+    return verify_reference_validation_nonce_reservation_record(
+        b"".join(chunks),
+        expected_authorization_nonce_sha256=nonce,
     )
 
 
@@ -988,4 +1034,5 @@ __all__ = [
     "reference_validation_nonce_reservation_contract_document",
     "require_reference_validation_nonce_reservation_contract_document",
     "reserve_reference_validation_authorization_nonce",
+    "verify_reference_validation_nonce_reservation_record",
 ]

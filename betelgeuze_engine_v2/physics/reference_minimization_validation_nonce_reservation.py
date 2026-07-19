@@ -107,7 +107,7 @@ def _canonical_bytes(value: object) -> bytes:
             sort_keys=True,
             separators=(",", ":"),
         ).encode("ascii")
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, RecursionError) as exc:
         raise ReferenceMinimizationValidationNonceReservationError(
             "minimization nonce reservation artifact is not canonical JSON"
         ) from exc
@@ -320,7 +320,7 @@ def require_reference_minimization_validation_nonce_reservation_contract_documen
         )
     observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     expected = reference_minimization_validation_nonce_reservation_contract_document()
-    if observed != expected:
+    if _canonical_bytes(observed) != _canonical_bytes(expected):
         raise ReferenceMinimizationValidationNonceReservationError(
             "nonce reservation contract does not match the frozen record"
         )
@@ -707,7 +707,9 @@ def _load_record(raw: bytes) -> dict[str, Any]:
         loaded = json.loads(
             raw.decode("ascii"), object_pairs_hook=reject_duplicate_keys
         )
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except ReferenceMinimizationValidationNonceReservationError:
+        raise
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
         raise ReferenceMinimizationValidationNonceReservationError(
             "nonce reservation record must be canonical ASCII JSON"
         ) from exc
@@ -772,7 +774,10 @@ def _reservation_from_record(
         "claim_safe": False,
         "blockers": list(_POST_RESERVATION_BLOCKERS),
     }
-    if any(payload.get(key) != value for key, value in fixed.items()):
+    if any(
+        _canonical_bytes(payload.get(key)) != _canonical_bytes(value)
+        for key, value in fixed.items()
+    ):
         raise ReferenceMinimizationValidationNonceReservationError(
             "nonce reservation record fixed fields drifted"
         )
@@ -835,6 +840,27 @@ def _reservation_from_record(
     )
 
 
+def verify_reference_minimization_validation_nonce_reservation_record(
+    source: bytes,
+    *,
+    expected_authorization_nonce_sha256: str,
+) -> ReferenceMinimizationValidationNonceReservation:
+    """Verify exact canonical raw reservation bytes without reading a path."""
+
+    if type(source) is not bytes:
+        raise ReferenceMinimizationValidationNonceReservationError(
+            "raw nonce reservation record must be bytes"
+        )
+    nonce = _require_sha256(
+        expected_authorization_nonce_sha256,
+        name="expected authorization nonce",
+    )
+    return _reservation_from_record(
+        _load_record(source),
+        expected_nonce_sha256=nonce,
+    )
+
+
 def read_reference_minimization_validation_nonce_reservation(
     reservation_root: str | os.PathLike[str], *, authorization_nonce_sha256: str
 ) -> ReferenceMinimizationValidationNonceReservation:
@@ -843,7 +869,7 @@ def read_reference_minimization_validation_nonce_reservation(
     nonce = _require_sha256(authorization_nonce_sha256, name="authorization nonce")
     root_fd = _open_secure_root(reservation_root)
     filename = f"{nonce}.json"
-    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | getattr(os, "O_NONBLOCK", 0)
     try:
         try:
             descriptor = os.open(filename, flags, dir_fd=root_fd)
@@ -878,7 +904,10 @@ def read_reference_minimization_validation_nonce_reservation(
             os.close(descriptor)
     finally:
         os.close(root_fd)
-    return _reservation_from_record(_load_record(raw), expected_nonce_sha256=nonce)
+    return verify_reference_minimization_validation_nonce_reservation_record(
+        raw,
+        expected_authorization_nonce_sha256=nonce,
+    )
 
 
 def reference_minimization_validation_nonce_reservation_contract_decision() -> dict[
@@ -915,4 +944,5 @@ __all__ = [
     "reference_minimization_validation_nonce_reservation_contract_document",
     "require_reference_minimization_validation_nonce_reservation_contract_document",
     "reserve_reference_minimization_validation_authorization_nonce",
+    "verify_reference_minimization_validation_nonce_reservation_record",
 ]

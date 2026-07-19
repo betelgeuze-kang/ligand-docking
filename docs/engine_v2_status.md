@@ -281,7 +281,7 @@ The current `main` branch contains:
   with a v4 runner/result writer; the active minimization base chain uses v3
   identities with a v6 runner and v5 result writer/result review. Their hashes were
   refrozen through the full upstream dependency DAG. A separate read-only
-  verifier recognizes 31 superseded contract documents by canonical projection
+  verifier recognizes 35 superseded contract documents by canonical projection
   hash. Superseded signed attestations, receipts, and run records are not
   supported and no compatibility claim is made for them.
   The energy-force lane now has a frozen Ed25519 result-review leaf with full
@@ -308,12 +308,59 @@ The current `main` branch contains:
   sequence-3 review and sequence-4 authorization carriers/events with causal-time,
   exact scalar-type, role/key/material-separation, and raw/logical revocation checks.
   These artifacts and keys are not provisioned; the energy-force upstream chain
-  remains symmetric HMAC; the process digest is bound but not externally
-  authenticated; reservation and later stages remain unimplemented. Without an external append-only
-  successor registry, valid sibling sequence-2 events are not mutually exclusive;
-  all promotion flags remain false. Runtime-integrity companion v5 binds the exact
-  frozen custody-v1, review/authorization extension, and process-launch-identity
-  contract SHA-256 values; runtime v4 is retained in the read-only legacy registry.
+  remains symmetric HMAC and the process digest is bound but not externally
+  authenticated. A sequence-5 companion now re-verifies the complete exact raw
+  sequence-1-through-4 prefix and lane-local reservation record, binds a
+  custodian-signed intent to exact registry/witness authority material and
+  realm-global uniqueness slots, and verifies registry plus witness signatures
+  over a claimed commit only after a strictly newer post-commit status snapshot.
+  The artifact is an attestation, not independent proof of external serializable
+  compare-and-set, slot consumption, non-equivocation, epoch continuity, or one
+  unique successor; same-prior-head sibling attestations remain possible and all
+  actual CAS/one-use/uniqueness fields stay false. No registry, key, intent,
+  commit proof, or production chain is provisioned, and environment/later stages
+  remain unimplemented. A verifier-only external same-epoch registry-proof
+  companion now freshly re-verifies sequence 5, checks a fixed-order chain of
+  exactly three adjacent transaction-tagged sparse-Merkle leaf transitions,
+  verifies separated backend/head-observer signatures and the supplied freshly
+  reverified status-lineage-tail denials, and requires the backend-native
+  checkpoint to equal a caller-supplied expected sequence/checkpoint. A supplied
+  proof verifies the backend's serializable/committed attestation, the exact
+  three-leaf transition, the observer-signed checkpoint, and equality with that
+  caller expectation only. It does not authenticate the expectation's
+  provenance or prove that the supplied status tail is globally latest, and does not
+  prove actual external CAS, global one-use consumption, status-head CAS,
+  realm-wide non-equivocation, epoch continuity, later-head consistency, or a
+  unique successor; all actual and promotion fields remain false. No proof,
+  keys, or backend is bundled. A separate verifier-only authenticated
+  head/status-receipt companion now snapshots both nested inputs, reproduces the
+  same raw proof twice, verifies a role-separated external Ed25519 receipt over
+  the exact proof/sequence-5/head/status/service/time/challenge projection, and
+  requires a separately reverified strict status descendant issued after the
+  receipt. Its current tail can revoke or supersede the exact receipt, authority,
+  proof, checkpoint, or service identity. This establishes only the bounded
+  receipt signature, exact binding, and caller challenge equality; challenge
+  freshness/one-use, a globally latest head, CAS, global slot consumption,
+  non-equivocation, later-head consistency, epoch continuity, and successor
+  uniqueness remain false. No receipt, receipt-authority key, caller challenge,
+  or post-receipt status descendant is provisioned. A verifier-only same-epoch
+  later-head companion now freshly re-verifies that receipt, verifies a strict
+  adjacent backend-signed checkpoint/state-root path and an observer signature
+  over the full path, and proves that the original three consumed reservation
+  leaves remain included in the caller-pinned later state root. A status tail
+  issued after the consistency proof supplies its denial fence, and the signed
+  later-head observation time means observer countersign completion. The slot
+  fact is selected-root inclusion of the anchor-attested consumed-leaf encodings,
+  not independent proof of actual global consumption. The DTO preserves false
+  challenge-freshness and challenge-one-use fields. This establishes only one
+  supplied fork's later-head consistency; sibling pins can each pass, so global
+  latest, non-equivocation, epoch continuity, CAS, and promotion remain false.
+  No consistency proof or post-proof status is provisioned.
+  Runtime-integrity companion v9 binds the exact frozen custody-v1,
+  review/authorization, reservation, external registry-proof, authenticated
+  head/status receipt, later-head consistency, and process-launch-identity
+  contract SHA-256 values; runtime v8 is retained in the read-only legacy
+  registry.
   The separate process-launch measurement primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
@@ -413,9 +460,15 @@ The current `main` branch contains:
   closure and kernel vDSO identity remain absent. The process launch tuple
   primitive exists, but worker binding, same-tick collision resistance, and
   external launch custody are absent. The common evidence-class/permit/status
-  base primitive plus the additive sequence-3 review/sequence-4 authorization
-  companion exist, but those artifacts are not provisioned and reservation/later carriers,
-  atomic permit consumption, and a provisioned chain,
+  base primitive plus additive sequence-3 review/sequence-4 authorization and
+  sequence-5 reservation-commit-attestation companions exist. The external
+  same-epoch registry transaction-proof, authenticated head/status receipt, and
+  same-epoch later-head consistency verifiers also exist, but no proof, backend
+  key, head-observer key, receipt-authority key, challenge, receipt, later-head
+  proof, post-consistency status descendant, or out-of-band current head is
+  provisioned.
+  Environment/later carriers, an external serializable registry, atomic permit
+  consumption, non-equivocation/epoch continuity, and a provisioned chain,
   independent result-review
   dependency-manifest re-verification, and an end-to-end asymmetric upstream
   review/authorization chain remain absent. The energy-force Ed25519

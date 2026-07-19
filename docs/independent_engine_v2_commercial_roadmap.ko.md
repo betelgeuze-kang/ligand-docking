@@ -37,10 +37,18 @@ production-only Ed25519 review·authorization carrier와 seq3·seq4 custody even
 검증한다. Linux PID/parent/start-tick/boot/PID-namespace 측정 digest도 결속한다. 다만 실제
 key·carrier/event·permit·external log·one-use registry·enrolled host·custody chain은 없고 permit
 검증도 bounded 외부 소비 목록을 조회할 뿐 one-use를 원자적으로 강제하지 않는다.
-Reservation 이후 custody stage는 planned-only이며, process
-tuple의 외부 authenticity와 worker carrier 결속은 아직 없고 같은 clock tick의 PID 재사용을 배제하지
-못한다. 외부 append-only successor registry가 없어 동일 seq1에서 갈라진 유효 seq2
-event 둘을 상호 배타적으로 만들지도 못한다.
+Seq5 reservation companion은 seq1~4 전체 raw prefix와 lane-local canonical nonce
+record를 재검증하고, custodian-signed intent에 realm-global permit·authorization-nonce·
+predecessor slot 및 registry/witness identity·key·epoch·prior checkpoint를 결속한다.
+이어지는 commit artifact는 registry와 witness 서명 및 commit 이후의 더 최신 status
+descendant를 검증한다. 그러나 이는 외부 commit에 대한 attestation일 뿐 실제 serializable
+CAS, one-use slot 소비, non-equivocation, epoch continuity, 유일 successor를 독립적으로
+증명하지 않는다. 같은 prior head에서 갈라진 sibling attestation도 각각 검증될 수 있으므로
+모든 실제 CAS·소비·유일성 필드는 false다. 실제 registry·key·intent·commit proof는
+provision되지 않았고 environment 이후 custody stage는 planned-only다. Process tuple의
+외부 authenticity와 worker carrier 결속도 아직 없고 같은 clock tick의 PID 재사용을
+배제하지 못한다. 외부 append-only successor registry가 없어 기존 seq2 sibling event도
+상호 배타적으로 만들지 못한다.
 V2-1 all-atom preparation,
 V2-2 과학 힘장, V2-3 도킹,
 V2-4 MD, V2-5 production AI, V2-6 ROCm/HIP, V2-7 상용 제품은 완료되지 않았다.
@@ -184,13 +192,13 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_cpu_fixed_born_polar_solvation` | Still DOI `10.1021/ja00172a038`의 `sqrt(r² + alpha_i alpha_j exp(-r²/(4 alpha_i alpha_j)))` pair function을 고정하고, exact topology·v2 charge-parameter fingerprint·caller radius-source SHA-256에 결속된 전 원자 fixed effective Born radius로 non-periodic single-model CPU float64 polar dielectric-transfer self/pair energy와 autograd force를 계산하며 v2 energy/force 결합 evaluator와 solvation fingerprint를 결속한 optional constrained minimization·exact checkpoint/restart를 제공; 512 atom·130816 pair hard bound와 minimum-distance admission 적용 | effective Born radius geometry 추정·reviewed radius/charge parameter와 applicability, nonpolar solvation, salt·explicit ion, PBC solvent, MD 통합, independent solvation·solvated-minimization reference/validation, 과학·benchmark·product/customer 승격 |
 | `v2_cpu_reference_minimization_validation_protocol` | unsolvated v1·constrained v2·fixed-Born constrained v2·checkpoint/restart·identity/applicability failure의 ordered 14-case, CPU float64 사전 10개 metric, all-case failure denominator, exact minimizer/evaluator source SHA-256와 independent-reference import 분리 요구사항을 결과 전에 고정한 execution-disabled protocol; 별도 exact materializer와 source-bound 표준 라이브러리 독립 reference를 구현하고, HMAC-SHA256 independent-review attestation·CPU-only network-disabled execution-environment/failure-inclusive result-receipt·single-run authorization 계약을 고정함; 별도 local POSIX atomic reservation primitive가 raw signed review/authorization을 재검증하고 caller-provisioned mode-0700 root에 `O_EXCL`·`O_NOFOLLOW`·mode-0600 canonical record·file/directory `fsync`로 one-time nonce를 소비하며, 별도 run-start primitive가 raw chain과 durable nonce·실제 CPU-only deterministic process·network namespace를 다시 검증하고 최대 5분 operator-signed network-isolation attestation을 확인한 뒤 separate private root에 canonical mode-0600 secret-free environment receipt 하나를 원자적으로 기록함; 두 stdlib-only bootstrap은 signed raw Git commit/tree object를 Git SHA-1 framing으로 자체 재검증하고 전체 tracked `betelgeuze_engine_v2` file의 mode·blob OID·SHA-256·size를 root-owned read-only live tree와 비교한 canonical source manifest를 6-tuple state로 전달함; run-start는 이를 `<nonce>.source-tree.json`으로 mode-0600·`O_EXCL`·`O_NOFOLLOW`·fsync 보존하고 runner/writer는 persisted/live exact equality와 environment→start→observation→result digest chain을 확인함; bounded runner는 선택된 6개 aggregate dependency identity·manifest를 함께 재검증하고 bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline 아래 nonce별 start marker를 소비한 뒤 ordered 14-case를 실행해 성공·실패, 독립 오라클 비교, checkpoint exactness와 complete ordered coordinate trace를 writer receipt에 결속함; exact canonical-input entrypoint는 package import 전에 signed nonce·author·source·dependency를 결속하고 고정 외부 root-owned mode-0600 trust store에서만 reviewer/operator key를 재로딩하며 고정 supervised evaluator subprocess를 검증한 뒤 같은 verified process에서 result receipt를 finalize함; 별도 Ed25519 result-review 계약은 full writer-schema validation 뒤 raw signed pre-execution chain, source-manifest digest, exact receipt, 14개 case, retained/missing metric, runtime/oracle/result hash, status/error, exact count, finite energy ledger, complete coordinate trace와 모든 disposition을 role-separated caller public key signature에 결속하되 어떤 claim도 승격하지 않음; release/delete API는 없고 실제 key/trust store/attestation/authorization receipt/production root/reservation/environment receipt/start/result/result-review approval은 bundle하지 않음 | externally provisioned root-owned/read-only source/dependency runtime, kernel-backed source/Git-metadata immutability·custody, pre-bootstrap stdlib closure, mapped native-DSO lifetime closure·worker pre/post-state, lane별 status 이후 carrier propagation·provisioned external custody, 실제 independent scientific review와 attestation/trusted key, signed authorization receipt·trusted operator key·production nonce reservation/root와 environment receipt, production result receipt·independent result-review approval, trajectory-level comparison, 두 CPU host 재현, external implementation comparison, reviewed parameter/applicability, validation 실행·결과·human review·parameter fitting·과학/제품 승격 |
 | `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·ordered 27 case·59 deterministic CPU float64 variant·19 metric·failure-inclusive denominator, exact materializer/evaluator/oracle, signed pre-execution review와 single-run authorization, CPU environment/result receipt, atomic nonce/run-start, full source/dependency manifest, request/PID/transcript-bound supervised worker, failure-inclusive result writer를 고정함; 별도 Ed25519 result-review leaf는 exact receipt와 retained raw energy/force array에서 56개 required metric occurrence를 독립 재계산한 bitwise-equal 값, 모든 case/variant/metric/failure/worker disposition, 성공 input/component/total/force evidence, four-role separation을 결속하고 모든 claim flag를 false로 유지함 | 실제 independent scientific/result review와 production result-review attestation/trusted key, upstream symmetric-HMAC review/authorization의 asymmetric 전환, independent dependency-manifest 재검증, lane별 status 이후 carrier propagation·provisioned external custody, externally provisioned root-owned source/dependency runtime, signed native-DSO lifetime closure, 실제 nonce/environment/start/result receipt, external receipt authenticity, 실제 27/59 production run·두 CPU host·external comparison·human approval, reviewed runtime parameter/applicability, energy/force/minimization validation, parameter fitting·제품 승격 |
-| `v2_synthetic_validation_production_evidence_custody_foundation` | 두 synthetic lane의 exact production evidence class, 24시간 이내 one-use-intent Ed25519 permit, adjacent previous-hash와 full-row 누적 불변을 요구하는 monotonic status snapshot, 4 MiB signed-carrier 및 argv/bundle/status-row hard bound, frozen seq1 permit→seq2 status base를 변경하지 않고 raw prefix를 내부 재검증하는 additive production-only Ed25519 review/authorization carrier와 seq3·seq4 custody event, fixed `/proc`의 PID·nonnegative parent·start tick·boot ID·PID namespace 측정 digest 결속; downgrade·bounded replay-list·key alias·status rewrite·stale/retroactive status·exact-scalar 혼동·causal-time 위반·raw/logical revoke·context transplant를 fail-closed하고 모든 claim을 false로 유지 | permit one-use 원자 소비, 실제 Evidence Authority/Run Custodian/review/authorization key와 carrier/event, permit·external append-only log/TSA·global one-use registry와 successor uniqueness, enrolled host·immutable store·실제 custody chain, worker carrier 결속, same-tick PID reuse 배제, procfs/host/launch external authenticity, reservation→environment→start→worker-transcript→observation→result→review→response carrier, upstream energy-force HMAC의 asymmetric 전환, production result·과학/제품 승격 |
+| `v2_synthetic_validation_production_evidence_custody_foundation` | 두 synthetic lane의 exact production evidence class, 24시간 이내 one-use-intent Ed25519 permit, adjacent previous-hash와 full-row 누적 불변을 요구하는 monotonic status snapshot, 4 MiB signed-carrier 및 argv/bundle/status-row hard bound, frozen seq1 permit→seq2 status base를 변경하지 않고 raw prefix를 내부 재검증하는 additive production-only Ed25519 review/authorization carrier와 seq3·seq4 custody event, 전체 seq1~4 raw ancestry·lane-local nonce record·realm-global slot·registry/witness authority를 결속하고 dual-signed commit 주장과 post-commit status descendant를 검증하는 attestation-only seq5 companion, seq5를 다시 검증하고 고정 순서의 정확한 3-leaf 인접-root 전이·분리된 backend/observer 서명·공급되어 재검증된 status-lineage-tail denial·caller-expected native checkpoint 일치를 검사하는 verifier-only same-epoch boundary, fixed `/proc`의 PID·nonnegative parent·start tick·boot ID·PID namespace 측정 digest 결속; caller expectation provenance와 global latest status head는 인증하지 않으며 downgrade·bounded replay-list·key alias·status rewrite·stale/retroactive status·exact-scalar 혼동·causal-time 위반·raw/logical revoke·context transplant를 fail-closed하고 모든 actual/scientific/product claim을 false로 유지 | 실제 external serializable CAS·permit/nonce/predecessor global one-use 소비·status-head CAS·non-equivocation·epoch continuity·successor uniqueness, 실제 Evidence Authority/Run Custodian/review/authorization/registry/witness/backend/observer key와 carrier/event/proof/authenticated head receipt, permit·external append-only log/TSA·global one-use registry, enrolled host·immutable store·실제 custody chain, worker carrier 결속, same-tick PID reuse 배제, procfs/host/launch external authenticity, environment→start→worker-transcript→observation→result→review→response carrier, upstream energy-force HMAC의 asymmetric 전환, production result·과학/제품 승격 |
 
 표의 `worker pre/post-state` blocker는 endpoint snapshot 자체의 부재가 아니라, signed
 native allowlist와 load/execute/unload 전체 수명·외부 custody가 결합된 production-grade
 closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 결속은 구현됐다.
 
-> **2026-07-19 runtime-integrity 갱신:** 위 두 synthetic validation lane의
+> **2026-07-20 runtime-integrity 갱신:** 위 두 synthetic validation lane의
 > durable dependency manifest와 full source/Git-tree manifest 코드 blocker는
 > 해소됐다. 두 bootstrap은 signed raw commit/tree object를 Git SHA-1 framing으로
 > 자체 재검증하고, 전체 tracked package file의 mode·blob OID·SHA-256·size를
@@ -199,16 +207,42 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > `O_EXCL`·`O_NOFOLLOW`·fsync 보존하며 runner/writer는 persisted/live exact
 > equality와 environment→start→observation→result digest chain을 확인한다.
 > minimization과 energy-force result-review의 Ed25519 signature도 이 digest를 결속한다.
-> Runtime-integrity v5는 permit→status snapshot custody-v1, review/authorization
-> custody extension, process-launch-identity의 exact frozen SHA-256을 직접 결속해
-> 세 계약의 독립 drift를 차단한다. Runtime v4는 read-only legacy identity로 보존한다.
+> Runtime-integrity v9은 permit→status snapshot custody-v1, review/authorization
+> custody extension, seq5 reservation extension, verifier-only external registry-
+> proof boundary, verifier-only authenticated head/status receipt boundary,
+> verifier-only same-epoch later-head consistency boundary, process-launch-
+> identity의 exact frozen SHA-256을 직접 결속해 일곱 계약의 독립 drift를
+> 차단한다. Runtime v8은 read-only legacy identity로 보존한다.
+> 공급된 registry proof가 검증할 수 있는 것은 backend의 serializable/committed
+> attestation, 고정 순서의 정확한 3-leaf 전이, observer-signed native checkpoint와
+> caller expectation의 일치뿐이며 그 expectation의 provenance나 global latest
+> status head를 인증하지 않는다. 실제 external CAS·global one-use·non-equivocation·
+> epoch continuity는 계속 false다.
+> 추가된 authenticated head/status receipt verifier는 두 nested 입력을 사용 전에
+> snapshot하고 같은 raw registry proof를 두 번 재현한 뒤, 분리된 외부 Ed25519
+> authority가 proof·seq5·realm/epoch/sequence·native checkpoint/state root·receipt 시점
+> status tail·service identity·causal time·caller challenge를 정확히 결속했는지
+> 확인한다. 또한 receipt 발행 뒤의 strict status descendant를 별도로 재검증해
+> receipt 자체와 authority/proof/checkpoint/service에 대한 revoke·supersede를
+> 적용한다. 이는 bounded signature와 challenge equality만 증명하며 challenge
+> freshness/one-use, global latest, CAS, later-head consistency, non-equivocation,
+> epoch continuity는 증명하지 않는다. 실제 receipt/key/challenge/current-status
+> descendant는 provision되지 않았다.
+> 추가된 later-head consistency verifier는 authenticated receipt를 다시 검증하고,
+> 같은 epoch의 sequence-adjacent backend-signed checkpoint/state-root path와 전체
+> path에 대한 observer countersign을 확인하며 anchor가 attested한 세 consumed-leaf
+> encoding의 selected later root 포함을 재구성한다. 이 포함은 실제 global slot
+> consumption 증명이 아니며 DTO는 challenge freshness/one-use를 계속 false로
+> 보존한다. 별도 sibling pin은 각각 통과할 수 있으므로 global latest·
+> non-equivocation·epoch continuity는 계속 false이고 실제 proof와 post-proof status
+> descendant는 provision되지 않았다.
 > `rglob`·`os.walk`·`distribution.files` 기반 열거와 unbounded source read는
 > bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline으로
 > 교체됐다. 다만 외부 root-owned source/dependency runtime은 아직
 > provision되지 않았다. 활성 energy-force base 계약은 v2이며 runner/result writer는
 > v4, minimization base 계약은 v3이며 runner는 v6, writer/result review는 v5로
 > 전환해 전체 upstream hash DAG를 다시 고정했다.
-> superseded 계약 문서 31개는 canonical
+> superseded 계약 문서 35개는 canonical
 > projection hash 기반 read-only verifier로 보존하지만, 과거 signed artifact나
 > receipt 호환을 claim하지 않는다. 외부 runtime provisioning, kernel source/Git-
 > metadata immutability·custody, pre-bootstrap stdlib closure, signed native-DSO
@@ -468,10 +502,11 @@ vDSO identity, worker PID start-time/boot-ID와 외부 launch custody는 product
 blocker로 남는다.
 별도 Linux process primitive는 이 tuple을 fixed `/proc`에서 bounded·race-checked로
 측정하지만 worker evidence에는 아직 결속되지 않고 durable uniqueness를 주장하지 않는다.
-공통 Ed25519 permit/status base와 raw prefix를 재검증하는 seq3 review·seq4
-authorization additive custody companion도 구현됐지만 실제 key/carrier/event나 외부
-chain을 provision하지 않았고 reservation 이후 stage도 없으므로 production blocker를
-해제하지 않는다.
+공통 Ed25519 permit/status base, raw prefix를 재검증하는 seq3 review·seq4
+authorization companion, 그리고 attestation-only seq5 reservation companion도
+구현됐다. 그러나 실제 key/carrier/event, 외부 serializable registry/CAS proof,
+slot 소비, non-equivocation·epoch continuity, 유일 successor를 provision하거나
+증명하지 않았고 environment 이후 stage도 없으므로 production blocker를 해제하지 않는다.
 Worker의 argv·cwd·flag·전체 환경·uint32 hash seed·application seed와 parent/child hash
 probe도 verified receipt에서만 유도해 평가 전에 확인하며 mutable supervisor 환경을
 복사하지 않는다. Exact process chain은 absolute checked-out bootstrap path를 사용하고
@@ -609,11 +644,13 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    upstream symmetric-HMAC chain 전환과 dependency-manifest 독립 재검증이 없으므로
    실행과 parameter-fitting proposal은 계속 fail-closed한다.
    공통 production-evidence base와 additive companion은 permit→status→review→authorization
-   4-event exact raw-byte custody primitive를 제공하지만 실제 key/carrier/event를
-   provision하거나 one-use permit 소비·successor uniqueness를 강제하지 않는다. 다음
-   구현 slice는 이 test-only 증거를 승격하지 않고 별도 atomic reservation custody
-   stage를 만든 뒤 process launch identity와 permit/status/review/authorization chain을
-   environment 이후 전 단계에 결속해야 한다.
+   4-event exact raw-byte custody와 seq5 reservation commit-attestation primitive를
+   제공하지만 실제 key/carrier/event/registry를 provision하거나 external CAS,
+   one-use permit·nonce·predecessor slot 소비, non-equivocation·epoch continuity,
+   successor uniqueness를 증명하지 않는다. 다음 구현 slice는 이 test-only 증거를
+   승격하지 않고 외부 immutable registry의 실제 CAS/소비 proof와 independent witness
+   continuity를 결속한 뒤 process launch identity와 chain을 environment 이후 전 단계에
+   연결해야 한다.
    별도 bounded CPU float64 minimizer는 deterministic backtracking, failure row와
    checkpoint/restart 계약까지 구현됐지만 독립 minimization reference·검증 protocol과
    reviewed parameter/applicability evidence가 아니므로 이 차단을 해제하지 않는다.

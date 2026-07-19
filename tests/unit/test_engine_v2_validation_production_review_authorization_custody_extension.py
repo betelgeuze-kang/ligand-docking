@@ -66,6 +66,10 @@ from betelgeuze_engine_v2.physics.validation_production_review_authorization_cus
     verify_signed_production_pre_execution_review_custody_extension_event,
     verify_signed_production_pre_execution_review_carrier,
 )
+from betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+    VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_ID,
+)
 
 
 UTC = timezone.utc
@@ -193,6 +197,9 @@ def _run_context() -> dict[str, object]:
         "contract_bundle_sha256_rows": {
             VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_ID: (
                 FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+            ),
+            VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_ID: (
+                FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
             ),
             "engine-v2-lane-contract/1.0.0": "1" * 64,
         },
