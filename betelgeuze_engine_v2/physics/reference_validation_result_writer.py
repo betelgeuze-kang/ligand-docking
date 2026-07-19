@@ -17,6 +17,7 @@ import json
 import os
 from typing import Any, Mapping, Sequence
 
+from . import reference_validation_runner as _reference_validation_runner
 from .reference_parameter_applicability import (
     FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
 )
@@ -61,26 +62,23 @@ from .reference_validation_runner import (
     ReferenceValidationRunnerError,
     read_reference_validation_runner_start_record,
     require_reference_validation_run_observation_document,
+    require_reference_validation_worker_execution_provenance_document,
 )
-from .validation_native_runtime_identity import (
-    WORKER_RUNTIME_LANE_ENERGY_FORCE,
-    WORKER_RUNTIME_LANE_ENERGY_FORCE_MANIFEST,
-    ValidationNativeRuntimeIdentityError,
-    require_worker_runtime_lifecycle_evidence,
-)
-
 
 REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_writer_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_writer_contract/4.0.0"
 )
 REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_validation_result_receipt_writer/3.0.0"
+    "cpu_reference_validation_result_receipt_writer/4.0.0"
 )
-REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-18T23:33:55Z"
+REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "4.0.0"
+REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-19T00:00:00Z"
 REFERENCE_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "183ff823795a166bb72647b34f118c480f2f785788123a31a4a95900d196dc24"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3 = (
     "44f12e6025d1aed0a09194b869f20f8838bc000bdfd6f90fb578e4a053fb1708"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V1 = (
@@ -91,7 +89,7 @@ _RECEIPT_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
-    "worker_request_observation_identity_binding_missing",
+    "external_worker_launch_identity_not_established",
     "scientific_parameter_applicability_domain_missing",
     "scientific_holdout_manifest_missing",
     "parameter_fitting_not_authorized",
@@ -111,7 +109,7 @@ _CURRENT_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
-    "worker_request_observation_identity_binding_missing",
+    "external_worker_launch_identity_not_established",
     "parameter_fitting_not_authorized",
     "scientific_validation_missing",
     "product_integration_not_qualified",
@@ -241,6 +239,11 @@ def _contract_projection() -> dict[str, Any]:
             "private_posix_storage_is_not_external_authenticity": True,
             "same_uid_replacement_resistance_established": False,
             "exact_worker_lifecycle_evidence_reverified_by_runner_schema": True,
+            "exact_worker_request_transport_reparsed": True,
+            "worker_request_cross_checked_against_outer_run_identity": True,
+            "worker_request_environment_cross_checked_against_persisted_receipt_and_live_process": True,
+            "worker_child_pid_cross_checked_against_native_snapshots": True,
+            "complete_worker_transcript_reconstructed_and_rehashed": True,
             "manifest_worker_lifecycle_reverified_against_frozen_manifest": True,
             "case_worker_lifecycle_reverified_against_exact_receipt_case_rows": True,
             "retained_case_payload_aggregate_recomputed_from_exact_case_rows": True,
@@ -253,6 +256,8 @@ def _contract_projection() -> dict[str, Any]:
             "failed_cases_variants_and_metrics_retained": True,
             "partial_or_skipped_results_allowed": False,
             "incomplete_worker_lifecycle_receipt_retained_failure_inclusively": True,
+            "incomplete_worker_partial_transcript_independently_replayable": False,
+            "incomplete_worker_accepted_payload_count": 0,
             "incomplete_worker_lifecycle_eligible_for_accepted_result_review": False,
             "result_review_state": "pending_independent_review",
         },
@@ -297,6 +302,8 @@ def require_reference_validation_result_writer_contract_document(
 
 def _require_worker_execution_receipt_binding(
     observation: ReferenceValidationRunObservation,
+    *,
+    environment: ReferenceValidationExecutionEnvironmentReceipt | None = None,
 ) -> None:
     """Reverify exact worker evidence against the rows retained by this receipt."""
 
@@ -319,37 +326,110 @@ def _require_worker_execution_receipt_binding(
     }
     manifest_lifecycle = run_document["manifest_worker_lifecycle_evidence"]
     case_lifecycle = run_document["case_worker_lifecycle_evidence"]
+    manifest_provenance = run_document["manifest_worker_execution_provenance"]
+    case_provenance = run_document["case_worker_execution_provenance"]
     try:
-        checked_manifest_lifecycle = require_worker_runtime_lifecycle_evidence(
-            manifest_lifecycle,
-            expected_lane=WORKER_RUNTIME_LANE_ENERGY_FORCE_MANIFEST,
-            expected_worker_request_sha256=_require_sha256(
-                manifest_lifecycle.get("worker_request_sha256"),
-                name="manifest worker request",
+        trusted_runtime: dict[str, Any] = {}
+        if environment is not None:
+            if (
+                environment.receipt_sha256
+                != observation.execution_environment_receipt_sha256
+                or environment.environment_fingerprint_sha256
+                != observation.environment_fingerprint_sha256
+                or environment.application_seed != observation.seed
+            ):
+                raise ReferenceValidationResultWriterError(
+                    "result receipt worker environment is cross-wired"
+                )
+            dependency_roots = (
+                _reference_validation_runner._require_isolated_python_bootstrap_runtime(
+                    expected_code_commit_sha=observation.code_commit_sha,
+                    expected_source_manifest_sha256=(
+                        observation.source_manifest_sha256
+                    ),
+                )
+            )
+            dependency_python_path = os.pathsep.join(
+                os.fspath(root) for root in dependency_roots
+            )
+            worker_environment = _reference_validation_runner._case_worker_environment(
+                environment.environment_variable_rows,
+                dependency_python_path=dependency_python_path,
+            )
+            trusted_runtime = {
+                "expected_python_hash_seed": environment.python_hash_seed,
+                "expected_worker_environment": worker_environment,
+                "expected_dependency_roots": dependency_roots,
+                "expected_python_hash_probe_sha256": (
+                    _reference_validation_runner._python_hash_probe_sha256()
+                ),
+            }
+        require_reference_validation_worker_execution_provenance_document(
+            manifest_provenance,
+            lifecycle=manifest_lifecycle,
+            expected_worker_kind="manifest",
+            expected_code_commit_sha=observation.code_commit_sha,
+            expected_runner_source_sha256=observation.runner_source_sha256,
+            expected_source_manifest_sha256=observation.source_manifest_sha256,
+            expected_dependency_artifact_sha256_rows=(
+                observation.dependency_artifact_sha256_rows
             ),
+            expected_environment_receipt_sha256=(
+                observation.execution_environment_receipt_sha256
+            ),
+            expected_environment_fingerprint_sha256=(
+                observation.environment_fingerprint_sha256
+            ),
+            expected_authorization_nonce_sha256=(
+                observation.authorization_nonce_sha256
+            ),
+            expected_runner_start_record_sha256=None,
+            expected_application_seed=observation.seed,
+            expected_materialization_manifest_sha256=None,
             expected_payload_rows=[manifest_payload],
+            **trusted_runtime,
         )
         case_completion_state = case_lifecycle.get("completion_state")
-        checked_case_lifecycle = require_worker_runtime_lifecycle_evidence(
-            case_lifecycle,
-            expected_lane=WORKER_RUNTIME_LANE_ENERGY_FORCE,
-            expected_worker_request_sha256=_require_sha256(
-                case_lifecycle.get("worker_request_sha256"),
-                name="case worker request",
+        require_reference_validation_worker_execution_provenance_document(
+            case_provenance,
+            lifecycle=case_lifecycle,
+            expected_worker_kind="case",
+            expected_code_commit_sha=observation.code_commit_sha,
+            expected_runner_source_sha256=observation.runner_source_sha256,
+            expected_source_manifest_sha256=observation.source_manifest_sha256,
+            expected_dependency_artifact_sha256_rows=(
+                observation.dependency_artifact_sha256_rows
             ),
+            expected_environment_receipt_sha256=(
+                observation.execution_environment_receipt_sha256
+            ),
+            expected_environment_fingerprint_sha256=(
+                observation.environment_fingerprint_sha256
+            ),
+            expected_authorization_nonce_sha256=(
+                observation.authorization_nonce_sha256
+            ),
+            expected_runner_start_record_sha256=(
+                observation.runner_start_record_sha256
+            ),
+            expected_application_seed=observation.seed,
+            expected_materialization_manifest_sha256=manifest[
+                "materialization_manifest_sha256"
+            ],
             expected_payload_rows=(
                 case_rows if case_completion_state == "complete" else None
             ),
+            **trusted_runtime,
         )
-    except (ValidationNativeRuntimeIdentityError, AttributeError) as exc:
+    except (ReferenceValidationRunnerError, AttributeError) as exc:
         raise ReferenceValidationResultWriterError(
-            "result receipt worker lifecycle evidence is invalid"
+            "result receipt worker execution provenance is invalid"
         ) from exc
-    if checked_manifest_lifecycle["completion_state"] != "complete":
+    if manifest_lifecycle["completion_state"] != "complete":
         raise ReferenceValidationResultWriterError(
             "result receipt manifest worker lifecycle is incomplete"
         )
-    if checked_case_lifecycle["completion_state"] == "complete":
+    if case_lifecycle["completion_state"] == "complete":
         if any(row.get("observation_origin") != "worker" for row in case_rows):
             raise ReferenceValidationResultWriterError(
                 "complete worker lifecycle is cross-wired to supervisor rows"
@@ -417,7 +497,10 @@ def _result_projection(
     reviewed_at_utc: str,
     receipt_created_at_utc: str,
 ) -> dict[str, Any]:
-    _require_worker_execution_receipt_binding(observation)
+    _require_worker_execution_receipt_binding(
+        observation,
+        environment=environment,
+    )
     run_document = observation.to_dict()
     return {
         "schema_id": REFERENCE_VALIDATION_RESULT_RECEIPT_SCHEMA_ID,
@@ -1140,6 +1223,8 @@ def reference_validation_result_writer_contract_decision() -> dict[str, Any]:
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V1",
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_RESULT_RECEIPT_MAX_BYTES",
     "REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_ID",

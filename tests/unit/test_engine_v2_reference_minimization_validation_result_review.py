@@ -22,6 +22,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_result_revie
     COORDINATE_TRACE_STEP_ACCEPTED,
     EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED,
     EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V4,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID,
@@ -187,15 +188,38 @@ def _finalize_observation_tamper(
     assert isinstance(pre_evidence, dict)
     snapshot = pre_evidence["snapshot"]
     assert isinstance(snapshot, dict)
-    evidence["runtime_lifecycle_evidence"] = (
-        native_identity.build_complete_worker_runtime_lifecycle_evidence(
-            lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
-            worker_request_sha256=evidence["worker_request_sha256"],
-            pre_evidence=pre_evidence,
-            payload_rows=cases,
-            post_snapshot=snapshot,
-        )
+    lifecycle = native_identity.build_complete_worker_runtime_lifecycle_evidence(
+        lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
+        worker_request_sha256=evidence["worker_request_sha256"],
+        pre_evidence=pre_evidence,
+        payload_rows=cases,
+        post_snapshot=snapshot,
     )
+    evidence["runtime_lifecycle_evidence"] = lifecycle
+    try:
+        parsed_cases = tuple(
+            runner_module._case_observation_from_payload(case) for case in cases
+        )
+        transcript = runner_module._reconstruct_complete_matrix_worker_transcript(
+            worker_request_sha256=evidence["worker_request_sha256"],
+            case_results=parsed_cases,
+            runtime_lifecycle_evidence=lifecycle,
+        )
+        request_document = evidence["worker_request_document"]
+        supervisor_child_process_id = evidence["supervisor_child_process_id"]
+        assert isinstance(request_document, dict)
+        assert type(supervisor_child_process_id) is int
+        run_observation["worker_execution_evidence"] = (
+            runner_module._decode_complete_matrix_worker_transcript(
+                transcript,
+                worker_preflight_request=request_document,
+                supervisor_child_process_id=supervisor_child_process_id,
+            ).worker_execution_evidence.to_dict()
+        )
+    except runner_module.ReferenceMinimizationValidationRunnerError:
+        # Structurally invalid scientific evidence remains deliberately
+        # inconsistent so the production receipt verifier rejects it.
+        pass
     tampered["case_results"] = deepcopy(cases)
     tampered["observation_sha256"] = _sha256(run_observation)
     return _rehash_receipt(tampered)  # type: ignore[return-value]
@@ -501,9 +525,13 @@ def _incomplete_worker_result_receipt(
     incomplete = deepcopy(result_receipt)
     run_observation = incomplete["run_observation"]
     assert isinstance(run_observation, dict)
+    current_evidence = run_observation["worker_execution_evidence"]
+    assert isinstance(current_evidence, dict)
+    request_document = current_evidence["worker_request_document"]
+    assert isinstance(request_document, dict)
     supervised = runner_module._supervisor_failure_complete_matrix(
         "runner_worker_output_invalid",
-        worker_preflight_request={"test_request": "incomplete-result-review"},
+        worker_preflight_request=request_document,
     )
     cases = [row.to_dict() for row in supervised.case_results]
     coverage = {
@@ -575,6 +603,10 @@ def test_result_review_contract_is_frozen_complete_and_closed() -> None:
         is True
     )
     assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V4
+        == "bb53f31227d7be92743b0fc49164237ec81948836ec82441c2854a65e0cb5e0a"
+    )
+    assert (
         FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3
         == "b1b981940ea3d5a68f3aa936e4569e6756a8a9b88b0e86137c10d8ec4deebcfa"
     )
@@ -596,7 +628,13 @@ def test_result_review_contract_is_frozen_complete_and_closed() -> None:
     assert decision["result_receipt_accepted"] is False
     assert "production_result_receipt_missing" in decision["blockers"]
     assert "two_cpu_host_reproducibility_missing" in decision["blockers"]
-    assert "worker_request_observation_identity_binding_missing" in decision["blockers"]
+    assert (
+        "worker_process_starttime_and_boot_id_binding_missing" in decision["blockers"]
+    )
+    assert (
+        "independent_result_review_dependency_manifest_reverification_missing"
+        in decision["blockers"]
+    )
 
 
 def test_signed_accepted_review_verifies_exact_receipt_and_all_rows(
@@ -726,7 +764,7 @@ def test_incomplete_worker_lifecycle_is_signed_and_verified_only_as_rejected(
     assert worker_review["completion_state"] == "incomplete"
     assert worker_review["runtime_lifecycle_completion_state"] == "incomplete"
     assert worker_review["payload_frame_count"] == 0
-    assert worker_review["discarded_partial_payload_count"] is None
+    assert worker_review["discarded_partial_payload_count"] == 0
     assert worker_review["native_pre_post_snapshot_equality_verified"] is False
     assert worker_review["native_mapping_lifetime_closure_claimed"] is False
     assert "worker_execution_incomplete" in worker_review["rejection_reasons"]

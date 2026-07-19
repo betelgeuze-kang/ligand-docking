@@ -23,6 +23,7 @@ import signal
 import stat
 import subprocess
 import time
+from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 
@@ -202,14 +203,27 @@ def _reap_worker_process(process: Any) -> None:
         ) from exc
 
 
-def communicate_bounded_worker_process(
+@dataclass(frozen=True, slots=True)
+class BoundedWorkerProcessCommunicationEvidence:
+    """Supervisor-observed outcome of one bounded worker exchange."""
+
+    raw_output_prefix: bytes
+    timed_out: bool
+    output_exceeded: bool
+    communication_failed: bool
+    request_fully_written: bool
+    succeeded: bool
+    final_returncode: int
+
+
+def communicate_bounded_worker_process_with_evidence(
     process: Any,
     request_bytes: bytes,
     *,
     deadline: float,
     max_output_bytes: int,
-) -> tuple[bytes, bool, bool]:
-    """Exchange one request with a worker without ever buffering past the cap."""
+) -> BoundedWorkerProcessCommunicationEvidence:
+    """Exchange one request while retaining a strictly bounded raw prefix."""
 
     if (
         not isinstance(request_bytes, bytes)
@@ -257,7 +271,11 @@ def communicate_bounded_worker_process(
                 _terminate_worker_process_group(process)
                 process_terminated = True
                 break
-            events = selector.select(remaining)
+            try:
+                events = selector.select(remaining)
+            except (OSError, ValueError):
+                communication_failed = True
+                break
             if not events:
                 timed_out = True
                 _terminate_worker_process_group(process)
@@ -278,13 +296,13 @@ def communicate_bounded_worker_process(
                         _close_pipe(stdin)
                         stdin_open = False
                 else:
-                    remaining_capacity = max_output_bytes - len(output) + 1
+                    remaining_capacity = max_output_bytes - len(output)
                     try:
                         chunk = os.read(
                             stdout_fd,
                             min(
                                 WORKER_RUNTIME_PIPE_READ_CHUNK_BYTES,
-                                remaining_capacity,
+                                remaining_capacity + 1,
                             ),
                         )
                     except BlockingIOError:
@@ -293,8 +311,9 @@ def communicate_bounded_worker_process(
                         communication_failed = True
                         chunk = b""
                     if chunk:
-                        output.extend(chunk)
-                        if len(output) > max_output_bytes:
+                        retained = chunk[:remaining_capacity]
+                        output.extend(retained)
+                        if len(chunk) > remaining_capacity:
                             output_exceeded = True
                             _terminate_worker_process_group(process)
                             process_terminated = True
@@ -326,13 +345,53 @@ def communicate_bounded_worker_process(
             _close_pipe(stdout)
     if process_terminated:
         _reap_worker_process(process)
-    return (
-        b"" if output_exceeded or communication_failed else bytes(output),
-        timed_out,
+    final_returncode = getattr(process, "returncode", None)
+    if type(final_returncode) is not int:
+        raise ValidationNativeRuntimeIdentityError(
+            "worker process lacks a final integer return code"
+        )
+    request_fully_written = request_offset == len(request_bytes)
+    succeeded = (
         not timed_out
         and not communication_failed
         and not output_exceeded
-        and getattr(process, "returncode", None) == 0,
+        and request_fully_written
+        and final_returncode == 0
+    )
+    return BoundedWorkerProcessCommunicationEvidence(
+        raw_output_prefix=bytes(output),
+        timed_out=timed_out,
+        output_exceeded=output_exceeded,
+        communication_failed=communication_failed,
+        request_fully_written=request_fully_written,
+        succeeded=succeeded,
+        final_returncode=final_returncode,
+    )
+
+
+def communicate_bounded_worker_process(
+    process: Any,
+    request_bytes: bytes,
+    *,
+    deadline: float,
+    max_output_bytes: int,
+) -> tuple[bytes, bool, bool]:
+    """Compatibility wrapper for the original bounded communication tuple."""
+
+    evidence = communicate_bounded_worker_process_with_evidence(
+        process,
+        request_bytes,
+        deadline=deadline,
+        max_output_bytes=max_output_bytes,
+    )
+    return (
+        (
+            b""
+            if evidence.output_exceeded or evidence.communication_failed
+            else evidence.raw_output_prefix
+        ),
+        evidence.timed_out,
+        evidence.succeeded,
     )
 
 
@@ -2095,6 +2154,7 @@ def require_worker_runtime_lifecycle_evidence(
 
 
 __all__ = [
+    "BoundedWorkerProcessCommunicationEvidence",
     "NATIVE_RUNTIME_MAX_FILE_BYTES",
     "NATIVE_RUNTIME_MAX_FILES",
     "NATIVE_RUNTIME_MAX_MAPS_BYTES",
@@ -2118,6 +2178,7 @@ __all__ = [
     "build_worker_runtime_post_evidence",
     "build_worker_runtime_pre_evidence",
     "communicate_bounded_worker_process",
+    "communicate_bounded_worker_process_with_evidence",
     "measure_native_runtime_snapshot",
     "require_complete_worker_runtime_process_id",
     "require_native_runtime_snapshot",

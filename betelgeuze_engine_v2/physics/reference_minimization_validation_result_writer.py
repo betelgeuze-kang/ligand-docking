@@ -17,6 +17,7 @@ import json
 import os
 from typing import Any, Mapping, Sequence
 
+from . import reference_minimization_validation_runner as _runner_module
 from .reference_minimization_validation_artifact_binding import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -58,17 +59,20 @@ from .reference_minimization_validation_runner import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/4.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/5.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_writer/4.0.0"
+    "cpu_reference_minimization_validation_result_receipt_writer/5.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "4.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "5.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T23:33:55Z"
+    "2026-07-19T00:00:00Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "9a3c4a22cc60dc06a468e8fa62f55b23766a106d2781c3ea485360ce3131a040"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4 = (
     "76bf29c96ea0d369f10d446fa5e33f6906e1adb3f6b3dba0e3a25cffdd0957c2"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3 = (
@@ -82,7 +86,8 @@ _RECEIPT_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
-    "worker_request_observation_identity_binding_missing",
+    "worker_process_starttime_and_boot_id_binding_missing",
+    "incomplete_raw_partial_transcript_not_independently_replayable",
     "scientific_parameter_applicability_domain_missing",
     "scientific_holdout_manifest_missing",
     "parameter_fitting_not_authorized",
@@ -102,7 +107,8 @@ _CURRENT_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
-    "worker_request_observation_identity_binding_missing",
+    "worker_process_starttime_and_boot_id_binding_missing",
+    "incomplete_raw_partial_transcript_not_independently_replayable",
     "parameter_fitting_not_authorized",
     "scientific_validation_missing",
     "product_integration_not_qualified",
@@ -234,6 +240,8 @@ def _contract_projection() -> dict[str, Any]:
             "external_trust_anchors_required": True,
             "external_revocation_inputs_required": True,
             "persisted_environment_receipt_and_live_process_required": True,
+            "observation_seeds_bound_to_persisted_environment_receipt": True,
+            "worker_environment_roots_seeds_and_hash_probe_derived_from_live_receipt_context": True,
             "durable_runner_start_record_required": True,
             "exact_observation_identity_required": True,
         },
@@ -260,12 +268,19 @@ def _contract_projection() -> dict[str, Any]:
             "trace_counts_and_energy_ledgers_crosschecked": True,
             "exact_worker_execution_evidence_reverified_by_runner_schema": True,
             "worker_request_and_frame_lifecycle_reverified": True,
+            "exact_worker_request_document_and_transport_bytes_reverified": True,
+            "worker_request_nonce_start_code_source_dependency_environment_seed_and_materialization_crosschecked": True,
+            "supervisor_child_process_id_reverified_against_lifecycle_endpoints": True,
+            "canonical_sixteen_frame_transcript_reconstructed_and_rehashed": True,
+            "canonical_transcript_length_frame_count_and_frame_hashes_reverified": True,
             "worker_completion_state_and_runtime_lifecycle_crosschecked": True,
             "retained_case_aggregate_recomputed_from_exact_case_rows": True,
             "case_frame_order_and_case_observation_digests_recomputed": True,
             "runtime_lifecycle_payload_revalidated_against_retained_case_rows": True,
             "native_pre_post_snapshot_equality_reverified_for_complete_lifecycle": True,
             "native_mapping_lifetime_closure_claim_remains_false": True,
+            "worker_process_starttime_and_boot_id_binding_established": False,
+            "incomplete_raw_partial_transcript_independently_replayable": False,
         },
         "coverage": {
             "case_count": 14,
@@ -276,6 +291,8 @@ def _contract_projection() -> dict[str, Any]:
             "partial_or_skipped_results_allowed": False,
             "incomplete_worker_lifecycle_receipt_retained_failure_inclusively": True,
             "incomplete_worker_lifecycle_eligible_for_accepted_result_review": False,
+            "incomplete_transcript_hash_length_prefix_suffix_and_discard_metadata_retained": True,
+            "incomplete_raw_partial_not_inlined_and_not_independently_replayable": True,
             "result_review_state": "pending_independent_review",
         },
         "current_state": {
@@ -295,8 +312,10 @@ def reference_minimization_validation_result_writer_contract_document() -> dict[
 ]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != (
+    if (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
+        and document["contract_sha256"]
+        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
     ):
         raise ReferenceMinimizationValidationResultWriterError(
             "frozen result writer contract SHA-256 drifted"
@@ -862,6 +881,8 @@ def write_reference_minimization_validation_result_receipt(
             observation.dependency_artifact_sha256_rows
         ),
         "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
+        "python_hash_seed": observation.python_hash_seed,
+        "application_seed": observation.seed,
     }
     if any(
         getattr(environment, name) != value
@@ -870,6 +891,39 @@ def write_reference_minimization_validation_result_receipt(
         raise ReferenceMinimizationValidationResultWriterError(
             "result writer environment and observation are cross-wired"
         )
+    durable_worker_request = (
+        observation.worker_execution_evidence.worker_request_document
+    )
+    if durable_worker_request is not None:
+        try:
+            dependency_roots = tuple(
+                os.fspath(root)
+                for root in _runner_module._require_isolated_python_bootstrap_runtime()
+            )
+            expected_worker_environment = _runner_module._matrix_worker_environment(
+                environment.environment_variable_rows,
+                dependency_roots,
+            )
+            expected_hash_probe_sha256 = _runner_module._python_hash_probe_sha256()
+        except ReferenceMinimizationValidationRunnerError as exc:
+            raise ReferenceMinimizationValidationResultWriterError(
+                "result writer could not derive the trusted worker runtime"
+            ) from exc
+        expected_worker_runtime_rows = {
+            "dependency_roots": list(dependency_roots),
+            "expected_python_hash_seed": environment.python_hash_seed,
+            "expected_application_seed": environment.application_seed,
+            "expected_worker_environment": expected_worker_environment,
+            "expected_worker_environment_sha256": _sha256(expected_worker_environment),
+            "expected_python_hash_probe_sha256": expected_hash_probe_sha256,
+        }
+        if any(
+            durable_worker_request.get(name) != value
+            for name, value in expected_worker_runtime_rows.items()
+        ):
+            raise ReferenceMinimizationValidationResultWriterError(
+                "result writer worker request and trusted environment are cross-wired"
+            )
     try:
         start_record = read_reference_minimization_validation_runner_start_record(
             artifact_output_root,
@@ -1103,6 +1157,7 @@ def reference_minimization_validation_result_writer_contract_decision() -> dict[
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES",

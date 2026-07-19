@@ -55,11 +55,28 @@ scientific claim from a package version.
   and enforces an out-of-band public key plus four-way governance-role
   separation. No result-review attestation, production receipt, or scientific
   acceptance is bundled.
+- A fail-closed Ed25519 energy-force result-review leaf that independently
+  recomputes all required metric occurrences from retained raw energy/force
+  arrays, records complete case/variant/metric/failure/worker dispositions, and
+  enforces four-role separation without bundling a production receipt,
+  attestation, independent approval, or scientific claim.
+- A Linux process-launch identity measurement contract plus a frozen Ed25519
+  production-evidence base for permit and status custody. An additive companion
+  internally re-verifies that raw two-event prefix and implements claim-closed
+  production-only review and authorization carriers as custody sequences three
+  and four. No key, carrier/event, external chain, atomic permit consumption,
+  successor uniqueness, execution authorization, or production result is
+  provisioned.
 
 ### Changed
 
 - The distribution version is `0.2.0rc2`, separating the runtime-byte-identity
   and Ed25519 trust boundary from the accumulated `0.2.0rc1` surface.
+- Runtime-integrity contract v5 now binds the exact frozen custody-v1,
+  review/authorization-extension, and process-launch-identity hashes while
+  keeping reservation, external process authenticity/custody, production
+  execution/results, and every scientific/product promotion flag false. The v4
+  runtime document is retained as a read-only legacy identity.
 
 ### Scientific boundary
 

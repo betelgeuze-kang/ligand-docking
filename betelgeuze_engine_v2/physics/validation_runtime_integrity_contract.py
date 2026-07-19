@@ -4,8 +4,8 @@ The active energy-force and minimization chains use new versioned contract
 identities.  Superseded contract documents remain exactly verifiable by their
 frozen hashes; superseded signed artifacts and receipts are not supported.
 This companion records the stronger enforcement now implemented and keeps
-production collection closed until native lifetime closure, worker post-state,
-external custody, and production infrastructure exist.
+production collection closed until native lifetime closure, externally
+authenticated worker launch/custody, and production infrastructure exist.
 """
 
 from __future__ import annotations
@@ -14,17 +14,33 @@ import hashlib
 import json
 from typing import Any, Mapping
 
+from betelgeuze_engine_v2.physics.validation_process_launch_identity import (
+    FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_evidence_custody import (
+    FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
+)
+from betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension import (
+    FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+)
 
 VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_validation_runtime_integrity_contract/2.0.0"
+    "betelgeuze.engine_v2_validation_runtime_integrity_contract/5.0.0"
 )
 VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID = (
-    "engine_v2_synthetic_validation_runtime_integrity/2.0.0"
+    "engine_v2_synthetic_validation_runtime_integrity/5.0.0"
 )
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "2.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-18T23:33:55Z"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "5.0.0"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-19T05:40:00Z"
+VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256 = (
+    FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
+)
+VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256 = (
+    FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
+)
 FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256 = (
-    "b0c3b1cf2f4182ad6c1f508be7126a3ca01c6c6aa3ff03d8c754d25bafee4e22"
+    "a93386f2be7a68c65684d25a057c5291f9d0374e2fc3c984e53a98fc5e29e8c1"
 )
 
 _BLOCKERS = (
@@ -35,10 +51,19 @@ _BLOCKERS = (
     "kernel_vdso_content_identity_missing",
     "procfs_superblock_identity_missing",
     "native_lifetime_closure_guard_missing",
-    "worker_request_observation_identity_binding_missing",
+    "worker_process_starttime_and_boot_id_binding_missing",
+    "same_tick_pid_reuse_collision_not_excluded",
+    "external_worker_launch_authenticity_or_custody_missing",
+    "final_production_carrier_family_not_implemented",
+    "production_evidence_permit_status_and_custody_not_provisioned",
+    "production_review_authorization_carriers_not_provisioned",
+    "production_review_authorization_custody_events_not_provisioned",
+    "production_permit_one_use_consumption_not_enforced",
+    "reservation_and_later_custody_stages_not_implemented",
+    "external_custody_successor_uniqueness_not_provisioned",
     "external_runtime_integrity_manifest_store_missing",
-    "energy_force_ed25519_chain_missing",
     "energy_force_independent_result_review_missing",
+    "energy_force_upstream_symmetric_hmac_chain",
     "independent_result_review_dependency_manifest_reverification_missing",
     "two_production_cpu_hosts_missing",
 )
@@ -77,6 +102,17 @@ def _contract_projection() -> dict[str, Any]:
             "27-case-59-variant-energy-force",
             "14-case-minimization",
         ],
+        "bound_contracts": {
+            "production_evidence_custody_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
+            ),
+            "production_review_authorization_custody_extension_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+            ),
+            "process_launch_identity_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
+            ),
+        },
         "implemented_enforcement": {
             "bootstrap_requires_root_owned_read_only_source_snapshot": True,
             "entire_engine_package_tree_checked_before_package_import": True,
@@ -102,6 +138,26 @@ def _contract_projection() -> dict[str, Any]:
             "source_manifest_digest_bound_through_result_finalization": True,
             "minimization_result_review_binds_source_manifest_digest": True,
             "result_finalization_reuses_environment_manifest_reverification": True,
+            "energy_force_ed25519_post_result_review_contract_implemented": True,
+            "energy_force_result_review_recomputes_metrics_from_retained_raw_evidence": True,
+            "linux_process_launch_identity_primitive_implemented": True,
+            "claim_closed_production_permit_status_four_event_custody_primitives_implemented": True,
+            "production_pre_execution_review_and_authorization_carriers_implemented": True,
+            "production_review_authorization_custody_extension_implemented": True,
+            "raw_base_and_review_authorization_prefix_internally_reverified": True,
+            "frozen_ancestor_exact_json_scalar_type_preflight_implemented": True,
+            "base_status_lineage_not_before_permit_enforced": True,
+            "process_launch_identity_digest_bound_by_review_authorization_carriers": True,
+            "process_launch_identity_authenticity_established": False,
+            "production_permit_one_use_consumption_enforced": False,
+            "verified_custody_stage_sequence": [
+                "production_permit",
+                "status_snapshot",
+                "pre_execution_review",
+                "authorization",
+            ],
+            "maximum_verified_custody_sequence": 4,
+            "custody_successor_uniqueness_enforced": False,
         },
         "bounded_preflight": {
             "bootstrap_source_and_dependency_cooperative_deadline_seconds": 180.0,
@@ -130,6 +186,29 @@ def _contract_projection() -> dict[str, Any]:
                 "<nonce>.source-tree.json"
             ),
             "overall_manifest_sha256_separately_signed": False,
+            "energy_force_upstream_review_and_authorization_use_symmetric_hmac": True,
+            "energy_force_upstream_asymmetric_chain_established": False,
+            "production_evidence_class_common_four_event_foundation_implemented": True,
+            "production_review_authorization_carriers_implemented": True,
+            "production_review_authorization_custody_extension_implemented": True,
+            "production_permit_one_use_enforced": False,
+            "verified_custody_stage_sequence": [
+                "production_permit",
+                "status_snapshot",
+                "pre_execution_review",
+                "authorization",
+            ],
+            "planned_only_custody_stages": [
+                "reservation",
+                "environment",
+                "runner_start",
+                "worker_transcript",
+                "observation",
+                "result",
+                "result_review",
+                "response",
+            ],
+            "final_stage_discriminated_production_carrier_family_implemented": False,
         },
         "native_runtime_and_worker_lifecycle": {
             "resident_native_mapping_snapshot_implemented": True,
@@ -144,11 +223,46 @@ def _contract_projection() -> dict[str, Any]:
             "worker_payload_aggregate_bound_to_post_state": True,
             "worker_snapshot_process_id_bound_to_supervisor_child": True,
             "worker_stdout_hard_byte_bound_before_buffering": True,
-            "worker_request_bound_to_persisted_observation_identity": False,
+            "worker_bounded_failure_prefix_and_transport_outcome_retained": True,
+            "worker_request_canonical_document_and_transport_identity_retained": True,
+            "worker_request_bound_to_persisted_observation_identity": True,
+            "worker_request_run_nonce_start_code_source_dependency_environment_seed_and_materialization_crosschecked": True,
+            "successful_raw_stdout_equals_canonical_reconstruction": True,
+            "successful_transcript_digest_length_frame_order_independently_reverified": True,
             "worker_incomplete_lifecycle_discards_partial_payload": True,
+            "worker_incomplete_payload_eligible_for_acceptance": False,
+            "incomplete_raw_partial_transcript_independently_replayable": False,
+            "supervisor_child_process_starttime_and_boot_id_bound": False,
+            "linux_process_pid_parent_starttime_boot_and_namespace_measurement_implemented": True,
+            "pid_namespace_init_parent_pid_zero_supported": True,
+            "same_tick_pid_reuse_collision_excluded": False,
+            "durable_process_uniqueness_established": False,
+            "external_worker_launch_authenticity_established": False,
             "pre_post_equality_is_native_lifetime_closure": False,
         },
         "external_custody": {
+            "ed25519_production_permit_primitive_implemented": True,
+            "monotonic_signed_status_snapshot_primitive_implemented": True,
+            "exact_raw_byte_dual_signed_four_event_custody_primitive_implemented": True,
+            "production_pre_execution_review_and_authorization_carriers_implemented": True,
+            "review_authorization_custody_extension_implemented": True,
+            "frozen_ancestor_exact_json_scalar_type_preflight_implemented": True,
+            "base_status_lineage_not_before_permit_enforced": True,
+            "verified_custody_stage_sequence": [
+                "production_permit",
+                "status_snapshot",
+                "pre_execution_review",
+                "authorization",
+            ],
+            "maximum_verified_custody_sequence": 4,
+            "production_permit_one_use_enforced": False,
+            "custody_stages_after_status_snapshot_implemented": True,
+            "custody_stages_after_authorization_implemented": False,
+            "custody_successor_uniqueness_enforced": False,
+            "production_evidence_class_exact_value": "synthetic_validation_production",
+            "actual_production_permit_provisioned": False,
+            "external_status_log_provisioned": False,
+            "production_custody_chain_provisioned": False,
             "root_owned_source_snapshot_provisioned": False,
             "root_owned_dependency_runtime_provisioned": False,
             "external_runtime_integrity_manifest_store_provisioned": False,
@@ -188,7 +302,7 @@ def require_validation_runtime_integrity_contract_document(
             "runtime-integrity contract must be a mapping"
         )
     expected = validation_runtime_integrity_contract_document()
-    if dict(value) != expected:
+    if _canonical_bytes(dict(value)) != _canonical_bytes(expected):
         raise ValidationRuntimeIntegrityContractError(
             "runtime-integrity contract does not match the frozen record"
         )
@@ -199,6 +313,17 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
     contract = validation_runtime_integrity_contract_document()
     return {
         "contract_sha256": contract["contract_sha256"],
+        "bound_production_evidence_custody_contract_sha256": (
+            contract["bound_contracts"]["production_evidence_custody_contract_sha256"]
+        ),
+        "bound_review_authorization_custody_extension_contract_sha256": (
+            contract["bound_contracts"][
+                "production_review_authorization_custody_extension_contract_sha256"
+            ]
+        ),
+        "bound_process_launch_identity_contract_sha256": contract["bound_contracts"][
+            "process_launch_identity_contract_sha256"
+        ],
         "versioned_contract_identity_migration_implemented": True,
         "legacy_contract_document_verification_preserved": True,
         "legacy_signed_artifact_verification_preserved": False,
@@ -212,6 +337,30 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
         "worker_payload_completion_binding_implemented": True,
         "bounded_worker_stdout_streaming_implemented": True,
         "worker_snapshot_process_id_binding_implemented": True,
+        "durable_worker_request_observation_binding_implemented": True,
+        "successful_worker_transcript_reconstruction_implemented": True,
+        "bounded_incomplete_worker_transport_disposition_implemented": True,
+        "linux_process_launch_identity_primitive_implemented": True,
+        "same_tick_pid_reuse_collision_excluded": False,
+        "durable_process_uniqueness_established": False,
+        "claim_closed_production_evidence_four_event_custody_foundation_implemented": True,
+        "production_review_authorization_carriers_implemented": True,
+        "production_review_authorization_custody_extension_implemented": True,
+        "frozen_ancestor_exact_json_scalar_type_preflight_implemented": True,
+        "base_status_lineage_not_before_permit_enforced": True,
+        "process_launch_identity_digest_bound_by_review_authorization_carriers": True,
+        "process_launch_identity_authenticity_established": False,
+        "production_permit_one_use_enforced": False,
+        "maximum_verified_custody_sequence": 4,
+        "custody_stages_after_status_snapshot_implemented": True,
+        "custody_stages_after_authorization_implemented": False,
+        "custody_successor_uniqueness_enforced": False,
+        "final_production_carrier_family_implemented": False,
+        "production_custody_chain_provisioned": False,
+        "energy_force_ed25519_post_result_review_contract_implemented": True,
+        "energy_force_result_review_recomputes_metrics_from_retained_raw_evidence": True,
+        "energy_force_upstream_asymmetric_chain_established": False,
+        "external_worker_launch_authenticity_implemented": False,
         "external_production_runtime_provisioned": False,
         "production_validation_results_collected": False,
         "scientifically_validated": False,
@@ -225,6 +374,9 @@ __all__ = [
     "VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID",
     "VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID",
     "VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256",
     "ValidationRuntimeIntegrityContractError",
     "require_validation_runtime_integrity_contract_document",
     "validation_runtime_integrity_contract_document",

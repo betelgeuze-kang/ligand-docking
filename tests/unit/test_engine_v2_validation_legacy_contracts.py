@@ -201,9 +201,57 @@ def test_registry_pins_all_energy_and_minimization_legacy_documents() -> None:
             "2026-07-18T22:48:58Z",
             "6f0670708e25966087dafcd54436798455cde2e9c9681d1195d9a426613ea148",
         ),
+        "betelgeuze.engine_v2_reference_validation_runner_contract/3.0.0": (
+            "cpu_reference_validation_bounded_runner/3.0.0",
+            "3.0.0",
+            "2026-07-18T23:33:55Z",
+            "c450059857a38f7cf8aa44ba1efbb79ff3d6218ebc7deaf963078c2e3f44a1e9",
+        ),
+        "betelgeuze.engine_v2_reference_validation_result_writer_contract/3.0.0": (
+            "cpu_reference_validation_result_receipt_writer/3.0.0",
+            "3.0.0",
+            "2026-07-18T23:33:55Z",
+            "44f12e6025d1aed0a09194b869f20f8838bc000bdfd6f90fb578e4a053fb1708",
+        ),
+        "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/5.0.0": (
+            "cpu_reference_minimization_validation_bounded_runner/5.0.0",
+            "5.0.0",
+            "2026-07-18T23:33:55Z",
+            "c27ff1ae8797db615e1aeb1625e70c476ff011026963b3a678880a4cc9fa7d33",
+        ),
+        "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/4.0.0": (
+            "cpu_reference_minimization_validation_result_receipt_writer/4.0.0",
+            "4.0.0",
+            "2026-07-18T23:33:55Z",
+            "76bf29c96ea0d369f10d446fa5e33f6906e1adb3f6b3dba0e3a25cffdd0957c2",
+        ),
+        "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/4.0.0": (
+            "cpu_reference_minimization_validation_independent_result_review_contract/4.0.0",
+            "4.0.0",
+            "2026-07-18T23:33:55Z",
+            "bb53f31227d7be92743b0fc49164237ec81948836ec82441c2854a65e0cb5e0a",
+        ),
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/2.0.0": (
+            "engine_v2_synthetic_validation_runtime_integrity/2.0.0",
+            "2.0.0",
+            "2026-07-18T23:33:55Z",
+            "b0c3b1cf2f4182ad6c1f508be7126a3ca01c6c6aa3ff03d8c754d25bafee4e22",
+        ),
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/3.0.0": (
+            "engine_v2_synthetic_validation_runtime_integrity/3.0.0",
+            "3.0.0",
+            "2026-07-19T00:00:00Z",
+            "5f1943bbddb39db0d120269cf8b80bcd9246da27eaff1ffba43879e6d2965eb6",
+        ),
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/4.0.0": (
+            "engine_v2_synthetic_validation_runtime_integrity/4.0.0",
+            "4.0.0",
+            "2026-07-19T02:51:00Z",
+            "1db4d12a4bba6437c6b3ab4797689a46fadafe0c38888021e0ae1e3b14720566",
+        ),
     }
 
-    assert len(expected) == 23
+    assert len(expected) == 31
     assert set(LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID) == set(expected)
     for schema_id, expected_identity in expected.items():
         identity = LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID[schema_id]

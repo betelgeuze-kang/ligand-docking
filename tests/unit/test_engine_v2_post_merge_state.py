@@ -49,9 +49,115 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     PHYSICS_REGISTRY_CAPABILITY_ID,
     PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
     PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
+    VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID,
     capability_snapshot,
     require_capability_snapshot,
 )
+
+
+def test_energy_result_review_public_exports_and_shared_outcomes() -> None:
+    from betelgeuze_engine_v2 import physics
+    from betelgeuze_engine_v2.physics.reference_minimization_validation_result_review import (
+        RESULT_REVIEW_OUTCOME_ACCEPTED as MINIMIZATION_ACCEPTED,
+        RESULT_REVIEW_OUTCOME_REJECTED as MINIMIZATION_REJECTED,
+    )
+    from betelgeuze_engine_v2.physics.reference_validation_result_review import (
+        RESULT_REVIEW_OUTCOME_ACCEPTED as ENERGY_FORCE_ACCEPTED,
+        RESULT_REVIEW_OUTCOME_REJECTED as ENERGY_FORCE_REJECTED,
+        __all__ as result_review_exports,
+    )
+
+    assert set(result_review_exports) <= set(physics.__all__)
+    assert ENERGY_FORCE_ACCEPTED == MINIMIZATION_ACCEPTED == "accepted"
+    assert ENERGY_FORCE_REJECTED == MINIMIZATION_REJECTED == "rejected"
+
+
+def test_production_evidence_and_process_identity_public_exports_are_closed() -> None:
+    from betelgeuze_engine_v2 import physics
+    from betelgeuze_engine_v2.physics.validation_process_launch_identity import (
+        __all__ as process_identity_exports,
+        process_launch_identity_decision,
+    )
+    from betelgeuze_engine_v2.physics.validation_production_evidence_custody import (
+        __all__ as custody_exports,
+        validation_production_evidence_custody_contract_document,
+        validation_production_evidence_custody_decision,
+    )
+    from betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension import (
+        FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+        __all__ as custody_extension_exports,
+        validation_production_review_authorization_custody_extension_contract_document,
+        validation_production_review_authorization_custody_extension_decision,
+    )
+    from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
+        __all__ as runtime_integrity_exports,
+    )
+
+    assert set(process_identity_exports) <= set(physics.__all__)
+    assert set(custody_exports) <= set(physics.__all__)
+    assert set(custody_extension_exports) <= set(physics.__all__)
+    assert set(runtime_integrity_exports) <= set(physics.__all__)
+    process_decision = process_launch_identity_decision()
+    custody_contract = validation_production_evidence_custody_contract_document()
+    custody_decision = validation_production_evidence_custody_decision()
+    custody_extension_contract = (
+        validation_production_review_authorization_custody_extension_contract_document()
+    )
+    custody_extension_decision = (
+        validation_production_review_authorization_custody_extension_decision()
+    )
+    assert process_decision["production_process_authenticity_established"] is False
+    assert process_decision["same_tick_pid_reuse_collision_excluded"] is False
+    assert custody_contract["permit"]["one_use_enforced"] is False
+    assert custody_contract["custody_event"]["verified_stage_sequence"] == [
+        "production_permit",
+        "status_snapshot",
+    ]
+    assert custody_contract["custody_event"]["maximum_verified_sequence"] == 2
+    assert (
+        custody_contract["custody_event"]["custody_successor_uniqueness_enforced"]
+        is False
+    )
+    assert custody_decision["production_permit_one_use_enforced"] is False
+    assert custody_decision["maximum_verified_custody_sequence"] == 2
+    assert custody_decision["custody_stages_after_status_snapshot_implemented"] is False
+    assert custody_decision["custody_successor_uniqueness_enforced"] is False
+    assert custody_decision["production_validation_results_collected"] is False
+    assert custody_decision["claim_safe"] is False
+    assert (
+        custody_extension_contract["contract_sha256"]
+        == FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+    )
+    assert custody_extension_contract["purpose"]["base_custody_v1_modified"] is False
+    assert custody_extension_contract["custody_scope"]["verified_custody_sequence"] == [
+        "production_permit",
+        "status_snapshot",
+        "pre_execution_review",
+        "authorization",
+    ]
+    assert custody_extension_contract["custody_extension_event"][
+        "implemented_sequences"
+    ] == [3, 4]
+    assert (
+        custody_extension_contract["custody_extension_event"][
+            "eligible_for_atomic_execution_reservation"
+        ]
+        is False
+    )
+    assert (
+        custody_extension_decision["pre_execution_review_carrier_implemented"] is True
+    )
+    assert custody_extension_decision["authorization_carrier_implemented"] is True
+    assert custody_extension_decision["custody_extension_event_implemented"] is True
+    assert custody_extension_decision["custody_successor_uniqueness_enforced"] is False
+    assert (
+        custody_extension_decision["production_validation_execution_authorized"]
+        is False
+    )
+    assert (
+        custody_extension_decision["production_validation_results_collected"] is False
+    )
+    assert custody_extension_decision["claim_safe"] is False
 
 
 def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
@@ -60,7 +166,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 44
+    assert len(loaded["capabilities"]) == 45
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -108,9 +214,41 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
+    assert VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID in rows
     assert (
         rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
         is False
+    )
+    custody_foundation = rows[VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID]
+    assert custody_foundation["internal_reference_execution_enabled"] is False
+    assert custody_foundation["current_state"] == (
+        "claim_closed_ed25519_permit_status_review_authorization_four_event_"
+        "custody_and_process_identity_foundation_without_external_chain"
+    )
+    assert (
+        "final_production_carrier_family_not_implemented"
+        in (custody_foundation["blockers"])
+    )
+    assert (
+        "same_tick_pid_reuse_collision_not_excluded" in (custody_foundation["blockers"])
+    )
+    assert "permit_one_use_consumption_not_enforced" in custody_foundation["blockers"]
+    assert (
+        "custody_stages_after_status_snapshot_not_implemented"
+        not in custody_foundation["blockers"]
+    )
+    for blocker in (
+        "production_pre_execution_review_carrier_not_provisioned",
+        "production_authorization_carrier_not_provisioned",
+        "production_review_authorization_custody_events_not_provisioned",
+        "trusted_production_review_key_not_provisioned",
+        "trusted_production_authorization_key_not_provisioned",
+        "reservation_and_later_custody_stages_not_implemented",
+    ):
+        assert blocker in custody_foundation["blockers"]
+    assert (
+        "external_custody_successor_uniqueness_not_provisioned"
+        in custody_foundation["blockers"]
     )
 
     mmcif_semantics = rows[MMCIF_SEMANTICS_CAPABILITY_ID]
@@ -594,8 +732,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "failure_inclusive_result_receipt_writer_implemented_"
-        "without_production_receipt_or_independent_result_review"
+        "result_writer_and_independent_result_review_contract_"
+        "without_production_receipt_or_review"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
     assert "fixture_materializer_not_implemented" not in validation_protocol["blockers"]
@@ -642,6 +780,26 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         in (validation_protocol["blockers"])
     )
     assert "independent_result_review_missing" in validation_protocol["blockers"]
+    assert (
+        "signed_independent_result_review_attestation_missing"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "trusted_independent_result_reviewer_key_not_provided"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "implementation_author_and_independent_result_reviewer_separation_not_attested"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "energy_force_upstream_symmetric_hmac_chain" in validation_protocol["blockers"]
+    )
+    assert "two_cpu_host_reproducibility_missing" in validation_protocol["blockers"]
+    assert (
+        "independent_external_implementation_comparison_missing"
+        in validation_protocol["blockers"]
+    )
     assert (
         "result_receipt_external_authenticity_not_established"
         in (validation_protocol["blockers"])
@@ -760,6 +918,11 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_runner" in policy
     assert "reference_minimization_validation_result_writer" in policy
     assert "reference_minimization_validation_result_review" in policy
+    assert "reference_validation_result_review" in policy
+    assert "energy-force result-review" in policy
+    assert "validation_process_launch_identity" in policy
+    assert "validation_production_evidence_custody" in policy
+    assert "validation_production_review_authorization_custody_extension" in policy
     assert "fixed external root-owned mode-0600 trust store" in policy
     assert "child-preflighted fourteen-case run" in status
     assert "Independent Engine v2 reviewer" in entrypoints
@@ -817,6 +980,10 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_validation_run_start.py",
         "test_engine_v2_reference_validation_runner.py",
         "test_engine_v2_reference_validation_result_writer.py",
+        "test_engine_v2_reference_validation_result_review.py",
+        "test_engine_v2_validation_process_launch_identity.py",
+        "test_engine_v2_validation_production_evidence_custody.py",
+        "test_engine_v2_validation_production_review_authorization_custody_extension.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
         "test_engine_v2_mmcif_nonpoly_canonical_topology.py",
         "test_engine_v2_mmcif_nonpoly_preparation.py",
@@ -870,6 +1037,17 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256" in source
+    assert "FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256" in source
+    assert "FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256" in source
+    assert "FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256" in source
+    assert (
+        "FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256"
+        in source
+    )
+    assert (
+        "validation_production_review_authorization_custody_extension_decision"
+        in source
+    )
     assert (
         "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256"
         in source
@@ -891,7 +1069,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     )
 
 
-def test_cpu_reference_validation_workflow_covers_minimization_result_review() -> None:
+def test_cpu_reference_validation_workflow_covers_both_result_reviews() -> None:
     source = Path(
         ".github/workflows/ci-engine-v2-cpu-reference-validation-protocol.yml"
     ).read_text(encoding="utf-8")
@@ -903,4 +1081,27 @@ def test_cpu_reference_validation_workflow_covers_minimization_result_review() -
         in source
     )
     assert "reference_minimization_validation_result_review_contract_decision" in source
+    assert "test_engine_v2_reference_validation_result_review.py" in source
+    assert "reference_validation_result_review.py" in source
+    assert "FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256" in source
+    assert "reference_validation_result_review_contract_decision" in source
+    assert "test_engine_v2_validation_process_launch_identity.py" in source
+    assert "validation_process_launch_identity.py" in source
+    assert "FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256" in source
+    assert "test_engine_v2_validation_production_evidence_custody.py" in source
+    assert "validation_production_evidence_custody.py" in source
+    assert "FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256" in source
+    assert (
+        "test_engine_v2_validation_production_review_authorization_custody_extension.py"
+        in source
+    )
+    assert "validation_production_review_authorization_custody_extension.py" in source
+    assert (
+        "FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256"
+        in source
+    )
+    assert (
+        "validation_production_review_authorization_custody_extension_decision"
+        in source
+    )
     assert f'"{IMPLEMENTATION_STAGE}"' in source

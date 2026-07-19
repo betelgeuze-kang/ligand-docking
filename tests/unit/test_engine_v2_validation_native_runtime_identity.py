@@ -479,6 +479,41 @@ def test_bounded_worker_communication_kills_on_first_byte_past_cap() -> None:
     assert process.returncode is not None
 
 
+def test_bounded_worker_evidence_retains_exact_prefix_at_cap_plus_one() -> None:
+    process = subprocess.Popen(
+        [
+            os.fspath(_TRUSTED_EXECUTABLE),
+            "-S",
+            "-c",
+            (
+                "import sys,time; sys.stdin.buffer.read(); "
+                "sys.stdout.buffer.write(b'x'*65); sys.stdout.buffer.flush(); "
+                "time.sleep(60)"
+            ),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    evidence = module.communicate_bounded_worker_process_with_evidence(
+        process,
+        b"request\n",
+        deadline=time.monotonic() + 10.0,
+        max_output_bytes=64,
+    )
+
+    assert evidence.raw_output_prefix == b"x" * 64
+    assert len(evidence.raw_output_prefix) == 64
+    assert evidence.timed_out is False
+    assert evidence.output_exceeded is True
+    assert evidence.communication_failed is False
+    assert evidence.request_fully_written is True
+    assert evidence.succeeded is False
+    assert evidence.final_returncode == -module.signal.SIGKILL
+    assert process.poll() == evidence.final_returncode
+
+
 def test_bounded_worker_communication_retains_bounded_partial_on_timeout() -> None:
     process = subprocess.Popen(
         [
@@ -507,6 +542,200 @@ def test_bounded_worker_communication_retains_bounded_partial_on_timeout() -> No
     assert timed_out is True
     assert succeeded is False
     assert process.returncode is not None
+
+
+def test_bounded_worker_evidence_retains_partial_prefix_on_timeout() -> None:
+    process = subprocess.Popen(
+        [
+            os.fspath(_TRUSTED_EXECUTABLE),
+            "-S",
+            "-c",
+            (
+                "import sys,time; sys.stdin.buffer.read(); "
+                "sys.stdout.buffer.write(b'pre\\n'); sys.stdout.buffer.flush(); "
+                "time.sleep(60)"
+            ),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    evidence = module.communicate_bounded_worker_process_with_evidence(
+        process,
+        b"request\n",
+        deadline=time.monotonic() + 0.2,
+        max_output_bytes=64,
+    )
+
+    assert evidence.raw_output_prefix == b"pre\n"
+    assert len(evidence.raw_output_prefix) <= 64
+    assert evidence.timed_out is True
+    assert evidence.output_exceeded is False
+    assert evidence.communication_failed is False
+    assert evidence.request_fully_written is True
+    assert evidence.succeeded is False
+    assert evidence.final_returncode == -module.signal.SIGKILL
+    assert process.poll() == evidence.final_returncode
+
+
+def test_bounded_worker_evidence_retains_nonzero_exit_and_output() -> None:
+    process = subprocess.Popen(
+        [
+            os.fspath(_TRUSTED_EXECUTABLE),
+            "-S",
+            "-c",
+            (
+                "import sys; sys.stdin.buffer.read(); "
+                "sys.stdout.buffer.write(b'failed\\n'); "
+                "sys.stdout.buffer.flush(); raise SystemExit(7)"
+            ),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    evidence = module.communicate_bounded_worker_process_with_evidence(
+        process,
+        b"request\n",
+        deadline=time.monotonic() + 10.0,
+        max_output_bytes=64,
+    )
+
+    assert evidence.raw_output_prefix == b"failed\n"
+    assert evidence.timed_out is False
+    assert evidence.output_exceeded is False
+    assert evidence.communication_failed is False
+    assert evidence.request_fully_written is True
+    assert evidence.succeeded is False
+    assert evidence.final_returncode == 7
+    assert process.poll() == evidence.final_returncode
+
+
+def test_bounded_worker_evidence_preserves_prefix_on_read_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = subprocess.Popen(
+        [
+            os.fspath(_TRUSTED_EXECUTABLE),
+            "-S",
+            "-c",
+            (
+                "import sys; sys.stdin.buffer.read(); "
+                "sys.stdout.buffer.write(b'pre\\ntail'); "
+                "sys.stdout.buffer.flush(); raise SystemExit(9)"
+            ),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    assert process.stdout is not None
+    stdout_fd = process.stdout.fileno()
+    real_read = module.os.read
+    stdout_read_count = 0
+
+    def fail_after_prefix(fd: int, count: int) -> bytes:
+        nonlocal stdout_read_count
+        if fd != stdout_fd:
+            return real_read(fd, count)
+        stdout_read_count += 1
+        if stdout_read_count == 1:
+            return real_read(fd, min(count, 4))
+        raise OSError("synthetic stdout read failure")
+
+    monkeypatch.setattr(module.os, "read", fail_after_prefix)
+    evidence = module.communicate_bounded_worker_process_with_evidence(
+        process,
+        b"request\n",
+        deadline=time.monotonic() + 10.0,
+        max_output_bytes=64,
+    )
+
+    assert evidence.raw_output_prefix == b"pre\n"
+    assert len(evidence.raw_output_prefix) <= 64
+    assert evidence.timed_out is False
+    assert evidence.output_exceeded is False
+    assert evidence.communication_failed is True
+    assert evidence.request_fully_written is True
+    assert evidence.succeeded is False
+    assert evidence.final_returncode == 9
+    assert process.poll() == evidence.final_returncode
+
+
+def test_bounded_worker_evidence_records_incomplete_request_on_write_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = subprocess.Popen(
+        [
+            os.fspath(_TRUSTED_EXECUTABLE),
+            "-S",
+            "-c",
+            "import sys; sys.stdin.buffer.read(); raise SystemExit(8)",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    assert process.stdin is not None
+    stdin_fd = process.stdin.fileno()
+    real_write = module.os.write
+    stdin_write_count = 0
+
+    def fail_after_one_byte(fd: int, value: bytes) -> int:
+        nonlocal stdin_write_count
+        if fd != stdin_fd:
+            return real_write(fd, value)
+        stdin_write_count += 1
+        if stdin_write_count == 1:
+            return real_write(fd, value[:1])
+        raise BrokenPipeError("synthetic stdin write failure")
+
+    monkeypatch.setattr(module.os, "write", fail_after_one_byte)
+    evidence = module.communicate_bounded_worker_process_with_evidence(
+        process,
+        b"request\n",
+        deadline=time.monotonic() + 10.0,
+        max_output_bytes=64,
+    )
+
+    assert evidence.raw_output_prefix == b""
+    assert evidence.timed_out is False
+    assert evidence.output_exceeded is False
+    assert evidence.communication_failed is True
+    assert evidence.request_fully_written is False
+    assert evidence.succeeded is False
+    assert evidence.final_returncode == 8
+    assert process.poll() == evidence.final_returncode
+
+
+def test_bounded_worker_compatibility_wrapper_discards_failure_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    evidence = module.BoundedWorkerProcessCommunicationEvidence(
+        raw_output_prefix=b"partial",
+        timed_out=False,
+        output_exceeded=False,
+        communication_failed=True,
+        request_fully_written=True,
+        succeeded=False,
+        final_returncode=-module.signal.SIGKILL,
+    )
+    monkeypatch.setattr(
+        module,
+        "communicate_bounded_worker_process_with_evidence",
+        lambda *_args, **_kwargs: evidence,
+    )
+
+    assert module.communicate_bounded_worker_process(
+        SimpleNamespace(),
+        b"request\n",
+        deadline=time.monotonic() + 10.0,
+        max_output_bytes=64,
+    ) == (b"", False, False)
 
 
 def test_process_group_termination_targets_group_after_leader_exit(

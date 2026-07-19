@@ -30,8 +30,12 @@ on:
       - "tests/unit/test_engine_v2_reference_validation_run_start.py"
       - "tests/unit/test_engine_v2_reference_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_validation_result_writer.py"
+      - "tests/unit/test_engine_v2_reference_validation_result_review.py"
       - "tests/unit/test_engine_v2_validation_legacy_contracts.py"
       - "tests/unit/test_engine_v2_validation_native_runtime_identity.py"
+      - "tests/unit/test_engine_v2_validation_process_launch_identity.py"
+      - "tests/unit/test_engine_v2_validation_production_evidence_custody.py"
+      - "tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py"
       - "tests/unit/test_engine_v2_validation_runtime_integrity_contract.py"
       - "tests/unit/test_engine_v2_validation_source_identity.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
@@ -76,8 +80,12 @@ on:
       - "tests/unit/test_engine_v2_reference_validation_run_start.py"
       - "tests/unit/test_engine_v2_reference_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_validation_result_writer.py"
+      - "tests/unit/test_engine_v2_reference_validation_result_review.py"
       - "tests/unit/test_engine_v2_validation_legacy_contracts.py"
       - "tests/unit/test_engine_v2_validation_native_runtime_identity.py"
+      - "tests/unit/test_engine_v2_validation_process_launch_identity.py"
+      - "tests/unit/test_engine_v2_validation_production_evidence_custody.py"
+      - "tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py"
       - "tests/unit/test_engine_v2_validation_runtime_integrity_contract.py"
       - "tests/unit/test_engine_v2_validation_source_identity.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
@@ -148,8 +156,12 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_run_start.py
             tests/unit/test_engine_v2_reference_validation_runner.py
             tests/unit/test_engine_v2_reference_validation_result_writer.py
+            tests/unit/test_engine_v2_reference_validation_result_review.py
             tests/unit/test_engine_v2_validation_legacy_contracts.py
             tests/unit/test_engine_v2_validation_native_runtime_identity.py
+            tests/unit/test_engine_v2_validation_process_launch_identity.py
+            tests/unit/test_engine_v2_validation_production_evidence_custody.py
+            tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py
             tests/unit/test_engine_v2_validation_source_identity.py
             tests/unit/test_engine_v2_reference_parameter_applicability.py
@@ -214,9 +226,13 @@ jobs:
             betelgeuze_engine_v2/physics/reference_validation_run_start.py \
             betelgeuze_engine_v2/physics/reference_validation_runner.py \
             betelgeuze_engine_v2/physics/reference_validation_result_writer.py \
+            betelgeuze_engine_v2/physics/reference_validation_result_review.py \
             betelgeuze_engine_v2/physics/reference_validation_receipts.py \
             betelgeuze_engine_v2/physics/validation_legacy_contracts.py \
             betelgeuze_engine_v2/physics/validation_native_runtime_identity.py \
+            betelgeuze_engine_v2/physics/validation_process_launch_identity.py \
+            betelgeuze_engine_v2/physics/validation_production_evidence_custody.py \
+            betelgeuze_engine_v2/physics/validation_production_review_authorization_custody_extension.py \
             betelgeuze_engine_v2/physics/validation_runtime_integrity_contract.py \
             betelgeuze_engine_v2/physics/validation_source_identity.py \
             betelgeuze_engine_v2/physics/__init__.py \
@@ -244,8 +260,12 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_run_start.py \
             tests/unit/test_engine_v2_reference_validation_runner.py \
             tests/unit/test_engine_v2_reference_validation_result_writer.py \
+            tests/unit/test_engine_v2_reference_validation_result_review.py \
             tests/unit/test_engine_v2_validation_legacy_contracts.py \
             tests/unit/test_engine_v2_validation_native_runtime_identity.py \
+            tests/unit/test_engine_v2_validation_process_launch_identity.py \
+            tests/unit/test_engine_v2_validation_production_evidence_custody.py \
+            tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py \
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
             tests/unit/test_engine_v2_validation_source_identity.py \
             --config packaging/engine-v2/pyproject.toml
@@ -276,8 +296,12 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_run_start.py \
             tests/unit/test_engine_v2_reference_validation_runner.py \
             tests/unit/test_engine_v2_reference_validation_result_writer.py \
+            tests/unit/test_engine_v2_reference_validation_result_review.py \
             tests/unit/test_engine_v2_validation_legacy_contracts.py \
             tests/unit/test_engine_v2_validation_native_runtime_identity.py \
+            tests/unit/test_engine_v2_validation_process_launch_identity.py \
+            tests/unit/test_engine_v2_validation_production_evidence_custody.py \
+            tests/unit/test_engine_v2_validation_production_review_authorization_custody_extension.py \
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
             tests/unit/test_engine_v2_validation_source_identity.py \
             tests/unit/test_engine_v2_reference_parameter_applicability.py \
@@ -307,6 +331,19 @@ jobs:
               FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
+              FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
+              FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+              process_launch_identity_contract_document,
+              process_launch_identity_decision,
+              validation_production_evidence_custody_contract_document,
+              validation_production_evidence_custody_decision,
+              validation_production_review_authorization_custody_extension_contract_document,
+              validation_production_review_authorization_custody_extension_decision,
+              validation_runtime_integrity_contract_document,
               reference_validation_authorization_contract_decision,
               reference_validation_authorization_contract_document,
               reference_validation_execution_environment_contract_document,
@@ -320,6 +357,8 @@ jobs:
               reference_validation_runner_contract_document,
               reference_validation_result_writer_contract_decision,
               reference_validation_result_writer_contract_document,
+              reference_validation_result_review_contract_decision,
+              reference_validation_result_review_contract_document,
               reference_validation_artifact_authorization_decision,
               reference_validation_artifact_binding_document,
               reference_validation_review_contract_authorization_decision,
@@ -344,8 +383,85 @@ jobs:
               )
           )
           assert loaded == capability_snapshot()
-          assert len(loaded["capabilities"]) == 44
+          assert len(loaded["capabilities"]) == 45
           assert loaded["implementation_stage"] == "v2_ao_minimization_validation_production_entrypoint"
+          process_identity = process_launch_identity_contract_document()
+          assert process_identity["contract_sha256"] == (
+              FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
+          )
+          process_identity_decision = process_launch_identity_decision()
+          assert process_identity_decision["same_tick_pid_reuse_collision_excluded"] is False
+          assert process_identity_decision["production_process_authenticity_established"] is False
+          custody = validation_production_evidence_custody_contract_document()
+          assert custody["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
+          )
+          runtime_integrity = validation_runtime_integrity_contract_document()
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_evidence_custody_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
+          )
+          custody_extension = (
+              validation_production_review_authorization_custody_extension_contract_document()
+          )
+          assert custody_extension["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_review_authorization_custody_extension_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+          )
+          assert custody_extension["custody_scope"]["verified_custody_sequence"] == [
+              "production_permit",
+              "status_snapshot",
+              "pre_execution_review",
+              "authorization",
+          ]
+          assert custody_extension["custody_extension_event"]["implemented_sequences"] == [3, 4]
+          assert custody_extension["custody_extension_event"][
+              "eligible_for_atomic_execution_reservation"
+          ] is False
+          custody_extension_decision = (
+              validation_production_review_authorization_custody_extension_decision()
+          )
+          assert custody_extension_decision["custody_extension_event_implemented"] is True
+          assert custody_extension_decision["custody_successor_uniqueness_enforced"] is False
+          assert custody_extension_decision["production_validation_execution_authorized"] is False
+          assert custody_extension_decision["production_validation_results_collected"] is False
+          assert custody_extension_decision["claim_safe"] is False
+          assert custody["permit"]["one_use_enforced"] is False
+          assert custody["custody_event"]["verified_stage_sequence"] == [
+              "production_permit",
+              "status_snapshot",
+          ]
+          assert custody["custody_event"]["maximum_verified_sequence"] == 2
+          assert custody["custody_event"]["custody_successor_uniqueness_enforced"] is False
+          assert custody["custody_event"]["planned_only_stages"] == [
+              "pre_execution_review",
+              "authorization",
+              "reservation",
+              "environment",
+              "runner_start",
+              "worker_transcript",
+              "observation",
+              "result",
+              "result_review",
+              "response",
+          ]
+          custody_decision = validation_production_evidence_custody_decision()
+          assert custody_decision["common_production_evidence_foundation_implemented"] is True
+          assert custody_decision["production_permit_one_use_enforced"] is False
+          assert custody_decision["maximum_verified_custody_sequence"] == 2
+          assert custody_decision["custody_stages_after_status_snapshot_implemented"] is False
+          assert custody_decision["custody_successor_uniqueness_enforced"] is False
+          assert custody_decision["production_custody_chain_present"] is False
+          assert custody_decision["production_validation_results_collected"] is False
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
@@ -464,6 +580,16 @@ jobs:
           assert writer_decision["production_result_receipt_present"] is False
           assert writer_decision["independent_result_review_complete"] is False
           assert writer_decision["claim_safe"] is False
+          result_review = reference_validation_result_review_contract_document()
+          assert result_review["contract_sha256"] == (
+              FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
+          )
+          result_review_decision = reference_validation_result_review_contract_decision()
+          assert result_review_decision["result_review_contract_implemented"] is True
+          assert result_review_decision["production_result_receipt_present"] is False
+          assert result_review_decision["signed_independent_result_review_present"] is False
+          assert result_review_decision["force_or_energy_validated"] is False
+          assert result_review_decision["claim_safe"] is False
           environment_contract = reference_validation_execution_environment_contract_document()
           assert environment_contract["contract_sha256"] == (
               FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256

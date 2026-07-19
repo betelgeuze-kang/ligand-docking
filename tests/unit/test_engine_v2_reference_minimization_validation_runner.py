@@ -33,6 +33,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol imp
     cpu_minimization_validation_protocol_document,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_runner import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V5,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES,
     ReferenceMinimizationValidationRunnerAlreadyStartedError,
@@ -51,6 +52,7 @@ RECEIPT_SHA256 = "b" * 64
 FINGERPRINT_SHA256 = "c" * 64
 COMMIT_SHA = "d" * 40
 SOURCE_MANIFEST_SHA256 = "7" * 64
+RUNNER_START_SHA256 = "6" * 64
 DEPENDENCIES = (
     ("cryptography-distribution", "a" * 64),
     ("numpy-distribution", "b" * 64),
@@ -138,8 +140,13 @@ def _install_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
 
     def supervise(**kwargs: object) -> object:
         assert isinstance(kwargs["deadline"], float)
-        request = _worker_request(source_sha256=receipt.runner_source_sha256)
-        assert kwargs["worker_preflight_request"] == request
+        request = kwargs["worker_preflight_request"]
+        assert isinstance(request, dict)
+        expected = _worker_request(source_sha256=receipt.runner_source_sha256)
+        expected["expected_runner_start_record_sha256"] = request[
+            "expected_runner_start_record_sha256"
+        ]
+        assert request == expected
         return _complete_supervised_result(
             monkeypatch,
             request=request,
@@ -188,8 +195,16 @@ def _worker_request(
         "schema_id": (
             module.REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID
         ),
+        "expected_authorization_nonce_sha256": NONCE,
+        "expected_runner_start_record_sha256": RUNNER_START_SHA256,
         "expected_code_commit_sha": COMMIT_SHA,
         "expected_runner_source_sha256": source_sha256,
+        "expected_source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+        "expected_materialization_manifest_sha256": (
+            module.cpu_minimization_validation_materialization_manifest_document()[
+                "materialization_manifest_sha256"
+            ]
+        ),
         "expected_dependency_artifact_sha256_rows": dict(DEPENDENCIES),
         "dependency_roots": roots,
         "expected_environment_receipt_sha256": RECEIPT_SHA256,
@@ -304,6 +319,7 @@ def _complete_supervised_result(
     return module._decode_complete_matrix_worker_transcript(
         raw,
         worker_preflight_request=request,
+        supervisor_child_process_id=1,
     )
 
 
@@ -323,7 +339,17 @@ def _supervise_raw_transcript(
     monkeypatch.setattr(
         module,
         "_communicate_fixed_matrix_worker",
-        lambda *_args, **_kwargs: (raw, timed_out, succeeded),
+        lambda *_args, **_kwargs: (
+            native_identity.BoundedWorkerProcessCommunicationEvidence(
+                raw_output_prefix=raw,
+                timed_out=timed_out,
+                output_exceeded=False,
+                communication_failed=False,
+                request_fully_written=True,
+                succeeded=succeeded,
+                final_returncode=0 if succeeded else 2,
+            )
+        ),
     )
     return module._run_supervised_case_matrix(
         deadline=time.monotonic() + 10.0,
@@ -370,6 +396,10 @@ def test_contract_is_frozen_and_all_claims_remain_closed() -> None:
     assert document["worker"]["exact_frame_count"] == 16
     assert document["worker"]["ordered_case_payload_frame_count"] == 14
     assert document["worker"]["native_mapping_lifetime_closure_claimed"] is False
+    assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V5
+        == "c27ff1ae8797db615e1aeb1625e70c476ff011026963b3a678880a4cc9fa7d33"
+    )
     assert document["worker"][
         "timeout_nonzero_or_incomplete_transcript_discards_all_child_payloads"
     ]
@@ -638,12 +668,22 @@ def test_worker_emits_exact_pre_fourteen_payload_completion_frames(
     result = module._decode_complete_matrix_worker_transcript(
         raw,
         worker_preflight_request=request,
+        supervisor_child_process_id=1,
     )
     evidence = result.worker_execution_evidence
     assert evidence.completion_state == "complete"
     assert evidence.failure_code is None
     assert evidence.native_pre_post_snapshot_equality_verified is True
     assert evidence.native_mapping_lifetime_closure_claimed is False
+    assert evidence.supervisor_child_process_id == 1
+    assert evidence.worker_request_document == request
+    assert evidence.worker_request_byte_count == len(
+        module._canonical_bytes(request) + b"\n"
+    )
+    assert evidence.transcript_frame_count == 16
+    assert evidence.canonical_transcript_reconstructed is True
+    assert evidence.partial_prefix_frame_rows == ()
+    assert evidence.raw_partial_not_independently_replayable is False
     assert len(evidence.case_frame_sha256_rows) == 14
     assert evidence.retained_case_aggregate_sha256 == module._sha256(
         [row.to_dict() for row in result.case_results]
@@ -723,7 +763,9 @@ def test_supervisor_discards_every_payload_for_incomplete_or_tampered_transcript
     assert evidence.case_frame_sha256_rows == ()
     assert evidence.pre_frame_sha256 is None
     assert evidence.completion_frame_sha256 is None
-    assert evidence.transcript_sha256 is None
+    assert evidence.transcript_sha256 == hashlib.sha256(b"".join(lines)).hexdigest()
+    assert evidence.raw_partial_not_independently_replayable is True
+    assert evidence.partial_prefix_frame_rows
     assert evidence.native_pre_post_snapshot_equality_verified is False
 
 
@@ -753,6 +795,15 @@ def test_timeout_after_partial_payload_discards_all_child_successes(
     assert all(row.operational_result_sha256 is None for row in result)
     assert result.worker_execution_evidence.completion_state == "incomplete"
     assert result.worker_execution_evidence.case_frame_sha256_rows == ()
+    evidence = result.worker_execution_evidence
+    assert evidence.transcript_byte_count == len(partial)
+    assert evidence.transcript_sha256 == hashlib.sha256(partial).hexdigest()
+    assert evidence.parsed_prefix_frame_count == 7
+    assert evidence.discarded_child_payload_frame_count == 6
+    assert evidence.accepted_child_payload_frame_count == 0
+    assert evidence.raw_partial_not_independently_replayable is True
+    assert evidence.failure_stage == "worker_execution_deadline"
+    assert evidence.worker_timed_out is True
 
 
 def test_nonzero_exit_discards_even_a_complete_valid_transcript(
@@ -805,6 +856,15 @@ def test_worker_execution_parser_enforces_complete_and_incomplete_cross_invarian
     aggregate_tamper = deepcopy(payload)
     aggregate_tamper["retained_case_aggregate_sha256"] = "0" * 64
     mutations.append(aggregate_tamper)
+    transcript_tamper = deepcopy(payload)
+    transcript_tamper["transcript_sha256"] = "0" * 64
+    mutations.append(transcript_tamper)
+    transcript_length_tamper = deepcopy(payload)
+    transcript_length_tamper["transcript_byte_count"] += 1
+    mutations.append(transcript_length_tamper)
+    pid_tamper = deepcopy(payload)
+    pid_tamper["supervisor_child_process_id"] = 2
+    mutations.append(pid_tamper)
     false_incomplete = deepcopy(payload)
     false_incomplete["completion_state"] = "incomplete"
     false_incomplete["failure_code"] = "runner_worker_output_invalid"
@@ -833,6 +893,41 @@ def test_worker_execution_parser_enforces_complete_and_incomplete_cross_invarian
             incomplete_payload,
             case_results=complete.case_results,
         )
+
+
+def test_self_consistent_request_lifecycle_transplant_is_rejected_by_observation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_preflight(monkeypatch)
+    observation = _run(_root(tmp_path)).to_dict()
+    original_evidence = observation["worker_execution_evidence"]
+    transplanted_request = deepcopy(original_evidence["worker_request_document"])
+    transplanted_request["expected_authorization_nonce_sha256"] = "f" * 64
+    transplanted_request["expected_runner_start_record_sha256"] = "e" * 64
+    transplanted = _complete_supervised_result(
+        monkeypatch,
+        request=transplanted_request,
+        rows=complete_case_rows,
+    )
+    observation["worker_execution_evidence"] = (
+        transplanted.worker_execution_evidence.to_dict()
+    )
+    with pytest.raises(
+        ReferenceMinimizationValidationRunnerError,
+        match="provenance identities are cross-wired",
+    ):
+        module.require_reference_minimization_validation_run_observation_document(
+            observation
+        )
+
+
+def test_frame_loader_rejects_duplicate_keys_and_noncanonical_transport() -> None:
+    with pytest.raises(ReferenceMinimizationValidationRunnerError, match="duplicate"):
+        module._load_matrix_worker_frame_line(b'{"schema_id":"a","schema_id":"b"}\n')
+    with pytest.raises(ReferenceMinimizationValidationRunnerError, match="canonical"):
+        module._load_matrix_worker_frame_line(b'{ "schema_id":"a" }\n')
 
 
 def test_case_observation_rejects_missing_reordered_or_crosswired_trace_data() -> None:
@@ -877,6 +972,7 @@ def test_supervisor_hard_stops_a_stalled_child_and_retains_all_rows(
 ) -> None:
     class StalledProcess:
         args = ("python",)
+        pid = 1
         returncode: int | None = None
 
         def __init__(self) -> None:
@@ -906,10 +1002,21 @@ def test_supervisor_hard_stops_a_stalled_child_and_retains_all_rows(
     monkeypatch.setattr(
         module,
         "_communicate_fixed_matrix_worker",
-        lambda *_args, **_kwargs: (process.kill() or b"", True, False),
+        lambda *_args, **_kwargs: (
+            process.kill()
+            or native_identity.BoundedWorkerProcessCommunicationEvidence(
+                raw_output_prefix=b"",
+                timed_out=True,
+                output_exceeded=False,
+                communication_failed=False,
+                request_fully_written=True,
+                succeeded=False,
+                final_returncode=-9,
+            )
+        ),
     )
     rows = module._run_supervised_case_matrix(
-        deadline=time.monotonic() + 0.05,
+        deadline=time.monotonic() + 1.0,
         worker_preflight_request=_worker_request(),
     )
     assert len(rows) == 14
@@ -939,6 +1046,7 @@ def test_supervisor_reaps_communication_failure_and_retains_fourteen_rows(
 ) -> None:
     class BrokenProcess:
         args = ("python",)
+        pid = 1
         returncode: int | None = None
 
         def __init__(self) -> None:
@@ -966,7 +1074,18 @@ def test_supervisor_reaps_communication_failure_and_retains_fourteen_rows(
     monkeypatch.setattr(
         module,
         "_communicate_fixed_matrix_worker",
-        lambda *_args, **_kwargs: (process.kill() or b"", False, False),
+        lambda *_args, **_kwargs: (
+            process.kill()
+            or native_identity.BoundedWorkerProcessCommunicationEvidence(
+                raw_output_prefix=b"",
+                timed_out=False,
+                output_exceeded=False,
+                communication_failed=True,
+                request_fully_written=False,
+                succeeded=False,
+                final_returncode=-9,
+            )
+        ),
     )
     rows = module._run_supervised_case_matrix(
         deadline=time.monotonic() + 1.0,
@@ -977,6 +1096,60 @@ def test_supervisor_reaps_communication_failure_and_retains_fourteen_rows(
         row.observed_error_code == "runner_worker_output_invalid" for row in rows
     )
     assert process.killed is True
+
+
+def test_supervisor_retains_only_bounded_prefix_when_worker_exceeds_output_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _worker_request()
+    retained_prefix = b"x" * 32
+    monkeypatch.setattr(
+        module,
+        "REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WORKER_OUTPUT_BYTES",
+        len(retained_prefix),
+    )
+    monkeypatch.setattr(
+        module,
+        "_start_fixed_matrix_worker",
+        lambda _request: SimpleNamespace(pid=17, returncode=-9),
+    )
+    monkeypatch.setattr(
+        module,
+        "_communicate_fixed_matrix_worker",
+        lambda *_args, **_kwargs: (
+            native_identity.BoundedWorkerProcessCommunicationEvidence(
+                raw_output_prefix=retained_prefix,
+                timed_out=False,
+                output_exceeded=True,
+                communication_failed=False,
+                request_fully_written=True,
+                succeeded=False,
+                final_returncode=-9,
+            )
+        ),
+    )
+
+    rows = module._run_supervised_case_matrix(
+        deadline=time.monotonic() + 1.0,
+        worker_preflight_request=request,
+    )
+
+    evidence = rows.worker_execution_evidence
+    serialized = evidence.to_dict()
+    assert len(rows) == 14
+    assert all(
+        row.observed_error_code == "runner_worker_output_invalid" for row in rows
+    )
+    assert evidence.completion_state == "incomplete"
+    assert evidence.failure_stage == "worker_output_bound"
+    assert evidence.supervisor_child_process_id == 17
+    assert evidence.transcript_byte_count == len(retained_prefix)
+    assert evidence.transcript_sha256 == hashlib.sha256(retained_prefix).hexdigest()
+    assert evidence.worker_output_overflow_detected is True
+    assert evidence.accepted_child_payload_frame_count == 0
+    assert evidence.raw_partial_not_independently_replayable is True
+    assert "raw_output" not in serialized
+    assert "raw_output_base64" not in serialized
 
 
 def test_fixed_worker_launch_uses_exact_flags_and_controlled_environment(
@@ -1066,15 +1239,15 @@ def test_real_fixed_worker_reaches_preflight_and_returns_failure_complete_rows(
     )
 
     process = module._start_fixed_matrix_worker(request)
-    raw, timed_out, succeeded = module._communicate_fixed_matrix_worker(
+    communication = module._communicate_fixed_matrix_worker(
         process,
         request,
         deadline=time.monotonic() + 30.0,
     )
 
-    assert timed_out is False
-    assert succeeded is False
-    assert raw == b""
+    assert communication.timed_out is False
+    assert communication.succeeded is False
+    assert communication.raw_output_prefix == b""
 
 
 def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(

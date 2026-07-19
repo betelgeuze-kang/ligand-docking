@@ -74,7 +74,8 @@ from .validation_native_runtime_identity import (
     build_complete_worker_runtime_lifecycle_evidence,
     build_incomplete_worker_runtime_lifecycle_evidence,
     build_worker_runtime_pre_evidence,
-    communicate_bounded_worker_process,
+    BoundedWorkerProcessCommunicationEvidence,
+    communicate_bounded_worker_process_with_evidence,
     require_complete_worker_runtime_process_id,
     require_worker_runtime_lifecycle_evidence,
     require_worker_runtime_pre_evidence,
@@ -82,13 +83,13 @@ from .validation_native_runtime_identity import (
 
 
 REFERENCE_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_contract/4.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_START_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_start/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_start/4.0.0"
 )
 REFERENCE_VALIDATION_RUN_OBSERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_run_observation/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_run_observation/4.0.0"
 )
 _CASE_WORKER_INCOMPLETE_FAILURE_CODES = frozenset(
     {
@@ -99,10 +100,10 @@ _CASE_WORKER_INCOMPLETE_FAILURE_CODES = frozenset(
     }
 )
 REFERENCE_VALIDATION_RUNNER_CONTRACT_ID = (
-    "cpu_reference_validation_bounded_runner/3.0.0"
+    "cpu_reference_validation_bounded_runner/4.0.0"
 )
-REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-18T23:33:55Z"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "4.0.0"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-19T00:00:00Z"
 REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_VALIDATION_RUNNER_PREFLIGHT_MAX_WALL_SECONDS = 180.0
@@ -121,10 +122,13 @@ REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_runner_response/2.0.0"
 )
 REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_case_worker_request/4.0.0"
+    "betelgeuze.engine_v2_reference_validation_case_worker_request/5.0.0"
 )
 REFERENCE_VALIDATION_WORKER_FRAME_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_worker_frame/1.0.0"
+)
+REFERENCE_VALIDATION_WORKER_EXECUTION_PROVENANCE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_validation_worker_execution_provenance/1.0.0"
 )
 REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_trust_store/1.0.0"
@@ -134,6 +138,9 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
+    "baeb0ae59234cf69154b0ed34658d779fdc0cfec05c969856056a586be13bad8"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V3 = (
     "c450059857a38f7cf8aa44ba1efbb79ff3d6218ebc7deaf963078c2e3f44a1e9"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V2 = (
@@ -180,7 +187,7 @@ _POST_RUN_BLOCKERS = (
     "production_validation_result_not_collected",
     "result_receipt_not_written",
     "independent_result_review_missing",
-    "worker_request_observation_identity_binding_missing",
+    "external_worker_launch_identity_not_established",
     "parameter_fitting_not_authorized",
     "minimization_validation_results_not_collected",
     "scientific_validation_missing",
@@ -1240,6 +1247,715 @@ def _lifecycle_evidence_from_bytes(value: bytes, *, name: str) -> dict[str, Any]
     return payload
 
 
+def _raw_sha256(value: bytes) -> str:
+    if not isinstance(value, bytes):
+        raise ReferenceValidationRunnerError("raw SHA-256 input must be bytes")
+    return hashlib.sha256(value).hexdigest()
+
+
+def _canonical_worker_frame_prefix(
+    transcript: bytes,
+) -> tuple[list[dict[str, Any]], int]:
+    """Describe the exact contiguous canonical-frame prefix of one transcript."""
+
+    if not isinstance(transcript, bytes):
+        raise ReferenceValidationRunnerError(
+            "validation-worker transcript must be bytes"
+        )
+    sequence: list[dict[str, Any]] = []
+    prefix_byte_count = 0
+    for index, raw_line in enumerate(transcript.splitlines(keepends=True)):
+        try:
+            frame = _decode_worker_frame(raw_line)
+        except ReferenceValidationRunnerError:
+            break
+        sequence.append(
+            {
+                "frame_index": index,
+                "frame_type": frame["frame_type"],
+                "ordinal": frame.get("ordinal"),
+                "worker_kind": frame["worker_kind"],
+                "worker_request_sha256": frame["worker_request_sha256"],
+                "frame_byte_count": len(raw_line),
+                "frame_sha256": _raw_sha256(raw_line),
+            }
+        )
+        prefix_byte_count += len(raw_line)
+    return sequence, prefix_byte_count
+
+
+def _build_worker_execution_provenance(
+    *,
+    worker_kind: str,
+    request: Mapping[str, Any],
+    supervisor_launched_child_process_id: int | None,
+    transcript: bytes,
+    lifecycle: Mapping[str, Any],
+    accepted_payload_rows: Sequence[Mapping[str, Any]] | None,
+    failure_stage: str | None,
+    child_exit_code: int | None,
+    timed_out: bool,
+    output_overflow: bool,
+    communication_failed: bool,
+    request_fully_written: bool,
+) -> dict[str, Any]:
+    """Bind exact supervisor inputs/outputs to one lifecycle without dropping bytes."""
+
+    if worker_kind not in {"manifest", "case"}:
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance kind is invalid"
+        )
+    request_bytes = _canonical_bytes(dict(request)) + b"\n"
+    checked_request = _load_case_worker_request(request_bytes)
+    if checked_request["worker_kind"] != worker_kind:
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance request kind is cross-wired"
+        )
+    if (
+        not isinstance(transcript, bytes)
+        or len(transcript) > REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance transcript exceeds the fixed bound"
+        )
+    if supervisor_launched_child_process_id is not None and (
+        type(supervisor_launched_child_process_id) is not int
+        or supervisor_launched_child_process_id <= 0
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance child process identity is invalid"
+        )
+    if not isinstance(lifecycle, Mapping):
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance lifecycle is invalid"
+        )
+    frame_sequence, canonical_prefix_byte_count = _canonical_worker_frame_prefix(
+        transcript
+    )
+    completion_state = lifecycle.get("completion_state")
+    if completion_state == "complete":
+        if accepted_payload_rows is None:
+            raise ReferenceValidationRunnerError(
+                "complete validation-worker provenance requires retained payload rows"
+            )
+        request_sha256 = _worker_request_sha256(checked_request)
+        reconstructed = b"".join(
+            _canonical_bytes(frame) + b"\n"
+            for frame in (
+                _worker_frame(
+                    frame_type="pre",
+                    worker_kind=worker_kind,
+                    worker_request_sha256=request_sha256,
+                    payload=lifecycle["pre"],
+                ),
+                *(
+                    _worker_frame(
+                        frame_type="payload",
+                        worker_kind=worker_kind,
+                        worker_request_sha256=request_sha256,
+                        payload=row,
+                        ordinal=ordinal,
+                    )
+                    for ordinal, row in enumerate(accepted_payload_rows)
+                ),
+                _worker_frame(
+                    frame_type="completion",
+                    worker_kind=worker_kind,
+                    worker_request_sha256=request_sha256,
+                    payload=lifecycle,
+                ),
+            )
+        )
+        if transcript != reconstructed:
+            raise ReferenceValidationRunnerError(
+                "complete validation-worker raw transcript differs from reconstruction"
+            )
+    elif accepted_payload_rows is not None:
+        raise ReferenceValidationRunnerError(
+            "incomplete validation-worker provenance cannot accept payload rows"
+        )
+    if (
+        (failure_stage is not None and not isinstance(failure_stage, str))
+        or type(timed_out) is not bool
+        or type(output_overflow) is not bool
+        or type(communication_failed) is not bool
+        or type(request_fully_written) is not bool
+        or (child_exit_code is not None and type(child_exit_code) is not int)
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker termination provenance is invalid"
+        )
+    payload_prefix_count = sum(row["frame_type"] == "payload" for row in frame_sequence)
+    trailing_fragment_byte_count = (
+        len(transcript.rsplit(b"\n", 1)[-1]) if not transcript.endswith(b"\n") else 0
+    )
+    projection: dict[str, Any] = {
+        "schema_id": REFERENCE_VALIDATION_WORKER_EXECUTION_PROVENANCE_SCHEMA_ID,
+        "worker_kind": worker_kind,
+        "worker_request_canonical_jsonl_hex": request_bytes.hex(),
+        "worker_request_byte_count": len(request_bytes),
+        "worker_request_sha256": _worker_request_sha256(checked_request),
+        "worker_request_transport_sha256": _raw_sha256(request_bytes),
+        "supervisor_launched_child_process_id": (supervisor_launched_child_process_id),
+        "transcript_byte_count": len(transcript),
+        "transcript_sha256": _raw_sha256(transcript),
+        "canonical_frame_sequence": frame_sequence,
+        "parsed_prefix_frame_count": len(frame_sequence),
+        "canonical_prefix_byte_count": canonical_prefix_byte_count,
+        "discarded_suffix_byte_count": len(transcript) - canonical_prefix_byte_count,
+        "trailing_fragment_byte_count": trailing_fragment_byte_count,
+        "discarded_payload_frame_count": (
+            0 if completion_state == "complete" else payload_prefix_count
+        ),
+        "accepted_payload_frame_count": (
+            payload_prefix_count if completion_state == "complete" else 0
+        ),
+        "lifecycle_evidence_sha256": _sha256(dict(lifecycle)),
+        "completion_state": completion_state,
+        "failure_code": lifecycle.get("failure_code"),
+        "failure_stage": failure_stage,
+        "child_exit_code": child_exit_code,
+        "timed_out": timed_out,
+        "output_overflow": output_overflow,
+        "communication_failed": communication_failed,
+        "request_fully_written": request_fully_written,
+        "raw_partial_not_independently_replayable": completion_state == "incomplete",
+        "partial_worker_payload_accepted": False,
+    }
+    projection["provenance_sha256"] = _sha256(projection)
+    return projection
+
+
+def _worker_execution_provenance_bytes(value: Mapping[str, Any], *, name: str) -> bytes:
+    if not isinstance(value, Mapping):
+        raise ReferenceValidationRunnerError(f"{name} must be a mapping")
+    encoded = _canonical_bytes(dict(value))
+    if not encoded:
+        raise ReferenceValidationRunnerError(f"{name} is empty")
+    return encoded
+
+
+def _worker_execution_provenance_from_bytes(
+    value: bytes, *, name: str
+) -> dict[str, Any]:
+    if not isinstance(value, bytes) or not value:
+        raise ReferenceValidationRunnerError(f"{name} canonical bytes are invalid")
+    try:
+        payload = json.loads(value.decode("ascii"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunnerError(
+            f"{name} canonical bytes are invalid"
+        ) from exc
+    if not isinstance(payload, dict) or _canonical_bytes(payload) != value:
+        raise ReferenceValidationRunnerError(f"{name} canonical bytes are not exact")
+    return payload
+
+
+def _decode_lower_hex_bytes(value: object, *, name: str, maximum: int) -> bytes:
+    if (
+        not isinstance(value, str)
+        or len(value) % 2
+        or len(value) > maximum * 2
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise ReferenceValidationRunnerError(f"{name} is not bounded lowercase hex")
+    return bytes.fromhex(value)
+
+
+def require_reference_validation_worker_execution_provenance_document(
+    payload: Mapping[str, Any],
+    *,
+    lifecycle: Mapping[str, Any],
+    expected_worker_kind: str,
+    expected_code_commit_sha: str,
+    expected_runner_source_sha256: str,
+    expected_source_manifest_sha256: str,
+    expected_dependency_artifact_sha256_rows: Mapping[str, str]
+    | Sequence[tuple[str, str]],
+    expected_environment_receipt_sha256: str,
+    expected_environment_fingerprint_sha256: str,
+    expected_authorization_nonce_sha256: str,
+    expected_runner_start_record_sha256: str | None,
+    expected_application_seed: int,
+    expected_materialization_manifest_sha256: str | None,
+    expected_payload_rows: Sequence[Mapping[str, Any]] | None,
+    expected_python_hash_seed: int | None = None,
+    expected_worker_environment: Mapping[str, str] | None = None,
+    expected_dependency_roots: Sequence[Path] | None = None,
+    expected_python_hash_probe_sha256: str | None = None,
+) -> dict[str, Any]:
+    """Reparse exact request/transcript bytes and bind them to outer run identity."""
+
+    if not isinstance(payload, Mapping) or not isinstance(lifecycle, Mapping):
+        raise ReferenceValidationRunnerError(
+            "validation-worker execution provenance must be mappings"
+        )
+    observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
+    expected_fields = {
+        "schema_id",
+        "worker_kind",
+        "worker_request_canonical_jsonl_hex",
+        "worker_request_byte_count",
+        "worker_request_sha256",
+        "worker_request_transport_sha256",
+        "supervisor_launched_child_process_id",
+        "transcript_byte_count",
+        "transcript_sha256",
+        "canonical_frame_sequence",
+        "parsed_prefix_frame_count",
+        "canonical_prefix_byte_count",
+        "discarded_suffix_byte_count",
+        "trailing_fragment_byte_count",
+        "discarded_payload_frame_count",
+        "accepted_payload_frame_count",
+        "lifecycle_evidence_sha256",
+        "completion_state",
+        "failure_code",
+        "failure_stage",
+        "child_exit_code",
+        "timed_out",
+        "output_overflow",
+        "communication_failed",
+        "request_fully_written",
+        "raw_partial_not_independently_replayable",
+        "partial_worker_payload_accepted",
+        "provenance_sha256",
+    }
+    if (
+        set(observed) != expected_fields
+        or observed.get("schema_id")
+        != REFERENCE_VALIDATION_WORKER_EXECUTION_PROVENANCE_SCHEMA_ID
+        or observed.get("worker_kind") != expected_worker_kind
+        or observed.get("partial_worker_payload_accepted") is not False
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker execution provenance fields are invalid"
+        )
+    projection = dict(observed)
+    provenance_sha256 = _require_sha256(
+        projection.pop("provenance_sha256", None),
+        name="validation-worker execution provenance",
+    )
+    if provenance_sha256 != _sha256(projection):
+        raise ReferenceValidationRunnerError(
+            "validation-worker execution provenance SHA-256 drifted"
+        )
+
+    request_bytes = _decode_lower_hex_bytes(
+        observed["worker_request_canonical_jsonl_hex"],
+        name="validation-worker canonical request",
+        maximum=REFERENCE_VALIDATION_CASE_WORKER_MAX_REQUEST_BYTES,
+    )
+    if observed.get("worker_request_byte_count") != len(request_bytes) or observed.get(
+        "worker_request_transport_sha256"
+    ) != _raw_sha256(request_bytes):
+        raise ReferenceValidationRunnerError(
+            "validation-worker request transport identity drifted"
+        )
+    request = _load_case_worker_request(request_bytes)
+    request_sha256 = _worker_request_sha256(request)
+    normalized_dependencies = dict(
+        _normalize_dependency_rows(expected_dependency_artifact_sha256_rows)
+    )
+    expected_materialization = (
+        None
+        if expected_worker_kind == "manifest"
+        else _require_sha256(
+            expected_materialization_manifest_sha256,
+            name="validation-worker expected materialization",
+        )
+    )
+    expected_runner_start = (
+        None
+        if expected_worker_kind == "manifest"
+        else _require_sha256(
+            expected_runner_start_record_sha256,
+            name="validation-worker expected runner start",
+        )
+    )
+    request_environment = request["expected_worker_environment"]
+    request_dependency_roots = request["dependency_roots"]
+    request_python_hash_seed = request["expected_python_hash_seed"]
+    request_application_seed = _require_worker_seed(
+        expected_application_seed,
+        name="validation-worker outer application seed",
+        maximum=2**63 - 1,
+    )
+    dependency_roots_are_canonical = len(set(request_dependency_roots)) == len(
+        request_dependency_roots
+    ) and all(
+        Path(root).is_absolute()
+        and os.path.normpath(root) == root
+        and os.pathsep not in root
+        for root in request_dependency_roots
+    )
+    if (
+        not dependency_roots_are_canonical
+        or request_environment.get("PYTHONPATH")
+        != os.pathsep.join(request_dependency_roots)
+        or request_environment.get("PYTHONHASHSEED") != str(request_python_hash_seed)
+        or request_environment.get(REFERENCE_VALIDATION_APPLICATION_SEED_ENV)
+        != str(request_application_seed)
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker request environment is internally cross-wired"
+        )
+
+    trusted_worker_environment: dict[str, str] | None = None
+    trusted_dependency_roots: list[str] | None = None
+    trusted_python_hash_seed: int | None = None
+    trusted_python_hash_probe_sha256: str | None = None
+    if expected_worker_environment is not None:
+        trusted_worker_environment = dict(expected_worker_environment)
+        if set(
+            trusted_worker_environment
+        ) != _REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES or any(
+            not isinstance(name, str) or not isinstance(value, str)
+            for name, value in trusted_worker_environment.items()
+        ):
+            raise ReferenceValidationRunnerError(
+                "validation-worker trusted environment is invalid"
+            )
+    if expected_dependency_roots is not None:
+        trusted_dependency_roots = [
+            os.fspath(root) for root in expected_dependency_roots
+        ]
+        if (
+            not trusted_dependency_roots
+            or len(set(trusted_dependency_roots)) != len(trusted_dependency_roots)
+            or any(
+                not isinstance(root, str)
+                or not Path(root).is_absolute()
+                or os.path.normpath(root) != root
+                or os.pathsep in root
+                for root in trusted_dependency_roots
+            )
+        ):
+            raise ReferenceValidationRunnerError(
+                "validation-worker trusted dependency roots are invalid"
+            )
+    if expected_python_hash_seed is not None:
+        trusted_python_hash_seed = _require_worker_seed(
+            expected_python_hash_seed,
+            name="validation-worker trusted Python hash seed",
+            maximum=2**32 - 1,
+        )
+    if expected_python_hash_probe_sha256 is not None:
+        trusted_python_hash_probe_sha256 = _require_sha256(
+            expected_python_hash_probe_sha256,
+            name="validation-worker trusted Python hash probe",
+        )
+    if (
+        observed.get("worker_request_sha256") != request_sha256
+        or request["worker_kind"] != expected_worker_kind
+        or request["expected_code_commit_sha"]
+        != _require_commit_sha(
+            expected_code_commit_sha,
+            name="validation-worker outer commit",
+        )
+        or request["expected_runner_source_sha256"]
+        != _require_sha256(
+            expected_runner_source_sha256,
+            name="validation-worker outer source",
+        )
+        or request["expected_source_manifest_sha256"]
+        != _require_sha256(
+            expected_source_manifest_sha256,
+            name="validation-worker outer source manifest",
+        )
+        or request["expected_dependency_artifact_sha256_rows"]
+        != normalized_dependencies
+        or request["expected_environment_receipt_sha256"]
+        != _require_sha256(
+            expected_environment_receipt_sha256,
+            name="validation-worker outer environment receipt",
+        )
+        or request["expected_environment_fingerprint_sha256"]
+        != _require_sha256(
+            expected_environment_fingerprint_sha256,
+            name="validation-worker outer environment fingerprint",
+        )
+        or request["expected_authorization_nonce_sha256"]
+        != _require_sha256(
+            expected_authorization_nonce_sha256,
+            name="validation-worker outer authorization nonce",
+        )
+        or request["expected_runner_start_record_sha256"] != expected_runner_start
+        or request["expected_application_seed"] != request_application_seed
+        or request["expected_materialization_manifest_sha256"]
+        != expected_materialization
+        or request["expected_worker_environment_sha256"]
+        != _sha256(request["expected_worker_environment"])
+        or (
+            trusted_python_hash_seed is not None
+            and request_python_hash_seed != trusted_python_hash_seed
+        )
+        or (
+            trusted_worker_environment is not None
+            and request_environment != trusted_worker_environment
+        )
+        or (
+            trusted_dependency_roots is not None
+            and request_dependency_roots != trusted_dependency_roots
+        )
+        or (
+            trusted_python_hash_probe_sha256 is not None
+            and request["expected_python_hash_probe_sha256"]
+            != trusted_python_hash_probe_sha256
+        )
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker request is cross-wired to the run observation"
+        )
+
+    transcript_byte_count = observed.get("transcript_byte_count")
+    _require_sha256(
+        observed.get("transcript_sha256"),
+        name="validation-worker transcript",
+    )
+    prefix_byte_count = observed.get("canonical_prefix_byte_count")
+    frame_sequence = observed.get("canonical_frame_sequence")
+    frame_sequence_valid = (
+        isinstance(frame_sequence, list)
+        and len(frame_sequence) <= REFERENCE_VALIDATION_RUNNER_MAX_CASES + 2
+    )
+    if frame_sequence_valid:
+        for index, frame_row in enumerate(frame_sequence):
+            if (
+                not isinstance(frame_row, dict)
+                or set(frame_row)
+                != {
+                    "frame_index",
+                    "frame_type",
+                    "ordinal",
+                    "worker_kind",
+                    "worker_request_sha256",
+                    "frame_byte_count",
+                    "frame_sha256",
+                }
+                or frame_row.get("frame_index") != index
+                or frame_row.get("frame_type") not in {"pre", "payload", "completion"}
+                or frame_row.get("worker_kind") != expected_worker_kind
+                or frame_row.get("worker_request_sha256") != request_sha256
+                or type(frame_row.get("frame_byte_count")) is not int
+                or frame_row["frame_byte_count"] <= 0
+            ):
+                frame_sequence_valid = False
+                break
+            _require_sha256(
+                frame_row.get("frame_sha256"),
+                name="validation-worker frame",
+            )
+    if (
+        type(transcript_byte_count) is not int
+        or not 0
+        <= transcript_byte_count
+        <= REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES
+        or type(prefix_byte_count) is not int
+        or not 0 <= prefix_byte_count <= transcript_byte_count
+        or not frame_sequence_valid
+        or observed.get("parsed_prefix_frame_count") != len(frame_sequence)
+        or prefix_byte_count != sum(row["frame_byte_count"] for row in frame_sequence)
+        or observed.get("discarded_suffix_byte_count")
+        != transcript_byte_count - prefix_byte_count
+        or type(observed.get("trailing_fragment_byte_count")) is not int
+        or not 0
+        <= observed["trailing_fragment_byte_count"]
+        <= observed["discarded_suffix_byte_count"]
+        or observed.get("lifecycle_evidence_sha256") != _sha256(dict(lifecycle))
+        or observed.get("completion_state") != lifecycle.get("completion_state")
+        or observed.get("failure_code") != lifecycle.get("failure_code")
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker transcript or lifecycle provenance drifted"
+        )
+
+    expected_lane = (
+        WORKER_RUNTIME_LANE_ENERGY_FORCE_MANIFEST
+        if expected_worker_kind == "manifest"
+        else WORKER_RUNTIME_LANE_ENERGY_FORCE
+    )
+    completion_state = lifecycle.get("completion_state")
+    try:
+        checked_lifecycle = require_worker_runtime_lifecycle_evidence(
+            lifecycle,
+            expected_lane=expected_lane,
+            expected_worker_request_sha256=request_sha256,
+            expected_payload_rows=(
+                expected_payload_rows if completion_state == "complete" else None
+            ),
+        )
+    except ValidationNativeRuntimeIdentityError as exc:
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance lifecycle is invalid"
+        ) from exc
+
+    process_id = observed.get("supervisor_launched_child_process_id")
+    if completion_state == "complete":
+        request_sha256 = _worker_request_sha256(request)
+        reconstructed = b"".join(
+            _canonical_bytes(frame) + b"\n"
+            for frame in (
+                _worker_frame(
+                    frame_type="pre",
+                    worker_kind=expected_worker_kind,
+                    worker_request_sha256=request_sha256,
+                    payload=checked_lifecycle["pre"],
+                ),
+                *(
+                    _worker_frame(
+                        frame_type="payload",
+                        worker_kind=expected_worker_kind,
+                        worker_request_sha256=request_sha256,
+                        payload=row,
+                        ordinal=ordinal,
+                    )
+                    for ordinal, row in enumerate(expected_payload_rows or ())
+                ),
+                _worker_frame(
+                    frame_type="completion",
+                    worker_kind=expected_worker_kind,
+                    worker_request_sha256=request_sha256,
+                    payload=checked_lifecycle,
+                ),
+            )
+        )
+        reconstructed_sequence, reconstructed_prefix = _canonical_worker_frame_prefix(
+            reconstructed
+        )
+        if (
+            type(process_id) is not int
+            or process_id <= 0
+            or expected_payload_rows is None
+            or prefix_byte_count != transcript_byte_count
+            or transcript_byte_count != len(reconstructed)
+            or observed.get("transcript_sha256") != _raw_sha256(reconstructed)
+            or frame_sequence != reconstructed_sequence
+            or reconstructed_prefix != len(reconstructed)
+            or observed.get("discarded_suffix_byte_count") != 0
+            or observed.get("trailing_fragment_byte_count") != 0
+            or observed.get("discarded_payload_frame_count") != 0
+            or observed.get("accepted_payload_frame_count")
+            != len(expected_payload_rows)
+            or observed.get("failure_stage") is not None
+            or observed.get("child_exit_code") != 0
+            or observed.get("timed_out") is not False
+            or observed.get("output_overflow") is not False
+            or observed.get("communication_failed") is not False
+            or observed.get("request_fully_written") is not True
+            or observed.get("raw_partial_not_independently_replayable") is not False
+        ):
+            raise ReferenceValidationRunnerError(
+                "complete validation-worker provenance is incomplete"
+            )
+        try:
+            require_complete_worker_runtime_process_id(
+                checked_lifecycle,
+                expected_process_id=process_id,
+            )
+        except ValidationNativeRuntimeIdentityError as exc:
+            raise ReferenceValidationRunnerError(
+                "validation-worker provenance process identity is invalid"
+            ) from exc
+        frames = reconstructed.splitlines(keepends=True)
+        expected_frame_count = len(expected_payload_rows) + 2
+        if len(frames) != expected_frame_count:
+            raise ReferenceValidationRunnerError(
+                "complete validation-worker transcript frame count drifted"
+            )
+        pre_evidence = _require_worker_pre_frame(
+            _decode_worker_frame(frames[0]),
+            worker_kind=expected_worker_kind,
+            worker_request_sha256=request_sha256,
+            lane=expected_lane,
+        )
+        if pre_evidence != checked_lifecycle["pre"]:
+            raise ReferenceValidationRunnerError(
+                "validation-worker transcript pre evidence is cross-wired"
+            )
+        for ordinal, (raw_line, expected_row) in enumerate(
+            zip(frames[1:-1], expected_payload_rows, strict=True)
+        ):
+            frame = _require_worker_frame_binding(
+                _decode_worker_frame(raw_line),
+                frame_type="payload",
+                worker_kind=expected_worker_kind,
+                worker_request_sha256=request_sha256,
+                ordinal=ordinal,
+            )
+            if frame["payload"] != dict(expected_row):
+                raise ReferenceValidationRunnerError(
+                    "validation-worker transcript payload is cross-wired"
+                )
+        completion = _require_worker_frame_binding(
+            _decode_worker_frame(frames[-1]),
+            frame_type="completion",
+            worker_kind=expected_worker_kind,
+            worker_request_sha256=request_sha256,
+        )
+        if completion["evidence"] != checked_lifecycle:
+            raise ReferenceValidationRunnerError(
+                "validation-worker transcript completion evidence is cross-wired"
+            )
+    elif completion_state == "incomplete":
+        failure_code = checked_lifecycle["failure_code"]
+        if expected_worker_kind != "case" or failure_code not in (
+            _CASE_WORKER_INCOMPLETE_FAILURE_CODES
+        ):
+            raise ReferenceValidationRunnerError(
+                "incomplete validation-worker provenance is unsupported"
+            )
+        if (
+            observed.get("accepted_payload_frame_count") != 0
+            or observed.get("discarded_payload_frame_count")
+            != sum(row.get("frame_type") == "payload" for row in frame_sequence)
+            or observed.get("raw_partial_not_independently_replayable") is not True
+            or not isinstance(observed.get("failure_stage"), str)
+            or type(observed.get("timed_out")) is not bool
+            or type(observed.get("output_overflow")) is not bool
+            or type(observed.get("communication_failed")) is not bool
+            or type(observed.get("request_fully_written")) is not bool
+            or (
+                observed.get("child_exit_code") is not None
+                and type(observed.get("child_exit_code")) is not int
+            )
+        ):
+            raise ReferenceValidationRunnerError(
+                "incomplete validation-worker discard provenance is invalid"
+            )
+        if failure_code == "case_worker_start_failed":
+            if (
+                process_id is not None
+                or transcript_byte_count != 0
+                or observed.get("transcript_sha256") != _raw_sha256(b"")
+                or observed.get("failure_stage") != "worker_start"
+                or observed.get("child_exit_code") is not None
+                or observed.get("timed_out") is not False
+                or observed.get("output_overflow") is not False
+                or observed.get("communication_failed") is not False
+                or observed.get("request_fully_written") is not False
+            ):
+                raise ReferenceValidationRunnerError(
+                    "unstarted validation-worker retained process output"
+                )
+        elif type(process_id) is not int or process_id <= 0:
+            raise ReferenceValidationRunnerError(
+                "started validation-worker process identity is missing"
+            )
+        if (
+            checked_lifecycle["pre"] is not None
+            and checked_lifecycle["pre"]["snapshot"]["process_id"] != process_id
+        ):
+            raise ReferenceValidationRunnerError(
+                "incomplete validation-worker process identity is cross-wired"
+            )
+    else:
+        raise ReferenceValidationRunnerError(
+            "validation-worker provenance completion state is invalid"
+        )
+    return observed
+
+
 @dataclass(frozen=True, slots=True)
 class ReferenceValidationRunObservation:
     runner_start_record_sha256: str
@@ -1258,6 +1974,8 @@ class ReferenceValidationRunObservation:
     case_results: tuple[ReferenceValidationCaseObservation, ...]
     manifest_worker_lifecycle_evidence_bytes: bytes
     case_worker_lifecycle_evidence_bytes: bytes
+    manifest_worker_execution_provenance_bytes: bytes
+    case_worker_execution_provenance_bytes: bytes
     retained_case_payload_aggregate_sha256: str
     blockers: tuple[str, ...] = _POST_RUN_BLOCKERS
 
@@ -1350,34 +2068,71 @@ class ReferenceValidationRunObservation:
             self.case_worker_lifecycle_evidence_bytes,
             name="case-worker lifecycle evidence",
         )
+        manifest_provenance = _worker_execution_provenance_from_bytes(
+            self.manifest_worker_execution_provenance_bytes,
+            name="manifest-worker execution provenance",
+        )
+        case_provenance = _worker_execution_provenance_from_bytes(
+            self.case_worker_execution_provenance_bytes,
+            name="case-worker execution provenance",
+        )
         try:
-            manifest_request_sha256 = _require_sha256(
-                manifest_lifecycle.get("worker_request_sha256"),
-                name="manifest-worker lifecycle request",
-            )
-            manifest_lifecycle = require_worker_runtime_lifecycle_evidence(
-                manifest_lifecycle,
-                expected_lane=WORKER_RUNTIME_LANE_ENERGY_FORCE_MANIFEST,
-                expected_worker_request_sha256=manifest_request_sha256,
+            require_reference_validation_worker_execution_provenance_document(
+                manifest_provenance,
+                lifecycle=manifest_lifecycle,
+                expected_worker_kind="manifest",
+                expected_code_commit_sha=self.code_commit_sha,
+                expected_runner_source_sha256=self.runner_source_sha256,
+                expected_source_manifest_sha256=self.source_manifest_sha256,
+                expected_dependency_artifact_sha256_rows=(
+                    self.dependency_artifact_sha256_rows
+                ),
+                expected_environment_receipt_sha256=(
+                    self.execution_environment_receipt_sha256
+                ),
+                expected_environment_fingerprint_sha256=(
+                    self.environment_fingerprint_sha256
+                ),
+                expected_authorization_nonce_sha256=self.authorization_nonce_sha256,
+                expected_runner_start_record_sha256=None,
+                expected_application_seed=self.seed,
+                expected_materialization_manifest_sha256=None,
                 expected_payload_rows=[_manifest_worker_payload(manifest)],
             )
-            case_request_sha256 = _require_sha256(
-                case_lifecycle.get("worker_request_sha256"),
-                name="case-worker lifecycle request",
-            )
-            case_lifecycle = require_worker_runtime_lifecycle_evidence(
-                case_lifecycle,
-                expected_lane=WORKER_RUNTIME_LANE_ENERGY_FORCE,
-                expected_worker_request_sha256=case_request_sha256,
+            require_reference_validation_worker_execution_provenance_document(
+                case_provenance,
+                lifecycle=case_lifecycle,
+                expected_worker_kind="case",
+                expected_code_commit_sha=self.code_commit_sha,
+                expected_runner_source_sha256=self.runner_source_sha256,
+                expected_source_manifest_sha256=self.source_manifest_sha256,
+                expected_dependency_artifact_sha256_rows=(
+                    self.dependency_artifact_sha256_rows
+                ),
+                expected_environment_receipt_sha256=(
+                    self.execution_environment_receipt_sha256
+                ),
+                expected_environment_fingerprint_sha256=(
+                    self.environment_fingerprint_sha256
+                ),
+                expected_authorization_nonce_sha256=self.authorization_nonce_sha256,
+                expected_runner_start_record_sha256=self.runner_start_record_sha256,
+                expected_application_seed=self.seed,
+                expected_materialization_manifest_sha256=manifest[
+                    "materialization_manifest_sha256"
+                ],
                 expected_payload_rows=(
                     retained_payload_rows
                     if case_lifecycle.get("completion_state") == "complete"
                     else None
                 ),
             )
-        except ValidationNativeRuntimeIdentityError as exc:
+        except (
+            ReferenceValidationRunnerError,
+            ValidationNativeRuntimeIdentityError,
+        ) as exc:
             raise ReferenceValidationRunnerError(
-                "run observation worker lifecycle evidence is invalid"
+                "run observation worker execution provenance is invalid"
             ) from exc
         if manifest_lifecycle["completion_state"] != "complete":
             raise ReferenceValidationRunnerError(
@@ -1463,6 +2218,18 @@ class ReferenceValidationRunObservation:
             "case_worker_lifecycle_evidence": _lifecycle_evidence_from_bytes(
                 self.case_worker_lifecycle_evidence_bytes,
                 name="case-worker lifecycle evidence",
+            ),
+            "manifest_worker_execution_provenance": (
+                _worker_execution_provenance_from_bytes(
+                    self.manifest_worker_execution_provenance_bytes,
+                    name="manifest-worker execution provenance",
+                )
+            ),
+            "case_worker_execution_provenance": (
+                _worker_execution_provenance_from_bytes(
+                    self.case_worker_execution_provenance_bytes,
+                    name="case-worker execution provenance",
+                )
             ),
             "retained_case_payload_aggregate_sha256": self.retained_case_payload_aggregate_sha256,
             "coverage_summary": {
@@ -1576,17 +2343,24 @@ def _contract_projection() -> dict[str, Any]:
             "worker_dependency_paths_derived_from_isolated_bootstrap": True,
             "case_worker_request_contains_trust_keys_or_receipts": False,
             "worker_environment_derived_from_verified_receipt": True,
+            "retained_worker_environment_internal_coherence_reverified": True,
             "worker_python_hash_seed_uint32_bound_to_receipt": True,
             "worker_application_seed_bound_to_receipt": True,
             "parent_child_python_hash_probe_equality_required": True,
             "worker_exact_argv_cwd_and_environment_reverified": True,
             "worker_dependency_roots_and_bytes_reverified": True,
             "case_worker_hard_kill_at_wall_deadline_required": True,
+            "worker_output_prefix_hard_bounded_before_buffer_growth": True,
+            "worker_output_overflow_and_request_write_state_retained": True,
             "in_worker_posix_deadline_interrupt_required": True,
             "worker_canonical_jsonl_frame_protocol_required": True,
             "manifest_worker_frame_order": ["pre", "payload", "completion"],
             "case_worker_frame_order": ["pre", "payload_x27", "completion"],
             "worker_request_sha256_bound_to_every_frame": True,
+            "exact_worker_request_transport_bytes_retained": True,
+            "supervisor_launched_child_process_id_retained": True,
+            "complete_raw_transcript_equals_canonical_reconstruction_required": True,
+            "worker_transcript_digest_and_frame_sequence_retained": True,
             "worker_payload_aggregate_bound_to_completion": True,
             "worker_pre_and_post_native_snapshots_required": True,
             "native_runtime_allowlist_authorization_established": False,
@@ -1645,6 +2419,13 @@ def _contract_projection() -> dict[str, Any]:
             "result_receipt_writer_implemented": True,
             "dependency_bytes_remeasured_during_result_finalize": True,
             "manifest_and_case_worker_lifecycle_evidence_retained": True,
+            "manifest_and_case_worker_execution_provenance_retained": True,
+            "worker_request_reparsed_and_cross_checked_against_run_identity": True,
+            "worker_pid_cross_checked_against_native_snapshots": True,
+            "external_worker_launch_identity_established": False,
+            "complete_worker_transcript_reconstructed_and_rehashed": True,
+            "incomplete_worker_partial_transcript_digest_retained_bounded": True,
+            "incomplete_raw_partial_independent_replay_available": False,
             "retained_case_payload_aggregate_sha256_required": True,
             "incomplete_worker_lifecycle_requires_supervisor_only_failure_rows": True,
         },
@@ -2754,10 +3535,13 @@ def _load_case_worker_request(raw: bytes) -> dict[str, Any]:
             "expected_variant_count",
             "expected_code_commit_sha",
             "expected_runner_source_sha256",
+            "expected_source_manifest_sha256",
             "expected_dependency_artifact_sha256_rows",
             "dependency_roots",
             "expected_environment_receipt_sha256",
             "expected_environment_fingerprint_sha256",
+            "expected_authorization_nonce_sha256",
+            "expected_runner_start_record_sha256",
             "expected_python_hash_seed",
             "expected_application_seed",
             "expected_worker_environment",
@@ -2800,6 +3584,10 @@ def _load_case_worker_request(raw: bytes) -> dict[str, Any]:
             and request["expected_materialization_manifest_sha256"] is not None
         )
         or (
+            worker_kind == "manifest"
+            and request["expected_runner_start_record_sha256"] is not None
+        )
+        or (
             worker_kind == "case"
             and (
                 not isinstance(request["expected_materialization_manifest_sha256"], str)
@@ -2809,6 +3597,10 @@ def _load_case_worker_request(raw: bytes) -> dict[str, Any]:
                 )
                 != request["expected_materialization_manifest_sha256"]
             )
+        )
+        or (
+            worker_kind == "case"
+            and not isinstance(request["expected_runner_start_record_sha256"], str)
         )
     ):
         raise ReferenceValidationRunnerError("case-worker runtime binding is invalid")
@@ -2829,6 +3621,10 @@ def _load_case_worker_request(raw: bytes) -> dict[str, Any]:
             request["expected_runner_source_sha256"],
             name="case-worker expected source",
         ),
+        "expected_source_manifest_sha256": _require_sha256(
+            request["expected_source_manifest_sha256"],
+            name="case-worker expected source manifest",
+        ),
         "expected_dependency_artifact_sha256_rows": {
             artifact_id: _require_sha256(
                 raw_dependency_rows[artifact_id],
@@ -2844,6 +3640,18 @@ def _load_case_worker_request(raw: bytes) -> dict[str, Any]:
         "expected_environment_fingerprint_sha256": _require_sha256(
             request["expected_environment_fingerprint_sha256"],
             name="case-worker environment fingerprint",
+        ),
+        "expected_authorization_nonce_sha256": _require_sha256(
+            request["expected_authorization_nonce_sha256"],
+            name="case-worker authorization nonce",
+        ),
+        "expected_runner_start_record_sha256": (
+            None
+            if request["expected_runner_start_record_sha256"] is None
+            else _require_sha256(
+                request["expected_runner_start_record_sha256"],
+                name="case-worker runner-start record",
+            )
         ),
         "expected_python_hash_seed": _require_worker_seed(
             request["expected_python_hash_seed"],
@@ -3434,6 +4242,9 @@ def _fixed_worker_request(
     expected_materialization_manifest_sha256: str | None,
     expected_code_commit_sha: str,
     expected_runner_source_sha256: str,
+    expected_source_manifest_sha256: str,
+    expected_authorization_nonce_sha256: str,
+    expected_runner_start_record_sha256: str | None,
     expected_dependency_artifact_sha256_rows: Mapping[str, str],
     dependency_roots: Sequence[Path],
     environment_receipt: ReferenceValidationExecutionEnvironmentReceipt,
@@ -3442,15 +4253,23 @@ def _fixed_worker_request(
     if worker_kind not in {"manifest", "case"}:
         raise ReferenceValidationRunnerError("validation-worker kind is invalid")
     if worker_kind == "manifest":
-        if expected_materialization_manifest_sha256 is not None:
+        if (
+            expected_materialization_manifest_sha256 is not None
+            or expected_runner_start_record_sha256 is not None
+        ):
             raise ReferenceValidationRunnerError(
-                "manifest-worker cannot receive a materialization result identity"
+                "manifest-worker cannot receive post-materialization identities"
             )
         materialization_manifest_sha256 = None
+        runner_start_record_sha256 = None
     else:
         materialization_manifest_sha256 = _require_sha256(
             expected_materialization_manifest_sha256,
             name="case-worker materialization manifest",
+        )
+        runner_start_record_sha256 = _require_sha256(
+            expected_runner_start_record_sha256,
+            name="case-worker runner-start record",
         )
     if set(worker_environment) != _REFERENCE_VALIDATION_WORKER_ENVIRONMENT_NAMES:
         raise ReferenceValidationRunnerError("validation-worker environment is invalid")
@@ -3488,6 +4307,10 @@ def _fixed_worker_request(
             expected_runner_source_sha256,
             name="validation-worker supervisor source",
         ),
+        "expected_source_manifest_sha256": _require_sha256(
+            expected_source_manifest_sha256,
+            name="validation-worker supervisor source manifest",
+        ),
         "expected_dependency_artifact_sha256_rows": normalized_dependency_rows,
         "dependency_roots": normalized_dependency_roots,
         "expected_environment_receipt_sha256": _require_sha256(
@@ -3498,6 +4321,11 @@ def _fixed_worker_request(
             environment_receipt.environment_fingerprint_sha256,
             name="validation-worker environment fingerprint",
         ),
+        "expected_authorization_nonce_sha256": _require_sha256(
+            expected_authorization_nonce_sha256,
+            name="validation-worker authorization nonce",
+        ),
+        "expected_runner_start_record_sha256": runner_start_record_sha256,
         "expected_python_hash_seed": _require_worker_seed(
             environment_receipt.python_hash_seed,
             name="validation-worker Python hash seed",
@@ -3591,9 +4419,9 @@ def _communicate_fixed_validation_worker(
     request: Mapping[str, Any],
     *,
     deadline: float,
-) -> tuple[bytes, bool, bool]:
+) -> BoundedWorkerProcessCommunicationEvidence:
     try:
-        return communicate_bounded_worker_process(
+        return communicate_bounded_worker_process_with_evidence(
             process,
             _canonical_bytes(dict(request)) + b"\n",
             deadline=deadline,
@@ -3603,6 +4431,47 @@ def _communicate_fixed_validation_worker(
         raise ReferenceValidationRunnerError(
             "validation-worker bounded communication failed"
         ) from exc
+
+
+def _worker_communication_result(
+    value: object,
+) -> tuple[bytes, bool, bool, bool, bool, bool, int | None]:
+    """Validate the private communication result; accept legacy triples in tests."""
+
+    if isinstance(value, BoundedWorkerProcessCommunicationEvidence):
+        return (
+            value.raw_output_prefix,
+            value.timed_out,
+            value.succeeded,
+            value.output_exceeded,
+            value.communication_failed,
+            value.request_fully_written,
+            value.final_returncode,
+        )
+    if not isinstance(value, tuple) or len(value) not in {3, 4}:
+        raise ReferenceValidationRunnerError(
+            "validation-worker communication result is invalid"
+        )
+    output, timed_out, succeeded = value[:3]
+    output_overflow = value[3] if len(value) == 4 else False
+    if (
+        not isinstance(output, bytes)
+        or type(timed_out) is not bool
+        or type(succeeded) is not bool
+        or type(output_overflow) is not bool
+    ):
+        raise ReferenceValidationRunnerError(
+            "validation-worker communication result is invalid"
+        )
+    return (
+        output,
+        timed_out,
+        succeeded,
+        output_overflow,
+        False,
+        True,
+        0 if succeeded else None,
+    )
 
 
 def _manifest_cases_from_worker_output(
@@ -3831,7 +4700,7 @@ def _run_supervised_frozen_case_matrix(
     environment_receipt: ReferenceValidationExecutionEnvironmentReceipt,
     worker_environment: Mapping[str, str],
     deadline: float,
-) -> tuple[Any, list[Mapping[str, Any]], str, dict[str, Any]]:
+) -> tuple[Any, list[Mapping[str, Any]], str, dict[str, Any], dict[str, Any]]:
     """Materialize frozen identities in a child before consuming the start marker."""
 
     protocol = frozen_cpu_reference_validation_protocol()
@@ -3840,6 +4709,11 @@ def _run_supervised_frozen_case_matrix(
         expected_materialization_manifest_sha256=None,
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=expected_runner_source_sha256,
+        expected_source_manifest_sha256=environment_receipt.source_manifest_sha256,
+        expected_authorization_nonce_sha256=(
+            environment_receipt.authorization_nonce_sha256
+        ),
+        expected_runner_start_record_sha256=None,
         expected_dependency_artifact_sha256_rows=(
             expected_dependency_artifact_sha256_rows
         ),
@@ -3849,16 +4723,22 @@ def _run_supervised_frozen_case_matrix(
     )
     process = _start_fixed_validation_worker("--manifest-worker", request)
     try:
-        output, timed_out, succeeded = _communicate_fixed_validation_worker(
-            process,
-            request,
-            deadline=deadline,
+        (
+            output,
+            timed_out,
+            succeeded,
+            output_overflow,
+            communication_failed,
+            request_fully_written,
+            final_returncode,
+        ) = _worker_communication_result(
+            _communicate_fixed_validation_worker(process, request, deadline=deadline)
         )
     except ReferenceValidationRunnerError as exc:
         raise ReferenceValidationRunnerError(
             "supervised materialization preflight did not complete"
         ) from exc
-    if timed_out or not succeeded:
+    if timed_out or output_overflow or not succeeded:
         raise ReferenceValidationRunnerError(
             "supervised materialization preflight did not complete"
         )
@@ -3876,7 +4756,23 @@ def _run_supervised_frozen_case_matrix(
         raise ReferenceValidationRunnerError(
             "manifest-worker lifecycle process identity is invalid"
         ) from exc
-    return protocol, manifest_cases, manifest_sha256, lifecycle
+    provenance = _build_worker_execution_provenance(
+        worker_kind="manifest",
+        request=request,
+        supervisor_launched_child_process_id=process.pid,
+        transcript=output,
+        lifecycle=lifecycle,
+        accepted_payload_rows=[
+            _manifest_worker_payload(_load_frozen_case_manifest_document()[1])
+        ],
+        failure_stage=None,
+        child_exit_code=final_returncode,
+        timed_out=False,
+        output_overflow=False,
+        communication_failed=communication_failed,
+        request_fully_written=request_fully_written,
+    )
+    return protocol, manifest_cases, manifest_sha256, lifecycle, provenance
 
 
 def _supervisor_failure_complete_case_matrix(
@@ -3924,11 +4820,24 @@ def _incomplete_case_worker_result(
     protocol: Any,
     manifest_cases: list[Mapping[str, Any]],
     *,
-    worker_request_sha256: str,
+    request: Mapping[str, Any],
     failure_code: str,
     observed_status: str,
     pre_evidence: Mapping[str, Any] | None,
-) -> tuple[tuple[ReferenceValidationCaseObservation, ...], dict[str, Any]]:
+    supervisor_launched_child_process_id: int | None,
+    transcript: bytes,
+    failure_stage: str,
+    child_exit_code: int | None,
+    timed_out: bool,
+    output_overflow: bool,
+    communication_failed: bool,
+    request_fully_written: bool,
+) -> tuple[
+    tuple[ReferenceValidationCaseObservation, ...],
+    dict[str, Any],
+    dict[str, Any],
+]:
+    worker_request_sha256 = _worker_request_sha256(request)
     try:
         lifecycle = build_incomplete_worker_runtime_lifecycle_evidence(
             lane=WORKER_RUNTIME_LANE_ENERGY_FORCE,
@@ -3942,15 +4851,27 @@ def _incomplete_case_worker_result(
         raise ReferenceValidationRunnerError(
             "case-worker incomplete lifecycle could not be built"
         ) from exc
-    return (
-        _supervisor_failure_complete_case_matrix(
-            protocol,
-            manifest_cases,
-            observed_status=observed_status,
-            observed_error_code=failure_code,
-        ),
-        lifecycle,
+    rows = _supervisor_failure_complete_case_matrix(
+        protocol,
+        manifest_cases,
+        observed_status=observed_status,
+        observed_error_code=failure_code,
     )
+    provenance = _build_worker_execution_provenance(
+        worker_kind="case",
+        request=request,
+        supervisor_launched_child_process_id=(supervisor_launched_child_process_id),
+        transcript=transcript,
+        lifecycle=lifecycle,
+        accepted_payload_rows=None,
+        failure_stage=failure_stage,
+        child_exit_code=child_exit_code,
+        timed_out=timed_out,
+        output_overflow=output_overflow,
+        communication_failed=communication_failed,
+        request_fully_written=request_fully_written,
+    )
+    return rows, lifecycle, provenance
 
 
 def _run_supervised_case_matrix(
@@ -3960,12 +4881,17 @@ def _run_supervised_case_matrix(
     materialization_manifest_sha256: str,
     expected_code_commit_sha: str,
     expected_runner_source_sha256: str,
+    expected_runner_start_record_sha256: str,
     expected_dependency_artifact_sha256_rows: Mapping[str, str],
     dependency_roots: Sequence[Path],
     environment_receipt: ReferenceValidationExecutionEnvironmentReceipt,
     worker_environment: Mapping[str, str],
     deadline: float,
-) -> tuple[tuple[ReferenceValidationCaseObservation, ...], dict[str, Any]]:
+) -> tuple[
+    tuple[ReferenceValidationCaseObservation, ...],
+    dict[str, Any],
+    dict[str, Any],
+]:
     """Run the matrix in one fixed child and hard-kill native stalls at deadline."""
 
     request = _fixed_worker_request(
@@ -3973,6 +4899,11 @@ def _run_supervised_case_matrix(
         expected_materialization_manifest_sha256=materialization_manifest_sha256,
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=expected_runner_source_sha256,
+        expected_source_manifest_sha256=environment_receipt.source_manifest_sha256,
+        expected_authorization_nonce_sha256=(
+            environment_receipt.authorization_nonce_sha256
+        ),
+        expected_runner_start_record_sha256=expected_runner_start_record_sha256,
         expected_dependency_artifact_sha256_rows=(
             expected_dependency_artifact_sha256_rows
         ),
@@ -3987,47 +4918,119 @@ def _run_supervised_case_matrix(
         return _incomplete_case_worker_result(
             protocol,
             manifest_cases,
-            worker_request_sha256=worker_request_sha256,
+            request=request,
             failure_code="case_worker_start_failed",
             observed_status="unexpected_error",
             pre_evidence=None,
+            supervisor_launched_child_process_id=None,
+            transcript=b"",
+            failure_stage="worker_start",
+            child_exit_code=None,
+            timed_out=False,
+            output_overflow=False,
+            communication_failed=False,
+            request_fully_written=False,
         )
     try:
-        output, timed_out, succeeded = _communicate_fixed_validation_worker(
-            process,
-            request,
-            deadline=deadline,
+        (
+            output,
+            timed_out,
+            succeeded,
+            output_overflow,
+            communication_failed,
+            request_fully_written,
+            final_returncode,
+        ) = _worker_communication_result(
+            _communicate_fixed_validation_worker(process, request, deadline=deadline)
         )
     except ReferenceValidationRunnerError:
         return _incomplete_case_worker_result(
             protocol,
             manifest_cases,
-            worker_request_sha256=worker_request_sha256,
+            request=request,
             failure_code="case_worker_protocol_invalid",
             observed_status="unexpected_error",
             pre_evidence=None,
+            supervisor_launched_child_process_id=process.pid,
+            transcript=b"",
+            failure_stage="worker_communication",
+            child_exit_code=getattr(process, "returncode", None),
+            timed_out=False,
+            output_overflow=False,
+            communication_failed=True,
+            request_fully_written=False,
         )
     pre_evidence = _case_worker_pre_evidence_from_output(
         output,
         worker_request_sha256=worker_request_sha256,
     )
+    if communication_failed or not request_fully_written:
+        return _incomplete_case_worker_result(
+            protocol,
+            manifest_cases,
+            request=request,
+            failure_code="case_worker_protocol_invalid",
+            observed_status="unexpected_error",
+            pre_evidence=pre_evidence,
+            supervisor_launched_child_process_id=process.pid,
+            transcript=output,
+            failure_stage="worker_communication",
+            child_exit_code=final_returncode,
+            timed_out=timed_out,
+            output_overflow=output_overflow,
+            communication_failed=communication_failed,
+            request_fully_written=request_fully_written,
+        )
+    if output_overflow:
+        return _incomplete_case_worker_result(
+            protocol,
+            manifest_cases,
+            request=request,
+            failure_code="case_worker_protocol_invalid",
+            observed_status="unexpected_error",
+            pre_evidence=pre_evidence,
+            supervisor_launched_child_process_id=process.pid,
+            transcript=output,
+            failure_stage="worker_output_overflow",
+            child_exit_code=final_returncode,
+            timed_out=False,
+            output_overflow=True,
+            communication_failed=communication_failed,
+            request_fully_written=request_fully_written,
+        )
     if timed_out:
         return _incomplete_case_worker_result(
             protocol,
             manifest_cases,
-            worker_request_sha256=worker_request_sha256,
+            request=request,
             failure_code="runner_time_budget_exhausted",
             observed_status="time_budget_exhausted",
             pre_evidence=pre_evidence,
+            supervisor_launched_child_process_id=process.pid,
+            transcript=output,
+            failure_stage="worker_timeout",
+            child_exit_code=final_returncode,
+            timed_out=True,
+            output_overflow=False,
+            communication_failed=communication_failed,
+            request_fully_written=request_fully_written,
         )
     if not succeeded:
         return _incomplete_case_worker_result(
             protocol,
             manifest_cases,
-            worker_request_sha256=worker_request_sha256,
+            request=request,
             failure_code="case_worker_nonzero_exit",
             observed_status="unexpected_error",
             pre_evidence=pre_evidence,
+            supervisor_launched_child_process_id=process.pid,
+            transcript=output,
+            failure_stage="worker_exit",
+            child_exit_code=final_returncode,
+            timed_out=False,
+            output_overflow=False,
+            communication_failed=communication_failed,
+            request_fully_written=request_fully_written,
         )
 
     frames = output.splitlines(keepends=True)
@@ -4091,16 +5094,38 @@ def _run_supervised_case_matrix(
         return _incomplete_case_worker_result(
             protocol,
             manifest_cases,
-            worker_request_sha256=worker_request_sha256,
+            request=request,
             failure_code="case_worker_protocol_invalid",
             observed_status="unexpected_error",
             pre_evidence=pre_evidence,
+            supervisor_launched_child_process_id=process.pid,
+            transcript=output,
+            failure_stage="worker_protocol",
+            child_exit_code=final_returncode,
+            timed_out=False,
+            output_overflow=False,
+            communication_failed=communication_failed,
+            request_fully_written=request_fully_written,
         )
     if len(accepted) != REFERENCE_VALIDATION_RUNNER_MAX_CASES:
         raise ReferenceValidationRunnerError(
             "case-worker accepted coverage is internally inconsistent"
         )
-    return tuple(accepted), lifecycle
+    provenance = _build_worker_execution_provenance(
+        worker_kind="case",
+        request=request,
+        supervisor_launched_child_process_id=process.pid,
+        transcript=output,
+        lifecycle=lifecycle,
+        accepted_payload_rows=[row.to_dict() for row in accepted],
+        failure_stage=None,
+        child_exit_code=final_returncode,
+        timed_out=False,
+        output_overflow=False,
+        communication_failed=communication_failed,
+        request_fully_written=request_fully_written,
+    )
+    return tuple(accepted), lifecycle, provenance
 
 
 def run_bounded_cpu_reference_validation(
@@ -4188,16 +5213,20 @@ def run_bounded_cpu_reference_validation(
         ),
     )
     deadline = time.monotonic() + REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS
-    protocol, manifest_cases, materialization_manifest_sha256, manifest_lifecycle = (
-        _run_supervised_frozen_case_matrix(
-            expected_code_commit_sha=expected_code_commit_sha,
-            expected_runner_source_sha256=runner_source,
-            expected_dependency_artifact_sha256_rows=live_dependency_rows,
-            dependency_roots=dependency_roots,
-            environment_receipt=receipt,
-            worker_environment=worker_environment,
-            deadline=deadline,
-        )
+    (
+        protocol,
+        manifest_cases,
+        materialization_manifest_sha256,
+        manifest_lifecycle,
+        manifest_provenance,
+    ) = _run_supervised_frozen_case_matrix(
+        expected_code_commit_sha=expected_code_commit_sha,
+        expected_runner_source_sha256=runner_source,
+        expected_dependency_artifact_sha256_rows=live_dependency_rows,
+        dependency_roots=dependency_roots,
+        environment_receipt=receipt,
+        worker_environment=worker_environment,
+        deadline=deadline,
     )
     if time.monotonic() >= deadline:
         raise ReferenceValidationRunnerError(
@@ -4212,12 +5241,13 @@ def run_bounded_cpu_reference_validation(
         started_at_utc=started_at_utc,
     )
 
-    case_results, case_lifecycle = _run_supervised_case_matrix(
+    case_results, case_lifecycle, case_provenance = _run_supervised_case_matrix(
         protocol,
         manifest_cases,
         materialization_manifest_sha256=materialization_manifest_sha256,
         expected_code_commit_sha=expected_code_commit_sha,
         expected_runner_source_sha256=runner_source,
+        expected_runner_start_record_sha256=start_record_sha256,
         expected_dependency_artifact_sha256_rows=live_dependency_rows,
         dependency_roots=dependency_roots,
         environment_receipt=receipt,
@@ -4247,6 +5277,18 @@ def run_bounded_cpu_reference_validation(
         case_worker_lifecycle_evidence_bytes=_lifecycle_evidence_bytes(
             case_lifecycle,
             name="case-worker lifecycle evidence",
+        ),
+        manifest_worker_execution_provenance_bytes=(
+            _worker_execution_provenance_bytes(
+                manifest_provenance,
+                name="manifest-worker execution provenance",
+            )
+        ),
+        case_worker_execution_provenance_bytes=(
+            _worker_execution_provenance_bytes(
+                case_provenance,
+                name="case-worker execution provenance",
+            )
         ),
         retained_case_payload_aggregate_sha256=_sha256(
             [row.to_dict() for row in case_results]
@@ -4510,6 +5552,18 @@ def require_reference_validation_run_observation_document(
             case_worker_lifecycle_evidence_bytes=_lifecycle_evidence_bytes(
                 observed["case_worker_lifecycle_evidence"],
                 name="case-worker lifecycle evidence",
+            ),
+            manifest_worker_execution_provenance_bytes=(
+                _worker_execution_provenance_bytes(
+                    observed["manifest_worker_execution_provenance"],
+                    name="manifest-worker execution provenance",
+                )
+            ),
+            case_worker_execution_provenance_bytes=(
+                _worker_execution_provenance_bytes(
+                    observed["case_worker_execution_provenance"],
+                    name="case-worker execution provenance",
+                )
             ),
             retained_case_payload_aggregate_sha256=observed[
                 "retained_case_payload_aggregate_sha256"
@@ -5028,7 +6082,9 @@ def main() -> int:
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V1",
     "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V2",
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM",
     "REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES",
@@ -5051,6 +6107,7 @@ __all__ = [
     "REFERENCE_VALIDATION_TRUST_STORE_PATH",
     "REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID",
     "REFERENCE_VALIDATION_WORKER_FRAME_SCHEMA_ID",
+    "REFERENCE_VALIDATION_WORKER_EXECUTION_PROVENANCE_SCHEMA_ID",
     "ReferenceValidationCaseObservation",
     "ReferenceValidationMetricObservation",
     "ReferenceValidationRunObservation",
@@ -5063,6 +6120,7 @@ __all__ = [
     "reference_validation_checked_out_code_commit_sha",
     "read_reference_validation_runner_start_record",
     "require_reference_validation_run_observation_document",
+    "require_reference_validation_worker_execution_provenance_document",
     "require_reference_validation_runner_contract_document",
     "run_bounded_cpu_reference_validation",
 ]

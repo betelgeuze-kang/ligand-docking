@@ -223,23 +223,94 @@ def _complete_worker_lifecycle(
     )
 
 
-def _frozen_manifest_worker_result() -> tuple[
+def _fixture_worker_request(
+    *,
+    worker_kind: str,
+    materialization_manifest_sha256: str | None,
+    runner_start_record_sha256: str | None,
+    receipt: SimpleNamespace | None = None,
+    code_commit_sha: str = CODE_COMMIT_SHA,
+    runner_source_sha256: str | None = None,
+    source_manifest_sha256: str = SOURCE_MANIFEST_SHA256,
+    authorization_nonce_sha256: str = AUTHORIZATION_NONCE,
+    dependency_rows: Mapping[str, str] = DEPENDENCY_ROWS,
+) -> dict[str, Any]:
+    selected = receipt or _receipt(
+        code_commit_sha=code_commit_sha,
+        runner_source_sha256=runner_source_sha256
+        or reference_validation_runner_source_sha256(),
+        source_manifest_sha256=source_manifest_sha256,
+        authorization_nonce_sha256=authorization_nonce_sha256,
+    )
+    worker_environment = module._case_worker_environment(
+        selected.environment_variable_rows,
+        dependency_python_path="/trusted",
+    )
+    return module._fixed_worker_request(
+        worker_kind=worker_kind,
+        expected_materialization_manifest_sha256=materialization_manifest_sha256,
+        expected_code_commit_sha=code_commit_sha,
+        expected_runner_source_sha256=(
+            runner_source_sha256 or selected.runner_source_sha256
+        ),
+        expected_source_manifest_sha256=source_manifest_sha256,
+        expected_authorization_nonce_sha256=authorization_nonce_sha256,
+        expected_runner_start_record_sha256=runner_start_record_sha256,
+        expected_dependency_artifact_sha256_rows=dependency_rows,
+        dependency_roots=(Path("/trusted"),),
+        environment_receipt=selected,
+        worker_environment=worker_environment,
+    )
+
+
+def _frozen_manifest_worker_result(
+    receipt: SimpleNamespace | None = None,
+) -> tuple[
     Any,
     list[Mapping[str, Any]],
     str,
     dict[str, Any],
+    dict[str, Any],
 ]:
     protocol, manifest = module._load_frozen_case_manifest_document()
+    selected = receipt or _receipt()
+    request = _fixture_worker_request(
+        worker_kind="manifest",
+        materialization_manifest_sha256=None,
+        runner_start_record_sha256=None,
+        receipt=selected,
+        code_commit_sha=selected.code_commit_sha,
+        runner_source_sha256=selected.runner_source_sha256,
+        source_manifest_sha256=selected.source_manifest_sha256,
+        authorization_nonce_sha256=selected.authorization_nonce_sha256,
+    )
+    request_sha256 = module._worker_request_sha256(request)
     lifecycle = _complete_worker_lifecycle(
         lane=native_identity.WORKER_RUNTIME_LANE_ENERGY_FORCE_MANIFEST,
-        worker_request_sha256=MANIFEST_WORKER_REQUEST_SHA256,
+        worker_request_sha256=request_sha256,
         payload_rows=[module._manifest_worker_payload(manifest)],
+    )
+    transcript = _worker_frames_bytes(_valid_manifest_worker_frames(request, manifest))
+    provenance = module._build_worker_execution_provenance(
+        worker_kind="manifest",
+        request=request,
+        supervisor_launched_child_process_id=1,
+        transcript=transcript,
+        lifecycle=lifecycle,
+        accepted_payload_rows=[module._manifest_worker_payload(manifest)],
+        failure_stage=None,
+        child_exit_code=0,
+        timed_out=False,
+        output_overflow=False,
+        communication_failed=False,
+        request_fully_written=True,
     )
     return (
         protocol,
         manifest["cases"],
         manifest["materialization_manifest_sha256"],
         lifecycle,
+        provenance,
     )
 
 
@@ -255,9 +326,94 @@ def _case_worker_lifecycle(
 
 def _observation_lifecycle_fields(
     cases: Sequence[module.ReferenceValidationCaseObservation],
+    *,
+    runner_start_record_sha256: str = "1" * 64,
+    execution_environment_receipt_sha256: str = "2" * 64,
+    environment_fingerprint_sha256: str = "3" * 64,
+    authorization_nonce_sha256: str = "5" * 64,
+    code_commit_sha: str = "6" * 40,
+    runner_source_sha256: str = "7" * 64,
+    source_manifest_sha256: str = "8" * 64,
+    seed: int = 123,
 ) -> dict[str, object]:
-    _, _, _, manifest_lifecycle = _frozen_manifest_worker_result()
-    case_lifecycle = _case_worker_lifecycle(cases)
+    _, manifest = module._load_frozen_case_manifest_document()
+    receipt = _receipt(
+        receipt_sha256=execution_environment_receipt_sha256,
+        environment_fingerprint_sha256=environment_fingerprint_sha256,
+        authorization_nonce_sha256=authorization_nonce_sha256,
+        code_commit_sha=code_commit_sha,
+        runner_source_sha256=runner_source_sha256,
+        source_manifest_sha256=source_manifest_sha256,
+        application_seed=seed,
+        environment_variable_rows=_environment_rows(application_seed=seed),
+    )
+    manifest_request = _fixture_worker_request(
+        worker_kind="manifest",
+        materialization_manifest_sha256=None,
+        runner_start_record_sha256=None,
+        receipt=receipt,
+        code_commit_sha=code_commit_sha,
+        runner_source_sha256=runner_source_sha256,
+        source_manifest_sha256=source_manifest_sha256,
+        authorization_nonce_sha256=authorization_nonce_sha256,
+    )
+    manifest_request_sha256 = module._worker_request_sha256(manifest_request)
+    manifest_payload = module._manifest_worker_payload(manifest)
+    manifest_lifecycle = _complete_worker_lifecycle(
+        lane=native_identity.WORKER_RUNTIME_LANE_ENERGY_FORCE_MANIFEST,
+        worker_request_sha256=manifest_request_sha256,
+        payload_rows=[manifest_payload],
+    )
+    manifest_transcript = _worker_frames_bytes(
+        _valid_manifest_worker_frames(manifest_request, manifest)
+    )
+    manifest_provenance = module._build_worker_execution_provenance(
+        worker_kind="manifest",
+        request=manifest_request,
+        supervisor_launched_child_process_id=1,
+        transcript=manifest_transcript,
+        lifecycle=manifest_lifecycle,
+        accepted_payload_rows=[manifest_payload],
+        failure_stage=None,
+        child_exit_code=0,
+        timed_out=False,
+        output_overflow=False,
+        communication_failed=False,
+        request_fully_written=True,
+    )
+    case_request = _fixture_worker_request(
+        worker_kind="case",
+        materialization_manifest_sha256=manifest["materialization_manifest_sha256"],
+        runner_start_record_sha256=runner_start_record_sha256,
+        receipt=receipt,
+        code_commit_sha=code_commit_sha,
+        runner_source_sha256=runner_source_sha256,
+        source_manifest_sha256=source_manifest_sha256,
+        authorization_nonce_sha256=authorization_nonce_sha256,
+    )
+    case_request_sha256 = module._worker_request_sha256(case_request)
+    case_lifecycle = _complete_worker_lifecycle(
+        lane=native_identity.WORKER_RUNTIME_LANE_ENERGY_FORCE,
+        worker_request_sha256=case_request_sha256,
+        payload_rows=[row.to_dict() for row in cases],
+    )
+    case_transcript = _worker_frames_bytes(
+        _valid_case_worker_frames(case_request, cases)
+    )
+    case_provenance = module._build_worker_execution_provenance(
+        worker_kind="case",
+        request=case_request,
+        supervisor_launched_child_process_id=1,
+        transcript=case_transcript,
+        lifecycle=case_lifecycle,
+        accepted_payload_rows=[row.to_dict() for row in cases],
+        failure_stage=None,
+        child_exit_code=0,
+        timed_out=False,
+        output_overflow=False,
+        communication_failed=False,
+        request_fully_written=True,
+    )
     payload_rows = [row.to_dict() for row in cases]
     return {
         "manifest_worker_lifecycle_evidence_bytes": module._lifecycle_evidence_bytes(
@@ -267,6 +423,18 @@ def _observation_lifecycle_fields(
         "case_worker_lifecycle_evidence_bytes": module._lifecycle_evidence_bytes(
             case_lifecycle,
             name="case-worker lifecycle evidence",
+        ),
+        "manifest_worker_execution_provenance_bytes": (
+            module._worker_execution_provenance_bytes(
+                manifest_provenance,
+                name="manifest-worker execution provenance",
+            )
+        ),
+        "case_worker_execution_provenance_bytes": (
+            module._worker_execution_provenance_bytes(
+                case_provenance,
+                name="case-worker execution provenance",
+            )
         ),
         "retained_case_payload_aggregate_sha256": module._sha256(payload_rows),
     }
@@ -370,13 +538,14 @@ def _call_supervised_case_worker(
 ) -> tuple[
     tuple[module.ReferenceValidationCaseObservation, ...],
     dict[str, Any],
+    dict[str, Any],
 ]:
     receipt = _receipt()
     worker_environment = module._case_worker_environment(
         receipt.environment_variable_rows,
         dependency_python_path="/trusted",
     )
-    process = SimpleNamespace(pid=1)
+    process = SimpleNamespace(pid=1, returncode=0)
     monkeypatch.setattr(
         module,
         "_start_fixed_validation_worker",
@@ -393,6 +562,7 @@ def _call_supervised_case_worker(
         materialization_manifest_sha256=manifest["materialization_manifest_sha256"],
         expected_code_commit_sha=CODE_COMMIT_SHA,
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_runner_start_record_sha256="1" * 64,
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -469,13 +639,43 @@ def _install_verified_receipt(
             worker_manifest_cases,
             deadline=kwargs["deadline"],
         )
-        return rows, _case_worker_lifecycle(rows)
+        request = _fixture_worker_request(
+            worker_kind="case",
+            materialization_manifest_sha256=kwargs["materialization_manifest_sha256"],
+            runner_start_record_sha256=kwargs["expected_runner_start_record_sha256"],
+            receipt=receipt,
+            code_commit_sha=receipt.code_commit_sha,
+            runner_source_sha256=receipt.runner_source_sha256,
+            source_manifest_sha256=receipt.source_manifest_sha256,
+            authorization_nonce_sha256=receipt.authorization_nonce_sha256,
+        )
+        lifecycle = _complete_worker_lifecycle(
+            lane=native_identity.WORKER_RUNTIME_LANE_ENERGY_FORCE,
+            worker_request_sha256=module._worker_request_sha256(request),
+            payload_rows=[row.to_dict() for row in rows],
+        )
+        transcript = _worker_frames_bytes(_valid_case_worker_frames(request, rows))
+        provenance = module._build_worker_execution_provenance(
+            worker_kind="case",
+            request=request,
+            supervisor_launched_child_process_id=1,
+            transcript=transcript,
+            lifecycle=lifecycle,
+            accepted_payload_rows=[row.to_dict() for row in rows],
+            failure_stage=None,
+            child_exit_code=0,
+            timed_out=False,
+            output_overflow=False,
+            communication_failed=False,
+            request_fully_written=True,
+        )
+        return rows, lifecycle, provenance
 
     monkeypatch.setattr(module, "_run_supervised_case_matrix", run_in_process)
     monkeypatch.setattr(
         module,
         "_run_supervised_frozen_case_matrix",
-        lambda **_kwargs: _frozen_manifest_worker_result(),
+        lambda **_kwargs: _frozen_manifest_worker_result(receipt),
     )
 
 
@@ -503,8 +703,12 @@ def test_runner_contract_is_frozen_and_current_decision_remains_closed() -> None
     assert first["bounds"]["variant_count"] == (
         REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
     )
-    assert first["frozen_at_utc"] == "2026-07-18T23:33:55Z"
+    assert first["frozen_at_utc"] == "2026-07-19T00:00:00Z"
     assert first["bounds"]["worker_canonical_jsonl_frame_protocol_required"] is True
+    assert (
+        first["bounds"]["retained_worker_environment_internal_coherence_reverified"]
+        is True
+    )
     assert first["bounds"]["source_checkout_root_owned_read_only_required"] is True
     assert first["bounds"]["manifest_worker_frame_order"] == [
         "pre",
@@ -526,6 +730,9 @@ def test_runner_contract_is_frozen_and_current_decision_remains_closed() -> None
     assert first["bounds"]["production_native_lifetime_closure_claimed"] is False
     assert module.FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V2 == (
         "96b133144344183191db89c86838a6d712a26f0dbfc5eee4981d34e2fe074754"
+    )
+    assert module.FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V3 == (
+        "c450059857a38f7cf8aa44ba1efbb79ff3d6218ebc7deaf963078c2e3f44a1e9"
     )
     assert first["observation"]["in_memory_only"] is True
     assert first["observation"]["failed_metrics_and_cases_retained"] is True
@@ -1773,6 +1980,7 @@ def test_supervisor_hard_kills_a_case_worker_at_the_wall_deadline(
 
     class StalledProcess:
         args = [sys.executable, "--case-worker"]
+        pid = 1
         returncode: int | None = None
 
         def __init__(self) -> None:
@@ -1806,12 +2014,13 @@ def test_supervisor_hard_kills_a_case_worker_at_the_wall_deadline(
         receipt.environment_variable_rows,
         dependency_python_path="/trusted",
     )
-    rows, lifecycle = module._run_supervised_case_matrix(
+    rows, lifecycle, provenance = module._run_supervised_case_matrix(
         protocol,
         manifest_cases,
         materialization_manifest_sha256=manifest["materialization_manifest_sha256"],
         expected_code_commit_sha=reference_validation_checked_out_code_commit_sha(),
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_runner_start_record_sha256="1" * 64,
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -1825,6 +2034,7 @@ def test_supervisor_hard_kills_a_case_worker_at_the_wall_deadline(
     assert len(rows) == REFERENCE_VALIDATION_RUNNER_MAX_CASES
     assert lifecycle["completion_state"] == "incomplete"
     assert lifecycle["failure_code"] == "runner_time_budget_exhausted"
+    assert provenance["timed_out"] is True
     assert all(row.observation_origin == "supervisor" for row in rows)
     assert all(row.observed_status == "time_budget_exhausted" for row in rows)
     assert all(
@@ -1896,6 +2106,9 @@ def test_worker_launch_uses_receipt_bound_environment_after_live_env_tamper(
         expected_materialization_manifest_sha256="f" * 64,
         expected_code_commit_sha=CODE_COMMIT_SHA,
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_source_manifest_sha256=SOURCE_MANIFEST_SHA256,
+        expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        expected_runner_start_record_sha256="1" * 64,
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -1944,6 +2157,9 @@ def test_worker_request_enforces_uint32_python_hash_seed() -> None:
         expected_materialization_manifest_sha256=None,
         expected_code_commit_sha=CODE_COMMIT_SHA,
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_source_manifest_sha256=SOURCE_MANIFEST_SHA256,
+        expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        expected_runner_start_record_sha256=None,
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -1979,6 +2195,9 @@ def test_worker_preflight_rechecks_dependencies_before_deterministic_config(
         expected_materialization_manifest_sha256="f" * 64,
         expected_code_commit_sha=CODE_COMMIT_SHA,
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_source_manifest_sha256=SOURCE_MANIFEST_SHA256,
+        expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        expected_runner_start_record_sha256="1" * 64,
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -2975,7 +3194,7 @@ def test_manifest_worker_accepts_exact_pre_payload_completion_lifecycle(
     monkeypatch.setattr(
         module,
         "_start_fixed_validation_worker",
-        lambda worker_flag, request: SimpleNamespace(pid=1),
+        lambda worker_flag, request: SimpleNamespace(pid=1, returncode=0),
     )
 
     def communicate(process: object, request: Mapping[str, Any], *, deadline: float):
@@ -2987,7 +3206,7 @@ def test_manifest_worker_accepts_exact_pre_payload_completion_lifecycle(
         "_communicate_fixed_validation_worker",
         communicate,
     )
-    protocol, cases, manifest_sha256, lifecycle = (
+    protocol, cases, manifest_sha256, lifecycle, provenance = (
         module._run_supervised_frozen_case_matrix(
             expected_code_commit_sha=CODE_COMMIT_SHA,
             expected_runner_source_sha256=reference_validation_runner_source_sha256(),
@@ -3005,6 +3224,7 @@ def test_manifest_worker_accepts_exact_pre_payload_completion_lifecycle(
     assert lifecycle["completion_state"] == "complete"
     assert lifecycle["payload"]["payload_row_count"] == 1
     assert lifecycle["pre"]["snapshot"] == lifecycle["post"]["snapshot"]
+    assert provenance["supervisor_launched_child_process_id"] == 1
 
 
 @pytest.mark.parametrize("worker_kind", ["manifest", "case"])
@@ -3032,6 +3252,11 @@ def test_worker_main_emits_canonical_pre_payload_completion_frames(
         ),
         expected_code_commit_sha=CODE_COMMIT_SHA,
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_source_manifest_sha256=SOURCE_MANIFEST_SHA256,
+        expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        expected_runner_start_record_sha256=(
+            None if worker_kind == "manifest" else "1" * 64
+        ),
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -3156,7 +3381,7 @@ def test_manifest_worker_rejects_nonexact_frame_or_lifecycle(
     monkeypatch.setattr(
         module,
         "_start_fixed_validation_worker",
-        lambda worker_flag, request: SimpleNamespace(pid=1),
+        lambda worker_flag, request: SimpleNamespace(pid=1, returncode=0),
     )
 
     def communicate(process: object, request: Mapping[str, Any], *, deadline: float):
@@ -3212,7 +3437,7 @@ def test_case_worker_accepts_exact_pre_payload_completion_lifecycle(
         frames = _valid_case_worker_frames(request, expected_cases)
         return _worker_frames_bytes(frames), False, True
 
-    cases, lifecycle = _call_supervised_case_worker(
+    cases, lifecycle, _provenance = _call_supervised_case_worker(
         monkeypatch,
         protocol=protocol,
         manifest=manifest,
@@ -3280,7 +3505,7 @@ def test_case_worker_protocol_failure_discards_every_worker_payload(
             raise AssertionError(mutation)
         return _worker_frames_bytes(frames), False, True
 
-    rows, lifecycle = _call_supervised_case_worker(
+    rows, lifecycle, _provenance = _call_supervised_case_worker(
         monkeypatch,
         protocol=protocol,
         manifest=manifest,
@@ -3311,7 +3536,7 @@ def test_case_worker_partial_timeout_discards_one_twenty_six_or_twenty_seven_row
         partial = frames[: emitted_payload_count + 1]
         return _worker_frames_bytes(partial), True, False
 
-    rows, lifecycle = _call_supervised_case_worker(
+    rows, lifecycle, _provenance = _call_supervised_case_worker(
         monkeypatch,
         protocol=protocol,
         manifest=manifest,
@@ -3339,7 +3564,7 @@ def test_case_worker_nonzero_exit_discards_a_complete_looking_payload(
         frames = _valid_case_worker_frames(request, worker_cases)
         return _worker_frames_bytes(frames), False, False
 
-    rows, lifecycle = _call_supervised_case_worker(
+    rows, lifecycle, _provenance = _call_supervised_case_worker(
         monkeypatch,
         protocol=protocol,
         manifest=manifest,
@@ -3380,6 +3605,11 @@ def test_worker_request_rejects_protocol_coverage_or_manifest_binding_drift(
         ),
         expected_code_commit_sha=CODE_COMMIT_SHA,
         expected_runner_source_sha256=reference_validation_runner_source_sha256(),
+        expected_source_manifest_sha256=SOURCE_MANIFEST_SHA256,
+        expected_authorization_nonce_sha256=AUTHORIZATION_NONCE,
+        expected_runner_start_record_sha256=(
+            None if worker_kind == "manifest" else "1" * 64
+        ),
         expected_dependency_artifact_sha256_rows=DEPENDENCY_ROWS,
         dependency_roots=(Path("/trusted"),),
         environment_receipt=receipt,
@@ -3444,7 +3674,7 @@ def test_run_observation_rejects_lifecycle_origin_and_aggregate_cross_wiring(
     )
     with pytest.raises(
         ReferenceValidationRunnerError,
-        match="failure-complete supervisor matrix",
+        match="worker execution provenance",
     ):
         module.require_reference_validation_run_observation_document(
             resign(incomplete_with_worker_rows)
@@ -3465,7 +3695,7 @@ def test_run_observation_rejects_lifecycle_origin_and_aggregate_cross_wiring(
     )
     with pytest.raises(
         ReferenceValidationRunnerError,
-        match="complete case-worker lifecycle contains supervisor-generated rows",
+        match="worker execution provenance",
     ):
         module.require_reference_validation_run_observation_document(
             resign(complete_with_supervisor_row)
@@ -3485,7 +3715,7 @@ def test_run_observation_rejects_lifecycle_origin_and_aggregate_cross_wiring(
     )
     with pytest.raises(
         ReferenceValidationRunnerError,
-        match="worker lifecycle evidence is invalid",
+        match="worker execution provenance",
     ):
         module.require_reference_validation_run_observation_document(
             resign(incomplete_manifest)
@@ -3519,7 +3749,9 @@ def test_run_observation_rejects_unreachable_incomplete_failure_code(
         )
     )
 
-    with pytest.raises(ReferenceValidationRunnerError, match="unsupported"):
+    with pytest.raises(
+        ReferenceValidationRunnerError, match="worker execution provenance"
+    ):
         module.ReferenceValidationRunObservation(
             runner_start_record_sha256="1" * 64,
             execution_environment_receipt_sha256="2" * 64,
@@ -3537,3 +3769,225 @@ def test_run_observation_rejects_unreachable_incomplete_failure_code(
             case_results=rows,
             **lifecycle_fields,
         )
+
+
+def _resign_worker_provenance(payload: dict[str, Any]) -> dict[str, Any]:
+    projection = dict(payload)
+    projection.pop("provenance_sha256", None)
+    payload["provenance_sha256"] = module._sha256(projection)
+    return payload
+
+
+def _resign_run_observation(payload: dict[str, Any]) -> dict[str, Any]:
+    projection = dict(payload)
+    projection.pop("observation_sha256", None)
+    payload["observation_sha256"] = module._sha256(projection)
+    return payload
+
+
+@pytest.mark.parametrize("mutation", ["request_duplicate_key", "request_noncanonical"])
+def test_run_observation_rejects_forged_request_transport_even_when_rehashed(
+    mutation: str,
+    frozen_worker_matrix: tuple[
+        Any,
+        dict[str, Any],
+        tuple[module.ReferenceValidationCaseObservation, ...],
+    ],
+) -> None:
+    _protocol, _manifest, cases = frozen_worker_matrix
+    observation = module.ReferenceValidationRunObservation(
+        runner_start_record_sha256="1" * 64,
+        execution_environment_receipt_sha256="2" * 64,
+        environment_fingerprint_sha256="3" * 64,
+        authorization_receipt_sha256="4" * 64,
+        authorization_nonce_sha256="5" * 64,
+        code_commit_sha="6" * 40,
+        runner_source_sha256="7" * 64,
+        source_manifest_sha256="8" * 64,
+        dependency_artifact_sha256_rows=tuple(sorted(DEPENDENCY_ROWS.items())),
+        command_argv=module.REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+        seed=123,
+        started_at_utc="2026-07-17T09:00:00Z",
+        completed_at_utc="2026-07-17T09:01:00Z",
+        case_results=cases,
+        **_observation_lifecycle_fields(cases),
+    )
+    forged = deepcopy(observation.to_dict())
+    provenance = forged["case_worker_execution_provenance"]
+    request_bytes = bytes.fromhex(provenance["worker_request_canonical_jsonl_hex"])
+    if mutation == "request_duplicate_key":
+        schema = module.REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID.encode(
+            "ascii"
+        )
+        request_bytes = b'{"schema_id":"' + schema + b'",' + request_bytes[1:]
+    else:
+        request_bytes = request_bytes[:-1] + b" \n"
+    provenance["worker_request_canonical_jsonl_hex"] = request_bytes.hex()
+    provenance["worker_request_byte_count"] = len(request_bytes)
+    provenance["worker_request_transport_sha256"] = hashlib.sha256(
+        request_bytes
+    ).hexdigest()
+    _resign_worker_provenance(provenance)
+
+    with pytest.raises(
+        ReferenceValidationRunnerError,
+        match="worker execution provenance is invalid",
+    ):
+        module.require_reference_validation_run_observation_document(
+            _resign_run_observation(forged)
+        )
+
+
+@pytest.mark.parametrize("mutation", ["transcript_sha", "child_pid"])
+def test_run_observation_rejects_rehashed_transcript_or_pid_forgery(
+    mutation: str,
+    frozen_worker_matrix: tuple[
+        Any,
+        dict[str, Any],
+        tuple[module.ReferenceValidationCaseObservation, ...],
+    ],
+) -> None:
+    _protocol, _manifest, cases = frozen_worker_matrix
+    observation = module.ReferenceValidationRunObservation(
+        runner_start_record_sha256="1" * 64,
+        execution_environment_receipt_sha256="2" * 64,
+        environment_fingerprint_sha256="3" * 64,
+        authorization_receipt_sha256="4" * 64,
+        authorization_nonce_sha256="5" * 64,
+        code_commit_sha="6" * 40,
+        runner_source_sha256="7" * 64,
+        source_manifest_sha256="8" * 64,
+        dependency_artifact_sha256_rows=tuple(sorted(DEPENDENCY_ROWS.items())),
+        command_argv=module.REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+        seed=123,
+        started_at_utc="2026-07-17T09:00:00Z",
+        completed_at_utc="2026-07-17T09:01:00Z",
+        case_results=cases,
+        **_observation_lifecycle_fields(cases),
+    )
+    forged = deepcopy(observation.to_dict())
+    provenance = forged["case_worker_execution_provenance"]
+    if mutation == "transcript_sha":
+        provenance["transcript_sha256"] = "0" * 64
+    else:
+        provenance["supervisor_launched_child_process_id"] = 2
+    _resign_worker_provenance(provenance)
+
+    with pytest.raises(ReferenceValidationRunnerError, match="provenance"):
+        module.require_reference_validation_run_observation_document(
+            _resign_run_observation(forged)
+        )
+
+
+def test_run_observation_rejects_self_consistent_worker_transplant_between_runs(
+    frozen_worker_matrix: tuple[
+        Any,
+        dict[str, Any],
+        tuple[module.ReferenceValidationCaseObservation, ...],
+    ],
+) -> None:
+    _protocol, _manifest, cases = frozen_worker_matrix
+    fields_a = _observation_lifecycle_fields(cases)
+    fields_b = _observation_lifecycle_fields(
+        cases,
+        runner_start_record_sha256="9" * 64,
+        execution_environment_receipt_sha256="a" * 64,
+        environment_fingerprint_sha256="b" * 64,
+        authorization_nonce_sha256="c" * 64,
+    )
+    observation = module.ReferenceValidationRunObservation(
+        runner_start_record_sha256="1" * 64,
+        execution_environment_receipt_sha256="2" * 64,
+        environment_fingerprint_sha256="3" * 64,
+        authorization_receipt_sha256="4" * 64,
+        authorization_nonce_sha256="5" * 64,
+        code_commit_sha="6" * 40,
+        runner_source_sha256="7" * 64,
+        source_manifest_sha256="8" * 64,
+        dependency_artifact_sha256_rows=tuple(sorted(DEPENDENCY_ROWS.items())),
+        command_argv=module.REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
+        seed=123,
+        started_at_utc="2026-07-17T09:00:00Z",
+        completed_at_utc="2026-07-17T09:01:00Z",
+        case_results=cases,
+        **fields_a,
+    )
+    transplanted = deepcopy(observation.to_dict())
+    transplanted["case_worker_lifecycle_evidence"] = json.loads(
+        fields_b["case_worker_lifecycle_evidence_bytes"].decode("ascii")
+    )
+    transplanted["case_worker_execution_provenance"] = json.loads(
+        fields_b["case_worker_execution_provenance_bytes"].decode("ascii")
+    )
+
+    with pytest.raises(ReferenceValidationRunnerError, match="provenance"):
+        module.require_reference_validation_run_observation_document(
+            _resign_run_observation(transplanted)
+        )
+
+
+def test_incomplete_worker_provenance_retains_timeout_prefix_and_discards_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    frozen_worker_matrix: tuple[
+        Any,
+        dict[str, Any],
+        tuple[module.ReferenceValidationCaseObservation, ...],
+    ],
+) -> None:
+    protocol, manifest, cases = frozen_worker_matrix
+
+    def communicate(process: object, request: Mapping[str, Any], *, deadline: float):
+        frames = _valid_case_worker_frames(request, cases)
+        partial = _worker_frames_bytes(frames[:2]) + b'{"truncated"'
+        return partial, True, False, False
+
+    rows, lifecycle, provenance = _call_supervised_case_worker(
+        monkeypatch,
+        protocol=protocol,
+        manifest=manifest,
+        communicate=communicate,
+    )
+    _assert_supervisor_failure_complete(
+        rows,
+        lifecycle,
+        expected_status="time_budget_exhausted",
+        expected_error_code="runner_time_budget_exhausted",
+    )
+    assert provenance["timed_out"] is True
+    assert provenance["parsed_prefix_frame_count"] == 2
+    assert provenance["discarded_payload_frame_count"] == 1
+    assert provenance["accepted_payload_frame_count"] == 0
+    assert provenance["discarded_suffix_byte_count"] == len(b'{"truncated"')
+    assert provenance["raw_partial_not_independently_replayable"] is True
+
+
+def test_incomplete_worker_provenance_records_exact_output_cap_overflow(
+    monkeypatch: pytest.MonkeyPatch,
+    frozen_worker_matrix: tuple[
+        Any,
+        dict[str, Any],
+        tuple[module.ReferenceValidationCaseObservation, ...],
+    ],
+) -> None:
+    protocol, manifest, _cases = frozen_worker_matrix
+    monkeypatch.setattr(module, "REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES", 64)
+
+    def communicate(process: object, request: Mapping[str, Any], *, deadline: float):
+        return b"x" * 64, False, False, True
+
+    rows, lifecycle, provenance = _call_supervised_case_worker(
+        monkeypatch,
+        protocol=protocol,
+        manifest=manifest,
+        communicate=communicate,
+    )
+    _assert_supervisor_failure_complete(
+        rows,
+        lifecycle,
+        expected_status="unexpected_error",
+        expected_error_code="case_worker_protocol_invalid",
+    )
+    assert provenance["output_overflow"] is True
+    assert provenance["transcript_byte_count"] == 64
+    assert provenance["accepted_payload_frame_count"] == 0
+    assert provenance["failure_stage"] == "worker_output_overflow"

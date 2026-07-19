@@ -65,8 +65,12 @@ betelgeuze_engine_v2.physics.reference_validation_run_start
 betelgeuze_engine_v2.physics.reference_validation_runner
 betelgeuze_engine_v2.physics.reference_validation_receipts
 betelgeuze_engine_v2.physics.reference_validation_result_writer
+betelgeuze_engine_v2.physics.reference_validation_result_review
 betelgeuze_engine_v2.physics.validation_legacy_contracts
 betelgeuze_engine_v2.physics.validation_native_runtime_identity
+betelgeuze_engine_v2.physics.validation_process_launch_identity
+betelgeuze_engine_v2.physics.validation_production_evidence_custody
+betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension
 betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
 betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.runtime
@@ -279,9 +283,14 @@ persisted and live bytes. The corresponding source-manifest digest is carried
 through the environment, runner-start, observation, and result receipts. The
 repository does not provision that external snapshot or dependency runtime;
 kernel-backed source/Git-metadata immutability and custody, pre-bootstrap stdlib
-closure, signed native-DSO allowlisting and lifetime closure, kernel vDSO
-identity, and persisted observation-to-worker-request identity remain production
-blockers. Signed evidence-class/custody propagation is also absent.
+closure, signed native-DSO allowlisting and lifetime closure, and kernel vDSO
+identity remain production blockers. A PID/parent/start-tick/boot/namespace
+measurement primitive exists, but worker binding, same-tick collision exclusion,
+and externally authenticated launch custody remain absent. Exact
+request/observation and successful canonical-transcript binding is implemented;
+the common production evidence-class/permit/status/custody foundation exists,
+but final stage-specific carrier propagation and a provisioned external chain are
+still absent.
 It fails closed when external
 production trust, signed artifacts, private roots, or nonce reservation are
 absent.
@@ -308,6 +317,21 @@ approval, or scientific claim is bundled.
 The validated receipt and the Ed25519 result-review signature also bind the
 canonical source-manifest digest; this is integrity binding, not reviewer
 approval or scientific acceptance.
+
+The energy-force result-review symbols provide a separate provisional Ed25519
+leaf over the exact 27-case, 59-variant, 19-metric result receipt. They derive
+deterministic case, variant, metric, expected-failure, and worker-execution
+dispositions; independently recompute all 56 required metric occurrences from
+retained raw energy/force arrays and require bitwise equality with retained
+float values; validate successful input/component/total/force evidence; and
+require pairwise separation of the implementation author, scientific reviewer,
+authorization operator, and result reviewer. A verified signature proves only
+the leaf review artifact and caller-provided result-reviewer key. The upstream
+scientific-review and authorization artifacts remain symmetric-HMAC records, so
+the leaf does not make that chain asymmetric. It also does not independently
+reverify the live dependency manifest or establish external custody. No
+production receipt, review attestation, trusted key, independent human approval,
+or scientific claim is bundled.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
 require exact code, runner-source, six selected aggregate dependency-artifact,
@@ -353,11 +377,17 @@ pre-read file caps, aggregate budgets, and carried monotonic deadlines. Each
 worker emits canonical request-bound pre/payload/completion frames, native
 endpoint snapshots, and payload aggregates. The parent accepts them only when
 both snapshot PIDs equal the launched child PID and reads stdout with a hard
-byte bound before buffering. Pre-bootstrap stdlib closure, signed native-DSO
-allowlisting/lifetime closure, kernel vDSO identity, and persisted
-observation-to-request identity remain production blockers. The energy-force lane also lacks a
-role-separated Ed25519 post-result-review contract and actual independent
-result review. Remaining cooperative budget is rechecked
+byte bound before buffering. It durably retains the exact canonical worker
+request plus transcript digest/length/frame order, requires complete raw stdout
+to equal reconstruction from the request, retained rows, and lifecycle, and
+discards every partial child payload on incomplete execution. Writer validation
+and minimization result review independently reconstruct and re-hash successful
+transcripts. Pre-bootstrap stdlib closure, signed native-DSO allowlisting/lifetime
+closure, kernel vDSO identity, PID start-time/boot-ID, and externally authenticated
+worker launch custody remain production blockers. The energy-force lane has a
+role-separated Ed25519 post-result-review leaf contract, but no actual production
+receipt, attestation, trusted result-reviewer key, or independent result review;
+its upstream review/authorization chain remains symmetric HMAC. Remaining cooperative budget is rechecked
 before the start marker is consumed, and a parent hard deadline can terminate
 blocked native code. The result
 is a canonical in-memory observation that retains
@@ -370,6 +400,51 @@ worker. It exposes no marker release/delete
 API. Test-only artifacts can exercise this implementation; no production key,
 receipt, start, result, validation
 acceptance, fitting, or claim promotion is bundled.
+
+`validation_process_launch_identity` is a provisional Linux-only measurement
+primitive for the fixed `/proc` view. It binds PID, nonnegative parent PID,
+stat-field-22 start clock tick, boot ID/hash, and PID-namespace inode using bounded
+no-follow reads and repeated observations. It does not authenticate the procfs
+superblock or host, cannot exclude reuse of one PID within the same clock tick,
+does not establish durable process uniqueness, and is not yet bound to either
+worker carrier.
+
+`validation_production_evidence_custody` is the frozen claim-closed Ed25519 base
+foundation shared by both synthetic lanes. It freezes the exact
+`synthetic_validation_production` class, a pre-execution permit, an adjacent and
+append-only status-snapshot chain, and a deliberately narrow two-event custody
+sequence: sequence 1 carries the exact canonical signed permit and sequence 2
+carries its exact canonical signed status snapshot. This base-v1 projection and
+its frozen SHA-256 remain unchanged. Signed carriers are capped at
+4 MiB; raw custody evidence, argv, contract bundles, and status rows have separate
+fixed bounds. The verifier rejects class downgrade, stale/revoked/superseded or
+caller-reported consumed permit inputs, trust-key aliases, rewritten status history,
+stale or retroactive handoff status, and raw-byte/run/lane/host transplant within
+that two-event sequence. Permit verification is an inspection against bounded
+external status inputs; it does not atomically consume a permit and therefore does
+not enforce one-use. This foundation does not provision keys, permits, an external
+log or one-use registry, enrolled hosts, immutable storage, an actual custody chain,
+or stage-specific production artifacts. Without an external append-only
+successor registry it also cannot make two sibling sequence-2 events mutually
+exclusive; each valid fork remains independently verifiable.
+
+`validation_production_review_authorization_custody_extension` is an additive
+companion that internally re-verifies the exact raw base sequence and adds
+production-only Ed25519 wrappers for sequence 3 `pre_execution_review` and
+sequence 4 `authorization`. It binds the lane-specific upstream review and
+authorization artifacts, the supplied process-launch-identity digest, exact
+permit/status ancestry, causal time ordering, global role/key/material separation,
+and logical plus raw revocation/supersession state. The energy-force upstream
+review/authorization remains symmetric HMAC, the supplied process identity digest
+is not external process authenticity, and neither carriers, events, keys nor an
+append-only successor registry are provisioned. Reservation and every later stage
+remain unimplemented; the companion is not eligible for atomic execution
+reservation and cannot enforce successor uniqueness. Consequently these contracts
+neither authorize execution nor record
+production results and every scientific, fitting, benchmark, product, and claim
+flag remains false. Runtime-integrity companion v5 binds the exact frozen SHA-256
+of custody-v1, this extension, and the process-launch-identity contract. Runtime
+v4 remains available only through the read-only legacy-contract registry.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
@@ -393,11 +468,11 @@ replacement resistance is not established, and result review remains
 `pending_independent_review`. No production receipt or scientific promotion is
 bundled.
 
-The active energy-force base carrier chain uses v2 identities with a v3 runner
+The active energy-force base carrier chain uses v2 identities with a v4 runner
 and result writer. The active minimization base chain uses v3 identities with a
-v5 runner and v4 result writer/result review. Current hashes are frozen over the
+v6 runner and v5 result writer/result review. Current hashes are frozen over the
 complete upstream contract DAG. The read-only legacy-contract verifier
-recognizes 23 superseded contract documents by canonical projection hash and
+recognizes 31 superseded contract documents by canonical projection hash and
 fixed identity metadata. It does not verify or claim compatibility with
 superseded signed attestations, receipts, run records, or observations.
 

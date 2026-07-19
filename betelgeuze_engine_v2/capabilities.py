@@ -109,6 +109,9 @@ CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = (
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID = (
     "v2_cpu_reference_minimization_validation_protocol"
 )
+VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID = (
+    "v2_synthetic_validation_production_evidence_custody_foundation"
+)
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID = "v2_frozen_public_benchmark_protocol"
@@ -493,6 +496,12 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "execution_environment_receipt_missing",
         "production_validation_result_receipt_missing",
         "independent_result_review_missing",
+        "signed_independent_result_review_attestation_missing",
+        "trusted_independent_result_reviewer_key_not_provided",
+        "implementation_author_and_independent_result_reviewer_separation_not_attested",
+        "energy_force_upstream_symmetric_hmac_chain",
+        "two_cpu_host_reproducibility_missing",
+        "independent_external_implementation_comparison_missing",
         "result_receipt_external_authenticity_not_established",
         "same_uid_artifact_replacement_resistance_not_established",
         "validation_execution_not_authorized",
@@ -531,6 +540,32 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "scientific_parameter_applicability_not_established",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID: (
+        "final_production_carrier_family_not_implemented",
+        "production_evidence_permit_not_provisioned",
+        "trusted_evidence_authority_key_not_provisioned",
+        "external_status_log_not_provisioned",
+        "global_one_use_permit_registry_not_provisioned",
+        "permit_one_use_consumption_not_enforced",
+        "run_custodian_key_not_provisioned",
+        "enrolled_host_identity_not_provisioned",
+        "production_pre_execution_review_carrier_not_provisioned",
+        "production_authorization_carrier_not_provisioned",
+        "production_review_authorization_custody_events_not_provisioned",
+        "trusted_production_review_key_not_provisioned",
+        "trusted_production_authorization_key_not_provisioned",
+        "reservation_and_later_custody_stages_not_implemented",
+        "process_launch_identity_not_bound_to_worker_carriers",
+        "same_tick_pid_reuse_collision_not_excluded",
+        "external_worker_launch_custody_missing",
+        "production_custody_chain_not_provisioned",
+        "external_custody_successor_uniqueness_not_provisioned",
+        "external_immutable_artifact_store_not_provisioned",
+        "production_validation_results_not_collected",
+        "scientific_validation_missing",
+        "parameter_fitting_not_authorized",
         "product_integration_not_qualified",
     ),
     DOCKING_CAPABILITY_ID: (
@@ -893,8 +928,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "failure_inclusive_result_receipt_writer_implemented_"
-                    "without_production_receipt_or_independent_result_review"
+                    "result_writer_and_independent_result_review_contract_"
+                    "without_production_receipt_or_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -905,6 +940,16 @@ def capability_snapshot() -> dict[str, Any]:
                     "failure_inclusive_complete_coordinate_trace_production_"
                     "entrypoint_result_writer_and_independent_result_review_"
                     "contract_without_production_result_receipt_or_review"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID: _row(
+                VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID,
+                current_state=(
+                    "claim_closed_ed25519_permit_status_review_authorization_"
+                    "four_event_custody_and_process_identity_foundation_"
+                    "without_external_chain"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -983,6 +1028,7 @@ __all__ = [
     "CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID",
     "CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID",
     "CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID",
+    "VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID",
     "DISTRIBUTION_CAPABILITY_ID",
     "DOCKING_CAPABILITY_ID",
     "ENGINE_ID",

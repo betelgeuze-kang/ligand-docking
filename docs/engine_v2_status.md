@@ -260,22 +260,61 @@ The current `main` branch contains:
   file/directory fsync before the environment receipt; runner and writer
   finalization require exact persisted/live equality and bind the source digest
   through environment, runner-start, observation, and result identities.
-  Workers now retain exact request-bound pre/payload/post lifecycle evidence,
-  failure-complete payload dispositions, native endpoint snapshots, and payload
-  aggregates. Supervisor reads are hard byte-bounded before buffering, and both
-  snapshot PIDs must equal the launched child PID. External source/dependency-
+  Workers now retain the exact canonical request transport, request-bound
+  pre/payload/post lifecycle evidence, failure-complete payload dispositions,
+  native endpoint snapshots, child PID, and payload aggregates. Supervisor reads
+  are hard byte-bounded before buffering; a complete raw stdout transcript must
+  equal the canonical reconstruction from the request, ordered retained rows,
+  and lifecycle. Writer validation and both result-review contracts independently
+  reconstructs and re-hashes the successful transcript. Incomplete output keeps
+  bounded digest/length/prefix/discard metadata, accepts no child payload, and is
+  not independently replayable or review-acceptable. External source/dependency-
   runtime provisioning, kernel-backed source/Git-metadata immutability and
   custody, pre-bootstrap stdlib closure, signed native-DSO allowlisting/lifetime
-  closure, kernel vDSO identity, persisted observation-to-request identity, and
-  signed evidence-class/custody propagation remain production blockers.
-  The active energy-force base chain uses v2 identities with a v3 runner/result
-  writer; the active minimization base chain uses v3 identities with a v5 runner
-  and v4 result writer/result review. Their hashes were
+  closure and kernel vDSO identity remain production blockers. A Linux-only
+  fixed-`/proc` primitive now measures PID, nonnegative parent PID, start clock
+  tick, boot ID, and PID-namespace inode with bounded race-checked reads, but it
+  is not bound into the workers, cannot exclude same-tick PID reuse, and is not
+  external launch authenticity or durable uniqueness. Final signed
+  evidence-class carrier propagation and external custody remain blockers. The
+  active energy-force base chain uses v2 identities
+  with a v4 runner/result writer; the active minimization base chain uses v3
+  identities with a v6 runner and v5 result writer/result review. Their hashes were
   refrozen through the full upstream dependency DAG. A separate read-only
-  verifier recognizes 23 superseded contract documents by canonical projection
+  verifier recognizes 31 superseded contract documents by canonical projection
   hash. Superseded signed attestations, receipts, and run records are not
   supported and no compatibility claim is made for them.
-  The primitive creates no network
+  The energy-force lane now has a frozen Ed25519 result-review leaf with full
+  case/variant/metric/failure/worker dispositions, independent recomputation of
+  all 56 required metric occurrences from retained raw energy/force arrays with
+  bitwise retained-value equality, and four-role separation. No
+  production result, attestation, trusted result-reviewer key, or independent
+  human approval is bundled; upstream scientific review and authorization remain
+  symmetric HMAC, and live dependency-manifest re-verification/external custody
+  remain open.
+  A common claim-closed Ed25519 base foundation freezes the exact
+  `synthetic_validation_production` evidence class, pre-execution permit,
+  adjacent monotonic status snapshots, bounded carrier inputs, and a two-event
+  dual-distinct-key custody sequence for the exact signed permit followed by its
+  exact signed status snapshot. Its v1 projection and hash remain unchanged. It rejects
+  downgrade, trust-key aliases, replay-list hits, rewritten status history,
+  stale/retroactive handoff status, and raw-byte/run/lane/host transplant within
+  those two events. Permit verification only inspects bounded caller-supplied
+  consumption state and does not atomically enforce one-use. No production key,
+  permit, external status log, global one-use registry,
+  enrolled host, immutable artifact store, actual custody chain, or final
+  stage-discriminated carrier family is provisioned. An additive companion now
+  internally re-verifies that raw prefix and implements production-only Ed25519
+  sequence-3 review and sequence-4 authorization carriers/events with causal-time,
+  exact scalar-type, role/key/material-separation, and raw/logical revocation checks.
+  These artifacts and keys are not provisioned; the energy-force upstream chain
+  remains symmetric HMAC; the process digest is bound but not externally
+  authenticated; reservation and later stages remain unimplemented. Without an external append-only
+  successor registry, valid sibling sequence-2 events are not mutually exclusive;
+  all promotion flags remain false. Runtime-integrity companion v5 binds the exact
+  frozen custody-v1, review/authorization extension, and process-launch-identity
+  contract SHA-256 values; runtime v4 is retained in the read-only legacy registry.
+  The separate process-launch measurement primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
   environment receipt, runner-start record, and canonical observation before
@@ -367,11 +406,21 @@ The current `main` branch contains:
   `<nonce>.source-tree.json`; runner and writer require exact persisted/live
   equality and cross-check its digest through environment, start, observation,
   and result identities. The six signed aggregate dependency digests commit to
-  a corresponding durable per-file sidecar. Pre-bootstrap stdlib closure,
-  signed native-DSO allowlisting/lifetime closure, kernel vDSO identity,
-  persisted observation-to-request identity, signed evidence-class/custody
-  propagation, and an energy-force Ed25519 post-result-review
-  contract remain absent.
+  a corresponding durable per-file sidecar. Exact worker requests are now
+  retained and cross-checked against those outer identities; successful worker
+  transcripts are reconstructed and re-hashed from retained rows and lifecycle
+  evidence. Pre-bootstrap stdlib closure, signed native-DSO allowlisting/lifetime
+  closure and kernel vDSO identity remain absent. The process launch tuple
+  primitive exists, but worker binding, same-tick collision resistance, and
+  external launch custody are absent. The common evidence-class/permit/status
+  base primitive plus the additive sequence-3 review/sequence-4 authorization
+  companion exist, but those artifacts are not provisioned and reservation/later carriers,
+  atomic permit consumption, and a provisioned chain,
+  independent result-review
+  dependency-manifest re-verification, and an end-to-end asymmetric upstream
+  review/authorization chain remain absent. The energy-force Ed25519
+  post-result-review leaf contract is implemented, but no actual production
+  receipt, review attestation, trusted key, or independent review exists.
   The inner bootstrap carries one 180-second cooperative preflight deadline
   across re-exec, polls canonical stdin under that deadline, and verifies
   the external operator signature, signed commit/source, and clean checkout
@@ -415,7 +464,19 @@ The current `main` branch contains:
   external authenticity proof, and same-UID pathname/inode replacement
   resistance is not established. Changed content is detected when the required
   out-of-band SHA-256 is supplied. Test-only signed artifacts and receipts exercise these
-  primitives. A separate Ed25519 result-review contract now fully revalidates one
+  primitives. The energy-force Ed25519 result-review leaf validates the exact
+  writer receipt and all ordered 27-case, 59-variant, and 19-metric evidence,
+  independently recomputes all 56 required metric occurrences from retained raw
+  energy/force arrays with bitwise retained-value equality, derives
+  case/variant/metric/expected-failure/worker dispositions, checks
+  successful input/component/total/force evidence, and requires separation of
+  all four governance roles. Its upstream scientific-review and authorization
+  records remain symmetric HMAC, and it does not independently reverify the live
+  dependency manifest or establish external custody. No production receipt,
+  attestation, trusted result-reviewer key, or independent human approval is
+  bundled; every production, scientific, fitting, benchmark, and product flag
+  remains false.
+  The separate minimization Ed25519 result-review contract fully revalidates one
   exact result-writer receipt, binds all fourteen ordered case outcomes and every
   retained or missing metric disposition, verifies exact runtime/oracle/result
   hashes, allowed status/error pairs, exact per-case-budgeted nonnegative counts,
@@ -442,8 +503,11 @@ not currently establish:
 - externally provisioned root-owned source/dependency runtimes, kernel-backed
   source/Git-metadata immutability and custody, pre-bootstrap stdlib closure,
   signed native-DSO allowlisting/lifetime closure, kernel vDSO identity,
-  persisted observation-to-request identity, or a signed evidence-class/custody
-  chain;
+  binding of measured worker PID/start-time/boot/namespace identity into signed
+  carriers, same-tick collision-resistant external launch identity/custody, or a
+  provisioned signed production evidence/custody chain; the claim-closed common
+  permit/status base and unprovisioned four-event companion primitives alone do not
+  satisfy this requirement;
 - a calibrated independent force field;
 - independently validated minimization or a scientific minimization protocol;
   the bounded deterministic minimizer and its failure/checkpoint tests are
