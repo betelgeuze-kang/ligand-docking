@@ -46,6 +46,7 @@ betelgeuze_engine_v2.physics.reference_minimization_validation_protocol
 betelgeuze_engine_v2.physics.reference_minimization_validation_review
 betelgeuze_engine_v2.physics.reference_minimization_validation_receipts
 betelgeuze_engine_v2.physics.reference_minimization_validation_authorization
+betelgeuze_engine_v2.physics.reference_minimization_validation_dependency_identity
 betelgeuze_engine_v2.physics.reference_minimization_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_minimization_validation_run_start
 betelgeuze_engine_v2.physics.reference_minimization_validation_runner
@@ -58,11 +59,16 @@ betelgeuze_engine_v2.physics.reference_validation_oracle
 betelgeuze_engine_v2.physics.reference_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_validation_review
 betelgeuze_engine_v2.physics.reference_validation_authorization
+betelgeuze_engine_v2.physics.reference_validation_dependency_identity
 betelgeuze_engine_v2.physics.reference_validation_nonce_reservation
 betelgeuze_engine_v2.physics.reference_validation_run_start
 betelgeuze_engine_v2.physics.reference_validation_runner
 betelgeuze_engine_v2.physics.reference_validation_receipts
 betelgeuze_engine_v2.physics.reference_validation_result_writer
+betelgeuze_engine_v2.physics.validation_legacy_contracts
+betelgeuze_engine_v2.physics.validation_native_runtime_identity
+betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
+betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.runtime
 ```
 
@@ -222,14 +228,32 @@ live CPU-only deterministic process, verify a short-lived operator-signed
 network-isolation attestation, and atomically persist a canonical mode-0600
 environment receipt in a private caller-provisioned artifact root. Only path
 hashes and a fixed logical runner argv are recorded, not secret-bearing command
-arguments. The library does not create a network namespace or establish
-same-UID replacement resistance. No trusted key, attestation, root, or
-production receipt is bundled, and a verified receipt authorizes neither a
-production run nor validation, fitting, or a scientific claim.
+arguments. The library does not create a network namespace or provision the
+required root-owned source/dependency runtime. The stdlib-only bootstrap now
+rejects a mutable Engine v2 source tree before package import. It independently
+rehashes the signed raw Git commit and recursive tree objects with Git SHA-1
+object framing and compares the exact tracked `betelgeuze_engine_v2` path set
+and each file's mode, blob OID, SHA-256, and size with the live root-owned
+read-only tree. The canonical source manifest is carried as the sixth bootstrap
+state element. Run-start persists canonical mode-0600 per-file source and
+dependency manifests as `<nonce>.source-tree.json` and
+`<nonce>.dependencies.json` with `O_EXCL`, `O_NOFOLLOW`, and file/directory
+fsync. Their signed commit and six aggregate dependency digests are rechecked
+against exact persisted/live bytes by runner and writer finalization, and the
+source-manifest digest is bound through environment, runner-start, observation,
+and result identities. Workers retain exact pre/payload/post lifecycle evidence,
+and the supervisor binds both endpoint snapshots to the child PID. This is
+endpoint evidence only: kernel vDSO content, an authorized native allowlist,
+and load/execute/unload lifetime closure are not established.
+No trusted key, attestation, root, or production receipt is bundled, and a
+verified receipt authorizes neither a production run nor validation, fitting,
+or a scientific claim.
 
 The minimization bounded-runner symbols re-read and live-reverify that receipt,
-bind the stdlib-only bootstrap and runner sources, require the signed clean Git
-checkout and exact dependency identities, validate the frozen materialization
+bind the stdlib-only bootstrap, dependency-identity helper, and runner sources,
+require the signed clean Git
+checkout and exact signed aggregate identities for six selected dependency
+artifacts, validate the frozen materialization
 manifest before consuming a nonce-bound mode-0600 start marker, and retain all
 fourteen ordered pass and fail-closed case observations in memory. The runner
 records predefined metric values, independent-oracle comparisons, exact
@@ -242,12 +266,23 @@ use a canonical explicit empty trace. It writes no validation result receipt
 itself. The separate result-writer symbols re-verify the signed chain,
 persisted/live environment, durable runner-start marker, and canonical
 observation before private atomic persistence. The receipt is unsigned and
-pending independent result review. The exact process entrypoint is wired through
-the stdlib-only bootstrap to the environment receipt, bounded runner, and result
+pending independent result review. The exact process entrypoint wires the
+stdlib-only bootstrap to the environment receipt, bounded runner, and result
 writer. It accepts no caller trust keys, reloads reviewer/operator anchors only
 from the fixed external root-owned mode-0600 trust store, revalidates the fixed
 supervised worker subprocess source/dependency/deterministic runtime before evaluation, and returns
-only artifact hashes plus closed claim flags. It fails closed when external
+only artifact hashes plus closed claim flags. The production entrypoint rejects
+a caller-owned mutable checkout and requires an externally provisioned
+root-owned read-only package snapshot. The signed aggregate dependency digests
+bind a durable canonical per-file manifest that runner and writer compare with
+persisted and live bytes. The corresponding source-manifest digest is carried
+through the environment, runner-start, observation, and result receipts. The
+repository does not provision that external snapshot or dependency runtime;
+kernel-backed source/Git-metadata immutability and custody, pre-bootstrap stdlib
+closure, signed native-DSO allowlisting and lifetime closure, kernel vDSO
+identity, and persisted observation-to-worker-request identity remain production
+blockers. Signed evidence-class/custody propagation is also absent.
+It fails closed when external
 production trust, signed artifacts, private roots, or nonce reservation are
 absent.
 
@@ -270,10 +305,14 @@ must be pairwise distinct, text/byte transport must be canonical JSON, and every
 current external revocation/supersession input—including result-review
 supersession—is required. No key, attestation, production receipt, reviewer
 approval, or scientific claim is bundled.
+The validated receipt and the Ed25519 result-review signature also bind the
+canonical source-manifest digest; this is integrity binding, not reviewer
+approval or scientific acceptance.
 
 The bounded-runner symbols re-read and live-reverify the environment receipt,
-require exact code, runner-source, dependency, and frozen-artifact identities,
-require a root-owned source-only stdlib outer bootstrap launched with `-I -S -B
+require exact code, runner-source, six selected aggregate dependency-artifact,
+and frozen-artifact identities, and require a source-only stdlib outer bootstrap
+launched by the root-owned Python executable with `-I -S -B
 -X pycache_prefix=/dev/null` before any validation dependency import, reject Git
 replacement refs, and atomically consume one nonce-bound mode-0600 runner-start
 marker. The outer stage validates its exact executable, flags, argv, cwd, and
@@ -284,25 +323,48 @@ complete process identity before reading bounded canonical stdin, so the
 canonical uint32 `PYTHONHASHSEED` is applied during interpreter initialization
 instead of merely being recorded after startup. Both stages ignore `PYTHONPATH`
 and user-site overrides, skip `sitecustomize`/`.pth` execution, admit only
-root-owned read-only dependency roots, and bind both bootstrap and runner
-sources into the signed runner-source identity. Before importing the package
+root-owned read-only dependency roots, and bind the bootstrap,
+dependency-identity helper, and runner sources into the signed runner-source
+identity. Before importing the package
 initializer the inner stage verifies the authorization operator HMAC against
 the external root-owned trust store, requires reservation and artifact roots
 outside the checkout, and uses root-owned Git to prove the exact signed commit,
-execution-source identity, and clean worktree. Frozen manifest construction and
+execution-source identity, and clean worktree. Before package import, it
+independently verifies the signed raw commit/tree object bytes using Git SHA-1
+framing and compares a canonical mode/blob-OID/SHA-256/size manifest for every
+tracked Engine v2 package file with the live root-owned read-only source tree.
+That canonical manifest is retained in the six-element bootstrap state. Frozen
+manifest construction and
 the exact 27-case/59-variant CPU float64 evaluation run in fixed supervised child
 processes with automatic site initialization disabled. Worker argv, cwd,
 flags, complete environment, uint32 hash seed, application seed, and a
 parent/child hash probe are derived only from the verified receipt and checked
 before evaluation; mutable live supervisor environment is not copied. Only the
-verified runtime's dependency roots are supplied. Remaining budget is rechecked
+verified runtime's dependency roots are supplied. The bootstrap requires a
+non-root process and root-owned/read-only package snapshot, but the repository
+does not provision an external production snapshot/dependency runtime or
+kernel-backed source/Git-metadata immutability and custody. Run-start persists
+the canonical source manifest as `<nonce>.source-tree.json`; runner and writer
+require exact persisted/live equality and match its digest across environment,
+start, observation, and result identities. The six signed aggregate dependency
+digests likewise commit to a durable per-file dependency sidecar. Source and
+dependency traversal use bounded `scandir`, direct streaming of wheel `RECORD`,
+pre-read file caps, aggregate budgets, and carried monotonic deadlines. Each
+worker emits canonical request-bound pre/payload/completion frames, native
+endpoint snapshots, and payload aggregates. The parent accepts them only when
+both snapshot PIDs equal the launched child PID and reads stdout with a hard
+byte bound before buffering. Pre-bootstrap stdlib closure, signed native-DSO
+allowlisting/lifetime closure, kernel vDSO identity, and persisted
+observation-to-request identity remain production blockers. The energy-force lane also lacks a
+role-separated Ed25519 post-result-review contract and actual independent
+result review. Remaining cooperative budget is rechecked
 before the start marker is consumed, and a parent hard deadline can terminate
 blocked native code. The result
 is a canonical in-memory observation that retains
 successes, expected failures, unexpected failures, missing metrics, and failed
 thresholds. The exact process entrypoint is the absolute checked-out
 `reference_validation_bootstrap.py` path under those frozen Python flags; it
-accepts one bounded canonical stdin request, loads trust anchors only from the
+accepts one deadline-polled canonical stdin request, loads trust anchors only from the
 fixed external root-owned store, and never sends trust material to either
 worker. It exposes no marker release/delete
 API. Test-only artifacts can exercise this implementation; no production key,
@@ -320,7 +382,8 @@ therefore always fails closed.
 
 The result-writer symbols accept only a verified bounded-run observation and
 re-verify the raw signed review and authorization, persisted/live environment,
-durable runner-start marker, and exact code/source/dependency identities. They
+durable runner-start marker, exact persisted/live source and dependency
+manifests, and exact code/source/dependency identities. They
 atomically persist one canonical mode-0600 nonce-bound receipt while retaining
 every failed case, variant, and metric. Reading verifies canonical JSON and the
 embedded digest; acceptance additionally requires an out-of-band expected
@@ -329,6 +392,14 @@ is unsigned, private POSIX storage is not external authenticity, same-UID
 replacement resistance is not established, and result review remains
 `pending_independent_review`. No production receipt or scientific promotion is
 bundled.
+
+The active energy-force base carrier chain uses v2 identities with a v3 runner
+and result writer. The active minimization base chain uses v3 identities with a
+v5 runner and v4 result writer/result review. Current hashes are frozen over the
+complete upstream contract DAG. The read-only legacy-contract verifier
+recognizes 23 superseded contract documents by canonical projection hash and
+fixed identity metadata. It does not verify or claim compatibility with
+superseded signed attestations, receipts, run records, or observations.
 
 Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should

@@ -25,6 +25,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_runner impor
     run_bounded_cpu_reference_minimization_validation,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID,
     ReferenceMinimizationValidationResultReceiptAlreadyExistsError,
@@ -38,6 +39,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_result_write
 )
 import betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer as module
 import betelgeuze_engine_v2.physics.reference_minimization_validation_runner as runner_module
+import betelgeuze_engine_v2.physics.validation_native_runtime_identity as native_identity
 
 
 RUN_NOW = datetime(2026, 7, 17, 9, 0, 0, tzinfo=timezone.utc)
@@ -46,6 +48,7 @@ REVIEWED_AT = RUN_NOW - timedelta(hours=1)
 AUTHORIZATION_NONCE = "e" * 64
 ENVIRONMENT_RECEIPT_SHA256 = "1" * 64
 ENVIRONMENT_FINGERPRINT_SHA256 = "2" * 64
+SOURCE_MANIFEST_SHA256 = "0" * 64
 AUTHORIZATION_RECEIPT_SHA256 = "3" * 64
 CODE_COMMIT_SHA = "4" * 40
 REVIEW_ATTESTATION_SHA256 = "5" * 64
@@ -62,6 +65,110 @@ DEPENDENCY_ROWS = {
 }
 RAW_REVIEW = {"raw_signed_review": True}
 RAW_AUTHORIZATION = {"raw_signed_authorization": True}
+
+
+def _synthetic_native_runtime_snapshot() -> dict[str, object]:
+    file_projection: dict[str, object] = {
+        "ordinal": 0,
+        "path": "/usr/bin/python3.11",
+        "device_major_hex": "1",
+        "device_minor_hex": "2",
+        "inode": 3,
+        "mode_octal": "0755",
+        "uid": 0,
+        "gid": 0,
+        "link_count": 1,
+        "size_bytes": 1,
+        "mtime_ns": 0,
+        "ctime_ns": 0,
+        "sha256": "a" * 64,
+    }
+    file_row = {
+        **file_projection,
+        "file_identity_sha256": native_identity._sha256(
+            native_identity._file_identity_projection(file_projection)
+        ),
+    }
+    projection: dict[str, object] = {
+        "schema_id": native_identity.NATIVE_RUNTIME_SNAPSHOT_SCHEMA_ID,
+        "process_id": 1,
+        "mapping_count": 1,
+        "file_count": 1,
+        "hashed_file_bytes": 1,
+        "mapping_rows": [
+            {
+                "ordinal": 0,
+                "address_start_hex": "1",
+                "address_end_hex": "2",
+                "permissions": "r-xp",
+                "file_offset_hex": "0",
+                "device_major_hex": "1",
+                "device_minor_hex": "2",
+                "inode": 3,
+                "path": "/usr/bin/python3.11",
+                "backing_kind": "file",
+                "backing_file_identity_sha256": file_row["file_identity_sha256"],
+            }
+        ],
+        "file_rows": [file_row],
+    }
+    return {
+        **projection,
+        "snapshot_sha256": runner_module._sha256(projection),
+    }
+
+
+def _complete_supervised_matrix_result(
+    *,
+    deadline: object,
+    worker_preflight_request: object,
+):
+    assert isinstance(deadline, float)
+    assert isinstance(worker_preflight_request, dict)
+    rows = runner_module._run_case_matrix_in_process(deadline=deadline)
+    payload_rows = [row.to_dict() for row in rows]
+    request_sha256 = runner_module._sha256(worker_preflight_request)
+    snapshot = _synthetic_native_runtime_snapshot()
+    pre_evidence = native_identity.build_worker_runtime_pre_evidence(
+        lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
+        worker_request_sha256=request_sha256,
+        snapshot=snapshot,
+    )
+    lifecycle = native_identity.build_complete_worker_runtime_lifecycle_evidence(
+        lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
+        worker_request_sha256=request_sha256,
+        pre_evidence=pre_evidence,
+        payload_rows=payload_rows,
+        post_snapshot=snapshot,
+    )
+    frame_sha256s = [
+        hashlib.sha256(f"test-minimization-frame-{ordinal}".encode("ascii")).hexdigest()
+        for ordinal in range(16)
+    ]
+    evidence = runner_module.ReferenceMinimizationValidationWorkerExecutionEvidence(
+        worker_request_sha256=request_sha256,
+        completion_state="complete",
+        failure_code=None,
+        pre_frame_sha256=frame_sha256s[0],
+        case_frame_sha256_rows=tuple(
+            (
+                row.ordinal,
+                row.case_id,
+                runner_module._sha256(row.to_dict()),
+                frame_sha256s[row.ordinal],
+            )
+            for row in rows
+        ),
+        completion_frame_sha256=frame_sha256s[-1],
+        transcript_sha256=hashlib.sha256(
+            b"test-complete-minimization-worker-transcript"
+        ).hexdigest(),
+        retained_case_aggregate_sha256=runner_module._sha256(payload_rows),
+        runtime_lifecycle_evidence=lifecycle,
+        native_pre_post_snapshot_equality_verified=True,
+        native_mapping_lifetime_closure_claimed=False,
+    )
+    return runner_module._SupervisedMinimizationMatrixResult(rows, evidence)
 
 
 def _environment_rows() -> tuple[tuple[str, str], ...]:
@@ -106,6 +213,7 @@ def _environment(root: Path, **overrides: object) -> SimpleNamespace:
         "authorization_nonce_sha256": AUTHORIZATION_NONCE,
         "code_commit_sha": CODE_COMMIT_SHA,
         "runner_source_sha256": reference_minimization_validation_runner_source_sha256(),
+        "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
         "dependency_artifact_sha256_rows": tuple(sorted(DEPENDENCY_ROWS.items())),
         "environment_variable_rows": _environment_rows(),
         "python_hash_seed": 123,
@@ -124,6 +232,7 @@ def _observation(
     monkeypatch: pytest.MonkeyPatch,
     *,
     environment: SimpleNamespace | None = None,
+    worker_failure_code: str | None = None,
 ):
     selected = environment or _environment(root)
     monkeypatch.setattr(runner_module, "_utc_now", lambda: RUN_NOW)
@@ -145,7 +254,7 @@ def _observation(
     monkeypatch.setattr(
         runner_module,
         "_observe_dependency_artifact_sha256_rows",
-        lambda _roots: dict(DEPENDENCY_ROWS),
+        lambda _roots, **kwargs: dict(DEPENDENCY_ROWS),
     )
     monkeypatch.setattr(
         runner_module,
@@ -154,8 +263,14 @@ def _observation(
     )
 
     def run_in_process(**kwargs: object):
-        return runner_module._run_case_matrix_in_process(
+        if worker_failure_code is not None:
+            return runner_module._supervisor_failure_complete_matrix(
+                worker_failure_code,
+                worker_preflight_request=kwargs["worker_preflight_request"],
+            )
+        return _complete_supervised_matrix_result(
             deadline=kwargs["deadline"],
+            worker_preflight_request=kwargs["worker_preflight_request"],
         )
 
     monkeypatch.setattr(
@@ -275,6 +390,30 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
     )
     assert first["coverage"]["failed_cases_and_metrics_retained"] is True
     assert first["verification"]["receipt_signature_implemented"] is False
+    assert (
+        first["verification"][
+            "exact_worker_execution_evidence_reverified_by_runner_schema"
+        ]
+        is True
+    )
+    assert (
+        first["verification"]["retained_case_aggregate_recomputed_from_exact_case_rows"]
+        is True
+    )
+    assert (
+        first["verification"]["native_mapping_lifetime_closure_claim_remains_false"]
+        is True
+    )
+    assert (
+        first["coverage"][
+            "incomplete_worker_lifecycle_eligible_for_accepted_result_review"
+        ]
+        is False
+    )
+    assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3
+        == "a02d29c915fa56a55b22a3109cafd8a95a1397e382c85dbb0c9cacfba8b9694b"
+    )
     assert first["claim_policy"]["claim_safe"] is False
     assert (
         require_reference_minimization_validation_result_writer_contract_document(first)
@@ -285,6 +424,7 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
     assert decision["production_result_receipt_present"] is False
     assert decision["production_validation_results_collected"] is False
     assert decision["independent_result_review_complete"] is False
+    assert "worker_request_observation_identity_binding_missing" in decision["blockers"]
     assert decision["parameter_fitting_authorized"] is False
     assert decision["claim_safe"] is False
 
@@ -333,6 +473,7 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
         f"reference-minimization-validation-runner-start-{AUTHORIZATION_NONCE}.json",
     ]
     assert payload["run_observation"] == observation.to_dict()
+    assert payload["source_manifest_sha256"] == SOURCE_MANIFEST_SHA256
     assert payload["case_results"] == observation.to_dict()["case_results"]
     assert payload["coverage_summary"] == {
         **observation.to_dict()["coverage_summary"],
@@ -355,6 +496,18 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     assert (
         payload["case_results"][12]["coordinate_traces"][1]["rejected_step_count"] > 0
     )
+    worker_evidence = payload["run_observation"]["worker_execution_evidence"]
+    assert worker_evidence["completion_state"] == "complete"
+    assert worker_evidence["failure_code"] is None
+    assert len(worker_evidence["case_frame_sha256_rows"]) == 14
+    assert worker_evidence["retained_case_aggregate_sha256"] == runner_module._sha256(
+        payload["case_results"]
+    )
+    assert (
+        worker_evidence["runtime_lifecycle_evidence"]["completion_state"] == "complete"
+    )
+    assert worker_evidence["native_pre_post_snapshot_equality_verified"] is True
+    assert worker_evidence["native_mapping_lifetime_closure_claimed"] is False
     assert payload["independent_result_review_state"] == "pending_independent_review"
     assert payload["review_scope"] == (
         "implementation_and_artifact_review_pre_execution"
@@ -420,6 +573,58 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
         _write(root, observation)
 
 
+def test_writer_revalidates_exact_worker_lifecycle_frames_and_retained_aggregate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _private_root(tmp_path)
+    environment = _environment(root)
+    observation = _observation(root, monkeypatch, environment=environment)
+    _install_verified_chain(monkeypatch, environment)
+    payload = _write(root, observation).to_dict()
+
+    def rehash(tampered: dict[str, object]) -> dict[str, object]:
+        run_observation = tampered["run_observation"]
+        assert isinstance(run_observation, dict)
+        tampered["observation_sha256"] = runner_module._sha256(run_observation)
+        tampered.pop("receipt_sha256", None)
+        tampered["receipt_sha256"] = runner_module._sha256(tampered)
+        return tampered
+
+    mutations: list[dict[str, object]] = []
+
+    aggregate_tamper = deepcopy(payload)
+    aggregate_evidence = aggregate_tamper["run_observation"][
+        "worker_execution_evidence"
+    ]
+    aggregate_evidence["retained_case_aggregate_sha256"] = "0" * 64
+    mutations.append(rehash(aggregate_tamper))
+
+    lifecycle_tamper = deepcopy(payload)
+    lifecycle_evidence = lifecycle_tamper["run_observation"][
+        "worker_execution_evidence"
+    ]
+    lifecycle_evidence["runtime_lifecycle_evidence"]["lifecycle_sha256"] = "0" * 64
+    mutations.append(rehash(lifecycle_tamper))
+
+    reordered = deepcopy(payload)
+    reordered_evidence = reordered["run_observation"]["worker_execution_evidence"]
+    reordered_evidence["case_frame_sha256_rows"].reverse()
+    mutations.append(rehash(reordered))
+
+    omitted = deepcopy(payload)
+    omitted_evidence = omitted["run_observation"]["worker_execution_evidence"]
+    omitted_evidence["case_frame_sha256_rows"].pop()
+    mutations.append(rehash(omitted))
+
+    for tampered in mutations:
+        with pytest.raises(
+            ReferenceMinimizationValidationResultWriterError,
+            match="run observation is invalid",
+        ):
+            module._validate_result_receipt_payload(tampered)
+
+
 @pytest.mark.parametrize(
     ("review", "authorization", "environment_overrides", "message"),
     [
@@ -433,13 +638,19 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
             None,
             _authorization(receipt_sha256="0" * 64),
             {},
-            "environment and observation are cross-wired",
+            "cross-wired",
         ),
         (
             None,
             None,
             {"environment_fingerprint_sha256": "0" * 64},
             "environment and observation are cross-wired",
+        ),
+        (
+            None,
+            None,
+            {"source_manifest_sha256": "f" * 64},
+            "cross-wired",
         ),
     ],
 )
@@ -515,6 +726,13 @@ def test_writer_rejects_tampered_runner_start_and_observation_before_result(
     with pytest.raises(ReferenceMinimizationValidationRunnerError):
         require_reference_minimization_validation_run_observation_document(incomplete)
 
+    crosswired_source_manifest = observation.to_dict()
+    crosswired_source_manifest["source_manifest_sha256"] = "not-a-digest"
+    with pytest.raises(ReferenceMinimizationValidationRunnerError):
+        require_reference_minimization_validation_run_observation_document(
+            crosswired_source_manifest
+        )
+
 
 def test_writer_rejects_passing_case_with_failed_retained_metric(
     tmp_path: Path,
@@ -527,6 +745,26 @@ def test_writer_rejects_passing_case_with_failed_retained_metric(
     contradictory = next(row for row in payload["case_results"] if row["metric_values"])
     contradictory["metric_values"][0]["value"] = -1.0
     contradictory["case_passed"] = True
+    evidence = payload["worker_execution_evidence"]
+    for frame_row, case in zip(
+        evidence["case_frame_sha256_rows"],
+        payload["case_results"],
+        strict=True,
+    ):
+        frame_row["case_observation_sha256"] = runner_module._sha256(case)
+    evidence["retained_case_aggregate_sha256"] = runner_module._sha256(
+        payload["case_results"]
+    )
+    lifecycle = evidence["runtime_lifecycle_evidence"]
+    evidence["runtime_lifecycle_evidence"] = (
+        native_identity.build_complete_worker_runtime_lifecycle_evidence(
+            lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
+            worker_request_sha256=evidence["worker_request_sha256"],
+            pre_evidence=lifecycle["pre"],
+            payload_rows=payload["case_results"],
+            post_snapshot=lifecycle["pre"]["snapshot"],
+        )
+    )
 
     with pytest.raises(
         ReferenceMinimizationValidationRunnerError,

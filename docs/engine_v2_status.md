@@ -233,10 +233,11 @@ The current `main` branch contains:
   launcher and fixed no-site controlled inner bootstrap now apply canonical
   uint32 `PYTHONHASHSEED` during interpreter initialization without consuming
   request stdin in the outer process. The bounded runner binds the exact
-  bootstrap/runner source identity, re-reads the persisted receipt and live
+  bootstrap/dependency-identity-helper/runner source identity, re-reads the persisted receipt and live
   process, and gives the child only receipt-derived seeds and environment plus
   a parent/child hash probe. It requires the exact signed clean checkout,
-  dependencies, protocol, and materialization manifest, then consumes
+  signed aggregate identities for six selected dependency artifacts, protocol,
+  and materialization manifest, then consumes
   one durable mode-0600 nonce-bound runner-start marker. It evaluates the ordered
   fourteen-case CPU float64 matrix, retains all success and failure observations,
   preserves complete ordered operational and independent-oracle coordinate
@@ -244,6 +245,36 @@ The current `main` branch contains:
   and identity digests, whole-trace digests, exact counts, and accepted-energy
   ledgers, compares operational endpoints with the import-separated independent
   oracle, and verifies exact checkpoint/restart equality under a 120-second budget.
+  The production entrypoint now rejects a caller-owned mutable checkout and
+  requires the complete Engine v2 package tree to be a canonical root-owned,
+  non-replaceable source snapshot before package import. The current development
+  worktree does not satisfy or provision that external requirement. Before
+  package import, both bootstraps independently rehash the signed raw Git commit
+  and recursive tree objects using Git SHA-1 object framing, then compare the
+  exact tracked `betelgeuze_engine_v2` path set and every file's mode, blob OID,
+  SHA-256, and size with the live root-owned read-only tree. The resulting
+  canonical source manifest is carried in the six-element bootstrap state. Each
+  of the six signed dependency digests likewise binds a canonical per-file
+  identity. Run-start durably persists both `<nonce>.source-tree.json` and
+  `<nonce>.dependencies.json` with mode 0600, `O_EXCL`, `O_NOFOLLOW`, and
+  file/directory fsync before the environment receipt; runner and writer
+  finalization require exact persisted/live equality and bind the source digest
+  through environment, runner-start, observation, and result identities.
+  Workers now retain exact request-bound pre/payload/post lifecycle evidence,
+  failure-complete payload dispositions, native endpoint snapshots, and payload
+  aggregates. Supervisor reads are hard byte-bounded before buffering, and both
+  snapshot PIDs must equal the launched child PID. External source/dependency-
+  runtime provisioning, kernel-backed source/Git-metadata immutability and
+  custody, pre-bootstrap stdlib closure, signed native-DSO allowlisting/lifetime
+  closure, kernel vDSO identity, persisted observation-to-request identity, and
+  signed evidence-class/custody propagation remain production blockers.
+  The active energy-force base chain uses v2 identities with a v3 runner/result
+  writer; the active minimization base chain uses v3 identities with a v5 runner
+  and v4 result writer/result review. Their hashes were
+  refrozen through the full upstream dependency DAG. A separate read-only
+  verifier recognizes 23 superseded contract documents by canonical projection
+  hash. Superseded signed attestations, receipts, and run records are not
+  supported and no compatibility claim is made for them.
   The primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
@@ -257,7 +288,9 @@ The current `main` branch contains:
   a child-preflighted fourteen-case run, and result finalization in one verified
   process. It remains fail-closed because no production trust store, signed
   chain, private roots, reserved nonce, or production result receipt is
-  provisioned. No independent result review, scientific applicability, or
+  provisioned. The minimization result-review validator and Ed25519 signature
+  bind the source-manifest digest through the fully validated result receipt,
+  but no actual independent-review approval, scientific applicability, or
   parameter-fitting approval exists, so minimization and
   solvated minimization remain unvalidated.
 - a frozen CPU reference energy/force contract-validation protocol. It binds
@@ -311,25 +344,49 @@ The current `main` branch contains:
   caller root. It provides neither kernel network isolation nor execution
   authorization, and the receipt never authorizes execution or fitting. A
   separate bounded runner now re-reads that persisted receipt and re-verifies
-  the live process. A root-owned stdlib-only `-I -S -B -X
+  the live process. A source-only stdlib `-I -S -B -X
   pycache_prefix=/dev/null` outer launcher validates startup without consuming
-  stdin, removes environment/user-site import paths, and re-execs the same
+  stdin under the root-owned Python executable, removes environment/user-site
+  import paths, and re-execs the same
   interpreter as the fixed no-site controlled inner command so canonical
   uint32 `PYTHONHASHSEED` is applied during interpreter initialization. Workers
   receive exact seeds and deterministic environment only from the verified
   receipt and recheck exact argv, cwd, flags, environment identity, and a
   parent/child hash probe; they no longer copy mutable live supervisor state.
   Only root-owned read-only bootstrap-verified dependency roots are supplied.
-  The signed runner-source identity binds both the bootstrap and runner files.
-  The inner bootstrap bounds canonical stdin and verifies
+  The signed runner-source identity binds the bootstrap, dependency-identity
+  helper, and runner files.
+  The bootstrap now requires a non-root process and a root-owned/read-only
+  package snapshot, but no such external production snapshot, kernel-backed
+  source/Git-metadata immutability/custody, or external dependency runtime is
+  provisioned. It independently verifies the signed raw commit and recursive
+  Git tree objects with Git SHA-1 framing and compares a canonical mode/blob-
+  OID/SHA-256/size manifest for every tracked package file with the live root-
+  owned read-only source tree. The canonical source manifest is passed in the
+  six-element bootstrap state and persisted once per nonce as mode-0600
+  `<nonce>.source-tree.json`; runner and writer require exact persisted/live
+  equality and cross-check its digest through environment, start, observation,
+  and result identities. The six signed aggregate dependency digests commit to
+  a corresponding durable per-file sidecar. Pre-bootstrap stdlib closure,
+  signed native-DSO allowlisting/lifetime closure, kernel vDSO identity,
+  persisted observation-to-request identity, signed evidence-class/custody
+  propagation, and an energy-force Ed25519 post-result-review
+  contract remain absent.
+  The inner bootstrap carries one 180-second cooperative preflight deadline
+  across re-exec, polls canonical stdin under that deadline, and verifies
   the external operator signature, signed commit/source, and clean checkout
   before the package initializer can run. Reservation and artifact roots must be private external directories
   with no ancestry overlap with the checkout. Root-owned absolute-Git clean-checkout proof with replacement refs
   disabled and rejected for the observed `HEAD`, signed runner source, frozen
-  reference-evaluator/materializer/oracle sources, and dependency identities, atomically
+  reference-evaluator/materializer/oracle sources, and selected aggregate dependency
+  identities, atomically
   consumes one mode-0600 nonce-bound runner-start marker, and evaluates the exact
   twenty-seven cases and fifty-nine variants on CPU float64 under a 120-second
-  deadline. Frozen manifest materialization runs in a supervised preflight child;
+  deadline. Preflight traversal uses bounded `scandir`, direct streaming of
+  wheel `RECORD`, pre-read file-size caps, aggregate entry/file/byte budgets,
+  and the carried monotonic deadline; it does not establish kernel-enforced
+  lifetime isolation.
+  Frozen manifest materialization runs in a supervised preflight child;
   remaining budget is rechecked before marker consumption, and evaluator/oracle
   work runs in a separate fixed child whose process is hard-killed at the deadline;
   POSIX timers remain an inner defense. It
@@ -370,7 +427,8 @@ The current `main` branch contains:
   caller-provided result-reviewer public key, pairwise separation from the derived
   implementation author, scientific reviewer, and authorization operator, plus
   explicit current revocation/supersession state for the receipt chain and the
-  result-review attestation itself. A cryptographically verified
+  result-review attestation itself. Full receipt validation and the Ed25519
+  signature bind the canonical source-manifest digest as well. A cryptographically verified
   rejection remains a rejection, and even a verified acceptance keeps production,
   scientific, fitting, and product gates closed. No production key, attestation,
   receipt, root, runner start, validation result, independent result-review receipt,
@@ -381,6 +439,11 @@ The current `main` branch contains:
 All customer and scientific promotion flags remain false. The repository does
 not currently establish:
 
+- externally provisioned root-owned source/dependency runtimes, kernel-backed
+  source/Git-metadata immutability and custody, pre-bootstrap stdlib closure,
+  signed native-DSO allowlisting/lifetime closure, kernel vDSO identity,
+  persisted observation-to-request identity, or a signed evidence-class/custody
+  chain;
 - a calibrated independent force field;
 - independently validated minimization or a scientific minimization protocol;
   the bounded deterministic minimizer and its failure/checkpoint tests are

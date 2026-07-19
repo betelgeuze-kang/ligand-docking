@@ -63,27 +63,26 @@ def test_environment_contract_is_frozen_cpu_only_and_pre_execution() -> None:
     assert first["receipt_schema"]["schema_id"] == (
         REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID
     )
-    assert first["receipt_schema"]["receipt_must_be_written_before_validation_evaluation"]
-    assert require_reference_validation_execution_environment_contract_document(
-        first
-    ) == first
+    assert first["receipt_schema"][
+        "receipt_must_be_written_before_validation_evaluation"
+    ]
+    assert (
+        require_reference_validation_execution_environment_contract_document(first)
+        == first
+    )
 
 
 def test_environment_contract_rejects_tamper() -> None:
-    tampered = deepcopy(
-        reference_validation_execution_environment_contract_document()
-    )
+    tampered = deepcopy(reference_validation_execution_environment_contract_document())
     tampered["runtime_contract"]["network_access_allowed"] = True
     with pytest.raises(
         ReferenceValidationReceiptContractError,
         match="does not match the frozen record",
     ):
-        require_reference_validation_execution_environment_contract_document(
-            tampered
-        )
+        require_reference_validation_execution_environment_contract_document(tampered)
 
 
-def test_result_contract_is_frozen_without_results_or_writer() -> None:
+def test_result_contract_is_frozen_without_results() -> None:
     first = reference_validation_result_receipt_contract_document()
     second = reference_validation_result_receipt_contract_document()
 
@@ -97,8 +96,8 @@ def test_result_contract_is_frozen_without_results_or_writer() -> None:
     )
     assert first["purpose"]["result_receipt_present"] is False
     assert first["purpose"]["result_values_present"] is False
-    assert first["current_state"]["result_receipt_writer_implemented"] is False
-    assert first["current_state"]["validation_runner_implemented"] is False
+    assert first["current_state"]["result_receipt_writer_implemented"] is True
+    assert first["current_state"]["validation_runner_implemented"] is True
     assert first["current_state"]["validation_results_collected"] is False
     assert first["claim_policy"]["force_or_energy_validated"] is False
     assert first["claim_policy"]["claim_safe"] is False
@@ -134,9 +133,10 @@ def test_result_contract_binds_exact_protocol_cases_variants_and_metrics() -> No
     assert [row["case_input_sha256"] for row in coverage["ordered_cases"]] == [
         row["case_input_sha256"] for row in materialization["cases"]
     ]
-    assert result["metric_contract"]["metrics"] == protocol["numerical_protocol"][
-        "metrics"
-    ]
+    assert (
+        result["metric_contract"]["metrics"]
+        == protocol["numerical_protocol"]["metrics"]
+    )
     assert len(result["metric_contract"]["metrics"]) == 19
 
 
@@ -174,8 +174,8 @@ def test_execution_readiness_remains_closed_after_contract_freeze() -> None:
     assert decision["authorization_receipt_present"] is False
     assert decision["authorization_nonce_reserved"] is False
     assert decision["execution_environment_receipt_present"] is False
-    assert decision["validation_runner_implemented"] is False
-    assert decision["result_receipt_writer_implemented"] is False
+    assert decision["validation_runner_implemented"] is True
+    assert decision["result_receipt_writer_implemented"] is True
     assert decision["validation_execution_authorized"] is False
     assert decision["validation_results_collected"] is False
     assert decision["parameter_fitting_proposal_authorized"] is False
@@ -183,8 +183,6 @@ def test_execution_readiness_remains_closed_after_contract_freeze() -> None:
     for blocker in (
         "execution_environment_receipt_missing",
         "authorization_nonce_not_atomically_reserved",
-        "validation_runner_not_implemented",
-        "result_receipt_writer_not_implemented",
         "validation_execution_not_authorized",
         "validation_results_not_collected",
     ):

@@ -111,7 +111,10 @@ def test_review_contract_is_frozen_dependency_bound_and_result_free() -> None:
         is True
     )
     assert first["identity_policy"]["trusted_reviewer_key_supplied_out_of_band"] is True
-    assert first["identity_policy"]["verifier_trust_anchor_contains_public_key_only"] is True
+    assert (
+        first["identity_policy"]["verifier_trust_anchor_contains_public_key_only"]
+        is True
+    )
     assert first["attestation_schema"]["signature_algorithm"] == "ed25519"
     assert (
         first["identity_policy"][
@@ -346,7 +349,8 @@ def test_current_review_decision_remains_closed_without_committed_attestation() 
         "signed_independent_scientific_review_attestation_missing"
         in decision["blockers"]
     )
+    assert "signed_execution_authorization_receipt_missing" in decision["blockers"]
     assert (
         "signed_execution_authorization_receipt_schema_not_frozen"
-        in decision["blockers"]
+        not in decision["blockers"]
     )

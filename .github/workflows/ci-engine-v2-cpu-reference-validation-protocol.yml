@@ -30,6 +30,10 @@ on:
       - "tests/unit/test_engine_v2_reference_validation_run_start.py"
       - "tests/unit/test_engine_v2_reference_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_validation_result_writer.py"
+      - "tests/unit/test_engine_v2_validation_legacy_contracts.py"
+      - "tests/unit/test_engine_v2_validation_native_runtime_identity.py"
+      - "tests/unit/test_engine_v2_validation_runtime_integrity_contract.py"
+      - "tests/unit/test_engine_v2_validation_source_identity.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -72,6 +76,10 @@ on:
       - "tests/unit/test_engine_v2_reference_validation_run_start.py"
       - "tests/unit/test_engine_v2_reference_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_validation_result_writer.py"
+      - "tests/unit/test_engine_v2_validation_legacy_contracts.py"
+      - "tests/unit/test_engine_v2_validation_native_runtime_identity.py"
+      - "tests/unit/test_engine_v2_validation_runtime_integrity_contract.py"
+      - "tests/unit/test_engine_v2_validation_source_identity.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
       - "tests/unit/test_engine_v2_reference_physics.py"
       - "tests/unit/test_engine_v2_commercial_roadmap.py"
@@ -140,6 +148,10 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_run_start.py
             tests/unit/test_engine_v2_reference_validation_runner.py
             tests/unit/test_engine_v2_reference_validation_result_writer.py
+            tests/unit/test_engine_v2_validation_legacy_contracts.py
+            tests/unit/test_engine_v2_validation_native_runtime_identity.py
+            tests/unit/test_engine_v2_validation_runtime_integrity_contract.py
+            tests/unit/test_engine_v2_validation_source_identity.py
             tests/unit/test_engine_v2_reference_parameter_applicability.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -195,12 +207,18 @@ jobs:
             betelgeuze_engine_v2/physics/reference_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_validation_oracle.py \
             betelgeuze_engine_v2/physics/reference_validation_artifact_binding.py \
+            betelgeuze_engine_v2/physics/reference_validation_bootstrap.py \
+            betelgeuze_engine_v2/physics/reference_validation_dependency_identity.py \
             betelgeuze_engine_v2/physics/reference_validation_authorization.py \
             betelgeuze_engine_v2/physics/reference_validation_nonce_reservation.py \
             betelgeuze_engine_v2/physics/reference_validation_run_start.py \
             betelgeuze_engine_v2/physics/reference_validation_runner.py \
             betelgeuze_engine_v2/physics/reference_validation_result_writer.py \
             betelgeuze_engine_v2/physics/reference_validation_receipts.py \
+            betelgeuze_engine_v2/physics/validation_legacy_contracts.py \
+            betelgeuze_engine_v2/physics/validation_native_runtime_identity.py \
+            betelgeuze_engine_v2/physics/validation_runtime_integrity_contract.py \
+            betelgeuze_engine_v2/physics/validation_source_identity.py \
             betelgeuze_engine_v2/physics/__init__.py \
             betelgeuze_engine_v2/capabilities.py \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
@@ -226,6 +244,10 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_run_start.py \
             tests/unit/test_engine_v2_reference_validation_runner.py \
             tests/unit/test_engine_v2_reference_validation_result_writer.py \
+            tests/unit/test_engine_v2_validation_legacy_contracts.py \
+            tests/unit/test_engine_v2_validation_native_runtime_identity.py \
+            tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
+            tests/unit/test_engine_v2_validation_source_identity.py \
             --config packaging/engine-v2/pyproject.toml
 
       - name: Verify frozen protocol, H5 dependency, and non-promotion
@@ -254,6 +276,10 @@ jobs:
             tests/unit/test_engine_v2_reference_validation_run_start.py \
             tests/unit/test_engine_v2_reference_validation_runner.py \
             tests/unit/test_engine_v2_reference_validation_result_writer.py \
+            tests/unit/test_engine_v2_validation_legacy_contracts.py \
+            tests/unit/test_engine_v2_validation_native_runtime_identity.py \
+            tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
+            tests/unit/test_engine_v2_validation_source_identity.py \
             tests/unit/test_engine_v2_reference_parameter_applicability.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_commercial_roadmap.py
@@ -347,6 +373,8 @@ jobs:
           minimization_run_start_decision = reference_minimization_validation_run_start_contract_decision()
           assert minimization_run_start_decision["run_start_environment_primitive_implemented"] is True
           assert minimization_run_start_decision["production_environment_receipt_present"] is False
+          assert minimization_run_start_decision["validation_runner_implemented"] is True
+          assert minimization_run_start_decision["result_receipt_writer_implemented"] is True
           assert minimization_run_start_decision["validation_execution_authorized"] is False
           minimization_runner = reference_minimization_validation_runner_contract_document()
           assert minimization_runner["contract_sha256"] == (
@@ -414,7 +442,8 @@ jobs:
           run_start_decision = reference_validation_run_start_contract_decision()
           assert run_start_decision["run_start_environment_primitive_implemented"] is True
           assert run_start_decision["production_environment_receipt_present"] is False
-          assert run_start_decision["validation_runner_implemented"] is False
+          assert run_start_decision["validation_runner_implemented"] is True
+          assert run_start_decision["result_receipt_writer_implemented"] is True
           assert run_start_decision["validation_execution_authorized"] is False
           runner_contract = reference_validation_runner_contract_document()
           assert runner_contract["contract_sha256"] == (
@@ -425,7 +454,7 @@ jobs:
           assert runner_decision["production_runner_start_consumed"] is False
           assert runner_decision["production_validation_execution_authorized"] is False
           assert runner_decision["production_validation_results_collected"] is False
-          assert runner_decision["result_receipt_writer_implemented"] is False
+          assert runner_decision["result_receipt_writer_implemented"] is True
           writer_contract = reference_validation_result_writer_contract_document()
           assert writer_contract["contract_sha256"] == (
               FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
@@ -446,8 +475,8 @@ jobs:
           readiness = reference_validation_execution_readiness_decision()
           assert readiness["receipt_contracts_frozen"] is True
           assert readiness["execution_environment_receipt_present"] is False
-          assert readiness["validation_runner_implemented"] is False
-          assert readiness["result_receipt_writer_implemented"] is False
+          assert readiness["validation_runner_implemented"] is True
+          assert readiness["result_receipt_writer_implemented"] is True
           assert readiness["validation_execution_authorized"] is False
           assert readiness["validation_results_collected"] is False
           PY

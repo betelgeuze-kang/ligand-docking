@@ -82,7 +82,9 @@ def test_review_contract_is_frozen_dependency_bound_and_result_free() -> None:
 
     assert first == second
     assert first["schema_id"] == REFERENCE_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID
-    assert first["contract_sha256"] == FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256
+    assert (
+        first["contract_sha256"] == FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256
+    )
     assert (
         first["dependencies"]["artifact_binding_sha256"]
         == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
@@ -95,11 +97,21 @@ def test_review_contract_is_frozen_dependency_bound_and_result_free() -> None:
         "authorizes_parameter_fitting_proposal": False,
         "authorizes_parameter_fitting": False,
     }
-    assert first["identity_policy"]["implementation_author_and_reviewer_must_differ"] is True
+    assert (
+        first["identity_policy"]["implementation_author_and_reviewer_must_differ"]
+        is True
+    )
     assert first["identity_policy"]["trusted_reviewer_key_supplied_out_of_band"] is True
-    assert first["identity_policy"]["repository_does_not_choose_or_bundle_trusted_reviewer_keys"] is True
+    assert (
+        first["identity_policy"][
+            "repository_does_not_choose_or_bundle_trusted_reviewer_keys"
+        ]
+        is True
+    )
     assert first["authorization_gate"]["status"] == "closed"
-    assert first["authorization_gate"]["independent_scientific_review_completed"] is False
+    assert (
+        first["authorization_gate"]["independent_scientific_review_completed"] is False
+    )
     assert first["authorization_gate"]["validation_execution_authorized"] is False
     assert first["claim_policy"]["scientifically_validated"] is False
     assert first["claim_policy"]["claim_safe"] is False
@@ -117,13 +129,21 @@ def test_review_contract_rejects_tamper() -> None:
         require_reference_validation_review_contract_document(tampered)
 
 
-def test_signed_review_attestation_verifies_exact_scope_and_stays_non_authorizing() -> None:
+def test_signed_review_attestation_verifies_exact_scope_and_stays_non_authorizing() -> (
+    None
+):
     attestation = _attestation()
     verification = _verify(attestation)
 
     assert attestation["schema_id"] == REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID
-    assert attestation["artifact_binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
-    assert attestation["signature"]["algorithm"] == REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM
+    assert (
+        attestation["artifact_binding_sha256"]
+        == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
+    )
+    assert (
+        attestation["signature"]["algorithm"]
+        == REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM
+    )
     assert len(attestation["attestation_sha256"]) == 64
     assert verification.independent_scientific_review_verified is True
     assert verification.implementation_author_separation_verified is True
@@ -132,7 +152,10 @@ def test_signed_review_attestation_verifies_exact_scope_and_stays_non_authorizin
     assert verification.parameter_fitting_authorized is False
     assert "signed_execution_authorization_receipt_missing" in verification.blockers
     assert "validation_execution_not_authorized" in verification.blockers
-    assert attestation["scientific_parameterized_force_field_validation_recommended"] is False
+    assert (
+        attestation["scientific_parameterized_force_field_validation_recommended"]
+        is False
+    )
     assert attestation["parameter_fitting_proposal_recommended"] is False
     assert attestation["parameter_fitting_recommended"] is False
     assert attestation["validation_execution_authorized"] is False
@@ -167,7 +190,11 @@ def test_signed_review_attestation_rejects_duplicate_json_or_signature_fields() 
         ("artifact_binding_sha256", "e" * 64, "signature verification failed"),
         ("claim_safe", True, "signature verification failed"),
         ("revoked", True, "signature verification failed"),
-        ("review_recommendation", "authorize_execution", "signature verification failed"),
+        (
+            "review_recommendation",
+            "authorize_execution",
+            "signature verification failed",
+        ),
     ),
 )
 def test_signed_review_attestation_rejects_unsigned_tamper(
@@ -190,9 +217,13 @@ def test_signed_review_attestation_rejects_untrusted_or_mismatched_keys() -> Non
             expected_implementation_author_identity_sha256=AUTHOR_IDENTITY,
             checked_at=CHECKED_AT,
         )
-    with pytest.raises(ReferenceValidationReviewError, match="signature verification failed"):
+    with pytest.raises(
+        ReferenceValidationReviewError, match="signature verification failed"
+    ):
         _verify(attestation, anchor=_anchor(key=OTHER_KEY))
-    with pytest.raises(ReferenceValidationReviewError, match="does not match the trusted key"):
+    with pytest.raises(
+        ReferenceValidationReviewError, match="does not match the trusted key"
+    ):
         _verify(attestation, anchor=_anchor(identity=OTHER_REVIEWER_IDENTITY))
 
 
@@ -224,7 +255,9 @@ def test_signed_review_attestation_rejects_incomplete_or_reordered_scope() -> No
     with pytest.raises(ReferenceValidationReviewError, match="check coverage"):
         _verify(missing)
 
-    reordered = _attestation(acknowledged_limitation_ids=list(reversed(required_limitations)))
+    reordered = _attestation(
+        acknowledged_limitation_ids=list(reversed(required_limitations))
+    )
     with pytest.raises(ReferenceValidationReviewError, match="limitations"):
         _verify(reordered)
 
@@ -236,9 +269,13 @@ def test_signed_review_attestation_enforces_freshness_window() -> None:
         _verify(_attestation(), checked_at=EXPIRES_AT)
 
     overlong = _attestation(
-        expires_at=REVIEWED_AT + REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY + timedelta(seconds=1),
+        expires_at=REVIEWED_AT
+        + REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY
+        + timedelta(seconds=1),
     )
-    with pytest.raises(ReferenceValidationReviewError, match="exceeds the frozen maximum"):
+    with pytest.raises(
+        ReferenceValidationReviewError, match="exceeds the frozen maximum"
+    ):
         _verify(overlong)
 
     inverted = _attestation(expires_at=REVIEWED_AT)
@@ -263,12 +300,22 @@ def test_review_trust_anchor_redacts_key_from_repr_and_rejects_short_key() -> No
 
 def test_current_review_decision_remains_closed_without_committed_attestation() -> None:
     decision = reference_validation_review_contract_authorization_decision()
-    assert decision["contract_sha256"] == FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256
+    assert (
+        decision["contract_sha256"]
+        == FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256
+    )
     assert decision["review_attestation_present"] is False
     assert decision["independent_scientific_review_verified"] is False
     assert decision["implementation_author_separation_verified"] is False
     assert decision["validation_execution_authorized"] is False
     assert decision["parameter_fitting_proposal_authorized"] is False
     assert decision["parameter_fitting_authorized"] is False
-    assert "signed_independent_scientific_review_attestation_missing" in decision["blockers"]
-    assert "signed_execution_authorization_receipt_schema_not_frozen" in decision["blockers"]
+    assert (
+        "signed_independent_scientific_review_attestation_missing"
+        in decision["blockers"]
+    )
+    assert "signed_execution_authorization_receipt_missing" in decision["blockers"]
+    assert (
+        "signed_execution_authorization_receipt_schema_not_frozen"
+        not in decision["blockers"]
+    )

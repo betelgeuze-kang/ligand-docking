@@ -22,6 +22,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_result_revie
     COORDINATE_TRACE_STEP_ACCEPTED,
     EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED,
     EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID,
     REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID,
@@ -29,6 +30,8 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_result_revie
     RESULT_REVIEW_OUTCOME_REJECTED,
     REQUIRED_RESULT_EVIDENCE_REJECTED,
     RETAINED_METRIC_VALUE_REJECTED,
+    WORKER_EXECUTION_EVIDENCE_ACCEPTED,
+    WORKER_EXECUTION_EVIDENCE_REJECTED,
     MinimizationResultReviewerTrustAnchor,
     ReferenceMinimizationValidationResultReviewError,
     build_signed_reference_minimization_validation_result_review_attestation,
@@ -44,6 +47,8 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_review impor
 from tests.unit import (
     test_engine_v2_reference_minimization_validation_result_writer as writer_helpers,
 )
+import betelgeuze_engine_v2.physics.reference_minimization_validation_runner as runner_module
+import betelgeuze_engine_v2.physics.validation_native_runtime_identity as native_identity
 
 
 RESULT_REVIEWER_IDENTITY = "f" * 64
@@ -121,6 +126,18 @@ def _rehash_receipt(payload: dict[str, object]) -> dict[str, object]:
     return payload
 
 
+def _resign_attestation(payload: dict[str, object]) -> dict[str, object]:
+    payload.pop("signature", None)
+    payload.pop("attestation_sha256", None)
+    payload["attestation_sha256"] = _sha256(payload)
+    payload["signature"] = {
+        "algorithm": "ed25519",
+        "key_id": RESULT_REVIEW_KEY_ID,
+        "value": sign_ed25519(_canonical_bytes(payload), RESULT_REVIEW_KEY),
+    }
+    return payload
+
+
 def _tampered_first_case_receipt(
     result_receipt: _ResultEvidence,
     **updates: object,
@@ -133,9 +150,7 @@ def _tampered_first_case_receipt(
     first_case = observed_cases[0]
     assert isinstance(first_case, dict)
     first_case.update(updates)
-    tampered["case_results"] = deepcopy(observed_cases)
-    tampered["observation_sha256"] = _sha256(run_observation)
-    return _rehash_receipt(tampered)  # type: ignore[return-value]
+    return _finalize_observation_tamper(tampered)
 
 
 def _rehash_trace_step(step: dict[str, object]) -> None:
@@ -155,6 +170,32 @@ def _finalize_observation_tamper(
     assert isinstance(run_observation, dict)
     cases = run_observation["case_results"]
     assert isinstance(cases, list)
+    evidence = run_observation["worker_execution_evidence"]
+    assert isinstance(evidence, dict)
+    assert evidence["completion_state"] == "complete"
+    case_frame_rows = evidence["case_frame_sha256_rows"]
+    assert isinstance(case_frame_rows, list) and len(case_frame_rows) == len(cases)
+    for frame_row, case in zip(case_frame_rows, cases, strict=True):
+        assert isinstance(frame_row, dict) and isinstance(case, dict)
+        frame_row["ordinal"] = case["ordinal"]
+        frame_row["case_id"] = case["case_id"]
+        frame_row["case_observation_sha256"] = _sha256(case)
+    evidence["retained_case_aggregate_sha256"] = _sha256(cases)
+    lifecycle = evidence["runtime_lifecycle_evidence"]
+    assert isinstance(lifecycle, dict)
+    pre_evidence = lifecycle["pre"]
+    assert isinstance(pre_evidence, dict)
+    snapshot = pre_evidence["snapshot"]
+    assert isinstance(snapshot, dict)
+    evidence["runtime_lifecycle_evidence"] = (
+        native_identity.build_complete_worker_runtime_lifecycle_evidence(
+            lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
+            worker_request_sha256=evidence["worker_request_sha256"],
+            pre_evidence=pre_evidence,
+            payload_rows=cases,
+            post_snapshot=snapshot,
+        )
+    )
     tampered["case_results"] = deepcopy(cases)
     tampered["observation_sha256"] = _sha256(run_observation)
     return _rehash_receipt(tampered)  # type: ignore[return-value]
@@ -208,9 +249,7 @@ def _append_accepted_trace_step(case: dict[str, object]) -> None:
     _rehash_trace_step(step)
     steps.append(step)
     trace["trace_length"] = len(steps)
-    trace["accepted_iteration_count"] = int(
-        trace["accepted_iteration_count"]
-    ) + 1
+    trace["accepted_iteration_count"] = int(trace["accepted_iteration_count"]) + 1
     trace["energy_force_evaluation_count"] = len(steps)
     trace["accepted_energy_ledger"] = [*ledger, ledger[-1]]
     _rehash_trace(trace)
@@ -452,10 +491,38 @@ def _rejected_result_receipt(
     assert isinstance(coverage, dict)
     coverage["all_cases_passed"] = False
     coverage["failed_case_count"] = 1
-    rejected["case_results"] = deepcopy(case_results)
     rejected["coverage_summary"] = deepcopy(coverage)
-    rejected["observation_sha256"] = _sha256(run_observation)
-    return _rehash_receipt(rejected)
+    return _finalize_observation_tamper(rejected)  # type: ignore[arg-type]
+
+
+def _incomplete_worker_result_receipt(
+    result_receipt: _ResultEvidence,
+) -> _ResultEvidence:
+    incomplete = deepcopy(result_receipt)
+    run_observation = incomplete["run_observation"]
+    assert isinstance(run_observation, dict)
+    supervised = runner_module._supervisor_failure_complete_matrix(
+        "runner_worker_output_invalid",
+        worker_preflight_request={"test_request": "incomplete-result-review"},
+    )
+    cases = [row.to_dict() for row in supervised.case_results]
+    coverage = {
+        "expected_case_count": 14,
+        "observed_case_count": 14,
+        "all_cases_observed": True,
+        "all_cases_passed": False,
+        "failed_case_count": 14,
+        "failure_rows_retained": True,
+    }
+    run_observation["case_results"] = cases
+    run_observation["worker_execution_evidence"] = (
+        supervised.worker_execution_evidence.to_dict()
+    )
+    run_observation["coverage_summary"] = coverage
+    incomplete["case_results"] = deepcopy(cases)
+    incomplete["coverage_summary"] = deepcopy(coverage)
+    incomplete["observation_sha256"] = _sha256(run_observation)
+    return _rehash_receipt(incomplete)  # type: ignore[return-value]
 
 
 def test_result_review_contract_is_frozen_complete_and_closed() -> None:
@@ -473,6 +540,16 @@ def test_result_review_contract_is_frozen_complete_and_closed() -> None:
     assert (
         first["dependencies"]["full_result_writer_receipt_validation_required"] is True
     )
+    assert (
+        first["dependencies"][
+            "worker_execution_evidence_extracted_from_validated_run_observation"
+        ]
+        is True
+    )
+    assert (
+        first["dependencies"]["worker_retained_case_aggregate_recomputed_and_bound"]
+        is True
+    )
     assert first["attestation_schema"]["review_outcomes"] == [
         RESULT_REVIEW_OUTCOME_ACCEPTED,
         RESULT_REVIEW_OUTCOME_REJECTED,
@@ -480,6 +557,26 @@ def test_result_review_contract_is_frozen_complete_and_closed() -> None:
     assert (
         first["attestation_schema"]["verified_review_does_not_imply_result_acceptance"]
         is True
+    )
+    assert (
+        first["attestation_schema"][
+            "accepted_outcome_requires_complete_worker_lifecycle"
+        ]
+        is True
+    )
+    assert (
+        first["attestation_schema"][
+            "accepted_outcome_requires_zero_discarded_partial_payloads"
+        ]
+        is True
+    )
+    assert (
+        first["attestation_schema"]["incomplete_worker_lifecycle_can_only_be_rejected"]
+        is True
+    )
+    assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3
+        == "b1b981940ea3d5a68f3aa936e4569e6756a8a9b88b0e86137c10d8ec4deebcfa"
     )
     assert len(first["case_review_template"]) == 14
     assert (
@@ -499,6 +596,7 @@ def test_result_review_contract_is_frozen_complete_and_closed() -> None:
     assert decision["result_receipt_accepted"] is False
     assert "production_result_receipt_missing" in decision["blockers"]
     assert "two_cpu_host_reproducibility_missing" in decision["blockers"]
+    assert "worker_request_observation_identity_binding_missing" in decision["blockers"]
 
 
 def test_signed_accepted_review_verifies_exact_receipt_and_all_rows(
@@ -515,6 +613,28 @@ def test_signed_accepted_review_verifies_exact_receipt_and_all_rows(
         attestation["result_receipt_review_outcome"] == RESULT_REVIEW_OUTCOME_ACCEPTED
     )
     assert attestation["result_receipt_accepted"] is True
+    worker_review = attestation["worker_execution_review"]
+    assert isinstance(worker_review, dict)
+    run_observation = result_receipt["run_observation"]
+    assert isinstance(run_observation, dict)
+    worker_evidence = run_observation["worker_execution_evidence"]
+    assert isinstance(worker_evidence, dict)
+    assert worker_review["disposition"] == WORKER_EXECUTION_EVIDENCE_ACCEPTED
+    assert worker_review["completion_state"] == "complete"
+    assert worker_review["runtime_lifecycle_completion_state"] == "complete"
+    assert worker_review["payload_frame_count"] == 14
+    assert worker_review["discarded_partial_payload_count"] == 0
+    assert (
+        worker_review["retained_case_aggregate_sha256"]
+        == worker_review["recomputed_retained_case_aggregate_sha256"]
+    )
+    assert (
+        worker_review["runtime_lifecycle_sha256"]
+        == worker_evidence["runtime_lifecycle_evidence"]["lifecycle_sha256"]
+    )
+    assert worker_review["native_pre_post_snapshot_equality_verified"] is True
+    assert worker_review["native_mapping_lifetime_closure_claimed"] is False
+    assert worker_review["rejection_reasons"] == []
     rows = attestation["case_review_rows"]
     assert isinstance(rows, list)
     assert len(rows) == 14
@@ -548,13 +668,23 @@ def test_signed_accepted_review_verifies_exact_receipt_and_all_rows(
         for trace in row["coordinate_trace_dispositions"]
     )
     assert verification.independent_result_review_verified is True
+    assert (
+        attestation["source_manifest_sha256"]
+        == (result_receipt["source_manifest_sha256"])
+    )
+    assert (
+        verification.source_manifest_sha256
+        == (result_receipt["source_manifest_sha256"])
+    )
     assert verification.implementation_author_separation_verified is True
     assert verification.result_receipt_review_outcome == RESULT_REVIEW_OUTCOME_ACCEPTED
     assert verification.result_receipt_accepted is True
     assert verification.scientifically_validated is False
     assert verification.parameter_fitting_authorized is False
     assert "independent_result_review_missing" in verification.blockers
-    assert "coordinate_trace_not_retained_in_result_receipt" not in verification.blockers
+    assert (
+        "coordinate_trace_not_retained_in_result_receipt" not in verification.blockers
+    )
     assert "trajectory_level_minimization_comparison_missing" in verification.blockers
     assert verification.to_dict()["result_receipt_accepted"] is True
 
@@ -581,6 +711,46 @@ def test_signed_rejected_review_is_verified_without_accepting_the_result(
     assert verification.result_receipt_accepted is False
     assert "result_receipt_review_rejected" in verification.blockers
     assert "scientific_validation_missing" in verification.blockers
+
+
+def test_incomplete_worker_lifecycle_is_signed_and_verified_only_as_rejected(
+    result_receipt: _ResultEvidence,
+) -> None:
+    incomplete_receipt = _incomplete_worker_result_receipt(result_receipt)
+    attestation = _attestation(incomplete_receipt)
+    verification = _verify(attestation, incomplete_receipt)
+    worker_review = attestation["worker_execution_review"]
+
+    assert isinstance(worker_review, dict)
+    assert worker_review["disposition"] == WORKER_EXECUTION_EVIDENCE_REJECTED
+    assert worker_review["completion_state"] == "incomplete"
+    assert worker_review["runtime_lifecycle_completion_state"] == "incomplete"
+    assert worker_review["payload_frame_count"] == 0
+    assert worker_review["discarded_partial_payload_count"] is None
+    assert worker_review["native_pre_post_snapshot_equality_verified"] is False
+    assert worker_review["native_mapping_lifetime_closure_claimed"] is False
+    assert "worker_execution_incomplete" in worker_review["rejection_reasons"]
+    assert (
+        attestation["result_receipt_review_outcome"] == RESULT_REVIEW_OUTCOME_REJECTED
+    )
+    assert attestation["result_receipt_accepted"] is False
+    assert verification.independent_result_review_verified is True
+    assert verification.result_receipt_review_outcome == RESULT_REVIEW_OUTCOME_REJECTED
+    assert verification.result_receipt_accepted is False
+
+    false_acceptance = deepcopy(attestation)
+    false_worker_review = false_acceptance["worker_execution_review"]
+    assert isinstance(false_worker_review, dict)
+    false_worker_review["disposition"] = WORKER_EXECUTION_EVIDENCE_ACCEPTED
+    false_worker_review["rejection_reasons"] = []
+    false_acceptance["result_receipt_review_outcome"] = RESULT_REVIEW_OUTCOME_ACCEPTED
+    false_acceptance["result_receipt_accepted"] = True
+    _resign_attestation(false_acceptance)
+    with pytest.raises(
+        ReferenceMinimizationValidationResultReviewError,
+        match="result receipt binding drifted",
+    ):
+        _verify(false_acceptance, incomplete_receipt)
 
 
 def test_builder_rejects_digest_valid_receipt_that_violates_writer_claim_policy(
@@ -754,9 +924,7 @@ def test_verifier_rejects_crosswired_receipt_and_validly_signed_false_dispositio
     trace_rows[0]["coordinate_trace_dispositions"][0]["disposition"] = (
         "coordinate_trace_rejected"
     )
-    false_trace_review["result_receipt_review_outcome"] = (
-        RESULT_REVIEW_OUTCOME_REJECTED
-    )
+    false_trace_review["result_receipt_review_outcome"] = RESULT_REVIEW_OUTCOME_REJECTED
     false_trace_review["result_receipt_accepted"] = False
     false_trace_review["attestation_sha256"] = _sha256(false_trace_review)
     false_trace_review["signature"] = {
@@ -772,6 +940,44 @@ def test_verifier_rejects_crosswired_receipt_and_validly_signed_false_dispositio
         match="case dispositions",
     ):
         _verify(false_trace_review, result_receipt)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "worker_review_omitted",
+        "case_frame_rows_reordered",
+        "lifecycle_sha256_tampered",
+        "native_lifetime_closure_overclaimed",
+    ],
+)
+def test_verifier_rejects_validly_signed_worker_evidence_omission_reorder_or_tamper(
+    result_receipt: _ResultEvidence,
+    mutation: str,
+) -> None:
+    tampered = deepcopy(_attestation(result_receipt))
+    worker_review = tampered["worker_execution_review"]
+    assert isinstance(worker_review, dict)
+
+    if mutation == "worker_review_omitted":
+        tampered.pop("worker_execution_review")
+    elif mutation == "case_frame_rows_reordered":
+        rows = worker_review["case_frame_sha256_rows"]
+        assert isinstance(rows, list)
+        rows.reverse()
+    elif mutation == "lifecycle_sha256_tampered":
+        worker_review["runtime_lifecycle_sha256"] = "0" * 64
+    elif mutation == "native_lifetime_closure_overclaimed":
+        worker_review["native_mapping_lifetime_closure_claimed"] = True
+    else:  # pragma: no cover - parametrization is closed above
+        raise AssertionError(mutation)
+
+    _resign_attestation(tampered)
+    with pytest.raises(
+        ReferenceMinimizationValidationResultReviewError,
+        match="result receipt binding drifted",
+    ):
+        _verify(tampered, result_receipt)
 
 
 @pytest.mark.parametrize(

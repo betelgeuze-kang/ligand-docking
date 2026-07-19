@@ -24,6 +24,7 @@ import betelgeuze_engine_v2.physics.reference_minimization_validation_dependency
 import betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer as result_writer_module
 import betelgeuze_engine_v2.physics.reference_minimization_validation_run_start as run_start_module
 import betelgeuze_engine_v2.physics.reference_minimization_validation_runner as module
+import betelgeuze_engine_v2.physics.validation_native_runtime_identity as native_identity
 from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
     ed25519_public_key_bytes,
     sign_ed25519,
@@ -49,6 +50,7 @@ NONCE = "a" * 64
 RECEIPT_SHA256 = "b" * 64
 FINGERPRINT_SHA256 = "c" * 64
 COMMIT_SHA = "d" * 40
+SOURCE_MANIFEST_SHA256 = "7" * 64
 DEPENDENCIES = (
     ("cryptography-distribution", "a" * 64),
     ("numpy-distribution", "b" * 64),
@@ -101,6 +103,7 @@ def _receipt() -> SimpleNamespace:
         environment_fingerprint_sha256=FINGERPRINT_SHA256,
         code_commit_sha=COMMIT_SHA,
         runner_source_sha256=reference_minimization_validation_runner_source_sha256(),
+        source_manifest_sha256=SOURCE_MANIFEST_SHA256,
         dependency_artifact_sha256_rows=DEPENDENCIES,
         environment_variable_rows=_environment_rows(),
         command_argv=module.REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV,
@@ -111,6 +114,7 @@ def _receipt() -> SimpleNamespace:
 
 def _install_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     receipt = _receipt()
+    _install_fake_native_runtime(monkeypatch)
     monkeypatch.setattr(module, "_utc_now", lambda: NOW)
     monkeypatch.setattr(
         module,
@@ -129,15 +133,18 @@ def _install_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         module,
         "_observe_dependency_artifact_sha256_rows",
-        lambda roots: dict(DEPENDENCIES),
+        lambda roots, **kwargs: dict(DEPENDENCIES),
     )
 
     def supervise(**kwargs: object) -> object:
         assert isinstance(kwargs["deadline"], float)
-        assert kwargs["worker_preflight_request"] == _worker_request(
-            source_sha256=receipt.runner_source_sha256
+        request = _worker_request(source_sha256=receipt.runner_source_sha256)
+        assert kwargs["worker_preflight_request"] == request
+        return _complete_supervised_result(
+            monkeypatch,
+            request=request,
+            rows=module._run_case_matrix_in_process(),
         )
-        return module._run_case_matrix_in_process()
 
     monkeypatch.setattr(module, "_run_supervised_case_matrix", supervise)
 
@@ -195,6 +202,142 @@ def _worker_request(
     }
 
 
+def _native_snapshot() -> dict[str, object]:
+    file_projection: dict[str, object] = {
+        "ordinal": 0,
+        "path": "/usr/bin/python3.11",
+        "device_major_hex": "1",
+        "device_minor_hex": "2",
+        "inode": 3,
+        "mode_octal": "0755",
+        "uid": 0,
+        "gid": 0,
+        "link_count": 1,
+        "size_bytes": 1,
+        "mtime_ns": 0,
+        "ctime_ns": 0,
+        "sha256": "a" * 64,
+    }
+    file_row = {
+        **file_projection,
+        "file_identity_sha256": native_identity._sha256(
+            native_identity._file_identity_projection(file_projection)
+        ),
+    }
+    projection: dict[str, object] = {
+        "schema_id": native_identity.NATIVE_RUNTIME_SNAPSHOT_SCHEMA_ID,
+        "process_id": 1,
+        "mapping_count": 1,
+        "file_count": 1,
+        "hashed_file_bytes": 1,
+        "mapping_rows": [
+            {
+                "ordinal": 0,
+                "address_start_hex": "1",
+                "address_end_hex": "2",
+                "permissions": "r-xp",
+                "file_offset_hex": "0",
+                "device_major_hex": "1",
+                "device_minor_hex": "2",
+                "inode": 3,
+                "path": "/usr/bin/python3.11",
+                "backing_kind": "file",
+                "backing_file_identity_sha256": file_row["file_identity_sha256"],
+            }
+        ],
+        "file_rows": [file_row],
+    }
+    return {**projection, "snapshot_sha256": module._sha256(projection)}
+
+
+def _install_fake_native_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    snapshot = _native_snapshot()
+    real_pre = native_identity.build_worker_runtime_pre_evidence
+    real_complete = native_identity.build_complete_worker_runtime_lifecycle_evidence
+    monkeypatch.setattr(
+        module,
+        "build_worker_runtime_pre_evidence",
+        lambda **kwargs: real_pre(**kwargs, snapshot=snapshot),
+    )
+    monkeypatch.setattr(
+        module,
+        "build_complete_worker_runtime_lifecycle_evidence",
+        lambda **kwargs: real_complete(**kwargs, post_snapshot=snapshot),
+    )
+
+
+def _complete_worker_transcript(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    request: Mapping[str, object],
+    rows: object,
+) -> bytes:
+    output = io.BytesIO()
+    with monkeypatch.context() as context:
+        context.setattr(
+            module.sys,
+            "stdin",
+            SimpleNamespace(
+                buffer=io.BytesIO(module._canonical_bytes(dict(request)) + b"\n")
+            ),
+        )
+        context.setattr(module.sys, "stdout", SimpleNamespace(buffer=output))
+        context.setattr(
+            module, "_require_matrix_worker_preflight", lambda _request: None
+        )
+        context.setattr(module, "_run_case_matrix_in_process", lambda: rows)
+        assert module._matrix_worker_main_from_standard_streams() == 0
+    return output.getvalue()
+
+
+def _complete_supervised_result(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    request: Mapping[str, object],
+    rows: object,
+):
+    raw = _complete_worker_transcript(
+        monkeypatch,
+        request=request,
+        rows=rows,
+    )
+    return module._decode_complete_matrix_worker_transcript(
+        raw,
+        worker_preflight_request=request,
+    )
+
+
+def _supervise_raw_transcript(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    request: Mapping[str, object],
+    raw: bytes,
+    timed_out: bool = False,
+    succeeded: bool = True,
+):
+    monkeypatch.setattr(
+        module,
+        "_start_fixed_matrix_worker",
+        lambda _request: SimpleNamespace(pid=1),
+    )
+    monkeypatch.setattr(
+        module,
+        "_communicate_fixed_matrix_worker",
+        lambda *_args, **_kwargs: (raw, timed_out, succeeded),
+    )
+    return module._run_supervised_case_matrix(
+        deadline=time.monotonic() + 10.0,
+        worker_preflight_request=request,
+    )
+
+
+def _canonical_frame_line(frame: Mapping[str, object]) -> bytes:
+    projection = dict(frame)
+    projection.pop("frame_sha256", None)
+    projection["frame_sha256"] = module._sha256(projection)
+    return module._canonical_bytes(projection) + b"\n"
+
+
 def _run(root: Path):
     return run_bounded_cpu_reference_minimization_validation(
         root,
@@ -223,6 +366,13 @@ def test_contract_is_frozen_and_all_claims_remain_closed() -> None:
         document["worker"]["failure_complete_communication_error_observation"] is True
     )
     assert document["worker"]["child_dependency_roots_and_bytes_reverified"]
+    assert document["worker"]["child_preflight_failure_emits_case_rows"] is False
+    assert document["worker"]["exact_frame_count"] == 16
+    assert document["worker"]["ordered_case_payload_frame_count"] == 14
+    assert document["worker"]["native_mapping_lifetime_closure_claimed"] is False
+    assert document["worker"][
+        "timeout_nonzero_or_incomplete_transcript_discards_all_child_payloads"
+    ]
     assert all(value is False for value in document["claim_policy"].values())
     assert (
         require_reference_minimization_validation_runner_contract_document(document)
@@ -254,8 +404,7 @@ def test_contract_rejects_tamper_and_source_binds_bootstrap_and_runner() -> None
     bootstrap_path = Path(bootstrap.reference_minimization_validation_bootstrap_path())
     source_identity = {
         "schema_id": (
-            "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/"
-            "1.0.0"
+            "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/4.0.0"
         ),
         "sources": [
             {
@@ -269,6 +418,22 @@ def test_contract_rejects_tamper_and_source_binds_bootstrap_and_runner() -> None
                     .with_name(
                         "reference_minimization_validation_dependency_identity.py"
                     )
+                    .read_bytes()
+                ).hexdigest(),
+            },
+            {
+                "path": "betelgeuze_engine_v2/physics/validation_source_identity.py",
+                "sha256": hashlib.sha256(
+                    Path(module.__file__)
+                    .with_name("validation_source_identity.py")
+                    .read_bytes()
+                ).hexdigest(),
+            },
+            {
+                "path": "betelgeuze_engine_v2/physics/validation_native_runtime_identity.py",
+                "sha256": hashlib.sha256(
+                    Path(module.__file__)
+                    .with_name("validation_native_runtime_identity.py")
                     .read_bytes()
                 ).hexdigest(),
             },
@@ -299,10 +464,12 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
         "json",
         "os",
         "betelgeuze_engine_v2.physics",
+        "select",
         "stat",
         "subprocess",
         "sys",
         "sysconfig",
+        "time",
     }
     assert "torch" not in imports
     assert "numpy" not in imports
@@ -330,6 +497,8 @@ def test_dependency_byte_identity_helper_is_stdlib_only_and_exactly_scoped() -> 
     assert imports == {
         "__future__",
         "base64",
+        "binascii",
+        "csv",
         "hashlib",
         "importlib",
         "json",
@@ -338,6 +507,7 @@ def test_dependency_byte_identity_helper_is_stdlib_only_and_exactly_scoped() -> 
         "stat",
         "sys",
         "sysconfig",
+        "time",
         "typing",
     }
     assert (
@@ -430,6 +600,241 @@ def test_exact_matrix_retains_all_success_and_fail_closed_rows() -> None:
         assert checkpoint_rows[case_id]["checkpoint_resume_bitwise_equal"] == 1.0
 
 
+@pytest.fixture(scope="module")
+def complete_case_rows():
+    return module._run_case_matrix_in_process()
+
+
+def test_worker_emits_exact_pre_fourteen_payload_completion_frames(
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_fake_native_runtime(monkeypatch)
+    request = _worker_request()
+    raw = _complete_worker_transcript(
+        monkeypatch,
+        request=request,
+        rows=complete_case_rows,
+    )
+    frames = [json.loads(line) for line in raw.splitlines()]
+    assert (
+        len(frames)
+        == module.REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT
+        == 16
+    )
+    assert [frame["frame_type"] for frame in frames] == [
+        "preflight_complete",
+        *(["case_payload"] * 14),
+        "completion",
+    ]
+    assert [frame["frame_ordinal"] for frame in frames] == list(range(16))
+    request_sha256 = module._sha256(request)
+    assert all(frame["worker_request_sha256"] == request_sha256 for frame in frames)
+    assert frames[0]["previous_frame_sha256"] is None
+    assert all(
+        frame["previous_frame_sha256"] == previous["frame_sha256"]
+        for previous, frame in zip(frames, frames[1:])
+    )
+    result = module._decode_complete_matrix_worker_transcript(
+        raw,
+        worker_preflight_request=request,
+    )
+    evidence = result.worker_execution_evidence
+    assert evidence.completion_state == "complete"
+    assert evidence.failure_code is None
+    assert evidence.native_pre_post_snapshot_equality_verified is True
+    assert evidence.native_mapping_lifetime_closure_claimed is False
+    assert len(evidence.case_frame_sha256_rows) == 14
+    assert evidence.retained_case_aggregate_sha256 == module._sha256(
+        [row.to_dict() for row in result.case_results]
+    )
+    assert tuple(row[2] for row in evidence.case_frame_sha256_rows) == tuple(
+        module._sha256(row.to_dict()) for row in result.case_results
+    )
+    assert all(
+        row["coordinate_traces"]
+        for row in (frame["case_observation"] for frame in frames[1:15])
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    (
+        "omitted_payload",
+        "reordered_payload",
+        "duplicated_payload",
+        "missing_completion",
+        "extra_completion",
+        "request_crosswire",
+        "aggregate_tamper",
+        "post_tamper",
+        "malformed_frame",
+    ),
+)
+def test_supervisor_discards_every_payload_for_incomplete_or_tampered_transcript(
+    mutation: str,
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_fake_native_runtime(monkeypatch)
+    request = _worker_request()
+    raw = _complete_worker_transcript(
+        monkeypatch,
+        request=request,
+        rows=complete_case_rows,
+    )
+    lines = raw.splitlines(keepends=True)
+    if mutation == "omitted_payload":
+        lines.pop(4)
+    elif mutation == "reordered_payload":
+        lines[2], lines[3] = lines[3], lines[2]
+    elif mutation == "duplicated_payload":
+        lines[3] = lines[2]
+    elif mutation == "missing_completion":
+        lines.pop()
+    elif mutation == "extra_completion":
+        lines.append(lines[-1])
+    elif mutation == "request_crosswire":
+        completion = json.loads(lines[-1])
+        completion["worker_request_sha256"] = "0" * 64
+        lines[-1] = _canonical_frame_line(completion)
+    elif mutation == "aggregate_tamper":
+        completion = json.loads(lines[-1])
+        completion["retained_case_aggregate_sha256"] = "0" * 64
+        lines[-1] = _canonical_frame_line(completion)
+    elif mutation == "post_tamper":
+        completion = json.loads(lines[-1])
+        completion["runtime_post_evidence"]["evidence_sha256"] = "0" * 64
+        lines[-1] = _canonical_frame_line(completion)
+    else:
+        lines[5] = b"{}\n"
+    result = _supervise_raw_transcript(
+        monkeypatch,
+        request=request,
+        raw=b"".join(lines),
+    )
+    assert len(result) == 14
+    assert all(row.case_passed is False for row in result)
+    assert all(
+        row.observed_error_code == "runner_worker_output_invalid" for row in result
+    )
+    evidence = result.worker_execution_evidence
+    assert evidence.completion_state == "incomplete"
+    assert evidence.case_frame_sha256_rows == ()
+    assert evidence.pre_frame_sha256 is None
+    assert evidence.completion_frame_sha256 is None
+    assert evidence.transcript_sha256 is None
+    assert evidence.native_pre_post_snapshot_equality_verified is False
+
+
+def test_timeout_after_partial_payload_discards_all_child_successes(
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_fake_native_runtime(monkeypatch)
+    request = _worker_request()
+    raw = _complete_worker_transcript(
+        monkeypatch,
+        request=request,
+        rows=complete_case_rows,
+    )
+    partial = b"".join(raw.splitlines(keepends=True)[:7])
+    result = _supervise_raw_transcript(
+        monkeypatch,
+        request=request,
+        raw=partial,
+        timed_out=True,
+        succeeded=False,
+    )
+    assert len(result) == 14
+    assert all(
+        row.observed_error_code == "runner_wall_time_exhausted" for row in result
+    )
+    assert all(row.operational_result_sha256 is None for row in result)
+    assert result.worker_execution_evidence.completion_state == "incomplete"
+    assert result.worker_execution_evidence.case_frame_sha256_rows == ()
+
+
+def test_nonzero_exit_discards_even_a_complete_valid_transcript(
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_fake_native_runtime(monkeypatch)
+    request = _worker_request()
+    raw = _complete_worker_transcript(
+        monkeypatch,
+        request=request,
+        rows=complete_case_rows,
+    )
+    result = _supervise_raw_transcript(
+        monkeypatch,
+        request=request,
+        raw=raw,
+        succeeded=False,
+    )
+    assert len(result) == 14
+    assert all(
+        row.observed_error_code == "runner_worker_output_invalid" for row in result
+    )
+    assert result.worker_execution_evidence.completion_state == "incomplete"
+
+
+def test_worker_execution_parser_enforces_complete_and_incomplete_cross_invariants(
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_fake_native_runtime(monkeypatch)
+    request = _worker_request()
+    complete = _complete_supervised_result(
+        monkeypatch,
+        request=request,
+        rows=complete_case_rows,
+    )
+    payload = complete.worker_execution_evidence.to_dict()
+    assert (
+        module._worker_execution_evidence_from_payload(
+            payload,
+            case_results=complete.case_results,
+        ).to_dict()
+        == payload
+    )
+    mutations = []
+    omitted_frame = deepcopy(payload)
+    omitted_frame["case_frame_sha256_rows"].pop()
+    mutations.append(omitted_frame)
+    aggregate_tamper = deepcopy(payload)
+    aggregate_tamper["retained_case_aggregate_sha256"] = "0" * 64
+    mutations.append(aggregate_tamper)
+    false_incomplete = deepcopy(payload)
+    false_incomplete["completion_state"] = "incomplete"
+    false_incomplete["failure_code"] = "runner_worker_output_invalid"
+    mutations.append(false_incomplete)
+    for mutation in mutations:
+        with pytest.raises(ReferenceMinimizationValidationRunnerError):
+            module._worker_execution_evidence_from_payload(
+                mutation,
+                case_results=complete.case_results,
+            )
+
+    incomplete = module._supervisor_failure_complete_matrix(
+        "runner_worker_output_invalid",
+        worker_preflight_request=request,
+    )
+    incomplete_payload = incomplete.worker_execution_evidence.to_dict()
+    assert (
+        module._worker_execution_evidence_from_payload(
+            incomplete_payload,
+            case_results=incomplete.case_results,
+        ).completion_state
+        == "incomplete"
+    )
+    with pytest.raises(ReferenceMinimizationValidationRunnerError):
+        module._worker_execution_evidence_from_payload(
+            incomplete_payload,
+            case_results=complete.case_results,
+        )
+
+
 def test_case_observation_rejects_missing_reordered_or_crosswired_trace_data() -> None:
     source = module._run_case_matrix_in_process()[0].to_dict()
     mutations: list[dict[str, object]] = []
@@ -498,6 +903,11 @@ def test_supervisor_hard_stops_a_stalled_child_and_retains_all_rows(
         "_start_fixed_matrix_worker",
         lambda _roots: process,
     )
+    monkeypatch.setattr(
+        module,
+        "_communicate_fixed_matrix_worker",
+        lambda *_args, **_kwargs: (process.kill() or b"", True, False),
+    )
     rows = module._run_supervised_case_matrix(
         deadline=time.monotonic() + 0.05,
         worker_preflight_request=_worker_request(),
@@ -552,6 +962,11 @@ def test_supervisor_reaps_communication_failure_and_retains_fourteen_rows(
         module,
         "_start_fixed_matrix_worker",
         lambda _roots: process,
+    )
+    monkeypatch.setattr(
+        module,
+        "_communicate_fixed_matrix_worker",
+        lambda *_args, **_kwargs: (process.kill() or b"", False, False),
     )
     rows = module._run_supervised_case_matrix(
         deadline=time.monotonic() + 1.0,
@@ -658,13 +1073,8 @@ def test_real_fixed_worker_reaches_preflight_and_returns_failure_complete_rows(
     )
 
     assert timed_out is False
-    assert succeeded is True
-    assert raw.endswith(b"\n")
-    rows = json.loads(raw.decode("ascii"))
-    assert len(rows) == 14
-    assert all(
-        row["observed_error_code"] == "runner_worker_preflight_failed" for row in rows
-    )
+    assert succeeded is False
+    assert raw == b""
 
 
 def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(
@@ -684,6 +1094,8 @@ def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(
     assert observation.all_cases_observed is True
     assert observation.all_cases_passed is True
     assert observation.to_dict()["result_receipt_written"] is False
+    assert observation.source_manifest_sha256 == SOURCE_MANIFEST_SHA256
+    assert json.loads(payload)["source_manifest_sha256"] == SOURCE_MANIFEST_SHA256
     assert list(root.iterdir()) == [marker]
     with pytest.raises(ReferenceMinimizationValidationRunnerAlreadyStartedError):
         _run(root)
@@ -723,6 +1135,7 @@ def test_marker_reader_rejects_hardlink_and_tamper(
         expected_record_sha256=observation.runner_start_record_sha256,
         expected_environment_receipt_sha256=RECEIPT_SHA256,
         expected_runner_source_sha256=observation.runner_source_sha256,
+        expected_source_manifest_sha256=observation.source_manifest_sha256,
     )
     assert document["runner_start_record_sha256"] == (
         observation.runner_start_record_sha256
@@ -736,6 +1149,7 @@ def test_marker_reader_rejects_hardlink_and_tamper(
             expected_record_sha256=observation.runner_start_record_sha256,
             expected_environment_receipt_sha256=RECEIPT_SHA256,
             expected_runner_source_sha256=observation.runner_source_sha256,
+            expected_source_manifest_sha256=observation.source_manifest_sha256,
         )
     alias.unlink()
     payload = json.loads(marker.read_text(encoding="ascii"))
@@ -748,6 +1162,7 @@ def test_marker_reader_rejects_hardlink_and_tamper(
             expected_record_sha256=observation.runner_start_record_sha256,
             expected_environment_receipt_sha256=RECEIPT_SHA256,
             expected_runner_source_sha256=observation.runner_source_sha256,
+            expected_source_manifest_sha256=observation.source_manifest_sha256,
         )
 
 
@@ -910,7 +1325,7 @@ def test_execute_runner_request_orders_environment_run_and_finalization(
     monkeypatch.setattr(
         module,
         "_observe_dependency_artifact_sha256_rows",
-        lambda _roots: events.append("dependencies") or dict(DEPENDENCIES),
+        lambda _roots, **kwargs: events.append("dependencies") or dict(DEPENDENCIES),
     )
     monkeypatch.setattr(
         module,
@@ -1338,7 +1753,7 @@ def test_minimization_bootstrap_outer_reexecs_before_reading_request(
     monkeypatch.setattr(
         bootstrap,
         "_prepare_isolated_outer_launcher",
-        lambda: (executable, expected_bootstrap),
+        lambda **kwargs: (executable, expected_bootstrap),
     )
     monkeypatch.setattr(
         bootstrap,
@@ -1406,17 +1821,23 @@ def test_bootstrap_main_checks_source_and_dependencies_before_runner_import(
         ("/trusted",),
         ("/checkout", "/trusted"),
     )
+    source_manifest = {"verified": True}
+    expected_state = (*state, bootstrap._canonical_bytes(source_manifest))
     raw = module._canonical_bytes(_runner_request()) + b"\n"
     attribute = bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE
     monkeypatch.delattr(bootstrap.sys, attribute, raising=False)
     monkeypatch.setattr(
         bootstrap,
         "_prepare_seeded_controlled_import_boundary",
-        lambda: state,
+        lambda **kwargs: state,
     )
     monkeypatch.setenv(
         bootstrap.REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STAGE_ENV,
         bootstrap.REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE,
+    )
+    monkeypatch.setenv(
+        bootstrap.REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV,
+        (time.monotonic() + 10.0).hex(),
     )
     monkeypatch.setattr(
         bootstrap,
@@ -1426,16 +1847,18 @@ def test_bootstrap_main_checks_source_and_dependencies_before_runner_import(
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, request: events.append("signed-clean"),
+        lambda repository_root, request, **kwargs: (
+            events.append("signed-clean") or source_manifest
+        ),
     )
     monkeypatch.setattr(
         bootstrap,
         "_require_observed_dependency_artifact_rows_before_import",
-        lambda repository_root, roots, request: events.append("dependencies"),
+        lambda repository_root, roots, request, **kwargs: events.append("dependencies"),
     )
 
     def run_runner(received: bytes) -> int:
-        assert getattr(bootstrap.sys, attribute) == state
+        assert getattr(bootstrap.sys, attribute) == expected_state
         assert received == raw
         events.append("runner")
         return 0
@@ -1461,11 +1884,15 @@ def test_bootstrap_main_blocks_runner_when_dependency_observation_fails(
     monkeypatch.setattr(
         bootstrap,
         "_prepare_seeded_controlled_import_boundary",
-        lambda: state,
+        lambda **kwargs: state,
     )
     monkeypatch.setenv(
         bootstrap.REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STAGE_ENV,
         bootstrap.REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE,
+    )
+    monkeypatch.setenv(
+        bootstrap.REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV,
+        (time.monotonic() + 10.0).hex(),
     )
     monkeypatch.setattr(
         bootstrap,
@@ -1475,12 +1902,12 @@ def test_bootstrap_main_blocks_runner_when_dependency_observation_fails(
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, request: None,
+        lambda repository_root, request, **kwargs: None,
     )
     monkeypatch.setattr(
         bootstrap,
         "_require_observed_dependency_artifact_rows_before_import",
-        lambda repository_root, roots, request: (_ for _ in ()).throw(
+        lambda repository_root, roots, request, **kwargs: (_ for _ in ()).throw(
             RuntimeError("secret")
         ),
     )
@@ -1559,7 +1986,7 @@ def test_matrix_worker_preflight_rechecks_runtime_before_deterministic_config(
     monkeypatch.setattr(
         module,
         "_observe_dependency_artifact_sha256_rows",
-        lambda _roots: events.append("dependencies") or dict(DEPENDENCIES),
+        lambda _roots, **kwargs: events.append("dependencies") or dict(DEPENDENCIES),
     )
     monkeypatch.setattr(
         module,
@@ -1577,7 +2004,7 @@ def test_matrix_worker_preflight_rechecks_runtime_before_deterministic_config(
     ]
 
 
-def test_matrix_worker_preflight_failure_retains_fourteen_sanitized_rows(
+def test_matrix_worker_preflight_failure_emits_no_case_rows_and_exits_nonzero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     output = io.BytesIO()
@@ -1600,15 +2027,8 @@ def test_matrix_worker_preflight_failure_retains_fourteen_sanitized_rows(
         lambda: (_ for _ in ()).throw(AssertionError("evaluator called")),
     )
 
-    assert module._matrix_worker_main_from_standard_streams() == 0
-
-    assert output.getvalue().endswith(b"\n")
-    rows = json.loads(output.getvalue().decode("ascii"))
-    assert len(rows) == 14
-    assert all(
-        row["observed_error_code"] == "runner_worker_preflight_failed" for row in rows
-    )
-    assert b"secret" not in output.getvalue()
+    assert module._matrix_worker_main_from_standard_streams() == 2
+    assert output.getvalue() == b""
 
 
 def test_matrix_worker_request_rejects_noncanonical_and_duplicate_input() -> None:

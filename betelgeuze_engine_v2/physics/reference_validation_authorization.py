@@ -19,6 +19,9 @@ from typing import Any, Mapping, Sequence
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
+from .reference_validation_dependency_identity import (
+    REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
+)
 from .reference_validation_review import (
     FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
     ReferenceValidationReviewError,
@@ -30,20 +33,29 @@ from .reference_validation_review import (
 
 
 REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_authorization_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_authorization_contract/2.0.0"
 )
 REFERENCE_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_authorization_receipt/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_authorization_receipt/2.0.0"
 )
 REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
-    "cpu_reference_validation_execution_authorization_contract/1.0.0"
+    "cpu_reference_validation_execution_authorization_contract/2.0.0"
 )
-REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-17T05:00:00Z"
+REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "2.0.0"
+REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
 REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "hmac-sha256"
 REFERENCE_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
+    "39ba89968afdeb6886bfc0bb3c67a99a516a7db46e475c02b7f0ee1728b10cfb"
+)
+LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID_V1 = (
+    "betelgeuze.engine_v2_reference_validation_authorization_contract/1.0.0"
+)
+LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID_V1 = (
+    "betelgeuze.engine_v2_reference_validation_authorization_receipt/1.0.0"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V1 = (
     "8c10d264c4228bead4a8d53b337a689d1ae1814c893190bb975f438cb9b3c018"
 )
 
@@ -52,8 +64,8 @@ _CURRENT_BLOCKERS = (
     "signed_execution_authorization_receipt_missing",
     "trusted_authorization_operator_key_not_provided",
     "authorization_nonce_not_atomically_reserved",
-    "execution_environment_contract_not_frozen",
-    "result_receipt_contract_not_frozen",
+    "production_execution_environment_receipt_missing",
+    "production_result_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -63,7 +75,7 @@ _CURRENT_BLOCKERS = (
 _POST_RECEIPT_BLOCKERS = (
     "authorization_nonce_not_atomically_reserved",
     "execution_environment_not_reverified_at_run_start",
-    "result_receipt_writer_not_implemented",
+    "production_result_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -159,9 +171,7 @@ def _parse_utc(value: object, *, name: str) -> datetime:
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceValidationAuthorizationError(
-            f"{name} must be timezone-aware"
-        )
+        raise ReferenceValidationAuthorizationError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
         raise ReferenceValidationAuthorizationError(
@@ -175,13 +185,25 @@ def _dependency_rows(rows: Mapping[str, str]) -> list[dict[str, str]]:
         raise ReferenceValidationAuthorizationError(
             "dependency artifact rows must be a non-empty mapping"
         )
+    if tuple(sorted(rows)) != REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS:
+        raise ReferenceValidationAuthorizationError(
+            "dependency artifact rows do not match the required byte identities"
+        )
     normalized: list[dict[str, str]] = []
     for artifact_id, digest in sorted(rows.items()):
-        if not isinstance(artifact_id, str) or not artifact_id or len(artifact_id) > 200:
+        if (
+            not isinstance(artifact_id, str)
+            or not artifact_id
+            or len(artifact_id) > 200
+        ):
             raise ReferenceValidationAuthorizationError(
                 "dependency artifact id must contain 1 to 200 characters"
             )
-        if any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-" for character in artifact_id):
+        if any(
+            character
+            not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+            for character in artifact_id
+        ):
             raise ReferenceValidationAuthorizationError(
                 "dependency artifact id contains unsupported characters"
             )
@@ -219,6 +241,10 @@ def _contract_projection() -> dict[str, Any]:
             "exact_execution_environment_contract_sha256_required": True,
             "exact_result_receipt_contract_sha256_required": True,
             "dependency_artifact_sha256_rows_required": True,
+            "required_dependency_artifact_ids": list(
+                REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+            ),
+            "dependency_payload_bytes_remeasured_before_authorized_execution": True,
         },
         "identity_policy": {
             "implementation_author_identity_required": True,
@@ -354,7 +380,9 @@ class ReferenceValidationAuthorizationVerification:
 
     def __post_init__(self) -> None:
         _require_sha256(self.receipt_sha256, name="authorization receipt")
-        _require_sha256(self.review_attestation_sha256, name="authorization review attestation")
+        _require_sha256(
+            self.review_attestation_sha256, name="authorization review attestation"
+        )
         _require_sha256(
             self.implementation_author_identity_sha256,
             name="authorization implementation author identity",
@@ -368,13 +396,16 @@ class ReferenceValidationAuthorizationVerification:
             name="authorization operator identity",
         )
         _require_key_id(self.authorization_key_id)
-        if len(
-            {
-                self.implementation_author_identity_sha256,
-                self.independent_reviewer_identity_sha256,
-                self.authorization_operator_identity_sha256,
-            }
-        ) != 3:
+        if (
+            len(
+                {
+                    self.implementation_author_identity_sha256,
+                    self.independent_reviewer_identity_sha256,
+                    self.authorization_operator_identity_sha256,
+                }
+            )
+            != 3
+        ):
             raise ReferenceValidationAuthorizationError(
                 "authorization verification identities must be pairwise distinct"
             )
@@ -393,16 +424,22 @@ class ReferenceValidationAuthorizationVerification:
             raise ReferenceValidationAuthorizationError(
                 "authorization verification dependency rows must be non-empty"
             )
-        dependency_ids: list[str] = []
-        for artifact_id, digest in self.dependency_artifact_sha256_rows:
-            normalized = _dependency_rows({artifact_id: digest})[0]
-            dependency_ids.append(normalized["artifact_id"])
-        if dependency_ids != sorted(set(dependency_ids)):
+        normalized_dependencies = _dependency_rows(
+            dict(self.dependency_artifact_sha256_rows)
+        )
+        if (
+            tuple(
+                (row["artifact_id"], row["sha256"]) for row in normalized_dependencies
+            )
+            != self.dependency_artifact_sha256_rows
+        ):
             raise ReferenceValidationAuthorizationError(
                 "authorization verification dependency rows must be sorted and unique"
             )
         issued_at = _parse_utc(self.issued_at_utc, name="authorization issued_at_utc")
-        expires_at = _parse_utc(self.expires_at_utc, name="authorization expires_at_utc")
+        expires_at = _parse_utc(
+            self.expires_at_utc, name="authorization expires_at_utc"
+        )
         if expires_at <= issued_at:
             raise ReferenceValidationAuthorizationError(
                 "authorization verification expiry must follow issue time"
@@ -483,7 +520,10 @@ def _require_review_verification(
         raise ReferenceValidationAuthorizationError(
             "authorization review contract identity drifted"
         )
-    if review.artifact_binding_sha256 != FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256:
+    if (
+        review.artifact_binding_sha256
+        != FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
+    ):
         raise ReferenceValidationAuthorizationError(
             "authorization review artifact binding drifted"
         )
@@ -709,7 +749,10 @@ def verify_signed_reference_validation_authorization_receipt(
         raise ReferenceValidationAuthorizationError(
             "authorization receipt signature fields are invalid"
         )
-    if signature.get("algorithm") != REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM:
+    if (
+        signature.get("algorithm")
+        != REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM
+    ):
         raise ReferenceValidationAuthorizationError(
             "authorization receipt signature algorithm is unsupported"
         )
@@ -783,8 +826,12 @@ def verify_signed_reference_validation_authorization_receipt(
             "authorization operator key id is cross-wired"
         )
 
-    issued_at = _parse_utc(payload.get("issued_at_utc"), name="authorization issued_at_utc")
-    expires_at = _parse_utc(payload.get("expires_at_utc"), name="authorization expires_at_utc")
+    issued_at = _parse_utc(
+        payload.get("issued_at_utc"), name="authorization issued_at_utc"
+    )
+    expires_at = _parse_utc(
+        payload.get("expires_at_utc"), name="authorization expires_at_utc"
+    )
     review_expires_at = _parse_utc(
         review.expires_at_utc,
         name="authorization review expires_at_utc",
@@ -797,7 +844,9 @@ def verify_signed_reference_validation_authorization_receipt(
         raise ReferenceValidationAuthorizationError(
             "authorization receipt validity exceeds the frozen maximum"
         )
-    if issued_at < _parse_utc(review.reviewed_at_utc, name="authorization review reviewed_at_utc"):
+    if issued_at < _parse_utc(
+        review.reviewed_at_utc, name="authorization review reviewed_at_utc"
+    ):
         raise ReferenceValidationAuthorizationError(
             "authorization receipt predates the independent review"
         )
@@ -810,9 +859,7 @@ def verify_signed_reference_validation_authorization_receipt(
             "authorization receipt is not yet valid"
         )
     if checked_at_utc >= expires_at:
-        raise ReferenceValidationAuthorizationError(
-            "authorization receipt is expired"
-        )
+        raise ReferenceValidationAuthorizationError("authorization receipt is expired")
     if checked_at_utc >= review_expires_at:
         raise ReferenceValidationAuthorizationError(
             "authorization review attestation is expired"

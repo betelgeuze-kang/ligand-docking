@@ -37,7 +37,9 @@ from betelgeuze_engine_v2.physics.reference_validation_run_start import (
     ReferenceValidationRunStartError,
     build_signed_reference_validation_network_isolation_attestation,
     create_reference_validation_execution_environment_receipt,
+    read_reference_validation_dependency_manifest,
     read_reference_validation_execution_environment_receipt,
+    read_reference_validation_source_manifest,
     reference_validation_artifact_output_root_identity_sha256,
     reference_validation_run_start_contract_decision,
     reference_validation_run_start_contract_document,
@@ -46,6 +48,8 @@ from betelgeuze_engine_v2.physics.reference_validation_run_start import (
     verify_signed_reference_validation_network_isolation_attestation,
 )
 import betelgeuze_engine_v2.physics.reference_validation_run_start as module
+import betelgeuze_engine_v2.physics.reference_validation_dependency_identity as dependency_identity
+import betelgeuze_engine_v2.physics.validation_source_identity as source_identity
 
 
 AUTHOR_IDENTITY = "a" * 64
@@ -68,11 +72,77 @@ NETWORK_OBSERVED_AT = NOW - timedelta(minutes=1)
 NETWORK_EXPIRES_AT = NOW + timedelta(minutes=4)
 CODE_COMMIT_SHA = "1" * 40
 RUNNER_SOURCE_SHA256 = "2" * 64
+DEPENDENCY_MANIFEST = dependency_identity._dependency_manifest_document(
+    [
+        dependency_identity._artifact_observation(
+            artifact_id,
+            {
+                "files": [
+                    {
+                        "path": f"{artifact_id}.payload",
+                        "sha256": f"{ordinal + 1:064x}",
+                        "size": ordinal + 1,
+                    }
+                ]
+            },
+        )
+        for ordinal, artifact_id in enumerate(
+            dependency_identity.REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+        )
+    ]
+)
 DEPENDENCY_ROWS = {
-    "numpy-1.26.4-wheel": "3" * 64,
-    "python-3.11-runtime": "4" * 64,
-    "torch-2.6.0-cpu-wheel": "5" * 64,
+    row["artifact_id"]: row["sha256"] for row in DEPENDENCY_MANIFEST["artifacts"]
 }
+SOURCE_MANIFEST = source_identity._manifest_document(
+    CODE_COMMIT_SHA,
+    [
+        {
+            "path": "betelgeuze_engine_v2/__init__.py",
+            "git_mode": "100644",
+            "git_blob_oid": "3" * 40,
+            "sha256": "4" * 64,
+            "size": 17,
+        },
+        {
+            "path": "betelgeuze_engine_v2/physics/__init__.py",
+            "git_mode": "100644",
+            "git_blob_oid": "5" * 40,
+            "sha256": "6" * 64,
+            "size": 29,
+        },
+    ],
+)
+OBSERVE_SOURCE_MANIFEST = module._observe_source_manifest_document
+
+
+@pytest.fixture(autouse=True)
+def _fixed_dependency_and_source_byte_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        module,
+        "_observe_dependency_artifact_sha256_rows",
+        lambda **kwargs: dict(DEPENDENCY_ROWS),
+    )
+    monkeypatch.setattr(
+        module,
+        "_observe_dependency_manifest_document",
+        lambda **kwargs: deepcopy(DEPENDENCY_MANIFEST),
+    )
+
+    def observe_source_manifest(
+        code_commit_sha: str,
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        assert code_commit_sha == CODE_COMMIT_SHA
+        return deepcopy(SOURCE_MANIFEST)
+
+    monkeypatch.setattr(
+        module,
+        "_observe_source_manifest_document",
+        observe_source_manifest,
+    )
 
 
 def _review_attestation() -> dict[str, object]:
@@ -297,7 +367,8 @@ def test_run_start_contract_is_frozen_and_current_decision_is_closed() -> None:
 
     assert decision["run_start_environment_primitive_implemented"] is True
     assert decision["production_environment_receipt_present"] is False
-    assert decision["validation_runner_implemented"] is False
+    assert decision["validation_runner_implemented"] is True
+    assert decision["result_receipt_writer_implemented"] is True
     assert decision["validation_execution_authorized"] is False
     assert decision["validation_results_collected"] is False
 
@@ -444,10 +515,13 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
         network=_network_attestation(receipt, output_root),
     )
     path = output_root / f"{AUTHORIZATION_NONCE}.environment.json"
+    manifest_path = output_root / f"{AUTHORIZATION_NONCE}.dependencies.json"
+    source_manifest_path = output_root / f"{AUTHORIZATION_NONCE}.source-tree.json"
 
     assert created.eligible_for_bounded_validation_runner is True
     assert created.authorization_receipt_sha256 == receipt["receipt_sha256"]
     assert created.authorization_nonce_sha256 == AUTHORIZATION_NONCE
+    assert created.source_manifest_sha256 == SOURCE_MANIFEST["manifest_sha256"]
     assert created.network_namespace_identity_sha256 == NETWORK_NAMESPACE_IDENTITY
     assert created.command_argv == REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV
     assert created.python_hash_seed == 123
@@ -465,6 +539,26 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
     assert path.is_file()
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     assert path.stat().st_nlink == 1
+    assert manifest_path.is_file()
+    assert stat.S_IMODE(manifest_path.stat().st_mode) == 0o600
+    assert manifest_path.stat().st_nlink == 1
+    assert source_manifest_path.is_file()
+    assert stat.S_IMODE(source_manifest_path.stat().st_mode) == 0o600
+    assert source_manifest_path.stat().st_nlink == 1
+    assert (
+        read_reference_validation_dependency_manifest(
+            output_root,
+            AUTHORIZATION_NONCE,
+        )
+        == DEPENDENCY_MANIFEST
+    )
+    assert (
+        read_reference_validation_source_manifest(
+            output_root,
+            AUTHORIZATION_NONCE,
+        )
+        == SOURCE_MANIFEST
+    )
     assert (
         read_reference_validation_execution_environment_receipt(
             output_root,
@@ -480,6 +574,22 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
         )
         == created
     )
+    drifted_manifest = deepcopy(DEPENDENCY_MANIFEST)
+    drifted_manifest["artifacts"][-1]["sha256"] = "f" * 64
+    monkeypatch.setattr(
+        module,
+        "_observe_dependency_manifest_document",
+        lambda **kwargs: drifted_manifest,
+    )
+    with pytest.raises(
+        ReferenceValidationRunStartError,
+        match="durable or live dependency manifest",
+    ):
+        require_reference_validation_execution_environment_receipt_for_runner(
+            output_root,
+            AUTHORIZATION_NONCE,
+            expected_receipt_sha256=created.receipt_sha256,
+        )
 
     payload = json.loads(path.read_text(encoding="ascii"))
     assert payload["schema_id"] == (
@@ -493,6 +603,166 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
     assert "total_energy" not in encoded
     assert "force_array" not in encoded
     assert "metric_values" not in encoded
+
+
+def test_bootstrap_source_manifest_bytes_are_canonical_and_live_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attribute = module.REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE
+
+    def install_state(manifest_bytes: bytes) -> None:
+        monkeypatch.setattr(
+            module.sys,
+            attribute,
+            (
+                module.REFERENCE_VALIDATION_CONTROLLED_INNER_STATE,
+                "/trusted/bootstrap.py",
+                "/trusted/repository",
+                ("/trusted/dependencies",),
+                ("/trusted/repository", "/trusted/dependencies"),
+                manifest_bytes,
+            ),
+            raising=False,
+        )
+
+    monkeypatch.setattr(
+        module,
+        "observed_validation_source_manifest_document",
+        lambda *_args, **_kwargs: deepcopy(SOURCE_MANIFEST),
+    )
+    canonical = module._canonical_bytes(SOURCE_MANIFEST)
+    install_state(canonical)
+    assert OBSERVE_SOURCE_MANIFEST(CODE_COMMIT_SHA) == SOURCE_MANIFEST
+
+    install_state(canonical + b"\n")
+    with pytest.raises(ReferenceValidationRunStartError, match="source bytes"):
+        OBSERVE_SOURCE_MANIFEST(CODE_COMMIT_SHA)
+
+    omitted = source_identity._manifest_document(
+        CODE_COMMIT_SHA,
+        deepcopy(SOURCE_MANIFEST["files"][:-1]),
+    )
+    install_state(module._canonical_bytes(omitted))
+    with pytest.raises(ReferenceValidationRunStartError, match="source bytes"):
+        OBSERVE_SOURCE_MANIFEST(CODE_COMMIT_SHA)
+
+    reordered = deepcopy(SOURCE_MANIFEST)
+    reordered["files"] = list(reversed(reordered["files"]))
+    projection = dict(reordered)
+    projection.pop("manifest_sha256")
+    reordered["manifest_sha256"] = module._sha256(projection)
+    install_state(module._canonical_bytes(reordered))
+    with pytest.raises(ReferenceValidationRunStartError, match="source bytes"):
+        OBSERVE_SOURCE_MANIFEST(CODE_COMMIT_SHA)
+
+
+def test_durable_source_manifest_rejects_tamper_omission_reordering_and_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    review = _review_attestation()
+    receipt = _authorization_receipt(review=review)
+    reservation_root = _private_root(tmp_path, "reservations")
+    output_root = _private_root(tmp_path, "outputs")
+    _reserve_nonce(reservation_root, review=review, receipt=receipt)
+    monkeypatch.setattr(module, "_utc_now", lambda: NOW)
+    monkeypatch.setattr(module, "_observe_current_runtime", _runtime_observation)
+    created = _create(
+        reservation_root,
+        output_root,
+        review=review,
+        receipt=receipt,
+        network=_network_attestation(receipt, output_root),
+    )
+    path = output_root / f"{AUTHORIZATION_NONCE}.source-tree.json"
+
+    tampered = deepcopy(SOURCE_MANIFEST)
+    tampered["files"][0]["sha256"] = "7" * 64
+    path.write_bytes(module._canonical_bytes(tampered) + b"\n")
+    with pytest.raises(ReferenceValidationRunStartError, match="identity verification"):
+        read_reference_validation_source_manifest(output_root, AUTHORIZATION_NONCE)
+
+    reordered = deepcopy(SOURCE_MANIFEST)
+    reordered["files"] = list(reversed(reordered["files"]))
+    projection = dict(reordered)
+    projection.pop("manifest_sha256")
+    reordered["manifest_sha256"] = module._sha256(projection)
+    path.write_bytes(module._canonical_bytes(reordered) + b"\n")
+    with pytest.raises(ReferenceValidationRunStartError, match="identity verification"):
+        read_reference_validation_source_manifest(output_root, AUTHORIZATION_NONCE)
+
+    omitted = source_identity._manifest_document(
+        CODE_COMMIT_SHA,
+        deepcopy(SOURCE_MANIFEST["files"][:-1]),
+    )
+    path.write_bytes(module._canonical_bytes(omitted) + b"\n")
+    assert (
+        read_reference_validation_source_manifest(
+            output_root,
+            AUTHORIZATION_NONCE,
+        )
+        == omitted
+    )
+    with pytest.raises(
+        ReferenceValidationRunStartError,
+        match="durable or live source manifest",
+    ):
+        require_reference_validation_execution_environment_receipt_for_runner(
+            output_root,
+            AUTHORIZATION_NONCE,
+            expected_receipt_sha256=created.receipt_sha256,
+        )
+
+    path.unlink()
+    with pytest.raises(ReferenceValidationRunStartError, match="unavailable"):
+        read_reference_validation_source_manifest(output_root, AUTHORIZATION_NONCE)
+
+    os.mkfifo(path, mode=0o600)
+    with pytest.raises(ReferenceValidationRunStartError, match="file policy"):
+        read_reference_validation_source_manifest(output_root, AUTHORIZATION_NONCE)
+
+
+def test_durable_dependency_manifest_rejects_reordering_and_missing_sidecar(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    review = _review_attestation()
+    receipt = _authorization_receipt(review=review)
+    reservation_root = _private_root(tmp_path, "reservations")
+    output_root = _private_root(tmp_path, "outputs")
+    _reserve_nonce(reservation_root, review=review, receipt=receipt)
+    monkeypatch.setattr(module, "_utc_now", lambda: NOW)
+    monkeypatch.setattr(module, "_observe_current_runtime", _runtime_observation)
+    _create(
+        reservation_root,
+        output_root,
+        review=review,
+        receipt=receipt,
+        network=_network_attestation(receipt, output_root),
+    )
+    manifest_path = output_root / f"{AUTHORIZATION_NONCE}.dependencies.json"
+    tampered = deepcopy(DEPENDENCY_MANIFEST)
+    tampered["artifacts"] = list(reversed(tampered["artifacts"]))
+    projection = dict(tampered)
+    projection.pop("manifest_sha256")
+    tampered["manifest_sha256"] = module._sha256(projection)
+    manifest_path.write_bytes(module._canonical_bytes(tampered) + b"\n")
+
+    with pytest.raises(
+        ReferenceValidationRunStartError,
+        match="identity verification failed",
+    ):
+        read_reference_validation_dependency_manifest(
+            output_root,
+            AUTHORIZATION_NONCE,
+        )
+
+    manifest_path.unlink()
+    with pytest.raises(ReferenceValidationRunStartError, match="unavailable"):
+        read_reference_validation_dependency_manifest(
+            output_root,
+            AUTHORIZATION_NONCE,
+        )
 
 
 def test_raw_authorization_is_reverified_before_output_mutation(

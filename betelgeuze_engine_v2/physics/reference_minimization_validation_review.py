@@ -31,20 +31,23 @@ from .reference_minimization_validation_artifact_binding import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_review_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_review_contract/3.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/2.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/3.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_review_contract/2.0.0"
+    "cpu_reference_minimization_validation_independent_review_contract/3.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "2.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-19T06:20:00Z"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "3.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256 = (
+    "9aee9223b5842f1ddbc2509079fd417958edb24b11262398b74853c9fe44d8a7"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V2 = (
     "324b9feebe12ba0f4056686a36fb9c62104604fb0be7c0e508a630105d8f448a"
 )
 
@@ -74,8 +77,6 @@ _CLOSED_GATE_BLOCKERS = (
     "signed_independent_scientific_review_attestation_missing",
     "trusted_independent_scientific_reviewer_key_not_provided",
     "implementation_author_and_independent_reviewer_separation_not_attested",
-    "signed_execution_authorization_receipt_schema_not_frozen",
-    "minimization_result_receipt_contract_not_frozen",
     "signed_execution_authorization_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
@@ -84,8 +85,6 @@ _CLOSED_GATE_BLOCKERS = (
     "product_integration_not_qualified",
 )
 _POST_REVIEW_BLOCKERS = (
-    "signed_execution_authorization_receipt_schema_not_frozen",
-    "minimization_result_receipt_contract_not_frozen",
     "signed_execution_authorization_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",

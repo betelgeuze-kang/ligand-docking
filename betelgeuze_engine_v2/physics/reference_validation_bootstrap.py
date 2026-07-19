@@ -11,16 +11,28 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import importlib.util
 import json
 import os
+import select
 import stat
 import subprocess
 import sys
 import sysconfig
+import time
 
 
 REFERENCE_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
     "betelgeuze_engine_v2/physics/reference_validation_bootstrap.py"
+)
+REFERENCE_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH = (
+    "betelgeuze_engine_v2/physics/reference_validation_dependency_identity.py"
+)
+REFERENCE_VALIDATION_SOURCE_IDENTITY_RELATIVE_PATH = (
+    "betelgeuze_engine_v2/physics/validation_source_identity.py"
+)
+REFERENCE_VALIDATION_NATIVE_RUNTIME_IDENTITY_RELATIVE_PATH = (
+    "betelgeuze_engine_v2/physics/validation_native_runtime_identity.py"
 )
 REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV = (
     "python",
@@ -44,9 +56,12 @@ REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV = (
     REFERENCE_VALIDATION_FIXED_RUNPY_LOADER,
     REFERENCE_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
 )
-REFERENCE_VALIDATION_CONTROLLED_INNER_STATE = "seeded-controlled-inner/1"
+REFERENCE_VALIDATION_CONTROLLED_INNER_STATE = "seeded-controlled-inner/3"
 REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV = (
     "BETELGEUZE_REFERENCE_VALIDATION_BOOTSTRAP_STAGE"
+)
+REFERENCE_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV = (
+    "BETELGEUZE_REFERENCE_VALIDATION_PREFLIGHT_DEADLINE"
 )
 REFERENCE_VALIDATION_APPLICATION_SEED_ENV = "BETELGEUZE_REFERENCE_VALIDATION_SEED"
 REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
@@ -54,6 +69,12 @@ REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
 )
 REFERENCE_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES = 1_048_576
 REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES = 65_536
+REFERENCE_VALIDATION_BOOTSTRAP_PREFLIGHT_MAX_WALL_SECONDS = 180.0
+REFERENCE_VALIDATION_BOOTSTRAP_SOURCE_TREE_MAX_ENTRIES = 50_000
+REFERENCE_VALIDATION_BOOTSTRAP_SOURCE_TREE_MAX_PATH_BYTES = 4_096
+REFERENCE_VALIDATION_BOOTSTRAP_EXECUTION_SOURCE_MAX_BYTES = 16 * 1024**2
+REFERENCE_VALIDATION_BOOTSTRAP_EXECUTION_SOURCE_MAX_WALL_SECONDS = 10.0
+REFERENCE_VALIDATION_BOOTSTRAP_PROCESS_ARGV_MAX_BYTES = 65_536
 REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH = (
     "/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json"
 )
@@ -62,7 +83,7 @@ _REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
 )
 _REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "hmac-sha256"
 _REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_request/1.1.0"
+    "betelgeuze.engine_v2_reference_validation_runner_request/2.0.0"
 )
 _BOOTSTRAP_REQUEST_FIELDS = {
     "schema_id",
@@ -126,49 +147,199 @@ def _canonical_bytes(value: object) -> bytes:
         ) from exc
 
 
+def _bounded_execution_source_sha256(source: str, *, deadline: float) -> str:
+    """Hash one execution source after enforcing its cap before any read."""
+
+    try:
+        path_stat = os.lstat(source)
+    except OSError as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation execution source is unavailable"
+        ) from exc
+    flags = os.O_RDONLY
+    for flag_name in ("O_CLOEXEC", "O_NOFOLLOW"):
+        if not hasattr(os, flag_name):
+            raise _ReferenceValidationBootstrapError(
+                "secure validation execution source access is unavailable"
+            )
+        flags |= getattr(os, flag_name)
+    try:
+        descriptor = os.open(source, flags)
+    except OSError as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation execution source cannot be opened securely"
+        ) from exc
+    try:
+        before = os.fstat(descriptor)
+        if (
+            os.path.islink(source)
+            or not stat.S_ISREG(path_stat.st_mode)
+            or path_stat.st_nlink != 1
+            or (path_stat.st_dev, path_stat.st_ino, path_stat.st_size)
+            != (before.st_dev, before.st_ino, before.st_size)
+            or before.st_size < 0
+            or before.st_size
+            > REFERENCE_VALIDATION_BOOTSTRAP_EXECUTION_SOURCE_MAX_BYTES
+        ):
+            raise _ReferenceValidationBootstrapError(
+                "validation execution source violates its pre-read file policy"
+            )
+        digest = hashlib.sha256()
+        observed = 0
+        while True:
+            if time.monotonic() >= deadline:
+                raise _ReferenceValidationBootstrapError(
+                    "validation execution source deadline expired"
+                )
+            chunk = os.read(
+                descriptor,
+                min(
+                    1024 * 1024,
+                    before.st_size + 1 - observed,
+                ),
+            )
+            if not chunk:
+                break
+            observed += len(chunk)
+            if observed > before.st_size:
+                raise _ReferenceValidationBootstrapError(
+                    "validation execution source grew while being measured"
+                )
+            digest.update(chunk)
+        after = os.fstat(descriptor)
+    except OSError as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation execution source cannot be measured"
+        ) from exc
+    finally:
+        os.close(descriptor)
+    if observed != before.st_size or (
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+    ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+        raise _ReferenceValidationBootstrapError(
+            "validation execution source changed while being measured"
+        )
+    return digest.hexdigest()
+
+
 def reference_validation_execution_source_sha256() -> str:
-    """Bind the stdlib bootstrap and runner into one authorization identity."""
+    """Bind the bootstrap, dependency helper, and runner source identity."""
 
     physics_root = os.path.dirname(reference_validation_bootstrap_path())
     source_rows: list[dict[str, str]] = []
+    deadline = (
+        time.monotonic()
+        + REFERENCE_VALIDATION_BOOTSTRAP_EXECUTION_SOURCE_MAX_WALL_SECONDS
+    )
     for relative_path in (
         REFERENCE_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+        REFERENCE_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
+        REFERENCE_VALIDATION_SOURCE_IDENTITY_RELATIVE_PATH,
+        REFERENCE_VALIDATION_NATIVE_RUNTIME_IDENTITY_RELATIVE_PATH,
         "betelgeuze_engine_v2/physics/reference_validation_runner.py",
     ):
         source = os.path.join(physics_root, os.path.basename(relative_path))
-        try:
-            file_stat = os.lstat(source)
-            with open(source, "rb") as stream:
-                payload = stream.read()
-        except OSError as exc:
-            raise _ReferenceValidationBootstrapError(
-                "validation execution source is unavailable"
-            ) from exc
-        if (
-            os.path.islink(source)
-            or not stat.S_ISREG(file_stat.st_mode)
-            or file_stat.st_nlink != 1
-            or len(payload) != file_stat.st_size
-        ):
-            raise _ReferenceValidationBootstrapError(
-                "validation execution source is not a stable regular file"
-            )
         source_rows.append(
             {
                 "path": relative_path,
-                "sha256": hashlib.sha256(payload).hexdigest(),
+                "sha256": _bounded_execution_source_sha256(
+                    source,
+                    deadline=deadline,
+                ),
             }
         )
     return hashlib.sha256(
         _canonical_bytes(
             {
                 "schema_id": (
-                    "betelgeuze.engine_v2_reference_validation_execution_sources/1.0.0"
+                    "betelgeuze.engine_v2_reference_validation_execution_sources/4.0.0"
                 ),
                 "sources": source_rows,
             }
         )
     ).hexdigest()
+
+
+def _require_observed_dependency_artifact_rows_before_import(
+    repository_root: str,
+    dependency_roots: tuple[str, ...],
+    request: dict[str, object],
+    *,
+    deadline: float,
+) -> None:
+    _require_preflight_time(deadline)
+    expected = request.get("expected_dependency_artifact_sha256_rows")
+    if not isinstance(expected, dict) or any(
+        not isinstance(key, str)
+        or not key
+        or _require_lower_hex(value, length=64, name=f"dependency {key}") != value
+        for key, value in expected.items()
+    ):
+        raise _ReferenceValidationBootstrapError(
+            "bootstrap dependency artifact rows are invalid"
+        )
+    helper_path = os.path.join(
+        repository_root,
+        REFERENCE_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
+    )
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_betelgeuze_reference_validation_dependency_identity",
+            helper_path,
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError("dependency identity loader is unavailable")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        observed = helper.observed_reference_validation_dependency_artifact_sha256_rows(
+            dependency_roots,
+            deadline=deadline,
+        )
+    except Exception as exc:
+        raise _ReferenceValidationBootstrapError(
+            "bootstrap dependency bytes cannot be measured"
+        ) from exc
+    if observed != expected:
+        raise _ReferenceValidationBootstrapError(
+            "bootstrap dependency bytes do not match the signed authorization"
+        )
+
+
+def _require_source_manifest_before_import(
+    repository_root: str,
+    expected_code_commit_sha: str,
+    *,
+    deadline: float,
+) -> dict[str, object]:
+    """Bind every package file to the self-verified signed Git tree."""
+
+    _require_preflight_time(deadline)
+    helper_path = os.path.join(
+        repository_root,
+        REFERENCE_VALIDATION_SOURCE_IDENTITY_RELATIVE_PATH,
+    )
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_betelgeuze_validation_source_identity",
+            helper_path,
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError("source identity loader is unavailable")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        document = helper.observed_validation_source_manifest_document(
+            repository_root,
+            expected_code_commit_sha,
+            deadline=deadline,
+        )
+        return helper.require_validation_source_manifest_document(document)
+    except Exception as exc:
+        raise _ReferenceValidationBootstrapError(
+            "bootstrap source bytes do not match the signed Git tree"
+        ) from exc
 
 
 def _require_root_owned_read_only_directory(raw_path: str) -> str:
@@ -197,6 +368,129 @@ def _require_root_owned_read_only_directory(raw_path: str) -> str:
     return resolved
 
 
+def _require_preflight_time(deadline: float) -> float:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0.0:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap preflight deadline expired"
+        )
+    return remaining
+
+
+def _require_canonical_preflight_deadline(value: object) -> float:
+    if not isinstance(value, str) or not value or len(value) > 64:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap preflight deadline is invalid"
+        )
+    try:
+        deadline = float.fromhex(value)
+    except ValueError as exc:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap preflight deadline is invalid"
+        ) from exc
+    if (
+        deadline != deadline
+        or deadline in {float("inf"), float("-inf")}
+        or deadline.hex() != value
+    ):
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap preflight deadline is not canonical"
+        )
+    remaining = _require_preflight_time(deadline)
+    if remaining > REFERENCE_VALIDATION_BOOTSTRAP_PREFLIGHT_MAX_WALL_SECONDS:
+        raise _ReferenceValidationBootstrapError(
+            "validation bootstrap preflight deadline exceeds its frozen bound"
+        )
+    return deadline
+
+
+def _require_immutable_source_snapshot(
+    repository_root: str,
+    *,
+    deadline: float,
+) -> str:
+    """Reject any package tree the executing uid could replace or rewrite."""
+
+    _require_preflight_time(deadline)
+    if os.geteuid() == 0:
+        raise _ReferenceValidationBootstrapError(
+            "validation source snapshot must execute under a non-root uid"
+        )
+    resolved_root = _require_root_owned_read_only_directory(repository_root)
+    package_root = os.path.join(resolved_root, "betelgeuze_engine_v2")
+    _require_root_owned_read_only_directory(package_root)
+    entry_count = 0
+    pending = [package_root]
+    while pending:
+        _require_preflight_time(deadline)
+        directory = pending.pop()
+        try:
+            with os.scandir(directory) as stream:
+                names: list[str] = []
+                for entry in stream:
+                    _require_preflight_time(deadline)
+                    entry_count += 1
+                    if (
+                        entry_count
+                        > REFERENCE_VALIDATION_BOOTSTRAP_SOURCE_TREE_MAX_ENTRIES
+                    ):
+                        raise _ReferenceValidationBootstrapError(
+                            "validation source snapshot exceeds its entry bound"
+                        )
+                    name = entry.name
+                    path = os.path.join(directory, name)
+                    try:
+                        relative = os.path.relpath(path, package_root).encode("utf-8")
+                    except UnicodeError as exc:
+                        raise _ReferenceValidationBootstrapError(
+                            "validation source snapshot path is not canonical UTF-8"
+                        ) from exc
+                    if (
+                        len(relative)
+                        > REFERENCE_VALIDATION_BOOTSTRAP_SOURCE_TREE_MAX_PATH_BYTES
+                    ):
+                        raise _ReferenceValidationBootstrapError(
+                            "validation source snapshot path exceeds its bound"
+                        )
+                    names.append(name)
+        except OSError as exc:
+            raise _ReferenceValidationBootstrapError(
+                "validation source snapshot cannot be enumerated"
+            ) from exc
+        child_directories: list[str] = []
+        for name in sorted(names):
+            path = os.path.join(directory, name)
+            try:
+                file_stat = os.lstat(path)
+            except OSError as exc:
+                raise _ReferenceValidationBootstrapError(
+                    "validation source snapshot entry is unavailable"
+                ) from exc
+            if (
+                os.path.islink(path)
+                or file_stat.st_uid != 0
+                or stat.S_IMODE(file_stat.st_mode) & 0o022
+            ):
+                raise _ReferenceValidationBootstrapError(
+                    "validation source snapshot is not root-owned read-only storage"
+                )
+            if name == "__pycache__" or name.endswith(".pyc"):
+                raise _ReferenceValidationBootstrapError(
+                    "validation source snapshot contains bytecode cache payload"
+                )
+            if stat.S_ISDIR(file_stat.st_mode):
+                child_directories.append(path)
+                continue
+            if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
+                raise _ReferenceValidationBootstrapError(
+                    "validation source snapshot contains an unsafe entry"
+                )
+        pending.extend(reversed(child_directories))
+    if entry_count == 0:
+        raise _ReferenceValidationBootstrapError("validation source snapshot is empty")
+    return resolved_root
+
+
 def _parse_canonical_seed(
     value: object,
     *,
@@ -215,7 +509,10 @@ def _parse_canonical_seed(
     return parsed
 
 
-def reference_validation_controlled_inner_environment() -> dict[str, str]:
+def reference_validation_controlled_inner_environment(
+    *,
+    preflight_deadline: float | None = None,
+) -> dict[str, str]:
     """Return the exact secret-free environment for the seeded inner process."""
 
     python_hash_seed = _parse_canonical_seed(
@@ -228,12 +525,26 @@ def reference_validation_controlled_inner_environment() -> dict[str, str]:
         name=REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
         maximum=2**63 - 1,
     )
+    if preflight_deadline is None:
+        raw_deadline = os.environ.get(
+            REFERENCE_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV
+        )
+        preflight_deadline = (
+            _require_canonical_preflight_deadline(raw_deadline)
+            if raw_deadline is not None
+            else time.monotonic()
+            + REFERENCE_VALIDATION_BOOTSTRAP_PREFLIGHT_MAX_WALL_SECONDS
+        )
+    _require_preflight_time(preflight_deadline)
     return {
         **_CONTROLLED_INNER_FIXED_ENVIRONMENT,
         "PYTHONHASHSEED": str(python_hash_seed),
         REFERENCE_VALIDATION_APPLICATION_SEED_ENV: str(application_seed),
         REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV: (
             REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+        ),
+        REFERENCE_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV: (
+            preflight_deadline.hex()
         ),
     }
 
@@ -293,14 +604,19 @@ def _require_trusted_running_interpreter() -> str:
 def _read_process_argv() -> tuple[str, ...]:
     try:
         with open("/proc/self/cmdline", "rb") as stream:
-            raw = stream.read(65_536)
+            raw = stream.read(REFERENCE_VALIDATION_BOOTSTRAP_PROCESS_ARGV_MAX_BYTES + 1)
         tokens = raw.rstrip(b"\0").split(b"\0")
         decoded = tuple(token.decode("utf-8") for token in tokens)
     except (OSError, UnicodeDecodeError) as exc:
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap process argv is unavailable"
         ) from exc
-    if not raw.endswith(b"\0") or not decoded or any(not token for token in decoded):
+    if (
+        len(raw) > REFERENCE_VALIDATION_BOOTSTRAP_PROCESS_ARGV_MAX_BYTES
+        or not raw.endswith(b"\0")
+        or not decoded
+        or any(not token for token in decoded)
+    ):
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap process argv is invalid"
         )
@@ -353,15 +669,63 @@ def _trusted_dependency_roots() -> tuple[str, ...]:
 
 def _read_bootstrap_request() -> tuple[bytes, dict[str, object]]:
     input_stream = getattr(sys.stdin, "buffer", sys.stdin)
+    deadline = _require_canonical_preflight_deadline(
+        os.environ.get(REFERENCE_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV)
+    )
     try:
-        raw = input_stream.read(REFERENCE_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES + 1)
-    except (AttributeError, OSError) as exc:
+        descriptor = input_stream.fileno()
+        poller = select.poll()
+        poller.register(
+            descriptor,
+            select.POLLIN | select.POLLHUP | select.POLLERR | select.POLLNVAL,
+        )
+    except (AttributeError, OSError, ValueError) as exc:
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap request cannot be read"
         ) from exc
+    raw_buffer = bytearray()
+    while len(raw_buffer) <= REFERENCE_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES:
+        remaining = _require_preflight_time(deadline)
+        timeout_ms = max(1, int(remaining * 1000.0))
+        try:
+            events = poller.poll(timeout_ms)
+        except OSError as exc:
+            raise _ReferenceValidationBootstrapError(
+                "validation bootstrap request cannot be polled"
+            ) from exc
+        if not events:
+            continue
+        if any(mask & select.POLLNVAL for _, mask in events):
+            raise _ReferenceValidationBootstrapError(
+                "validation bootstrap request descriptor is invalid"
+            )
+        try:
+            chunk = os.read(
+                descriptor,
+                min(
+                    65_536,
+                    REFERENCE_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES
+                    + 1
+                    - len(raw_buffer),
+                ),
+            )
+        except OSError as exc:
+            raise _ReferenceValidationBootstrapError(
+                "validation bootstrap request cannot be read"
+            ) from exc
+        if not chunk:
+            break
+        raw_buffer.extend(chunk)
+        newline = raw_buffer.find(b"\n")
+        if newline >= 0:
+            if newline != len(raw_buffer) - 1:
+                raise _ReferenceValidationBootstrapError(
+                    "validation bootstrap request framing is invalid"
+                )
+            break
+    raw = bytes(raw_buffer)
     if (
-        not isinstance(raw, bytes)
-        or not raw
+        not raw
         or len(raw) > REFERENCE_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES
         or not raw.endswith(b"\n")
     ):
@@ -456,18 +820,36 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
         ) from exc
     try:
         initial_stat = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(initial_stat.st_mode)
+            or initial_stat.st_uid != 0
+            or stat.S_IMODE(initial_stat.st_mode) != 0o600
+            or initial_stat.st_nlink != 1
+            or not 0
+            < initial_stat.st_size
+            <= REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES
+        ):
+            raise _ReferenceValidationBootstrapError(
+                "bootstrap trust store violates the pre-read file policy"
+            )
         chunks: list[bytes] = []
         total = 0
         while True:
-            chunk = os.read(descriptor, 8192)
+            chunk = os.read(
+                descriptor,
+                min(
+                    8192,
+                    initial_stat.st_size + 1 - total,
+                ),
+            )
             if not chunk:
                 break
-            chunks.append(chunk)
             total += len(chunk)
-            if total > REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES:
+            if total > initial_stat.st_size:
                 raise _ReferenceValidationBootstrapError(
-                    "bootstrap trust store exceeds the size limit"
+                    "bootstrap trust store grew while being read"
                 )
+            chunks.append(chunk)
         final_stat = os.fstat(descriptor)
     except OSError as exc:
         raise _ReferenceValidationBootstrapError(
@@ -477,14 +859,7 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
         os.close(descriptor)
     raw = b"".join(chunks)
     if (
-        not stat.S_ISREG(initial_stat.st_mode)
-        or initial_stat.st_uid != 0
-        or stat.S_IMODE(initial_stat.st_mode) != 0o600
-        or initial_stat.st_nlink != 1
-        or not 0
-        < initial_stat.st_size
-        <= (REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES)
-        or (initial_stat.st_dev, initial_stat.st_ino, initial_stat.st_size)
+        (initial_stat.st_dev, initial_stat.st_ino, initial_stat.st_size)
         != (final_stat.st_dev, final_stat.st_ino, final_stat.st_size)
         or len(raw) != initial_stat.st_size
         or not raw.endswith(b"\n")
@@ -607,12 +982,46 @@ def _require_bootstrap_authorization_signature(
             "bootstrap authorization signature verification failed"
         )
     receipt_sha256 = payload.pop("receipt_sha256", None)
+    expected_nonce = _require_lower_hex(
+        request.get("authorization_nonce_sha256"),
+        length=64,
+        name="bootstrap authorization nonce",
+    )
+    expected_author = _require_lower_hex(
+        request.get("expected_implementation_author_identity_sha256"),
+        length=64,
+        name="bootstrap implementation author",
+    )
+    raw_dependencies = request.get("expected_dependency_artifact_sha256_rows")
+    if not isinstance(raw_dependencies, dict) or not raw_dependencies:
+        raise _ReferenceValidationBootstrapError(
+            "bootstrap dependency artifact rows are invalid"
+        )
+    expected_dependencies: list[dict[str, str]] = []
+    for artifact_id, digest in sorted(raw_dependencies.items()):
+        if not isinstance(artifact_id, str) or not artifact_id:
+            raise _ReferenceValidationBootstrapError(
+                "bootstrap dependency artifact rows are invalid"
+            )
+        expected_dependencies.append(
+            {
+                "artifact_id": artifact_id,
+                "sha256": _require_lower_hex(
+                    digest,
+                    length=64,
+                    name=f"bootstrap dependency {artifact_id}",
+                ),
+            }
+        )
     if (
         receipt_sha256 != hashlib.sha256(_canonical_bytes(payload)).hexdigest()
         or payload.get("authorization_key_id") != key_id
         or payload.get("authorization_operator_identity_sha256") != operator_identity
+        or payload.get("authorization_nonce_sha256") != expected_nonce
+        or payload.get("implementation_author_identity_sha256") != expected_author
         or payload.get("code_commit_sha") != expected_commit
         or payload.get("runner_source_sha256") != expected_source
+        or payload.get("dependency_artifact_sha256_rows") != expected_dependencies
     ):
         raise _ReferenceValidationBootstrapError(
             "bootstrap authorization source binding is invalid"
@@ -622,7 +1031,11 @@ def _require_bootstrap_authorization_signature(
 def _require_signed_clean_checkout_before_import(
     repository_root: str,
     request: dict[str, object],
-) -> None:
+    *,
+    deadline: float,
+) -> dict[str, object]:
+    _require_preflight_time(deadline)
+    _require_root_owned_read_only_directory(repository_root)
     _require_external_private_root(
         request.get("reservation_root"),
         repository_root=repository_root,
@@ -689,7 +1102,7 @@ def _require_signed_clean_checkout_before_import(
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             check=False,
-            timeout=10,
+            timeout=min(10.0, _require_preflight_time(deadline)),
         )
         observed_status = subprocess.run(
             [
@@ -704,7 +1117,17 @@ def _require_signed_clean_checkout_before_import(
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             check=False,
-            timeout=10,
+            timeout=min(10.0, _require_preflight_time(deadline)),
+        )
+        observed_replacements = subprocess.run(
+            [*common_command, "replace", "--list"],
+            cwd=repository_root,
+            env=environment,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=min(10.0, _require_preflight_time(deadline)),
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise _ReferenceValidationBootstrapError(
@@ -715,11 +1138,18 @@ def _require_signed_clean_checkout_before_import(
         or observed_head.stdout != expected_commit.encode("ascii") + b"\n"
         or observed_status.returncode != 0
         or observed_status.stdout
+        or observed_replacements.returncode != 0
+        or observed_replacements.stdout
         or reference_validation_execution_source_sha256() != expected_source
     ):
         raise _ReferenceValidationBootstrapError(
             "validation bootstrap checkout is not the signed clean source"
         )
+    return _require_source_manifest_before_import(
+        repository_root,
+        expected_commit,
+        deadline=deadline,
+    )
 
 
 def _require_canonical_bootstrap_source() -> str:
@@ -741,8 +1171,12 @@ def _require_canonical_bootstrap_source() -> str:
     return expected_bootstrap
 
 
-def _prepare_isolated_outer_launcher() -> tuple[str, str]:
+def _prepare_isolated_outer_launcher(*, deadline: float) -> tuple[str, str]:
     expected_bootstrap = _require_canonical_bootstrap_source()
+    repository_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(expected_bootstrap))
+    )
+    _require_immutable_source_snapshot(repository_root, deadline=deadline)
     expected_tail = (
         *REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV[1:-1],
         expected_bootstrap,
@@ -778,8 +1212,12 @@ def _prepare_isolated_outer_launcher() -> tuple[str, str]:
 def _reexec_seeded_controlled_inner(
     interpreter: str,
     expected_bootstrap: str,
+    *,
+    deadline: float,
 ) -> None:
-    environment = reference_validation_controlled_inner_environment()
+    environment = reference_validation_controlled_inner_environment(
+        preflight_deadline=deadline
+    )
     command = (
         interpreter,
         *REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
@@ -792,7 +1230,10 @@ def _reexec_seeded_controlled_inner(
     )
 
 
-def _prepare_seeded_controlled_import_boundary() -> tuple[object, ...]:
+def _prepare_seeded_controlled_import_boundary(
+    *,
+    deadline: float,
+) -> tuple[object, ...]:
     expected_bootstrap = _require_canonical_bootstrap_source()
     interpreter = _require_trusted_running_interpreter()
     expected_argv = (
@@ -802,7 +1243,9 @@ def _prepare_seeded_controlled_import_boundary() -> tuple[object, ...]:
     )
     observed_argv = tuple(getattr(sys, "orig_argv", ()))
     process_argv = _read_process_argv()
-    expected_environment = reference_validation_controlled_inner_environment()
+    expected_environment = reference_validation_controlled_inner_environment(
+        preflight_deadline=deadline
+    )
     python_hash_seed = int(expected_environment["PYTHONHASHSEED"])
     if (
         observed_argv != expected_argv
@@ -830,6 +1273,7 @@ def _prepare_seeded_controlled_import_boundary() -> tuple[object, ...]:
     repository_root = os.path.dirname(
         os.path.dirname(os.path.dirname(expected_bootstrap))
     )
+    _require_immutable_source_snapshot(repository_root, deadline=deadline)
     package_root = os.path.join(repository_root, "betelgeuze_engine_v2")
     if not os.path.isdir(package_root):
         raise _ReferenceValidationBootstrapError(
@@ -858,8 +1302,18 @@ def main() -> int:
     try:
         stage = os.environ.get(REFERENCE_VALIDATION_CONTROLLED_INNER_STAGE_ENV)
         if stage is None:
-            interpreter, expected_bootstrap = _prepare_isolated_outer_launcher()
-            _reexec_seeded_controlled_inner(interpreter, expected_bootstrap)
+            preflight_deadline = (
+                time.monotonic()
+                + REFERENCE_VALIDATION_BOOTSTRAP_PREFLIGHT_MAX_WALL_SECONDS
+            )
+            interpreter, expected_bootstrap = _prepare_isolated_outer_launcher(
+                deadline=preflight_deadline
+            )
+            _reexec_seeded_controlled_inner(
+                interpreter,
+                expected_bootstrap,
+                deadline=preflight_deadline,
+            )
             raise _ReferenceValidationBootstrapError(
                 "validation bootstrap controlled inner process did not start"
             )
@@ -867,10 +1321,27 @@ def main() -> int:
             raise _ReferenceValidationBootstrapError(
                 "validation bootstrap stage marker is invalid"
             )
-        state = _prepare_seeded_controlled_import_boundary()
+        preflight_deadline = _require_canonical_preflight_deadline(
+            os.environ.get(REFERENCE_VALIDATION_CONTROLLED_INNER_PREFLIGHT_DEADLINE_ENV)
+        )
+        state = _prepare_seeded_controlled_import_boundary(deadline=preflight_deadline)
         raw_request, request = _read_bootstrap_request()
-        _require_signed_clean_checkout_before_import(state[2], request)
-        setattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
+        source_manifest = _require_signed_clean_checkout_before_import(
+            state[2],
+            request,
+            deadline=preflight_deadline,
+        )
+        _require_observed_dependency_artifact_rows_before_import(
+            state[2],
+            state[3],
+            request,
+            deadline=preflight_deadline,
+        )
+        setattr(
+            sys,
+            REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+            (*state, _canonical_bytes(source_manifest)),
+        )
         from betelgeuze_engine_v2.physics import reference_validation_runner
 
         return reference_validation_runner._main_from_canonical_request(raw_request)

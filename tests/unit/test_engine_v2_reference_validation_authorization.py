@@ -54,9 +54,12 @@ ENVIRONMENT_CONTRACT_SHA256 = (
 )
 RESULT_CONTRACT_SHA256 = FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
 DEPENDENCY_ROWS = {
-    "numpy-1.26.4-wheel": "5" * 64,
-    "python-3.11-runtime": "6" * 64,
-    "torch-2.6.0-cpu-wheel": "7" * 64,
+    "cryptography-distribution": "5" * 64,
+    "numpy-distribution": "6" * 64,
+    "openssl-executable": "7" * 64,
+    "python-runtime-executable": "8" * 64,
+    "python-standard-library": "9" * 64,
+    "torch-distribution": "a" * 64,
 }
 
 
@@ -140,9 +143,7 @@ def _verify(
         "checked_at": checked_at,
         "expected_code_commit_sha": CODE_COMMIT_SHA,
         "expected_runner_source_sha256": RUNNER_SOURCE_SHA256,
-        "expected_execution_environment_contract_sha256": (
-            ENVIRONMENT_CONTRACT_SHA256
-        ),
+        "expected_execution_environment_contract_sha256": (ENVIRONMENT_CONTRACT_SHA256),
         "expected_result_receipt_contract_sha256": RESULT_CONTRACT_SHA256,
         "expected_dependency_artifact_sha256_rows": DEPENDENCY_ROWS,
     }
@@ -163,7 +164,10 @@ def test_authorization_contract_is_frozen_and_current_decision_is_closed() -> No
     assert first["receipt_schema"]["maximum_execution_count"] == 1
     assert first["receipt_schema"]["one_time_nonce_required"] is True
     assert first["receipt_schema"]["external_revocation_sets_required"] is True
-    assert first["receipt_schema"]["atomic_nonce_reservation_required_before_execution"] is True
+    assert (
+        first["receipt_schema"]["atomic_nonce_reservation_required_before_execution"]
+        is True
+    )
     assert first["receipt_schema"]["parameter_fitting_authorized"] is False
     assert first["current_state"]["authorization_receipt_present"] is False
     assert first["current_state"]["validation_execution_authorized"] is False
@@ -236,8 +240,12 @@ def test_signed_authorization_receipt_accepts_json_bytes() -> None:
     assert _verify(encoded).receipt_sha256 == receipt["receipt_sha256"]
 
 
-def test_signed_authorization_receipt_rejects_duplicate_json_or_signature_fields() -> None:
-    with pytest.raises(ReferenceValidationAuthorizationError, match="duplicate JSON key"):
+def test_signed_authorization_receipt_rejects_duplicate_json_or_signature_fields() -> (
+    None
+):
+    with pytest.raises(
+        ReferenceValidationAuthorizationError, match="duplicate JSON key"
+    ):
         _verify(b'{"schema_id":"first","schema_id":"second"}')
 
     receipt = deepcopy(_receipt())
@@ -314,7 +322,9 @@ def test_signed_authorization_receipt_rejects_untrusted_or_mismatched_key() -> N
         )
 
 
-def test_authorization_reverifies_signed_review_instead_of_trusting_a_decision_object() -> None:
+def test_authorization_reverifies_signed_review_instead_of_trusting_a_decision_object() -> (
+    None
+):
     tampered_review = deepcopy(_review_attestation())
     tampered_review["claim_safe"] = True
     with pytest.raises(
@@ -404,7 +414,9 @@ def test_signed_authorization_receipt_enforces_time_and_review_lifetime() -> Non
 def test_signed_authorization_receipt_enforces_external_revocation_sets() -> None:
     receipt = _receipt()
     verification = _verify(receipt)
-    with pytest.raises(ReferenceValidationAuthorizationError, match="receipt is externally revoked"):
+    with pytest.raises(
+        ReferenceValidationAuthorizationError, match="receipt is externally revoked"
+    ):
         _verify(
             receipt,
             revoked_receipt_sha256s=(verification.receipt_sha256,),
@@ -448,7 +460,7 @@ def test_signed_authorization_receipt_rejects_expected_dependency_crosswire(
 ) -> None:
     with pytest.raises(
         ReferenceValidationAuthorizationError,
-        match="do not match the frozen schema or expected dependencies",
+        match="do not match",
     ):
         _verify(_receipt(), **{argument: replacement})
 
@@ -456,7 +468,9 @@ def test_signed_authorization_receipt_rejects_expected_dependency_crosswire(
 def test_authorization_trust_anchor_redacts_key_and_rejects_invalid_keys() -> None:
     anchor = AuthorizationOperatorTrustAnchor(OPERATOR_IDENTITY, OPERATOR_KEY)
     assert "operator-key-material" not in repr(anchor)
-    with pytest.raises(ReferenceValidationAuthorizationError, match="at least 32 bytes"):
+    with pytest.raises(
+        ReferenceValidationAuthorizationError, match="at least 32 bytes"
+    ):
         AuthorizationOperatorTrustAnchor(OPERATOR_IDENTITY, b"short")
     with pytest.raises(ReferenceValidationAuthorizationError, match="bytes or text"):
         AuthorizationOperatorTrustAnchor(
@@ -465,8 +479,12 @@ def test_authorization_trust_anchor_redacts_key_and_rejects_invalid_keys() -> No
         )
 
 
-def test_authorization_receipt_builder_rejects_invalid_commit_or_dependency_rows() -> None:
+def test_authorization_receipt_builder_rejects_invalid_commit_or_dependency_rows() -> (
+    None
+):
     with pytest.raises(ReferenceValidationAuthorizationError, match="Git SHA"):
         _receipt(code_commit_sha="not-a-commit")
-    with pytest.raises(ReferenceValidationAuthorizationError, match="non-empty mapping"):
+    with pytest.raises(
+        ReferenceValidationAuthorizationError, match="non-empty mapping"
+    ):
         _receipt(dependency_artifact_sha256_rows={})

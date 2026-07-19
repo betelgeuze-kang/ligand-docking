@@ -58,17 +58,23 @@ from .reference_minimization_validation_runner import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/4.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_writer/2.0.0"
+    "cpu_reference_minimization_validation_result_receipt_writer/4.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "4.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-19T07:20:00Z"
+    "2026-07-18T23:33:55Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "76bf29c96ea0d369f10d446fa5e33f6906e1adb3f6b3dba0e3a25cffdd0957c2"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3 = (
+    "a02d29c915fa56a55b22a3109cafd8a95a1397e382c85dbb0c9cacfba8b9694b"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V2 = (
     "69c7dcb183194c8d8197ca99474536d2a6e4dc6efba020535c0765e4e53153c8"
 )
 
@@ -76,10 +82,11 @@ _RECEIPT_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
+    "worker_request_observation_identity_binding_missing",
     "scientific_parameter_applicability_domain_missing",
     "scientific_holdout_manifest_missing",
     "parameter_fitting_not_authorized",
-    "minimization_validation_protocol_missing",
+    "trajectory_level_minimization_comparison_missing",
     "scientific_validation_missing",
     "product_integration_not_qualified",
 )
@@ -95,6 +102,7 @@ _CURRENT_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
+    "worker_request_observation_identity_binding_missing",
     "parameter_fitting_not_authorized",
     "scientific_validation_missing",
     "product_integration_not_qualified",
@@ -250,6 +258,14 @@ def _contract_projection() -> dict[str, Any]:
             "complete_coordinate_traces_reverified_by_runner_schema": True,
             "trace_step_and_whole_trace_digests_recomputed": True,
             "trace_counts_and_energy_ledgers_crosschecked": True,
+            "exact_worker_execution_evidence_reverified_by_runner_schema": True,
+            "worker_request_and_frame_lifecycle_reverified": True,
+            "worker_completion_state_and_runtime_lifecycle_crosschecked": True,
+            "retained_case_aggregate_recomputed_from_exact_case_rows": True,
+            "case_frame_order_and_case_observation_digests_recomputed": True,
+            "runtime_lifecycle_payload_revalidated_against_retained_case_rows": True,
+            "native_pre_post_snapshot_equality_reverified_for_complete_lifecycle": True,
+            "native_mapping_lifetime_closure_claim_remains_false": True,
         },
         "coverage": {
             "case_count": 14,
@@ -258,6 +274,8 @@ def _contract_projection() -> dict[str, Any]:
             "raw_and_evaluated_coordinates_retained_for_every_evaluation": True,
             "canonical_empty_trace_retained_for_pre_evaluation_failure": True,
             "partial_or_skipped_results_allowed": False,
+            "incomplete_worker_lifecycle_receipt_retained_failure_inclusively": True,
+            "incomplete_worker_lifecycle_eligible_for_accepted_result_review": False,
             "result_review_state": "pending_independent_review",
         },
         "current_state": {
@@ -392,6 +410,7 @@ def _result_projection(
         "observation_sha256": _sha256(run_document),
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
+        "source_manifest_sha256": observation.source_manifest_sha256,
         "dependency_artifact_sha256_rows": run_document[
             "dependency_artifact_sha256_rows"
         ],
@@ -471,6 +490,7 @@ def _validate_result_receipt_payload(
         "observation_sha256",
         "code_commit_sha",
         "runner_source_sha256",
+        "source_manifest_sha256",
         "dependency_artifact_sha256_rows",
         "command_argv",
         "seed",
@@ -567,6 +587,7 @@ def _validate_result_receipt_payload(
         "observation_sha256": _sha256(run_document),
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
+        "source_manifest_sha256": observation.source_manifest_sha256,
         "dependency_artifact_sha256_rows": run_document[
             "dependency_artifact_sha256_rows"
         ],
@@ -836,6 +857,7 @@ def write_reference_minimization_validation_result_receipt(
         "authorization_nonce_sha256": nonce,
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
+        "source_manifest_sha256": observation.source_manifest_sha256,
         "dependency_artifact_sha256_rows": (
             observation.dependency_artifact_sha256_rows
         ),
@@ -857,6 +879,7 @@ def write_reference_minimization_validation_result_receipt(
                 observation.environment_receipt_sha256
             ),
             expected_runner_source_sha256=observation.runner_source_sha256,
+            expected_source_manifest_sha256=observation.source_manifest_sha256,
         )
     except ReferenceMinimizationValidationRunnerError as exc:
         raise ReferenceMinimizationValidationResultWriterError(
@@ -865,6 +888,7 @@ def write_reference_minimization_validation_result_receipt(
     start_crosscheck = {
         "started_at_utc": observation.started_at_utc,
         "code_commit_sha": observation.code_commit_sha,
+        "source_manifest_sha256": observation.source_manifest_sha256,
     }
     if any(start_record.get(name) != value for name, value in start_crosscheck.items()):
         raise ReferenceMinimizationValidationResultWriterError(
@@ -1079,6 +1103,7 @@ def reference_minimization_validation_result_writer_contract_decision() -> dict[
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID",

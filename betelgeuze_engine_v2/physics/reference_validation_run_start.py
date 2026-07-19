@@ -20,15 +20,25 @@ from pathlib import Path
 import platform
 import re
 import stat
+import sys
+import time
 from typing import Any, Mapping, Sequence
 
 import torch
 
 from .reference_validation_bootstrap import (
     REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
+    REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
+    REFERENCE_VALIDATION_CONTROLLED_INNER_STATE,
     REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV,
     REFERENCE_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV,
     reference_validation_bootstrap_path,
+)
+from .reference_validation_dependency_identity import (
+    REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
+    ReferenceValidationDependencyIdentityError,
+    observed_reference_validation_dependency_manifest_document,
+    require_reference_validation_dependency_manifest_document,
 )
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
@@ -58,22 +68,33 @@ from .reference_validation_receipts import (
     REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID,
 )
 from .reference_validation_review import ScientificReviewerTrustAnchor
+from .validation_source_identity import (
+    ValidationSourceIdentityError,
+    observed_validation_source_manifest_document,
+    require_validation_source_manifest_document,
+)
 
 
 REFERENCE_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_run_start_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_run_start_contract/2.0.0"
 )
 REFERENCE_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_network_isolation_attestation/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_network_isolation_attestation/2.0.0"
 )
 REFERENCE_VALIDATION_RUN_START_CONTRACT_ID = (
-    "cpu_reference_validation_run_start_environment/1.0.0"
+    "cpu_reference_validation_run_start_environment/2.0.0"
 )
-REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-17T13:45:00Z"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "2.0.0"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
+REFERENCE_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS = 180.0
+REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES = 64 * 1024 * 1024
+REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES = 16 * 1024 * 1024
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
+    "826024deb27c8e20fc8a47960bf63780dabb7ec35a9ef16a5c252ceda69570ff"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V1 = (
     "9ee69b7a0424a409cf15bd6df7450c2d1307afa37b7ea1c5b1d89b372a44f73a"
 )
 
@@ -100,8 +121,8 @@ _REQUIRED_ENVIRONMENT_VALUES = (
     ("TZ", "UTC"),
 )
 _POST_ENVIRONMENT_RECEIPT_BLOCKERS = (
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
+    "production_runner_start_missing",
+    "production_result_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -117,8 +138,8 @@ _CURRENT_BLOCKERS = (
     "trusted_authorization_operator_key_not_provided",
     "authorization_nonce_not_atomically_reserved",
     "execution_environment_receipt_missing",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
+    "production_runner_start_missing",
+    "production_result_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -251,6 +272,12 @@ def _normalize_dependency_rows(
     if not normalized or len({row[0] for row in normalized}) != len(normalized):
         raise ReferenceValidationRunStartError(
             "run-start dependency rows must be non-empty and unique"
+        )
+    if tuple(row[0] for row in normalized) != (
+        REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+    ):
+        raise ReferenceValidationRunStartError(
+            "run-start dependency rows do not match the required byte identities"
         )
     return tuple(normalized)
 
@@ -777,6 +804,115 @@ def _observe_current_runtime() -> _RuntimeObservation:
     )
 
 
+def _dependency_rows_from_manifest(
+    manifest: Mapping[str, Any],
+) -> dict[str, str]:
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list):
+        raise ReferenceValidationRunStartError(
+            "dependency manifest artifacts are invalid"
+        )
+    rows = {
+        row["artifact_id"]: row["sha256"]
+        for row in artifacts
+        if isinstance(row, Mapping)
+        and isinstance(row.get("artifact_id"), str)
+        and isinstance(row.get("sha256"), str)
+    }
+    if tuple(sorted(rows)) != REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest artifact rows drifted"
+        )
+    return rows
+
+
+def _observe_dependency_manifest_document(
+    *,
+    deadline: float | None = None,
+) -> dict[str, Any]:
+    state = getattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, None)
+    if (
+        not isinstance(state, tuple)
+        or len(state) != 6
+        or state[0] != REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+        or not isinstance(state[3], tuple)
+        or not state[3]
+    ):
+        raise ReferenceValidationRunStartError(
+            "dependency identity requires the isolated trust bootstrap"
+        )
+    try:
+        return observed_reference_validation_dependency_manifest_document(
+            state[3],
+            deadline=deadline,
+        )
+    except ReferenceValidationDependencyIdentityError as exc:
+        raise ReferenceValidationRunStartError(
+            "live dependency bytes cannot be measured"
+        ) from exc
+
+
+def _observe_dependency_artifact_sha256_rows(
+    *,
+    deadline: float | None = None,
+) -> dict[str, str]:
+    return _dependency_rows_from_manifest(
+        _observe_dependency_manifest_document(deadline=deadline)
+    )
+
+
+def _observe_source_manifest_document(
+    code_commit_sha: str,
+    *,
+    deadline: float | None = None,
+) -> dict[str, Any]:
+    state = getattr(sys, REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, None)
+    if (
+        not isinstance(state, tuple)
+        or len(state) != 6
+        or state[0] != REFERENCE_VALIDATION_CONTROLLED_INNER_STATE
+        or not isinstance(state[2], str)
+        or not isinstance(state[5], bytes)
+    ):
+        raise ReferenceValidationRunStartError(
+            "source identity requires the isolated trust bootstrap"
+        )
+    try:
+        bootstrap_manifest = json.loads(state[5].decode("ascii"))
+        if (
+            not isinstance(bootstrap_manifest, dict)
+            or _canonical_bytes(bootstrap_manifest) != state[5]
+        ):
+            raise ValidationSourceIdentityError(
+                "bootstrap source manifest bytes are not canonical"
+            )
+        bootstrap_manifest = require_validation_source_manifest_document(
+            bootstrap_manifest
+        )
+        if bootstrap_manifest.get("code_commit_sha") != code_commit_sha:
+            raise ValidationSourceIdentityError(
+                "bootstrap source manifest commit is cross-wired"
+            )
+        live_manifest = observed_validation_source_manifest_document(
+            state[2],
+            _require_git_commit(code_commit_sha),
+            deadline=deadline,
+        )
+        if live_manifest != bootstrap_manifest:
+            raise ValidationSourceIdentityError(
+                "live source manifest changed after bootstrap"
+            )
+        return live_manifest
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        ValidationSourceIdentityError,
+    ) as exc:
+        raise ReferenceValidationRunStartError(
+            "live source bytes cannot be measured"
+        ) from exc
+
+
 def _require_runtime_observation(observation: _RuntimeObservation) -> None:
     if not isinstance(observation, _RuntimeObservation):
         raise ReferenceValidationRunStartError("runtime observation type is invalid")
@@ -889,7 +1025,8 @@ def _contract_projection() -> dict[str, Any]:
             ),
             "raw_signed_review_and_authorization_reverification_required": True,
             "durable_nonce_record_reverification_required": True,
-            "exact_code_runner_and_dependency_rows_required": True,
+            "exact_code_runner_source_and_dependency_rows_required": True,
+            "full_source_git_tree_manifest_required": True,
         },
         "runtime_observation": {
             "linux_x86_64_only": True,
@@ -932,6 +1069,12 @@ def _contract_projection() -> dict[str, Any]:
             "reservation_and_artifact_roots_outside_checkout_required": True,
             "artifact_root_path_stored_as_sha256_only": True,
             "receipt_filename": "<authorization_nonce_sha256>.environment.json",
+            "source_manifest_filename": (
+                "<authorization_nonce_sha256>.source-tree.json"
+            ),
+            "dependency_manifest_filename": (
+                "<authorization_nonce_sha256>.dependencies.json"
+            ),
             "exclusive_nofollow_create_and_file_directory_fsync_required": True,
             "receipt_mode": "0600",
             "duplicate_or_poisoned_path_fails_closed": True,
@@ -944,8 +1087,8 @@ def _contract_projection() -> dict[str, Any]:
             "production_authorization_receipt_present": False,
             "production_nonce_reserved": False,
             "production_environment_receipt_present": False,
-            "validation_runner_implemented": False,
-            "result_receipt_writer_implemented": False,
+            "validation_runner_implemented": True,
+            "result_receipt_writer_implemented": True,
             "validation_execution_authorized": False,
             "validation_results_collected": False,
         },
@@ -994,6 +1137,7 @@ class ReferenceValidationExecutionEnvironmentReceipt:
     authorization_nonce_sha256: str
     code_commit_sha: str
     runner_source_sha256: str
+    source_manifest_sha256: str
     dependency_artifact_sha256_rows: tuple[tuple[str, str], ...]
     operating_system_release: str
     machine_architecture: str
@@ -1024,6 +1168,7 @@ class ReferenceValidationExecutionEnvironmentReceipt:
             ("authorization operator", self.authorization_operator_identity_sha256),
             ("authorization nonce", self.authorization_nonce_sha256),
             ("runner source", self.runner_source_sha256),
+            ("source manifest", self.source_manifest_sha256),
             ("CPU identity", self.cpu_identity_sha256),
             ("network attestation", self.network_isolation_attestation_sha256),
             ("network namespace", self.network_namespace_identity_sha256),
@@ -1184,6 +1329,7 @@ class ReferenceValidationExecutionEnvironmentReceipt:
             "authorization_nonce_sha256": self.authorization_nonce_sha256,
             "code_commit_sha": self.code_commit_sha,
             "runner_source_sha256": self.runner_source_sha256,
+            "source_manifest_sha256": self.source_manifest_sha256,
             "dependency_artifact_sha256_rows": [
                 {"artifact_id": artifact_id, "sha256": digest}
                 for artifact_id, digest in self.dependency_artifact_sha256_rows
@@ -1278,6 +1424,7 @@ def _build_environment_receipt(
     observation: _RuntimeObservation,
     network: ReferenceValidationNetworkIsolationVerification,
     artifact_output_root_identity_sha256: str,
+    source_manifest_sha256: str,
     started_at_utc: str,
 ) -> ReferenceValidationExecutionEnvironmentReceipt:
     fingerprint = _sha256(
@@ -1301,6 +1448,10 @@ def _build_environment_receipt(
         "authorization_nonce_sha256": verification.authorization_nonce_sha256,
         "code_commit_sha": verification.code_commit_sha,
         "runner_source_sha256": verification.runner_source_sha256,
+        "source_manifest_sha256": _require_sha256(
+            source_manifest_sha256,
+            name="source manifest",
+        ),
         "dependency_artifact_sha256_rows": (
             verification.dependency_artifact_sha256_rows
         ),
@@ -1332,6 +1483,105 @@ def _build_environment_receipt(
         receipt_sha256=_sha256(provisional.projection()),
         **values,
     )
+
+
+def _persist_dependency_manifest(
+    root_fd: int,
+    authorization_nonce_sha256: str,
+    manifest: Mapping[str, Any],
+) -> None:
+    verified = require_reference_validation_dependency_manifest_document(dict(manifest))
+    payload = _canonical_bytes(verified) + b"\n"
+    if len(payload) > REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest exceeds the persistence bound"
+        )
+    filename = f"{authorization_nonce_sha256}.dependencies.json"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        descriptor = os.open(filename, flags, 0o600, dir_fd=root_fd)
+    except FileExistsError as exc:
+        raise ReferenceValidationEnvironmentReceiptAlreadyExistsError(
+            "dependency manifest already exists for the nonce"
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest cannot be created securely"
+        ) from exc
+    try:
+        try:
+            _validate_reservation_file_stat(os.fstat(descriptor))
+            remaining = memoryview(payload)
+            while remaining:
+                written = os.write(descriptor, remaining)
+                if written <= 0:
+                    raise OSError("dependency manifest write made no progress")
+                remaining = remaining[written:]
+            os.fsync(descriptor)
+        except Exception as exc:
+            raise ReferenceValidationRunStartError(
+                "dependency manifest persistence failed; the path remains consumed"
+            ) from exc
+    finally:
+        os.close(descriptor)
+    try:
+        os.fsync(root_fd)
+    except OSError as exc:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest directory fsync failed; the path remains consumed"
+        ) from exc
+
+
+def _persist_source_manifest(
+    root_fd: int,
+    authorization_nonce_sha256: str,
+    manifest: Mapping[str, Any],
+) -> None:
+    try:
+        verified = require_validation_source_manifest_document(manifest)
+    except ValidationSourceIdentityError as exc:
+        raise ReferenceValidationRunStartError(
+            "source manifest identity verification failed"
+        ) from exc
+    payload = _canonical_bytes(verified) + b"\n"
+    if len(payload) > REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES:
+        raise ReferenceValidationRunStartError(
+            "source manifest exceeds the persistence bound"
+        )
+    filename = f"{authorization_nonce_sha256}.source-tree.json"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        descriptor = os.open(filename, flags, 0o600, dir_fd=root_fd)
+    except FileExistsError as exc:
+        raise ReferenceValidationEnvironmentReceiptAlreadyExistsError(
+            "source manifest already exists for the nonce"
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise ReferenceValidationRunStartError(
+            "source manifest cannot be created securely"
+        ) from exc
+    try:
+        try:
+            _validate_reservation_file_stat(os.fstat(descriptor))
+            remaining = memoryview(payload)
+            while remaining:
+                written = os.write(descriptor, remaining)
+                if written <= 0:
+                    raise OSError("source manifest write made no progress")
+                remaining = remaining[written:]
+            os.fsync(descriptor)
+        except Exception as exc:
+            raise ReferenceValidationRunStartError(
+                "source manifest persistence failed; the path remains consumed"
+            ) from exc
+    finally:
+        os.close(descriptor)
+    try:
+        os.fsync(root_fd)
+    except OSError as exc:
+        raise ReferenceValidationRunStartError(
+            "source manifest directory fsync failed; the path remains consumed"
+        ) from exc
 
 
 def _persist_environment_receipt(
@@ -1396,6 +1646,9 @@ def create_reference_validation_execution_environment_receipt(
 ) -> ReferenceValidationExecutionEnvironmentReceipt:
     """Reverify the full chain and persist one pre-evaluation receipt."""
 
+    preflight_deadline = (
+        time.monotonic() + REFERENCE_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS
+    )
     _require_reference_validation_root_outside_checkout(
         reservation_root,
         name="reservation root",
@@ -1442,6 +1695,20 @@ def create_reference_validation_execution_environment_receipt(
         raise ReferenceValidationRunStartError(
             "requested nonce and signed authorization are cross-wired"
         )
+    dependency_manifest = _observe_dependency_manifest_document(
+        deadline=preflight_deadline
+    )
+    source_manifest = _observe_source_manifest_document(
+        verification.code_commit_sha,
+        deadline=preflight_deadline,
+    )
+    observed_dependency_rows = _dependency_rows_from_manifest(dependency_manifest)
+    if tuple(sorted(observed_dependency_rows.items())) != (
+        verification.dependency_artifact_sha256_rows
+    ):
+        raise ReferenceValidationRunStartError(
+            "live dependency bytes do not match the signed authorization"
+        )
     try:
         reservation = read_reference_validation_nonce_reservation(
             reservation_root,
@@ -1474,6 +1741,7 @@ def create_reference_validation_execution_environment_receipt(
         observation=observation,
         network=network,
         artifact_output_root_identity_sha256=output_root_identity,
+        source_manifest_sha256=source_manifest["manifest_sha256"],
         started_at_utc=_format_utc(checked_at, name="run-start checked_at"),
     )
     try:
@@ -1483,6 +1751,8 @@ def create_reference_validation_execution_environment_receipt(
             "artifact output root does not satisfy the private POSIX policy"
         ) from exc
     try:
+        _persist_source_manifest(root_fd, nonce, source_manifest)
+        _persist_dependency_manifest(root_fd, nonce, dependency_manifest)
         _persist_environment_receipt(root_fd, receipt)
     finally:
         os.close(root_fd)
@@ -1517,6 +1787,252 @@ def _load_persisted_receipt(raw: bytes) -> dict[str, Any]:
             "environment receipt bytes are not canonical"
         )
     return loaded
+
+
+def _load_persisted_dependency_manifest(raw: bytes) -> dict[str, Any]:
+    if (
+        not raw
+        or len(raw) > REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
+        or not raw.endswith(b"\n")
+    ):
+        raise ReferenceValidationRunStartError(
+            "dependency manifest size or framing is invalid"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunStartError(
+                    "dependency manifest contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        loaded = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest must be canonical ASCII JSON"
+        ) from exc
+    if not isinstance(loaded, dict) or raw != _canonical_bytes(loaded) + b"\n":
+        raise ReferenceValidationRunStartError(
+            "dependency manifest bytes are not canonical"
+        )
+    try:
+        return require_reference_validation_dependency_manifest_document(loaded)
+    except ReferenceValidationDependencyIdentityError as exc:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest identity verification failed"
+        ) from exc
+
+
+def _load_persisted_source_manifest(raw: bytes) -> dict[str, Any]:
+    if (
+        not raw
+        or len(raw) > REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
+        or not raw.endswith(b"\n")
+    ):
+        raise ReferenceValidationRunStartError(
+            "source manifest size or framing is invalid"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceValidationRunStartError(
+                    "source manifest contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        loaded = json.loads(
+            raw[:-1].decode("ascii"),
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceValidationRunStartError(
+            "source manifest must be canonical ASCII JSON"
+        ) from exc
+    if not isinstance(loaded, dict) or raw != _canonical_bytes(loaded) + b"\n":
+        raise ReferenceValidationRunStartError(
+            "source manifest bytes are not canonical"
+        )
+    try:
+        return require_validation_source_manifest_document(loaded)
+    except ValidationSourceIdentityError as exc:
+        raise ReferenceValidationRunStartError(
+            "source manifest identity verification failed"
+        ) from exc
+
+
+def read_reference_validation_dependency_manifest(
+    artifact_output_root: str | os.PathLike[str],
+    authorization_nonce_sha256: str,
+) -> dict[str, Any]:
+    """Read the durable per-file manifest bound by the signed six digests."""
+
+    nonce = _require_sha256(
+        authorization_nonce_sha256,
+        name="requested dependency manifest nonce",
+    )
+    try:
+        root_fd = _open_secure_reservation_root(artifact_output_root)
+    except ReferenceValidationNonceReservationError as exc:
+        raise ReferenceValidationRunStartError(
+            "artifact output root does not satisfy the private POSIX policy"
+        ) from exc
+    filename = f"{nonce}.dependencies.json"
+    flags = os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        try:
+            descriptor = os.open(filename, flags, dir_fd=root_fd)
+        except OSError as exc:
+            raise ReferenceValidationRunStartError(
+                "dependency manifest is unavailable"
+            ) from exc
+        try:
+            before = os.fstat(descriptor)
+            _validate_reservation_file_stat(before)
+            if not (
+                0
+                < before.st_size
+                <= REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
+            ):
+                raise ReferenceValidationRunStartError(
+                    "dependency manifest violates its pre-read size bound"
+                )
+            chunks: list[bytes] = []
+            total = 0
+            while True:
+                chunk = os.read(
+                    descriptor,
+                    min(
+                        8192,
+                        REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
+                        + 1
+                        - total,
+                    ),
+                )
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                total += len(chunk)
+                if total > REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES:
+                    raise ReferenceValidationRunStartError(
+                        "dependency manifest exceeds the read bound"
+                    )
+            after = os.fstat(descriptor)
+            if (
+                before.st_dev,
+                before.st_ino,
+                before.st_size,
+                before.st_mtime_ns,
+            ) != (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+            ):
+                raise ReferenceValidationRunStartError(
+                    "dependency manifest changed while it was read"
+                )
+        finally:
+            os.close(descriptor)
+    except (OSError, ReferenceValidationNonceReservationError) as exc:
+        raise ReferenceValidationRunStartError(
+            "dependency manifest file policy verification failed"
+        ) from exc
+    finally:
+        os.close(root_fd)
+    return _load_persisted_dependency_manifest(b"".join(chunks))
+
+
+def read_reference_validation_source_manifest(
+    artifact_output_root: str | os.PathLike[str],
+    authorization_nonce_sha256: str,
+) -> dict[str, Any]:
+    """Read the durable full package source/Git-tree manifest."""
+
+    nonce = _require_sha256(
+        authorization_nonce_sha256,
+        name="requested source manifest nonce",
+    )
+    try:
+        root_fd = _open_secure_reservation_root(artifact_output_root)
+    except ReferenceValidationNonceReservationError as exc:
+        raise ReferenceValidationRunStartError(
+            "artifact output root does not satisfy the private POSIX policy"
+        ) from exc
+    filename = f"{nonce}.source-tree.json"
+    flags = os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC
+    try:
+        try:
+            descriptor = os.open(filename, flags, dir_fd=root_fd)
+        except OSError as exc:
+            raise ReferenceValidationRunStartError(
+                "source manifest is unavailable"
+            ) from exc
+        try:
+            before = os.fstat(descriptor)
+            _validate_reservation_file_stat(before)
+            if not (
+                0
+                < before.st_size
+                <= REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
+            ):
+                raise ReferenceValidationRunStartError(
+                    "source manifest violates its pre-read size bound"
+                )
+            chunks: list[bytes] = []
+            total = 0
+            while True:
+                chunk = os.read(
+                    descriptor,
+                    min(
+                        8192,
+                        REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
+                        + 1
+                        - total,
+                    ),
+                )
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                total += len(chunk)
+                if total > REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES:
+                    raise ReferenceValidationRunStartError(
+                        "source manifest exceeds the read bound"
+                    )
+            after = os.fstat(descriptor)
+            if (
+                before.st_dev,
+                before.st_ino,
+                before.st_size,
+                before.st_mtime_ns,
+            ) != (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+            ):
+                raise ReferenceValidationRunStartError(
+                    "source manifest changed while it was read"
+                )
+        finally:
+            os.close(descriptor)
+    except (OSError, ReferenceValidationNonceReservationError) as exc:
+        raise ReferenceValidationRunStartError(
+            "source manifest file policy verification failed"
+        ) from exc
+    finally:
+        os.close(root_fd)
+    return _load_persisted_source_manifest(b"".join(chunks))
 
 
 def _receipt_from_payload(
@@ -1644,6 +2160,10 @@ def _receipt_from_payload(
                 projection.get("runner_source_sha256"),
                 name="environment receipt runner",
             ),
+            source_manifest_sha256=_require_sha256(
+                projection.get("source_manifest_sha256"),
+                name="environment receipt source manifest",
+            ),
             dependency_artifact_sha256_rows=_normalize_dependency_rows(
                 projection.get("dependency_artifact_sha256_rows")
             ),
@@ -1762,6 +2282,7 @@ def require_reference_validation_execution_environment_receipt_for_runner(
     authorization_nonce_sha256: str,
     *,
     expected_receipt_sha256: str,
+    deadline: float | None = None,
 ) -> ReferenceValidationExecutionEnvironmentReceipt:
     """Re-read a receipt and require the live process to match it exactly."""
 
@@ -1814,6 +2335,34 @@ def require_reference_validation_execution_environment_receipt_for_runner(
         raise ReferenceValidationRunStartError(
             "live runner process does not match the execution environment receipt"
         )
+    persisted_manifest = read_reference_validation_dependency_manifest(
+        artifact_output_root,
+        authorization_nonce_sha256,
+    )
+    live_manifest = _observe_dependency_manifest_document(deadline=deadline)
+    if (
+        persisted_manifest != live_manifest
+        or tuple(sorted(_dependency_rows_from_manifest(live_manifest).items()))
+        != receipt.dependency_artifact_sha256_rows
+    ):
+        raise ReferenceValidationRunStartError(
+            "durable or live dependency manifest does not match the environment receipt"
+        )
+    persisted_source_manifest = read_reference_validation_source_manifest(
+        artifact_output_root,
+        authorization_nonce_sha256,
+    )
+    live_source_manifest = _observe_source_manifest_document(
+        receipt.code_commit_sha,
+        deadline=deadline,
+    )
+    if (
+        persisted_source_manifest != live_source_manifest
+        or live_source_manifest.get("manifest_sha256") != receipt.source_manifest_sha256
+    ):
+        raise ReferenceValidationRunStartError(
+            "durable or live source manifest does not match the environment receipt"
+        )
     fingerprint = _sha256(
         observation.fingerprint_projection(
             artifact_output_root_identity_sha256=root_identity
@@ -1838,8 +2387,8 @@ def reference_validation_run_start_contract_decision() -> dict[str, Any]:
         "production_authorization_receipt_present": False,
         "production_nonce_reserved": False,
         "production_environment_receipt_present": False,
-        "validation_runner_implemented": False,
-        "result_receipt_writer_implemented": False,
+        "validation_runner_implemented": True,
+        "result_receipt_writer_implemented": True,
         "validation_execution_authorized": False,
         "validation_results_collected": False,
         "parameter_fitting_authorized": False,
@@ -1850,6 +2399,7 @@ def reference_validation_run_start_contract_decision() -> dict[str, Any]:
 __all__ = [
     "FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_APPLICATION_SEED_ENV",
+    "REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES",
     "REFERENCE_VALIDATION_LOGICAL_RUNNER_ARGV",
     "REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY",
     "REFERENCE_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID",
@@ -1864,6 +2414,8 @@ __all__ = [
     "build_signed_reference_validation_network_isolation_attestation",
     "create_reference_validation_execution_environment_receipt",
     "read_reference_validation_execution_environment_receipt",
+    "read_reference_validation_dependency_manifest",
+    "read_reference_validation_source_manifest",
     "require_reference_validation_execution_environment_receipt_for_runner",
     "reference_validation_artifact_output_root_identity_sha256",
     "reference_validation_run_start_contract_decision",

@@ -54,9 +54,12 @@ RESERVED_AT = ISSUED_AT + timedelta(hours=1)
 CODE_COMMIT_SHA = "1" * 40
 RUNNER_SOURCE_SHA256 = "2" * 64
 DEPENDENCY_ROWS = {
-    "numpy-1.26.4-wheel": "3" * 64,
-    "python-3.11-runtime": "4" * 64,
-    "torch-2.6.0-cpu-wheel": "5" * 64,
+    "cryptography-distribution": "3" * 64,
+    "numpy-distribution": "4" * 64,
+    "openssl-executable": "5" * 64,
+    "python-runtime-executable": "6" * 64,
+    "python-standard-library": "7" * 64,
+    "torch-distribution": "8" * 64,
 }
 
 
@@ -161,17 +164,22 @@ def test_nonce_reservation_contract_is_frozen_and_current_decision_is_closed() -
     assert first["contract_sha256"] == (
         FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
     )
-    assert first["atomicity_and_durability"]["duplicate_or_preexisting_path_fails_closed"]
+    assert first["atomicity_and_durability"][
+        "duplicate_or_preexisting_path_fails_closed"
+    ]
     assert first["atomicity_and_durability"]["release_or_delete_api_provided"] is False
     assert (
-        first["atomicity_and_durability"]
-        ["same_uid_unlink_or_replacement_resistance_established"]
+        first["atomicity_and_durability"][
+            "same_uid_unlink_or_replacement_resistance_established"
+        ]
         is False
     )
     assert first["current_state"]["atomic_nonce_reservation_primitive_implemented"]
     assert first["current_state"]["authorization_nonce_reserved"] is False
     assert first["claim_policy"]["claim_safe"] is False
-    assert require_reference_validation_nonce_reservation_contract_document(first) == first
+    assert (
+        require_reference_validation_nonce_reservation_contract_document(first) == first
+    )
 
     assert decision["atomic_nonce_reservation_primitive_implemented"] is True
     assert decision["authorization_receipt_present"] is False
@@ -242,16 +250,15 @@ def test_duplicate_reservation_always_fails_closed(tmp_path: Path) -> None:
 
 def test_oversized_reservation_is_rejected_before_nonce_path_is_consumed(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = _reservation_root(tmp_path)
-    dependency_rows = {
-        f"dependency-{index:04d}": f"{index:064x}"
-        for index in range(800)
-    }
     review = _review_attestation()
-    receipt = _authorization_receipt(
-        review_attestation=review,
-        dependency_artifact_sha256_rows=dependency_rows,
+    receipt = _authorization_receipt(review_attestation=review)
+    monkeypatch.setattr(
+        module,
+        "REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES",
+        1,
     )
 
     with pytest.raises(
@@ -262,7 +269,6 @@ def test_oversized_reservation_is_rejected_before_nonce_path_is_consumed(
             root,
             receipt=receipt,
             review=review,
-            expected_dependency_artifact_sha256_rows=dependency_rows,
         )
 
     assert list(root.iterdir()) == []
@@ -284,10 +290,13 @@ def test_concurrent_reservation_has_exactly_one_winner(tmp_path: Path) -> None:
         outcomes = list(executor.map(lambda _: attempt(), range(8)))
     assert outcomes.count("reserved") == 1
     assert outcomes.count("already_reserved") == 7
-    assert read_reference_validation_nonce_reservation(
-        root,
-        AUTHORIZATION_NONCE,
-    ).reservation_persisted is True
+    assert (
+        read_reference_validation_nonce_reservation(
+            root,
+            AUTHORIZATION_NONCE,
+        ).reservation_persisted
+        is True
+    )
 
 
 def test_invalid_raw_receipt_is_rejected_before_filesystem_mutation(

@@ -22,6 +22,9 @@ from .reference_validation_artifact_binding import (
 from .reference_validation_authorization import (
     FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
 )
+from .reference_validation_dependency_identity import (
+    REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS,
+)
 from .reference_validation_materializer import (
     reference_validation_materialization_manifest_document,
 )
@@ -32,30 +35,36 @@ from .reference_validation_protocol import (
 
 
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_execution_environment_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_execution_environment_contract/2.0.0"
 )
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_execution_environment_receipt/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_execution_environment_receipt/2.0.0"
 )
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID = (
-    "cpu_reference_validation_execution_environment_contract/1.0.0"
+    "cpu_reference_validation_execution_environment_contract/2.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_receipt_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_receipt_contract/2.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_receipt/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_receipt/2.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_ID = (
-    "cpu_reference_validation_result_receipt_contract/1.0.0"
+    "cpu_reference_validation_result_receipt_contract/2.0.0"
 )
-REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-17T05:38:00Z"
+REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "2.0.0"
+REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
 
 FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "f4d9bea26c38a009c96c2cfc31d1b00abcac8991468406a433d6ad2c4bbde5ec"
+    "e6e5e124e5391ba0f04cc2db60f5195f6a31f73782f13956eec878a4ceae5894"
 )
 FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
+    "e746de80faa7950cddc05c9bb575f053a63b1427e8c6c3a4f5cc9bb8a20ccb89"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V1 = (
+    "f4d9bea26c38a009c96c2cfc31d1b00abcac8991468406a433d6ad2c4bbde5ec"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V1 = (
     "3cd5b4c269895baac36c374c8698a36cdfc4424afcaa2772cb5ef60a9f1860f6"
 )
 
@@ -68,8 +77,6 @@ _CURRENT_BLOCKERS = (
     "trusted_authorization_operator_key_not_provided",
     "authorization_nonce_not_atomically_reserved",
     "execution_environment_receipt_missing",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -129,7 +136,15 @@ def _environment_contract_projection() -> dict[str, Any]:
             "authorization_nonce_sha256_required": True,
             "exact_code_commit_required": True,
             "exact_runner_source_sha256_required": True,
+            "full_source_git_tree_manifest_required": True,
+            "source_manifest_sha256_required_in_receipt": True,
             "dependency_artifact_sha256_rows_required": True,
+            "dependency_artifact_bytes_observed_before_engine_import": True,
+            "required_dependency_artifact_ids": list(
+                REFERENCE_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+            ),
+            "distribution_record_payload_hashes_required": True,
+            "active_import_origin_bound_to_distribution_record": True,
         },
         "runtime_contract": {
             "operating_system": "linux",
@@ -138,6 +153,8 @@ def _environment_contract_projection() -> dict[str, Any]:
             "cpu_only": True,
             "supported_python_minor_versions": ["3.10", "3.11", "3.12"],
             "exact_python_patch_version_required_in_receipt": True,
+            "python_executable_and_stdlib_byte_manifests_required": True,
+            "openssl_executable_byte_manifest_required": True,
             "torch_version": "2.6.0",
             "numpy_version": "1.26.4",
             "coordinate_dtype": "float64",
@@ -314,6 +331,7 @@ def _result_contract_projection() -> dict[str, Any]:
             "exact_authorization_receipt_sha256_required": True,
             "exact_execution_environment_receipt_sha256_required": True,
             "exact_code_commit_and_runner_source_sha256_required": True,
+            "exact_source_manifest_sha256_required": True,
         },
         "coverage_contract": {
             "case_count": 27,
@@ -344,6 +362,8 @@ def _result_contract_projection() -> dict[str, Any]:
             "required_top_level_fields": [
                 "schema_id",
                 "result_contract_sha256",
+                "result_writer_contract_sha256",
+                "runner_contract_sha256",
                 "protocol_sha256",
                 "h5_applicability_record_sha256",
                 "artifact_binding_sha256",
@@ -353,6 +373,8 @@ def _result_contract_projection() -> dict[str, Any]:
                 "execution_environment_contract_sha256",
                 "execution_environment_receipt_sha256",
                 "environment_fingerprint_sha256",
+                "runner_start_record_sha256",
+                "observation_sha256",
                 "code_commit_sha",
                 "runner_source_sha256",
                 "dependency_artifact_sha256_rows",
@@ -360,13 +382,30 @@ def _result_contract_projection() -> dict[str, Any]:
                 "seed",
                 "started_at_utc",
                 "completed_at_utc",
+                "receipt_created_at_utc",
                 "case_results",
                 "coverage_summary",
+                "run_observation",
                 "artifact_path_confinement_verification",
+                "review_attestation_sha256",
                 "independent_reviewer_identity_sha256",
                 "reviewed_at_utc",
+                "review_scope",
+                "independent_result_review_state",
                 "supersession_state",
                 "revocation_state",
+                "result_values_present",
+                "result_receipt_written",
+                "validation_results_collected",
+                "production_validation_results_collected",
+                "parameter_fitting_proposal_authorized",
+                "parameter_fitting_authorized",
+                "scientifically_validated",
+                "benchmark_validated",
+                "product_qualified",
+                "customer_execution_enabled",
+                "claim_safe",
+                "blockers",
                 "receipt_sha256",
             ],
             "required_case_fields": [
@@ -394,6 +433,11 @@ def _result_contract_projection() -> dict[str, Any]:
                 "force_array_dtype",
                 "force_array_unit",
                 "force_array_sha256",
+                "force_array_values",
+                "oracle_total_energy_value",
+                "oracle_total_energy_unit",
+                "oracle_force_array_sha256",
+                "oracle_force_array_values",
             ],
             "fail_closed_case_numeric_results_must_be_absent": True,
             "passing_case_expected_and_observed_error_codes_must_be_null": True,
@@ -415,8 +459,8 @@ def _result_contract_projection() -> dict[str, Any]:
         "current_state": {
             "contract_frozen": True,
             "result_receipt_present": False,
-            "result_receipt_writer_implemented": False,
-            "validation_runner_implemented": False,
+            "result_receipt_writer_implemented": True,
+            "validation_runner_implemented": True,
             "validation_execution_authorized": False,
             "validation_results_collected": False,
         },
@@ -526,8 +570,8 @@ def reference_validation_execution_readiness_decision() -> dict[str, Any]:
         "trusted_operator_key_present": False,
         "authorization_nonce_reserved": False,
         "execution_environment_receipt_present": False,
-        "validation_runner_implemented": False,
-        "result_receipt_writer_implemented": False,
+        "validation_runner_implemented": True,
+        "result_receipt_writer_implemented": True,
         "validation_execution_authorized": False,
         "validation_results_collected": False,
         "parameter_fitting_proposal_authorized": False,

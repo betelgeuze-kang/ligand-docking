@@ -37,19 +37,22 @@ from .reference_validation_review import ScientificReviewerTrustAnchor
 
 
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/2.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_nonce_reservation/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_nonce_reservation/2.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_ID = (
-    "cpu_reference_validation_atomic_nonce_reservation/1.0.0"
+    "cpu_reference_validation_atomic_nonce_reservation/2.0.0"
 )
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-17T06:18:00Z"
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "2.0.0"
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
 REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
+    "1e9cc7d18b78f57a34f7399da0bd6f7a755658142dfd5c91b86e952b02e94f5f"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V1 = (
     "fcaa1c9fe02b8bbab83eb8a128f9188bc299e161af1371a6c3dd2b377f6246c1"
 )
 
@@ -65,9 +68,8 @@ _CURRENT_BLOCKERS = (
     "trusted_authorization_operator_key_not_provided",
     "authorization_nonce_not_atomically_reserved",
     "execution_environment_receipt_missing",
-    "run_start_dependency_reverification_not_implemented",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
+    "production_runner_start_missing",
+    "production_result_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -77,9 +79,8 @@ _CURRENT_BLOCKERS = (
 _POST_RESERVATION_BLOCKERS = (
     "execution_environment_receipt_missing",
     "execution_environment_not_reverified_at_run_start",
-    "run_start_dependency_reverification_not_implemented",
-    "validation_runner_not_implemented",
-    "result_receipt_writer_not_implemented",
+    "production_runner_start_missing",
+    "production_result_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
     "parameter_fitting_not_authorized",
@@ -311,8 +312,8 @@ def _contract_projection() -> dict[str, Any]:
             "authorization_nonce_reserved": False,
             "execution_environment_receipt_present": False,
             "run_start_dependencies_reverified": False,
-            "validation_runner_implemented": False,
-            "result_receipt_writer_implemented": False,
+            "validation_runner_implemented": True,
+            "result_receipt_writer_implemented": True,
             "validation_execution_authorized": False,
             "validation_results_collected": False,
         },

@@ -33,28 +33,32 @@ from .reference_minimization_validation_review import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/2.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_receipt/2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/3.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_receipt/3.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_execution_environment_contract/2.0.0"
+    "cpu_reference_minimization_validation_execution_environment_contract/3.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/3.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt/2.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt/3.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_contract/2.0.0"
+    "cpu_reference_minimization_validation_result_receipt_contract/3.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION = "2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION = "3.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = (
-    "2026-07-19T06:30:00Z"
+    "2026-07-18T22:48:58Z"
 )
 
 # Filled only after the complete canonical projections have been reviewed.
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "a3022f345d99dfc84eb0f539d72a75f1e533c61789d770baa8a0aa9a789f51cb"
+    "b639cc7ead5ea15678183c855b14bcaa289b7f62d36d1fc98706e2a32c44ed9f"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
+    "814ea0ec6464acb77cdf41ccba8070c03ed79cc6e605805a55719c54c55b6745"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2 = "a3022f345d99dfc84eb0f539d72a75f1e533c61789d770baa8a0aa9a789f51cb"
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V2 = (
     "d4d27679f6d658bbc22b35ae9a4d7c588f41aa3e18633eb0bff5ad4c25b38897"
 )
 
@@ -140,12 +144,15 @@ def _environment_contract_projection() -> dict[str, Any]:
             "authorization_nonce_sha256_required": True,
             "exact_code_commit_required": True,
             "exact_runner_source_sha256_required": True,
+            "full_source_git_tree_manifest_required": True,
+            "source_manifest_sha256_required_in_receipt": True,
             "dependency_artifact_sha256_rows_required": True,
             "dependency_artifact_bytes_observed_before_engine_import": True,
             "required_dependency_artifact_ids": list(
                 REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
             ),
             "distribution_record_payload_hashes_required": True,
+            "active_import_origin_bound_to_distribution_record": True,
         },
         "runtime_contract": {
             "operating_system": "linux",
@@ -319,6 +326,7 @@ def _result_contract_projection() -> dict[str, Any]:
             "exact_authorization_receipt_sha256_required": True,
             "exact_execution_environment_receipt_sha256_required": True,
             "exact_code_commit_and_runner_source_sha256_required": True,
+            "exact_source_manifest_sha256_required": True,
         },
         "coverage_contract": {
             "case_count": cases["case_count"],

@@ -72,24 +72,41 @@ from .reference_minimization_validation_run_start import (
     _require_reference_minimization_validation_root_outside_checkout,
     require_reference_minimization_validation_execution_environment_receipt_for_runner,
 )
+from .validation_source_identity import (
+    ValidationSourceIdentityError,
+    require_validation_source_manifest_document,
+)
+from .validation_native_runtime_identity import (
+    WORKER_RUNTIME_LANE_MINIMIZATION,
+    WORKER_RUNTIME_LIFECYCLE_EVIDENCE_SCHEMA_ID,
+    ValidationNativeRuntimeIdentityError,
+    build_complete_worker_runtime_lifecycle_evidence,
+    build_incomplete_worker_runtime_lifecycle_evidence,
+    build_worker_runtime_pre_evidence,
+    communicate_bounded_worker_process,
+    require_complete_worker_runtime_process_id,
+    require_worker_runtime_lifecycle_evidence,
+    require_worker_runtime_pre_evidence,
+)
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_runner_start/2.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_runner_start/3.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUN_OBSERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_run_observation/2.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_run_observation/4.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_bounded_runner/3.0.0"
+    "cpu_reference_minimization_validation_bounded_runner/5.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_VERSION = "3.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-19T08:00:00Z"
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_VERSION = "5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-18T23:33:55Z"
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_PREFLIGHT_MAX_WALL_SECONDS = 180.0
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES = 14
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_START_RECORD_BYTES = 65_536
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WORKER_OUTPUT_BYTES = 8 * 1_048_576
@@ -106,11 +123,15 @@ REFERENCE_MINIMIZATION_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
     REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RUNNER_REQUEST_SCHEMA_ID
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_runner_response/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_runner_response/2.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_matrix_worker_request/2.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_matrix_worker_request/4.0.0"
 )
+REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_matrix_worker_frame/1.0.0"
+)
+REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT = 16
 _REFERENCE_MINIMIZATION_VALIDATION_FIXED_WORKER_BOOTSTRAP = (
     "from betelgeuze_engine_v2.physics import "
     "reference_minimization_validation_runner as worker;"
@@ -144,6 +165,12 @@ REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX = (
     "reference-minimization-validation-runner-start-"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256 = (
+    "c27ff1ae8797db615e1aeb1625e70c476ff011026963b3a678880a4cc9fa7d33"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V4 = (
+    "56ab57ecf3f512c460c8684e62ef99a58a5ec03f564c52b95ccbf0fa01e0239f"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V3 = (
     "980f0110ce7849795110f2cf034717ae7b71704d5e4a0a8a1520a99f6aee3c7b"
 )
 
@@ -342,7 +369,7 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         or sys.dont_write_bytecode is not True
         or sys.pycache_prefix != "/dev/null"
         or not isinstance(state, tuple)
-        or len(state) != 5
+        or len(state) != 6
     ):
         raise ReferenceMinimizationValidationRunnerError(
             "minimization runner requires the seeded controlled trust bootstrap"
@@ -353,7 +380,26 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         repository_root,
         raw_dependency_roots,
         frozen_sys_path,
+        source_manifest_bytes,
     ) = state
+    try:
+        source_manifest = json.loads(source_manifest_bytes.decode("ascii"))
+        if (
+            not isinstance(source_manifest, dict)
+            or _canonical_bytes(source_manifest) != source_manifest_bytes
+        ):
+            raise ValidationSourceIdentityError(
+                "bootstrap source manifest is not canonical"
+            )
+        require_validation_source_manifest_document(source_manifest)
+    except (AttributeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "minimization runner bootstrap source manifest is invalid"
+        ) from exc
+    except ValidationSourceIdentityError as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "minimization runner bootstrap source manifest is invalid"
+        ) from exc
     expected_orig_argv = (
         os.path.realpath(sys.executable),
         *REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV[1:-1],
@@ -390,11 +436,14 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
 
 def _observe_dependency_artifact_sha256_rows(
     dependency_roots: tuple[Path, ...],
+    *,
+    deadline: float | None = None,
 ) -> dict[str, str]:
     try:
         return (
             observed_reference_minimization_validation_dependency_artifact_sha256_rows(
-                dependency_roots
+                dependency_roots,
+                deadline=deadline,
             )
         )
     except ReferenceMinimizationValidationDependencyIdentityError as exc:
@@ -1049,6 +1098,7 @@ def _contract_projection() -> dict[str, Any]:
             "bootstrap_and_runner_source_identity_measured": True,
             "dependency_roots_root_owned_read_only": True,
             "dependency_payload_bytes_remeasured_before_evaluation": True,
+            "active_import_origin_bound_to_distribution_record": True,
             "required_dependency_artifact_ids": list(
                 REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
             ),
@@ -1073,7 +1123,23 @@ def _contract_projection() -> dict[str, Any]:
             "child_application_seed_bound_to_receipt": True,
             "parent_child_python_hash_probe_equality_required": True,
             "child_exact_argv_cwd_and_environment_reverified": True,
-            "child_preflight_failure_rows_retained": True,
+            "child_preflight_failure_rows_retained": False,
+            "child_preflight_failure_emits_case_rows": False,
+            "canonical_jsonl_pre_case_payload_completion_frames_required": True,
+            "exact_frame_count": REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT,
+            "preflight_frame_count": 1,
+            "ordered_case_payload_frame_count": 14,
+            "completion_frame_count": 1,
+            "request_sha256_bound_into_every_frame": True,
+            "previous_frame_sha256_chain_required": True,
+            "frame_sha256_required": True,
+            "case_observation_sha256_required": True,
+            "retained_case_aggregate_sha256_required": True,
+            "native_runtime_pre_and_post_snapshot_evidence_required": True,
+            "native_runtime_pre_post_snapshot_equality_verified": True,
+            "native_mapping_lifetime_closure_claimed": False,
+            "timeout_nonzero_or_incomplete_transcript_discards_all_child_payloads": True,
+            "supervisor_synthesizes_exactly_fourteen_failure_rows": True,
         },
         "entrypoint": {
             "logical_argv": list(REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV),
@@ -1128,6 +1194,11 @@ def _contract_projection() -> dict[str, Any]:
             "coordinate_trace_step_identity_includes_case_and_source": True,
             "coordinate_trace_length_order_counts_and_energy_ledger_verified": True,
             "coordinate_trace_sha256_required": True,
+            "worker_lifecycle_evidence_retained": True,
+            "worker_request_sha256_retained": True,
+            "frame_and_transcript_sha256s_retained_for_complete_worker": True,
+            "retained_case_aggregate_transitively_binds_coordinate_traces": True,
+            "complete_and_incomplete_worker_cross_invariants_required": True,
             "result_receipt_written": False,
         },
         "start_marker": {
@@ -1204,12 +1275,53 @@ class ReferenceMinimizationValidationCaseObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class ReferenceMinimizationValidationWorkerExecutionEvidence:
+    worker_request_sha256: str
+    completion_state: str
+    failure_code: str | None
+    pre_frame_sha256: str | None
+    case_frame_sha256_rows: tuple[tuple[int, str, str, str], ...]
+    completion_frame_sha256: str | None
+    transcript_sha256: str | None
+    retained_case_aggregate_sha256: str
+    runtime_lifecycle_evidence: Mapping[str, Any]
+    native_pre_post_snapshot_equality_verified: bool
+    native_mapping_lifetime_closure_claimed: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "worker_request_sha256": self.worker_request_sha256,
+            "completion_state": self.completion_state,
+            "failure_code": self.failure_code,
+            "pre_frame_sha256": self.pre_frame_sha256,
+            "case_frame_sha256_rows": [
+                {
+                    "ordinal": ordinal,
+                    "case_id": case_id,
+                    "case_observation_sha256": case_sha256,
+                    "frame_sha256": frame_sha256,
+                }
+                for ordinal, case_id, case_sha256, frame_sha256 in self.case_frame_sha256_rows
+            ],
+            "completion_frame_sha256": self.completion_frame_sha256,
+            "transcript_sha256": self.transcript_sha256,
+            "retained_case_aggregate_sha256": self.retained_case_aggregate_sha256,
+            "runtime_lifecycle_evidence": dict(self.runtime_lifecycle_evidence),
+            "native_pre_post_snapshot_equality_verified": (
+                self.native_pre_post_snapshot_equality_verified
+            ),
+            "native_mapping_lifetime_closure_claimed": self.native_mapping_lifetime_closure_claimed,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ReferenceMinimizationValidationRunObservation:
     authorization_nonce_sha256: str
     environment_receipt_sha256: str
     environment_fingerprint_sha256: str
     code_commit_sha: str
     runner_source_sha256: str
+    source_manifest_sha256: str
     dependency_artifact_sha256_rows: tuple[tuple[str, str], ...]
     command_argv: tuple[str, ...]
     seed: int
@@ -1217,6 +1329,7 @@ class ReferenceMinimizationValidationRunObservation:
     completed_at_utc: str
     runner_start_record_sha256: str
     case_results: tuple[ReferenceMinimizationValidationCaseObservation, ...]
+    worker_execution_evidence: ReferenceMinimizationValidationWorkerExecutionEvidence
     all_cases_observed: bool
     all_cases_passed: bool
     claim_policy: Mapping[str, bool]
@@ -1238,6 +1351,7 @@ class ReferenceMinimizationValidationRunObservation:
             "environment_fingerprint_sha256": self.environment_fingerprint_sha256,
             "code_commit_sha": self.code_commit_sha,
             "runner_source_sha256": self.runner_source_sha256,
+            "source_manifest_sha256": self.source_manifest_sha256,
             "dependency_artifact_sha256_rows": [
                 {"artifact_id": key, "sha256": value}
                 for key, value in self.dependency_artifact_sha256_rows
@@ -1248,6 +1362,7 @@ class ReferenceMinimizationValidationRunObservation:
             "completed_at_utc": self.completed_at_utc,
             "runner_start_record_sha256": self.runner_start_record_sha256,
             "case_results": [row.to_dict() for row in self.case_results],
+            "worker_execution_evidence": self.worker_execution_evidence.to_dict(),
             "coverage_summary": {
                 "expected_case_count": 14,
                 "observed_case_count": len(self.case_results),
@@ -1821,6 +1936,178 @@ def _case_observation_from_payload(
     return row
 
 
+def _worker_execution_evidence_from_payload(
+    value: object,
+    *,
+    case_results: Sequence[ReferenceMinimizationValidationCaseObservation],
+) -> ReferenceMinimizationValidationWorkerExecutionEvidence:
+    expected_fields = {
+        "worker_request_sha256",
+        "completion_state",
+        "failure_code",
+        "pre_frame_sha256",
+        "case_frame_sha256_rows",
+        "completion_frame_sha256",
+        "transcript_sha256",
+        "retained_case_aggregate_sha256",
+        "runtime_lifecycle_evidence",
+        "native_pre_post_snapshot_equality_verified",
+        "native_mapping_lifetime_closure_claimed",
+    }
+    if not isinstance(value, Mapping) or set(value) != expected_fields:
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker execution lifecycle evidence fields are invalid"
+        )
+    request_sha256 = _require_sha256(
+        value["worker_request_sha256"], name="worker request"
+    )
+    retained_payload_rows = [row.to_dict() for row in case_results]
+    retained_case_aggregate_sha256 = _require_sha256(
+        value["retained_case_aggregate_sha256"],
+        name="retained minimization case aggregate",
+    )
+    if retained_case_aggregate_sha256 != _sha256(retained_payload_rows):
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker execution retained case aggregate is cross-wired"
+        )
+    raw_case_frame_rows = value["case_frame_sha256_rows"]
+    if not isinstance(raw_case_frame_rows, list):
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker execution case frame digest rows are invalid"
+        )
+    case_frame_rows: list[tuple[int, str, str, str]] = []
+    for item in raw_case_frame_rows:
+        if not isinstance(item, Mapping) or set(item) != {
+            "ordinal",
+            "case_id",
+            "case_observation_sha256",
+            "frame_sha256",
+        }:
+            raise ReferenceMinimizationValidationRunnerError(
+                "worker execution case frame digest row is invalid"
+            )
+        if type(item["ordinal"]) is not int or not isinstance(item["case_id"], str):
+            raise ReferenceMinimizationValidationRunnerError(
+                "worker execution case frame identity is invalid"
+            )
+        case_frame_rows.append(
+            (
+                item["ordinal"],
+                item["case_id"],
+                _require_sha256(
+                    item["case_observation_sha256"], name="worker case observation"
+                ),
+                _require_sha256(item["frame_sha256"], name="worker case frame"),
+            )
+        )
+    lifecycle_payload = value["runtime_lifecycle_evidence"]
+    if not isinstance(lifecycle_payload, Mapping):
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker runtime lifecycle evidence is invalid"
+        )
+    completion_state = value["completion_state"]
+    if value["native_mapping_lifetime_closure_claimed"] is not False:
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker execution cannot claim native mapping lifetime closure"
+        )
+    if completion_state == "complete":
+        pre_frame_sha256 = _require_sha256(
+            value["pre_frame_sha256"], name="worker preflight frame"
+        )
+        completion_frame_sha256 = _require_sha256(
+            value["completion_frame_sha256"],
+            name="worker completion frame",
+        )
+        transcript_sha256 = _require_sha256(
+            value["transcript_sha256"], name="worker transcript"
+        )
+        if (
+            value["failure_code"] is not None
+            or value["native_pre_post_snapshot_equality_verified"] is not True
+            or len(case_frame_rows)
+            != REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+            or tuple(row[0] for row in case_frame_rows) != tuple(range(1, 15))
+            or tuple(row[1] for row in case_frame_rows)
+            != tuple(row.case_id for row in case_results)
+            or tuple(row[2] for row in case_frame_rows)
+            != tuple(_sha256(row.to_dict()) for row in case_results)
+            or len(
+                {
+                    pre_frame_sha256,
+                    completion_frame_sha256,
+                    *(row[3] for row in case_frame_rows),
+                }
+            )
+            != REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT
+        ):
+            raise ReferenceMinimizationValidationRunnerError(
+                "complete worker execution lifecycle is incomplete, reordered, duplicated, or contradictory"
+            )
+        expected_payload_rows: Sequence[Mapping[str, Any]] | None = (
+            retained_payload_rows
+        )
+        failure_code = None
+    elif completion_state == "incomplete":
+        failure_code = value["failure_code"]
+        if not isinstance(failure_code, str) or not failure_code:
+            raise ReferenceMinimizationValidationRunnerError(
+                "incomplete worker execution failure code is invalid"
+            )
+        expected_failure_rows = [
+            row.to_dict() for row in _failure_complete_matrix(failure_code)
+        ]
+        if (
+            value["pre_frame_sha256"] is not None
+            or case_frame_rows
+            or value["completion_frame_sha256"] is not None
+            or value["transcript_sha256"] is not None
+            or value["native_pre_post_snapshot_equality_verified"] is not False
+            or retained_payload_rows != expected_failure_rows
+        ):
+            raise ReferenceMinimizationValidationRunnerError(
+                "incomplete worker execution retained partial payload or contradictory rows"
+            )
+        pre_frame_sha256 = None
+        completion_frame_sha256 = None
+        transcript_sha256 = None
+        expected_payload_rows = None
+    else:
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker execution completion state is invalid"
+        )
+    try:
+        lifecycle = require_worker_runtime_lifecycle_evidence(
+            lifecycle_payload,
+            expected_lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            expected_worker_request_sha256=request_sha256,
+            expected_payload_rows=expected_payload_rows,
+        )
+    except ValidationNativeRuntimeIdentityError as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker runtime lifecycle evidence does not match retained cases"
+        ) from exc
+    evidence = ReferenceMinimizationValidationWorkerExecutionEvidence(
+        worker_request_sha256=request_sha256,
+        completion_state=completion_state,
+        failure_code=failure_code,
+        pre_frame_sha256=pre_frame_sha256,
+        case_frame_sha256_rows=tuple(case_frame_rows),
+        completion_frame_sha256=completion_frame_sha256,
+        transcript_sha256=transcript_sha256,
+        retained_case_aggregate_sha256=retained_case_aggregate_sha256,
+        runtime_lifecycle_evidence=lifecycle,
+        native_pre_post_snapshot_equality_verified=(
+            value["native_pre_post_snapshot_equality_verified"] is True
+        ),
+        native_mapping_lifetime_closure_claimed=False,
+    )
+    if evidence.to_dict() != dict(value):
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker execution lifecycle evidence is not canonical"
+        )
+    return evidence
+
+
 def require_reference_minimization_validation_run_observation_document(
     value: object,
 ) -> ReferenceMinimizationValidationRunObservation:
@@ -1839,6 +2126,7 @@ def require_reference_minimization_validation_run_observation_document(
         "environment_fingerprint_sha256",
         "code_commit_sha",
         "runner_source_sha256",
+        "source_manifest_sha256",
         "dependency_artifact_sha256_rows",
         "command_argv",
         "seed",
@@ -1846,6 +2134,7 @@ def require_reference_minimization_validation_run_observation_document(
         "completed_at_utc",
         "runner_start_record_sha256",
         "case_results",
+        "worker_execution_evidence",
         "coverage_summary",
         "in_memory_only",
         "result_receipt_written",
@@ -1872,6 +2161,10 @@ def require_reference_minimization_validation_run_observation_document(
             "run observation collections are invalid"
         )
     case_results = tuple(_case_observation_from_payload(row) for row in rows)
+    worker_execution_evidence = _worker_execution_evidence_from_payload(
+        value["worker_execution_evidence"],
+        case_results=case_results,
+    )
     dependency_rows = tuple(
         (str(row["artifact_id"]), str(row["sha256"])) for row in dependencies
     )
@@ -1897,6 +2190,9 @@ def require_reference_minimization_validation_run_observation_document(
             runner_source_sha256=_require_sha256(
                 value["runner_source_sha256"], name="runner source"
             ),
+            source_manifest_sha256=_require_sha256(
+                value["source_manifest_sha256"], name="source manifest"
+            ),
             dependency_artifact_sha256_rows=dependency_rows,
             command_argv=tuple(command),
             seed=value["seed"],
@@ -1906,6 +2202,7 @@ def require_reference_minimization_validation_run_observation_document(
                 value["runner_start_record_sha256"], name="runner-start record"
             ),
             case_results=case_results,
+            worker_execution_evidence=worker_execution_evidence,
             all_cases_observed=value["coverage_summary"]["all_cases_observed"] is True,
             all_cases_passed=value["coverage_summary"]["all_cases_passed"] is True,
             claim_policy=dict(value["claim_policy"]),
@@ -2225,6 +2522,40 @@ def _load_matrix_worker_request(raw: bytes) -> dict[str, Any]:
     return request
 
 
+def _finalize_matrix_worker_frame(projection: Mapping[str, Any]) -> dict[str, Any]:
+    payload = dict(projection)
+    payload["frame_sha256"] = _sha256(payload)
+    return payload
+
+
+def _write_matrix_worker_frame(output_stream: Any, frame: Mapping[str, Any]) -> None:
+    output_stream.write(_canonical_bytes(dict(frame)) + b"\n")
+    output_stream.flush()
+
+
+def _complete_runtime_lifecycle_from_phases(
+    *,
+    worker_request_sha256: str,
+    pre_evidence: Mapping[str, Any],
+    payload_evidence: Mapping[str, Any],
+    post_evidence: Mapping[str, Any],
+    payload_aggregate_sha256: str,
+    lifecycle_sha256: str,
+) -> dict[str, Any]:
+    return {
+        "schema_id": WORKER_RUNTIME_LIFECYCLE_EVIDENCE_SCHEMA_ID,
+        "completion_state": "complete",
+        "failure_code": None,
+        "lane": WORKER_RUNTIME_LANE_MINIMIZATION,
+        "worker_request_sha256": worker_request_sha256,
+        "pre": dict(pre_evidence),
+        "payload": dict(payload_evidence),
+        "post": dict(post_evidence),
+        "payload_aggregate_sha256": payload_aggregate_sha256,
+        "lifecycle_sha256": lifecycle_sha256,
+    }
+
+
 def _matrix_worker_main_from_standard_streams() -> int:
     input_stream = getattr(sys.stdin, "buffer", sys.stdin)
     output_stream = getattr(sys.stdout, "buffer", sys.stdout)
@@ -2234,14 +2565,70 @@ def _matrix_worker_main_from_standard_streams() -> int:
         )
         if not isinstance(raw, bytes):
             return 2
-        try:
-            request = _load_matrix_worker_request(raw)
-            _require_matrix_worker_preflight(request)
-            rows = _run_case_matrix_in_process()
-        except Exception:
-            rows = _failure_complete_matrix("runner_worker_preflight_failed")
-        output_stream.write(_canonical_bytes([row.to_dict() for row in rows]) + b"\n")
-        output_stream.flush()
+        request = _load_matrix_worker_request(raw)
+        _require_matrix_worker_preflight(request)
+        request_sha256 = _sha256(request)
+        pre_evidence = build_worker_runtime_pre_evidence(
+            lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            worker_request_sha256=request_sha256,
+        )
+        pre_frame = _finalize_matrix_worker_frame(
+            {
+                "schema_id": REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID,
+                "frame_type": "preflight_complete",
+                "frame_ordinal": 0,
+                "worker_request_sha256": request_sha256,
+                "previous_frame_sha256": None,
+                "runtime_pre_evidence": pre_evidence,
+            }
+        )
+        _write_matrix_worker_frame(output_stream, pre_frame)
+
+        rows = _run_case_matrix_in_process()
+        payload_rows = [row.to_dict() for row in rows]
+        lifecycle = build_complete_worker_runtime_lifecycle_evidence(
+            lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            worker_request_sha256=request_sha256,
+            pre_evidence=pre_evidence,
+            payload_rows=payload_rows,
+        )
+        previous_frame_sha256 = pre_frame["frame_sha256"]
+        for ordinal, (row, payload) in enumerate(
+            zip(rows, payload_rows, strict=True), start=1
+        ):
+            frame = _finalize_matrix_worker_frame(
+                {
+                    "schema_id": REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID,
+                    "frame_type": "case_payload",
+                    "frame_ordinal": ordinal,
+                    "worker_request_sha256": request_sha256,
+                    "previous_frame_sha256": previous_frame_sha256,
+                    "case_id": row.case_id,
+                    "case_observation_sha256": _sha256(payload),
+                    "case_observation": payload,
+                }
+            )
+            _write_matrix_worker_frame(output_stream, frame)
+            previous_frame_sha256 = frame["frame_sha256"]
+        completion_frame = _finalize_matrix_worker_frame(
+            {
+                "schema_id": REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID,
+                "frame_type": "completion",
+                "frame_ordinal": REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES + 1,
+                "worker_request_sha256": request_sha256,
+                "previous_frame_sha256": previous_frame_sha256,
+                "case_count": REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES,
+                "retained_case_aggregate_sha256": _sha256(payload_rows),
+                "runtime_payload_evidence": lifecycle["payload"],
+                "runtime_post_evidence": lifecycle["post"],
+                "runtime_payload_aggregate_sha256": lifecycle[
+                    "payload_aggregate_sha256"
+                ],
+                "runtime_lifecycle_sha256": lifecycle["lifecycle_sha256"],
+                "native_mapping_lifetime_closure_claimed": False,
+            }
+        )
+        _write_matrix_worker_frame(output_stream, completion_frame)
     except Exception:
         return 2
     return 0
@@ -2254,7 +2641,12 @@ def _matrix_worker_environment(
     environment = dict(environment_variable_rows)
     expected_receipt_names = (
         _REFERENCE_MINIMIZATION_VALIDATION_WORKER_ENVIRONMENT_NAMES
-        - {"HOME", "PATH", "PYTHONNOUSERSITE", "PYTHONPATH"}
+        - {
+            "HOME",
+            "PATH",
+            "PYTHONNOUSERSITE",
+            "PYTHONPATH",
+        }
     )
     if (
         set(environment) != expected_receipt_names
@@ -2337,57 +2729,343 @@ def _communicate_fixed_matrix_worker(
     *,
     deadline: float,
 ) -> tuple[bytes, bool, bool]:
-    timed_out = False
     try:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0.0:
-            raise subprocess.TimeoutExpired(process.args, 0.0)
-        output, _stderr = process.communicate(
-            input=_canonical_bytes(dict(request)) + b"\n",
-            timeout=remaining,
+        return communicate_bounded_worker_process(
+            process,
+            _canonical_bytes(dict(request)) + b"\n",
+            deadline=deadline,
+            max_output_bytes=(
+                REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WORKER_OUTPUT_BYTES
+            ),
         )
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        try:
-            process.kill()
-        except OSError:
-            pass
-        try:
-            output, _stderr = process.communicate(timeout=5.0)
-        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
-            raise ReferenceMinimizationValidationRunnerError(
-                "matrix worker process could not be reaped after termination"
-            ) from exc
-    except (OSError, ValueError):
-        try:
-            process.kill()
-        except OSError:
-            pass
-        try:
-            process.communicate(timeout=5.0)
-        except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
-            raise ReferenceMinimizationValidationRunnerError(
-                "matrix worker process could not be reaped after communication failure"
-            ) from exc
-        return b"", False, False
-    if not isinstance(output, bytes) or len(output) > (
-        REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WORKER_OUTPUT_BYTES + 1
+    except ValidationNativeRuntimeIdentityError as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker bounded communication failed"
+        ) from exc
+
+
+@dataclass(frozen=True, slots=True)
+class _SupervisedMinimizationMatrixResult:
+    case_results: tuple[ReferenceMinimizationValidationCaseObservation, ...]
+    worker_execution_evidence: ReferenceMinimizationValidationWorkerExecutionEvidence
+
+    def __len__(self) -> int:
+        return len(self.case_results)
+
+    def __iter__(self):
+        return iter(self.case_results)
+
+    def __getitem__(self, index: int | slice):
+        return self.case_results[index]
+
+
+def _load_matrix_worker_frame_line(raw: bytes) -> dict[str, Any]:
+    if not raw or not raw.endswith(b"\n") or raw == b"\n":
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker frame is not newline-delimited"
+        )
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ReferenceMinimizationValidationRunnerError(
+                    "matrix worker frame contains a duplicate JSON key"
+                )
+            result[key] = value
+        return result
+
+    try:
+        frame = json.loads(
+            raw[:-1].decode("ascii"), object_pairs_hook=reject_duplicate_keys
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker frame is not canonical ASCII JSON"
+        ) from exc
+    if not isinstance(frame, dict) or _canonical_bytes(frame) + b"\n" != raw:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker frame is not exact canonical JSON"
+        )
+    return frame
+
+
+def _require_matrix_worker_frame(
+    frame: Mapping[str, Any],
+    *,
+    expected_fields: set[str],
+    frame_type: str,
+    frame_ordinal: int,
+    worker_request_sha256: str,
+    previous_frame_sha256: str | None,
+) -> dict[str, Any]:
+    if not isinstance(frame, Mapping) or set(frame) != expected_fields | {
+        "frame_sha256"
+    }:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker frame fields are invalid"
+        )
+    payload = dict(frame)
+    observed_frame_sha256 = _require_sha256(
+        payload.pop("frame_sha256"), name="matrix worker frame"
+    )
+    if (
+        payload.get("schema_id")
+        != REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID
+        or payload.get("frame_type") != frame_type
+        or type(payload.get("frame_ordinal")) is not int
+        or payload.get("frame_ordinal") != frame_ordinal
+        or payload.get("worker_request_sha256") != worker_request_sha256
+        or payload.get("previous_frame_sha256") != previous_frame_sha256
+        or not hmac.compare_digest(observed_frame_sha256, _sha256(payload))
     ):
-        return b"", False, False
-    return output, timed_out, process.returncode == 0
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker frame identity, order, request, chain, or digest is invalid"
+        )
+    return {**payload, "frame_sha256": observed_frame_sha256}
+
+
+def _decode_complete_matrix_worker_transcript(
+    raw: bytes,
+    *,
+    worker_preflight_request: Mapping[str, Any],
+) -> _SupervisedMinimizationMatrixResult:
+    request_sha256 = _sha256(dict(worker_preflight_request))
+    raw_lines = raw.splitlines(keepends=True)
+    if (
+        len(raw_lines) != REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT
+        or b"".join(raw_lines) != raw
+        or not raw.endswith(b"\n")
+    ):
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker transcript frame count or framing is incomplete"
+        )
+    frames = [_load_matrix_worker_frame_line(line) for line in raw_lines]
+    pre_fields = {
+        "schema_id",
+        "frame_type",
+        "frame_ordinal",
+        "worker_request_sha256",
+        "previous_frame_sha256",
+        "runtime_pre_evidence",
+    }
+    pre_frame = _require_matrix_worker_frame(
+        frames[0],
+        expected_fields=pre_fields,
+        frame_type="preflight_complete",
+        frame_ordinal=0,
+        worker_request_sha256=request_sha256,
+        previous_frame_sha256=None,
+    )
+    try:
+        pre_evidence = require_worker_runtime_pre_evidence(
+            pre_frame["runtime_pre_evidence"],
+            expected_lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            expected_worker_request_sha256=request_sha256,
+        )
+    except ValidationNativeRuntimeIdentityError as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker preflight runtime evidence is invalid"
+        ) from exc
+
+    expected_ids = [
+        row["case_id"]
+        for row in cpu_minimization_validation_protocol_document()["case_manifest"][
+            "cases"
+        ]
+    ]
+    previous_frame_sha256 = pre_frame["frame_sha256"]
+    rows: list[ReferenceMinimizationValidationCaseObservation] = []
+    payload_rows: list[dict[str, Any]] = []
+    case_frame_rows: list[tuple[int, str, str, str]] = []
+    case_fields = {
+        "schema_id",
+        "frame_type",
+        "frame_ordinal",
+        "worker_request_sha256",
+        "previous_frame_sha256",
+        "case_id",
+        "case_observation_sha256",
+        "case_observation",
+    }
+    for ordinal, (frame, expected_case_id) in enumerate(
+        zip(frames[1:15], expected_ids, strict=True),
+        start=1,
+    ):
+        checked_frame = _require_matrix_worker_frame(
+            frame,
+            expected_fields=case_fields,
+            frame_type="case_payload",
+            frame_ordinal=ordinal,
+            worker_request_sha256=request_sha256,
+            previous_frame_sha256=previous_frame_sha256,
+        )
+        row_payload = checked_frame["case_observation"]
+        row_sha256 = _require_sha256(
+            checked_frame["case_observation_sha256"],
+            name="matrix worker case observation",
+        )
+        if (
+            not isinstance(row_payload, Mapping)
+            or checked_frame["case_id"] != expected_case_id
+            or row_payload.get("case_id") != expected_case_id
+            or row_payload.get("ordinal") != ordinal
+            or not hmac.compare_digest(row_sha256, _sha256(dict(row_payload)))
+        ):
+            raise ReferenceMinimizationValidationRunnerError(
+                "matrix worker case frame is omitted, reordered, cross-wired, or altered"
+            )
+        row = _case_observation_from_payload(row_payload)
+        payload = row.to_dict()
+        rows.append(row)
+        payload_rows.append(payload)
+        case_frame_rows.append(
+            (ordinal, expected_case_id, row_sha256, checked_frame["frame_sha256"])
+        )
+        previous_frame_sha256 = checked_frame["frame_sha256"]
+
+    completion_fields = {
+        "schema_id",
+        "frame_type",
+        "frame_ordinal",
+        "worker_request_sha256",
+        "previous_frame_sha256",
+        "case_count",
+        "retained_case_aggregate_sha256",
+        "runtime_payload_evidence",
+        "runtime_post_evidence",
+        "runtime_payload_aggregate_sha256",
+        "runtime_lifecycle_sha256",
+        "native_mapping_lifetime_closure_claimed",
+    }
+    completion_frame = _require_matrix_worker_frame(
+        frames[-1],
+        expected_fields=completion_fields,
+        frame_type="completion",
+        frame_ordinal=REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES + 1,
+        worker_request_sha256=request_sha256,
+        previous_frame_sha256=previous_frame_sha256,
+    )
+    retained_case_aggregate_sha256 = _require_sha256(
+        completion_frame["retained_case_aggregate_sha256"],
+        name="matrix worker retained case aggregate",
+    )
+    runtime_payload_aggregate_sha256 = _require_sha256(
+        completion_frame["runtime_payload_aggregate_sha256"],
+        name="matrix worker runtime payload aggregate",
+    )
+    runtime_lifecycle_sha256 = _require_sha256(
+        completion_frame["runtime_lifecycle_sha256"],
+        name="matrix worker runtime lifecycle",
+    )
+    if (
+        completion_frame["case_count"]
+        != REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+        or retained_case_aggregate_sha256 != _sha256(payload_rows)
+        or completion_frame["native_mapping_lifetime_closure_claimed"] is not False
+    ):
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker completion aggregate or claim boundary is invalid"
+        )
+    lifecycle = _complete_runtime_lifecycle_from_phases(
+        worker_request_sha256=request_sha256,
+        pre_evidence=pre_evidence,
+        payload_evidence=completion_frame["runtime_payload_evidence"],
+        post_evidence=completion_frame["runtime_post_evidence"],
+        payload_aggregate_sha256=runtime_payload_aggregate_sha256,
+        lifecycle_sha256=runtime_lifecycle_sha256,
+    )
+    try:
+        lifecycle = require_worker_runtime_lifecycle_evidence(
+            lifecycle,
+            expected_lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            expected_worker_request_sha256=request_sha256,
+            expected_payload_rows=payload_rows,
+        )
+    except ValidationNativeRuntimeIdentityError as exc:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker completion lifecycle is invalid"
+        ) from exc
+    evidence = ReferenceMinimizationValidationWorkerExecutionEvidence(
+        worker_request_sha256=request_sha256,
+        completion_state="complete",
+        failure_code=None,
+        pre_frame_sha256=pre_frame["frame_sha256"],
+        case_frame_sha256_rows=tuple(case_frame_rows),
+        completion_frame_sha256=completion_frame["frame_sha256"],
+        transcript_sha256=hashlib.sha256(raw).hexdigest(),
+        retained_case_aggregate_sha256=retained_case_aggregate_sha256,
+        runtime_lifecycle_evidence=lifecycle,
+        native_pre_post_snapshot_equality_verified=True,
+        native_mapping_lifetime_closure_claimed=False,
+    )
+    return _SupervisedMinimizationMatrixResult(tuple(rows), evidence)
+
+
+def _supervisor_failure_complete_matrix(
+    error_code: str,
+    *,
+    worker_preflight_request: Mapping[str, Any] | None,
+) -> _SupervisedMinimizationMatrixResult:
+    request_projection: object = (
+        dict(worker_preflight_request)
+        if isinstance(worker_preflight_request, Mapping)
+        else None
+    )
+    request_sha256 = _sha256(request_projection)
+    rows = _failure_complete_matrix(error_code)
+    payload_rows = [row.to_dict() for row in rows]
+    try:
+        lifecycle = build_incomplete_worker_runtime_lifecycle_evidence(
+            lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            worker_request_sha256=request_sha256,
+            failure_code=error_code,
+        )
+        lifecycle = require_worker_runtime_lifecycle_evidence(
+            lifecycle,
+            expected_lane=WORKER_RUNTIME_LANE_MINIMIZATION,
+            expected_worker_request_sha256=request_sha256,
+            expected_payload_rows=None,
+        )
+    except (
+        ValidationNativeRuntimeIdentityError
+    ) as exc:  # pragma: no cover - fixed local projection
+        raise ReferenceMinimizationValidationRunnerError(
+            "supervisor could not construct failure-complete worker lifecycle evidence"
+        ) from exc
+    evidence = ReferenceMinimizationValidationWorkerExecutionEvidence(
+        worker_request_sha256=request_sha256,
+        completion_state="incomplete",
+        failure_code=error_code,
+        pre_frame_sha256=None,
+        case_frame_sha256_rows=(),
+        completion_frame_sha256=None,
+        transcript_sha256=None,
+        retained_case_aggregate_sha256=_sha256(payload_rows),
+        runtime_lifecycle_evidence=lifecycle,
+        native_pre_post_snapshot_equality_verified=False,
+        native_mapping_lifetime_closure_claimed=False,
+    )
+    return _SupervisedMinimizationMatrixResult(rows, evidence)
 
 
 def _run_supervised_case_matrix(
     *,
     deadline: float,
     worker_preflight_request: Mapping[str, Any] | None = None,
-) -> tuple[ReferenceMinimizationValidationCaseObservation, ...]:
+) -> _SupervisedMinimizationMatrixResult:
     """Hard-stop a fixed child on deadline, including native-code stalls."""
 
     if deadline - time.monotonic() <= 0.0:
-        return _failure_complete_matrix("runner_wall_time_exhausted")
+        return _supervisor_failure_complete_matrix(
+            "runner_wall_time_exhausted",
+            worker_preflight_request=worker_preflight_request,
+        )
     if worker_preflight_request is None:
-        return _failure_complete_matrix("runner_worker_preflight_failed")
+        return _supervisor_failure_complete_matrix(
+            "runner_worker_preflight_failed",
+            worker_preflight_request=worker_preflight_request,
+        )
     raw_roots = worker_preflight_request.get("dependency_roots")
     raw_environment = worker_preflight_request.get("expected_worker_environment")
     if (
@@ -2395,47 +3073,57 @@ def _run_supervised_case_matrix(
         or any(not isinstance(row, str) for row in raw_roots)
         or not isinstance(raw_environment, Mapping)
     ):
-        return _failure_complete_matrix("runner_worker_preflight_failed")
+        return _supervisor_failure_complete_matrix(
+            "runner_worker_preflight_failed",
+            worker_preflight_request=worker_preflight_request,
+        )
     try:
         process = _start_fixed_matrix_worker(worker_preflight_request)
     except ReferenceMinimizationValidationRunnerError:
-        return _failure_complete_matrix("runner_worker_start_failed")
-    raw, timed_out, succeeded = _communicate_fixed_matrix_worker(
-        process,
-        worker_preflight_request,
-        deadline=deadline,
-    )
-    if timed_out:
-        return _failure_complete_matrix("runner_wall_time_exhausted")
-    if not succeeded:
-        return _failure_complete_matrix("runner_worker_output_invalid")
-    if not raw.endswith(b"\n"):
-        return _failure_complete_matrix("runner_worker_output_invalid")
+        return _supervisor_failure_complete_matrix(
+            "runner_worker_start_failed",
+            worker_preflight_request=worker_preflight_request,
+        )
     try:
-        payload = json.loads(raw[:-1].decode("ascii"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return _failure_complete_matrix("runner_worker_output_invalid")
-    if (
-        not isinstance(payload, list)
-        or len(payload) != REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
-        or raw != _canonical_bytes(payload) + b"\n"
-    ):
-        return _failure_complete_matrix("runner_worker_output_invalid")
-    try:
-        rows = tuple(_case_observation_from_payload(value) for value in payload)
+        raw, timed_out, succeeded = _communicate_fixed_matrix_worker(
+            process,
+            worker_preflight_request,
+            deadline=deadline,
+        )
     except ReferenceMinimizationValidationRunnerError:
-        return _failure_complete_matrix("runner_worker_output_invalid")
-    expected_ids = [
-        row["case_id"]
-        for row in cpu_minimization_validation_protocol_document()["case_manifest"][
-            "cases"
-        ]
-    ]
-    if [row.case_id for row in rows] != expected_ids or [
-        row.ordinal for row in rows
-    ] != list(range(1, 15)):
-        return _failure_complete_matrix("runner_worker_output_crosswired")
-    return rows
+        return _supervisor_failure_complete_matrix(
+            "runner_worker_output_invalid",
+            worker_preflight_request=worker_preflight_request,
+        )
+    if timed_out:
+        return _supervisor_failure_complete_matrix(
+            "runner_wall_time_exhausted",
+            worker_preflight_request=worker_preflight_request,
+        )
+    if not succeeded:
+        return _supervisor_failure_complete_matrix(
+            "runner_worker_output_invalid",
+            worker_preflight_request=worker_preflight_request,
+        )
+    try:
+        result = _decode_complete_matrix_worker_transcript(
+            raw,
+            worker_preflight_request=worker_preflight_request,
+        )
+        require_complete_worker_runtime_process_id(
+            result.worker_execution_evidence.runtime_lifecycle_evidence,
+            expected_process_id=process.pid,
+        )
+        return result
+    except (
+        AttributeError,
+        ReferenceMinimizationValidationRunnerError,
+        ValidationNativeRuntimeIdentityError,
+    ):
+        return _supervisor_failure_complete_matrix(
+            "runner_worker_output_invalid",
+            worker_preflight_request=worker_preflight_request,
+        )
 
 
 def _validate_manifest_before_start() -> None:
@@ -2460,6 +3148,7 @@ def _persist_runner_start(
     environment_receipt_sha256: str,
     code_commit_sha: str,
     runner_source_sha256: str,
+    source_manifest_sha256: str,
     started_at_utc: str,
 ) -> str:
     _require_reference_minimization_validation_root_outside_checkout(
@@ -2481,6 +3170,7 @@ def _persist_runner_start(
         "environment_receipt_sha256": environment_receipt_sha256,
         "code_commit_sha": code_commit_sha,
         "runner_source_sha256": runner_source_sha256,
+        "source_manifest_sha256": source_manifest_sha256,
         "started_at_utc": started_at_utc,
         "result_receipt_written": False,
         **_closed_claim_policy(),
@@ -2535,6 +3225,7 @@ def read_reference_minimization_validation_runner_start_record(
     expected_record_sha256: str,
     expected_environment_receipt_sha256: str,
     expected_runner_source_sha256: str,
+    expected_source_manifest_sha256: str,
 ) -> dict[str, Any]:
     """Read a durable marker without releasing or deleting its nonce."""
 
@@ -2547,6 +3238,9 @@ def read_reference_minimization_validation_runner_start_record(
     )
     expected_source = _require_sha256(
         expected_runner_source_sha256, name="runner source"
+    )
+    expected_source_manifest = _require_sha256(
+        expected_source_manifest_sha256, name="source manifest"
     )
     _require_reference_minimization_validation_root_outside_checkout(
         artifact_output_root, name="runner artifact root"
@@ -2628,6 +3322,7 @@ def read_reference_minimization_validation_runner_start_record(
         or payload.get("authorization_nonce_sha256") != nonce
         or payload.get("environment_receipt_sha256") != expected_environment
         or payload.get("runner_source_sha256") != expected_source
+        or payload.get("source_manifest_sha256") != expected_source_manifest
         or payload.get("result_receipt_written") is not False
         or any(payload.get(name) is not False for name in _closed_claim_policy())
     ):
@@ -2647,6 +3342,10 @@ def run_bounded_cpu_reference_minimization_validation(
 ) -> ReferenceMinimizationValidationRunObservation:
     """Consume one run start and evaluate the complete frozen matrix."""
 
+    preflight_deadline = (
+        time.monotonic()
+        + REFERENCE_MINIMIZATION_VALIDATION_RUNNER_PREFLIGHT_MAX_WALL_SECONDS
+    )
     nonce = _require_sha256(authorization_nonce_sha256, name="authorization nonce")
     expected_receipt = _require_sha256(
         expected_environment_receipt_sha256, name="environment receipt"
@@ -2658,6 +3357,7 @@ def run_bounded_cpu_reference_minimization_validation(
         artifact_output_root,
         nonce,
         expected_receipt_sha256=expected_receipt,
+        deadline=preflight_deadline,
     )
     started = _parse_utc(receipt.started_at_utc, name="environment receipt start")
     now = _utc_now()
@@ -2679,7 +3379,12 @@ def run_bounded_cpu_reference_minimization_validation(
         )
     if (
         tuple(
-            sorted(_observe_dependency_artifact_sha256_rows(dependency_roots).items())
+            sorted(
+                _observe_dependency_artifact_sha256_rows(
+                    dependency_roots,
+                    deadline=preflight_deadline,
+                ).items()
+            )
         )
         != expected_rows
     ):
@@ -2691,6 +3396,10 @@ def run_bounded_cpu_reference_minimization_validation(
         raise ReferenceMinimizationValidationRunnerError(
             "environment receipt runner source is cross-wired"
         )
+    source_manifest_sha256 = _require_sha256(
+        receipt.source_manifest_sha256,
+        name="environment receipt source manifest",
+    )
     if tuple(receipt.command_argv) != (
         REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV
     ):
@@ -2699,6 +3408,10 @@ def run_bounded_cpu_reference_minimization_validation(
         )
     _require_clean_checked_out_code_commit(expected_commit)
     _validate_manifest_before_start()
+    if time.monotonic() >= preflight_deadline:
+        raise ReferenceMinimizationValidationRunnerError(
+            "validation preflight time budget expired before worker launch"
+        )
     raw_dependency_roots = [os.fspath(root) for root in dependency_roots]
     worker_environment = _matrix_worker_environment(
         receipt.environment_variable_rows,
@@ -2740,12 +3453,18 @@ def run_bounded_cpu_reference_minimization_validation(
         environment_receipt_sha256=expected_receipt,
         code_commit_sha=expected_commit,
         runner_source_sha256=source_sha256,
+        source_manifest_sha256=source_manifest_sha256,
         started_at_utc=started_at,
     )
-    case_results = _run_supervised_case_matrix(
+    supervised_result = _run_supervised_case_matrix(
         deadline=deadline,
         worker_preflight_request=worker_preflight_request,
     )
+    if not isinstance(supervised_result, _SupervisedMinimizationMatrixResult):
+        raise ReferenceMinimizationValidationRunnerError(
+            "validation supervisor omitted worker lifecycle evidence"
+        )
+    case_results = supervised_result.case_results
     all_observed = len(case_results) == 14
     return ReferenceMinimizationValidationRunObservation(
         authorization_nonce_sha256=nonce,
@@ -2753,6 +3472,7 @@ def run_bounded_cpu_reference_minimization_validation(
         environment_fingerprint_sha256=receipt.environment_fingerprint_sha256,
         code_commit_sha=expected_commit,
         runner_source_sha256=source_sha256,
+        source_manifest_sha256=source_manifest_sha256,
         dependency_artifact_sha256_rows=expected_rows,
         command_argv=tuple(receipt.command_argv),
         seed=receipt.application_seed,
@@ -2760,6 +3480,7 @@ def run_bounded_cpu_reference_minimization_validation(
         completed_at_utc=_format_utc(_utc_now()),
         runner_start_record_sha256=marker,
         case_results=case_results,
+        worker_execution_evidence=supervised_result.worker_execution_evidence,
         all_cases_observed=all_observed,
         all_cases_passed=all_observed and all(row.case_passed for row in case_results),
         claim_policy=_closed_claim_policy(),
@@ -3320,11 +4041,14 @@ if __name__ == "__main__":
 
 __all__ = [
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V4",
     "REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_ID",
     "REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID",
     "REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_VERSION",
     "REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV",
     "REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID",
+    "REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID",
+    "REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT",
     "REFERENCE_MINIMIZATION_VALIDATION_COORDINATE_DIGEST_ALGORITHM",
     "REFERENCE_MINIMIZATION_VALIDATION_COORDINATE_ENCODING",
     "REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES",
@@ -3343,6 +4067,7 @@ __all__ = [
     "ReferenceMinimizationValidationCoordinateTrace",
     "ReferenceMinimizationValidationCoordinateTraceStep",
     "ReferenceMinimizationValidationRunObservation",
+    "ReferenceMinimizationValidationWorkerExecutionEvidence",
     "ReferenceMinimizationValidationRunnerAlreadyStartedError",
     "ReferenceMinimizationValidationRunnerError",
     "reference_minimization_validation_checked_out_code_commit_sha",

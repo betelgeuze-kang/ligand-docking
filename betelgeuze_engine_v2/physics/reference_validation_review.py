@@ -25,20 +25,23 @@ from .reference_validation_artifact_binding import (
 
 
 REFERENCE_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_review_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_review_contract/2.0.0"
 )
 REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_review_attestation/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_review_attestation/2.0.0"
 )
 REFERENCE_VALIDATION_REVIEW_CONTRACT_ID = (
-    "cpu_reference_validation_independent_review_contract/1.0.0"
+    "cpu_reference_validation_independent_review_contract/2.0.0"
 )
-REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-17T04:31:00Z"
+REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION = "2.0.0"
+REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
 REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "hmac-sha256"
 REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256 = (
+    "24508ab9947688ae981479148fbcb9cf67b3fa9147631609f49864c71be421d2"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V1 = (
     "37ca9f550486febc73e36dc36a113e00042d87de79b14bf8033fbbfc1dcbf104"
 )
 
@@ -62,7 +65,6 @@ _CLOSED_GATE_BLOCKERS = (
     "signed_independent_scientific_review_attestation_missing",
     "trusted_independent_scientific_reviewer_key_not_provided",
     "implementation_author_and_independent_reviewer_separation_not_attested",
-    "signed_execution_authorization_receipt_schema_not_frozen",
     "signed_execution_authorization_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
@@ -71,7 +73,6 @@ _CLOSED_GATE_BLOCKERS = (
     "product_integration_not_qualified",
 )
 _POST_REVIEW_BLOCKERS = (
-    "signed_execution_authorization_receipt_schema_not_frozen",
     "signed_execution_authorization_receipt_missing",
     "validation_execution_not_authorized",
     "validation_results_not_collected",
@@ -95,7 +96,9 @@ def _canonical_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
-        raise ReferenceValidationReviewError("review artifact is not canonical JSON") from exc
+        raise ReferenceValidationReviewError(
+            "review artifact is not canonical JSON"
+        ) from exc
 
 
 def _sha256(value: object) -> str:
@@ -114,9 +117,13 @@ def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
         raise ReferenceValidationReviewError(f"{name} must be second-resolution UTC")
     try:
-        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
     except ValueError as exc:
-        raise ReferenceValidationReviewError(f"{name} must be second-resolution UTC") from exc
+        raise ReferenceValidationReviewError(
+            f"{name} must be second-resolution UTC"
+        ) from exc
     return parsed
 
 
@@ -143,9 +150,17 @@ def _require_key(value: bytes | str, *, name: str) -> bytes:
 
 def _require_key_id(value: object) -> str:
     if not isinstance(value, str) or not value or len(value) > 128:
-        raise ReferenceValidationReviewError("reviewer key id must contain 1 to 128 characters")
-    if any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-" for character in value):
-        raise ReferenceValidationReviewError("reviewer key id contains unsupported characters")
+        raise ReferenceValidationReviewError(
+            "reviewer key id must contain 1 to 128 characters"
+        )
+    if any(
+        character
+        not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+        for character in value
+    ):
+        raise ReferenceValidationReviewError(
+            "reviewer key id contains unsupported characters"
+        )
     return value
 
 
@@ -167,8 +182,12 @@ def _contract_projection() -> dict[str, Any]:
         "dependencies": {
             "artifact_binding_sha256": FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
             "protocol_sha256": binding["dependencies"]["protocol_sha256"],
-            "h5_applicability_record_sha256": binding["dependencies"]["h5_applicability_record_sha256"],
-            "materialization_manifest_sha256": binding["materializer"]["materialization_manifest_sha256"],
+            "h5_applicability_record_sha256": binding["dependencies"][
+                "h5_applicability_record_sha256"
+            ],
+            "materialization_manifest_sha256": binding["materializer"][
+                "materialization_manifest_sha256"
+            ],
             "reference_evaluator_source_sha256": FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256,
             "materializer_source_sha256": FROZEN_REFERENCE_VALIDATION_MATERIALIZER_SOURCE_SHA256,
             "oracle_source_sha256": FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256,
@@ -187,7 +206,9 @@ def _contract_projection() -> dict[str, Any]:
         "attestation_schema": {
             "schema_id": REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
             "signature_algorithm": REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM,
-            "maximum_validity_seconds": int(REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY.total_seconds()),
+            "maximum_validity_seconds": int(
+                REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY.total_seconds()
+            ),
             "required_review_check_ids": list(_REQUIRED_REVIEW_CHECK_IDS),
             "required_limitation_ids": list(_REQUIRED_LIMITATION_IDS),
             "all_required_checks_must_be_accepted": True,
@@ -224,21 +245,34 @@ def _contract_projection() -> dict[str, Any]:
 def reference_validation_review_contract_document() -> dict[str, Any]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256:
-        raise ReferenceValidationReviewError("frozen validation review contract SHA-256 drifted")
+    if (
+        document["contract_sha256"]
+        != FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256
+    ):
+        raise ReferenceValidationReviewError(
+            "frozen validation review contract SHA-256 drifted"
+        )
     return document
 
 
-def require_reference_validation_review_contract_document(payload: Mapping[str, Any]) -> dict[str, Any]:
+def require_reference_validation_review_contract_document(
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
-        raise ReferenceValidationReviewError("review contract document must be a mapping")
+        raise ReferenceValidationReviewError(
+            "review contract document must be a mapping"
+        )
     try:
         observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise ReferenceValidationReviewError("review contract document is invalid") from exc
+        raise ReferenceValidationReviewError(
+            "review contract document is invalid"
+        ) from exc
     expected = reference_validation_review_contract_document()
     if observed != expected:
-        raise ReferenceValidationReviewError("review contract document does not match the frozen record")
+        raise ReferenceValidationReviewError(
+            "review contract document does not match the frozen record"
+        )
     return observed
 
 
@@ -253,12 +287,16 @@ class ScientificReviewerTrustAnchor:
         object.__setattr__(
             self,
             "reviewer_identity_sha256",
-            _require_sha256(self.reviewer_identity_sha256, name="trusted reviewer identity"),
+            _require_sha256(
+                self.reviewer_identity_sha256, name="trusted reviewer identity"
+            ),
         )
         object.__setattr__(
             self,
             "verification_key",
-            _require_key(self.verification_key, name="trusted reviewer verification key"),
+            _require_key(
+                self.verification_key, name="trusted reviewer verification key"
+            ),
         )
 
 
@@ -296,24 +334,36 @@ class ReferenceValidationReviewVerification:
                 "review verification author and reviewer identities must differ"
             )
         _require_key_id(self.reviewer_key_id)
-        reviewed_at = _parse_utc(self.reviewed_at_utc, name="review verification reviewed_at_utc")
-        expires_at = _parse_utc(self.expires_at_utc, name="review verification expires_at_utc")
+        reviewed_at = _parse_utc(
+            self.reviewed_at_utc, name="review verification reviewed_at_utc"
+        )
+        expires_at = _parse_utc(
+            self.expires_at_utc, name="review verification expires_at_utc"
+        )
         if expires_at <= reviewed_at:
             raise ReferenceValidationReviewError(
                 "review verification expiry must follow review time"
             )
         if not self.independent_scientific_review_verified:
-            raise ReferenceValidationReviewError("verified review decision must retain review verification")
+            raise ReferenceValidationReviewError(
+                "verified review decision must retain review verification"
+            )
         if not self.implementation_author_separation_verified:
-            raise ReferenceValidationReviewError("verified review decision must retain author separation")
+            raise ReferenceValidationReviewError(
+                "verified review decision must retain author separation"
+            )
         if (
             self.validation_execution_authorized
             or self.parameter_fitting_proposal_authorized
             or self.parameter_fitting_authorized
         ):
-            raise ReferenceValidationReviewError("review attestation alone cannot authorize execution or fitting")
+            raise ReferenceValidationReviewError(
+                "review attestation alone cannot authorize execution or fitting"
+            )
         if not self.blockers:
-            raise ReferenceValidationReviewError("review verification must retain downstream blockers")
+            raise ReferenceValidationReviewError(
+                "review verification must retain downstream blockers"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -416,8 +466,11 @@ def _load_attestation(source: str | bytes | Mapping[str, Any]) -> dict[str, Any]
         return dict(source)
     raw = source.encode("utf-8") if isinstance(source, str) else source
     if not isinstance(raw, bytes):
-        raise ReferenceValidationReviewError("review attestation must be a mapping, string, or bytes")
+        raise ReferenceValidationReviewError(
+            "review attestation must be a mapping, string, or bytes"
+        )
     try:
+
         def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             result: dict[str, Any] = {}
             for key, value in pairs:
@@ -433,9 +486,13 @@ def _load_attestation(source: str | bytes | Mapping[str, Any]) -> dict[str, Any]
             object_pairs_hook=reject_duplicate_keys,
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceValidationReviewError("review attestation must be UTF-8 JSON") from exc
+        raise ReferenceValidationReviewError(
+            "review attestation must be UTF-8 JSON"
+        ) from exc
     if not isinstance(loaded, dict):
-        raise ReferenceValidationReviewError("review attestation root must be an object")
+        raise ReferenceValidationReviewError(
+            "review attestation root must be an object"
+        )
     return loaded
 
 
@@ -456,59 +513,90 @@ def verify_signed_reference_validation_review_attestation(
         expected_implementation_author_identity_sha256,
         name="expected implementation author identity",
     )
-    checked_at_utc = _parse_utc(_format_utc(checked_at, name="checked_at"), name="checked_at")
+    checked_at_utc = _parse_utc(
+        _format_utc(checked_at, name="checked_at"), name="checked_at"
+    )
     payload = _load_attestation(source)
     signature = payload.pop("signature", None)
     if not isinstance(signature, Mapping):
         raise ReferenceValidationReviewError("review attestation signature is missing")
     if set(signature) != {"algorithm", "key_id", "value"}:
-        raise ReferenceValidationReviewError("review attestation signature fields are invalid")
+        raise ReferenceValidationReviewError(
+            "review attestation signature fields are invalid"
+        )
     if signature.get("algorithm") != REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM:
-        raise ReferenceValidationReviewError("review attestation signature algorithm is unsupported")
+        raise ReferenceValidationReviewError(
+            "review attestation signature algorithm is unsupported"
+        )
     key_id = _require_key_id(signature.get("key_id"))
     if key_id not in trusted_reviewer_keys:
         raise ReferenceValidationReviewError("reviewer key id is not trusted")
     anchor = trusted_reviewer_keys[key_id]
     if not isinstance(anchor, ScientificReviewerTrustAnchor):
-        raise ReferenceValidationReviewError("trusted reviewer entry has an invalid type")
+        raise ReferenceValidationReviewError(
+            "trusted reviewer entry has an invalid type"
+        )
     expected_signature = hmac.new(
         anchor.verification_key,
         _canonical_bytes(payload),
         hashlib.sha256,
     ).hexdigest()
     signature_value = signature.get("value")
-    if not isinstance(signature_value, str) or not hmac.compare_digest(signature_value, expected_signature):
-        raise ReferenceValidationReviewError("review attestation signature verification failed")
+    if not isinstance(signature_value, str) or not hmac.compare_digest(
+        signature_value, expected_signature
+    ):
+        raise ReferenceValidationReviewError(
+            "review attestation signature verification failed"
+        )
 
     attestation_sha256 = payload.pop("attestation_sha256", None)
     if attestation_sha256 != _sha256(payload):
-        raise ReferenceValidationReviewError("review attestation SHA-256 verification failed")
+        raise ReferenceValidationReviewError(
+            "review attestation SHA-256 verification failed"
+        )
     if payload.get("schema_id") != REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID:
         raise ReferenceValidationReviewError("review attestation schema is unsupported")
     contract = reference_validation_review_contract_document()
     if payload.get("contract_sha256") != contract["contract_sha256"]:
-        raise ReferenceValidationReviewError("review attestation contract identity drifted")
-    if payload.get("artifact_binding_sha256") != FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256:
-        raise ReferenceValidationReviewError("review attestation artifact binding drifted")
+        raise ReferenceValidationReviewError(
+            "review attestation contract identity drifted"
+        )
+    if (
+        payload.get("artifact_binding_sha256")
+        != FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
+    ):
+        raise ReferenceValidationReviewError(
+            "review attestation artifact binding drifted"
+        )
     if payload.get("implementation_author_identity_sha256") != expected_author:
-        raise ReferenceValidationReviewError("review attestation implementation author identity drifted")
+        raise ReferenceValidationReviewError(
+            "review attestation implementation author identity drifted"
+        )
     reviewer_identity = _require_sha256(
         payload.get("independent_reviewer_identity_sha256"),
         name="independent reviewer identity",
     )
     if reviewer_identity != anchor.reviewer_identity_sha256:
-        raise ReferenceValidationReviewError("reviewer identity does not match the trusted key")
+        raise ReferenceValidationReviewError(
+            "reviewer identity does not match the trusted key"
+        )
     if reviewer_identity == expected_author:
-        raise ReferenceValidationReviewError("implementation author and independent reviewer must differ")
+        raise ReferenceValidationReviewError(
+            "implementation author and independent reviewer must differ"
+        )
     if payload.get("reviewer_key_id") != key_id:
         raise ReferenceValidationReviewError("reviewer key id is cross-wired")
 
     reviewed_at = _parse_utc(payload.get("reviewed_at_utc"), name="reviewed_at_utc")
     expires_at = _parse_utc(payload.get("expires_at_utc"), name="expires_at_utc")
     if expires_at <= reviewed_at:
-        raise ReferenceValidationReviewError("review attestation expiry must follow review time")
+        raise ReferenceValidationReviewError(
+            "review attestation expiry must follow review time"
+        )
     if expires_at - reviewed_at > REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY:
-        raise ReferenceValidationReviewError("review attestation validity exceeds the frozen maximum")
+        raise ReferenceValidationReviewError(
+            "review attestation validity exceeds the frozen maximum"
+        )
     if checked_at_utc < reviewed_at:
         raise ReferenceValidationReviewError("review attestation is not yet valid")
     if checked_at_utc >= expires_at:
@@ -517,9 +605,13 @@ def verify_signed_reference_validation_review_attestation(
     expected_checks = list(_REQUIRED_REVIEW_CHECK_IDS)
     expected_limitations = list(_REQUIRED_LIMITATION_IDS)
     if payload.get("accepted_check_ids") != expected_checks:
-        raise ReferenceValidationReviewError("review attestation check coverage is incomplete or reordered")
+        raise ReferenceValidationReviewError(
+            "review attestation check coverage is incomplete or reordered"
+        )
     if payload.get("acknowledged_limitation_ids") != expected_limitations:
-        raise ReferenceValidationReviewError("review attestation limitations are incomplete or reordered")
+        raise ReferenceValidationReviewError(
+            "review attestation limitations are incomplete or reordered"
+        )
     expected_projection = _attestation_projection(
         implementation_author_identity_sha256=expected_author,
         independent_reviewer_identity_sha256=reviewer_identity,
@@ -531,11 +623,15 @@ def verify_signed_reference_validation_review_attestation(
         acknowledged_limitation_ids=expected_limitations,
     )
     if payload != expected_projection:
-        raise ReferenceValidationReviewError("review attestation fields do not match the frozen schema")
+        raise ReferenceValidationReviewError(
+            "review attestation fields do not match the frozen schema"
+        )
     return ReferenceValidationReviewVerification(
         contract_sha256=contract["contract_sha256"],
         artifact_binding_sha256=FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
-        attestation_sha256=_require_sha256(attestation_sha256, name="review attestation"),
+        attestation_sha256=_require_sha256(
+            attestation_sha256, name="review attestation"
+        ),
         implementation_author_identity_sha256=expected_author,
         independent_reviewer_identity_sha256=reviewer_identity,
         reviewer_key_id=key_id,

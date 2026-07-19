@@ -57,14 +57,14 @@ from .reference_minimization_validation_runner import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/2.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/4.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/4.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_result_review_contract/2.0.0"
+    "cpu_reference_minimization_validation_independent_result_review_contract/4.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "2.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "4.0.0"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-19T07:30:00Z"
+    "2026-07-18T23:33:55Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
@@ -83,14 +83,23 @@ COORDINATE_TRACE_ACCEPTED = "coordinate_trace_accepted"
 EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED = "expected_empty_coordinate_trace_accepted"
 COORDINATE_TRACE_REJECTED = "coordinate_trace_rejected"
 COORDINATE_TRACE_STEP_ACCEPTED = "coordinate_trace_step_accepted"
+WORKER_EXECUTION_EVIDENCE_ACCEPTED = "worker_execution_evidence_accepted"
+WORKER_EXECUTION_EVIDENCE_REJECTED = "worker_execution_evidence_rejected"
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256 = (
+    "bb53f31227d7be92743b0fc49164237ec81948836ec82441c2854a65e0cb5e0a"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3 = (
+    "b1b981940ea3d5a68f3aa936e4569e6756a8a9b88b0e86137c10d8ec4deebcfa"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V2 = (
     "2ad7c25661e4192eb988237a0c351a0e30fdde9c16854f825134b4148744eb82"
 )
 
 _REQUIRED_RESULT_REVIEW_CHECK_IDS = (
     "result_receipt_identity_and_exact_dependency_chain_reviewed",
     "protocol_runner_and_writer_contract_identities_reviewed",
+    "complete_worker_lifecycle_and_retained_case_aggregate_reviewed",
     "ordered_fourteen_case_coverage_and_failure_inclusion_reviewed",
     "retained_metric_dispositions_complete_and_ordered_reviewed",
     "iteration_rejection_evaluation_and_energy_trace_reviewed",
@@ -119,6 +128,7 @@ _CLOSED_GATE_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
+    "worker_request_observation_identity_binding_missing",
     "trajectory_level_minimization_comparison_missing",
     "two_cpu_host_reproducibility_missing",
     "independent_external_implementation_comparison_missing",
@@ -134,6 +144,7 @@ _POST_ATTESTATION_BLOCKERS = (
     "independent_result_review_missing",
     "result_receipt_external_authenticity_not_established",
     "same_uid_artifact_replacement_resistance_not_established",
+    "worker_request_observation_identity_binding_missing",
     "trajectory_level_minimization_comparison_missing",
     "two_cpu_host_reproducibility_missing",
     "independent_external_implementation_comparison_missing",
@@ -899,37 +910,54 @@ def _case_review_rows_from_result_receipt(
     return rows
 
 
-def _result_review_outcome(case_review_rows: Sequence[Mapping[str, Any]]) -> str:
-    accepted = all(
-        row.get("case_passed") is True
-        and row.get("result_evidence_disposition") == REQUIRED_RESULT_EVIDENCE_ACCEPTED
-        and not row.get("result_evidence_rejection_reasons")
-        and not row.get("missing_metric_dispositions")
-        and len(row.get("coordinate_trace_dispositions", ())) == 2
+def _result_review_outcome(
+    case_review_rows: Sequence[Mapping[str, Any]],
+    worker_execution_review: Mapping[str, Any],
+) -> str:
+    accepted = (
+        worker_execution_review.get("disposition") == WORKER_EXECUTION_EVIDENCE_ACCEPTED
+        and worker_execution_review.get("completion_state") == "complete"
+        and worker_execution_review.get("runtime_lifecycle_completion_state")
+        == "complete"
+        and worker_execution_review.get("payload_frame_count") == 14
+        and worker_execution_review.get("discarded_partial_payload_count") == 0
+        and worker_execution_review.get("native_pre_post_snapshot_equality_verified")
+        is True
+        and worker_execution_review.get("native_mapping_lifetime_closure_claimed")
+        is False
+        and not worker_execution_review.get("rejection_reasons")
         and all(
-            trace.get("disposition")
-            in {
-                COORDINATE_TRACE_ACCEPTED,
-                EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
-            }
-            and not trace.get("rejection_reasons")
+            row.get("case_passed") is True
+            and row.get("result_evidence_disposition")
+            == REQUIRED_RESULT_EVIDENCE_ACCEPTED
+            and not row.get("result_evidence_rejection_reasons")
+            and not row.get("missing_metric_dispositions")
+            and len(row.get("coordinate_trace_dispositions", ())) == 2
             and all(
-                step.get("disposition") == COORDINATE_TRACE_STEP_ACCEPTED
-                and not step.get("rejection_reasons")
-                for step in trace.get("step_dispositions", ())
-                if isinstance(step, Mapping)
+                trace.get("disposition")
+                in {
+                    COORDINATE_TRACE_ACCEPTED,
+                    EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED,
+                }
+                and not trace.get("rejection_reasons")
+                and all(
+                    step.get("disposition") == COORDINATE_TRACE_STEP_ACCEPTED
+                    and not step.get("rejection_reasons")
+                    for step in trace.get("step_dispositions", ())
+                    if isinstance(step, Mapping)
+                )
+                for trace in row.get("coordinate_trace_dispositions", ())
+                if isinstance(trace, Mapping)
             )
-            for trace in row.get("coordinate_trace_dispositions", ())
-            if isinstance(trace, Mapping)
+            and all(
+                metric.get("disposition") == RETAINED_METRIC_VALUE_ACCEPTED
+                for metric in row.get("metric_dispositions", ())
+                if isinstance(metric, Mapping)
+            )
+            and row.get("failure_disposition")
+            in {None, EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED}
+            for row in case_review_rows
         )
-        and all(
-            metric.get("disposition") == RETAINED_METRIC_VALUE_ACCEPTED
-            for metric in row.get("metric_dispositions", ())
-            if isinstance(metric, Mapping)
-        )
-        and row.get("failure_disposition")
-        in {None, EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED}
-        for row in case_review_rows
     )
     return (
         RESULT_REVIEW_OUTCOME_ACCEPTED if accepted else RESULT_REVIEW_OUTCOME_REJECTED
@@ -966,6 +994,157 @@ def _dependency_rows(rows: object) -> list[dict[str, str]]:
             "result receipt dependency rows are not sorted"
         )
     return normalized
+
+
+def _worker_execution_review_from_result_receipt(
+    result_receipt: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project exact validated worker evidence into the signed review decision."""
+
+    run_observation = result_receipt["run_observation"]
+    case_results = run_observation["case_results"]
+    evidence = run_observation["worker_execution_evidence"]
+    lifecycle = evidence["runtime_lifecycle_evidence"]
+    case_frame_rows = [dict(row) for row in evidence["case_frame_sha256_rows"]]
+
+    retained_case_aggregate_sha256 = _require_sha256(
+        evidence["retained_case_aggregate_sha256"],
+        name="retained worker case aggregate",
+    )
+    recomputed_retained_case_aggregate_sha256 = _sha256(case_results)
+    lifecycle_sha256 = _require_sha256(
+        lifecycle["lifecycle_sha256"],
+        name="worker runtime lifecycle",
+    )
+    completion_state = evidence["completion_state"]
+    lifecycle_completion_state = lifecycle["completion_state"]
+    discarded_partial_payload_count: int | None = (
+        0 if completion_state == "complete" else None
+    )
+
+    expected_case_frame_rows = [
+        {
+            "ordinal": row["ordinal"],
+            "case_id": row["case_id"],
+            "case_observation_sha256": _sha256(row),
+        }
+        for row in case_results
+    ]
+    observed_case_frame_projection = [
+        {
+            "ordinal": row["ordinal"],
+            "case_id": row["case_id"],
+            "case_observation_sha256": row["case_observation_sha256"],
+        }
+        for row in case_frame_rows
+    ]
+    case_frame_rows_match_retained_cases = (
+        observed_case_frame_projection == expected_case_frame_rows
+    )
+
+    pre = lifecycle["pre"]
+    post = lifecycle["post"]
+    pre_snapshot_sha256 = (
+        None
+        if pre is None
+        else _require_sha256(
+            pre["snapshot"]["snapshot_sha256"],
+            name="worker native pre snapshot",
+        )
+    )
+    post_snapshot_sha256 = (
+        None
+        if post is None
+        else _require_sha256(
+            post["snapshot"]["snapshot_sha256"],
+            name="worker native post snapshot",
+        )
+    )
+    native_pre_post_snapshot_equality_verified = (
+        evidence["native_pre_post_snapshot_equality_verified"] is True
+        and pre_snapshot_sha256 is not None
+        and pre_snapshot_sha256 == post_snapshot_sha256
+    )
+
+    frame_sha256s = [
+        evidence["pre_frame_sha256"],
+        *(row["frame_sha256"] for row in case_frame_rows),
+        evidence["completion_frame_sha256"],
+    ]
+    complete_frame_set_verified = (
+        len(frame_sha256s) == 16
+        and all(_is_sha256(value) for value in frame_sha256s)
+        and len(set(frame_sha256s)) == 16
+    )
+
+    rejection_reasons: list[str] = []
+    if completion_state != "complete":
+        rejection_reasons.append("worker_execution_incomplete")
+    if lifecycle_completion_state != "complete":
+        rejection_reasons.append("worker_runtime_lifecycle_incomplete")
+    if lifecycle["worker_request_sha256"] != evidence["worker_request_sha256"]:
+        rejection_reasons.append("worker_request_lifecycle_mismatch")
+    if evidence["failure_code"] is not None or lifecycle["failure_code"] is not None:
+        rejection_reasons.append("worker_failure_code_present")
+    if len(case_results) != 14:
+        rejection_reasons.append("retained_case_count_mismatch")
+    if len(case_frame_rows) != 14:
+        rejection_reasons.append("worker_payload_frame_count_mismatch")
+    if not case_frame_rows_match_retained_cases:
+        rejection_reasons.append("worker_case_frame_rows_mismatch")
+    if retained_case_aggregate_sha256 != recomputed_retained_case_aggregate_sha256:
+        rejection_reasons.append("retained_case_aggregate_mismatch")
+    if lifecycle["payload_aggregate_sha256"] is None:
+        rejection_reasons.append("runtime_payload_aggregate_missing")
+    if not complete_frame_set_verified:
+        rejection_reasons.append("complete_worker_frame_set_missing")
+    if evidence["transcript_sha256"] is None:
+        rejection_reasons.append("worker_transcript_identity_missing")
+    if discarded_partial_payload_count != 0:
+        rejection_reasons.append("zero_discarded_partial_payloads_not_established")
+    if not native_pre_post_snapshot_equality_verified:
+        rejection_reasons.append("native_pre_post_snapshot_equality_not_verified")
+    if evidence["native_mapping_lifetime_closure_claimed"] is not False:
+        rejection_reasons.append("native_mapping_lifetime_closure_overclaimed")
+
+    return {
+        "worker_request_sha256": _require_sha256(
+            evidence["worker_request_sha256"],
+            name="worker request",
+        ),
+        "completion_state": completion_state,
+        "failure_code": evidence["failure_code"],
+        "runtime_lifecycle_completion_state": lifecycle_completion_state,
+        "runtime_lifecycle_sha256": lifecycle_sha256,
+        "runtime_payload_aggregate_sha256": lifecycle["payload_aggregate_sha256"],
+        "retained_case_count": len(case_results),
+        "retained_case_aggregate_sha256": retained_case_aggregate_sha256,
+        "recomputed_retained_case_aggregate_sha256": (
+            recomputed_retained_case_aggregate_sha256
+        ),
+        "payload_frame_count": len(case_frame_rows),
+        "case_frame_sha256_rows": case_frame_rows,
+        "case_frame_rows_match_retained_cases": (case_frame_rows_match_retained_cases),
+        "pre_frame_sha256": evidence["pre_frame_sha256"],
+        "completion_frame_sha256": evidence["completion_frame_sha256"],
+        "transcript_sha256": evidence["transcript_sha256"],
+        "complete_frame_set_verified": complete_frame_set_verified,
+        "discarded_partial_payload_count": discarded_partial_payload_count,
+        "native_pre_snapshot_sha256": pre_snapshot_sha256,
+        "native_post_snapshot_sha256": post_snapshot_sha256,
+        "native_pre_post_snapshot_equality_verified": (
+            native_pre_post_snapshot_equality_verified
+        ),
+        "native_mapping_lifetime_closure_claimed": evidence[
+            "native_mapping_lifetime_closure_claimed"
+        ],
+        "disposition": (
+            WORKER_EXECUTION_EVIDENCE_ACCEPTED
+            if not rejection_reasons
+            else WORKER_EXECUTION_EVIDENCE_REJECTED
+        ),
+        "rejection_reasons": rejection_reasons,
+    }
 
 
 def _result_receipt_binding(result_receipt: Mapping[str, Any]) -> dict[str, Any]:
@@ -1041,6 +1220,10 @@ def _result_receipt_binding(result_receipt: Mapping[str, Any]) -> dict[str, Any]
             result_receipt.get("runner_source_sha256"),
             name="result receipt runner source",
         ),
+        "source_manifest_sha256": _require_sha256(
+            result_receipt.get("source_manifest_sha256"),
+            name="result receipt source manifest",
+        ),
         "dependency_artifact_sha256_rows": _dependency_rows(
             result_receipt.get("dependency_artifact_sha256_rows")
         ),
@@ -1051,6 +1234,9 @@ def _result_receipt_binding(result_receipt: Mapping[str, Any]) -> dict[str, Any]
         "independent_scientific_reviewer_identity_sha256": _require_sha256(
             result_receipt.get("independent_reviewer_identity_sha256"),
             name="result receipt independent scientific reviewer identity",
+        ),
+        "worker_execution_review": _worker_execution_review_from_result_receipt(
+            result_receipt
         ),
     }
 
@@ -1207,6 +1393,12 @@ def _contract_projection() -> dict[str, Any]:
             "canonical_empty_trace_required_for_pre_evaluation_failure": True,
             "coordinate_trace_step_and_whole_trace_digests_recomputed": True,
             "coordinate_trace_counts_and_energy_ledger_must_be_consistent": True,
+            "worker_execution_evidence_extracted_from_validated_run_observation": True,
+            "worker_completion_state_and_runtime_lifecycle_sha256_bound": True,
+            "worker_retained_case_aggregate_recomputed_and_bound": True,
+            "ordered_worker_case_frame_rows_and_case_digests_bound": True,
+            "native_pre_post_snapshot_equality_evidence_bound": True,
+            "native_mapping_lifetime_closure_claim_remains_false": True,
             "dependency_claim_status_inherited": False,
         },
         "identity_policy": {
@@ -1248,6 +1440,13 @@ def _contract_projection() -> dict[str, Any]:
             "review_outcome_derived_from_frozen_case_semantics": True,
             "accepted_outcome_requires_complete_result_evidence_disposition": True,
             "accepted_outcome_requires_all_trace_and_step_dispositions": True,
+            "accepted_outcome_requires_complete_worker_lifecycle": True,
+            "accepted_outcome_requires_fourteen_ordered_worker_payload_frames": True,
+            "accepted_outcome_requires_zero_discarded_partial_payloads": True,
+            "accepted_outcome_requires_matching_retained_case_aggregate": True,
+            "accepted_outcome_requires_native_pre_post_snapshot_equality": True,
+            "incomplete_worker_lifecycle_is_preservable_and_signable": True,
+            "incomplete_worker_lifecycle_can_only_be_rejected": True,
             "verified_review_does_not_imply_result_acceptance": True,
             "external_revocation_rechecks_required_for_entire_receipt_chain": True,
             "all_external_lifecycle_inputs_are_required_verifier_arguments": True,
@@ -1348,6 +1547,7 @@ class MinimizationResultReviewerTrustAnchor:
 class ReferenceMinimizationValidationResultReviewVerification:
     contract_sha256: str
     result_receipt_sha256: str
+    source_manifest_sha256: str
     attestation_sha256: str
     implementation_author_identity_sha256: str
     independent_scientific_reviewer_identity_sha256: str
@@ -1369,6 +1569,7 @@ class ReferenceMinimizationValidationResultReviewVerification:
         for name, value in (
             ("result review contract", self.contract_sha256),
             ("result receipt", self.result_receipt_sha256),
+            ("source manifest", self.source_manifest_sha256),
             ("result review attestation", self.attestation_sha256),
             ("implementation author", self.implementation_author_identity_sha256),
             (
@@ -1441,6 +1642,7 @@ class ReferenceMinimizationValidationResultReviewVerification:
         return {
             "contract_sha256": self.contract_sha256,
             "result_receipt_sha256": self.result_receipt_sha256,
+            "source_manifest_sha256": self.source_manifest_sha256,
             "attestation_sha256": self.attestation_sha256,
             "implementation_author_identity_sha256": self.implementation_author_identity_sha256,
             "independent_scientific_reviewer_identity_sha256": self.independent_scientific_reviewer_identity_sha256,
@@ -1523,7 +1725,10 @@ def _attestation_projection(
             "result review limitations are incomplete or reordered"
         )
     rows = [dict(row) for row in case_review_rows]
-    review_outcome = _result_review_outcome(rows)
+    review_outcome = _result_review_outcome(
+        rows,
+        binding["worker_execution_review"],
+    )
     return {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID,
         "contract_sha256": contract["contract_sha256"],
@@ -1547,8 +1752,10 @@ def _attestation_projection(
         "result_receipt_created_at_utc": binding["result_receipt_created_at_utc"],
         "code_commit_sha": binding["code_commit_sha"],
         "runner_source_sha256": binding["runner_source_sha256"],
+        "source_manifest_sha256": binding["source_manifest_sha256"],
         "dependency_artifact_sha256_rows": binding["dependency_artifact_sha256_rows"],
         "review_attestation_sha256": binding["review_attestation_sha256"],
+        "worker_execution_review": binding["worker_execution_review"],
         "implementation_author_identity_sha256": author_identity,
         "independent_scientific_reviewer_identity_sha256": scientific_reviewer_identity,
         "authorization_operator_identity_sha256": operator_identity,
@@ -2111,10 +2318,14 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation fields do not match the frozen schema"
         )
-    result_review_outcome = _result_review_outcome(expected_case_rows)
+    result_review_outcome = _result_review_outcome(
+        expected_case_rows,
+        receipt_binding["worker_execution_review"],
+    )
     return ReferenceMinimizationValidationResultReviewVerification(
         contract_sha256=contract["contract_sha256"],
         result_receipt_sha256=expected_receipt,
+        source_manifest_sha256=receipt_binding["source_manifest_sha256"],
         attestation_sha256=_require_sha256(
             attestation_sha256, name="result review attestation"
         ),
@@ -2167,6 +2378,7 @@ __all__ = [
     "COORDINATE_TRACE_REJECTED",
     "COORDINATE_TRACE_STEP_ACCEPTED",
     "EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID",
     "REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID",
@@ -2185,6 +2397,8 @@ __all__ = [
     "RESULT_REVIEW_OUTCOME_ACCEPTED",
     "RESULT_REVIEW_OUTCOME_REJECTED",
     "UNEXPECTED_METRIC_VALUE_REJECTED",
+    "WORKER_EXECUTION_EVIDENCE_ACCEPTED",
+    "WORKER_EXECUTION_EVIDENCE_REJECTED",
     "MinimizationResultReviewerTrustAnchor",
     "ReferenceMinimizationValidationResultReviewError",
     "ReferenceMinimizationValidationResultReviewVerification",
