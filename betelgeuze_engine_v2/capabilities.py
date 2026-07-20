@@ -541,8 +541,6 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: (
         "four_case_contract_cohort_not_statistically_representative",
         "posebusters_benchmark_equivalence_not_established",
-        "symmetry_mapping_materializer_not_implemented",
-        "reference_ligand_match_materializer_not_implemented",
         "public_benchmark_not_executed",
         "public_holdout_results_missing",
         "independent_attestation_missing",
@@ -917,8 +915,8 @@ def capability_snapshot() -> dict[str, Any]:
             PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_four_case_public_redocking_protocol_definition_"
-                    "without_execution_or_results"
+                    "frozen_four_case_public_redocking_protocol_with_"
+                    "result_free_input_materializer_without_execution_or_results"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
