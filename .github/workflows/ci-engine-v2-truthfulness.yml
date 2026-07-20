@@ -11,6 +11,7 @@ on:
       - "tools/update_engine_v2_truthfulness_state.py"
       - "tools/update_engine_v2_main_ci_coverage.py"
       - "tests/unit/test_engine_v2_truthfulness.py"
+      - "docs/engine_v2_status.md"
       - "docs/engine_v2_truthfulness.md"
       - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-truthfulness.yml"
@@ -25,6 +26,7 @@ on:
       - "tools/update_engine_v2_truthfulness_state.py"
       - "tools/update_engine_v2_main_ci_coverage.py"
       - "tests/unit/test_engine_v2_truthfulness.py"
+      - "docs/engine_v2_status.md"
       - "docs/engine_v2_truthfulness.md"
       - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-truthfulness.yml"
@@ -65,6 +67,7 @@ jobs:
             tools/update_engine_v2_truthfulness_state.py
             tools/update_engine_v2_main_ci_coverage.py
             tests/unit/test_engine_v2_truthfulness.py
+            docs/engine_v2_status.md
             docs/engine_v2_truthfulness.md
             .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-truthfulness.yml
@@ -93,6 +96,25 @@ jobs:
             tools/update_engine_v2_truthfulness_state.py \
             tools/update_engine_v2_main_ci_coverage.py
           python tools/check_engine_v2_architecture.py
+
+      - name: Generate canonical branch state in the isolated checkout
+        run: |
+          python tools/update_engine_v2_main_ci_coverage.py --write
+          python tools/update_engine_v2_truthfulness_state.py --write
+
+      - name: Upload canonical branch state
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: engine-v2-truthfulness-generated-${{ matrix.python-version }}
+          path: |
+            .github/workflows/ci-engine-v2-main.yml
+            betelgeuze_engine_v2/capabilities.py
+            config/independent_engine_v2_capabilities.yaml
+            config/independent_engine_v2_truthfulness_policy.json
+            docs/engine_v2_status.md
+            docs/engine_v2_truthfulness.md
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Verify canonical Engine v2 main CI coverage
         run: |
