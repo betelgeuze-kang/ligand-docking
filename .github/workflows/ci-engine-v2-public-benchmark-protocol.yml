@@ -65,6 +65,10 @@ jobs:
           sparse-checkout-cone-mode: false
           show-progress: false
 
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Record exact public materializer source hash
         run: |
           sha256sum \
@@ -78,10 +82,6 @@ jobs:
           path: public-materializer-source-hash.txt
           if-no-files-found: error
           retention-days: 1
-
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Install focused CPU dependencies
         run: |
