@@ -13,12 +13,13 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScoreDescriptor,
     PoseMetricError,
     PoseValidityConfig,
+    PoseValidityContext,
     ScoreDirection,
     TorsionSearchSpace,
     evaluate_pose_validity,
     generate_bounded_docking_proposals,
     kabsch_aligned_rmsd,
-    run_bounded_docking_search,
+    run_bounded_docking_search as _run_bounded_docking_search,
     symmetry_aware_rmsd,
 )
 
@@ -46,6 +47,37 @@ def _problem() -> DockingProblemIdentity:
         ligand_system_sha256="b" * 64,
         pocket_definition_sha256="c" * 64,
     )
+
+
+def _validity_context(problem: DockingProblemIdentity) -> PoseValidityContext:
+    reference = generate_bounded_docking_proposals(
+        _space(),
+        DockingBudget(candidate_count=1, top_k=1, max_torsions=2),
+        problem=problem,
+    )[0].coordinates
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=((0, 1), (1, 2), (2, 3)),
+        excluded_nonbonded_pairs=((0, 1), (1, 2), (2, 3)),
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]], dtype=torch.float64
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(
+            pocket_radius_angstrom=100.0,
+            ligand_self_clash_angstrom=0.0,
+            receptor_ligand_clash_angstrom=0.0,
+        ),
+    )
+
+
+def run_bounded_docking_search(*args, **kwargs):
+    problem = kwargs.get("problem")
+    if problem is not None and "validity_context" not in kwargs:
+        kwargs["validity_context"] = _validity_context(problem)
+    return _run_bounded_docking_search(*args, **kwargs)
 
 
 _PROBLEM_FINGERPRINT = _problem().fingerprint_sha256
@@ -132,6 +164,8 @@ def test_score_direction_controls_ranking_and_component_fingerprints_are_emitted
     assert len(result.scorer_contract_fingerprint_sha256) == 64
     assert result.refiner_contract_fingerprint_sha256 == ""
     assert "docking_score_uncalibrated" in result.blockers
+    assert result.validity_context_fingerprint_sha256
+    assert all(row.selection_eligible for row in successful)
 
 
 def test_failure_rows_redact_private_exception_text() -> None:
