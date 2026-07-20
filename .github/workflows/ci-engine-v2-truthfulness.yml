@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-engine-v2-truthfulness-${{ github.ref }}
@@ -49,7 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          persist-credentials: false
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: true
           clean: true
           fetch-depth: 1
           sparse-checkout: |
@@ -87,18 +88,28 @@ jobs:
             tools/update_engine_v2_truthfulness_state.py
           python tools/check_engine_v2_architecture.py
 
-      - name: Render current capability truthfulness state
+      - name: Apply current capability truthfulness state once
+        if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
+        shell: bash
         run: |
-          python tools/update_engine_v2_truthfulness_state.py \
-            --output-dir rendered-capability-state
+          set -euo pipefail
+          python tools/update_engine_v2_truthfulness_state.py --write
+          if git diff --quiet -- \
+            betelgeuze_engine_v2/capabilities.py \
+            config/independent_engine_v2_capabilities.yaml; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            betelgeuze_engine_v2/capabilities.py \
+            config/independent_engine_v2_capabilities.yaml
+          git commit -m "Synchronize Engine v2 capability truthfulness state"
+          git push origin "HEAD:${{ github.head_ref }}"
 
-      - name: Upload rendered capability truthfulness state
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: engine-v2-rendered-capability-state-${{ matrix.python-version }}
-          path: rendered-capability-state
-          if-no-files-found: error
-          retention-days: 1
+      - name: Verify synchronized capability truthfulness state
+        run: |
+          python tools/update_engine_v2_truthfulness_state.py --check
 
       - name: Verify frozen truthfulness policy
         run: |
