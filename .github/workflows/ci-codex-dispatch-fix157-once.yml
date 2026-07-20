@@ -1,0 +1,48 @@
+name: ci-codex-dispatch-fix157-once
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-codex-dispatch-fix157-once.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.repository == 'betelgeuze-kang/ligand-docking'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch verified repair workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.request import Request, urlopen
+
+          repository = os.environ['GITHUB_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          request = Request(
+              f'https://api.github.com/repos/{repository}/actions/workflows/ci-codex-fix157-once.yml/dispatches',
+              data=json.dumps(
+                  {'ref': 'agent/v2-claim-state-truthfulness'}
+              ).encode('utf-8'),
+              method='POST',
+              headers={
+                  'Accept': 'application/vnd.github+json',
+                  'Authorization': f'Bearer {token}',
+                  'Content-Type': 'application/json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              },
+          )
+          with urlopen(request, timeout=30) as response:
+              if response.status != 204:
+                  raise SystemExit(
+                      f'workflow dispatch returned {response.status}'
+                  )
+          PY
