@@ -9,8 +9,10 @@ on:
       - "config/independent_engine_v2_truthfulness_policy.json"
       - "tools/check_engine_v2_truthfulness.py"
       - "tools/update_engine_v2_truthfulness_state.py"
+      - "tools/update_engine_v2_main_ci_coverage.py"
       - "tests/unit/test_engine_v2_truthfulness.py"
       - "docs/engine_v2_truthfulness.md"
+      - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-truthfulness.yml"
   push:
     branches: ["main"]
@@ -21,13 +23,15 @@ on:
       - "config/independent_engine_v2_truthfulness_policy.json"
       - "tools/check_engine_v2_truthfulness.py"
       - "tools/update_engine_v2_truthfulness_state.py"
+      - "tools/update_engine_v2_main_ci_coverage.py"
       - "tests/unit/test_engine_v2_truthfulness.py"
       - "docs/engine_v2_truthfulness.md"
+      - ".github/workflows/ci-engine-v2-main.yml"
       - ".github/workflows/ci-engine-v2-truthfulness.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-engine-v2-truthfulness-${{ github.ref }}
@@ -49,7 +53,8 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          persist-credentials: false
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: true
           clean: true
           fetch-depth: 1
           sparse-checkout: |
@@ -59,8 +64,10 @@ jobs:
             tools/check_engine_v2_architecture.py
             tools/check_engine_v2_truthfulness.py
             tools/update_engine_v2_truthfulness_state.py
+            tools/update_engine_v2_main_ci_coverage.py
             tests/unit/test_engine_v2_truthfulness.py
             docs/engine_v2_truthfulness.md
+            .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-truthfulness.yml
           sparse-checkout-cone-mode: false
           show-progress: false
@@ -84,8 +91,28 @@ jobs:
           python -m compileall -q \
             betelgeuze_engine_v2 \
             tools/check_engine_v2_truthfulness.py \
-            tools/update_engine_v2_truthfulness_state.py
+            tools/update_engine_v2_truthfulness_state.py \
+            tools/update_engine_v2_main_ci_coverage.py
           python tools/check_engine_v2_architecture.py
+
+      - name: Apply canonical Engine v2 main CI coverage once
+        if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/update_engine_v2_main_ci_coverage.py --write
+          if git diff --quiet -- .github/workflows/ci-engine-v2-main.yml; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/ci-engine-v2-main.yml
+          git commit -m "Cover current Engine v2 contracts in canonical main CI"
+          git push origin "HEAD:${{ github.head_ref }}"
+
+      - name: Verify canonical Engine v2 main CI coverage
+        run: |
+          python tools/update_engine_v2_main_ci_coverage.py --check
 
       - name: Verify synchronized capability truthfulness state
         run: |
