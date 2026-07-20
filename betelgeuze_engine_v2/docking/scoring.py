@@ -85,13 +85,26 @@ def _require_digest(
     return text
 
 
-def component_problem_fingerprint(component: Any, *, kind: str) -> str:
+def component_problem_fingerprint(
+    component: Any,
+    *,
+    kind: str,
+    fallback_unbound_problem_fingerprint_sha256: str = "",
+) -> str:
     """Return the exact docking problem declared by a scorer or refiner."""
 
-    return _require_digest(
-        getattr(component, "problem_fingerprint_sha256", ""),
-        name=f"{kind} problem_fingerprint_sha256",
-    )
+    declared = getattr(component, "problem_fingerprint_sha256", "")
+    if declared:
+        return _require_digest(
+            declared,
+            name=f"{kind} problem_fingerprint_sha256",
+        )
+    if fallback_unbound_problem_fingerprint_sha256:
+        return _require_digest(
+            fallback_unbound_problem_fingerprint_sha256,
+            name="unbound internal docking problem fingerprint",
+        )
+    raise ValueError(f"{kind} must declare problem_fingerprint_sha256")
 
 
 def component_contract_fingerprint(
@@ -99,6 +112,7 @@ def component_contract_fingerprint(
     *,
     kind: str,
     expected_problem_fingerprint_sha256: str | None = None,
+    allow_unbound_internal: bool = False,
 ) -> str:
     """Fingerprint a scorer/refiner contract and its immutable problem binding."""
 
@@ -108,25 +122,39 @@ def component_contract_fingerprint(
     version = str(getattr(component, f"{kind}_version", "") or "").strip()
     if not identifier or not version:
         raise ValueError(f"{kind} must declare ID and version")
-    problem_fingerprint = component_problem_fingerprint(component, kind=kind)
-    if expected_problem_fingerprint_sha256 is not None:
-        expected_problem = _require_digest(
+    expected_problem = (
+        ""
+        if expected_problem_fingerprint_sha256 is None
+        else _require_digest(
             expected_problem_fingerprint_sha256,
             name="expected docking problem fingerprint",
         )
-        if problem_fingerprint != expected_problem:
-            raise ValueError(
-                f"{kind} problem_fingerprint_sha256 does not match the active docking problem"
-            )
+    )
+    declared_problem = getattr(component, "problem_fingerprint_sha256", "")
+    unbound_compatibility = bool(allow_unbound_internal and not declared_problem)
+    problem_fingerprint = component_problem_fingerprint(
+        component,
+        kind=kind,
+        fallback_unbound_problem_fingerprint_sha256=(
+            expected_problem if unbound_compatibility else ""
+        ),
+    )
+    if expected_problem and problem_fingerprint != expected_problem:
+        raise ValueError(
+            f"{kind} problem_fingerprint_sha256 does not match the active docking problem"
+        )
     source_fingerprint = _require_digest(
         getattr(component, "implementation_source_sha256", ""),
         name=f"{kind} implementation_source_sha256",
+        allow_empty=unbound_compatibility,
     )
     config_fingerprint = _require_digest(
         getattr(component, "config_fingerprint_sha256", ""),
         name=f"{kind} config_fingerprint_sha256",
         allow_empty=True,
     )
+    if not unbound_compatibility and not source_fingerprint:
+        raise ValueError(f"{kind} must declare implementation_source_sha256")
     payload = {
         "schema_id": "betelgeuze.engine_v2_docking_component_contract/2.0.0",
         "kind": kind,
@@ -136,6 +164,7 @@ def component_contract_fingerprint(
         "problem_fingerprint_sha256": problem_fingerprint,
         "implementation_source_sha256": source_fingerprint,
         "config_fingerprint_sha256": config_fingerprint,
+        "unbound_internal_compatibility": unbound_compatibility,
     }
     if kind == "scorer":
         payload["validated_for_docking_ranking"] = bool(
