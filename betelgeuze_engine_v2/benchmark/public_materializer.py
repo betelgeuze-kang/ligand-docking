@@ -3,7 +3,7 @@
 The materializer accepts caller-supplied bytes, verifies every byte against the
 frozen upstream artifact identities, splits bounded multi-record SDF input,
 selects exactly one reference record by exact labeled-graph isomorphism, and
-emits bounded heavy-atom symmetry mappings.  It performs no network access,
+emits bounded heavy-atom symmetry mappings. It performs no network access,
 docking, scoring, RMSD evaluation, benchmark execution, or claim promotion.
 """
 
@@ -28,6 +28,7 @@ from betelgeuze_engine_v2.molecular import (
 
 from .public_protocol import (
     FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256,
+    POSEBUSTERS_SOURCE_COMMIT_SHA,
     FrozenPublicBenchmarkProtocol,
     PublicBenchmarkCaseDefinition,
     frozen_public_benchmark_protocol,
@@ -104,7 +105,7 @@ def split_sdf_v2000_records(
     max_records: int = PUBLIC_BENCHMARK_MAX_SDF_RECORDS,
     max_bytes: int = PUBLIC_BENCHMARK_MAX_SDF_BYTES,
 ) -> tuple[bytes, ...]:
-    """Split exact ASCII SDF records while preserving each record's bytes."""
+    """Split exact ASCII SDF records while preserving every source byte."""
 
     payload = _require_bytes(source, name="SDF source", maximum=max_bytes)
     if type(max_records) is not int or max_records < 1:
@@ -156,9 +157,11 @@ def _atom_label(atom: Any) -> tuple[object, ...]:
     return (
         str(atom.element).upper(),
         int(atom.formal_charge),
-        None if atom.isotope_mass_number is None else int(atom.isotope_mass_number),
-        bool(atom.is_aromatic),
-        None if atom.chirality is None else str(atom.chirality),
+        None
+        if atom.isotope_mass_number is None
+        else int(atom.isotope_mass_number),
+        bool(atom.aromatic),
+        str(atom.stereo),
     )
 
 
@@ -170,8 +173,8 @@ def _bond_label(bond: Any) -> tuple[object, ...]:
         )
     return (
         order.hex(),
-        bool(bond.is_aromatic),
-        None if bond.stereo is None else str(bond.stereo),
+        bool(bond.aromatic),
+        str(bond.stereo),
     )
 
 
@@ -205,6 +208,8 @@ class _LabeledGraph:
 
 
 def _labeled_graph(system: AllAtomSystem) -> _LabeledGraph:
+    if not isinstance(system, AllAtomSystem):
+        raise TypeError("molecular graph source must be AllAtomSystem")
     atom_count = int(system.atom_count)
     if atom_count < 1 or atom_count > PUBLIC_BENCHMARK_MAX_GRAPH_ATOMS:
         raise PublicBenchmarkMaterializerError(
@@ -214,6 +219,7 @@ def _labeled_graph(system: AllAtomSystem) -> _LabeledGraph:
         raise PublicBenchmarkMaterializerError(
             "molecular graph bond count exceeds the materializer bound"
         )
+
     atom_labels = tuple(_atom_label(atom) for atom in system.atoms)
     adjacency_rows: list[list[tuple[int, tuple[object, ...]]]] = [
         [] for _ in range(atom_count)
@@ -242,46 +248,54 @@ def _labeled_graph(system: AllAtomSystem) -> _LabeledGraph:
                 label,
             )
         )
+
     adjacency = tuple(
-        tuple(sorted(row, key=lambda item: (item[0], item[1])))
+        tuple(sorted(row, key=lambda item: (item[0], repr(item[1]))))
         for row in adjacency_rows
     )
-    heavy = tuple(
+    heavy_atom_indices = tuple(
         index
         for index, label in enumerate(atom_labels)
         if label[0] != "H"
     )
-    if not heavy:
+    if not heavy_atom_indices:
         raise PublicBenchmarkMaterializerError(
             "molecular graph contains no heavy atoms"
         )
+
+    degree_signatures = tuple(
+        (
+            atom_labels[index],
+            len(adjacency[index]),
+            tuple(
+                sorted(
+                    (
+                        bond_label,
+                        atom_labels[neighbor],
+                    )
+                    for neighbor, bond_label in adjacency[index]
+                )
+            ),
+        )
+        for index in range(atom_count)
+    )
     invariant = {
-        "schema_id": "betelgeuze.engine_v2_public_labeled_graph_invariant/1.0.0",
+        "schema_id": (
+            "betelgeuze.engine_v2_public_labeled_graph_invariant/1.0.0"
+        ),
         "atom_count": atom_count,
         "edge_count": len(seen_edges),
         "atom_label_counts": [
-            {"label": list(label), "count": count}
-            for label, count in sorted(Counter(atom_labels).items())
+            {"label": repr(label), "count": count}
+            for label, count in sorted(
+                Counter(atom_labels).items(),
+                key=lambda item: repr(item[0]),
+            )
         ],
         "degree_signature_counts": [
             {"signature": repr(signature), "count": count}
             for signature, count in sorted(
-                Counter(
-                    (
-                        atom_labels[index],
-                        len(adjacency[index]),
-                        tuple(
-                            sorted(
-                                (
-                                    bond_label,
-                                    atom_labels[neighbor],
-                                )
-                                for neighbor, bond_label in adjacency[index]
-                            )
-                        ),
-                    )
-                    for index in range(atom_count)
-                ).items(),
+                Counter(degree_signatures).items(),
                 key=lambda item: repr(item[0]),
             )
         ],
@@ -292,18 +306,20 @@ def _labeled_graph(system: AllAtomSystem) -> _LabeledGraph:
                 key=lambda item: repr(item[0]),
             )
         ],
-        "heavy_atom_count": len(heavy),
+        "heavy_atom_count": len(heavy_atom_indices),
     }
     return _LabeledGraph(
         atom_labels=atom_labels,
         adjacency=adjacency,
         edge_count=len(seen_edges),
-        heavy_atom_indices=heavy,
+        heavy_atom_indices=heavy_atom_indices,
         invariant_sha256=_sha256(invariant),
     )
 
 
-def _edge_map(graph: _LabeledGraph) -> dict[tuple[int, int], tuple[object, ...]]:
+def _edge_map(
+    graph: _LabeledGraph,
+) -> dict[tuple[int, int], tuple[object, ...]]:
     result: dict[tuple[int, int], tuple[object, ...]] = {}
     for first, neighbors in enumerate(graph.adjacency):
         for second, label in neighbors:
@@ -319,7 +335,7 @@ def exact_graph_isomorphisms(
     max_mappings: int = MAX_SYMMETRY_PERMUTATIONS,
     max_search_states: int = PUBLIC_BENCHMARK_MAX_GRAPH_SEARCH_STATES,
 ) -> tuple[tuple[int, ...], ...]:
-    """Return every bounded source-to-target atom mapping for exact graph labels."""
+    """Return bounded exact source-to-target atom mappings."""
 
     if type(max_mappings) is not int or max_mappings < 1:
         raise PublicBenchmarkMaterializerError(
@@ -334,7 +350,8 @@ def exact_graph_isomorphisms(
     if (
         source_graph.atom_count != target_graph.atom_count
         or source_graph.edge_count != target_graph.edge_count
-        or Counter(source_graph.atom_labels) != Counter(target_graph.atom_labels)
+        or Counter(source_graph.atom_labels)
+        != Counter(target_graph.atom_labels)
         or Counter(source_graph.degree_signatures)
         != Counter(target_graph.degree_signatures)
     ):
@@ -343,7 +360,9 @@ def exact_graph_isomorphisms(
     source_edges = _edge_map(source_graph)
     target_edges = _edge_map(target_graph)
     candidates: dict[int, tuple[int, ...]] = {}
-    for source_index, signature in enumerate(source_graph.degree_signatures):
+    for source_index, signature in enumerate(
+        source_graph.degree_signatures
+    ):
         rows = tuple(
             target_index
             for target_index, target_signature in enumerate(
@@ -354,6 +373,7 @@ def exact_graph_isomorphisms(
         if not rows:
             return ()
         candidates[source_index] = rows
+
     order = tuple(
         sorted(
             range(source_graph.atom_count),
@@ -365,6 +385,8 @@ def exact_graph_isomorphisms(
             ),
         )
     )
+    source_edge_map = source_edges
+    target_edge_map = target_edges
     mapping: dict[int, int] = {}
     used_targets: set[int] = set()
     results: list[tuple[int, ...]] = []
@@ -385,27 +407,34 @@ def exact_graph_isomorphisms(
                 "exact graph matching exceeded the search-state bound"
             )
         if depth == len(order):
-            result = tuple(mapping[index] for index in range(source_graph.atom_count))
+            result = tuple(
+                mapping[index]
+                for index in range(source_graph.atom_count)
+            )
             results.append(result)
             if len(results) > max_mappings:
                 raise PublicBenchmarkMaterializerError(
                     "exact graph symmetry exceeds the mapping bound"
                 )
             return
+
         source_index = order[depth]
         for target_index in candidates[source_index]:
             if target_index in used_targets:
                 continue
-            compatible = True
-            for other_source, other_target in mapping.items():
-                if edge_label(source_edges, source_index, other_source) != edge_label(
-                    target_edges,
+            if any(
+                edge_label(
+                    source_edge_map,
+                    source_index,
+                    other_source,
+                )
+                != edge_label(
+                    target_edge_map,
                     target_index,
                     other_target,
-                ):
-                    compatible = False
-                    break
-            if not compatible:
+                )
+                for other_source, other_target in mapping.items()
+            ):
                 continue
             mapping[source_index] = target_index
             used_targets.add(target_index)
@@ -426,7 +455,9 @@ def _heavy_atom_bijections(
     target_graph = _labeled_graph(target)
     target_heavy_position = {
         atom_index: position
-        for position, atom_index in enumerate(target_graph.heavy_atom_indices)
+        for position, atom_index in enumerate(
+            target_graph.heavy_atom_indices
+        )
     }
     rows: list[tuple[int, ...]] = []
     for mapping in mappings:
@@ -443,7 +474,9 @@ def _heavy_atom_bijections(
                 )
             projected.append(target_heavy_position[target_index])
         row = tuple(projected)
-        if sorted(row) != list(range(len(target_graph.heavy_atom_indices))):
+        if sorted(row) != list(
+            range(len(target_graph.heavy_atom_indices))
+        ):
             raise PublicBenchmarkMaterializerError(
                 "heavy-atom graph mapping is not a bijection"
             )
@@ -458,6 +491,59 @@ def _heavy_atom_bijections(
             "heavy-atom symmetry exceeds the mapping bound"
         )
     return unique
+
+
+def _case_projection(
+    *,
+    case_id: str,
+    case_input_sha256: str,
+    source_commit_sha: str,
+    receptor_sha256: str,
+    reference_ligands_sha256: str,
+    ligand_identity_seed_sha256: str,
+    selected_reference_record_index: int,
+    selected_reference_record_sha256: str,
+    selected_reference_system_sha256: str,
+    selected_reference_topology_sha256: str,
+    selected_reference_coordinates_sha256: str,
+    ligand_graph_invariant_sha256: str,
+    heavy_atom_count: int,
+    symmetry_permutations: Sequence[Sequence[int]],
+) -> dict[str, object]:
+    return {
+        "schema_id": PUBLIC_BENCHMARK_CASE_MATERIALIZATION_SCHEMA_ID,
+        "case_id": case_id,
+        "case_input_sha256": case_input_sha256,
+        "source_commit_sha": source_commit_sha,
+        "receptor_sha256": receptor_sha256,
+        "reference_ligands_sha256": reference_ligands_sha256,
+        "ligand_identity_seed_sha256": ligand_identity_seed_sha256,
+        "selected_reference_record_index": selected_reference_record_index,
+        "selected_reference_record_sha256": (
+            selected_reference_record_sha256
+        ),
+        "selected_reference_system_sha256": (
+            selected_reference_system_sha256
+        ),
+        "selected_reference_topology_sha256": (
+            selected_reference_topology_sha256
+        ),
+        "selected_reference_coordinates_sha256": (
+            selected_reference_coordinates_sha256
+        ),
+        "ligand_graph_invariant_sha256": ligand_graph_invariant_sha256,
+        "heavy_atom_count": heavy_atom_count,
+        "symmetry_permutation_count": len(symmetry_permutations),
+        "symmetry_permutations": [
+            list(row) for row in symmetry_permutations
+        ],
+        "ligand_identity_seed_coordinates_used": False,
+        "receptor_coordinates_interpreted": False,
+        "docking_executed": False,
+        "metric_values_collected": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -478,32 +564,126 @@ class PublicBenchmarkCaseMaterialization:
     symmetry_permutations: tuple[tuple[int, ...], ...]
     materialization_sha256: str
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.case_id, str) or not self.case_id:
+            raise PublicBenchmarkMaterializerError(
+                "case_id must be non-empty"
+            )
+        for name in (
+            "case_input_sha256",
+            "receptor_sha256",
+            "reference_ligands_sha256",
+            "ligand_identity_seed_sha256",
+            "selected_reference_record_sha256",
+            "selected_reference_system_sha256",
+            "selected_reference_topology_sha256",
+            "selected_reference_coordinates_sha256",
+            "ligand_graph_invariant_sha256",
+            "materialization_sha256",
+        ):
+            _require_sha256(getattr(self, name), name=name)
+        if self.source_commit_sha != POSEBUSTERS_SOURCE_COMMIT_SHA:
+            raise PublicBenchmarkMaterializerError(
+                "materialization source commit is cross-wired"
+            )
+        if (
+            type(self.selected_reference_record_index) is not int
+            or self.selected_reference_record_index < 0
+        ):
+            raise PublicBenchmarkMaterializerError(
+                "selected reference record index must be non-negative"
+            )
+        if type(self.heavy_atom_count) is not int or self.heavy_atom_count < 1:
+            raise PublicBenchmarkMaterializerError(
+                "heavy atom count must be positive"
+            )
+        mappings = tuple(
+            tuple(int(value) for value in row)
+            for row in self.symmetry_permutations
+        )
+        if (
+            not mappings
+            or len(mappings) > MAX_SYMMETRY_PERMUTATIONS
+            or any(len(row) != self.heavy_atom_count for row in mappings)
+            or any(
+                sorted(row) != list(range(self.heavy_atom_count))
+                for row in mappings
+            )
+            or tuple(sorted(set(mappings))) != mappings
+        ):
+            raise PublicBenchmarkMaterializerError(
+                "materialization symmetry mappings are invalid"
+            )
+        object.__setattr__(self, "symmetry_permutations", mappings)
+        expected = _sha256(
+            _case_projection(
+                case_id=self.case_id,
+                case_input_sha256=self.case_input_sha256,
+                source_commit_sha=self.source_commit_sha,
+                receptor_sha256=self.receptor_sha256,
+                reference_ligands_sha256=self.reference_ligands_sha256,
+                ligand_identity_seed_sha256=(
+                    self.ligand_identity_seed_sha256
+                ),
+                selected_reference_record_index=(
+                    self.selected_reference_record_index
+                ),
+                selected_reference_record_sha256=(
+                    self.selected_reference_record_sha256
+                ),
+                selected_reference_system_sha256=(
+                    self.selected_reference_system_sha256
+                ),
+                selected_reference_topology_sha256=(
+                    self.selected_reference_topology_sha256
+                ),
+                selected_reference_coordinates_sha256=(
+                    self.selected_reference_coordinates_sha256
+                ),
+                ligand_graph_invariant_sha256=(
+                    self.ligand_graph_invariant_sha256
+                ),
+                heavy_atom_count=self.heavy_atom_count,
+                symmetry_permutations=mappings,
+            )
+        )
+        if self.materialization_sha256 != expected:
+            raise PublicBenchmarkMaterializerError(
+                "materialization SHA-256 does not match its exact projection"
+            )
+
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_id": PUBLIC_BENCHMARK_CASE_MATERIALIZATION_SCHEMA_ID,
-            "case_id": self.case_id,
-            "case_input_sha256": self.case_input_sha256,
-            "source_commit_sha": self.source_commit_sha,
-            "receptor_sha256": self.receptor_sha256,
-            "reference_ligands_sha256": self.reference_ligands_sha256,
-            "ligand_identity_seed_sha256": self.ligand_identity_seed_sha256,
-            "selected_reference_record_index": self.selected_reference_record_index,
-            "selected_reference_record_sha256": self.selected_reference_record_sha256,
-            "selected_reference_system_sha256": self.selected_reference_system_sha256,
-            "selected_reference_topology_sha256": self.selected_reference_topology_sha256,
-            "selected_reference_coordinates_sha256": self.selected_reference_coordinates_sha256,
-            "ligand_graph_invariant_sha256": self.ligand_graph_invariant_sha256,
-            "heavy_atom_count": self.heavy_atom_count,
-            "symmetry_permutation_count": len(self.symmetry_permutations),
-            "symmetry_permutations": [
-                list(row) for row in self.symmetry_permutations
-            ],
-            "ligand_identity_seed_coordinates_used": False,
-            "receptor_coordinates_interpreted": False,
-            "docking_executed": False,
-            "metric_values_collected": False,
-            "scientifically_validated": False,
-            "claim_safe": False,
+            **_case_projection(
+                case_id=self.case_id,
+                case_input_sha256=self.case_input_sha256,
+                source_commit_sha=self.source_commit_sha,
+                receptor_sha256=self.receptor_sha256,
+                reference_ligands_sha256=self.reference_ligands_sha256,
+                ligand_identity_seed_sha256=(
+                    self.ligand_identity_seed_sha256
+                ),
+                selected_reference_record_index=(
+                    self.selected_reference_record_index
+                ),
+                selected_reference_record_sha256=(
+                    self.selected_reference_record_sha256
+                ),
+                selected_reference_system_sha256=(
+                    self.selected_reference_system_sha256
+                ),
+                selected_reference_topology_sha256=(
+                    self.selected_reference_topology_sha256
+                ),
+                selected_reference_coordinates_sha256=(
+                    self.selected_reference_coordinates_sha256
+                ),
+                ligand_graph_invariant_sha256=(
+                    self.ligand_graph_invariant_sha256
+                ),
+                heavy_atom_count=self.heavy_atom_count,
+                symmetry_permutations=self.symmetry_permutations,
+            ),
             "materialization_sha256": self.materialization_sha256,
         }
 
@@ -520,6 +700,50 @@ class PublicBenchmarkMaterializationRow:
     private_error_sha256: str = ""
     private_error_byte_length: int = 0
 
+    def __post_init__(self) -> None:
+        if type(self.ordinal) is not int or self.ordinal < 0:
+            raise PublicBenchmarkMaterializerError(
+                "materialization row ordinal must be non-negative"
+            )
+        if not isinstance(self.case_id, str) or not self.case_id:
+            raise PublicBenchmarkMaterializerError(
+                "materialization row case_id must be non-empty"
+            )
+        _require_sha256(self.case_input_sha256, name="case input")
+        if self.status not in {"success", "failure"}:
+            raise PublicBenchmarkMaterializerError(
+                "materialization row status is invalid"
+            )
+        if self.status == "success":
+            if (
+                self.materialization is None
+                or self.materialization.case_id != self.case_id
+                or self.materialization.case_input_sha256
+                != self.case_input_sha256
+                or self.error_code
+                or self.error_message
+                or self.private_error_sha256
+                or self.private_error_byte_length
+            ):
+                raise PublicBenchmarkMaterializerError(
+                    "successful materialization row contains contradictory state"
+                )
+        else:
+            if (
+                self.materialization is not None
+                or not self.error_code
+                or not self.error_message
+                or not self.private_error_sha256
+                or self.private_error_byte_length < 1
+            ):
+                raise PublicBenchmarkMaterializerError(
+                    "failed materialization row is incomplete"
+                )
+            _require_sha256(
+                self.private_error_sha256,
+                name="private error",
+            )
+
     @property
     def succeeded(self) -> bool:
         return self.status == "success" and self.materialization is not None
@@ -532,7 +756,9 @@ class PublicBenchmarkMaterializationRow:
             "status": self.status,
             "succeeded": self.succeeded,
             "materialization": (
-                None if self.materialization is None else self.materialization.to_dict()
+                None
+                if self.materialization is None
+                else self.materialization.to_dict()
             ),
             "error_code": self.error_code,
             "error_message": self.error_message,
@@ -541,11 +767,65 @@ class PublicBenchmarkMaterializationRow:
         }
 
 
+def _manifest_projection(
+    protocol_sha256: str,
+    rows: Sequence[PublicBenchmarkMaterializationRow],
+) -> dict[str, object]:
+    row_tuple = tuple(rows)
+    success_count = sum(row.succeeded for row in row_tuple)
+    return {
+        "schema_id": PUBLIC_BENCHMARK_MATERIALIZATION_MANIFEST_SCHEMA_ID,
+        "materializer_id": PUBLIC_BENCHMARK_MATERIALIZER_ID,
+        "protocol_sha256": protocol_sha256,
+        "case_count": len(row_tuple),
+        "success_count": success_count,
+        "failure_count": len(row_tuple) - success_count,
+        "all_cases_observed": True,
+        "failure_rows_retained": True,
+        "network_fetch_performed": False,
+        "raw_artifact_bytes_embedded": False,
+        "benchmark_execution_performed": False,
+        "docking_results_collected": False,
+        "metric_values_collected": False,
+        "result_document_created": False,
+        "scientifically_validated": False,
+        "benchmark_validated": False,
+        "product_qualified": False,
+        "customer_execution_enabled": False,
+        "claim_safe": False,
+        "rows": [row.to_dict() for row in row_tuple],
+    }
+
+
 @dataclass(frozen=True, slots=True)
 class PublicBenchmarkMaterializationManifest:
     protocol_sha256: str
     rows: tuple[PublicBenchmarkMaterializationRow, ...]
     manifest_sha256: str
+
+    def __post_init__(self) -> None:
+        _require_sha256(self.protocol_sha256, name="protocol")
+        _require_sha256(self.manifest_sha256, name="manifest")
+        rows = tuple(self.rows)
+        if not rows:
+            raise PublicBenchmarkMaterializerError(
+                "materialization manifest must retain case rows"
+            )
+        if tuple(row.ordinal for row in rows) != tuple(range(len(rows))):
+            raise PublicBenchmarkMaterializerError(
+                "materialization manifest row order is invalid"
+            )
+        if len({row.case_id for row in rows}) != len(rows):
+            raise PublicBenchmarkMaterializerError(
+                "materialization manifest case ids are not unique"
+            )
+        object.__setattr__(self, "rows", rows)
+        if self.manifest_sha256 != _sha256(
+            _manifest_projection(self.protocol_sha256, rows)
+        ):
+            raise PublicBenchmarkMaterializerError(
+                "manifest SHA-256 does not match its exact projection"
+            )
 
     @property
     def success_count(self) -> int:
@@ -557,26 +837,7 @@ class PublicBenchmarkMaterializationManifest:
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_id": PUBLIC_BENCHMARK_MATERIALIZATION_MANIFEST_SCHEMA_ID,
-            "materializer_id": PUBLIC_BENCHMARK_MATERIALIZER_ID,
-            "protocol_sha256": self.protocol_sha256,
-            "case_count": len(self.rows),
-            "success_count": self.success_count,
-            "failure_count": self.failure_count,
-            "all_cases_observed": True,
-            "failure_rows_retained": True,
-            "network_fetch_performed": False,
-            "raw_artifact_bytes_embedded": False,
-            "benchmark_execution_performed": False,
-            "docking_results_collected": False,
-            "metric_values_collected": False,
-            "result_document_created": False,
-            "scientifically_validated": False,
-            "benchmark_validated": False,
-            "product_qualified": False,
-            "customer_execution_enabled": False,
-            "claim_safe": False,
-            "rows": [row.to_dict() for row in self.rows],
+            **_manifest_projection(self.protocol_sha256, self.rows),
             "manifest_sha256": self.manifest_sha256,
         }
 
@@ -596,7 +857,7 @@ def materialize_public_benchmark_case(
         _require_bytes(
             receptor_bytes,
             name="receptor bytes",
-            maximum=max(case.receptor.size_bytes, 1),
+            maximum=case.receptor.size_bytes,
         )
     )
     reference_digest = case.reference_ligands.verify_bytes(
@@ -613,7 +874,10 @@ def materialize_public_benchmark_case(
             maximum=PUBLIC_BENCHMARK_MAX_SDF_BYTES,
         )
     )
-    seed_records = split_sdf_v2000_records(ligand_identity_seed_bytes)
+
+    seed_records = split_sdf_v2000_records(
+        ligand_identity_seed_bytes
+    )
     if len(seed_records) != 1:
         raise PublicBenchmarkMaterializerError(
             "ligand identity seed must contain exactly one SDF record"
@@ -623,55 +887,74 @@ def materialize_public_benchmark_case(
         source_id=f"{case.case_id}:ligand-identity-seed",
     )
     seed_graph = _labeled_graph(seed_system)
-    reference_records = split_sdf_v2000_records(reference_ligands_bytes)
-    matches: list[tuple[int, bytes, AllAtomSystem, tuple[tuple[int, ...], ...]]] = []
-    for index, record in enumerate(reference_records):
+
+    matches: list[
+        tuple[
+            int,
+            bytes,
+            AllAtomSystem,
+            tuple[tuple[int, ...], ...],
+        ]
+    ] = []
+    for index, record in enumerate(
+        split_sdf_v2000_records(reference_ligands_bytes)
+    ):
         reference_system = parse_sdf_v2000(
             record.decode("ascii"),
             source_id=f"{case.case_id}:reference:{index}",
         )
-        mappings = exact_graph_isomorphisms(seed_system, reference_system)
+        mappings = exact_graph_isomorphisms(
+            seed_system,
+            reference_system,
+        )
         if mappings:
-            matches.append((index, record, reference_system, mappings))
+            matches.append(
+                (index, record, reference_system, mappings)
+            )
     if len(matches) != 1:
         raise PublicBenchmarkMaterializerError(
             "exactly one reference record must match the ligand seed graph"
         )
-    selected_index, selected_record, selected_system, mappings = matches[0]
+
+    (
+        selected_index,
+        selected_record,
+        selected_system,
+        mappings,
+    ) = matches[0]
     heavy_mappings = _heavy_atom_bijections(
         seed_system,
         selected_system,
         mappings,
     )
-    projection = {
-        "schema_id": PUBLIC_BENCHMARK_CASE_MATERIALIZATION_SCHEMA_ID,
-        "case_id": case.case_id,
-        "case_input_sha256": case.input_sha256,
-        "source_commit_sha": case.receptor.immutable_url.split("/")[-4],
-        "receptor_sha256": receptor_digest,
-        "reference_ligands_sha256": reference_digest,
-        "ligand_identity_seed_sha256": seed_digest,
-        "selected_reference_record_index": selected_index,
-        "selected_reference_record_sha256": hashlib.sha256(selected_record).hexdigest(),
-        "selected_reference_system_sha256": canonical_system_sha256(selected_system),
-        "selected_reference_topology_sha256": canonical_topology_sha256(selected_system),
-        "selected_reference_coordinates_sha256": canonical_coordinates_sha256(
+    projection = _case_projection(
+        case_id=case.case_id,
+        case_input_sha256=case.input_sha256,
+        source_commit_sha=POSEBUSTERS_SOURCE_COMMIT_SHA,
+        receptor_sha256=receptor_digest,
+        reference_ligands_sha256=reference_digest,
+        ligand_identity_seed_sha256=seed_digest,
+        selected_reference_record_index=selected_index,
+        selected_reference_record_sha256=hashlib.sha256(
+            selected_record
+        ).hexdigest(),
+        selected_reference_system_sha256=canonical_system_sha256(
             selected_system
         ),
-        "ligand_graph_invariant_sha256": seed_graph.invariant_sha256,
-        "heavy_atom_count": len(seed_graph.heavy_atom_indices),
-        "symmetry_permutations": [list(row) for row in heavy_mappings],
-        "ligand_identity_seed_coordinates_used": False,
-        "receptor_coordinates_interpreted": False,
-        "docking_executed": False,
-        "metric_values_collected": False,
-        "scientifically_validated": False,
-        "claim_safe": False,
-    }
+        selected_reference_topology_sha256=canonical_topology_sha256(
+            selected_system
+        ),
+        selected_reference_coordinates_sha256=(
+            canonical_coordinates_sha256(selected_system)
+        ),
+        ligand_graph_invariant_sha256=seed_graph.invariant_sha256,
+        heavy_atom_count=len(seed_graph.heavy_atom_indices),
+        symmetry_permutations=heavy_mappings,
+    )
     return PublicBenchmarkCaseMaterialization(
         case_id=case.case_id,
         case_input_sha256=case.input_sha256,
-        source_commit_sha=str(projection["source_commit_sha"]),
+        source_commit_sha=POSEBUSTERS_SOURCE_COMMIT_SHA,
         receptor_sha256=receptor_digest,
         reference_ligands_sha256=reference_digest,
         ligand_identity_seed_sha256=seed_digest,
@@ -718,6 +1001,7 @@ def materialize_frozen_public_benchmark_inputs(
         raise PublicBenchmarkMaterializerError(
             "artifact input contains cases outside the frozen protocol"
         )
+
     rows: list[PublicBenchmarkMaterializationRow] = []
     for ordinal, case in enumerate(active.cases):
         try:
@@ -733,8 +1017,12 @@ def materialize_frozen_public_benchmark_inputs(
             materialization = materialize_public_benchmark_case(
                 case,
                 receptor_bytes=supplied["receptor"],
-                reference_ligands_bytes=supplied["reference_ligands"],
-                ligand_identity_seed_bytes=supplied["ligand_identity_seed"],
+                reference_ligands_bytes=supplied[
+                    "reference_ligands"
+                ],
+                ligand_identity_seed_bytes=supplied[
+                    "ligand_identity_seed"
+                ],
             )
             rows.append(
                 PublicBenchmarkMaterializationRow(
@@ -748,7 +1036,9 @@ def materialize_frozen_public_benchmark_inputs(
         except Exception as exc:
             receipt = failure_receipt(
                 exc,
-                public_message="public benchmark case materialization failed",
+                public_message=(
+                    "public benchmark case materialization failed"
+                ),
             )
             rows.append(
                 PublicBenchmarkMaterializationRow(
@@ -759,32 +1049,23 @@ def materialize_frozen_public_benchmark_inputs(
                     materialization=None,
                     error_code=receipt.public_error_code,
                     error_message=receipt.public_message,
-                    private_error_sha256=receipt.private_error_sha256,
-                    private_error_byte_length=receipt.private_error_byte_length,
+                    private_error_sha256=(
+                        receipt.private_error_sha256
+                    ),
+                    private_error_byte_length=(
+                        receipt.private_error_byte_length
+                    ),
                 )
             )
-    projection = {
-        "schema_id": PUBLIC_BENCHMARK_MATERIALIZATION_MANIFEST_SCHEMA_ID,
-        "materializer_id": PUBLIC_BENCHMARK_MATERIALIZER_ID,
-        "protocol_sha256": active.protocol_sha256,
-        "case_count": len(rows),
-        "failure_rows_retained": True,
-        "network_fetch_performed": False,
-        "raw_artifact_bytes_embedded": False,
-        "benchmark_execution_performed": False,
-        "docking_results_collected": False,
-        "metric_values_collected": False,
-        "result_document_created": False,
-        "scientifically_validated": False,
-        "benchmark_validated": False,
-        "product_qualified": False,
-        "customer_execution_enabled": False,
-        "claim_safe": False,
-        "rows": [row.to_dict() for row in rows],
-    }
+
+    row_tuple = tuple(rows)
+    projection = _manifest_projection(
+        active.protocol_sha256,
+        row_tuple,
+    )
     return PublicBenchmarkMaterializationManifest(
         protocol_sha256=active.protocol_sha256,
-        rows=tuple(rows),
+        rows=row_tuple,
         manifest_sha256=_sha256(projection),
     )
 
