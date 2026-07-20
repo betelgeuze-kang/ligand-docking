@@ -19,7 +19,7 @@ jobs:
   apply-repair:
     if: github.repository == 'betelgeuze-kang/ligand-docking' && github.ref == 'refs/heads/agent/v2-claim-state-truthfulness'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
       TARGET_BRANCH: agent/v2-claim-state-truthfulness
@@ -38,7 +38,12 @@ jobs:
       - name: Install focused dependencies
         run: |
           python -m pip install pip==25.0.1
-          python -m pip install pytest==8.3.5 PyYAML==6.0.3
+          python -m pip install \
+            pytest==8.3.5 \
+            PyYAML==6.0.3 \
+            cryptography==46.0.5 \
+            numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
 
       - name: Apply exact state and CI repair
         run: |
@@ -108,7 +113,9 @@ jobs:
         run: |
           git rm --ignore-unmatch \
             .github/workflows/ci-codex-source-export-once.yml \
-            .github/workflows/ci-codex-fix157-once.yml
+            .github/workflows/ci-codex-fix157-once.yml \
+            .github/workflows/ci-codex-dispatch-fix157-once.yml \
+            .github/workflows/ci-codex-inspect-fix157-once.yml
           git add \
             .github/workflows/ci-engine-v2-main.yml \
             .github/workflows/ci-engine-v2-truthfulness.yml \
