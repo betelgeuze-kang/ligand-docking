@@ -36,12 +36,14 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     protocol = frozen_public_benchmark_protocol()
 
     assert protocol.schema_id == PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID
-    assert protocol.protocol_version == "1.0.1"
+    assert protocol.protocol_version == "1.1.0"
     assert protocol.protocol_sha256 == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
     assert protocol.protocol_sha256 == (
-        "32b8cc84a499118c29cecfe28b84a0be5c78060333dbf3c2cdb1d3d4ad91f292"
+        "e0e49a1b58742f0d2faa7d52e25b9bc4e6ac1208c08a6aaa7a27372c9d89ffc6"
     )
-    assert POSEBUSTERS_SOURCE_COMMIT_SHA == ("1a5f26aa7270fafba21b7fec8b3633f4c4e45ead")
+    assert POSEBUSTERS_SOURCE_COMMIT_SHA == (
+        "1a5f26aa7270fafba21b7fec8b3633f4c4e45ead"
+    )
     assert [case.pdb_id for case in protocol.cases] == [
         "1ia1",
         "1of6",
@@ -68,7 +70,7 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     assert manifest.metadata["denominator"] == "all_manifest_cases"
 
 
-def test_protocol_keeps_source_licensing_and_nonpromotion_boundaries_explicit() -> None:
+def test_protocol_keeps_materialization_and_nonpromotion_boundaries_explicit() -> None:
     document = public_benchmark_protocol_document()
     source = document["source"]
 
@@ -76,6 +78,9 @@ def test_protocol_keeps_source_licensing_and_nonpromotion_boundaries_explicit() 
     assert source["underlying_structure_archive_license"]["spdx_id"] == "CC0-1.0"
     assert source["license_metadata_reviewed"] is True
     assert source["legal_compliance_approved"] is False
+    endpoint = document["endpoint_policy"]
+    assert endpoint["symmetry_mapping_generation_implemented"] is True
+    assert endpoint["reference_ligand_match_materializer_implemented"] is True
     execution = document["execution_policy"]
     for key in (
         "network_fetch_implemented",
@@ -105,6 +110,8 @@ def test_protocol_keeps_source_licensing_and_nonpromotion_boundaries_explicit() 
         "claim_safe",
     ):
         assert claims[key] is False
+    assert "symmetry_mapping_materializer_not_implemented" not in document["blockers"]
+    assert "reference_ligand_match_materializer_not_implemented" not in document["blockers"]
     assert "public_benchmark_not_executed" in document["blockers"]
     assert "posebusters_benchmark_equivalence_not_established" in document["blockers"]
 
@@ -304,6 +311,7 @@ def test_scorer_source_identities_verify_and_detect_checkout_drift(
     observed = verify_public_benchmark_scorer_sources(Path.cwd())
     assert set(observed) == {
         "failure_inclusive_report",
+        "input_materializer",
         "pose_validity",
         "symmetry_aware_rmsd",
     }

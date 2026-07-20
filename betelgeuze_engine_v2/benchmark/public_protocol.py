@@ -2,14 +2,14 @@
 
 The protocol binds a small, public, license-metadata-reviewed contract cohort to
 exact upstream bytes, predefined metrics, failure-inclusive denominators, and
-the source identities of the bounded Engine v2 scorers.  It deliberately does
-not download data, run docking, emit benchmark results, establish statistical
-representativeness, or promote scientific, benchmark, product, or customer
-claims.
+the source identities of the bounded Engine v2 evaluators and input
+materializer. It deliberately does not download data, run docking, emit
+benchmark results, establish statistical representativeness, or promote
+scientific, benchmark, product, or customer claims.
 
 The four cases are the packaged PDB examples in one immutable PoseBusters
-repository commit.  They are protocol fixtures, not the PoseBusters Benchmark
-and not a scientifically sufficient holdout.  Raw receptor and ligand files are
+repository commit. They are protocol fixtures, not the PoseBusters Benchmark
+and not a scientifically sufficient holdout. Raw receptor and ligand files are
 not bundled by this package.
 """
 
@@ -40,10 +40,10 @@ PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID = (
 PUBLIC_BENCHMARK_PROTOCOL_ID = (
     "posebusters_packaged_public_redocking_contract_cohort/1.0.0"
 )
-PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.0.1"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T02:00:00Z"
+PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.0"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T03:30:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "32b8cc84a499118c29cecfe28b84a0be5c78060333dbf3c2cdb1d3d4ad91f292"
+    "e0e49a1b58742f0d2faa7d52e25b9bc4e6ac1208c08a6aaa7a27372c9d89ffc6"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -469,8 +469,8 @@ class FrozenPublicBenchmarkProtocol:
                 "failure_rows_retained": True,
                 "denominator": "all_manifest_cases",
                 "missing_or_failed_case_counts_as_primary_failure": True,
-                "symmetry_mapping_generation_implemented": False,
-                "reference_ligand_match_materializer_implemented": False,
+                "symmetry_mapping_generation_implemented": True,
+                "reference_ligand_match_materializer_implemented": True,
                 "posebusters_parity_claimed": False,
             },
             "split_policy": {
@@ -514,8 +514,6 @@ class FrozenPublicBenchmarkProtocol:
             "blockers": [
                 "four_case_contract_cohort_not_statistically_representative",
                 "posebusters_benchmark_equivalence_not_established",
-                "symmetry_mapping_materializer_not_implemented",
-                "reference_ligand_match_materializer_not_implemented",
                 "public_benchmark_not_executed",
                 "public_holdout_results_missing",
                 "independent_attestation_missing",
@@ -670,6 +668,14 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 ),
             ),
             PublicBenchmarkScorerIdentity(
+                purpose="input_materializer",
+                module="betelgeuze_engine_v2.benchmark.public_materializer",
+                relative_path="betelgeuze_engine_v2/benchmark/public_materializer.py",
+                source_sha256=(
+                    "ee23a401b00c508ffc61edca6e349149e739508562983d4d3102f4cc59365309"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
                 purpose="pose_validity",
                 module="betelgeuze_engine_v2.docking.validity",
                 relative_path="betelgeuze_engine_v2/docking/validity.py",
@@ -792,7 +798,7 @@ def require_public_benchmark_report(report: BenchmarkReport) -> BenchmarkReport:
 def verify_public_benchmark_scorer_sources(
     repository_root: str | os.PathLike[str],
 ) -> dict[str, str]:
-    """Verify reviewed scorer source files in a checkout without executing them."""
+    """Verify reviewed evaluator/materializer source files without executing them."""
 
     root = Path(repository_root).resolve(strict=True)
     observed: dict[str, str] = {}
