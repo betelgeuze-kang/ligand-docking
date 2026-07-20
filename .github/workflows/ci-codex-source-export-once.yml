@@ -1,0 +1,40 @@
+name: ci-codex-source-export-once
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci-codex-source-export-once.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-codex-source-export-once-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - name: Archive exact checked-out source
+        run: |
+          tar --exclude=.git -czf codex-source.tar.gz .
+          sha256sum codex-source.tar.gz > codex-source.tar.gz.sha256
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codex-source-${{ github.sha }}
+          path: |
+            codex-source.tar.gz
+            codex-source.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
