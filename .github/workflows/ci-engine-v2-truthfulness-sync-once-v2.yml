@@ -1,0 +1,214 @@
+name: ci-engine-v2-truthfulness-sync-once-v2
+
+on:
+  push:
+    branches:
+      - "agent/v2-claim-state-truthfulness"
+    paths:
+      - ".github/workflows/ci-engine-v2-truthfulness-sync-once-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-engine-v2-truthfulness-sync-once-v2
+  cancel-in-progress: false
+
+jobs:
+  synchronize:
+    if: github.repository == 'betelgeuze-kang/ligand-docking' && github.ref == 'refs/heads/agent/v2-claim-state-truthfulness'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/v2-claim-state-truthfulness
+          persist-credentials: true
+          clean: true
+          fetch-depth: 2
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install \
+            pytest==8.3.5 \
+            PyYAML==6.0.3 \
+            cryptography==46.0.5 \
+            numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Generate canonical checked-in state
+        run: |
+          python tools/update_engine_v2_main_ci_coverage.py --write
+          python tools/update_engine_v2_truthfulness_state.py --write
+
+      - name: Restore final read-only truthfulness workflow
+        run: |
+          cat > .github/workflows/ci-engine-v2-truthfulness.yml <<'YAML'
+          name: ci-engine-v2-truthfulness
+
+          on:
+            pull_request:
+              paths:
+                - "betelgeuze_engine_v2/truthfulness.py"
+                - "betelgeuze_engine_v2/capabilities.py"
+                - "config/independent_engine_v2_capabilities.yaml"
+                - "config/independent_engine_v2_truthfulness_policy.json"
+                - "tools/check_engine_v2_truthfulness.py"
+                - "tools/update_engine_v2_truthfulness_state.py"
+                - "tools/update_engine_v2_main_ci_coverage.py"
+                - "tests/unit/test_engine_v2_truthfulness.py"
+                - "docs/engine_v2_status.md"
+                - "docs/engine_v2_truthfulness.md"
+                - ".github/workflows/ci-engine-v2-main.yml"
+                - ".github/workflows/ci-engine-v2-truthfulness.yml"
+            push:
+              branches: ["main"]
+              paths:
+                - "betelgeuze_engine_v2/truthfulness.py"
+                - "betelgeuze_engine_v2/capabilities.py"
+                - "config/independent_engine_v2_capabilities.yaml"
+                - "config/independent_engine_v2_truthfulness_policy.json"
+                - "tools/check_engine_v2_truthfulness.py"
+                - "tools/update_engine_v2_truthfulness_state.py"
+                - "tools/update_engine_v2_main_ci_coverage.py"
+                - "tests/unit/test_engine_v2_truthfulness.py"
+                - "docs/engine_v2_status.md"
+                - "docs/engine_v2_truthfulness.md"
+                - ".github/workflows/ci-engine-v2-main.yml"
+                - ".github/workflows/ci-engine-v2-truthfulness.yml"
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+
+          concurrency:
+            group: ci-engine-v2-truthfulness-__GITHUB_REF_EXPRESSION__
+            cancel-in-progress: true
+
+          jobs:
+            truthfulness:
+              runs-on: ubuntu-latest
+              timeout-minutes: 20
+              strategy:
+                fail-fast: false
+                matrix:
+                  python-version: ["3.10", "3.11", "3.12"]
+              env:
+                CUDA_VISIBLE_DEVICES: ""
+                HIP_VISIBLE_DEVICES: ""
+                ROCR_VISIBLE_DEVICES: ""
+                PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+              steps:
+                - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+                  with:
+                    persist-credentials: false
+                    clean: true
+                    fetch-depth: 1
+                    sparse-checkout: |
+                      betelgeuze_engine_v2
+                      config/independent_engine_v2_capabilities.yaml
+                      config/independent_engine_v2_truthfulness_policy.json
+                      tools/check_engine_v2_architecture.py
+                      tools/check_engine_v2_truthfulness.py
+                      tools/update_engine_v2_truthfulness_state.py
+                      tools/update_engine_v2_main_ci_coverage.py
+                      tests/unit/test_engine_v2_truthfulness.py
+                      docs/engine_v2_status.md
+                      docs/engine_v2_truthfulness.md
+                      .github/workflows/ci-engine-v2-main.yml
+                      .github/workflows/ci-engine-v2-truthfulness.yml
+                    sparse-checkout-cone-mode: false
+                    show-progress: false
+
+                - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+                  with:
+                    python-version: __MATRIX_PYTHON_VERSION_EXPRESSION__
+
+                - name: Install focused CPU dependencies
+                  run: |
+                    python -m pip install pip==25.0.1
+                    python -m pip install \
+                      pytest==8.3.5 \
+                      PyYAML==6.0.3 \
+                      cryptography==46.0.5 \
+                      numpy==1.26.4
+                    python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+                - name: Compile and enforce architecture boundary
+                  run: |
+                    python -m compileall -q \
+                      betelgeuze_engine_v2 \
+                      tools/check_engine_v2_truthfulness.py \
+                      tools/update_engine_v2_truthfulness_state.py \
+                      tools/update_engine_v2_main_ci_coverage.py
+                    python tools/check_engine_v2_architecture.py
+
+                - name: Verify canonical Engine v2 main CI coverage
+                  run: |
+                    python tools/update_engine_v2_main_ci_coverage.py --check
+
+                - name: Verify synchronized capability truthfulness state
+                  run: |
+                    python tools/update_engine_v2_truthfulness_state.py --check
+
+                - name: Verify frozen truthfulness policy
+                  run: |
+                    python tools/check_engine_v2_truthfulness.py
+
+                - name: Run capability and evidence truthfulness tests
+                  run: |
+                    python -m pytest -q tests/unit/test_engine_v2_truthfulness.py
+          YAML
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/ci-engine-v2-truthfulness.yml')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              '__GITHUB_REF_EXPRESSION__',
+              '$' + '{{ github.ref }}',
+          )
+          text = text.replace(
+              '__MATRIX_PYTHON_VERSION_EXPRESSION__',
+              '$' + '{{ matrix.python-version }}',
+          )
+          if '__' in text:
+              raise SystemExit('truthfulness workflow template retains a placeholder')
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify generated state before persistence
+        run: |
+          python tools/update_engine_v2_main_ci_coverage.py --check
+          python tools/update_engine_v2_truthfulness_state.py --check
+          python tools/check_engine_v2_truthfulness.py
+          python -m pytest -q tests/unit/test_engine_v2_truthfulness.py
+
+      - name: Persist generated state and remove one-shot workflows
+        run: |
+          git rm --ignore-unmatch \
+            .github/workflows/ci-engine-v2-truthfulness-sync-once.yml \
+            .github/workflows/ci-engine-v2-truthfulness-sync-once-v2.yml
+          git add \
+            .github/workflows/ci-engine-v2-main.yml \
+            .github/workflows/ci-engine-v2-truthfulness.yml \
+            betelgeuze_engine_v2/capabilities.py \
+            config/independent_engine_v2_capabilities.yaml \
+            config/independent_engine_v2_truthfulness_policy.json \
+            docs/engine_v2_status.md \
+            docs/engine_v2_truthfulness.md
+          git diff --cached --check
+          git config user.name "betelgeuze-engine-v2-truthfulness-bot"
+          git config user.email "engine-v2-truthfulness-bot@users.noreply.github.com"
+          git commit -m "Synchronize Engine v2 truthfulness state"
+          git push origin HEAD:agent/v2-claim-state-truthfulness
