@@ -98,37 +98,43 @@ jobs:
 
           path = Path("tests/unit/test_engine_v2_truthfulness.py")
           source = path.read_text(encoding="utf-8")
-          old = '''    base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
-              assert "symmetry_mapping_materializer_not_implemented" in base["blockers"]
+          old_assertions = '''    assert "symmetry_mapping_materializer_not_implemented" in base["blockers"]
               assert "reference_ligand_match_materializer_not_implemented" in base["blockers"]
-
-              row = capability_truthfulness_snapshot()["capabilities"][
-                  PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID
-              ]
           '''.replace("              ", "")
-          new = '''    base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
-              assert base["current_state"] == (
-                  "frozen_four_case_public_redocking_protocol_with_"
-                  "result_free_input_materializer_without_execution_or_results"
+          new_assertions = '''    assert base["current_state"] == (
+              "frozen_four_case_public_redocking_protocol_with_"
+              "result_free_input_materializer_without_execution_or_results"
               )
               assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]
               assert "reference_ligand_match_materializer_not_implemented" not in base["blockers"]
-
-              row = capability_truthfulness_snapshot()["capabilities"][
-                  PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID
-              ]
-              assert "symmetry_mapping_materializer_not_implemented" in row[
-                  "superseded_blockers"
+          '''.replace("              ", "    ")
+          insertion_point = '''    assert row["canonical_entrypoint_applicable"] is True
+          '''
+          superseded_assertions = '''    assert "symmetry_mapping_materializer_not_implemented" in row[
+              "superseded_blockers"
               ]
               assert "reference_ligand_match_materializer_not_implemented" in row[
-                  "superseded_blockers"
+              "superseded_blockers"
               ]
-          '''.replace("              ", "")
-          count = source.count(old)
-          if count not in {0, 1}:
-              raise SystemExit(f"unexpected truthfulness test match count: {count}")
-          if count == 1:
-              path.write_text(source.replace(old, new, 1), encoding="utf-8", newline="\n")
+          '''.replace("              ", "    ")
+
+          old_count = source.count(old_assertions)
+          if old_count not in {0, 1}:
+              raise SystemExit(f"unexpected base assertion match count: {old_count}")
+          if old_count == 1:
+              source = source.replace(old_assertions, new_assertions, 1)
+          if superseded_assertions not in source:
+              point_count = source.count(insertion_point)
+              if point_count != 1:
+                  raise SystemExit(
+                      f"unexpected superseded insertion point count: {point_count}"
+                  )
+              source = source.replace(
+                  insertion_point,
+                  superseded_assertions + insertion_point,
+                  1,
+              )
+          path.write_text(source, encoding="utf-8", newline="\n")
           PY
           if git diff --quiet -- tests/unit/test_engine_v2_truthfulness.py; then
             exit 0
