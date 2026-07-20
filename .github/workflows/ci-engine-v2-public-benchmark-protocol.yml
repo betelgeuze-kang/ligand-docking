@@ -9,6 +9,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/unit/test_engine_v2_public_benchmark_materializer.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -21,6 +22,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/unit/test_engine_v2_public_benchmark_materializer.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -56,24 +58,24 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
+            tests/unit/test_engine_v2_public_benchmark_materializer.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
           show-progress: false
 
-      - name: Record exact public benchmark source hashes
+      - name: Record exact public materializer source hash
         run: |
           sha256sum \
-            betelgeuze_engine_v2/docking/metrics.py \
-            betelgeuze_engine_v2/docking/validity.py \
-            > public-benchmark-source-hashes.txt
+            betelgeuze_engine_v2/benchmark/public_materializer.py \
+            > public-materializer-source-hash.txt
 
-      - name: Upload exact public benchmark source hashes
+      - name: Upload exact public materializer source hash
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: public-benchmark-source-hashes-${{ matrix.python-version }}
-          path: public-benchmark-source-hashes.txt
+          name: public-materializer-source-hash-${{ matrix.python-version }}
+          path: public-materializer-source-hash.txt
           if-no-files-found: error
           retention-days: 1
 
@@ -92,8 +94,9 @@ jobs:
           python -m compileall -q betelgeuze_engine_v2
           python tools/check_engine_v2_architecture.py
 
-      - name: Verify frozen protocol and failure-inclusive report contract
+      - name: Verify frozen protocol and result-free materializer contracts
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
+            tests/unit/test_engine_v2_public_benchmark_materializer.py \
             tests/unit/test_engine_v2_benchmark_contracts.py
