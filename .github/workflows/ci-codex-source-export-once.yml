@@ -26,15 +26,16 @@ jobs:
 
       - name: Archive exact checked-out source
         run: |
-          tar --exclude=.git -czf codex-source.tar.gz .
-          sha256sum codex-source.tar.gz > codex-source.tar.gz.sha256
+          tar --exclude=.git -czf "${RUNNER_TEMP}/codex-source.tar.gz" .
+          sha256sum "${RUNNER_TEMP}/codex-source.tar.gz" \
+            > "${RUNNER_TEMP}/codex-source.tar.gz.sha256"
 
       - name: Upload source archive
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: codex-source-${{ github.sha }}
           path: |
-            codex-source.tar.gz
-            codex-source.tar.gz.sha256
+            ${{ runner.temp }}/codex-source.tar.gz
+            ${{ runner.temp }}/codex-source.tar.gz.sha256
           if-no-files-found: error
           retention-days: 1
