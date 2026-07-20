@@ -45,6 +45,17 @@ _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_trust_store/1.0.0"
 )
 _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
+_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/1.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS = (
+    "cryptography-distribution",
+    "numpy-distribution",
+    "openssl-executable",
+    "python-runtime-executable",
+    "python-standard-library",
+    "torch-distribution",
+)
 _REFERENCE_MINIMIZATION_VALIDATION_OPENSSL_EXECUTABLE = "/usr/bin/openssl"
 _ED25519_SUBJECT_PUBLIC_KEY_INFO_PREFIX = bytes.fromhex(
     "302a300506032b6570032100"
@@ -143,19 +154,90 @@ def reference_minimization_validation_execution_source_sha256() -> str:
     ).hexdigest()
 
 
+def _require_lower_hex(value: object, *, length: int, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != length
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is invalid")
+    return value
+
+
+def _require_dependency_artifact_row_mapping(
+    value: object,
+    *,
+    name: str,
+) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} dependency artifact rows are invalid"
+        )
+    rows: dict[str, str] = {}
+    for artifact_id, digest in value.items():
+        if not isinstance(artifact_id, str) or artifact_id in rows:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                f"{name} dependency artifact rows are invalid"
+            )
+        rows[artifact_id] = _require_lower_hex(
+            digest,
+            length=64,
+            name=f"{name} dependency {artifact_id}",
+        )
+    if tuple(sorted(rows)) != (
+        _REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} dependency artifact row schema is invalid"
+        )
+    return rows
+
+
+def _require_signed_dependency_artifact_rows(value: object) -> dict[str, str]:
+    if not isinstance(value, list):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "signed authorization dependency artifact rows are invalid"
+        )
+    rows: dict[str, str] = {}
+    for row in value:
+        if (
+            not isinstance(row, dict)
+            or set(row) != {"artifact_id", "sha256"}
+            or not isinstance(row.get("artifact_id"), str)
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "signed authorization dependency artifact rows are invalid"
+            )
+        artifact_id = row["artifact_id"]
+        if artifact_id in rows:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "signed authorization dependency artifact rows are duplicated"
+            )
+        rows[artifact_id] = _require_lower_hex(
+            row.get("sha256"),
+            length=64,
+            name=f"signed authorization dependency {artifact_id}",
+        )
+    return _require_dependency_artifact_row_mapping(
+        rows,
+        name="signed authorization",
+    )
+
+
 def _require_observed_dependency_artifact_rows_before_import(
     repository_root: str,
     dependency_roots: tuple[str, ...],
     request: dict[str, object],
+    *,
+    signed_expected: dict[str, str],
 ) -> None:
-    expected = request.get("expected_dependency_artifact_sha256_rows")
-    if not isinstance(expected, dict) or any(
-        not isinstance(key, str)
-        or _require_lower_hex(value, length=64, name=f"dependency {key}") != value
-        for key, value in expected.items()
-    ):
+    request_expected = _require_dependency_artifact_row_mapping(
+        request.get("expected_dependency_artifact_sha256_rows"),
+        name="bootstrap request",
+    )
+    if request_expected != signed_expected:
         raise _ReferenceMinimizationValidationBootstrapError(
-            "bootstrap dependency artifact rows are invalid"
+            "bootstrap request dependency rows do not match the signed authorization"
         )
     helper_path = os.path.join(
         repository_root,
@@ -177,7 +259,7 @@ def _require_observed_dependency_artifact_rows_before_import(
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap dependency bytes cannot be measured"
         ) from exc
-    if observed != expected:
+    if observed != signed_expected:
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap dependency bytes do not match the signed authorization"
         )
@@ -301,16 +383,6 @@ def _read_bootstrap_request() -> tuple[bytes, dict[str, object]]:
             "validation bootstrap request is not the exact canonical schema"
         )
     return raw, request
-
-
-def _require_lower_hex(value: object, *, length: int, name: str) -> str:
-    if (
-        not isinstance(value, str)
-        or len(value) != length
-        or any(character not in "0123456789abcdef" for character in value)
-    ):
-        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is invalid")
-    return value
 
 
 def _require_external_private_root(
@@ -580,7 +652,7 @@ def _require_bootstrap_authorization_signature(
     *,
     expected_commit: str,
     expected_source: str,
-) -> None:
+) -> dict[str, str]:
     raw_receipt = request.get("authorization_receipt")
     if not isinstance(raw_receipt, dict):
         raise _ReferenceMinimizationValidationBootstrapError(
@@ -613,23 +685,34 @@ def _require_bootstrap_authorization_signature(
             "bootstrap authorization signature verification failed"
         )
     receipt_sha256 = payload.pop("receipt_sha256", None)
+    request_nonce = _require_lower_hex(
+        request.get("authorization_nonce_sha256"),
+        length=64,
+        name="bootstrap request authorization nonce",
+    )
     if (
         receipt_sha256 != hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+        or payload.get("schema_id")
+        != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
         or payload.get("authorization_key_id") != key_id
         or payload.get("authorization_operator_identity_sha256")
         != operator_identity
+        or payload.get("authorization_nonce_sha256") != request_nonce
         or payload.get("code_commit_sha") != expected_commit
         or payload.get("runner_source_sha256") != expected_source
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap authorization source binding is invalid"
         )
+    return _require_signed_dependency_artifact_rows(
+        payload.get("dependency_artifact_sha256_rows")
+    )
 
 
 def _require_signed_clean_checkout_before_import(
     repository_root: str,
     request: dict[str, object],
-) -> None:
+) -> dict[str, str]:
     _require_external_private_root(
         request.get("reservation_root"),
         repository_root=repository_root,
@@ -650,7 +733,7 @@ def _require_signed_clean_checkout_before_import(
         length=64,
         name="expected validation source",
     )
-    _require_bootstrap_authorization_signature(
+    signed_dependency_rows = _require_bootstrap_authorization_signature(
         request,
         expected_commit=expected_commit,
         expected_source=expected_source,
@@ -724,6 +807,7 @@ def _require_signed_clean_checkout_before_import(
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap checkout is not the signed clean source"
         )
+    return signed_dependency_rows
 
 
 def _prepare_isolated_import_boundary() -> tuple[object, ...]:
@@ -793,9 +877,14 @@ def main() -> int:
     try:
         state = _prepare_isolated_import_boundary()
         raw_request, request = _read_bootstrap_request()
-        _require_signed_clean_checkout_before_import(state[1], request)
+        signed_dependency_rows = _require_signed_clean_checkout_before_import(
+            state[1], request
+        )
         _require_observed_dependency_artifact_rows_before_import(
-            state[1], state[2], request
+            state[1],
+            state[2],
+            request,
+            signed_expected=signed_dependency_rows,
         )
         setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
         from betelgeuze_engine_v2.physics import reference_minimization_validation_runner
