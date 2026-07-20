@@ -318,19 +318,33 @@ def _standard_library_identity(*, allowed_roots: tuple[Path, ...]) -> str:
 
 
 def _normalized_distribution_relative_path(package_path: object) -> str:
+    """Accept canonical wheel paths, including a leading wheel-script parent prefix."""
+
     raw = str(package_path)
     if not raw or "\\" in raw:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "distribution RECORD path is not canonical POSIX text"
         )
     relative = PurePosixPath(raw)
+    parts = relative.parts
+    parent_prefix_finished = False
+    for part in parts:
+        if part == "..":
+            if parent_prefix_finished:
+                raise ReferenceMinimizationValidationDependencyIdentityError(
+                    "distribution RECORD parent traversal is not a leading prefix"
+                )
+        else:
+            parent_prefix_finished = True
     if (
         relative.is_absolute()
-        or any(part in {"", ".", ".."} for part in relative.parts)
+        or not parts
+        or any(part in {"", "."} for part in parts)
+        or all(part == ".." for part in parts)
         or relative.as_posix() != raw
     ):
         raise ReferenceMinimizationValidationDependencyIdentityError(
-            "distribution RECORD path is not canonical or escapes its root"
+            "distribution RECORD path is not canonical"
         )
     return raw
 
@@ -384,10 +398,7 @@ def _distribution_identity(
             raise ReferenceMinimizationValidationDependencyIdentityError(
                 f"{distribution_name} RECORD payload is unavailable"
             ) from exc
-        if not located.is_relative_to(distribution_root):
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                f"{distribution_name} RECORD payload escaped its installation root"
-            )
+        _matching_trusted_root(located, allowed_roots)
         digest, size = _hash_regular_file(located, allowed_roots=allowed_roots)
         declared_hash = package_path.hash
         if relative.endswith(".dist-info/RECORD"):
