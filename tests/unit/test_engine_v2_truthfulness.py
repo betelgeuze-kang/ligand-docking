@@ -101,11 +101,21 @@ def test_lifecycle_snapshot_separates_wiring_from_production_evidence() -> None:
 
 def test_public_materializer_implementation_does_not_become_benchmark_execution() -> None:
     base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
-    assert "symmetry_mapping_materializer_not_implemented" in base["blockers"]
-    assert "reference_ligand_match_materializer_not_implemented" in base["blockers"]
+    assert base["current_state"] == (
+        "frozen_four_case_public_redocking_protocol_with_"
+        "result_free_input_materializer_without_execution_or_results"
+    )
+    assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]
+    assert "reference_ligand_match_materializer_not_implemented" not in base["blockers"]
 
     row = capability_truthfulness_snapshot()["capabilities"][
         PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID
+    ]
+    assert "symmetry_mapping_materializer_not_implemented" in row[
+        "superseded_blockers"
+    ]
+    assert "reference_ligand_match_materializer_not_implemented" in row[
+        "superseded_blockers"
     ]
     assert row["canonical_entrypoint_applicable"] is True
     assert row["canonical_entrypoint_wired"] is False
