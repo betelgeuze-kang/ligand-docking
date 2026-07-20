@@ -131,6 +131,22 @@ def _normalize_chirality(
     return tuple(normalized)
 
 
+def _signed_volume(
+    coords: torch.Tensor,
+    center: int,
+    a: int,
+    b: int,
+    c: int,
+) -> float:
+    origin = coords[center]
+    return float(
+        torch.dot(
+            torch.cross(coords[a] - origin, coords[b] - origin, dim=0),
+            coords[c] - origin,
+        ).item()
+    )
+
+
 @dataclass(frozen=True)
 class PoseValidityConfig:
     bond_length_tolerance_angstrom: float = 0.15
@@ -319,14 +335,18 @@ class PoseValidityContext:
     def reference_coordinates_sha256(self) -> str:
         return _coordinate_identity(
             self.reference_coordinates,
-            schema_id="betelgeuze.engine_v2_pose_validity_reference_coordinates/1.0.0",
+            schema_id=(
+                "betelgeuze.engine_v2_pose_validity_reference_coordinates/1.0.0"
+            ),
         )
 
     @property
     def receptor_coordinates_sha256(self) -> str:
         return _coordinate_identity(
             self.receptor_coordinates,
-            schema_id="betelgeuze.engine_v2_pose_validity_receptor_coordinates/1.0.0",
+            schema_id=(
+                "betelgeuze.engine_v2_pose_validity_receptor_coordinates/1.0.0"
+            ),
         )
 
     @property
@@ -393,22 +413,6 @@ class PoseValidityContext:
         self.assert_integrity()
         proposal.assert_integrity()
         return result
-
-
-def _signed_volume(
-    coords: torch.Tensor,
-    center: int,
-    a: int,
-    b: int,
-    c: int,
-) -> float:
-    origin = coords[center]
-    return float(
-        torch.dot(
-            torch.cross(coords[a] - origin, coords[b] - origin, dim=0),
-            coords[c] - origin,
-        ).item()
-    )
 
 
 def evaluate_pose_validity(
@@ -564,12 +568,23 @@ def evaluate_pose_validity(
             name="receptor_coordinates",
             require_nonempty=True,
         )
-        if int(receptor.shape[0]) * atom_count > cfg.max_cross_checks:
+        cross_count = int(receptor.shape[0]) * atom_count
+        if cross_count > cfg.max_cross_checks:
             raise PoseValidityError(
                 "receptor-ligand cross-check capacity exceeded"
             )
-        distances = torch.cdist(pose, receptor)
-        minimum_receptor_distance = float(distances.min().item())
+        minimum_receptor_distance = float("inf")
+        for ligand_index in range(atom_count):
+            for receptor_index in range(int(receptor.shape[0])):
+                distance = float(
+                    torch.linalg.vector_norm(
+                        pose[ligand_index] - receptor[receptor_index]
+                    ).item()
+                )
+                minimum_receptor_distance = min(
+                    minimum_receptor_distance,
+                    distance,
+                )
         checks["receptor_ligand_clash_free"] = (
             minimum_receptor_distance >= cfg.receptor_ligand_clash_angstrom
         )
@@ -577,6 +592,7 @@ def evaluate_pose_validity(
         measurements["minimum_receptor_ligand_distance_angstrom"] = (
             minimum_receptor_distance
         )
+        measurements["evaluated_receptor_ligand_pair_count"] = cross_count
         if not checks["receptor_ligand_clash_free"]:
             blockers.append("receptor_ligand_clash_detected")
 
@@ -629,9 +645,12 @@ def evaluate_pose_validity(
             raise PoseValidityError(
                 "pocket_center requires pocket_radius_angstrom"
             )
-        max_distance = float(
-            torch.linalg.vector_norm(pose - center, dim=-1).max().item()
-        )
+        max_distance = 0.0
+        for index in range(atom_count):
+            max_distance = max(
+                max_distance,
+                float(torch.linalg.vector_norm(pose[index] - center).item()),
+            )
         checks["inside_declared_pocket"] = max_distance <= radius
         evaluated_checks["inside_declared_pocket"] = True
         measurements["maximum_pocket_center_distance_angstrom"] = max_distance
