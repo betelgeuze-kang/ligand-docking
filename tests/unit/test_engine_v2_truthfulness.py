@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 import json
 from pathlib import Path
 
@@ -175,26 +176,11 @@ def test_scoped_metric_evidence_requires_full_context_and_exact_identity() -> No
 
 def test_scoped_metric_evidence_rejects_unbounded_or_inconsistent_values() -> None:
     with pytest.raises(TruthfulnessContractError, match="inside"):
-        ScopedMetricEvidence(
-            **{
-                **_metric().__dict__,
-                "value": 0.95,
-            }
-        )
+        replace(_metric(), value=0.95)
     with pytest.raises(TruthfulnessContractError, match="positive integer"):
-        ScopedMetricEvidence(
-            **{
-                **_metric().__dict__,
-                "failure_denominator": 0,
-            }
-        )
+        replace(_metric(), failure_denominator=0)
     with pytest.raises(TruthfulnessContractError, match="finite"):
-        ScopedMetricEvidence(
-            **{
-                **_metric().__dict__,
-                "value": float("nan"),
-            }
-        )
+        replace(_metric(), value=float("nan"))
 
 
 def _review_evidence() -> dict[str, object]:
