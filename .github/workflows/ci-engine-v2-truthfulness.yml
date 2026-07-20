@@ -80,9 +80,26 @@ jobs:
           python tools/check_engine_v2_architecture.py
 
       - name: Verify frozen truthfulness policy
+        shell: bash
         run: |
-          python tools/check_engine_v2_truthfulness.py
+          set -o pipefail
+          python tools/check_engine_v2_truthfulness.py \
+            2>&1 | tee engine-v2-truthfulness-check.log
 
       - name: Run capability and evidence truthfulness tests
+        shell: bash
         run: |
-          python -m pytest -q tests/unit/test_engine_v2_truthfulness.py
+          set -o pipefail
+          python -m pytest -q tests/unit/test_engine_v2_truthfulness.py \
+            2>&1 | tee engine-v2-truthfulness-pytest.log
+
+      - name: Upload focused truthfulness diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: engine-v2-truthfulness-${{ matrix.python-version }}
+          path: |
+            engine-v2-truthfulness-check.log
+            engine-v2-truthfulness-pytest.log
+          if-no-files-found: warn
+          retention-days: 1
