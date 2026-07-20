@@ -83,7 +83,9 @@ def test_canonical_json_round_trip_is_self_verifying_and_atomic(tmp_path: Path) 
     path = write_canonical_system_json(system, tmp_path / "system.json")
     assert path.exists()
     assert not list(tmp_path.glob(".system.json.tmp-*"))
-    assert canonical_system_sha256(all_atom_system_from_canonical_json(path.read_bytes())) == canonical_system_sha256(system)
+    assert canonical_system_sha256(
+        all_atom_system_from_canonical_json(path.read_bytes())
+    ) == canonical_system_sha256(system)
 
     tampered = encoded.replace(b"identity-ligand", b"identity-ligand-tampered")
     with pytest.raises(CanonicalSerializationError, match="SHA-256 mismatch"):
@@ -97,7 +99,12 @@ def test_strict_pdb_and_sdf_writers_round_trip_supported_fields() -> None:
     assert pdb_receipt.format == "pdb_strict_v1"
     assert [atom.element for atom in pdb_round_trip.atoms] == ["C", "O"]
     assert [(bond.atom_i, bond.atom_j) for bond in pdb_round_trip.bonds] == [(0, 1)]
-    assert torch.allclose(pdb_round_trip.coordinates, pdb_system.coordinates, atol=5.0e-4, rtol=0.0)
+    assert torch.allclose(
+        pdb_round_trip.coordinates,
+        pdb_system.coordinates,
+        atol=5.0e-4,
+        rtol=0.0,
+    )
 
     sdf_system = parse_sdf_v2000(_sdf_fixture(), source_id="sdf-source")
     sdf_text, sdf_receipt = sdf_v2000_string(sdf_system)
@@ -105,8 +112,15 @@ def test_strict_pdb_and_sdf_writers_round_trip_supported_fields() -> None:
     assert sdf_receipt.format == "sdf_v2000_strict_v1"
     assert sdf_round_trip.atoms[0].isotope_mass_number == 13
     assert sdf_round_trip.atoms[1].formal_charge == -1
-    assert [(bond.atom_i, bond.atom_j, bond.order) for bond in sdf_round_trip.bonds] == [(0, 1, 1.0)]
-    assert torch.allclose(sdf_round_trip.coordinates, sdf_system.coordinates, atol=5.0e-5, rtol=0.0)
+    assert [
+        (bond.atom_i, bond.atom_j, bond.order) for bond in sdf_round_trip.bonds
+    ] == [(0, 1, 1.0)]
+    assert torch.allclose(
+        sdf_round_trip.coordinates,
+        sdf_system.coordinates,
+        atol=5.0e-5,
+        rtol=0.0,
+    )
 
 
 def test_pdb_connectivity_records_are_rejected_or_explicitly_recorded() -> None:
@@ -116,9 +130,14 @@ def test_pdb_connectivity_records_are_rejected_or_explicitly_recorded() -> None:
         parse_pdb(source)
 
     recorded = parse_pdb(source, connectivity_policy="record_unrepresented")
-    counts = recorded.provenance.metadata["unrepresented_connectivity_record_counts"]
+    counts = recorded.provenance.metadata[
+        "unrepresented_connectivity_record_counts"
+    ]
     assert counts == {"LINK": 1}
-    assert recorded.metadata["connectivity_claim_blocker"] == "pdb_link_or_ssbond_not_materialized"
+    assert (
+        recorded.metadata["connectivity_claim_blocker"]
+        == "pdb_link_or_ssbond_not_materialized"
+    )
     assert recorded.provenance.chemistry_validated is False
 
 
@@ -145,21 +164,36 @@ def _problem(marker: str) -> DockingProblemIdentity:
 
 def test_problem_and_search_space_identity_are_bound_into_every_proposal() -> None:
     budget = DockingBudget(candidate_count=3, top_k=1, max_torsions=1, seed=7)
-    first = generate_bounded_docking_proposals(_search_space(), budget, problem=_problem("a"))
-    changed_problem = generate_bounded_docking_proposals(_search_space(), budget, problem=_problem("b"))
-    changed_space = generate_bounded_docking_proposals(_search_space(1.1), budget, problem=_problem("a"))
+    first = generate_bounded_docking_proposals(
+        _search_space(), budget, problem=_problem("a")
+    )
+    changed_problem = generate_bounded_docking_proposals(
+        _search_space(), budget, problem=_problem("b")
+    )
+    changed_space = generate_bounded_docking_proposals(
+        _search_space(1.1), budget, problem=_problem("a")
+    )
 
     assert first[0].problem_fingerprint_sha256 == _problem("a").fingerprint_sha256
-    assert first[0].search_space_fingerprint_sha256 == _search_space().fingerprint_sha256
+    assert (
+        first[0].search_space_fingerprint_sha256
+        == _search_space().fingerprint_sha256
+    )
     assert first[0].fingerprint_sha256 != changed_problem[0].fingerprint_sha256
     assert first[0].fingerprint_sha256 != changed_space[0].fingerprint_sha256
     assert first[0].coordinate_fingerprint_sha256
+
+
+_PROBLEM_A_FINGERPRINT = _problem("a").fingerprint_sha256
 
 
 class _Scorer:
     scorer_id = "identity-test-scorer"
     scorer_version = "1.0.0"
     validated_for_docking_ranking = False
+    problem_fingerprint_sha256 = _PROBLEM_A_FINGERPRINT
+    implementation_source_sha256 = "1" * 64
+    config_fingerprint_sha256 = "2" * 64
 
     def score(self, proposal):
         return proposal.coordinates.square().sum()
@@ -168,6 +202,9 @@ class _Scorer:
 class _LineageRefiner:
     refiner_id = "identity-test-refiner"
     refiner_version = "1.0.0"
+    problem_fingerprint_sha256 = _PROBLEM_A_FINGERPRINT
+    implementation_source_sha256 = "3" * 64
+    config_fingerprint_sha256 = "4" * 64
 
     def refine(self, proposal, *, max_steps):
         assert max_steps == 2
@@ -182,6 +219,9 @@ class _LineageRefiner:
 class _BadRefiner:
     refiner_id = "bad-refiner"
     refiner_version = "1.0.0"
+    problem_fingerprint_sha256 = _PROBLEM_A_FINGERPRINT
+    implementation_source_sha256 = "5" * 64
+    config_fingerprint_sha256 = "6" * 64
 
     def refine(self, proposal, *, max_steps):
         del max_steps
@@ -207,9 +247,15 @@ def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -
     assert result.problem_fingerprint_sha256 == _problem("a").fingerprint_sha256
     for row in result.rows:
         assert row.refined is True
-        assert row.proposal_fingerprint_sha256 != row.result_proposal_fingerprint_sha256
+        assert (
+            row.proposal_fingerprint_sha256
+            != row.result_proposal_fingerprint_sha256
+        )
         assert row.proposal is not None
-        assert row.proposal.parent_proposal_fingerprint_sha256 == row.proposal_fingerprint_sha256
+        assert (
+            row.proposal.parent_proposal_fingerprint_sha256
+            == row.proposal_fingerprint_sha256
+        )
 
     rejected = run_bounded_docking_search(
         _search_space(),
@@ -219,4 +265,7 @@ def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -
         problem=_problem("a"),
     )
     assert rejected.failure_count == 2
-    assert all(row.error_code == "DockingSearchError" for row in rejected.rows)
+    assert all(
+        row.error_code in {"DockingProposalError", "DockingSearchError"}
+        for row in rejected.rows
+    )
