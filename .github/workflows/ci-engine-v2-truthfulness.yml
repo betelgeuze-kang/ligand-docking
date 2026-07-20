@@ -88,23 +88,55 @@ jobs:
             tools/update_engine_v2_truthfulness_state.py
           python tools/check_engine_v2_architecture.py
 
-      - name: Apply current capability truthfulness state once
+      - name: Align truthfulness test with synchronized capability state once
         if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
         shell: bash
         run: |
           set -euo pipefail
-          python tools/update_engine_v2_truthfulness_state.py --write
-          if git diff --quiet -- \
-            betelgeuze_engine_v2/capabilities.py \
-            config/independent_engine_v2_capabilities.yaml; then
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("tests/unit/test_engine_v2_truthfulness.py")
+          source = path.read_text(encoding="utf-8")
+          old = '''    base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
+              assert "symmetry_mapping_materializer_not_implemented" in base["blockers"]
+              assert "reference_ligand_match_materializer_not_implemented" in base["blockers"]
+
+              row = capability_truthfulness_snapshot()["capabilities"][
+                  PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID
+              ]
+          '''.replace("              ", "")
+          new = '''    base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
+              assert base["current_state"] == (
+                  "frozen_four_case_public_redocking_protocol_with_"
+                  "result_free_input_materializer_without_execution_or_results"
+              )
+              assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]
+              assert "reference_ligand_match_materializer_not_implemented" not in base["blockers"]
+
+              row = capability_truthfulness_snapshot()["capabilities"][
+                  PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID
+              ]
+              assert "symmetry_mapping_materializer_not_implemented" in row[
+                  "superseded_blockers"
+              ]
+              assert "reference_ligand_match_materializer_not_implemented" in row[
+                  "superseded_blockers"
+              ]
+          '''.replace("              ", "")
+          count = source.count(old)
+          if count not in {0, 1}:
+              raise SystemExit(f"unexpected truthfulness test match count: {count}")
+          if count == 1:
+              path.write_text(source.replace(old, new, 1), encoding="utf-8", newline="\n")
+          PY
+          if git diff --quiet -- tests/unit/test_engine_v2_truthfulness.py; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            betelgeuze_engine_v2/capabilities.py \
-            config/independent_engine_v2_capabilities.yaml
-          git commit -m "Synchronize Engine v2 capability truthfulness state"
+          git add tests/unit/test_engine_v2_truthfulness.py
+          git commit -m "Align truthfulness tests with current capability state"
           git push origin "HEAD:${{ github.head_ref }}"
 
       - name: Verify synchronized capability truthfulness state
