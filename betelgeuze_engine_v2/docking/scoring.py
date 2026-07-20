@@ -7,7 +7,10 @@ from enum import Enum
 import hashlib
 import json
 import math
+import re
 from typing import Any
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 class ScoreDirection(str, Enum):
@@ -68,26 +71,70 @@ def _canonical_sha256(payload: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def component_contract_fingerprint(component: Any, *, kind: str) -> str:
-    """Fingerprint a scorer/refiner contract without serializing executable state."""
+def _require_digest(
+    value: object,
+    *,
+    name: str,
+    allow_empty: bool = False,
+) -> str:
+    text = str(value or "").strip().lower()
+    if allow_empty and not text:
+        return ""
+    if _SHA256_RE.fullmatch(text) is None:
+        raise ValueError(f"{name} must be a lowercase SHA-256")
+    return text
 
+
+def component_problem_fingerprint(component: Any, *, kind: str) -> str:
+    """Return the exact docking problem declared by a scorer or refiner."""
+
+    return _require_digest(
+        getattr(component, "problem_fingerprint_sha256", ""),
+        name=f"{kind} problem_fingerprint_sha256",
+    )
+
+
+def component_contract_fingerprint(
+    component: Any,
+    *,
+    kind: str,
+    expected_problem_fingerprint_sha256: str | None = None,
+) -> str:
+    """Fingerprint a scorer/refiner contract and its immutable problem binding."""
+
+    if kind not in {"scorer", "refiner"}:
+        raise ValueError("component kind must be scorer or refiner")
     identifier = str(getattr(component, f"{kind}_id", "") or "").strip()
     version = str(getattr(component, f"{kind}_version", "") or "").strip()
     if not identifier or not version:
         raise ValueError(f"{kind} must declare ID and version")
-    config_fingerprint = str(
-        getattr(component, "config_fingerprint_sha256", "") or ""
-    ).lower()
-    if config_fingerprint and (
-        len(config_fingerprint) != 64
-        or any(char not in "0123456789abcdef" for char in config_fingerprint)
-    ):
-        raise ValueError(f"{kind} config_fingerprint_sha256 must be a lowercase SHA-256")
+    problem_fingerprint = component_problem_fingerprint(component, kind=kind)
+    if expected_problem_fingerprint_sha256 is not None:
+        expected_problem = _require_digest(
+            expected_problem_fingerprint_sha256,
+            name="expected docking problem fingerprint",
+        )
+        if problem_fingerprint != expected_problem:
+            raise ValueError(
+                f"{kind} problem_fingerprint_sha256 does not match the active docking problem"
+            )
+    source_fingerprint = _require_digest(
+        getattr(component, "implementation_source_sha256", ""),
+        name=f"{kind} implementation_source_sha256",
+    )
+    config_fingerprint = _require_digest(
+        getattr(component, "config_fingerprint_sha256", ""),
+        name=f"{kind} config_fingerprint_sha256",
+        allow_empty=True,
+    )
     payload = {
+        "schema_id": "betelgeuze.engine_v2_docking_component_contract/2.0.0",
         "kind": kind,
         "id": identifier,
         "version": version,
         "class": f"{component.__class__.__module__}.{component.__class__.__qualname__}",
+        "problem_fingerprint_sha256": problem_fingerprint,
+        "implementation_source_sha256": source_fingerprint,
         "config_fingerprint_sha256": config_fingerprint,
     }
     if kind == "scorer":
@@ -119,6 +166,7 @@ __all__ = [
     "ScoreDirection",
     "UNCALIBRATED_INTERNAL_DOCKING_SCORE",
     "component_contract_fingerprint",
+    "component_problem_fingerprint",
     "score_sort_key",
     "scorer_descriptor",
 ]
