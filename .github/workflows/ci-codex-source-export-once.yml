@@ -24,9 +24,19 @@ jobs:
           clean: true
           fetch-depth: 1
 
-      - name: Archive exact checked-out source
+      - name: Archive exact Engine v2 source surfaces
         run: |
-          tar --exclude=.git -czf "${RUNNER_TEMP}/codex-source.tar.gz" .
+          tar -czf "${RUNNER_TEMP}/codex-source.tar.gz" \
+            .github/workflows \
+            betelgeuze_engine_v2 \
+            config \
+            docs \
+            packaging/engine-v2 \
+            tests/unit \
+            tools \
+            pyproject.toml \
+            README.md \
+            README.ko.md
           sha256sum "${RUNNER_TEMP}/codex-source.tar.gz" \
             > "${RUNNER_TEMP}/codex-source.tar.gz.sha256"
 
