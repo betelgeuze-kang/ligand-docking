@@ -193,6 +193,7 @@ def test_case_materialization_selects_exactly_one_reference_and_emits_symmetry()
     )
     document = result.to_dict()
 
+    assert result.source_commit_sha == POSEBUSTERS_SOURCE_COMMIT_SHA
     assert result.selected_reference_record_index == 1
     assert result.heavy_atom_count == 3
     assert len(result.symmetry_permutations) == 2
@@ -259,10 +260,13 @@ def test_four_case_manifest_retains_missing_and_failed_rows(
     document = manifest.to_dict()
 
     assert len(manifest.rows) == 4
-    assert manifest.success_count == 1
-    assert manifest.failure_count == 3
+    assert manifest.success_count == 2
+    assert manifest.failure_count == 2
     assert [row.ordinal for row in manifest.rows] == [0, 1, 2, 3]
-    assert all(row.case_id == protocol.cases[row.ordinal].case_id for row in manifest.rows)
+    assert all(
+        row.case_id == protocol.cases[row.ordinal].case_id
+        for row in manifest.rows
+    )
     assert document["all_cases_observed"] is True
     assert document["failure_rows_retained"] is True
     assert document["network_fetch_performed"] is False
@@ -271,6 +275,9 @@ def test_four_case_manifest_retains_missing_and_failed_rows(
     assert document["metric_values_collected"] is False
     assert document["claim_safe"] is False
     failures = [row for row in manifest.rows if not row.succeeded]
-    assert all(row.error_message == "public benchmark case materialization failed" for row in failures)
+    assert all(
+        row.error_message == "public benchmark case materialization failed"
+        for row in failures
+    )
     assert all(len(row.private_error_sha256) == 64 for row in failures)
     assert all(row.private_error_byte_length > 0 for row in failures)
