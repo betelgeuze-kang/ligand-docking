@@ -11,6 +11,8 @@ torch = pytest.importorskip("torch")
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingBudget,
     DockingProblemIdentity,
+    PoseValidityConfig,
+    PoseValidityContext,
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
     run_bounded_docking_search,
@@ -162,6 +164,26 @@ def _problem(marker: str) -> DockingProblemIdentity:
     )
 
 
+def _validity_context(problem: DockingProblemIdentity) -> PoseValidityContext:
+    reference = generate_bounded_docking_proposals(
+        _search_space(),
+        DockingBudget(candidate_count=1, top_k=1, max_torsions=1),
+        problem=problem,
+    )[0].coordinates
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=((0, 1), (1, 2)),
+        excluded_nonbonded_pairs=((0, 1), (1, 2)),
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]], dtype=torch.float64
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(pocket_radius_angstrom=20.0),
+    )
+
+
 def test_problem_and_search_space_identity_are_bound_into_every_proposal() -> None:
     budget = DockingBudget(candidate_count=3, top_k=1, max_torsions=1, seed=7)
     first = generate_bounded_docking_proposals(
@@ -229,6 +251,8 @@ class _BadRefiner:
 
 
 def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -> None:
+    problem = _problem("a")
+    context = _validity_context(problem)
     budget = DockingBudget(
         candidate_count=2,
         top_k=1,
@@ -241,10 +265,12 @@ def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -
         budget,
         _Scorer(),
         refiner=_LineageRefiner(),
-        problem=_problem("a"),
+        validity_context=context,
+        problem=problem,
     )
     assert result.failure_count == 0
-    assert result.problem_fingerprint_sha256 == _problem("a").fingerprint_sha256
+    assert result.problem_fingerprint_sha256 == problem.fingerprint_sha256
+    assert all(row.selection_eligible for row in result.rows)
     for row in result.rows:
         assert row.refined is True
         assert (
@@ -262,7 +288,8 @@ def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -
         budget,
         _Scorer(),
         refiner=_BadRefiner(),
-        problem=_problem("a"),
+        validity_context=context,
+        problem=problem,
     )
     assert rejected.failure_count == 2
     assert all(
