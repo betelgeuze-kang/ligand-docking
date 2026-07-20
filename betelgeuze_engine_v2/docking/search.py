@@ -40,9 +40,6 @@ class DockingSearchError(RuntimeError):
 class DockingPoseScorer(Protocol):
     scorer_id: str
     scorer_version: str
-    problem_fingerprint_sha256: str
-    implementation_source_sha256: str
-    config_fingerprint_sha256: str
     validated_for_docking_ranking: bool
 
     def score(self, proposal: DockingProposal) -> float | torch.Tensor:
@@ -53,9 +50,6 @@ class DockingPoseScorer(Protocol):
 class DockingPoseRefiner(Protocol):
     refiner_id: str
     refiner_version: str
-    problem_fingerprint_sha256: str
-    implementation_source_sha256: str
-    config_fingerprint_sha256: str
 
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         ...
@@ -278,21 +272,18 @@ def _pose_distance(
 def _require_component_contracts(
     scorer: DockingPoseScorer,
     refiner: DockingPoseRefiner | None,
-    problem_fingerprint_sha256: str,
+    problem: DockingProblemIdentity,
 ) -> tuple[DockingScoreDescriptor, str, str]:
     if not isinstance(scorer, DockingPoseScorer):
-        raise TypeError(
-            "scorer must declare ID, version, problem, source, config, validation, and score"
-        )
+        raise TypeError("scorer must declare ID, version, validation, and score")
     if refiner is not None and not isinstance(refiner, DockingPoseRefiner):
-        raise TypeError(
-            "refiner must declare ID, version, problem, source, config, and refine"
-        )
+        raise TypeError("refiner must declare ID, version, and refine")
     descriptor = scorer_descriptor(scorer)
     scorer_fingerprint = component_contract_fingerprint(
         scorer,
         kind="scorer",
-        expected_problem_fingerprint_sha256=problem_fingerprint_sha256,
+        expected_problem_fingerprint_sha256=problem.fingerprint_sha256,
+        allow_unbound_internal=not problem.bound,
     )
     refiner_fingerprint = (
         ""
@@ -300,7 +291,8 @@ def _require_component_contracts(
         else component_contract_fingerprint(
             refiner,
             kind="refiner",
-            expected_problem_fingerprint_sha256=problem_fingerprint_sha256,
+            expected_problem_fingerprint_sha256=problem.fingerprint_sha256,
+            allow_unbound_internal=not problem.bound,
         )
     )
     return descriptor, scorer_fingerprint, refiner_fingerprint
@@ -329,11 +321,7 @@ def run_bounded_docking_search(
         raise TypeError("problem must be DockingProblemIdentity")
     problem_fingerprint = problem_identity.fingerprint_sha256
     descriptor, scorer_fingerprint, refiner_fingerprint = (
-        _require_component_contracts(
-            scorer,
-            refiner,
-            problem_fingerprint,
-        )
+        _require_component_contracts(scorer, refiner, problem_identity)
     )
 
     threshold = float(diversity_rmsd_angstrom)
@@ -493,7 +481,12 @@ def run_bounded_docking_search(
         "component_source_identity_not_independently_attested",
     ]
     if not problem_identity.bound:
-        blockers.append("docking_problem_identity_unbound")
+        blockers.extend(
+            (
+                "docking_problem_identity_unbound",
+                "unbound_internal_component_compatibility",
+            )
+        )
     if getattr(scorer, "score_descriptor", None) is None:
         blockers.append("score_descriptor_not_explicit")
     if not descriptor.calibrated:
