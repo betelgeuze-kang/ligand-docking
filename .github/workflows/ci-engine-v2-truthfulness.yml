@@ -98,25 +98,31 @@ jobs:
 
           path = Path("tests/unit/test_engine_v2_truthfulness.py")
           source = path.read_text(encoding="utf-8")
-          old_assertions = '''    assert "symmetry_mapping_materializer_not_implemented" in base["blockers"]
-              assert "reference_ligand_match_materializer_not_implemented" in base["blockers"]
-          '''.replace("              ", "")
-          new_assertions = '''    assert base["current_state"] == (
-              "frozen_four_case_public_redocking_protocol_with_"
-              "result_free_input_materializer_without_execution_or_results"
-              )
-              assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]
-              assert "reference_ligand_match_materializer_not_implemented" not in base["blockers"]
-          '''.replace("              ", "    ")
-          insertion_point = '''    assert row["canonical_entrypoint_applicable"] is True
-          '''
-          superseded_assertions = '''    assert "symmetry_mapping_materializer_not_implemented" in row[
-              "superseded_blockers"
-              ]
-              assert "reference_ligand_match_materializer_not_implemented" in row[
-              "superseded_blockers"
-              ]
-          '''.replace("              ", "    ")
+          old_assertions = (
+              '    assert "symmetry_mapping_materializer_not_implemented" in base["blockers"]\n'
+              '    assert "reference_ligand_match_materializer_not_implemented" in base["blockers"]\n'
+          )
+          new_assertions = (
+              '    assert base["current_state"] == (\n'
+              '        "frozen_four_case_public_redocking_protocol_with_"\n'
+              '        "result_free_input_materializer_without_execution_or_results"\n'
+              '    )\n'
+              '    assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]\n'
+              '    assert "reference_ligand_match_materializer_not_implemented" not in base["blockers"]\n'
+          )
+          marker = (
+              '    row = capability_truthfulness_snapshot()["capabilities"][\n'
+              '        PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID\n'
+              '    ]\n'
+          )
+          superseded_assertions = (
+              '    assert "symmetry_mapping_materializer_not_implemented" in row[\n'
+              '        "superseded_blockers"\n'
+              '    ]\n'
+              '    assert "reference_ligand_match_materializer_not_implemented" in row[\n'
+              '        "superseded_blockers"\n'
+              '    ]\n'
+          )
 
           old_count = source.count(old_assertions)
           if old_count not in {0, 1}:
@@ -124,14 +130,14 @@ jobs:
           if old_count == 1:
               source = source.replace(old_assertions, new_assertions, 1)
           if superseded_assertions not in source:
-              point_count = source.count(insertion_point)
-              if point_count != 1:
+              marker_count = source.count(marker)
+              if marker_count != 1:
                   raise SystemExit(
-                      f"unexpected superseded insertion point count: {point_count}"
+                      f"unexpected superseded insertion point count: {marker_count}"
                   )
               source = source.replace(
-                  insertion_point,
-                  superseded_assertions + insertion_point,
+                  marker,
+                  marker + superseded_assertions,
                   1,
               )
           path.write_text(source, encoding="utf-8", newline="\n")
