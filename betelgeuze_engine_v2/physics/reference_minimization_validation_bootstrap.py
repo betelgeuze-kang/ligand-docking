@@ -1,9 +1,11 @@
-"""Stdlib-only bootstrap for the bounded reference-validation process.
+"""Stdlib-only bootstrap for the bounded minimization-validation process.
 
-This file is executed directly, before importing the Engine v2 package.  The
-frozen command uses isolated Python startup with automatic ``site`` loading
-disabled, so ``PYTHONPATH``, user-site packages, ``sitecustomize``, and ``.pth``
-files cannot run before the validation trust boundary is established.
+This file is executed directly before importing Engine v2 or any third-party
+runtime package.  It verifies the signed source, dependency bytes, clean Git
+checkout, and external trust-store boundary, then runs one bounded validation
+request through the environment receipt, fourteen-case runner, and atomic
+failure-inclusive result writer.  Every scientific and product claim remains
+closed.
 """
 
 from __future__ import annotations
@@ -40,6 +42,9 @@ REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES = 1_048_576
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH = (
     "/etc/betelgeuze/engine-v2/reference-minimization-validation-trust-anchors.json"
+)
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_runner_response/1.0.0"
 )
 _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_trust_store/1.0.0"
@@ -80,10 +85,13 @@ _BOOTSTRAP_REQUEST_FIELDS = {
     "externally_conflicting_nonce_sha256s",
     "revoked_network_attestation_sha256s",
 }
+_SAFE_KEY_ID_CHARACTERS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+)
 
 
 class _ReferenceMinimizationValidationBootstrapError(RuntimeError):
-    """The interpreter did not establish the frozen import boundary."""
+    """The interpreter did not establish the frozen execution boundary."""
 
 
 def reference_minimization_validation_bootstrap_path() -> str:
@@ -103,55 +111,12 @@ def _canonical_bytes(value: object) -> bytes:
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
         raise _ReferenceMinimizationValidationBootstrapError(
-            "validation bootstrap request is not canonical JSON"
+            "validation bootstrap artifact is not canonical JSON"
         ) from exc
 
 
-def reference_minimization_validation_execution_source_sha256() -> str:
-    """Bind the stdlib bootstrap and runner into one authorization identity."""
-
-    physics_root = os.path.dirname(reference_minimization_validation_bootstrap_path())
-    source_rows: list[dict[str, str]] = []
-    for relative_path in (
-        REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
-        REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
-        "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
-    ):
-        source = os.path.join(physics_root, os.path.basename(relative_path))
-        try:
-            file_stat = os.lstat(source)
-            with open(source, "rb") as stream:
-                payload = stream.read()
-        except OSError as exc:
-            raise _ReferenceMinimizationValidationBootstrapError(
-                "validation execution source is unavailable"
-            ) from exc
-        if (
-            os.path.islink(source)
-            or not stat.S_ISREG(file_stat.st_mode)
-            or file_stat.st_nlink != 1
-            or len(payload) != file_stat.st_size
-        ):
-            raise _ReferenceMinimizationValidationBootstrapError(
-                "validation execution source is not a stable regular file"
-            )
-        source_rows.append(
-            {
-                "path": relative_path,
-                "sha256": hashlib.sha256(payload).hexdigest(),
-            }
-        )
-    return hashlib.sha256(
-        _canonical_bytes(
-            {
-                "schema_id": (
-                    "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/"
-                    "1.0.0"
-                ),
-                "sources": source_rows,
-            }
-        )
-    ).hexdigest()
+def _sha256(value: object) -> str:
+    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
 def _require_lower_hex(value: object, *, length: int, name: str) -> str:
@@ -162,6 +127,24 @@ def _require_lower_hex(value: object, *, length: int, name: str) -> str:
     ):
         raise _ReferenceMinimizationValidationBootstrapError(f"{name} is invalid")
     return value
+
+
+def _require_key_id(value: object, *, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or not 1 <= len(value) <= 128
+        or any(character not in _SAFE_KEY_ID_CHARACTERS for character in value)
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is invalid")
+    return value
+
+
+def _require_string_sequence(value: object, *, name: str) -> tuple[str, ...]:
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} must be a JSON string array"
+        )
+    return tuple(value)
 
 
 def _require_dependency_artifact_row_mapping(
@@ -224,45 +207,49 @@ def _require_signed_dependency_artifact_rows(value: object) -> dict[str, str]:
     )
 
 
-def _require_observed_dependency_artifact_rows_before_import(
-    repository_root: str,
-    dependency_roots: tuple[str, ...],
-    request: dict[str, object],
-    *,
-    signed_expected: dict[str, str],
-) -> None:
-    request_expected = _require_dependency_artifact_row_mapping(
-        request.get("expected_dependency_artifact_sha256_rows"),
-        name="bootstrap request",
-    )
-    if request_expected != signed_expected:
-        raise _ReferenceMinimizationValidationBootstrapError(
-            "bootstrap request dependency rows do not match the signed authorization"
-        )
-    helper_path = os.path.join(
-        repository_root,
+def reference_minimization_validation_execution_source_sha256() -> str:
+    """Bind the stdlib bootstrap, dependency helper, and bounded runner."""
+
+    physics_root = os.path.dirname(reference_minimization_validation_bootstrap_path())
+    source_rows: list[dict[str, str]] = []
+    for relative_path in (
+        REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
         REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
+        "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
+    ):
+        source = os.path.join(physics_root, os.path.basename(relative_path))
+        try:
+            file_stat = os.lstat(source)
+            with open(source, "rb") as stream:
+                payload = stream.read()
+        except OSError as exc:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation execution source is unavailable"
+            ) from exc
+        if (
+            os.path.islink(source)
+            or not stat.S_ISREG(file_stat.st_mode)
+            or file_stat.st_nlink != 1
+            or len(payload) != file_stat.st_size
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation execution source is not a stable regular file"
+            )
+        source_rows.append(
+            {
+                "path": relative_path,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+        )
+    return _sha256(
+        {
+            "schema_id": (
+                "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/"
+                "1.0.0"
+            ),
+            "sources": source_rows,
+        }
     )
-    try:
-        spec = importlib.util.spec_from_file_location(
-            "_betelgeuze_reference_minimization_validation_dependency_identity",
-            helper_path,
-        )
-        if spec is None or spec.loader is None:
-            raise ImportError("dependency identity loader is unavailable")
-        helper = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(helper)
-        observed = helper.observed_reference_minimization_validation_dependency_artifact_sha256_rows(
-            dependency_roots
-        )
-    except Exception as exc:
-        raise _ReferenceMinimizationValidationBootstrapError(
-            "bootstrap dependency bytes cannot be measured"
-        ) from exc
-    if observed != signed_expected:
-        raise _ReferenceMinimizationValidationBootstrapError(
-            "bootstrap dependency bytes do not match the signed authorization"
-        )
 
 
 def _require_root_owned_read_only_directory(raw_path: str) -> str:
@@ -270,9 +257,11 @@ def _require_root_owned_read_only_directory(raw_path: str) -> str:
         raise _ReferenceMinimizationValidationBootstrapError("bootstrap path is invalid")
     resolved = os.path.realpath(raw_path)
     if resolved != os.path.abspath(raw_path):
-        raise _ReferenceMinimizationValidationBootstrapError("bootstrap path is not canonical")
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap path is not canonical"
+        )
     current = resolved
-    while current != os.path.dirname(current):
+    while True:
         try:
             file_stat = os.lstat(current)
         except OSError as exc:
@@ -280,14 +269,18 @@ def _require_root_owned_read_only_directory(raw_path: str) -> str:
                 "bootstrap path is unavailable"
             ) from exc
         if (
-            not stat.S_ISDIR(file_stat.st_mode)
+            os.path.islink(current)
+            or not stat.S_ISDIR(file_stat.st_mode)
             or file_stat.st_uid != 0
             or stat.S_IMODE(file_stat.st_mode) & 0o022
         ):
             raise _ReferenceMinimizationValidationBootstrapError(
                 "bootstrap path is not root-owned read-only storage"
             )
-        current = os.path.dirname(current)
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
     return resolved
 
 
@@ -338,7 +331,9 @@ def _trusted_dependency_roots() -> tuple[str, ...]:
 def _read_bootstrap_request() -> tuple[bytes, dict[str, object]]:
     input_stream = getattr(sys.stdin, "buffer", sys.stdin)
     try:
-        raw = input_stream.read(REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES + 1)
+        raw = input_stream.read(
+            REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES + 1
+        )
     except (AttributeError, OSError) as exc:
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap request cannot be read"
@@ -399,9 +394,12 @@ def _require_external_private_root(
         file_stat = os.lstat(value)
         common = os.path.commonpath((resolved, repository_root))
     except (OSError, ValueError) as exc:
-        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is unavailable") from exc
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} is unavailable"
+        ) from exc
     if (
         candidate != resolved
+        or os.path.islink(value)
         or not stat.S_ISDIR(file_stat.st_mode)
         or file_stat.st_uid != os.geteuid()
         or stat.S_IMODE(file_stat.st_mode) != 0o700
@@ -413,24 +411,93 @@ def _require_external_private_root(
     return resolved
 
 
-def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
-    trust_store = REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH
-    _require_root_owned_read_only_directory(os.path.dirname(trust_store))
-    flags = os.O_RDONLY | os.O_NONBLOCK
-    for flag_name in ("O_CLOEXEC", "O_NOFOLLOW"):
-        if not hasattr(os, flag_name):
-            raise _ReferenceMinimizationValidationBootstrapError(
-                "secure bootstrap trust-store access is unavailable"
-            )
-        flags |= getattr(os, flag_name)
+def _open_bootstrap_trust_store() -> int:
+    required_flags = ("O_NOFOLLOW", "O_CLOEXEC", "O_DIRECTORY", "O_NONBLOCK")
+    if (
+        os.name != "posix"
+        or any(not hasattr(os, name) for name in required_flags)
+        or os.open not in os.supports_dir_fd
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "secure bootstrap trust-store access is unavailable"
+        )
+    path = REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH
+    if not os.path.isabs(path) or os.path.normpath(path) != path:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust-store path is invalid"
+        )
+    components = tuple(part for part in path.split(os.sep) if part)
+    if len(components) < 2:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust-store path is invalid"
+        )
+    directory_flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_DIRECTORY
+    current_fd = -1
+    file_fd = -1
     try:
-        descriptor = os.open(trust_store, flags)
-    except OSError as exc:
+        current_fd = os.open(os.sep, directory_flags)
+        for component in components[:-1]:
+            directory_stat = os.fstat(current_fd)
+            if (
+                not stat.S_ISDIR(directory_stat.st_mode)
+                or directory_stat.st_uid != 0
+                or stat.S_IMODE(directory_stat.st_mode) & 0o022
+            ):
+                raise _ReferenceMinimizationValidationBootstrapError(
+                    "bootstrap trust-store directory policy failed"
+                )
+            next_fd = os.open(component, directory_flags, dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+        directory_stat = os.fstat(current_fd)
+        if (
+            not stat.S_ISDIR(directory_stat.st_mode)
+            or directory_stat.st_uid != 0
+            or stat.S_IMODE(directory_stat.st_mode) & 0o022
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "bootstrap trust-store directory policy failed"
+            )
+        file_fd = os.open(
+            components[-1],
+            os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC,
+            dir_fd=current_fd,
+        )
+        file_stat = os.fstat(file_fd)
+        if (
+            not stat.S_ISREG(file_stat.st_mode)
+            or file_stat.st_uid != 0
+            or stat.S_IMODE(file_stat.st_mode) != 0o600
+            or file_stat.st_nlink != 1
+            or not (
+                0
+                < file_stat.st_size
+                <= REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES
+            )
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "bootstrap trust-store file policy failed"
+            )
+        result = file_fd
+        file_fd = -1
+        return result
+    except _ReferenceMinimizationValidationBootstrapError:
+        raise
+    except (OSError, ValueError) as exc:
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap trust store cannot be opened securely"
         ) from exc
+    finally:
+        if file_fd >= 0:
+            os.close(file_fd)
+        if current_fd >= 0:
+            os.close(current_fd)
+
+
+def _load_bootstrap_trust_store_payload() -> dict[str, object]:
+    descriptor = _open_bootstrap_trust_store()
     try:
-        initial_stat = os.fstat(descriptor)
+        before = os.fstat(descriptor)
         chunks: list[bytes] = []
         total = 0
         while True:
@@ -443,7 +510,9 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
                 raise _ReferenceMinimizationValidationBootstrapError(
                     "bootstrap trust store exceeds the size limit"
                 )
-        final_stat = os.fstat(descriptor)
+        after = os.fstat(descriptor)
+    except _ReferenceMinimizationValidationBootstrapError:
+        raise
     except OSError as exc:
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap trust store cannot be read securely"
@@ -452,16 +521,13 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
         os.close(descriptor)
     raw = b"".join(chunks)
     if (
-        not stat.S_ISREG(initial_stat.st_mode)
-        or initial_stat.st_uid != 0
-        or stat.S_IMODE(initial_stat.st_mode) != 0o600
-        or initial_stat.st_nlink != 1
-        or not 0 < initial_stat.st_size <= (
-            REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES
-        )
-        or (initial_stat.st_dev, initial_stat.st_ino, initial_stat.st_size)
-        != (final_stat.st_dev, final_stat.st_ino, final_stat.st_size)
-        or len(raw) != initial_stat.st_size
+        not stat.S_ISREG(before.st_mode)
+        or before.st_uid != 0
+        or stat.S_IMODE(before.st_mode) != 0o600
+        or before.st_nlink != 1
+        or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns)
+        != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns)
+        or len(raw) != before.st_size
         or not raw.endswith(b"\n")
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
@@ -491,12 +557,18 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
         not isinstance(payload, dict)
         or set(payload) != {"schema_id", "reviewer_keys", "operator_keys"}
         or payload.get("schema_id") != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID
-        or _canonical_bytes(payload) + b"\n" != raw
+        or not isinstance(payload.get("reviewer_keys"), list)
         or not isinstance(payload.get("operator_keys"), list)
+        or _canonical_bytes(payload) + b"\n" != raw
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap trust store is not the exact canonical schema"
         )
+    return payload
+
+
+def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
+    payload = _load_bootstrap_trust_store_payload()
     result: dict[str, tuple[str, bytes]] = {}
     for row in payload["operator_keys"]:
         if not isinstance(row, dict) or set(row) != {
@@ -507,30 +579,20 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
             raise _ReferenceMinimizationValidationBootstrapError(
                 "bootstrap operator key fields are invalid"
             )
-        key_id = row.get("key_id")
-        identity = row.get("operator_identity_sha256")
-        key_hex = row.get("verification_key_hex")
-        if (
-            not isinstance(key_id, str)
-            or not 1 <= len(key_id) <= 128
-            or any(
-                character
-                not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
-                for character in key_id
-            )
-            or key_id in result
-            or _require_lower_hex(
-                identity,
-                length=64,
-                name="bootstrap operator identity",
-            )
-            != identity
-            or not isinstance(key_hex, str)
-            or len(key_hex) != 64
-            or any(character not in "0123456789abcdef" for character in key_hex)
-        ):
+        key_id = _require_key_id(row.get("key_id"), name="bootstrap operator key id")
+        identity = _require_lower_hex(
+            row.get("operator_identity_sha256"),
+            length=64,
+            name="bootstrap operator identity",
+        )
+        key_hex = _require_lower_hex(
+            row.get("verification_key_hex"),
+            length=64,
+            name="bootstrap operator verification key",
+        )
+        if key_id in result:
             raise _ReferenceMinimizationValidationBootstrapError(
-                "bootstrap operator key is invalid"
+                "bootstrap operator key ids are duplicated"
             )
         result[key_id] = (identity, bytes.fromhex(key_hex))
     if not result:
@@ -552,6 +614,7 @@ def _require_trusted_root_executable(path: str, *, name: str) -> str:
         or not stat.S_ISREG(file_stat.st_mode)
         or file_stat.st_uid != 0
         or stat.S_IMODE(file_stat.st_mode) & 0o022
+        or file_stat.st_nlink != 1
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             f"validation bootstrap {name} is not trusted"
@@ -586,22 +649,19 @@ def _verify_ed25519_with_trusted_openssl(
         _REFERENCE_MINIMIZATION_VALIDATION_OPENSSL_EXECUTABLE,
         name="OpenSSL",
     )
-    message_descriptor = -1
-    key_descriptor = -1
-    signature_descriptor = -1
+    descriptors = [-1, -1, -1]
     try:
-        message_descriptor = os.memfd_create("ed25519-message", flags=0)
-        key_descriptor = os.memfd_create("ed25519-public-key", flags=0)
-        signature_descriptor = os.memfd_create("ed25519-signature", flags=0)
-        _write_all(message_descriptor, message)
+        descriptors[0] = os.memfd_create("ed25519-message", flags=0)
+        descriptors[1] = os.memfd_create("ed25519-public-key", flags=0)
+        descriptors[2] = os.memfd_create("ed25519-signature", flags=0)
+        _write_all(descriptors[0], message)
         _write_all(
-            key_descriptor,
+            descriptors[1],
             _ED25519_SUBJECT_PUBLIC_KEY_INFO_PREFIX + public_key,
         )
-        _write_all(signature_descriptor, bytes.fromhex(signature_hex))
-        os.lseek(message_descriptor, 0, os.SEEK_SET)
-        os.lseek(key_descriptor, 0, os.SEEK_SET)
-        os.lseek(signature_descriptor, 0, os.SEEK_SET)
+        _write_all(descriptors[2], bytes.fromhex(signature_hex))
+        for descriptor in descriptors:
+            os.lseek(descriptor, 0, os.SEEK_SET)
         completed = subprocess.run(
             [
                 executable,
@@ -611,12 +671,12 @@ def _verify_ed25519_with_trusted_openssl(
                 "-keyform",
                 "DER",
                 "-inkey",
-                f"/proc/self/fd/{key_descriptor}",
+                f"/proc/self/fd/{descriptors[1]}",
                 "-rawin",
                 "-in",
-                f"/proc/self/fd/{message_descriptor}",
+                f"/proc/self/fd/{descriptors[0]}",
                 "-sigfile",
-                f"/proc/self/fd/{signature_descriptor}",
+                f"/proc/self/fd/{descriptors[2]}",
             ],
             env={
                 "HOME": "/nonexistent",
@@ -627,23 +687,16 @@ def _verify_ed25519_with_trusted_openssl(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            pass_fds=(
-                message_descriptor,
-                key_descriptor,
-                signature_descriptor,
-            ),
+            pass_fds=tuple(descriptors),
             check=False,
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError, ValueError):
         return False
     finally:
-        if signature_descriptor >= 0:
-            os.close(signature_descriptor)
-        if key_descriptor >= 0:
-            os.close(key_descriptor)
-        if message_descriptor >= 0:
-            os.close(message_descriptor)
+        for descriptor in reversed(descriptors):
+            if descriptor >= 0:
+                os.close(descriptor)
     return completed.returncode == 0
 
 
@@ -665,13 +718,15 @@ def _require_bootstrap_authorization_signature(
         or set(signature) != {"algorithm", "key_id", "value"}
         or signature.get("algorithm")
         != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM
-        or not isinstance(signature.get("key_id"), str)
         or not isinstance(signature.get("value"), str)
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap authorization signature is invalid"
         )
-    key_id = signature["key_id"]
+    key_id = _require_key_id(
+        signature.get("key_id"),
+        name="bootstrap authorization key id",
+    )
     operator_keys = _load_bootstrap_operator_keys()
     if key_id not in operator_keys:
         raise _ReferenceMinimizationValidationBootstrapError(
@@ -691,12 +746,11 @@ def _require_bootstrap_authorization_signature(
         name="bootstrap request authorization nonce",
     )
     if (
-        receipt_sha256 != hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+        receipt_sha256 != _sha256(payload)
         or payload.get("schema_id")
         != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
         or payload.get("authorization_key_id") != key_id
-        or payload.get("authorization_operator_identity_sha256")
-        != operator_identity
+        or payload.get("authorization_operator_identity_sha256") != operator_identity
         or payload.get("authorization_nonce_sha256") != request_nonce
         or payload.get("code_commit_sha") != expected_commit
         or payload.get("runner_source_sha256") != expected_source
@@ -810,6 +864,47 @@ def _require_signed_clean_checkout_before_import(
     return signed_dependency_rows
 
 
+def _require_observed_dependency_artifact_rows_before_import(
+    repository_root: str,
+    dependency_roots: tuple[str, ...],
+    request: dict[str, object],
+    *,
+    signed_expected: dict[str, str],
+) -> None:
+    request_expected = _require_dependency_artifact_row_mapping(
+        request.get("expected_dependency_artifact_sha256_rows"),
+        name="bootstrap request",
+    )
+    if request_expected != signed_expected:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap request dependency rows do not match the signed authorization"
+        )
+    helper_path = os.path.join(
+        repository_root,
+        REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
+    )
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_betelgeuze_reference_minimization_validation_dependency_identity",
+            helper_path,
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError("dependency identity loader is unavailable")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        observed = helper.observed_reference_minimization_validation_dependency_artifact_sha256_rows(
+            dependency_roots
+        )
+    except Exception as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap dependency bytes cannot be measured"
+        ) from exc
+    if observed != signed_expected:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap dependency bytes do not match the signed authorization"
+        )
+
+
 def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     expected_bootstrap = reference_minimization_validation_bootstrap_path()
     try:
@@ -871,9 +966,212 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     )
 
 
-def main() -> int:
-    """Establish the import boundary and delegate canonical stdin handling."""
+def _runtime_trust_anchors(
+    payload: dict[str, object],
+    reviewer_class: object,
+    operator_class: object,
+) -> tuple[dict[str, object], dict[str, object]]:
+    reviewer_rows = payload.get("reviewer_keys")
+    operator_rows = payload.get("operator_keys")
+    if not isinstance(reviewer_rows, list) or not reviewer_rows:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "runtime reviewer trust anchors are unavailable"
+        )
+    if not isinstance(operator_rows, list) or not operator_rows:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "runtime operator trust anchors are unavailable"
+        )
+    reviewers: dict[str, object] = {}
+    for row in reviewer_rows:
+        if not isinstance(row, dict) or set(row) != {
+            "key_id",
+            "reviewer_identity_sha256",
+            "verification_key_hex",
+        }:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "runtime reviewer trust-anchor fields are invalid"
+            )
+        key_id = _require_key_id(row.get("key_id"), name="runtime reviewer key id")
+        if key_id in reviewers:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "runtime reviewer key ids are duplicated"
+            )
+        reviewers[key_id] = reviewer_class(
+            _require_lower_hex(
+                row.get("reviewer_identity_sha256"),
+                length=64,
+                name="runtime reviewer identity",
+            ),
+            bytes.fromhex(
+                _require_lower_hex(
+                    row.get("verification_key_hex"),
+                    length=64,
+                    name="runtime reviewer verification key",
+                )
+            ),
+        )
+    operators: dict[str, object] = {}
+    for row in operator_rows:
+        if not isinstance(row, dict) or set(row) != {
+            "key_id",
+            "operator_identity_sha256",
+            "verification_key_hex",
+        }:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "runtime operator trust-anchor fields are invalid"
+            )
+        key_id = _require_key_id(row.get("key_id"), name="runtime operator key id")
+        if key_id in operators:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "runtime operator key ids are duplicated"
+            )
+        operators[key_id] = operator_class(
+            _require_lower_hex(
+                row.get("operator_identity_sha256"),
+                length=64,
+                name="runtime operator identity",
+            ),
+            bytes.fromhex(
+                _require_lower_hex(
+                    row.get("verification_key_hex"),
+                    length=64,
+                    name="runtime operator verification key",
+                )
+            ),
+        )
+    return reviewers, operators
 
+
+def _configure_deterministic_torch_runtime(torch_module: object) -> None:
+    torch_module.set_num_threads(1)
+    if torch_module.get_num_interop_threads() != 1:
+        try:
+            torch_module.set_num_interop_threads(1)
+        except RuntimeError as exc:
+            if torch_module.get_num_interop_threads() != 1:
+                raise _ReferenceMinimizationValidationBootstrapError(
+                    "Torch interop thread count cannot be frozen"
+                ) from exc
+    torch_module.use_deterministic_algorithms(True)
+    seed_text = os.environ.get("BETELGEUZE_REFERENCE_MINIMIZATION_VALIDATION_SEED")
+    if not isinstance(seed_text, str) or not seed_text.isascii() or not seed_text.isdigit():
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "minimization application seed is unavailable"
+        )
+    seed = int(seed_text)
+    if not 0 <= seed <= 2**63 - 1 or str(seed) != seed_text:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "minimization application seed is outside the frozen range"
+        )
+    torch_module.manual_seed(seed)
+
+
+def _execute_verified_request(raw_request: bytes, request: dict[str, object]) -> dict[str, object]:
+    from betelgeuze_engine_v2.physics import (
+        MinimizationAuthorizationOperatorTrustAnchor,
+        MinimizationScientificReviewerTrustAnchor,
+        create_reference_minimization_validation_execution_environment_receipt,
+        run_bounded_cpu_reference_minimization_validation,
+        write_reference_minimization_validation_result_receipt,
+    )
+
+    del raw_request
+    torch_module = sys.modules.get("torch")
+    if torch_module is None:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "Torch was not imported through the verified Engine v2 package"
+        )
+    _configure_deterministic_torch_runtime(torch_module)
+    trust_payload = _load_bootstrap_trust_store_payload()
+    reviewers, operators = _runtime_trust_anchors(
+        trust_payload,
+        MinimizationScientificReviewerTrustAnchor,
+        MinimizationAuthorizationOperatorTrustAnchor,
+    )
+    dependency_rows = _require_dependency_artifact_row_mapping(
+        request.get("expected_dependency_artifact_sha256_rows"),
+        name="runtime request",
+    )
+    revoked_authorizations = _require_string_sequence(
+        request.get("revoked_authorization_receipt_sha256s"),
+        name="revoked authorization receipts",
+    )
+    revoked_reviews = _require_string_sequence(
+        request.get("revoked_review_attestation_sha256s"),
+        name="revoked review attestations",
+    )
+    conflicting_nonces = _require_string_sequence(
+        request.get("externally_conflicting_nonce_sha256s"),
+        name="externally conflicting nonces",
+    )
+    revoked_network = _require_string_sequence(
+        request.get("revoked_network_attestation_sha256s"),
+        name="revoked network attestations",
+    )
+    environment = create_reference_minimization_validation_execution_environment_receipt(
+        request["reservation_root"],
+        request["artifact_output_root"],
+        authorization_nonce_sha256=request["authorization_nonce_sha256"],
+        authorization_receipt=request["authorization_receipt"],
+        review_attestation=request["review_attestation"],
+        trusted_reviewer_keys=reviewers,
+        expected_implementation_author_identity_sha256=(
+            request["expected_implementation_author_identity_sha256"]
+        ),
+        trusted_operator_keys=operators,
+        network_isolation_attestation=request["network_isolation_attestation"],
+        expected_code_commit_sha=request["expected_code_commit_sha"],
+        expected_runner_source_sha256=request["expected_runner_source_sha256"],
+        expected_dependency_artifact_sha256_rows=dependency_rows,
+        revoked_receipt_sha256s=revoked_authorizations,
+        revoked_review_attestation_sha256s=revoked_reviews,
+        externally_conflicting_nonce_sha256s=conflicting_nonces,
+        revoked_network_attestation_sha256s=revoked_network,
+    )
+    observation = run_bounded_cpu_reference_minimization_validation(
+        request["artifact_output_root"],
+        request["authorization_nonce_sha256"],
+        expected_environment_receipt_sha256=environment.receipt_sha256,
+        expected_code_commit_sha=request["expected_code_commit_sha"],
+        expected_dependency_artifact_sha256_rows=dependency_rows,
+    )
+    result = write_reference_minimization_validation_result_receipt(
+        request["artifact_output_root"],
+        request["authorization_nonce_sha256"],
+        observation,
+        review_attestation=request["review_attestation"],
+        authorization_receipt=request["authorization_receipt"],
+        trusted_reviewer_keys=reviewers,
+        expected_implementation_author_identity_sha256=(
+            request["expected_implementation_author_identity_sha256"]
+        ),
+        trusted_operator_keys=operators,
+        revoked_authorization_receipt_sha256s=revoked_authorizations,
+        revoked_review_attestation_sha256s=revoked_reviews,
+        externally_conflicting_nonce_sha256s=conflicting_nonces,
+    )
+    return {
+        "schema_id": REFERENCE_MINIMIZATION_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID,
+        "environment_receipt_sha256": environment.receipt_sha256,
+        "observation_sha256": _sha256(observation.to_dict()),
+        "result_receipt_sha256": result.receipt_sha256,
+        "bounded_validation_observation_collected": True,
+        "failure_inclusive_result_receipt_written": True,
+        "production_validation_results_collected": False,
+        "minimization_scientifically_validated": False,
+        "parameter_fitting_proposal_authorized": False,
+        "parameter_fitting_authorized": False,
+        "benchmark_validated": False,
+        "product_qualified": False,
+        "customer_execution_enabled": False,
+        "claim_safe": False,
+    }
+
+
+def main() -> int:
+    """Establish the boundary, execute one request, and emit canonical output."""
+
+    output_stream = getattr(sys.stdout, "buffer", sys.stdout)
     try:
         state = _prepare_isolated_import_boundary()
         raw_request, request = _read_bootstrap_request()
@@ -887,11 +1185,12 @@ def main() -> int:
             signed_expected=signed_dependency_rows,
         )
         setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
-        from betelgeuze_engine_v2.physics import reference_minimization_validation_runner
-
-        return reference_minimization_validation_runner._main_from_canonical_request(raw_request)
+        response = _execute_verified_request(raw_request, request)
+        output_stream.write(_canonical_bytes(response) + b"\n")
+        output_stream.flush()
     except Exception:
         return 2
+    return 0
 
 
 if __name__ == "__main__":
