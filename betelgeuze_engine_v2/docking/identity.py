@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import hashlib
 import json
+import math
 import re
+from types import MappingProxyType
 from typing import Any, Mapping
 
 import torch
 
-_DOCKING_PROBLEM_SCHEMA_ID = "betelgeuze.engine_v2_docking_problem/1.0.0"
+_DOCKING_PROBLEM_SCHEMA_ID = "betelgeuze.engine_v2_docking_problem/1.1.0"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _ZERO_SHA256 = "0" * 64
 
@@ -28,10 +30,46 @@ def _digest(value: str, *, name: str, allow_empty: bool = False) -> str:
     return text
 
 
+def _freeze_json(value: Any, *, path: str = "metadata") -> Any:
+    """Return a recursively immutable, canonical-JSON-compatible value."""
+
+    if value is None or isinstance(value, (bool, str, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise DockingIdentityError(f"{path} contains a non-finite float")
+        return float(value)
+    if isinstance(value, Mapping):
+        if not all(isinstance(key, str) for key in value):
+            raise DockingIdentityError(f"{path} keys must be strings")
+        return MappingProxyType(
+            {
+                key: _freeze_json(value[key], path=f"{path}.{key}")
+                for key in sorted(value)
+            }
+        )
+    if isinstance(value, (tuple, list)):
+        return tuple(
+            _freeze_json(item, path=f"{path}[{index}]")
+            for index, item in enumerate(value)
+        )
+    raise DockingIdentityError(
+        f"{path} contains unsupported JSON value {type(value).__name__}"
+    )
+
+
+def _thaw_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json(item) for item in value]
+    return value
+
+
 def _canonical_sha256(payload: object) -> str:
     try:
         encoded = json.dumps(
-            payload,
+            _thaw_json(payload),
             sort_keys=True,
             separators=(",", ":"),
             allow_nan=False,
@@ -44,7 +82,13 @@ def _canonical_sha256(payload: object) -> str:
 def _tensor_payload(tensor: torch.Tensor | None) -> object:
     if tensor is None:
         return None
-    values = tensor.detach().to(dtype=torch.float64, device="cpu").reshape(-1).tolist()
+    values = (
+        tensor.detach()
+        .to(dtype=torch.float64, device="cpu")
+        .contiguous()
+        .reshape(-1)
+        .tolist()
+    )
     return {
         "shape": [int(size) for size in tensor.shape],
         "values_hex": [float(value).hex() for value in values],
@@ -84,15 +128,17 @@ class DockingProblemIdentity:
                 allow_empty=True,
             ),
         )
-        if not str(self.coordinate_frame_id or "").strip():
+        frame = str(self.coordinate_frame_id or "").strip()
+        if not frame:
             raise DockingIdentityError("coordinate_frame_id must be non-empty")
-        metadata = dict(self.metadata)
+        object.__setattr__(self, "coordinate_frame_id", frame)
+        metadata = _freeze_json(dict(self.metadata))
         _canonical_sha256(metadata)
         object.__setattr__(self, "metadata", metadata)
 
     @classmethod
     def unbound(cls) -> "DockingProblemIdentity":
-        """Compatibility identity for internal tests that have no receptor input."""
+        """Compatibility identity for explicitly internal receptor-free tests."""
 
         return cls(
             receptor_system_sha256=_ZERO_SHA256,
@@ -115,7 +161,7 @@ class DockingProblemIdentity:
             "ligand_system_sha256": self.ligand_system_sha256,
             "pocket_definition_sha256": self.pocket_definition_sha256,
             "coordinate_frame_id": self.coordinate_frame_id,
-            "metadata": dict(self.metadata),
+            "metadata": _thaw_json(self.metadata),
             "bound": self.bound,
         }
 
@@ -133,16 +179,21 @@ def search_space_fingerprint(
     root_positions: torch.Tensor | None,
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_torsion_search_space/1.0.0",
+        "schema_id": "betelgeuze.engine_v2_torsion_search_space/1.1.0",
         "local_offsets": _tensor_payload(local_offsets),
         "parent": {
             "shape": [int(size) for size in parent.shape],
-            "values": [int(value) for value in parent.detach().cpu().reshape(-1).tolist()],
+            "values": [
+                int(value) for value in parent.detach().cpu().reshape(-1).tolist()
+            ],
         },
         "local_axes": _tensor_payload(local_axes),
         "rotatable_mask": {
             "shape": [int(size) for size in rotatable_mask.shape],
-            "values": [bool(value) for value in rotatable_mask.detach().cpu().reshape(-1).tolist()],
+            "values": [
+                bool(value)
+                for value in rotatable_mask.detach().cpu().reshape(-1).tolist()
+            ],
         },
         "root_positions": _tensor_payload(root_positions),
     }
@@ -152,7 +203,7 @@ def search_space_fingerprint(
 def coordinate_fingerprint(coordinates: torch.Tensor) -> str:
     return _canonical_sha256(
         {
-            "schema_id": "betelgeuze.engine_v2_pose_coordinates/1.0.0",
+            "schema_id": "betelgeuze.engine_v2_pose_coordinates/1.1.0",
             "coordinates": _tensor_payload(coordinates),
         }
     )
