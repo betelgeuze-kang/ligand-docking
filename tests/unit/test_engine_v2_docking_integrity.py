@@ -8,6 +8,8 @@ torch = pytest.importorskip("torch")
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingBudget,
     DockingProblemIdentity,
+    PoseValidityConfig,
+    PoseValidityContext,
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
     run_bounded_docking_search,
@@ -35,6 +37,26 @@ def _space() -> TorsionSearchSpace:
         parent=torch.tensor([-1, 0, 1], dtype=torch.long),
         local_axes=torch.tensor([[0.0, 0.0, 1.0]] * 3, dtype=torch.float64),
         rotatable_mask=torch.tensor([False, False, True]),
+    )
+
+
+def _validity_context(problem: DockingProblemIdentity) -> PoseValidityContext:
+    reference = generate_bounded_docking_proposals(
+        _space(),
+        DockingBudget(candidate_count=1, top_k=1, max_torsions=1),
+        problem=problem,
+    )[0].coordinates
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=((0, 1), (1, 2)),
+        excluded_nonbonded_pairs=((0, 1), (1, 2)),
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]], dtype=torch.float64
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(pocket_radius_angstrom=20.0),
     )
 
 
@@ -143,6 +165,7 @@ def test_bound_problem_rejects_cross_wired_scorer_before_any_candidate() -> None
             _space(),
             DockingBudget(candidate_count=2, top_k=1, max_torsions=1),
             scorer,
+            validity_context=_validity_context(active),
             problem=active,
         )
 
@@ -156,6 +179,7 @@ def test_scorer_in_place_mutation_becomes_failure_rows_not_success() -> None:
         _space(),
         DockingBudget(candidate_count=2, top_k=1, max_torsions=1),
         scorer,
+        validity_context=_validity_context(problem),
         problem=problem,
     )
 
@@ -177,6 +201,7 @@ def test_refiner_in_place_mutation_becomes_failure_rows_not_success() -> None:
         ),
         _BoundScorer(problem),
         refiner=_MutatingRefiner(problem),
+        validity_context=_validity_context(problem),
         problem=problem,
     )
 
@@ -187,16 +212,25 @@ def test_refiner_in_place_mutation_becomes_failure_rows_not_success() -> None:
 
 def test_component_source_identity_changes_the_search_fingerprint() -> None:
     problem = _problem()
+    context = _validity_context(problem)
     first_scorer = _BoundScorer(problem)
     second_scorer = _BoundScorer(problem)
     second_scorer.implementation_source_sha256 = "9" * 64
     budget = DockingBudget(candidate_count=2, top_k=1, max_torsions=1)
 
     first = run_bounded_docking_search(
-        _space(), budget, first_scorer, problem=problem
+        _space(),
+        budget,
+        first_scorer,
+        validity_context=context,
+        problem=problem,
     )
     second = run_bounded_docking_search(
-        _space(), budget, second_scorer, problem=problem
+        _space(),
+        budget,
+        second_scorer,
+        validity_context=context,
+        problem=problem,
     )
 
     assert (
