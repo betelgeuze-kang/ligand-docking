@@ -40,6 +40,9 @@ class DockingSearchError(RuntimeError):
 class DockingPoseScorer(Protocol):
     scorer_id: str
     scorer_version: str
+    problem_fingerprint_sha256: str
+    implementation_source_sha256: str
+    config_fingerprint_sha256: str
     validated_for_docking_ranking: bool
 
     def score(self, proposal: DockingProposal) -> float | torch.Tensor:
@@ -50,6 +53,9 @@ class DockingPoseScorer(Protocol):
 class DockingPoseRefiner(Protocol):
     refiner_id: str
     refiner_version: str
+    problem_fingerprint_sha256: str
+    implementation_source_sha256: str
+    config_fingerprint_sha256: str
 
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
         ...
@@ -74,16 +80,24 @@ class DockingSearchRow:
 
     @property
     def succeeded(self) -> bool:
-        return self.status == "success" and self.score is not None and self.proposal is not None
+        return (
+            self.status == "success"
+            and self.score is not None
+            and self.proposal is not None
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {
             "candidate_id": self.candidate_id,
             "proposal_index": int(self.proposal_index),
             "proposal_fingerprint_sha256": self.proposal_fingerprint_sha256,
-            "result_proposal_fingerprint_sha256": self.result_proposal_fingerprint_sha256,
+            "result_proposal_fingerprint_sha256": (
+                self.result_proposal_fingerprint_sha256
+            ),
             "problem_fingerprint_sha256": self.problem_fingerprint_sha256,
-            "search_space_fingerprint_sha256": self.search_space_fingerprint_sha256,
+            "search_space_fingerprint_sha256": (
+                self.search_space_fingerprint_sha256
+            ),
             "status": self.status,
             "succeeded": self.succeeded,
             "score": self.score,
@@ -133,12 +147,18 @@ class DockingSearchResult:
             "budget": self.budget.to_dict(),
             "scorer_id": self.scorer_id,
             "scorer_version": self.scorer_version,
-            "scorer_contract_fingerprint_sha256": self.scorer_contract_fingerprint_sha256,
+            "scorer_contract_fingerprint_sha256": (
+                self.scorer_contract_fingerprint_sha256
+            ),
             "refiner_id": self.refiner_id,
-            "refiner_contract_fingerprint_sha256": self.refiner_contract_fingerprint_sha256,
+            "refiner_contract_fingerprint_sha256": (
+                self.refiner_contract_fingerprint_sha256
+            ),
             "score_descriptor": self.score_descriptor.to_dict(),
             "problem_fingerprint_sha256": self.problem_fingerprint_sha256,
-            "search_space_fingerprint_sha256": self.search_space_fingerprint_sha256,
+            "search_space_fingerprint_sha256": (
+                self.search_space_fingerprint_sha256
+            ),
             "search_fingerprint_sha256": self.search_fingerprint_sha256,
             "diversity_metric": self.diversity_metric,
             "claim_safe": False,
@@ -151,7 +171,9 @@ class DockingSearchResult:
 def _score_value(value: float | torch.Tensor) -> float:
     if isinstance(value, torch.Tensor):
         if value.numel() != 1:
-            raise DockingSearchError("docking scorer must return one scalar per proposal")
+            raise DockingSearchError(
+                "docking scorer must return one scalar per proposal"
+            )
         score = float(value.detach().cpu().item())
     else:
         score = float(value)
@@ -171,7 +193,7 @@ def _search_fingerprint(
     symmetry_permutations: tuple[tuple[int, ...], ...],
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_docking_search/3.1.0",
+        "schema_id": "betelgeuze.engine_v2_docking_search/4.0.0",
         "budget": budget.to_dict(),
         "scorer_contract_fingerprint_sha256": scorer_fingerprint,
         "refiner_contract_fingerprint_sha256": refiner_fingerprint,
@@ -183,10 +205,19 @@ def _search_fingerprint(
             "mappings": [list(permutation) for permutation in symmetry_permutations],
         },
         "problem_fingerprint_sha256": proposals[0].problem_fingerprint_sha256,
-        "search_space_fingerprint_sha256": proposals[0].search_space_fingerprint_sha256,
-        "proposal_fingerprints": [proposal.fingerprint_sha256 for proposal in proposals],
+        "search_space_fingerprint_sha256": (
+            proposals[0].search_space_fingerprint_sha256
+        ),
+        "proposal_fingerprints": [
+            proposal.fingerprint_sha256 for proposal in proposals
+        ],
     }
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -195,6 +226,8 @@ def _require_refined_lineage(
     refined: DockingProposal,
     refiner: DockingPoseRefiner,
 ) -> None:
+    original.assert_integrity()
+    refined.assert_integrity()
     for field_name in (
         "candidate_id",
         "proposal_index",
@@ -203,11 +236,20 @@ def _require_refined_lineage(
         "search_space_fingerprint_sha256",
     ):
         if getattr(refined, field_name) != getattr(original, field_name):
-            raise DockingSearchError(f"refiner changed immutable proposal identity field {field_name}")
+            raise DockingSearchError(
+                f"refiner changed immutable proposal identity field {field_name}"
+            )
     if refined.parent_proposal_fingerprint_sha256 != original.fingerprint_sha256:
-        raise DockingSearchError("refined proposal does not reference the original proposal fingerprint")
-    if refined.refiner_id != str(refiner.refiner_id) or refined.refiner_version != str(refiner.refiner_version):
-        raise DockingSearchError("refined proposal refiner identity does not match the active refiner")
+        raise DockingSearchError(
+            "refined proposal does not reference the original proposal fingerprint"
+        )
+    if (
+        refined.refiner_id != str(refiner.refiner_id)
+        or refined.refiner_version != str(refiner.refiner_version)
+    ):
+        raise DockingSearchError(
+            "refined proposal refiner identity does not match the active refiner"
+        )
 
 
 def _pose_distance(
@@ -217,6 +259,8 @@ def _pose_distance(
     metric: str,
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None,
 ) -> float:
+    first.assert_integrity()
+    second.assert_integrity()
     if metric == "direct_rmsd":
         return direct_rmsd(first.coordinates, second.coordinates)
     if metric == "kabsch_rmsd":
@@ -231,6 +275,37 @@ def _pose_distance(
     raise ValueError("unsupported diversity metric")
 
 
+def _require_component_contracts(
+    scorer: DockingPoseScorer,
+    refiner: DockingPoseRefiner | None,
+    problem_fingerprint_sha256: str,
+) -> tuple[DockingScoreDescriptor, str, str]:
+    if not isinstance(scorer, DockingPoseScorer):
+        raise TypeError(
+            "scorer must declare ID, version, problem, source, config, validation, and score"
+        )
+    if refiner is not None and not isinstance(refiner, DockingPoseRefiner):
+        raise TypeError(
+            "refiner must declare ID, version, problem, source, config, and refine"
+        )
+    descriptor = scorer_descriptor(scorer)
+    scorer_fingerprint = component_contract_fingerprint(
+        scorer,
+        kind="scorer",
+        expected_problem_fingerprint_sha256=problem_fingerprint_sha256,
+    )
+    refiner_fingerprint = (
+        ""
+        if refiner is None
+        else component_contract_fingerprint(
+            refiner,
+            kind="refiner",
+            expected_problem_fingerprint_sha256=problem_fingerprint_sha256,
+        )
+    )
+    return descriptor, scorer_fingerprint, refiner_fingerprint
+
+
 def run_bounded_docking_search(
     search_space: TorsionSearchSpace,
     budget: DockingBudget,
@@ -242,20 +317,43 @@ def run_bounded_docking_search(
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     problem: DockingProblemIdentity | None = None,
 ) -> DockingSearchResult:
-    """Generate, optionally refine, score, and diversity-filter a fixed budget."""
+    """Generate, refine, score, and diversity-filter one fixed candidate budget."""
 
-    if not isinstance(scorer, DockingPoseScorer):
-        raise TypeError("scorer must satisfy DockingPoseScorer")
-    if refiner is not None and not isinstance(refiner, DockingPoseRefiner):
-        raise TypeError("refiner must satisfy DockingPoseRefiner")
+    if not isinstance(search_space, TorsionSearchSpace):
+        raise TypeError("search_space must be TorsionSearchSpace")
+    if not isinstance(budget, DockingBudget):
+        raise TypeError("budget must be DockingBudget")
+    search_space.assert_integrity()
+    problem_identity = problem or DockingProblemIdentity.unbound()
+    if not isinstance(problem_identity, DockingProblemIdentity):
+        raise TypeError("problem must be DockingProblemIdentity")
+    problem_fingerprint = problem_identity.fingerprint_sha256
+    descriptor, scorer_fingerprint, refiner_fingerprint = (
+        _require_component_contracts(
+            scorer,
+            refiner,
+            problem_fingerprint,
+        )
+    )
+
     threshold = float(diversity_rmsd_angstrom)
     if not math.isfinite(threshold) or threshold < 0.0:
-        raise ValueError("diversity_rmsd_angstrom must be finite and non-negative")
-    if diversity_metric not in {"direct_rmsd", "kabsch_rmsd", "symmetry_aware_kabsch_rmsd"}:
+        raise ValueError(
+            "diversity_rmsd_angstrom must be finite and non-negative"
+        )
+    if diversity_metric not in {
+        "direct_rmsd",
+        "kabsch_rmsd",
+        "symmetry_aware_kabsch_rmsd",
+    }:
         raise ValueError("unsupported diversity_metric")
-    if diversity_metric == "symmetry_aware_kabsch_rmsd" and symmetry_permutations is None:
-        raise ValueError("symmetry-aware diversity requires explicit permutations")
-
+    if (
+        diversity_metric == "symmetry_aware_kabsch_rmsd"
+        and symmetry_permutations is None
+    ):
+        raise ValueError(
+            "symmetry-aware diversity requires explicit permutations"
+        )
     canonical_symmetry_permutations = (
         ()
         if symmetry_permutations is None
@@ -265,26 +363,61 @@ def run_bounded_docking_search(
         )
     )
 
-    descriptor = scorer_descriptor(scorer)
-    scorer_fingerprint = component_contract_fingerprint(scorer, kind="scorer")
-    refiner_fingerprint = "" if refiner is None else component_contract_fingerprint(refiner, kind="refiner")
-    proposals = generate_bounded_docking_proposals(search_space, budget, problem=problem)
+    proposals = generate_bounded_docking_proposals(
+        search_space,
+        budget,
+        problem=problem_identity,
+    )
     rows: list[DockingSearchRow] = []
     for proposal in proposals:
         current = proposal
         refined = False
         try:
-            if int(budget.max_refinement_steps) > 0:
+            search_space.assert_integrity()
+            proposal.assert_integrity()
+            if proposal.problem_fingerprint_sha256 != problem_fingerprint:
+                raise DockingSearchError(
+                    "proposal is cross-wired to a different docking problem"
+                )
+            if proposal.search_space_fingerprint_sha256 != (
+                search_space.fingerprint_sha256
+            ):
+                raise DockingSearchError(
+                    "proposal is cross-wired to a different search space"
+                )
+            if budget.max_refinement_steps > 0:
                 if refiner is None:
-                    raise DockingSearchError("refinement requested but no refiner was provided")
-                current = refiner.refine(proposal, max_steps=int(budget.max_refinement_steps))
+                    raise DockingSearchError(
+                        "refinement requested but no refiner was provided"
+                    )
+                original_fingerprint = proposal.fingerprint_sha256
+                current = refiner.refine(
+                    proposal,
+                    max_steps=budget.max_refinement_steps,
+                )
+                proposal.assert_integrity()
+                if proposal.fingerprint_sha256 != original_fingerprint:
+                    raise DockingSearchError(
+                        "refiner mutated the original proposal identity"
+                    )
                 if not isinstance(current, DockingProposal):
                     raise TypeError("refiner did not return DockingProposal")
                 if current.coordinates.shape != proposal.coordinates.shape:
-                    raise DockingSearchError("refiner changed the ligand atom count")
+                    raise DockingSearchError(
+                        "refiner changed the ligand atom count"
+                    )
                 _require_refined_lineage(proposal, current, refiner)
                 refined = True
+            current.assert_integrity()
+            before_score_fingerprint = current.fingerprint_sha256
             score = _score_value(scorer.score(current))
+            current.assert_integrity()
+            proposal.assert_integrity()
+            search_space.assert_integrity()
+            if current.fingerprint_sha256 != before_score_fingerprint:
+                raise DockingSearchError(
+                    "scorer mutated the proposal identity"
+                )
             rows.append(
                 DockingSearchRow(
                     candidate_id=current.candidate_id,
@@ -292,7 +425,9 @@ def run_bounded_docking_search(
                     proposal_fingerprint_sha256=proposal.fingerprint_sha256,
                     result_proposal_fingerprint_sha256=current.fingerprint_sha256,
                     problem_fingerprint_sha256=proposal.problem_fingerprint_sha256,
-                    search_space_fingerprint_sha256=proposal.search_space_fingerprint_sha256,
+                    search_space_fingerprint_sha256=(
+                        proposal.search_space_fingerprint_sha256
+                    ),
                     status="success",
                     score=score,
                     proposal=current,
@@ -300,7 +435,10 @@ def run_bounded_docking_search(
                 )
             )
         except Exception as exc:
-            receipt = failure_receipt(exc, public_message="docking candidate execution failed")
+            receipt = failure_receipt(
+                exc,
+                public_message="docking candidate execution failed",
+            )
             rows.append(
                 DockingSearchRow(
                     candidate_id=proposal.candidate_id,
@@ -308,7 +446,9 @@ def run_bounded_docking_search(
                     proposal_fingerprint_sha256=proposal.fingerprint_sha256,
                     result_proposal_fingerprint_sha256="",
                     problem_fingerprint_sha256=proposal.problem_fingerprint_sha256,
-                    search_space_fingerprint_sha256=proposal.search_space_fingerprint_sha256,
+                    search_space_fingerprint_sha256=(
+                        proposal.search_space_fingerprint_sha256
+                    ),
                     status="failure",
                     score=None,
                     proposal=None,
@@ -331,6 +471,7 @@ def run_bounded_docking_search(
     selected: list[DockingSearchRow] = []
     for row in successful:
         assert row.proposal is not None
+        row.proposal.assert_integrity()
         if all(
             _pose_distance(
                 row.proposal,
@@ -343,14 +484,15 @@ def run_bounded_docking_search(
             if other.proposal is not None
         ):
             selected.append(row)
-        if len(selected) >= int(budget.top_k):
+        if len(selected) >= budget.top_k:
             break
 
     blockers = [
         "docking_proposal_scaffold_not_scientifically_validated",
         "public_pose_validity_and_ranking_evidence_missing",
+        "component_source_identity_not_independently_attested",
     ]
-    if problem is None or not problem.bound:
+    if not problem_identity.bound:
         blockers.append("docking_problem_identity_unbound")
     if getattr(scorer, "score_descriptor", None) is None:
         blockers.append("score_descriptor_not_explicit")
@@ -360,11 +502,15 @@ def run_bounded_docking_search(
         blockers.append("scorer_not_validated_for_docking_ranking")
     if not successful:
         blockers.append("no_successful_candidates")
-    if len(selected) < min(int(budget.top_k), len(successful)):
+    if len(selected) < min(budget.top_k, len(successful)):
         blockers.append("insufficient_diverse_top_k")
-    if int(budget.max_refinement_steps) > 0 and refiner is None:
+    if budget.max_refinement_steps > 0 and refiner is None:
         blockers.append("refinement_requested_but_refiner_missing")
 
+    search_space.assert_integrity()
+    for row in selected:
+        assert row.proposal is not None
+        row.proposal.assert_integrity()
     return DockingSearchResult(
         rows=tuple(rows),
         top_rows=tuple(selected),
@@ -375,8 +521,8 @@ def run_bounded_docking_search(
         refiner_id="" if refiner is None else str(refiner.refiner_id),
         refiner_contract_fingerprint_sha256=refiner_fingerprint,
         score_descriptor=descriptor,
-        problem_fingerprint_sha256=proposals[0].problem_fingerprint_sha256,
-        search_space_fingerprint_sha256=proposals[0].search_space_fingerprint_sha256,
+        problem_fingerprint_sha256=problem_fingerprint,
+        search_space_fingerprint_sha256=search_space.fingerprint_sha256,
         search_fingerprint_sha256=_search_fingerprint(
             proposals,
             budget,
