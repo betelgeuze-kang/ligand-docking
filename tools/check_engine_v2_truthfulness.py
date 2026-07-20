@@ -9,17 +9,20 @@ from pathlib import Path
 import sys
 from typing import Any
 
-from betelgeuze_engine_v2.truthfulness import (
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from betelgeuze_engine_v2.truthfulness import (  # noqa: E402
     capability_truthfulness_snapshot,
     require_capability_truthfulness_snapshot,
     require_scoped_metric_evidence_row,
     require_truthfulness_policy_document,
-    truthfulness_policy_document,
     verify_release_review_evidence,
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY = ROOT / "config" / "independent_engine_v2_truthfulness_policy.json"
 
 
