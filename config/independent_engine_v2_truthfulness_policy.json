@@ -1,0 +1,45 @@
+{
+  "schema_id": "betelgeuze.engine_v2_truthfulness_policy/1.0.0",
+  "schema_version": 1,
+  "base_capability_schema_version": 4,
+  "canonical_entrypoint_applicable_capability_ids": [
+    "v2_cpu_reference_minimization_validation_protocol",
+    "v2_cpu_reference_energy_force_validation_protocol",
+    "v2_frozen_public_benchmark_protocol"
+  ],
+  "canonical_entrypoint_wired_capability_ids": [
+    "v2_cpu_reference_minimization_validation_protocol",
+    "v2_cpu_reference_energy_force_validation_protocol"
+  ],
+  "production_result_receipt_required_capability_ids": [
+    "v2_cpu_reference_minimization_validation_protocol",
+    "v2_cpu_reference_energy_force_validation_protocol"
+  ],
+  "independent_result_review_required_capability_ids": [
+    "v2_cpu_reference_minimization_validation_protocol",
+    "v2_cpu_reference_energy_force_validation_protocol",
+    "v2_frozen_public_benchmark_protocol"
+  ],
+  "superseded_blockers": {
+    "v2_cpu_reference_energy_force_validation_protocol": [
+      "validation_runner_not_implemented",
+      "result_receipt_writer_not_implemented"
+    ],
+    "v2_cpu_reference_minimization_validation_protocol": [
+      "validation_runner_not_implemented",
+      "result_receipt_writer_not_implemented"
+    ],
+    "v2_frozen_public_benchmark_protocol": [
+      "symmetry_mapping_materializer_not_implemented",
+      "reference_ligand_match_materializer_not_implemented"
+    ]
+  },
+  "principles": {
+    "component_implementation_is_not_production_authorization": true,
+    "canonical_entrypoint_wiring_is_not_result_evidence": true,
+    "result_receipt_is_not_independent_result_review": true,
+    "operational_review_is_not_scientific_validation": true,
+    "public_protocol_materialization_is_not_benchmark_execution": true,
+    "all_claim_promotion_requires_external_evidence": true
+  }
+}
