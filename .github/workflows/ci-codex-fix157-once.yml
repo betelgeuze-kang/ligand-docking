@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: ci-codex-fix157-once
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   apply-repair:
