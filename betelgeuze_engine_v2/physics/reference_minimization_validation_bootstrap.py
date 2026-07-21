@@ -47,7 +47,28 @@ REFERENCE_MINIMIZATION_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_runner_response/1.0.0"
 )
 _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_trust_store/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_trust_store/2.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/1.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/1.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS = frozenset(
+    {
+        "schema_id",
+        "reviewer_keys",
+        "operator_keys",
+        "revoked_authorization_receipt_sha256s",
+        "revoked_review_attestation_sha256s",
+        "externally_conflicting_nonce_sha256s",
+        "revoked_network_attestation_sha256s",
+        "superseded_operator_key_ids",
+        "superseded_reviewer_key_ids",
+        "minimum_authorization_receipt_schema_id",
+        "minimum_review_attestation_schema_id",
+    }
 )
 _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
@@ -145,6 +166,132 @@ def _require_string_sequence(value: object, *, name: str) -> tuple[str, ...]:
             f"{name} must be a JSON string array"
         )
     return tuple(value)
+
+
+def _require_sorted_unique_digest_sequence(
+    value: object, *, name: str
+) -> tuple[str, ...]:
+    rows = _require_string_sequence(value, name=name)
+    normalized = tuple(
+        _require_lower_hex(item, length=64, name=name) for item in rows
+    )
+    if normalized != tuple(sorted(set(normalized))):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} must be uniquely sorted"
+        )
+    return normalized
+
+
+def _require_sorted_unique_key_id_sequence(
+    value: object, *, name: str
+) -> tuple[str, ...]:
+    rows = _require_string_sequence(value, name=name)
+    normalized = tuple(_require_key_id(item, name=name) for item in rows)
+    if normalized != tuple(sorted(set(normalized))):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} must be uniquely sorted"
+        )
+    return normalized
+
+
+def _require_embedded_receipt_sha256(
+    value: object, *, field_name: str, name: str
+) -> str:
+    if not isinstance(value, dict):
+        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is invalid")
+    return _require_lower_hex(
+        value.get(field_name), length=64, name=f"{name} {field_name}"
+    )
+
+
+def _require_trusted_revocation_state(
+    request: dict[str, object], trust_payload: dict[str, object]
+) -> dict[str, tuple[str, ...]]:
+    state = {
+        "revoked_authorization_receipt_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("revoked_authorization_receipt_sha256s"),
+                name="trusted revoked authorization receipts",
+            )
+        ),
+        "revoked_review_attestation_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("revoked_review_attestation_sha256s"),
+                name="trusted revoked review attestations",
+            )
+        ),
+        "externally_conflicting_nonce_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("externally_conflicting_nonce_sha256s"),
+                name="trusted externally conflicting nonces",
+            )
+        ),
+        "revoked_network_attestation_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("revoked_network_attestation_sha256s"),
+                name="trusted revoked network attestations",
+            )
+        ),
+        "superseded_operator_key_ids": _require_sorted_unique_key_id_sequence(
+            trust_payload.get("superseded_operator_key_ids"),
+            name="trusted superseded operator keys",
+        ),
+        "superseded_reviewer_key_ids": _require_sorted_unique_key_id_sequence(
+            trust_payload.get("superseded_reviewer_key_ids"),
+            name="trusted superseded reviewer keys",
+        ),
+    }
+    for request_field in (
+        "revoked_authorization_receipt_sha256s",
+        "revoked_review_attestation_sha256s",
+        "externally_conflicting_nonce_sha256s",
+        "revoked_network_attestation_sha256s",
+    ):
+        request_rows = _require_sorted_unique_digest_sequence(
+            request.get(request_field), name=f"bootstrap request {request_field}"
+        )
+        if request_rows != state[request_field]:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "bootstrap request revocation state does not match the trusted store"
+            )
+    nonce = _require_lower_hex(
+        request.get("authorization_nonce_sha256"),
+        length=64,
+        name="bootstrap request authorization nonce",
+    )
+    if nonce in state["externally_conflicting_nonce_sha256s"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap authorization nonce is externally conflicting"
+        )
+    review = request.get("review_attestation")
+    review_sha256 = _require_embedded_receipt_sha256(
+        review, field_name="attestation_sha256", name="bootstrap review attestation"
+    )
+    if not isinstance(review, dict) or review.get("schema_id") != trust_payload.get(
+        "minimum_review_attestation_schema_id"
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap review attestation schema is below the trusted minimum"
+        )
+    if review_sha256 in state["revoked_review_attestation_sha256s"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap review attestation is externally revoked"
+        )
+    network = request.get("network_isolation_attestation")
+    network_sha256 = _require_embedded_receipt_sha256(
+        network, field_name="attestation_sha256", name="bootstrap network attestation"
+    )
+    if not isinstance(network, dict) or network.get("schema_id") != (
+        _REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap network attestation schema is unsupported"
+        )
+    if network_sha256 in state["revoked_network_attestation_sha256s"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap network attestation is externally revoked"
+        )
+    return state
 
 
 def _require_dependency_artifact_row_mapping(
@@ -555,20 +702,53 @@ def _load_bootstrap_trust_store_payload() -> dict[str, object]:
         ) from exc
     if (
         not isinstance(payload, dict)
-        or set(payload) != {"schema_id", "reviewer_keys", "operator_keys"}
+        or set(payload) != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS
         or payload.get("schema_id") != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID
         or not isinstance(payload.get("reviewer_keys"), list)
         or not isinstance(payload.get("operator_keys"), list)
+        or payload.get("minimum_authorization_receipt_schema_id")
+        != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+        or payload.get("minimum_review_attestation_schema_id")
+        != _REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID
         or _canonical_bytes(payload) + b"\n" != raw
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap trust store is not the exact canonical schema"
         )
+    reviewer_ids = tuple(
+        row.get("key_id") for row in payload["reviewer_keys"] if isinstance(row, dict)
+    )
+    operator_ids = tuple(
+        row.get("key_id") for row in payload["operator_keys"] if isinstance(row, dict)
+    )
+    if reviewer_ids != tuple(sorted(set(reviewer_ids))) or operator_ids != tuple(
+        sorted(set(operator_ids))
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust-store active key ids must be uniquely sorted"
+        )
+    superseded_reviewers = _require_sorted_unique_key_id_sequence(
+        payload.get("superseded_reviewer_key_ids"),
+        name="trusted superseded reviewer keys",
+    )
+    superseded_operators = _require_sorted_unique_key_id_sequence(
+        payload.get("superseded_operator_key_ids"),
+        name="trusted superseded operator keys",
+    )
+    if set(reviewer_ids).intersection(superseded_reviewers) or set(
+        operator_ids
+    ).intersection(superseded_operators):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust store contains active superseded keys"
+        )
     return payload
 
 
-def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
-    payload = _load_bootstrap_trust_store_payload()
+def _load_bootstrap_operator_keys(
+    payload: dict[str, object] | None = None,
+) -> dict[str, tuple[str, bytes]]:
+    if payload is None:
+        payload = _load_bootstrap_trust_store_payload()
     result: dict[str, tuple[str, bytes]] = {}
     for row in payload["operator_keys"]:
         if not isinstance(row, dict) or set(row) != {
@@ -705,6 +885,8 @@ def _require_bootstrap_authorization_signature(
     *,
     expected_commit: str,
     expected_source: str,
+    trust_payload: dict[str, object],
+    trusted_revocation_state: dict[str, tuple[str, ...]],
 ) -> dict[str, str]:
     raw_receipt = request.get("authorization_receipt")
     if not isinstance(raw_receipt, dict):
@@ -727,7 +909,11 @@ def _require_bootstrap_authorization_signature(
         signature.get("key_id"),
         name="bootstrap authorization key id",
     )
-    operator_keys = _load_bootstrap_operator_keys()
+    if key_id in trusted_revocation_state["superseded_operator_key_ids"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap authorization key is superseded"
+        )
+    operator_keys = _load_bootstrap_operator_keys(trust_payload)
     if key_id not in operator_keys:
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap authorization key is not trusted"
@@ -745,8 +931,16 @@ def _require_bootstrap_authorization_signature(
         length=64,
         name="bootstrap request authorization nonce",
     )
+    if receipt_sha256 in trusted_revocation_state[
+        "revoked_authorization_receipt_sha256s"
+    ]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap authorization receipt is externally revoked"
+        )
     if (
         receipt_sha256 != _sha256(payload)
+        or payload.get("schema_id")
+        != trust_payload.get("minimum_authorization_receipt_schema_id")
         or payload.get("schema_id")
         != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
         or payload.get("authorization_key_id") != key_id
@@ -787,10 +981,16 @@ def _require_signed_clean_checkout_before_import(
         length=64,
         name="expected validation source",
     )
+    trust_payload = _load_bootstrap_trust_store_payload()
+    trusted_revocation_state = _require_trusted_revocation_state(
+        request, trust_payload
+    )
     signed_dependency_rows = _require_bootstrap_authorization_signature(
         request,
         expected_commit=expected_commit,
         expected_source=expected_source,
+        trust_payload=trust_payload,
+        trusted_revocation_state=trusted_revocation_state,
     )
     git_executable = _require_trusted_root_executable("/usr/bin/git", name="Git")
     environment = {
@@ -861,7 +1061,7 @@ def _require_signed_clean_checkout_before_import(
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap checkout is not the signed clean source"
         )
-    return signed_dependency_rows
+    return signed_dependency_rows, _sha256(trust_payload)
 
 
 def _require_observed_dependency_artifact_rows_before_import(
@@ -1066,7 +1266,12 @@ def _configure_deterministic_torch_runtime(torch_module: object) -> None:
     torch_module.manual_seed(seed)
 
 
-def _execute_verified_request(raw_request: bytes, request: dict[str, object]) -> dict[str, object]:
+def _execute_verified_request(
+    raw_request: bytes,
+    request: dict[str, object],
+    *,
+    expected_trust_store_sha256: str,
+) -> dict[str, object]:
     from betelgeuze_engine_v2.physics import (
         MinimizationAuthorizationOperatorTrustAnchor,
         MinimizationScientificReviewerTrustAnchor,
@@ -1083,6 +1288,13 @@ def _execute_verified_request(raw_request: bytes, request: dict[str, object]) ->
         )
     _configure_deterministic_torch_runtime(torch_module)
     trust_payload = _load_bootstrap_trust_store_payload()
+    if _sha256(trust_payload) != expected_trust_store_sha256:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust store changed after pre-import verification"
+        )
+    trusted_revocation_state = _require_trusted_revocation_state(
+        request, trust_payload
+    )
     reviewers, operators = _runtime_trust_anchors(
         trust_payload,
         MinimizationScientificReviewerTrustAnchor,
@@ -1092,22 +1304,18 @@ def _execute_verified_request(raw_request: bytes, request: dict[str, object]) ->
         request.get("expected_dependency_artifact_sha256_rows"),
         name="runtime request",
     )
-    revoked_authorizations = _require_string_sequence(
-        request.get("revoked_authorization_receipt_sha256s"),
-        name="revoked authorization receipts",
-    )
-    revoked_reviews = _require_string_sequence(
-        request.get("revoked_review_attestation_sha256s"),
-        name="revoked review attestations",
-    )
-    conflicting_nonces = _require_string_sequence(
-        request.get("externally_conflicting_nonce_sha256s"),
-        name="externally conflicting nonces",
-    )
-    revoked_network = _require_string_sequence(
-        request.get("revoked_network_attestation_sha256s"),
-        name="revoked network attestations",
-    )
+    revoked_authorizations = trusted_revocation_state[
+        "revoked_authorization_receipt_sha256s"
+    ]
+    revoked_reviews = trusted_revocation_state[
+        "revoked_review_attestation_sha256s"
+    ]
+    conflicting_nonces = trusted_revocation_state[
+        "externally_conflicting_nonce_sha256s"
+    ]
+    revoked_network = trusted_revocation_state[
+        "revoked_network_attestation_sha256s"
+    ]
     environment = create_reference_minimization_validation_execution_environment_receipt(
         request["reservation_root"],
         request["artifact_output_root"],
@@ -1175,8 +1383,8 @@ def main() -> int:
     try:
         state = _prepare_isolated_import_boundary()
         raw_request, request = _read_bootstrap_request()
-        signed_dependency_rows = _require_signed_clean_checkout_before_import(
-            state[1], request
+        signed_dependency_rows, trust_store_sha256 = (
+            _require_signed_clean_checkout_before_import(state[1], request)
         )
         _require_observed_dependency_artifact_rows_before_import(
             state[1],
@@ -1185,7 +1393,11 @@ def main() -> int:
             signed_expected=signed_dependency_rows,
         )
         setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
-        response = _execute_verified_request(raw_request, request)
+        response = _execute_verified_request(
+            raw_request,
+            request,
+            expected_trust_store_sha256=trust_store_sha256,
+        )
         output_stream.write(_canonical_bytes(response) + b"\n")
         output_stream.flush()
     except Exception:

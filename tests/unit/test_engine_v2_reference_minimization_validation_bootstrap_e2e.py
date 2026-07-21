@@ -27,9 +27,15 @@ def _request() -> dict[str, object]:
         "artifact_output_root": "/private/artifacts",
         "authorization_nonce_sha256": "1" * 64,
         "authorization_receipt": {"signed": True},
-        "review_attestation": {"reviewed": True},
+        "review_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": "7" * 64,
+        },
         "expected_implementation_author_identity_sha256": "2" * 64,
-        "network_isolation_attestation": {"network_disabled": True},
+        "network_isolation_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": "8" * 64,
+        },
         "expected_code_commit_sha": "3" * 40,
         "expected_runner_source_sha256": "4" * 64,
         "expected_dependency_artifact_sha256_rows": dict(DEPENDENCIES),
@@ -56,7 +62,19 @@ def test_verified_request_runs_environment_runner_and_writer_in_order(
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_trust_store_payload",
-        lambda: {"reviewer_keys": [{}], "operator_keys": [{}]},
+        lambda: {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID,
+            "reviewer_keys": [{}],
+            "operator_keys": [{}],
+            "revoked_authorization_receipt_sha256s": [],
+            "revoked_review_attestation_sha256s": [],
+            "externally_conflicting_nonce_sha256s": [],
+            "revoked_network_attestation_sha256s": [],
+            "superseded_operator_key_ids": [],
+            "superseded_reviewer_key_ids": [],
+            "minimum_authorization_receipt_schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID,
+            "minimum_review_attestation_schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
+        },
     )
     monkeypatch.setattr(
         bootstrap,
@@ -98,7 +116,12 @@ def test_verified_request_runs_environment_runner_and_writer_in_order(
         write_result,
     )
 
-    response = bootstrap._execute_verified_request(b"ignored", _request())
+    trust_payload = bootstrap._load_bootstrap_trust_store_payload()
+    response = bootstrap._execute_verified_request(
+        b"ignored",
+        _request(),
+        expected_trust_store_sha256=bootstrap._sha256(trust_payload),
+    )
 
     assert calls == ["determinism", "environment", "runner", "writer"]
     assert response["environment_receipt_sha256"] == "5" * 64
@@ -139,7 +162,9 @@ def test_bootstrap_main_emits_one_canonical_response_after_all_boundaries(
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, supplied: (observed.append("source") or dict(DEPENDENCIES)),
+        lambda repository_root, supplied: (
+            observed.append("source") or (dict(DEPENDENCIES), "9" * 64)
+        ),
     )
     monkeypatch.setattr(
         bootstrap,
@@ -149,7 +174,9 @@ def test_bootstrap_main_emits_one_canonical_response_after_all_boundaries(
     monkeypatch.setattr(
         bootstrap,
         "_execute_verified_request",
-        lambda supplied_raw, supplied_request: (observed.append("execute") or response),
+        lambda supplied_raw, supplied_request, **kwargs: (
+            observed.append("execute") or response
+        ),
     )
     monkeypatch.setattr(bootstrap.sys, "stdout", SimpleNamespace(buffer=output))
 
