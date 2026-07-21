@@ -43,7 +43,7 @@ from .public_evaluator import (
     PublicBenchmarkEvaluationError,
     PublicBenchmarkEvaluationReport,
     PublicBenchmarkEvaluationRow,
-    run_offline_public_benchmark_evaluation,
+    run_offline_public_benchmark_evaluation as run_prepared_offline_public_benchmark_evaluation,
 )
 from .public_materializer import (
     PUBLIC_BENCHMARK_CASE_MATERIALIZATION_SCHEMA_ID,
@@ -88,8 +88,22 @@ from .public_protocol import (
     verify_public_benchmark_scorer_sources,
     write_public_benchmark_protocol_json,
 )
+from .public_evaluator_authenticated import (
+    AUTHENTICATED_PUBLIC_BENCHMARK_CASE_INPUT_SCHEMA_ID,
+    AUTHENTICATED_PUBLIC_BENCHMARK_DERIVATION_POLICY_SCHEMA_ID,
+    AuthenticatedPublicBenchmarkCaseInput,
+    AuthenticatedPublicBenchmarkInputError,
+    authenticated_public_benchmark_derivation_policy_document,
+    run_authenticated_offline_public_benchmark_evaluation,
+)
+
+run_offline_public_benchmark_evaluation = (
+    run_authenticated_offline_public_benchmark_evaluation
+)
 
 __all__ = [
+    "AUTHENTICATED_PUBLIC_BENCHMARK_CASE_INPUT_SCHEMA_ID",
+    "AUTHENTICATED_PUBLIC_BENCHMARK_DERIVATION_POLICY_SCHEMA_ID",
     "BENCHMARK_MANIFEST_SCHEMA_ID",
     "BENCHMARK_REPORT_SCHEMA_ID",
     "BOUNDED_VALIDITY_METRIC_ID",
@@ -120,6 +134,8 @@ __all__ = [
     "PUBLIC_BENCHMARK_PROTOCOL_ID",
     "PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID",
     "SUPPORTED_EXTERNAL_ENGINES",
+    "AuthenticatedPublicBenchmarkCaseInput",
+    "AuthenticatedPublicBenchmarkInputError",
     "BenchmarkCase",
     "BenchmarkCaseResult",
     "BenchmarkContractError",
@@ -150,6 +166,7 @@ __all__ = [
     "PublicBenchmarkMaterializerError",
     "PublicBenchmarkProtocolError",
     "PublicBenchmarkScorerIdentity",
+    "authenticated_public_benchmark_derivation_policy_document",
     "benchmark_case_seed",
     "exact_graph_isomorphisms",
     "frozen_public_benchmark_protocol",
@@ -161,8 +178,10 @@ __all__ = [
     "require_public_benchmark_case_metrics",
     "require_public_benchmark_protocol_document",
     "require_public_benchmark_report",
+    "run_authenticated_offline_public_benchmark_evaluation",
     "run_benchmark_manifest",
     "run_offline_public_benchmark_evaluation",
+    "run_prepared_offline_public_benchmark_evaluation",
     "split_sdf_v2000_records",
     "validate_external_baseline_results",
     "verify_public_benchmark_scorer_sources",
