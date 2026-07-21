@@ -281,7 +281,7 @@ The current `main` branch contains:
   with a v4 runner/result writer; the active minimization base chain uses v3
   identities with a v6 runner and v5 result writer/result review. Their hashes were
   refrozen through the full upstream dependency DAG. A separate read-only
-  verifier recognizes 35 superseded contract documents by canonical projection
+  verifier recognizes 36 superseded contract documents by canonical projection
   hash. Superseded signed attestations, receipts, and run records are not
   supported and no compatibility claim is made for them.
   The energy-force lane now has a frozen Ed25519 result-review leaf with full
@@ -356,11 +356,21 @@ The current `main` branch contains:
   supplied fork's later-head consistency; sibling pins can each pass, so global
   latest, non-equivocation, epoch continuity, CAS, and promotion remain false.
   No consistency proof or post-proof status is provisioned.
-  Runtime-integrity companion v9 binds the exact frozen custody-v1,
+  A fixed-policy witness-quorum verifier now binds N/F/Q, the exact ordered
+  roster with distinct caller-pinned declared fault-domain identifiers, a stable
+  exact-anchor fork scope, and
+  Q signed exact-lineage statements. The complete N-member roster must remain
+  valid and non-revoked. This verifies only a conditional same-epoch,
+  anchor-scoped certificate; the verifier does not observe the fault bound,
+  enforce exclusive voting, reconcile independent journals, or rule out a
+  hidden sibling certificate. Realm-wide non-equivocation and every promotion
+  fact remain false, and no policy, keys, proof, journals, or post-quorum status
+  are provisioned.
+  Runtime-integrity companion v10 binds the exact frozen custody-v1,
   review/authorization, reservation, external registry-proof, authenticated
   head/status receipt, later-head consistency, and process-launch-identity
-  contract SHA-256 values; runtime v8 is retained in the read-only legacy
-  registry.
+  contract SHA-256 values including the witness-quorum contract; runtime v8 and
+  v9 are retained in the read-only legacy registry.
   The separate process-launch measurement primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
@@ -463,10 +473,11 @@ The current `main` branch contains:
   base primitive plus additive sequence-3 review/sequence-4 authorization and
   sequence-5 reservation-commit-attestation companions exist. The external
   same-epoch registry transaction-proof, authenticated head/status receipt, and
-  same-epoch later-head consistency verifiers also exist, but no proof, backend
+  same-epoch later-head consistency and fixed-policy anchor-scoped witness-
+  quorum verifiers also exist, but no proof, backend
   key, head-observer key, receipt-authority key, challenge, receipt, later-head
-  proof, post-consistency status descendant, or out-of-band current head is
-  provisioned.
+  proof, witness policy/keys/quorum certificate, post-consistency or post-quorum
+  status descendant, or out-of-band current head is provisioned.
   Environment/later carriers, an external serializable registry, atomic permit
   consumption, non-equivocation/epoch continuity, and a provisioned chain,
   independent result-review

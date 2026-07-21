@@ -25,6 +25,9 @@ from betelgeuze_engine_v2.physics.validation_production_reservation_later_head_c
 from betelgeuze_engine_v2.physics.validation_production_reservation_registry_proof import (
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
 )
+from betelgeuze_engine_v2.physics.validation_production_reservation_witness_quorum_non_equivocation import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
+)
 from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
     FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256,
@@ -34,6 +37,7 @@ from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
+    VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION,
     ValidationRuntimeIntegrityContractError,
     require_validation_runtime_integrity_contract_document,
@@ -54,7 +58,7 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert (
         first["contract_version"]
         == VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION
-        == "9.0.0"
+        == "10.0.0"
     )
     assert (
         first["bound_contracts"]["production_evidence_custody_contract_sha256"]
@@ -121,6 +125,17 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert (
         decision["bound_reservation_later_head_consistency_contract_sha256"]
         == FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
+    )
+    assert (
+        first["bound_contracts"][
+            "production_reservation_witness_quorum_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
+    )
+    assert (
+        decision["bound_reservation_witness_quorum_contract_sha256"]
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
     )
     assert (
         first["bound_contracts"]["process_launch_identity_contract_sha256"]
@@ -273,6 +288,25 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert first["implemented_enforcement"][
         "one_fork_consistency_does_not_prove_global_non_equivocation"
     ] is True
+    for field_name in (
+        "fixed_policy_same_epoch_anchor_scoped_witness_quorum_verifier_implemented",
+        "quorum_intersection_above_declared_fault_bound_verification_implemented",
+        "exclusive_vote_statement_signature_verification_implemented",
+        "fixed_policy_full_roster_validity_and_denial_verification_implemented",
+        "anchor_scoped_quorum_certificate_does_not_prove_registry_non_equivocation",
+    ):
+        assert first["implemented_enforcement"][field_name] is True
+        assert decision[field_name] is True
+    for field_name in (
+        "fixed_policy_same_epoch_anchor_scoped_quorum_certificate_verified",
+        "declared_fault_bound_observed_in_operation",
+        "cross_anchor_non_equivocation_verified",
+        "exclusive_vote_enforcement_verified",
+        "independent_witness_journal_consistency_verified",
+        "witness_locking_enforced",
+    ):
+        assert first["implemented_enforcement"][field_name] is False
+        assert decision[field_name] is False
     assert first["implemented_enforcement"][
         "authenticated_out_of_band_registry_head_receipt_verified"
     ] is False
@@ -342,6 +376,16 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert "post_consistency_current_status_descendant_not_provisioned" in first[
         "blockers"
     ]
+    for blocker in (
+        "fixed_policy_witness_quorum_proof_not_provisioned",
+        "fixed_policy_witness_keys_not_provisioned",
+        "fixed_policy_witness_quorum_policy_not_provisioned",
+        "post_quorum_current_status_descendant_not_provisioned",
+        "independent_witness_journal_consistency_not_established",
+        "witness_locking_enforcement_not_established",
+        "realm_wide_external_registry_non_equivocation_not_established",
+    ):
+        assert blocker in first["blockers"]
     assert "status_head_compare_and_set_not_independently_verified" in first["blockers"]
     assert "production_reservation_intent_not_provisioned" in first["blockers"]
     assert "production_atomic_reservation_commit_not_provisioned" in first["blockers"]
@@ -516,6 +560,26 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
     assert first["external_custody"][
         "post_consistency_current_status_descendant_provisioned"
     ] is False
+    for field_name in (
+        "fixed_policy_same_epoch_anchor_scoped_witness_quorum_verifier_implemented",
+        "quorum_intersection_above_declared_fault_bound_verification_implemented",
+        "exclusive_vote_statement_signature_verification_implemented",
+        "fixed_policy_full_roster_validity_and_denial_verification_implemented",
+    ):
+        assert first["external_custody"][field_name] is True
+    for field_name in (
+        "fixed_policy_same_epoch_anchor_scoped_quorum_certificate_verified",
+        "declared_fault_bound_observed_in_operation",
+        "cross_anchor_non_equivocation_verified",
+        "exclusive_vote_enforcement_verified",
+        "independent_witness_journal_consistency_verified",
+        "witness_locking_enforced",
+        "fixed_policy_witness_quorum_proof_provisioned",
+        "fixed_policy_witness_keys_provisioned",
+        "fixed_policy_witness_quorum_policy_provisioned",
+        "post_quorum_current_status_descendant_provisioned",
+    ):
+        assert first["external_custody"][field_name] is False
     assert first["external_custody"]["external_registry_transaction_proof_provisioned"] is False
     assert first["external_custody"]["out_of_band_current_registry_head_provisioned"] is False
     assert (

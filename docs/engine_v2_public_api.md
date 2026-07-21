@@ -75,6 +75,7 @@ betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension
 betelgeuze_engine_v2.physics.validation_production_reservation_registry_proof
 betelgeuze_engine_v2.physics.validation_production_reservation_authenticated_head_receipt
 betelgeuze_engine_v2.physics.validation_production_reservation_later_head_consistency
+betelgeuze_engine_v2.physics.validation_production_reservation_witness_quorum_non_equivocation
 betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
 betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.runtime
@@ -520,12 +521,29 @@ transaction-tagged consumed-leaf encodings attested by the anchor proof are
 included in the selected later root; it does not independently establish actual
 global slot consumption or one-use enforcement.
 
-Runtime-integrity companion v9 binds the exact frozen SHA-256 of custody-v1,
+`validation_production_reservation_witness_quorum_non_equivocation` adds a
+verifier-only N/F/Q witness certificate for one fixed policy, registry realm,
+epoch, and exact authenticated anchor. The caller-pinned policy binds the
+ordered full roster with distinct declared witness/operator/fault-domain
+identifiers, public keys, service identities, validity windows, and the `2Q-N>F`
+intersection rule. Every vote signs one stable anchor fork scope and one exact
+descendant-lineage statement. All N roster members—not only the Q signers—must
+remain valid for the policy window and survive the post-certificate status
+denial fence. A successful result is only the conditional,
+anchor-scoped certificate fact. The verifier does not observe the declared
+fault bound, enforce exclusive voting, compare independent witness journals, or
+exclude a hidden sibling certificate; realm-wide non-equivocation, global
+latest, epoch continuity, execution, and promotion therefore remain false.
+No policy, witness key, certificate, journal, or post-certificate status is
+provisioned.
+
+Runtime-integrity companion v10 binds the exact frozen SHA-256 of custody-v1,
 the review/authorization extension, the sequence-5 reservation companion, the
 external registry-proof verifier, the authenticated head/status receipt
-verifier, the same-epoch later-head consistency verifier, and the
+verifier, the same-epoch later-head consistency verifier, the fixed-policy
+anchor-scoped witness-quorum verifier, and the
 process-launch-identity contract. Runtime v8 is retained only in the read-only
-legacy-contract registry.
+legacy-contract registry together with runtime v9.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
@@ -553,7 +571,7 @@ The active energy-force base carrier chain uses v2 identities with a v4 runner
 and result writer. The active minimization base chain uses v3 identities with a
 v6 runner and v5 result writer/result review. Current hashes are frozen over the
 complete upstream contract DAG. The read-only legacy-contract verifier
-recognizes 35 superseded contract documents by canonical projection hash and
+recognizes 36 superseded contract documents by canonical projection hash and
 fixed identity metadata. It does not verify or claim compatibility with
 superseded signed attestations, receipts, run records, or observations.
 

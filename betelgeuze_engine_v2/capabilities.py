@@ -571,6 +571,13 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "global_latest_registry_head_not_independently_verified",
         "global_latest_status_head_not_independently_verified",
         "later_head_consistency_proof_not_provisioned",
+        "fixed_policy_witness_quorum_proof_not_provisioned",
+        "fixed_policy_witness_keys_not_provisioned",
+        "fixed_policy_witness_quorum_policy_not_provisioned",
+        "post_quorum_current_status_descendant_not_provisioned",
+        "independent_witness_journal_consistency_not_established",
+        "witness_locking_enforcement_not_established",
+        "realm_wide_external_registry_non_equivocation_not_established",
         "status_head_compare_and_set_not_independently_verified",
         "reservation_registry_authority_key_not_provisioned",
         "reservation_checkpoint_witness_key_not_provisioned",
@@ -971,9 +978,10 @@ def capability_snapshot() -> dict[str, Any]:
                     "claim_closed_ed25519_permit_status_review_authorization_"
                     "four_event_custody_process_identity_seq5_attestation_and_"
                     "same_epoch_external_registry_proof_and_authenticated_head_"
-                    "status_receipt_and_later_head_consistency_verifiers_"
-                    "without_provisioned_receipt_registry_consistency_proof_"
-                    "or_global_non_equivocation"
+                    "status_receipt_later_head_consistency_and_anchor_scoped_"
+                    "fixed_policy_witness_quorum_verifiers_without_provisioned_"
+                    "receipt_registry_consistency_or_witness_quorum_proof_or_"
+                    "realm_wide_non_equivocation"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

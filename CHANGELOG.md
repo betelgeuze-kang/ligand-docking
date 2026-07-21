@@ -114,20 +114,33 @@ scientific claim from a package version.
   consumption fields. This is one supplied fork only: sibling pins can each verify, so
   global latest, external non-equivocation, epoch continuity, CAS, execution,
   and promotion remain false; no proof, keys, or post-proof status is bundled.
+- A verifier-only fixed-policy witness-quorum contract for one same-epoch exact
+  anchor. It binds N/F/Q, an ordered full roster with distinct caller-pinned
+  witness/operator/fault-domain identifiers, `2Q-N>F` and `2Q-N-F`
+  intersection facts, a target-independent anchor fork
+  scope, and Q Ed25519 votes over one exact descendant lineage. The complete N
+  roster is validity- and denial-fenced. The resulting fact is conditional and
+  anchor-scoped: the verifier does not observe the fault assumption, enforce
+  exclusive voting, reconcile independent journals, or exclude hidden sibling
+  certificates. Realm-wide non-equivocation, global latest, epoch continuity,
+  execution, and promotion remain false; no external policy, keys, proof,
+  journal, or post-quorum status is bundled.
 
 ### Changed
 
 - The distribution version is `0.2.0rc2`, separating the runtime-byte-identity
   and Ed25519 trust boundary from the accumulated `0.2.0rc1` surface.
-- Runtime-integrity contract v9 now binds the exact frozen custody-v1,
+- Runtime-integrity contract v10 now binds the exact frozen custody-v1,
   review/authorization-extension, reservation-extension, external
   registry-proof-verifier, authenticated head/status-receipt verifier, and
-  same-epoch later-head consistency verifier plus process-launch-identity hashes
+  same-epoch later-head consistency verifier, fixed-policy anchor-scoped
+  witness-quorum verifier, and process-launch-identity hashes
   while keeping
   provisioned external registry CAS,
   slot consumption, successor uniqueness, external process authenticity/custody,
   production execution/results, and every scientific/product promotion flag
-  false. The v8 runtime document is retained as a read-only legacy identity.
+  false. The v8 and v9 runtime documents are retained as read-only legacy
+  identities.
 
 ### Scientific boundary
 

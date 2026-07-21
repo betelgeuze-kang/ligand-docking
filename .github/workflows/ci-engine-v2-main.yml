@@ -158,6 +158,7 @@ jobs:
             tests/unit/test_engine_v2_validation_production_reservation_registry_proof.py
             tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py
             tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py
+            tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py
             tests/unit/test_engine_v2_validation_source_identity.py
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py
@@ -298,6 +299,7 @@ jobs:
             tests/unit/test_engine_v2_validation_production_reservation_registry_proof.py \
             tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py \
             tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py \
+            tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py \
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
             tests/unit/test_engine_v2_validation_source_identity.py \
             tests/unit/test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py \
@@ -444,12 +446,14 @@ jobs:
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
               ReferenceForceFieldParameters,
@@ -497,6 +501,8 @@ jobs:
               validation_production_reservation_authenticated_head_receipt_decision,
               validation_production_reservation_later_head_consistency_contract_document,
               validation_production_reservation_later_head_consistency_decision,
+              validation_production_reservation_witness_quorum_contract_document,
+              validation_production_reservation_witness_quorum_decision,
               validation_runtime_integrity_contract_document,
               reviewed_parameter_source_provenance,
           )
@@ -653,6 +659,30 @@ jobs:
               "external_registry_non_equivocation_verified"
           ] is False
           assert later_head_decision["claim_safe"] is False
+          witness_quorum_contract = (
+              validation_production_reservation_witness_quorum_contract_document()
+          )
+          assert witness_quorum_contract["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_reservation_witness_quorum_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
+          )
+          witness_quorum_decision = (
+              validation_production_reservation_witness_quorum_decision()
+          )
+          assert witness_quorum_decision["verifier_implemented"] is True
+          assert witness_quorum_decision[
+              "fixed_policy_same_epoch_anchor_scoped_quorum_certificate_verified"
+          ] is False
+          assert witness_quorum_decision[
+              "external_registry_non_equivocation_verified"
+          ] is False
+          assert witness_quorum_decision["claim_safe"] is False
           assert reservation_extension_decision[
               "custody_successor_uniqueness_enforced"
           ] is False

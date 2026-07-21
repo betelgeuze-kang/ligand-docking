@@ -207,12 +207,13 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > `O_EXCL`·`O_NOFOLLOW`·fsync 보존하며 runner/writer는 persisted/live exact
 > equality와 environment→start→observation→result digest chain을 확인한다.
 > minimization과 energy-force result-review의 Ed25519 signature도 이 digest를 결속한다.
-> Runtime-integrity v9은 permit→status snapshot custody-v1, review/authorization
+> Runtime-integrity v10은 permit→status snapshot custody-v1, review/authorization
 > custody extension, seq5 reservation extension, verifier-only external registry-
 > proof boundary, verifier-only authenticated head/status receipt boundary,
-> verifier-only same-epoch later-head consistency boundary, process-launch-
-> identity의 exact frozen SHA-256을 직접 결속해 일곱 계약의 독립 drift를
-> 차단한다. Runtime v8은 read-only legacy identity로 보존한다.
+> verifier-only same-epoch later-head consistency boundary, fixed-policy exact-
+> anchor witness-quorum boundary, process-launch-identity의 exact frozen SHA-256을
+> 직접 결속해 독립 drift를 차단한다. Runtime v8·v9은 read-only legacy
+> identity로 보존한다.
 > 공급된 registry proof가 검증할 수 있는 것은 backend의 serializable/committed
 > attestation, 고정 순서의 정확한 3-leaf 전이, observer-signed native checkpoint와
 > caller expectation의 일치뿐이며 그 expectation의 provenance나 global latest
@@ -236,13 +237,21 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > 보존한다. 별도 sibling pin은 각각 통과할 수 있으므로 global latest·
 > non-equivocation·epoch continuity는 계속 false이고 실제 proof와 post-proof status
 > descendant는 provision되지 않았다.
+> fixed-policy witness-quorum verifier는 N/F/Q와 `2Q-N>F`, 전체 ordered roster의
+> caller-pinned 상이한 witness/operator/fault-domain 식별자, exact anchor에서 파생된 stable fork scope,
+> exact descendant lineage에 대한 Q개 서명을 검증한다. Q signer뿐 아니라 전체 N의
+> policy-window validity와 post-certificate denial을 적용한다. 그러나 fault bound의
+> 실제 준수, exclusive-vote locking, 독립 witness journal 일치, 숨은 sibling
+> certificate 부재는 관찰하지 못한다. 따라서 참인 것은 conditional same-epoch
+> exact-anchor certificate뿐이며 realm-wide non-equivocation은 계속 false다. 실제
+> policy/key/certificate/journal/post-quorum status는 provision되지 않았다.
 > `rglob`·`os.walk`·`distribution.files` 기반 열거와 unbounded source read는
 > bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline으로
 > 교체됐다. 다만 외부 root-owned source/dependency runtime은 아직
 > provision되지 않았다. 활성 energy-force base 계약은 v2이며 runner/result writer는
 > v4, minimization base 계약은 v3이며 runner는 v6, writer/result review는 v5로
 > 전환해 전체 upstream hash DAG를 다시 고정했다.
-> superseded 계약 문서 35개는 canonical
+> superseded 계약 문서 36개는 canonical
 > projection hash 기반 read-only verifier로 보존하지만, 과거 signed artifact나
 > receipt 호환을 claim하지 않는다. 외부 runtime provisioning, kernel source/Git-
 > metadata immutability·custody, pre-bootstrap stdlib closure, signed native-DSO

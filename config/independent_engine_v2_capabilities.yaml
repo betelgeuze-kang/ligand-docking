@@ -948,7 +948,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_synthetic_validation_production_evidence_custody_foundation:
-    current_state: claim_closed_ed25519_permit_status_review_authorization_four_event_custody_process_identity_seq5_attestation_and_same_epoch_external_registry_proof_and_authenticated_head_status_receipt_and_later_head_consistency_verifiers_without_provisioned_receipt_registry_consistency_proof_or_global_non_equivocation
+    current_state: claim_closed_ed25519_permit_status_review_authorization_four_event_custody_process_identity_seq5_attestation_and_same_epoch_external_registry_proof_and_authenticated_head_status_receipt_later_head_consistency_and_anchor_scoped_fixed_policy_witness_quorum_verifiers_without_provisioned_receipt_registry_consistency_or_witness_quorum_proof_or_realm_wide_non_equivocation
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -989,6 +989,13 @@ capabilities:
       - global_latest_registry_head_not_independently_verified
       - global_latest_status_head_not_independently_verified
       - later_head_consistency_proof_not_provisioned
+      - fixed_policy_witness_quorum_proof_not_provisioned
+      - fixed_policy_witness_keys_not_provisioned
+      - fixed_policy_witness_quorum_policy_not_provisioned
+      - post_quorum_current_status_descendant_not_provisioned
+      - independent_witness_journal_consistency_not_established
+      - witness_locking_enforcement_not_established
+      - realm_wide_external_registry_non_equivocation_not_established
       - status_head_compare_and_set_not_independently_verified
       - reservation_registry_authority_key_not_provisioned
       - reservation_checkpoint_witness_key_not_provisioned
