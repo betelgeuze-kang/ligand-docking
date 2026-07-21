@@ -494,10 +494,16 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     public_protocol = rows[PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert public_protocol["current_state"] == (
-        "frozen_four_case_public_redocking_protocol_definition_"
-        "without_execution_or_results"
+        "frozen_four_case_public_redocking_protocol_with_"
+        "result_free_input_materializer_without_execution_or_results"
     )
     assert public_protocol["internal_reference_execution_enabled"] is False
+    assert "symmetry_mapping_materializer_not_implemented" not in (
+        public_protocol["blockers"]
+    )
+    assert "reference_ligand_match_materializer_not_implemented" not in (
+        public_protocol["blockers"]
+    )
     assert "public_benchmark_not_executed" in public_protocol["blockers"]
 
     h5_record = rows[H5_PARAMETER_APPLICABILITY_CAPABILITY_ID]
