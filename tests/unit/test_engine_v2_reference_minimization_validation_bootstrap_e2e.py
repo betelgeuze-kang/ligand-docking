@@ -153,11 +153,20 @@ def test_bootstrap_main_emits_one_canonical_response_after_all_boundaries(
     }
     observed: list[str] = []
 
+    finder = SimpleNamespace(verify_repository_binding=lambda: observed.append("finder"))
     monkeypatch.setattr(
         bootstrap,
         "_prepare_isolated_import_boundary",
-        lambda: ("bootstrap", "/checkout", ("/dependencies",), ("/checkout",)),
+        lambda: (
+            "bootstrap",
+            "/checkout",
+            ("/dependencies",),
+            ("/dependencies",),
+            "7" * 64,
+            "8" * 64,
+        ),
     )
+    monkeypatch.setattr(bootstrap, "_require_verified_source_finder", lambda: finder)
     monkeypatch.setattr(bootstrap, "_read_bootstrap_request", lambda: (raw, request))
     monkeypatch.setattr(
         bootstrap,
@@ -181,7 +190,7 @@ def test_bootstrap_main_emits_one_canonical_response_after_all_boundaries(
     monkeypatch.setattr(bootstrap.sys, "stdout", SimpleNamespace(buffer=output))
 
     assert bootstrap.main() == 0
-    assert observed == ["source", "dependencies", "execute"]
+    assert observed == ["source", "dependencies", "finder", "execute"]
     assert output.getvalue() == bootstrap._canonical_bytes(response) + b"\n"
     assert json.loads(output.getvalue()) == response
 

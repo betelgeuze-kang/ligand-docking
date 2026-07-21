@@ -33,6 +33,8 @@ from .reference_minimization_independent_oracle import (
 from .reference_minimization_validation_bootstrap import (
     REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
     REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV,
+    REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE,
+    REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE,
     reference_minimization_validation_bootstrap_path,
     reference_minimization_validation_execution_source_sha256,
 )
@@ -198,7 +200,7 @@ def _require_source_only_python_runtime() -> None:
 
 
 def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
-    """Make the stdlib trust bootstrap mandatory for every real run."""
+    """Make the signed snapshot bootstrap mandatory for every real run."""
 
     state = getattr(
         sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, None
@@ -206,7 +208,6 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
     expected_bootstrap = Path(
         reference_minimization_validation_bootstrap_path()
     )
-    expected_repository = Path(__file__).resolve(strict=True).parents[2]
     if (
         sys.flags.isolated != 1
         or sys.flags.ignore_environment != 1
@@ -216,24 +217,62 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         or sys.dont_write_bytecode is not True
         or sys.pycache_prefix != "/dev/null"
         or not isinstance(state, tuple)
-        or len(state) != 4
+        or len(state) != 6
     ):
         raise ReferenceMinimizationValidationRunnerError(
             "minimization runner requires the isolated trust bootstrap"
         )
-    bootstrap_path, repository_root, raw_dependency_roots, frozen_sys_path = state
+    (
+        bootstrap_path,
+        repository_root,
+        raw_dependency_roots,
+        frozen_sys_path,
+        source_manifest_sha256,
+        finder_identity_sha256,
+    ) = state
     if (
         bootstrap_path != os.fspath(expected_bootstrap)
-        or repository_root != os.fspath(expected_repository)
+        or not isinstance(repository_root, str)
+        or not repository_root
+        or not os.path.isabs(repository_root)
         or not isinstance(raw_dependency_roots, tuple)
         or not raw_dependency_roots
         or not isinstance(frozen_sys_path, tuple)
         or tuple(sys.path) != frozen_sys_path
-        or not sys.path
-        or sys.path[0] != os.fspath(expected_repository)
+        or repository_root in sys.path
+        or not isinstance(finder_identity_sha256, str)
     ):
         raise ReferenceMinimizationValidationRunnerError(
             "minimization runner bootstrap state is invalid"
+        )
+    _require_sha256(
+        source_manifest_sha256,
+        name="minimization runner source manifest",
+    )
+    _require_sha256(
+        finder_identity_sha256,
+        name="minimization runner source finder identity",
+    )
+    finder = getattr(
+        sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE, None
+    )
+    observed_manifest = getattr(
+        sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE, None
+    )
+    if (
+        finder is None
+        or finder not in sys.meta_path
+        or getattr(finder, "repository_root", None) != repository_root
+        or getattr(finder, "source_manifest_sha256", None)
+        != source_manifest_sha256
+        or getattr(finder, "finder_identity_sha256", None)
+        != finder_identity_sha256
+        or observed_manifest != source_manifest_sha256
+        or reference_minimization_validation_runner_source_sha256()
+        != source_manifest_sha256
+    ):
+        raise ReferenceMinimizationValidationRunnerError(
+            "minimization runner verified source finder is invalid"
         )
     dependency_roots: list[Path] = []
     for raw_root in raw_dependency_roots:
@@ -266,7 +305,6 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
                 f"minimization runner {name} was not imported from a trusted root"
             )
     return tuple(dependency_roots)
-
 
 def _observe_dependency_artifact_sha256_rows(
     dependency_roots: tuple[Path, ...],

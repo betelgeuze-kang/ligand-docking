@@ -3,8 +3,6 @@ from __future__ import annotations
 import ast
 from copy import copy
 from datetime import datetime, timezone
-import hashlib
-import inspect
 import json
 import os
 from pathlib import Path
@@ -137,38 +135,24 @@ def test_contract_rejects_tamper_and_source_binds_bootstrap_and_runner() -> None
     with pytest.raises(ReferenceMinimizationValidationRunnerError, match="frozen"):
         require_reference_minimization_validation_runner_contract_document(tampered)
 
-    runner_path = Path(inspect.getsourcefile(module) or "")
-    bootstrap_path = Path(bootstrap.reference_minimization_validation_bootstrap_path())
-    source_identity = {
-        "schema_id": (
-            "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/"
-            "1.0.0"
-        ),
-        "sources": [
-            {
-                "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py",
-                "sha256": hashlib.sha256(bootstrap_path.read_bytes()).hexdigest(),
-            },
-            {
-                "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py",
-                "sha256": hashlib.sha256(
-                    Path(module.__file__)
-                    .with_name(
-                        "reference_minimization_validation_dependency_identity.py"
-                    )
-                    .read_bytes()
-                ).hexdigest(),
-            },
-            {
-                "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
-                "sha256": hashlib.sha256(runner_path.read_bytes()).hexdigest(),
-            },
-        ],
-    }
+    repository_root = str(Path(bootstrap.__file__).resolve().parents[2])
+    manifest_sha256, sources, _ = (
+        bootstrap._snapshot_reference_minimization_validation_sources(
+            repository_root
+        )
+    )
     assert (
         reference_minimization_validation_runner_source_sha256()
-        == hashlib.sha256(module._canonical_bytes(source_identity)).hexdigest()
+        == manifest_sha256
     )
+    assert bootstrap.REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_SCHEMA_ID.endswith(
+        "/2.0.0"
+    )
+    assert {
+        bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
+        bootstrap.REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
+        "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
+    }.issubset(sources)
 
 
 def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
@@ -182,6 +166,8 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
     assert imports == {
         "__future__",
         "hashlib",
+        "importlib.abc",
+        "importlib.machinery",
         "importlib.util",
         "json",
         "os",
@@ -190,6 +176,7 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
         "subprocess",
         "sys",
         "sysconfig",
+        "types",
     }
     assert "torch" not in imports
     assert "numpy" not in imports
