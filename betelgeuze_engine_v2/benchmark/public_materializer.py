@@ -45,7 +45,10 @@ PUBLIC_BENCHMARK_MATERIALIZATION_MANIFEST_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_benchmark_materialization_manifest/1.0.0"
 )
 PUBLIC_BENCHMARK_MATERIALIZER_ID = (
-    "posebusters_packaged_public_redocking_input_materializer/1.0.0"
+    "posebusters_packaged_public_redocking_input_materializer/1.1.0"
+)
+PUBLIC_BENCHMARK_SYMMETRY_PERMUTATION_DIRECTION = (
+    "reference_position_to_candidate_position"
 )
 PUBLIC_BENCHMARK_MAX_SDF_BYTES = 16 * 1024 * 1024
 PUBLIC_BENCHMARK_MAX_SDF_RECORDS = 256
@@ -473,14 +476,16 @@ def _heavy_atom_bijections(
                     "graph mapping does not preserve heavy-atom identity"
                 )
             projected.append(target_heavy_position[target_index])
-        row = tuple(projected)
-        if sorted(row) != list(
+        if sorted(projected) != list(
             range(len(target_graph.heavy_atom_indices))
         ):
             raise PublicBenchmarkMaterializerError(
                 "heavy-atom graph mapping is not a bijection"
             )
-        rows.append(row)
+        inverse = [0] * len(projected)
+        for candidate_position, reference_position in enumerate(projected):
+            inverse[reference_position] = candidate_position
+        rows.append(tuple(inverse))
     unique = tuple(sorted(set(rows)))
     if not unique:
         raise PublicBenchmarkMaterializerError(
@@ -533,6 +538,9 @@ def _case_projection(
         ),
         "ligand_graph_invariant_sha256": ligand_graph_invariant_sha256,
         "heavy_atom_count": heavy_atom_count,
+        "symmetry_permutation_direction": (
+            PUBLIC_BENCHMARK_SYMMETRY_PERMUTATION_DIRECTION
+        ),
         "symmetry_permutation_count": len(symmetry_permutations),
         "symmetry_permutations": [
             list(row) for row in symmetry_permutations
@@ -1075,6 +1083,7 @@ __all__ = [
     "PUBLIC_BENCHMARK_MATERIALIZATION_MANIFEST_SCHEMA_ID",
     "PUBLIC_BENCHMARK_MATERIALIZER_ID",
     "PUBLIC_BENCHMARK_MATERIALIZER_SCHEMA_ID",
+    "PUBLIC_BENCHMARK_SYMMETRY_PERMUTATION_DIRECTION",
     "PUBLIC_BENCHMARK_MAX_GRAPH_ATOMS",
     "PUBLIC_BENCHMARK_MAX_GRAPH_BONDS",
     "PUBLIC_BENCHMARK_MAX_GRAPH_SEARCH_STATES",

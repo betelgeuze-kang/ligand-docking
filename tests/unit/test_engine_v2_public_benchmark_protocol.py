@@ -36,10 +36,10 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     protocol = frozen_public_benchmark_protocol()
 
     assert protocol.schema_id == PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID
-    assert protocol.protocol_version == "1.1.0"
+    assert protocol.protocol_version == "1.1.1"
     assert protocol.protocol_sha256 == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
     assert protocol.protocol_sha256 == (
-        "e0e49a1b58742f0d2faa7d52e25b9bc4e6ac1208c08a6aaa7a27372c9d89ffc6"
+        "40abed35d59219ad60e35301166818f64f5962479616616d25610d2726d11718"
     )
     assert POSEBUSTERS_SOURCE_COMMIT_SHA == (
         "1a5f26aa7270fafba21b7fec8b3633f4c4e45ead"
@@ -80,6 +80,9 @@ def test_protocol_keeps_materialization_and_nonpromotion_boundaries_explicit() -
     assert source["legal_compliance_approved"] is False
     endpoint = document["endpoint_policy"]
     assert endpoint["symmetry_mapping_generation_implemented"] is True
+    assert endpoint["symmetry_permutation_direction"] == (
+        "reference_position_to_candidate_position"
+    )
     assert endpoint["reference_ligand_match_materializer_implemented"] is True
     execution = document["execution_policy"]
     for key in (

@@ -40,10 +40,10 @@ PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID = (
 PUBLIC_BENCHMARK_PROTOCOL_ID = (
     "posebusters_packaged_public_redocking_contract_cohort/1.0.0"
 )
-PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.0"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T03:30:00Z"
+PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.1"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T11:30:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "e0e49a1b58742f0d2faa7d52e25b9bc4e6ac1208c08a6aaa7a27372c9d89ffc6"
+    "40abed35d59219ad60e35301166818f64f5962479616616d25610d2726d11718"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -470,6 +470,9 @@ class FrozenPublicBenchmarkProtocol:
                 "denominator": "all_manifest_cases",
                 "missing_or_failed_case_counts_as_primary_failure": True,
                 "symmetry_mapping_generation_implemented": True,
+                "symmetry_permutation_direction": (
+                    "reference_position_to_candidate_position"
+                ),
                 "reference_ligand_match_materializer_implemented": True,
                 "posebusters_parity_claimed": False,
             },
@@ -672,7 +675,7 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 module="betelgeuze_engine_v2.benchmark.public_materializer",
                 relative_path="betelgeuze_engine_v2/benchmark/public_materializer.py",
                 source_sha256=(
-                    "ee23a401b00c508ffc61edca6e349149e739508562983d4d3102f4cc59365309"
+                    "94cde82b126c826458d689e89ff3dd958ec2ac2f3a12700ffd61a7de49eb77ed"
                 ),
             ),
             PublicBenchmarkScorerIdentity(

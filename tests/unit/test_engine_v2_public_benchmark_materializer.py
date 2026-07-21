@@ -7,6 +7,7 @@ import pytest
 from betelgeuze_engine_v2.benchmark import (
     PublicBenchmarkArtifact,
     PublicBenchmarkCaseDefinition,
+    PUBLIC_BENCHMARK_SYMMETRY_PERMUTATION_DIRECTION,
     PublicBenchmarkMaterializerError,
     exact_graph_isomorphisms,
     materialize_frozen_public_benchmark_inputs,
@@ -18,6 +19,7 @@ from betelgeuze_engine_v2.benchmark.public_protocol import (
     POSEBUSTERS_SOURCE_COMMIT_SHA,
     FrozenPublicBenchmarkProtocol,
 )
+from betelgeuze_engine_v2.docking import symmetry_aware_rmsd
 from betelgeuze_engine_v2.io import parse_sdf_v2000
 
 
@@ -87,6 +89,30 @@ def _nonmatching_record() -> bytes:
             ("O", -1.0, 0.0, 0.0),
         ),
         ((1, 2, 1), (1, 3, 1)),
+    )
+
+
+def _cycle_seed_record() -> bytes:
+    return _sdf_record(
+        "cycle-seed",
+        (
+            ("C", 0.0, 0.0, 0.0),
+            ("N", 1.0, 0.0, 0.0),
+            ("O", 2.0, 0.5, 0.0),
+        ),
+        ((1, 2, 1), (2, 3, 1)),
+    )
+
+
+def _cycle_reference_record() -> bytes:
+    return _sdf_record(
+        "cycle-reference",
+        (
+            ("N", 1.0, 0.0, 0.0),
+            ("O", 2.0, 0.5, 0.0),
+            ("C", 0.0, 0.0, 0.0),
+        ),
+        ((3, 1, 1), (1, 2, 1)),
     )
 
 
@@ -180,6 +206,33 @@ def test_exact_graph_isomorphism_ignores_coordinates_and_retains_symmetry() -> N
     mappings = exact_graph_isomorphisms(seed, reference)
     assert len(mappings) == 2
     assert all(sorted(mapping) == [0, 1, 2] for mapping in mappings)
+
+
+def test_non_self_inverse_atom_cycle_is_emitted_in_metric_direction() -> None:
+    case, payloads = _case(
+        "1aaz",
+        references=_cycle_reference_record(),
+        seed=_cycle_seed_record(),
+    )
+    result = materialize_public_benchmark_case(
+        case,
+        receptor_bytes=payloads["receptor"],
+        reference_ligands_bytes=payloads["reference_ligands"],
+        ligand_identity_seed_bytes=payloads["ligand_identity_seed"],
+    )
+    assert result.to_dict()["symmetry_permutation_direction"] == (
+        PUBLIC_BENCHMARK_SYMMETRY_PERMUTATION_DIRECTION
+    )
+    assert result.symmetry_permutations == ((1, 2, 0),)
+    candidate = parse_sdf_v2000(_cycle_seed_record().decode("ascii"))
+    reference = parse_sdf_v2000(_cycle_reference_record().decode("ascii"))
+    metric = symmetry_aware_rmsd(
+        reference.coordinates[0],
+        candidate.coordinates[0],
+        permutations=result.symmetry_permutations,
+        align=False,
+    )
+    assert metric.rmsd_angstrom == pytest.approx(0.0, abs=1.0e-12)
 
 
 def test_case_materialization_selects_exactly_one_reference_and_emits_symmetry() -> None:
