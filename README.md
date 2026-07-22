@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_at_deterministic_reference_nve_restart_contract
+v2_at_explicit_solvent_ion_preparation_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -47,11 +47,40 @@ Implemented and GitHub-hosted CPU tested:
   product promotion;
 - bounded deterministic CPU `float64` velocity-Verlet NVE integration with a
   compact neighbor-list rebuild at every force evaluation, full 3D
-  orthorhombic PBC and coordinate wrapping, binary64 trajectory-chain
-  identity, exact checkpoint serialization, and bit-exact same-runtime restart.
-  It ships no validated parameters or NVE-drift evidence and does not implement
-  SHAKE/RATTLE, PME/Ewald, explicit solvent/ions, thermostats, barostats,
-  triclinic cells, NVT/NPT statistics, GPU parity, or a product route;
+  orthorhombic PBC and coordinate wrapping, plus optional canonical-pair-order
+  inverse-mass SHAKE position corrections and RATTLE radial-velocity
+  projection. Frames and checkpoints bind the complete constraint
+  configuration, maximum accepted position/velocity residuals, cumulative
+  iteration counts, binary64 trajectory-chain identity, and bit-exact
+  same-runtime restart. For neutral single-model CPU `float64` systems in a
+  full 3D orthorhombic cell, an optional bounded direct-Ewald reference exactly
+  replaces (rather than adds to) the frozen v1 screened-Coulomb term. It binds
+  explicit alpha and reciprocal-index bounds, conducting/tin-foil boundary,
+  shifted real-space, reciprocal, self, exclusion and 1-4 correction terms into
+  the NVE config and restart identity. It ships no general solute
+  constraint/mass assignment,
+  validated parameters, independent SHAKE/RATTLE/Ewald comparison, accepted
+  convergence or NVE-drift evidence, PME, net-charge background convention,
+  thermostats, barostats, triclinic cells, NVT/NPT
+  statistics, GPU parity, or a product route;
+- bounded deterministic CPU `float64` explicit-solvent preparation that binds a
+  frozen OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source snapshot
+  and materializes water/ion atoms, residues, bonds, angles, nonbonded values,
+  intrawater exclusions, rigid-water SHAKE/RATTLE constraints, full 3D
+  orthorhombic PBC, neutrality, species molarity, minimum-clearance checks, and
+  a canonical placement trace. Neutralized preparations are exercised through
+  direct Ewald, constrained NVE, and bit-exact checkpoint/restart. The
+  SHA-256-ordered lattice is not minimized or equilibrated; source transcription,
+  liquid properties, ion behavior, energy/force parity, two-host reproduction,
+  and scientific/product use remain unvalidated;
+- bounded all-step NVE drift analysis that requires `trajectory_stride=1` and
+  a genuine independently executed pause/resume segment. It retains every
+  energy, kinetic-temperature, linear-momentum, current constraint-residual,
+  frame, coordinate and velocity digest observation; reports max/RMS energy
+  and momentum drift plus energy-drift slope; and preserves all nine
+  predeclared threshold/restart metric rows including failures. Passing
+  caller-supplied thresholds is not an independent NVE acceptance result,
+  two-host reproduction, force-field validation, or scientific/product claim;
 - bounded component-energy central-difference force diagnostics and
   non-periodic configurational virials, with every perturbation retained and
   periodic virials fail-closed;

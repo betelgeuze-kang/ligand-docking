@@ -265,11 +265,32 @@ claim status without revalidating the dependency and freshness chain.
 - Keep the bounded CPU `float64` velocity-Verlet NVE path as implementation
   evidence only. It requires explicit masses and caller-bound parameters,
   rebuilds compact neighbors at every force evaluation, supports non-periodic
-  or full 3D orthorhombic PBC with wrapping, and binds binary64 trajectory and
-  exact checkpoint/restart identities. It does not satisfy an NVE-drift
-  acceptance protocol, independent or two-host reproduction, SHAKE/RATTLE,
-  PME/Ewald, explicit-solvent/ion, thermostat/barostat, triclinic-PBC,
-  NVT/NPT-statistics, CPU/GPU-parity, scientific, or product gates.
+  or full 3D orthorhombic PBC with wrapping, optionally applies canonical-pair
+  inverse-mass SHAKE/RATTLE, and binds constraint residual/iteration, binary64
+  trajectory, and exact checkpoint/restart identities. A neutral CPU `float64`
+  orthorhombic direct-Ewald option now replaces screened Coulomb with explicit
+  real/reciprocal/self/exclusion-scaling components and is restart-bound. It
+  does not assign general solute constraints or masses and does not satisfy an NVE-drift or
+  Ewald-convergence acceptance protocol, independent SHAKE/RATTLE/Ewald or
+  two-host reproduction, PME, net-charge-background,
+  thermostat/barostat, triclinic-PBC, NVT/NPT-statistics, CPU/GPU-parity,
+  scientific, or product gates.
+  A separate bounded preparation now freezes one exact Amber TIP3P/
+  Joung--Cheatham Na+/Cl- source snapshot and deterministically materializes
+  water/ion topology, parameters, exclusions, rigid-water constraints, full
+  orthorhombic PBC, neutralization, molarity, clearance diagnostics, and a
+  canonical placement trace. Neutral and counterion cases execute through the
+  actual direct-Ewald and constrained-NVE restart path. This closes the missing
+  explicit-particle wiring only: the initial lattice is unequilibrated and no
+  independent source transcription, energy/force parity, water/ion observable,
+  two-host, or scientific acceptance receipt exists.
+  A bounded analyzer now requires every evaluated frame plus a genuine
+  pause/resume run and emits energy max/RMS/slope, momentum max/RMS, instantaneous
+  kinetic-temperature, current constraint residual, trajectory-byte identity,
+  exact restart, and all nine predeclared pass/fail metric rows. This closes an
+  implementation-observability gap only; independently reviewed thresholds,
+  longer physical systems, external-integrator comparison, two-host receipts,
+  and accepted NVE-drift evidence remain required.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64

@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_at_deterministic_reference_nve_restart_contract
+implementation_stage: v2_at_explicit_solvent_ion_preparation_contract
 
 claim_policy:
   customer_execution_enabled: false
@@ -789,7 +789,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_bounded_cpu_reference_nve:
-    current_state: bounded_deterministic_cpu_float64_velocity_verlet_nve_with_every_force_neighbor_rebuild_full_orthorhombic_pbc_binary64_trajectory_chain_and_exact_checkpoint_restart
+    current_state: bounded_cpu_float64_nve_with_full_orthorhombic_pbc_mass_weighted_shake_rattle_optional_neutral_direct_ewald_exact_restart_and_all_step_energy_momentum_constraint_drift_analysis
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
@@ -803,17 +803,49 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - caller_supplied_parameter_values_not_independently_reviewed
-      - atom_mass_assignment_not_implemented
+      - caller_supplied_solute_mass_assignment_not_independently_reviewed
       - reference_force_field_not_scientifically_validated
-      - nve_energy_drift_acceptance_evidence_missing
+      - caller_supplied_nve_drift_thresholds_not_independently_reviewed
+      - independent_nve_drift_acceptance_evidence_missing
       - cross_host_reproducibility_missing
       - cpu_gpu_parity_evidence_missing
-      - shake_rattle_constraints_not_implemented
-      - pme_ewald_long_range_electrostatics_not_implemented
-      - explicit_solvent_and_ion_preparation_not_implemented
+      - caller_supplied_constraints_not_independently_reviewed
+      - shake_rattle_reference_path_not_independently_validated
+      - constraint_assignment_and_hydrogen_bond_selection_not_implemented
+      - direct_ewald_reference_path_not_independently_validated
+      - direct_ewald_convergence_acceptance_evidence_missing
+      - pme_not_implemented
+      - net_charge_background_and_triclinic_ewald_not_supported
+      - explicit_solvent_and_ion_preparation_not_independently_validated
       - thermostat_and_barostat_not_implemented
       - nvt_npt_ensemble_statistics_missing
       - triclinic_periodic_cells_not_supported
+      - product_integration_not_qualified
+
+  v2_bounded_cpu_reference_explicit_solvent_ions:
+    current_state: bounded_cpu_float64_source_bound_tip3p_joung_cheatham_na_cl_deterministic_periodic_preparation_with_full_topology_parameters_rigid_water_constraints_neutrality_concentration_placement_trace_direct_ewald_nve_and_exact_restart
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_solute_parameters_not_independently_reviewed
+      - tip3p_joung_cheatham_snapshot_not_independently_validated_in_engine_v2
+      - deterministic_lattice_is_not_an_equilibrated_liquid
+      - water_and_ion_placement_not_energy_minimized
+      - explicit_solvent_energy_force_external_comparison_missing
+      - direct_ewald_convergence_acceptance_evidence_missing
+      - water_density_diffusion_dielectric_and_rdf_evidence_missing
+      - nvt_npt_ensemble_statistics_missing
+      - two_cpu_host_reproducibility_missing
+      - cpu_gpu_parity_evidence_missing
       - product_integration_not_qualified
 
   v2_bounded_cpu_reference_term_diagnostics:

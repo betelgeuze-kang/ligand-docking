@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_at_deterministic_reference_nve_restart_contract
+v2_at_explicit_solvent_ion_preparation_contract
 ```
 
 The current `main` branch contains:
@@ -148,13 +148,56 @@ The current `main` branch contains:
 - a bounded deterministic CPU `float64` velocity-Verlet NVE reference path for
   one-model systems with explicit atomic masses and caller-bound parameters. It
   rebuilds the compact neighbor list for every force evaluation, supports
-  non-periodic or full 3D orthorhombic PBC with per-step wrapping, retains a
-  binary64 trajectory hash chain, and round-trips a canonical checkpoint whose
-  same-source, same-parameter, same-config, and same-runtime continuation is
-  bit-exact. The implementation has no accepted drift study or cross-host/GPU
-  evidence and no SHAKE/RATTLE, PME/Ewald, explicit solvent/ions,
-  thermostat/barostat, triclinic-cell, NVT/NPT-statistics, scientific, product,
+  non-periodic or full 3D orthorhombic PBC with per-step wrapping, and can apply
+  bounded canonical-pair-order inverse-mass SHAKE corrections using the prior
+  constrained pair vectors followed by RATTLE radial-velocity projection.
+  Fresh runs require an already position-constrained source state; initial
+  radial velocities are projected before the step-zero energy is recorded.
+  Minimum-image targets at or above half the shortest periodic length fail
+  closed. Binary64 frames and checkpoints bind the complete constraint config,
+  maximum accepted position/velocity residuals, cumulative SHAKE/RATTLE
+  iterations, trajectory hash chain, and bit-exact same-source, same-parameter,
+  same-config, same-runtime continuation. An optional direct-Ewald mode is
+  bounded to a neutral single CPU `float64` model in a full 3D orthorhombic
+  cell. It uses conducting/tin-foil boundary conditions, caller-bound alpha and
+  rectangular reciprocal limits, potential-shifted `erfc` real space,
+  reciprocal and self terms, and same-cell exclusion/1-4 `erf` corrections. It
+  replaces the frozen v1 screened-Coulomb energy and force without double
+  counting, and its complete config is checkpoint-bound. The implementation
+  has no general solute constraint or mass assignment, independent
+  SHAKE/RATTLE/Ewald
+  comparison, accepted drift/convergence study, or cross-host/GPU evidence and
+  no PME, net-charge background convention, thermostat/barostat,
+  triclinic-cell, NVT/NPT-statistics, scientific, product,
   or customer claim.
+- a bounded deterministic CPU `float64` explicit-solvent and monovalent-ion
+  preparation. It freezes the exact OpenMM Force Fields Amber TIP3P standard
+  XML snapshot at commit `89cd3a18d19c207b595269f36cb7e0d63950944e`
+  and its source SHA-256, including TIP3P geometry/masses/charges/LJ and the
+  compatible Joung--Cheatham Na+/Cl- masses/charges/LJ values. For a complete,
+  unboxed one-model solute with caller-bound masses, partial charges, and
+  reference parameters, it deterministically recenters the solute, constructs
+  water and ion atoms/residues, water bonds and angles, intrawater exclusions,
+  three rigid-water distance constraints, full orthorhombic PBC, exact
+  neutralization, per-species molarity, minimum-distance diagnostics, and a
+  canonical placement trace. Result identities bind the source and solvated
+  systems, both topology and parameter fingerprints, constraints, profile,
+  configuration, and placement. Neutral and counterion cases run through the
+  actual direct-Ewald evaluator and constrained NVE with bit-exact restart.
+  The SHA-256-ordered lattice is neither minimized nor equilibrated, and no
+  external energy/force comparison, liquid-density/diffusion/dielectric/RDF or
+  ion-property evidence, two-host receipt, scientific validation, product
+  qualification, or customer route exists.
+- a bounded all-step NVE drift analyzer that rejects subsampled trajectories,
+  requires a genuine pause/resume execution, and retains every energy,
+  instantaneous kinetic-temperature, linear-momentum, current constraint
+  residual, frame, coordinate and velocity digest row. It reports maximum and
+  RMS energy/momentum drift, energy-drift slope, exact checkpoint/trajectory
+  equality, and all nine caller-predeclared metric rows including failures.
+  Threshold fingerprints and both checkpoint identities are provenance-bound.
+  These are local numerical implementation diagnostics; no independently
+  reviewed acceptance thresholds, external integrator comparison, two-host
+  receipt, parameter validation, or scientific/product/customer claim exists.
 - bounded per-term numerical diagnostics layered around the unchanged frozen
   reference evaluator. For a single CPU `float64` model it retains all `6N`
   plus/minus coordinate perturbations, reconstructs each of the five component

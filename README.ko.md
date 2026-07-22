@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_at_deterministic_reference_nve_restart_contract
+v2_at_explicit_solvent_ion_preparation_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -41,11 +41,35 @@ v2_at_deterministic_reference_nve_restart_contract
 - failure row와 exact checkpoint/restart identity를 보존하는 bounded
   deterministic CPU `float64` reference minimization; 과학·제품 승격은 없음
 - force 평가마다 compact neighbor list를 재구축하고 full 3D orthorhombic PBC와
-  좌표 wrapping, binary64 trajectory-chain identity, canonical checkpoint 직렬화,
-  동일 runtime bit-exact 재시작을 제공하는 bounded deterministic CPU `float64`
-  velocity-Verlet NVE. 검증된 parameter나 NVE drift evidence는 포함하지 않으며
-  SHAKE/RATTLE·PME/Ewald·explicit solvent/ion·thermostat/barostat·triclinic cell·
-  NVT/NPT 통계·GPU parity·제품 route는 구현하지 않음
+  좌표 wrapping, canonical pair 순서의 inverse-mass SHAKE 위치 보정과 RATTLE
+  방사상 상대속도 투영을 선택적으로 제공하는 bounded deterministic CPU
+  `float64` velocity-Verlet NVE. frame/checkpoint는 전체 constraint 설정,
+  최대 위치·속도 잔차, 누적 반복 수, binary64 trajectory-chain identity와 동일
+  runtime bit-exact 재시작을 결속함. 중성 단일 모델 CPU `float64`·full 3D
+  orthorhombic cell에서는 선택적 bounded direct-Ewald reference가 frozen v1
+  screened-Coulomb term에 더해지지 않고 이를 정확히 교체함. 명시적 alpha·
+  reciprocal-index bound, conducting/tin-foil 경계, shifted real-space·reciprocal·
+  self·exclusion·1-4 correction을 NVE config와 restart identity에 결속함.
+  일반 solute constraint/mass 자동 할당, 검증된 parameter, 독립
+  SHAKE/RATTLE/Ewald 비교,
+  Ewald convergence·NVE drift acceptance evidence, PME, net-charge background,
+  thermostat/barostat·triclinic cell·NVT/NPT 통계·GPU parity·
+  제품 route는 구현하지 않음
+- OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source snapshot을
+  고정하고 water/ion atom·residue·bond·angle·nonbonded value, intrawater
+  exclusion, rigid-water SHAKE/RATTLE constraint, full 3D orthorhombic PBC,
+  중성도, species molarity, 최소 거리 검사와 canonical placement trace를 실제
+  생성하는 bounded deterministic CPU `float64` explicit-solvent preparation.
+  중성화된 결과는 direct Ewald·constrained NVE·bit-exact checkpoint/restart로
+  실행 검증함. SHA-256 순서 lattice는 minimization·equilibration된 액체가 아니며
+  source 전사, 액체 물성·ion 거동·energy/force parity·두-host 재현·과학/제품
+  사용은 계속 미검증
+- `trajectory_stride=1`인 fresh run과 실제 pause/resume 재실행을 요구하는 bounded
+  all-step NVE drift 분석. 모든 energy·kinetic-temperature·linear-momentum·현재
+  constraint residual·frame/coordinate/velocity digest 관측, energy·momentum의
+  max/RMS와 energy-drift slope, 실패를 포함한 사전 9개 threshold/restart metric
+  행을 보존함. caller-supplied threshold 통과는 독립 NVE acceptance 결과,
+  두-host 재현, force-field 검증, 과학·제품 claim이 아님
 - 모든 perturbation을 보존하는 bounded component-energy central-difference
   force와 non-periodic configurational virial diagnostics; periodic virial은 fail-closed
 - 별도 versioned reference-forcefield 확장에 ordered-star harmonic out-of-plane

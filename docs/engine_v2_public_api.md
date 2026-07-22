@@ -39,7 +39,11 @@ betelgeuze_engine_v2.physics.reference_diagnostics
 betelgeuze_engine_v2.physics.reference_constrained_minimization
 betelgeuze_engine_v2.physics.reference_forcefield_v2
 betelgeuze_engine_v2.physics.reference_minimization
+betelgeuze_engine_v2.physics.reference_ewald
+betelgeuze_engine_v2.physics.reference_explicit_solvent
 betelgeuze_engine_v2.physics.reference_nve
+betelgeuze_engine_v2.physics.reference_nve_drift
+betelgeuze_engine_v2.physics.reference_shake_rattle
 betelgeuze_engine_v2.physics.reference_minimization_independent_oracle
 betelgeuze_engine_v2.physics.reference_minimization_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_minimization_validation_materializer
@@ -135,17 +139,72 @@ assign parameters, establish chemical
 applicability, validate minimization accuracy, satisfy the frozen independent
 validation protocol, or enable a scientific/product/customer route.
 
+The bounded direct-Ewald symbols expose an immutable canonical config and a
+force-field evaluator for one neutral CPU `float64` coordinate model in a full
+3D orthorhombic cell. The fixed convention is conducting/tin-foil boundary,
+potential-shifted `erfc` real space at the v1 parameter cutoff, a full symmetric
+rectangular reciprocal lattice, analytic self energy, and same-cell exclusion
+or 1-4 `erf` correction. The evaluator reconstructs and checks the frozen v1
+screened-Coulomb energy before replacing both its energy and force, preventing
+silent double counting. Alpha, reciprocal bounds, neutrality tolerance, system,
+topology, parameters, and neighbor identity are fingerprinted. This is direct
+Ewald, not PME; non-neutral/background, partial-periodic, triclinic, non-CPU,
+non-float64, oversized, or screened-kappa inputs fail closed. Formula and
+finite-difference unit comparisons are implementation tests, not independent
+scientific validation or convergence acceptance.
+
+The bounded explicit-solvent symbols compose a complete, unboxed, single-model
+CPU `float64` solute and its exact caller-bound reference parameters with a
+frozen source-identified Amber TIP3P/Joung--Cheatham Na+/Cl- profile. The
+result is not a label-only carrier: it materializes explicit water and ion
+atoms/residues, water bonds and angles, Lennard-Jones and charge values,
+intrawater exclusions, three rigid-water distance constraints, a full 3D
+orthorhombic cell, and canonical source/system/topology/parameter/constraint/
+placement identities. The deterministic lattice enforces box, clearance,
+capacity, exact partial-charge binding, and neutral-direct-Ewald admission and
+reports water/ion counts and molarity. A trusted-input replay helper re-runs the
+complete preparation and requires exact artifact and coordinate identity. It is an unequilibrated implementation
+fixture. It does not establish that the frozen source was transcribed by an
+independent reviewer, reproduce liquid or ion observables, compare energy or
+forces with an external implementation, authorize broad chemistry, or enable
+scientific/product/customer use.
+
 The bounded reference-NVE symbols implement CPU `float64` velocity-Verlet for
 one canonical model with explicit atom masses and caller-bound reference
 parameters. Every force evaluation rebuilds the compact neighbor list;
 non-periodic and full 3D orthorhombic PBC inputs are admitted, with periodic
-coordinates wrapped each step. Canonical binary64 frames form a trajectory hash
-chain, and the checkpoint binds source, topology, parameter, configuration,
-runtime, state, energy-drift, and chain identities for bit-exact continuation.
-This is an implementation contract only: accepted drift evidence, independent
-or cross-host reproduction, SHAKE/RATTLE, PME/Ewald, explicit solvent/ions,
-thermostats, barostats, triclinic cells, NVT/NPT statistics, GPU parity, and all
-scientific/product/customer promotion remain unavailable.
+coordinates wrapped each step. An optional constraint config applies bounded
+canonical-pair-order inverse-mass SHAKE corrections based on the previous
+constrained pair vectors, transfers each position correction into the half-step
+velocity, and applies RATTLE radial-velocity projection after the second force
+kick. Fresh constrained runs require the source coordinates to satisfy the
+internal position tolerance before the initial velocities are RATTLE-projected.
+Periodic constraints use minimum-image vectors and reject ambiguous target
+distances. Canonical binary64 frames form a trajectory hash chain; the
+checkpoint binds source, topology, parameter, integration and complete
+constraint configurations, residual maxima, cumulative SHAKE/RATTLE iterations,
+runtime, state, energy drift, and chain identities for bit-exact continuation.
+Its integration config can optionally bind the neutral direct-Ewald reference;
+that selection and the entire Ewald config survive canonical checkpoint parsing
+and bit-exact restart. This is an implementation contract only:
+general solute constraint/mass assignment, accepted drift or Ewald-convergence evidence,
+independent SHAKE/RATTLE/Ewald or cross-host reproduction, PME, net-charge
+background, thermostats, barostats, triclinic cells,
+NVT/NPT statistics, GPU parity, and all scientific/product/customer promotion
+remain unavailable.
+
+The bounded reference-NVE-drift symbols require a fresh all-step NVE result and
+a separately executed pause/resume result. They reconstruct every step's
+energy drift, raw kinetic temperature using the explicit
+`3N - declared distance constraints` convention without center-of-mass removal,
+linear momentum and momentum drift, and current position/velocity constraint
+residuals. Frame, coordinate and velocity byte digests retain trajectory
+identity. Maximum/RMS energy and momentum drift, least-squares energy-drift
+slope, and exact final checkpoint/trajectory equality are evaluated against a
+fixed nine-row caller-bound acceptance config; failed rows remain in the same
+denominator. Subsampled or over-capacity traces fail closed. A numerical pass
+does not establish accepted thresholds, independent or two-host reproduction,
+force-field validity, NVT/NPT ensemble behavior, or a scientific/product claim.
 
 The bounded reference-diagnostics symbols leave the frozen evaluator source
 unchanged and numerically differentiate its five component energies over every

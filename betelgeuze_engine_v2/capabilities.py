@@ -13,10 +13,13 @@ from copy import deepcopy
 from typing import Any
 
 from .engine import REFERENCE_CLAIM_BLOCKERS
+from .physics.reference_explicit_solvent import (
+    REFERENCE_EXPLICIT_SOLVENT_SCIENTIFIC_BLOCKERS,
+)
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_at_deterministic_reference_nve_restart_contract"
+IMPLEMENTATION_STAGE = "v2_at_explicit_solvent_ion_preparation_contract"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -53,6 +56,9 @@ PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = "v2_h5_reference_physics_parameter_applicability_record"
 CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = "v2_bounded_cpu_reference_minimization"
 CPU_REFERENCE_NVE_CAPABILITY_ID = "v2_bounded_cpu_reference_nve"
+CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID = (
+    "v2_bounded_cpu_reference_explicit_solvent_ions"
+)
 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = "v2_bounded_cpu_reference_term_diagnostics"
 CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = "v2_bounded_cpu_reference_improper_constraint_extension"
 CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = "v2_bounded_cpu_fixed_born_polar_solvation"
@@ -397,18 +403,27 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     CPU_REFERENCE_NVE_CAPABILITY_ID: (
         "caller_supplied_parameter_values_not_independently_reviewed",
-        "atom_mass_assignment_not_implemented",
+        "caller_supplied_solute_mass_assignment_not_independently_reviewed",
         "reference_force_field_not_scientifically_validated",
-        "nve_energy_drift_acceptance_evidence_missing",
+        "caller_supplied_nve_drift_thresholds_not_independently_reviewed",
+        "independent_nve_drift_acceptance_evidence_missing",
         "cross_host_reproducibility_missing",
         "cpu_gpu_parity_evidence_missing",
-        "shake_rattle_constraints_not_implemented",
-        "pme_ewald_long_range_electrostatics_not_implemented",
-        "explicit_solvent_and_ion_preparation_not_implemented",
+        "caller_supplied_constraints_not_independently_reviewed",
+        "shake_rattle_reference_path_not_independently_validated",
+        "constraint_assignment_and_hydrogen_bond_selection_not_implemented",
+        "direct_ewald_reference_path_not_independently_validated",
+        "direct_ewald_convergence_acceptance_evidence_missing",
+        "pme_not_implemented",
+        "net_charge_background_and_triclinic_ewald_not_supported",
+        "explicit_solvent_and_ion_preparation_not_independently_validated",
         "thermostat_and_barostat_not_implemented",
         "nvt_npt_ensemble_statistics_missing",
         "triclinic_periodic_cells_not_supported",
         "product_integration_not_qualified",
+    ),
+    CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID: tuple(
+        REFERENCE_EXPLICIT_SOLVENT_SCIENTIFIC_BLOCKERS
     ),
     CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: (
         "caller_supplied_parameter_values_not_independently_reviewed",
@@ -859,9 +874,20 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_NVE_CAPABILITY_ID: _row(
                 CPU_REFERENCE_NVE_CAPABILITY_ID,
                 current_state=(
-                    "bounded_deterministic_cpu_float64_velocity_verlet_nve_with_"
-                    "every_force_neighbor_rebuild_full_orthorhombic_pbc_binary64_"
-                    "trajectory_chain_and_exact_checkpoint_restart"
+                    "bounded_cpu_float64_nve_with_full_orthorhombic_pbc_mass_"
+                    "weighted_shake_rattle_optional_neutral_direct_ewald_exact_"
+                    "restart_and_all_step_energy_momentum_constraint_drift_analysis"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID: _row(
+                CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID,
+                current_state=(
+                    "bounded_cpu_float64_source_bound_tip3p_joung_cheatham_na_cl_"
+                    "deterministic_periodic_preparation_with_full_topology_"
+                    "parameters_rigid_water_constraints_neutrality_concentration_"
+                    "placement_trace_direct_ewald_nve_and_exact_restart"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -1000,6 +1026,7 @@ __all__ = [
     "CPU_REFERENCE_CAPABILITY_ID",
     "CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID",
     "CPU_REFERENCE_NVE_CAPABILITY_ID",
+    "CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID",
     "CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID",
     "CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID",
     "CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID",

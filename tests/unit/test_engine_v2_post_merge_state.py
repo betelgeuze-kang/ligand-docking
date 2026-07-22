@@ -14,6 +14,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID,
     CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
     CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID,
+    CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID,
     CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
     CPU_REFERENCE_NVE_CAPABILITY_ID,
     CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
@@ -318,7 +319,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 46
+    assert len(loaded["capabilities"]) == 47
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -364,6 +365,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert H5_PARAMETER_APPLICABILITY_CAPABILITY_ID in rows
     assert CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID in rows
     assert CPU_REFERENCE_NVE_CAPABILITY_ID in rows
+    assert CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID in rows
     assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
@@ -664,16 +666,52 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     nve = rows[CPU_REFERENCE_NVE_CAPABILITY_ID]
     assert nve["current_state"] == (
-        "bounded_deterministic_cpu_float64_velocity_verlet_nve_with_every_force_"
-        "neighbor_rebuild_full_orthorhombic_pbc_binary64_trajectory_chain_and_"
-        "exact_checkpoint_restart"
+        "bounded_cpu_float64_nve_with_full_orthorhombic_pbc_mass_weighted_shake_"
+        "rattle_optional_neutral_direct_ewald_exact_restart_and_all_step_energy_"
+        "momentum_constraint_drift_analysis"
     )
     assert nve["internal_reference_execution_enabled"] is True
     assert nve["scientifically_validated"] is False
-    assert "nve_energy_drift_acceptance_evidence_missing" in nve["blockers"]
-    assert "shake_rattle_constraints_not_implemented" in nve["blockers"]
-    assert "pme_ewald_long_range_electrostatics_not_implemented" in nve["blockers"]
+    assert "caller_supplied_nve_drift_thresholds_not_independently_reviewed" in (
+        nve["blockers"]
+    )
+    assert "independent_nve_drift_acceptance_evidence_missing" in (
+        nve["blockers"]
+    )
+    assert "shake_rattle_constraints_not_implemented" not in nve["blockers"]
+    assert (
+        "caller_supplied_constraints_not_independently_reviewed"
+        in nve["blockers"]
+    )
+    assert (
+        "shake_rattle_reference_path_not_independently_validated"
+        in nve["blockers"]
+    )
+    assert "direct_ewald_reference_path_not_independently_validated" in (
+        nve["blockers"]
+    )
+    assert "direct_ewald_convergence_acceptance_evidence_missing" in (
+        nve["blockers"]
+    )
+    assert "pme_not_implemented" in nve["blockers"]
     assert "nvt_npt_ensemble_statistics_missing" in nve["blockers"]
+
+    explicit_solvent = rows[CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID]
+    assert explicit_solvent["current_state"] == (
+        "bounded_cpu_float64_source_bound_tip3p_joung_cheatham_na_cl_"
+        "deterministic_periodic_preparation_with_full_topology_parameters_rigid_"
+        "water_constraints_neutrality_concentration_placement_trace_direct_ewald_"
+        "nve_and_exact_restart"
+    )
+    assert explicit_solvent["internal_reference_execution_enabled"] is True
+    assert explicit_solvent["scientifically_validated"] is False
+    assert "deterministic_lattice_is_not_an_equilibrated_liquid" in (
+        explicit_solvent["blockers"]
+    )
+    assert "explicit_solvent_energy_force_external_comparison_missing" in (
+        explicit_solvent["blockers"]
+    )
+    assert "nvt_npt_ensemble_statistics_missing" in explicit_solvent["blockers"]
 
     diagnostics = rows[CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID]
     assert diagnostics["current_state"] == (
@@ -804,7 +842,10 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_result_writer" in policy
     assert "reference_minimization_validation_result_review" in policy
     assert "reference_minimization_validation_trajectory_comparison" in policy
+    assert "reference_ewald" in policy
+    assert "reference_explicit_solvent" in policy
     assert "reference_nve" in policy
+    assert "reference_nve_drift" in policy
     assert "reference_validation_result_review" in policy
     assert "energy-force result-review" in policy
     assert "validation_process_launch_identity" in policy
@@ -925,7 +966,10 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_diagnostics.py",
         "test_engine_v2_reference_forcefield_v2.py",
         "test_engine_v2_reference_minimization.py",
+        "test_engine_v2_reference_ewald.py",
+        "test_engine_v2_reference_explicit_solvent.py",
         "test_engine_v2_reference_nve.py",
+        "test_engine_v2_reference_nve_drift.py",
         "test_engine_v2_reference_physics.py",
         "test_engine_v2_reference_solvation.py",
         "test_engine_v2_reference_minimization_validation_protocol.py",

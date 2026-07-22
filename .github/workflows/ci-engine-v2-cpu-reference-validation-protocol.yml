@@ -9,7 +9,10 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_ewald.py"
+      - "tests/unit/test_engine_v2_reference_explicit_solvent.py"
       - "tests/unit/test_engine_v2_reference_nve.py"
+      - "tests/unit/test_engine_v2_reference_nve_drift.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
@@ -67,7 +70,10 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_ewald.py"
+      - "tests/unit/test_engine_v2_reference_explicit_solvent.py"
       - "tests/unit/test_engine_v2_reference_nve.py"
+      - "tests/unit/test_engine_v2_reference_nve_drift.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
@@ -151,7 +157,10 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
             tests/unit/test_engine_v2_reference_minimization.py
+            tests/unit/test_engine_v2_reference_ewald.py
+            tests/unit/test_engine_v2_reference_explicit_solvent.py
             tests/unit/test_engine_v2_reference_nve.py
+            tests/unit/test_engine_v2_reference_nve_drift.py
             tests/unit/test_engine_v2_reference_constrained_minimization.py
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py
@@ -225,7 +234,11 @@ jobs:
           ruff check \
             betelgeuze_engine_v2/physics/reference_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_minimization.py \
+            betelgeuze_engine_v2/physics/reference_ewald.py \
+            betelgeuze_engine_v2/physics/reference_explicit_solvent.py \
             betelgeuze_engine_v2/physics/reference_nve.py \
+            betelgeuze_engine_v2/physics/reference_nve_drift.py \
+            betelgeuze_engine_v2/physics/reference_shake_rattle.py \
             betelgeuze_engine_v2/physics/reference_constrained_minimization.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py \
@@ -271,7 +284,10 @@ jobs:
             betelgeuze_engine_v2/capabilities.py \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
             tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_ewald.py \
+            tests/unit/test_engine_v2_reference_explicit_solvent.py \
             tests/unit/test_engine_v2_reference_nve.py \
+            tests/unit/test_engine_v2_reference_nve_drift.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
@@ -315,7 +331,10 @@ jobs:
           python -m pytest -q \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
             tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_ewald.py \
+            tests/unit/test_engine_v2_reference_explicit_solvent.py \
             tests/unit/test_engine_v2_reference_nve.py \
+            tests/unit/test_engine_v2_reference_nve_drift.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
@@ -459,8 +478,8 @@ jobs:
               )
           )
           assert loaded == capability_snapshot()
-          assert len(loaded["capabilities"]) == 46
-          assert loaded["implementation_stage"] == "v2_at_deterministic_reference_nve_restart_contract"
+          assert len(loaded["capabilities"]) == 47
+          assert loaded["implementation_stage"] == "v2_at_explicit_solvent_ion_preparation_contract"
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (
               FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256

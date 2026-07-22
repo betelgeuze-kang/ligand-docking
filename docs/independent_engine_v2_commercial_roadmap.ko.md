@@ -758,10 +758,28 @@ constraint solver, NVE/NVT/NPT integrator, trajectory/restart와 drift/distribut
 진단이 필요하다. tiny reference 밖 direct Coulomb all-pairs는 금지한다.
 현재는 caller-supplied mass·parameter를 쓰는 deterministic CPU `float64`
 velocity-Verlet NVE, force 평가별 compact neighbor-list 재구축, full 3D
-orthorhombic PBC wrapping, binary64 trajectory chain, exact checkpoint/restart까지만
-구현됐다. 이는 drift acceptance나 독립·두-host 재현 결과가 아니며 SHAKE/RATTLE,
-PME/Ewald, explicit solvent·ion, thermostat/barostat, triclinic PBC, NVT/NPT 통계,
-CPU/GPU parity와 제품 승격은 계속 차단된다.
+orthorhombic PBC wrapping, canonical-pair inverse-mass SHAKE와 RATTLE,
+constraint residual·iteration provenance, binary64 trajectory chain, exact
+checkpoint/restart, 그리고 중성 CPU `float64` orthorhombic cell에서 screened
+Coulomb을 real·reciprocal·self·exclusion/1-4 correction으로 교체하는 bounded
+direct-Ewald 선택 경로까지 구현됐다. 이는 constraint/mass assignment,
+drift·Ewald convergence acceptance, 독립 SHAKE/RATTLE/Ewald 비교나 독립·두-host
+재현 결과가 아니며 PME, net-charge background,
+thermostat/barostat, triclinic PBC, NVT/NPT 통계, CPU/GPU parity와 제품 승격은 계속
+차단된다.
+별도 bounded preparation은 exact Amber TIP3P/Joung--Cheatham Na+/Cl- source
+snapshot을 고정하고 water/ion topology·parameter·intrawater exclusion·rigid-water
+constraint·full orthorhombic PBC·중성화·molarity·clearance·canonical placement
+trace를 생성한다. 중성/반대이온 case는 실제 direct-Ewald와 constrained-NVE
+restart까지 실행된다. 다만 초기 lattice는 미평형이며 독립 source 전사 검토,
+external energy/force parity, 물/이온 관측량, 두-host 또는 과학 acceptance receipt는
+없다.
+또한 모든 evaluated frame과 실제 pause/resume 재실행을 요구하고 energy·momentum
+max/RMS·slope, instantaneous kinetic temperature, 현재 constraint residual,
+trajectory byte identity, exact restart, 실패 포함 사전 9개 metric 행을 기록하는
+bounded NVE drift 분석 계약을 추가했다. 이는 관측 가능성 구현일 뿐 독립 검토된
+threshold, external integrator 비교, 두 CPU host receipt 또는 accepted drift
+evidence가 아니다.
 
 ### V2-5 — Production AI
 

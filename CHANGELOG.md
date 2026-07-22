@@ -8,15 +8,39 @@ scientific claim from a package version.
 
 ### Added
 
+- A bounded deterministic CPU `float64` explicit-solvent preparation bound to
+  an exact OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source
+  snapshot. It materializes water/ion atoms and residues, water bonds and
+  angles, nonbonded parameters, intrawater exclusions, rigid-water
+  SHAKE/RATTLE constraints, full orthorhombic PBC, exact neutralization,
+  species molarity, clearance diagnostics, and a canonical placement trace.
+  Neutral and counterion cases execute through direct Ewald, constrained NVE,
+  and bit-exact checkpoint/restart. The deterministic lattice is not minimized
+  or equilibrated, and source transcription, energy/force parity, liquid/ion
+  observables, two-host reproduction, and every scientific/product claim
+  remain unvalidated.
 - A bounded deterministic CPU `float64` velocity-Verlet NVE reference path
   using explicit atom masses and caller-bound parameters. It rebuilds compact
   neighbors at every force evaluation, supports non-periodic or full 3D
-  orthorhombic PBC with per-step wrapping, records a binary64 trajectory hash
-  chain, and provides canonical checkpoints with bit-exact same-runtime restart.
-  Scientific drift acceptance, independent/cross-host reproduction,
-  SHAKE/RATTLE, PME/Ewald, explicit solvent/ions, thermostat/barostat,
-  triclinic-cell, NVT/NPT-statistics, GPU-parity, and product claims remain
-  blocked.
+  orthorhombic PBC with per-step wrapping, and optionally applies canonical-pair
+  inverse-mass SHAKE position corrections plus RATTLE radial-velocity
+  projection. Binary64 frames and canonical checkpoints bind constraint
+  configuration, residual maxima, cumulative iterations, and bit-exact
+  same-runtime restart. An optional neutral orthorhombic direct-Ewald mode now
+  exactly replaces the frozen v1 screened-Coulomb energy/force with bounded
+  shifted-real, reciprocal, self, and exclusion/1-4 correction components and
+  binds its canonical config into restart identity. Constraint/mass assignment,
+  scientific drift or Ewald-convergence acceptance, independent
+  SHAKE/RATTLE/Ewald and cross-host reproduction, PME, net-charge background,
+  thermostat/barostat, triclinic-cell,
+  NVT/NPT-statistics, GPU-parity, and product claims remain blocked.
+- A bounded all-step NVE drift analyzer requiring a fresh `trajectory_stride=1`
+  run and a genuine pause/resume execution. It retains energy, raw kinetic
+  temperature, linear momentum, current constraint residuals, and exact
+  frame/coordinate/velocity identities; reports max/RMS energy and momentum
+  drift plus energy-drift slope; and preserves all nine caller-predeclared
+  metric rows including exact-restart and failure rows. A local numerical pass
+  is not independently reviewed drift evidence or scientific promotion.
 - A fit-only pose-ranking calibration contract with canonical success/failure
   rows, exact receptor/ligand/scaffold/pose identities, configurable target and
   family overlap rejection, deterministic CPU `float64` pairwise-logistic term
