@@ -83,13 +83,13 @@ from .validation_native_runtime_identity import (
 
 
 REFERENCE_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_contract/4.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_contract/5.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_START_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_start/4.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_start/5.0.0"
 )
 REFERENCE_VALIDATION_RUN_OBSERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_run_observation/4.0.0"
+    "betelgeuze.engine_v2_reference_validation_run_observation/5.0.0"
 )
 _CASE_WORKER_INCOMPLETE_FAILURE_CODES = frozenset(
     {
@@ -100,10 +100,10 @@ _CASE_WORKER_INCOMPLETE_FAILURE_CODES = frozenset(
     }
 )
 REFERENCE_VALIDATION_RUNNER_CONTRACT_ID = (
-    "cpu_reference_validation_bounded_runner/4.0.0"
+    "cpu_reference_validation_bounded_runner/5.0.0"
 )
-REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "4.0.0"
-REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-19T00:00:00Z"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
 REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_VALIDATION_RUNNER_PREFLIGHT_MAX_WALL_SECONDS = 180.0
@@ -116,10 +116,10 @@ REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES = 8 * 1_048_576
 REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM = 1.0e-5
 REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_request/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_request/3.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_response/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_response/3.0.0"
 )
 REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_case_worker_request/5.0.0"
@@ -131,13 +131,16 @@ REFERENCE_VALIDATION_WORKER_EXECUTION_PROVENANCE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_worker_execution_provenance/1.0.0"
 )
 REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_trust_store/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_trust_store/2.0.0"
 )
 REFERENCE_VALIDATION_TRUST_STORE_PATH = (
     "/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json"
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
+    "4c2cc8f162f2e71686c99245deca977df725306ab58afc1fa96d84019be00cdb"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V4 = (
     "baeb0ae59234cf69154b0ed34658d779fdc0cfec05c969856056a586be13bad8"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V3 = (
@@ -2282,6 +2285,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_RUNNER_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V4
+        ),
+        "refreeze_reason": "binds_public_key_ed25519_review_authorization_and_trust_store",
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "bounded_runner_primitive_only": True,
@@ -2403,6 +2410,9 @@ def _contract_projection() -> dict[str, Any]:
             "trust_keys_in_standard_input_allowed": False,
             "fixed_root_owned_mode_0600_trust_store_required": True,
             "trust_store_path": REFERENCE_VALIDATION_TRUST_STORE_PATH,
+            "trust_store_schema_id": REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID,
+            "trust_store_contains_ed25519_public_keys_only": True,
+            "private_or_symmetric_key_material_allowed": False,
             "repository_bundles_trust_store_or_keys": False,
             "trust_keys_retained_or_echoed": False,
             "environment_receipt_runner_and_result_writer_reachable": True,
@@ -5592,12 +5602,11 @@ def _require_string_sequence(value: object, *, name: str) -> tuple[str, ...]:
 def _verification_key_from_hex(value: object, *, name: str) -> bytes:
     if (
         not isinstance(value, str)
-        or len(value) < 64
-        or len(value) % 2
+        or len(value) != 64
         or any(character not in "0123456789abcdef" for character in value)
     ):
         raise ReferenceValidationRunnerError(
-            f"{name} must be canonical lowercase hexadecimal key material"
+            f"{name} must be an exact lowercase Ed25519 public key"
         )
     return bytes.fromhex(value)
 
@@ -6085,6 +6094,7 @@ __all__ = [
     "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V1",
     "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V2",
     "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V3",
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V4",
     "FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM",
     "REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES",

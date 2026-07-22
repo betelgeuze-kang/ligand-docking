@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_at_public_benchmark_reference_materialization_contract
+v2_at_s0_production_evidence_bundle_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -178,7 +178,9 @@ Implemented and GitHub-hosted CPU tested:
   attestation contract that requires author/reviewer separation and an
   out-of-band trusted reviewer key, and a separate single-run authorization
   receipt contract with operator separation, 24-hour expiry, revocation inputs,
-  and one-time nonce semantics, plus frozen CPU execution-environment and
+  and one-time nonce semantics. Both artifacts use Ed25519; active verifier
+  trust anchors contain exact 32-byte public keys only and reject private or
+  symmetric verification material. Frozen CPU execution-environment and
   failure-inclusive result-receipt schemas for all 27 cases and 59 variants,
   and a local POSIX `O_EXCL`/`fsync` one-time nonce-reservation primitive that
   re-verifies both raw signed artifacts before durable consumption, followed by
@@ -220,12 +222,66 @@ Implemented and GitHub-hosted CPU tested:
   reservation or artifact root, production nonce reservation, production
   environment receipt, runner start/result receipt, authorized production
   execution, independent result review, or scientific acceptance is bundled;
+- a lazy, offline-only adapter pinned to `OpenMM==8.4.0.post2` and its
+  `Reference` platform. It maps all 47 supported energy/force variants, retains
+  all 12 Engine-contract failures as N/A, and re-evaluates every coordinate in
+  the eight supported minimization traces while retaining six fail-closed
+  traces. Canonical receipts bind complete OpenMM distribution/native/runtime
+  identity, fixed-Born self/pair terms, and recomputed nested errors. A separate
+  Ed25519 verifier freshly checks both Engine result-review chains, both OpenMM
+  receipts, exact retained Engine outputs/traces, role separation, freshness,
+  and revocation/supersession state before signing one host-scoped comparison.
+  A frozen final S0 bundle contract now freshly reverifies exactly two such
+  host inputs, requires distinct host/CPU/session/custody/artifact/nonces and
+  exact commit/source/dependency/runtime/seed/physics equality, and verifies a
+  role-separated final Ed25519 human approval. A verified bundle can establish
+  only the frozen synthetic S0 protocols and admission to S1; chemistry,
+  fitting, benchmark, product, customer, and broad scientific claims stay
+  closed. The installable `betelgeuze-engine-v2-s0-review` command validates a
+  secret-free detached signing request, emits the exact canonical bytes for an
+  external/HSM signer, and verifies a returned signature with a public key
+  before attachment; it has no private-key option and never overwrites output.
+  No host evidence, trust key, final approval, or external custody is bundled,
+  so the repository's static S0 decision remains false;
 - deterministic bounded torsion/rigid docking proposal and search scaffolds,
-  candidate-level score-term receipts, and an explicit-parameter CPU `float64`
+  including a receipt-bearing molecular-graph materializer that admits only
+  non-ring, non-terminal heavy-atom single-bond bridges and excludes narrow
+  amide/sulfonamide/phosphoramidate patterns. This bounded heuristic preserves
+  seed bond lengths/angles but is not full resonance perception, ring closure,
+  a torsion-energy model, or validated conformer generation. The docking scorer
+  surfaces retain candidate-level score-term receipts and an explicit-parameter
+  CPU `float64`
   diagnostic scorer that separates cross LJ, screened Coulomb, signed ligand
   internal strain delta, and VDW-overlap penalty, plus a fit-only pairwise
   ranking-calibration contract with strict identity-overlap audit and
-  failure-inclusive all-case/target-family bootstrap evaluation;
+  failure-inclusive all-case/target-family evaluation, tie-invariant pose-level
+  average-precision PR-AUC over successfully scored/labeled poses, explicit
+  all-pose coverage/failure denominators, and deterministic case-cluster
+  bootstrap intervals. A bound, claim-closed confidence evaluator reports raw
+  logistic top-1/runner-up margin diagnostics (Brier, fixed-bin ECE,
+  reliability bins, threshold abstention/coverage/risk, and tie-inclusive
+  selective-risk curves) overall and per family while retaining failed and
+  single-success cases in all-case/all-pose denominators. It explicitly lacks a
+  disjoint probability-calibration fit and cannot promote a confidence claim;
+- a failure-inclusive rigid-body public diagnostic that derives one redocking
+  pocket center from the lowest-index graph-matched native reference, applies a
+  fixed non-identity rotation to the seed conformer before proposal generation,
+  scores every generated pose with an element-radius geometry heuristic, applies
+  deterministic rigid coordinate descent to the initial diverse score Top-K,
+  then re-ranks and records the complete refinement trace, full validity, direct
+  receptor-frame symmetry-aware RMSD, Top-1/Top-5, and oracle-best generation
+  diagnostics. It retains every search/refinement/evaluation failure. It has no
+  torsion sampling, supported-force-field refinement, charge-aware physics,
+  fitted score, disjoint holdout status, external baseline, or claim-grade
+  benchmark result;
+- a separate failure-inclusive flexible four-case diagnostic that embeds the
+  all-bond torsion materialization receipt, samples candidate zero at zero
+  torsion and later candidates from deterministic independent uniform torsions,
+  then adds a fixed element-radius ligand nonbonded self-overlap term (excluding
+  1-2/1-3 pairs) before the same validity/RMSD evaluation and Top-K rigid
+  refinement; final score-order diversity selection excludes invalid poses. It
+  has no torsion-energy or bonded-force-field strain term, torsion refinement,
+  force-field refinement, holdout status, or docking claim;
 - benchmark manifests with exactly one ordered success/failure row per case.
 - a bounded offline materializer for the frozen four-case PoseBusters contract
   cohort. It verifies caller-supplied seed/reference SDF bytes, retains every
@@ -233,9 +289,14 @@ Implemented and GitHub-hosted CPU tested:
   atomic-number/charge/isotope/aromatic/directional-V2000-stereo labeled
   graphs, enumerates bounded stereo-preserving symmetry mappings, and computes
   the minimum heavy-atom RMSD directly in the receptor frame across every
-  matched reference pose without ligand-only alignment. The exact materializer
-  source is bound into protocol v1.1. No data, docking run, benchmark result,
-  independent review, or scientific/product claim is bundled.
+  matched reference pose without ligand-only alignment. The installable
+  `betelgeuze-engine-v2-public-materialize` command additionally verifies all
+  twelve receptor/seed/reference files from a local non-symlink input root and
+  emits a canonical, no-overwrite, one-row-per-case suite receipt. The exact
+  per-case materializer source is bound into protocol v1.1. The suite command
+  performs no network fetch, pose generation, pose-validity evaluation, or
+  scoring; no data, docking run, benchmark result, independent review, or
+  scientific/product claim is bundled.
 
 These surfaces are **not** calibrated docking, MD, free-energy, GPU, or customer
 product capabilities. Every current V2 capability remains `claim_safe=false` and

@@ -45,19 +45,19 @@ from betelgeuze_engine_v2.physics.validation_production_reservation_epoch_transi
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
 )
 
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_validation_runtime_integrity_contract/13.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID = "engine_v2_synthetic_validation_runtime_integrity/13.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "13.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-22T03:00:00Z"
-VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256 = (
-    FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_validation_runtime_integrity_contract/14.0.0"
 )
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID = (
+    "engine_v2_synthetic_validation_runtime_integrity/14.0.0"
+)
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "14.0.0"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256 = FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
 VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256 = (
     FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
 )
-VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = (
-    FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
-)
+VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
 VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256 = (
     FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
 )
@@ -67,12 +67,8 @@ VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
 VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256 = (
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256
 )
-VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256 = (
-    FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
-)
-VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256 = (
-    FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
-)
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256 = FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256
 VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256 = (
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
 )
@@ -80,6 +76,9 @@ VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256 
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
 )
 FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256 = (
+    "191560bd10344eddde753028033585821da1ca6cb259f30df1cf86c5feed35b2"
+)
+FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V13 = (
     "1121a8a8a68fd8d2b41618404a8bff389307dc55de754a6400f00567f83c94d6"
 )
 FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12 = (
@@ -138,7 +137,6 @@ _BLOCKERS = (
     "external_custody_successor_uniqueness_not_provisioned",
     "external_runtime_integrity_manifest_store_missing",
     "energy_force_independent_result_review_missing",
-    "energy_force_upstream_symmetric_hmac_chain",
     "independent_result_review_dependency_manifest_reverification_missing",
     "two_production_cpu_hosts_missing",
 )
@@ -158,7 +156,9 @@ def _canonical_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
-        raise ValidationRuntimeIntegrityContractError("runtime-integrity contract is not canonical JSON") from exc
+        raise ValidationRuntimeIntegrityContractError(
+            "runtime-integrity contract is not canonical JSON"
+        ) from exc
 
 
 def _sha256(value: object) -> str:
@@ -172,9 +172,9 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION,
         "frozen_at_utc": VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12
+            FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V13
         ),
-        "refreeze_reason": "binds_adjacent_registry_epoch_transition_continuity_contract",
+        "refreeze_reason": "binds_energy_force_ed25519_public_key_chain_and_refrozen_custody_contracts",
         "lanes": [
             "27-case-59-variant-energy-force",
             "14-case-minimization",
@@ -330,10 +330,14 @@ def _contract_projection() -> dict[str, Any]:
             "six_dependency_artifact_manifest_sha256_rows_retained": True,
             "per_file_rows_cryptographically_bound_by_existing_artifact_digests": True,
             "deterministic_nonce_manifest_filename": "<nonce>.dependencies.json",
-            "deterministic_nonce_source_manifest_filename": ("<nonce>.source-tree.json"),
+            "deterministic_nonce_source_manifest_filename": (
+                "<nonce>.source-tree.json"
+            ),
             "overall_manifest_sha256_separately_signed": False,
-            "energy_force_upstream_review_and_authorization_use_symmetric_hmac": True,
-            "energy_force_upstream_asymmetric_chain_established": False,
+            "energy_force_upstream_review_and_authorization_use_symmetric_hmac": False,
+            "energy_force_upstream_asymmetric_chain_established": True,
+            "energy_force_upstream_public_key_verification_only": True,
+            "energy_force_upstream_private_or_symmetric_verification_material_accepted": False,
             "production_evidence_class_common_four_event_foundation_implemented": True,
             "production_review_authorization_carriers_implemented": True,
             "production_review_authorization_custody_extension_implemented": True,
@@ -505,7 +509,9 @@ def validation_runtime_integrity_contract_document() -> dict[str, Any]:
     projection = _contract_projection()
     observed = _sha256(projection)
     if observed != FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256:
-        raise ValidationRuntimeIntegrityContractError("runtime-integrity contract projection drifted")
+        raise ValidationRuntimeIntegrityContractError(
+            "runtime-integrity contract projection drifted"
+        )
     return {**projection, "contract_sha256": observed}
 
 
@@ -513,10 +519,14 @@ def require_validation_runtime_integrity_contract_document(
     value: Mapping[str, Any],
 ) -> dict[str, Any]:
     if not isinstance(value, Mapping):
-        raise ValidationRuntimeIntegrityContractError("runtime-integrity contract must be a mapping")
+        raise ValidationRuntimeIntegrityContractError(
+            "runtime-integrity contract must be a mapping"
+        )
     expected = validation_runtime_integrity_contract_document()
     if _canonical_bytes(dict(value)) != _canonical_bytes(expected):
-        raise ValidationRuntimeIntegrityContractError("runtime-integrity contract does not match the frozen record")
+        raise ValidationRuntimeIntegrityContractError(
+            "runtime-integrity contract does not match the frozen record"
+        )
     return expected
 
 
@@ -525,31 +535,47 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
     return {
         "contract_sha256": contract["contract_sha256"],
         "bound_minimization_trajectory_comparison_contract_sha256": (
-            contract["bound_contracts"]["minimization_trajectory_comparison_contract_sha256"]
+            contract["bound_contracts"][
+                "minimization_trajectory_comparison_contract_sha256"
+            ]
         ),
         "bound_production_evidence_custody_contract_sha256": (
             contract["bound_contracts"]["production_evidence_custody_contract_sha256"]
         ),
         "bound_review_authorization_custody_extension_contract_sha256": (
-            contract["bound_contracts"]["production_review_authorization_custody_extension_contract_sha256"]
+            contract["bound_contracts"][
+                "production_review_authorization_custody_extension_contract_sha256"
+            ]
         ),
         "bound_reservation_custody_extension_contract_sha256": (
-            contract["bound_contracts"]["production_reservation_custody_extension_contract_sha256"]
+            contract["bound_contracts"][
+                "production_reservation_custody_extension_contract_sha256"
+            ]
         ),
         "bound_reservation_registry_proof_contract_sha256": (
-            contract["bound_contracts"]["production_reservation_registry_proof_contract_sha256"]
+            contract["bound_contracts"][
+                "production_reservation_registry_proof_contract_sha256"
+            ]
         ),
         "bound_reservation_authenticated_head_receipt_contract_sha256": (
-            contract["bound_contracts"]["production_reservation_authenticated_head_receipt_contract_sha256"]
+            contract["bound_contracts"][
+                "production_reservation_authenticated_head_receipt_contract_sha256"
+            ]
         ),
         "bound_reservation_later_head_consistency_contract_sha256": (
-            contract["bound_contracts"]["production_reservation_later_head_consistency_contract_sha256"]
+            contract["bound_contracts"][
+                "production_reservation_later_head_consistency_contract_sha256"
+            ]
         ),
         "bound_reservation_witness_quorum_contract_sha256": (
-            contract["bound_contracts"]["production_reservation_witness_quorum_contract_sha256"]
+            contract["bound_contracts"][
+                "production_reservation_witness_quorum_contract_sha256"
+            ]
         ),
         "bound_reservation_epoch_transition_contract_sha256": (
-            contract["bound_contracts"]["production_reservation_epoch_transition_contract_sha256"]
+            contract["bound_contracts"][
+                "production_reservation_epoch_transition_contract_sha256"
+            ]
         ),
         "bound_process_launch_identity_contract_sha256": contract["bound_contracts"][
             "process_launch_identity_contract_sha256"
@@ -650,7 +676,7 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
         "minimization_full_trajectory_comparison_contract_implemented": True,
         "minimization_checkpoint_restart_digest_comparison_implemented": True,
         "minimization_production_trajectory_comparison_receipt_present": False,
-        "energy_force_upstream_asymmetric_chain_established": False,
+        "energy_force_upstream_asymmetric_chain_established": True,
         "external_worker_launch_authenticity_implemented": False,
         "external_production_runtime_provisioned": False,
         "production_validation_results_collected": False,
@@ -661,6 +687,7 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
 
 
 __all__ = [
+    "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V13",
     "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12",
     "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V11",
     "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V10",

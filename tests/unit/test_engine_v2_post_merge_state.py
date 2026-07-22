@@ -49,9 +49,11 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     MMCIF_SEMANTICS_CAPABILITY_ID,
     MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID,
     MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID,
+    OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID,
     PHYSICS_REGISTRY_CAPABILITY_ID,
     PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
     PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
+    S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID,
     VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID,
     capability_snapshot,
     require_capability_snapshot,
@@ -320,7 +322,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 48
+    assert len(loaded["capabilities"]) == 50
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -371,8 +373,52 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
+    assert OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID in rows
+    assert S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID in rows
     assert VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID in rows
-    assert rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"] is False
+    openmm_reference = rows[OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID]
+    assert openmm_reference["current_state"] == (
+        "pinned_openmm_reference_offline_mapping_runtime_identity_"
+        "and_canonical_energy_force_minimization_trace_receipt_"
+        "builders_plus_fail_closed_ed25519_external_result_review_"
+        "verifier_without_provisioned_production_receipt_or_attestation"
+    )
+    assert openmm_reference["internal_reference_execution_enabled"] is False
+    assert (
+        "runtime_and_source_pre_post_checks_do_not_establish_immutable_custody"
+        in openmm_reference["blockers"]
+    )
+    assert (
+        "signed_external_oracle_production_receipt_missing"
+        in (openmm_reference["blockers"])
+    )
+    assert (
+        "signed_external_oracle_result_review_attestation_not_provisioned"
+        in (openmm_reference["blockers"])
+    )
+    assert (
+        "independent_external_oracle_result_review_missing"
+        not in (openmm_reference["blockers"])
+    )
+    s0_bundle = rows[S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID]
+    assert s0_bundle["current_state"] == (
+        "fail_closed_two_host_exact_physics_full_ed25519_public_key_"
+        "chain_and_secret_free_detached_final_human_approval_without_"
+        "provisioned_evidence_or_keys"
+    )
+    assert s0_bundle["internal_reference_execution_enabled"] is False
+    assert (
+        "two_distinct_cpu_host_result_sets_not_provisioned" in (s0_bundle["blockers"])
+    )
+    assert (
+        "final_independent_human_s0_approval_not_provisioned" in (s0_bundle["blockers"])
+    )
+    assert "s0_reference_physics_evidence_not_accepted" in s0_bundle["blockers"]
+    assert "s1_admission_not_authorized" in s0_bundle["blockers"]
+    assert (
+        rows[EXTERNAL_BASELINE_CAPABILITY_ID]["internal_reference_execution_enabled"]
+        is False
+    )
     custody_foundation = rows[VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID]
     assert custody_foundation["internal_reference_execution_enabled"] is False
     assert custody_foundation["current_state"] == (
@@ -642,8 +688,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     public_protocol = rows[PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert public_protocol["current_state"] == (
-        "frozen_four_case_public_redocking_protocol_with_verified_multirecord_"
-        "stereo_aware_reference_materialization_without_benchmark_execution_or_results"
+        "frozen_four_case_public_redocking_protocol_with_receptor_bound_failure_"
+        "inclusive_offline_suite_materialization_without_docking_execution_or_results"
     )
     assert public_protocol["internal_reference_execution_enabled"] is True
     assert "public_benchmark_not_executed" in public_protocol["blockers"]
@@ -657,6 +703,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "v2000_labeled_graph_identity_not_independent_chemical_standardization"
         in public_protocol["blockers"]
     )
+    assert "docking_predictions_missing" in public_protocol["blockers"]
+    assert "pose_validity_not_evaluated" in public_protocol["blockers"]
+    assert "same_input_vina_gnina_smina_receipts_missing" in public_protocol["blockers"]
 
     h5_record = rows[H5_PARAMETER_APPLICABILITY_CAPABILITY_ID]
     assert h5_record["current_state"] == (
@@ -795,7 +844,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     validation_protocol = rows[CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID]
     assert validation_protocol["current_state"] == (
-        "result_writer_and_independent_result_review_contract_without_production_receipt_or_review"
+        "full_ed25519_public_key_chain_result_writer_and_independent_"
+        "result_review_contract_without_production_receipt_or_review"
     )
     assert validation_protocol["internal_reference_execution_enabled"] is False
     assert "fixture_materializer_not_implemented" not in validation_protocol["blockers"]
@@ -820,10 +870,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "implementation_author_and_independent_result_reviewer_separation_not_attested"
         in validation_protocol["blockers"]
     )
-    assert "energy_force_upstream_symmetric_hmac_chain" in validation_protocol["blockers"]
+    assert (
+        "energy_force_upstream_symmetric_hmac_chain"
+        not in validation_protocol["blockers"]
+    )
     assert "two_cpu_host_reproducibility_missing" in validation_protocol["blockers"]
-    assert "independent_external_implementation_comparison_missing" in validation_protocol["blockers"]
-    assert "result_receipt_external_authenticity_not_established" in (validation_protocol["blockers"])
+    assert (
+        "independent_external_implementation_production_receipt_missing"
+        in validation_protocol["blockers"]
+    )
+    assert (
+        "result_receipt_external_authenticity_not_established"
+        in (validation_protocol["blockers"])
+    )
     assert "validation_execution_not_authorized" in (validation_protocol["blockers"])
     assert "parameter_fitting_not_authorized" in (validation_protocol["blockers"])
     assert "minimization_validation_protocol_frozen_but_not_executed" in (validation_protocol["blockers"])
@@ -914,9 +973,9 @@ def test_engine_v2_docs_pin_legacy_count_and_declared_witness_scope() -> None:
     readiness = Path("docs/ai/tasks/TASK-v2-production-run-integrity-readiness.md").read_text(encoding="utf-8")
     bundle = Path("docs/ai/tasks/TASK-v2-s0-production-evidence-bundle.md").read_text(encoding="utf-8")
 
-    assert "recognizes 64 superseded contract documents" in status
-    assert "recognizes 64 superseded contract documents" in policy
-    assert "verifies 64 superseded contract documents" in readiness
+    assert "recognizes 76 superseded contract documents" in status
+    assert "recognizes 76 superseded contract documents" in policy
+    assert "verifies 76 superseded contract documents" in readiness
     assert "distinct caller-pinned declared" in status
     assert "distinct declared witness/operator/fault-domain" in policy
     assert "distinct caller-pinned declared" in readiness
@@ -1006,9 +1065,16 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_post_merge_state.py",
         "test_engine_v2_input_identity.py",
         "test_engine_v2_docking_semantics.py",
+        "test_engine_v2_geometric_docking_scorer.py",
+        "test_engine_v2_flexible_geometric_scorer.py",
+        "test_engine_v2_geometric_rigid_refinement.py",
+        "test_engine_v2_molecular_torsion_search.py",
         "test_engine_v2_benchmark_contracts.py",
         "test_engine_v2_public_benchmark_protocol.py",
         "test_engine_v2_public_benchmark_materialization.py",
+        "test_engine_v2_public_benchmark_suite_materialization.py",
+        "test_engine_v2_public_rigid_docking_diagnostic.py",
+        "test_engine_v2_public_flexible_docking_diagnostic.py",
         "test_engine_v2_reference_constrained_minimization.py",
         "test_engine_v2_reference_diagnostics.py",
         "test_engine_v2_reference_forcefield_v2.py",
@@ -1033,6 +1099,10 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_minimization_validation_result_review.py",
         "test_engine_v2_reference_minimization_validation_trajectory_comparison.py",
         "test_engine_v2_external_baseline.py",
+        "test_engine_v2_openmm_reference_contract.py",
+        "test_engine_v2_openmm_reference_result_review_contract.py",
+        "test_engine_v2_s0_production_evidence_bundle_contract.py",
+        "test_engine_v2_s0_production_evidence_bundle.py",
     ):
         assert test_file in source
     assert "pip check" in source

@@ -34,16 +34,29 @@ def _sha256(value: object) -> str:
 
 def _legacy_energy_review_document() -> dict[str, Any]:
     document = deepcopy(reference_validation_review_contract_document())
+    document.pop("superseded_contract_sha256")
+    document.pop("refreeze_reason")
     document.update(
         {
-            "schema_id": ("betelgeuze.engine_v2_reference_validation_review_contract/1.0.0"),
-            "contract_id": ("cpu_reference_validation_independent_review_contract/1.0.0"),
+            "schema_id": (
+                "betelgeuze.engine_v2_reference_validation_review_contract/1.0.0"
+            ),
+            "contract_id": (
+                "cpu_reference_validation_independent_review_contract/1.0.0"
+            ),
             "contract_version": "1.0.0",
             "frozen_at_utc": "2026-07-17T04:31:00Z",
-            "contract_sha256": ("37ca9f550486febc73e36dc36a113e00042d87de79b14bf8033fbbfc1dcbf104"),
+            "contract_sha256": (
+                "37ca9f550486febc73e36dc36a113e00042d87de79b14bf8033fbbfc1dcbf104"
+            ),
         }
     )
-    document["attestation_schema"]["schema_id"] = "betelgeuze.engine_v2_reference_validation_review_attestation/1.0.0"
+    document["attestation_schema"]["schema_id"] = (
+        "betelgeuze.engine_v2_reference_validation_review_attestation/1.0.0"
+    )
+    document["attestation_schema"]["signature_algorithm"] = "hmac-sha256"
+    document["identity_policy"].pop("verifier_trust_anchor_contains_public_key_only")
+    document["identity_policy"].pop("private_signing_key_remains_external_to_verifier")
     legacy_blocker = "signed_execution_authorization_receipt_schema_not_frozen"
     document["authorization_gate"]["current_blockers"].insert(3, legacy_blocker)
     document["blockers"].insert(3, legacy_blocker)
@@ -439,9 +452,81 @@ def test_registry_pins_all_energy_and_minimization_legacy_documents() -> None:
             "2026-07-22T00:00:00Z",
             "cf1eafa05f58320ae71a2e2a781dc801d0dcedb326d29b310c8a734daae63069",
         ),
+        "betelgeuze.engine_v2_reference_validation_review_contract/2.0.0": (
+            "cpu_reference_validation_independent_review_contract/2.0.0",
+            "2.0.0",
+            "2026-07-18T22:48:58Z",
+            "24508ab9947688ae981479148fbcb9cf67b3fa9147631609f49864c71be421d2",
+        ),
+        "betelgeuze.engine_v2_reference_validation_authorization_contract/2.0.0": (
+            "cpu_reference_validation_execution_authorization_contract/2.0.0",
+            "2.0.0",
+            "2026-07-18T22:48:58Z",
+            "39ba89968afdeb6886bfc0bb3c67a99a516a7db46e475c02b7f0ee1728b10cfb",
+        ),
+        "betelgeuze.engine_v2_reference_validation_execution_environment_contract/2.0.0": (
+            "cpu_reference_validation_execution_environment_contract/2.0.0",
+            "2.0.0",
+            "2026-07-18T22:48:58Z",
+            "e6e5e124e5391ba0f04cc2db60f5195f6a31f73782f13956eec878a4ceae5894",
+        ),
+        "betelgeuze.engine_v2_reference_validation_result_receipt_contract/2.0.0": (
+            "cpu_reference_validation_result_receipt_contract/2.0.0",
+            "2.0.0",
+            "2026-07-18T22:48:58Z",
+            "e746de80faa7950cddc05c9bb575f053a63b1427e8c6c3a4f5cc9bb8a20ccb89",
+        ),
+        "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/2.0.0": (
+            "cpu_reference_validation_atomic_nonce_reservation/2.0.0",
+            "2.0.0",
+            "2026-07-18T22:48:58Z",
+            "1e9cc7d18b78f57a34f7399da0bd6f7a755658142dfd5c91b86e952b02e94f5f",
+        ),
+        "betelgeuze.engine_v2_reference_validation_run_start_contract/2.0.0": (
+            "cpu_reference_validation_run_start_environment/2.0.0",
+            "2.0.0",
+            "2026-07-18T22:48:58Z",
+            "826024deb27c8e20fc8a47960bf63780dabb7ec35a9ef16a5c252ceda69570ff",
+        ),
+        "betelgeuze.engine_v2_reference_validation_runner_contract/4.0.0": (
+            "cpu_reference_validation_bounded_runner/4.0.0",
+            "4.0.0",
+            "2026-07-19T00:00:00Z",
+            "baeb0ae59234cf69154b0ed34658d779fdc0cfec05c969856056a586be13bad8",
+        ),
+        "betelgeuze.engine_v2_reference_validation_result_writer_contract/4.0.0": (
+            "cpu_reference_validation_result_receipt_writer/4.0.0",
+            "4.0.0",
+            "2026-07-19T00:00:00Z",
+            "183ff823795a166bb72647b34f118c480f2f785788123a31a4a95900d196dc24",
+        ),
+        "betelgeuze.engine_v2_reference_validation_result_review_contract/1.0.0": (
+            "cpu_reference_energy_force_independent_result_review_contract/1.0.0",
+            "1.0.0",
+            "2026-07-19T01:00:00Z",
+            "6c8cfb583f6d52ca17338fa0e84d5c5740da0820750dd9d99df1f309b888140a",
+        ),
+        "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/3.0.0": (
+            "engine_v2_synthetic_validation_production_review_authorization_custody_extension/3.0.0",
+            "3.0.0",
+            "2026-07-22T01:17:31Z",
+            "b41e48da2d11118e3e3fabae0ef83694f4b0fbebb28b6f46cb6ab39613f961c3",
+        ),
+        "betelgeuze.engine_v2_validation_production_reservation_custody_extension_contract/3.0.0": (
+            "engine_v2_synthetic_validation_production_reservation_custody_extension/3.0.0",
+            "3.0.0",
+            "2026-07-22T01:17:31Z",
+            "52583222d95cf342d5a2aa5db575cf6936343cbc12e69982903362408d3f481f",
+        ),
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/13.0.0": (
+            "engine_v2_synthetic_validation_runtime_integrity/13.0.0",
+            "13.0.0",
+            "2026-07-22T03:00:00Z",
+            "1121a8a8a68fd8d2b41618404a8bff389307dc55de754a6400f00567f83c94d6",
+        ),
     }
 
-    assert len(expected) == 64
+    assert len(expected) == 76
     assert set(LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID) == set(expected)
     for schema_id, expected_identity in expected.items():
         identity = LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID[schema_id]

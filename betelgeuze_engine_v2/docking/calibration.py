@@ -3,7 +3,9 @@
 The fitting API consumes only a fit partition.  A separate audit binds that
 partition to one evaluation identity commitment and rejects configured identity
 overlap before fitting.  No public dataset, fitted model, benchmark result, or
-scientific promotion is bundled by this module.
+scientific promotion is bundled by this module.  Evaluation retains case and
+pose denominators and reports tie-invariant average-precision PR-AUC with a
+deterministic case-cluster bootstrap rather than treating poses as independent.
 """
 
 from __future__ import annotations
@@ -43,6 +45,9 @@ POSE_RANKING_CALIBRATION_MODEL_SCHEMA_ID = (
     "betelgeuze.engine_v2_pose_ranking_calibration_model/1.0.0"
 )
 POSE_RANKING_EVALUATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_pose_ranking_evaluation/2.0.0"
+)
+POSE_RANKING_LEGACY_EVALUATION_SCHEMA_ID_V1 = (
     "betelgeuze.engine_v2_pose_ranking_evaluation/1.0.0"
 )
 
@@ -964,7 +969,66 @@ class PoseRankingCaseEvaluation:
     top1_native_like: bool
     top5_native_like: bool
     ranked_pose_ids: tuple[str, ...]
+    ranked_scores: tuple[float, ...]
+    ranked_native_like: tuple[bool, ...]
     failed_pose_ids: tuple[str, ...]
+    failed_pose_error_codes: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        for name in ("case_id", "target_id", "target_family"):
+            object.__setattr__(self, name, _token(getattr(self, name), name=name))
+        total = _exact_int(self.total_pose_count, name="total_pose_count")
+        successful = _exact_int(
+            self.successful_pose_count,
+            name="successful_pose_count",
+        )
+        failed = _exact_int(self.failed_pose_count, name="failed_pose_count")
+        if successful + failed != total:
+            raise PoseRankingCalibrationError(
+                "case successful and failed pose counts must equal total_pose_count"
+            )
+        object.__setattr__(self, "total_pose_count", total)
+        object.__setattr__(self, "successful_pose_count", successful)
+        object.__setattr__(self, "failed_pose_count", failed)
+        ranked_ids = tuple(_token(value, name="ranked pose ID") for value in self.ranked_pose_ids)
+        ranked_scores = tuple(
+            _finite_float(value, name="ranked pose score") for value in self.ranked_scores
+        )
+        ranked_labels = tuple(self.ranked_native_like)
+        failed_ids = tuple(_token(value, name="failed pose ID") for value in self.failed_pose_ids)
+        failed_errors = tuple(
+            _token(value, name="failed pose error code")
+            for value in self.failed_pose_error_codes
+        )
+        if (
+            type(self.top1_native_like) is not bool
+            or type(self.top5_native_like) is not bool
+            or len(ranked_ids) != successful
+            or len(ranked_scores) != successful
+            or len(ranked_labels) != successful
+            or any(type(value) is not bool for value in ranked_labels)
+            or len(failed_ids) != failed
+            or len(failed_errors) != failed
+            or len(set((*ranked_ids, *failed_ids))) != total
+        ):
+            raise PoseRankingCalibrationError(
+                "case ranked and failed pose evidence is incomplete or inconsistent"
+            )
+        if tuple(zip(ranked_scores, ranked_ids, strict=True)) != tuple(
+            sorted(zip(ranked_scores, ranked_ids, strict=True))
+        ) or failed_ids != tuple(sorted(failed_ids)):
+            raise PoseRankingCalibrationError(
+                "case ranked and failed pose evidence is not in canonical order"
+            )
+        if bool(ranked_ids and ranked_labels[0]) != self.top1_native_like:
+            raise PoseRankingCalibrationError("case Top-1 label disagrees with ranked evidence")
+        if any(ranked_labels[:5]) != self.top5_native_like:
+            raise PoseRankingCalibrationError("case Top-5 label disagrees with ranked evidence")
+        object.__setattr__(self, "ranked_pose_ids", ranked_ids)
+        object.__setattr__(self, "ranked_scores", ranked_scores)
+        object.__setattr__(self, "ranked_native_like", ranked_labels)
+        object.__setattr__(self, "failed_pose_ids", failed_ids)
+        object.__setattr__(self, "failed_pose_error_codes", failed_errors)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -977,7 +1041,10 @@ class PoseRankingCaseEvaluation:
             "top1_native_like": self.top1_native_like,
             "top5_native_like": self.top5_native_like,
             "ranked_pose_ids": list(self.ranked_pose_ids),
+            "ranked_scores": list(self.ranked_scores),
+            "ranked_native_like": list(self.ranked_native_like),
             "failed_pose_ids": list(self.failed_pose_ids),
+            "failed_pose_error_codes": list(self.failed_pose_error_codes),
         }
 
 
@@ -990,6 +1057,43 @@ class PoseRankingMetricEstimate:
     confidence_level: float
     numerator: int
     all_case_denominator: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "metric_id", _token(self.metric_id, name="metric_id"))
+        value = _finite_float(self.value, name="metric value")
+        low = _finite_float(
+            self.confidence_interval_low,
+            name="metric confidence_interval_low",
+        )
+        high = _finite_float(
+            self.confidence_interval_high,
+            name="metric confidence_interval_high",
+        )
+        level = _finite_float(self.confidence_level, name="confidence_level")
+        if not 0.0 <= value <= 1.0:
+            raise PoseRankingCalibrationError("metric value must be in [0,1]")
+        if not 0.0 <= low <= high <= 1.0:
+            raise PoseRankingCalibrationError(
+                "metric confidence interval must be ordered in [0,1]"
+            )
+        if not 0.0 < level < 1.0:
+            raise PoseRankingCalibrationError("confidence_level must be in (0,1)")
+        numerator = _exact_int(self.numerator, name="metric numerator")
+        denominator = _exact_int(
+            self.all_case_denominator,
+            name="metric all_case_denominator",
+            minimum=1,
+        )
+        if numerator > denominator or value != float(numerator) / float(denominator):
+            raise PoseRankingCalibrationError(
+                "metric value and numerator must reconcile with the all-case denominator"
+            )
+        object.__setattr__(self, "value", value)
+        object.__setattr__(self, "confidence_interval_low", low)
+        object.__setattr__(self, "confidence_interval_high", high)
+        object.__setattr__(self, "confidence_level", level)
+        object.__setattr__(self, "numerator", numerator)
+        object.__setattr__(self, "all_case_denominator", denominator)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -1004,16 +1108,234 @@ class PoseRankingMetricEstimate:
 
 
 @dataclass(frozen=True)
+class PoseRankingCurveMetricEstimate:
+    metric_id: str
+    value: float | None
+    confidence_interval_low: float | None
+    confidence_interval_high: float | None
+    confidence_level: float
+    total_case_denominator: int
+    all_pose_denominator: int
+    successful_labeled_pose_count: int
+    positive_pose_count: int
+    negative_pose_count: int
+    failed_pose_count: int
+    bootstrap_unit: str
+    bootstrap_requested_sample_count: int
+    bootstrap_valid_sample_count: int
+    blockers: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "metric_id", _token(self.metric_id, name="metric_id"))
+        level = _finite_float(self.confidence_level, name="confidence_level")
+        if not 0.0 < level < 1.0:
+            raise PoseRankingCalibrationError("confidence_level must be in (0,1)")
+        object.__setattr__(self, "confidence_level", level)
+        counts = {
+            "total_case_denominator": _exact_int(
+                self.total_case_denominator,
+                name="total_case_denominator",
+                minimum=1,
+            ),
+            "all_pose_denominator": _exact_int(
+                self.all_pose_denominator,
+                name="all_pose_denominator",
+                minimum=1,
+            ),
+            "successful_labeled_pose_count": _exact_int(
+                self.successful_labeled_pose_count,
+                name="successful_labeled_pose_count",
+            ),
+            "positive_pose_count": _exact_int(
+                self.positive_pose_count,
+                name="positive_pose_count",
+            ),
+            "negative_pose_count": _exact_int(
+                self.negative_pose_count,
+                name="negative_pose_count",
+            ),
+            "failed_pose_count": _exact_int(
+                self.failed_pose_count,
+                name="failed_pose_count",
+            ),
+            "bootstrap_requested_sample_count": _exact_int(
+                self.bootstrap_requested_sample_count,
+                name="bootstrap_requested_sample_count",
+                minimum=1,
+                maximum=MAX_BOOTSTRAP_SAMPLES,
+            ),
+            "bootstrap_valid_sample_count": _exact_int(
+                self.bootstrap_valid_sample_count,
+                name="bootstrap_valid_sample_count",
+                maximum=self.bootstrap_requested_sample_count,
+            ),
+        }
+        for name, value in counts.items():
+            object.__setattr__(self, name, value)
+        if (
+            self.positive_pose_count + self.negative_pose_count
+            != self.successful_labeled_pose_count
+            or self.successful_labeled_pose_count + self.failed_pose_count
+            != self.all_pose_denominator
+        ):
+            raise PoseRankingCalibrationError(
+                "curve metric pose counts do not reconcile with the all-pose denominator"
+            )
+        unit = _token(self.bootstrap_unit, name="bootstrap_unit")
+        if unit != "case":
+            raise PoseRankingCalibrationError("curve metric bootstrap unit must be case")
+        object.__setattr__(self, "bootstrap_unit", unit)
+        blockers = tuple(_token(value, name="curve metric blocker") for value in self.blockers)
+        if len(blockers) != len(set(blockers)):
+            raise PoseRankingCalibrationError("curve metric blockers must be unique")
+        object.__setattr__(self, "blockers", blockers)
+        missing_positive = "positive_successful_pose_class_missing" in blockers
+        missing_negative = "negative_successful_pose_class_missing" in blockers
+        missing_bootstrap = (
+            "case_cluster_bootstrap_two_class_replicates_missing" in blockers
+        )
+        dropped_bootstrap = (
+            "case_cluster_bootstrap_dropped_single_class_replicates" in blockers
+        )
+        if self.value is None:
+            if (
+                self.confidence_interval_low is not None
+                or self.confidence_interval_high is not None
+                or not blockers
+                or self.bootstrap_valid_sample_count != 0
+                or self.positive_pose_count > 0
+                and self.negative_pose_count > 0
+                or missing_positive != (self.positive_pose_count == 0)
+                or missing_negative != (self.negative_pose_count == 0)
+                or missing_bootstrap
+                or dropped_bootstrap
+            ):
+                raise PoseRankingCalibrationError(
+                    "unavailable curve metric evidence is internally inconsistent"
+                )
+            return
+        value = _finite_float(self.value, name="curve metric value")
+        if not 0.0 <= value <= 1.0:
+            raise PoseRankingCalibrationError("curve metric value must be in [0,1]")
+        object.__setattr__(self, "value", value)
+        if self.positive_pose_count == 0 or self.negative_pose_count == 0:
+            raise PoseRankingCalibrationError(
+                "available PR-AUC requires both positive and negative successful poses"
+            )
+        if missing_positive or missing_negative:
+            raise PoseRankingCalibrationError(
+                "available PR-AUC cannot retain missing-class blockers"
+            )
+        if self.bootstrap_valid_sample_count == 0:
+            if (
+                self.confidence_interval_low is not None
+                or self.confidence_interval_high is not None
+            ):
+                raise PoseRankingCalibrationError(
+                    "curve metric interval requires valid bootstrap samples"
+                )
+            if not missing_bootstrap or dropped_bootstrap:
+                raise PoseRankingCalibrationError(
+                    "missing curve metric interval must retain its bootstrap blocker"
+                )
+            return
+        if missing_bootstrap:
+            raise PoseRankingCalibrationError(
+                "available curve metric interval cannot retain a missing-bootstrap blocker"
+            )
+        if (
+            self.bootstrap_valid_sample_count < self.bootstrap_requested_sample_count
+        ) != dropped_bootstrap:
+            raise PoseRankingCalibrationError(
+                "curve metric bootstrap count and dropped-replicate blocker disagree"
+            )
+        low = _finite_float(
+            self.confidence_interval_low,
+            name="curve metric confidence_interval_low",
+        )
+        high = _finite_float(
+            self.confidence_interval_high,
+            name="curve metric confidence_interval_high",
+        )
+        if not 0.0 <= low <= high <= 1.0:
+            raise PoseRankingCalibrationError(
+                "curve metric confidence interval must be ordered in [0,1]"
+            )
+        object.__setattr__(self, "confidence_interval_low", low)
+        object.__setattr__(self, "confidence_interval_high", high)
+
+    @property
+    def successful_pose_coverage(self) -> float:
+        if self.all_pose_denominator == 0:
+            return 0.0
+        return float(self.successful_labeled_pose_count) / float(self.all_pose_denominator)
+
+    @property
+    def available(self) -> bool:
+        return self.value is not None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "metric_id": self.metric_id,
+            "value": self.value,
+            "confidence_interval_low": self.confidence_interval_low,
+            "confidence_interval_high": self.confidence_interval_high,
+            "confidence_level": self.confidence_level,
+            "total_case_denominator": self.total_case_denominator,
+            "all_pose_denominator": self.all_pose_denominator,
+            "successful_labeled_pose_count": self.successful_labeled_pose_count,
+            "positive_pose_count": self.positive_pose_count,
+            "negative_pose_count": self.negative_pose_count,
+            "failed_pose_count": self.failed_pose_count,
+            "successful_pose_coverage": self.successful_pose_coverage,
+            "bootstrap_unit": self.bootstrap_unit,
+            "bootstrap_requested_sample_count": self.bootstrap_requested_sample_count,
+            "bootstrap_valid_sample_count": self.bootstrap_valid_sample_count,
+            "available": self.available,
+            "blockers": list(self.blockers),
+        }
+
+
+@dataclass(frozen=True)
 class PoseRankingFamilyEvaluation:
     target_family: str
     case_count: int
     metrics: tuple[PoseRankingMetricEstimate, ...]
+    pose_metrics: tuple[PoseRankingCurveMetricEstimate, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "target_family",
+            _token(self.target_family, name="target_family"),
+        )
+        count = _exact_int(self.case_count, name="family case_count", minimum=1)
+        object.__setattr__(self, "case_count", count)
+        metrics = tuple(self.metrics)
+        pose_metrics = tuple(self.pose_metrics)
+        if (
+            not metrics
+            or any(
+                not isinstance(metric, PoseRankingMetricEstimate)
+                or metric.all_case_denominator != count
+                for metric in metrics
+            )
+            or len(pose_metrics) != 1
+            or pose_metrics[0].metric_id != "average_precision_pr_auc"
+            or pose_metrics[0].total_case_denominator != count
+        ):
+            raise PoseRankingCalibrationError(
+                "family metrics are incomplete or disagree with the family denominator"
+            )
+        object.__setattr__(self, "metrics", metrics)
+        object.__setattr__(self, "pose_metrics", pose_metrics)
 
     def to_dict(self) -> dict[str, object]:
         return {
             "target_family": self.target_family,
             "case_count": self.case_count,
             "metrics": [metric.to_dict() for metric in self.metrics],
+            "pose_metrics": [metric.to_dict() for metric in self.pose_metrics],
         }
 
 
@@ -1054,6 +1376,120 @@ def _metrics(
     return tuple(metrics)
 
 
+def _average_precision_pr_auc(
+    scored_labels: Sequence[tuple[float, bool]],
+) -> float | None:
+    positive_count = sum(1 for _, label in scored_labels if label)
+    negative_count = len(scored_labels) - positive_count
+    if positive_count == 0 or negative_count == 0:
+        return None
+    ordered = sorted(
+        (
+            (_finite_float(score, name="pose ranking score"), bool(label))
+            for score, label in scored_labels
+        ),
+        key=lambda row: row[0],
+    )
+    true_positive = 0
+    false_positive = 0
+    previous_recall = 0.0
+    area = 0.0
+    index = 0
+    while index < len(ordered):
+        score = ordered[index][0]
+        group_positive = 0
+        group_negative = 0
+        while index < len(ordered) and ordered[index][0] == score:
+            if ordered[index][1]:
+                group_positive += 1
+            else:
+                group_negative += 1
+            index += 1
+        true_positive += group_positive
+        false_positive += group_negative
+        recall = float(true_positive) / float(positive_count)
+        precision = float(true_positive) / float(true_positive + false_positive)
+        area += (recall - previous_recall) * precision
+        previous_recall = recall
+    return float(area)
+
+
+def _curve_metric(
+    cases: Sequence[PoseRankingCaseEvaluation],
+    *,
+    config: PoseRankingEvaluationConfig,
+    scope: str,
+) -> PoseRankingCurveMetricEstimate:
+    per_case = [
+        list(zip(case.ranked_scores, case.ranked_native_like, strict=True))
+        for case in cases
+    ]
+    scored_labels = [row for case_rows in per_case for row in case_rows]
+    positive_count = sum(1 for _, label in scored_labels if label)
+    negative_count = len(scored_labels) - positive_count
+    total_pose_count = sum(case.total_pose_count for case in cases)
+    failed_pose_count = sum(case.failed_pose_count for case in cases)
+    value = _average_precision_pr_auc(scored_labels)
+    blockers: list[str] = []
+    if positive_count == 0:
+        blockers.append("positive_successful_pose_class_missing")
+    if negative_count == 0:
+        blockers.append("negative_successful_pose_class_missing")
+    valid_samples: list[float] = []
+    if value is not None:
+        seed = int.from_bytes(
+            hashlib.sha256(f"{config.seed}:{scope}:average_precision_pr_auc".encode("utf-8")).digest()[:8],
+            "big",
+        )
+        generator = random.Random(seed)
+        case_count = len(per_case)
+        for _ in range(config.bootstrap_samples):
+            sampled = [
+                row
+                for _ in range(case_count)
+                for row in per_case[generator.randrange(case_count)]
+            ]
+            estimate = _average_precision_pr_auc(sampled)
+            if estimate is not None:
+                valid_samples.append(estimate)
+        if not valid_samples:
+            blockers.append("case_cluster_bootstrap_two_class_replicates_missing")
+        elif len(valid_samples) != config.bootstrap_samples:
+            blockers.append("case_cluster_bootstrap_dropped_single_class_replicates")
+    low: float | None = None
+    high: float | None = None
+    if valid_samples:
+        ordered_samples = sorted(valid_samples)
+        alpha = (1.0 - config.confidence_level) / 2.0
+        low_index = min(
+            len(ordered_samples) - 1,
+            int(math.floor(alpha * len(ordered_samples))),
+        )
+        high_index = min(
+            len(ordered_samples) - 1,
+            int(math.ceil((1.0 - alpha) * len(ordered_samples))) - 1,
+        )
+        low = float(ordered_samples[low_index])
+        high = float(ordered_samples[high_index])
+    return PoseRankingCurveMetricEstimate(
+        metric_id="average_precision_pr_auc",
+        value=value,
+        confidence_interval_low=low,
+        confidence_interval_high=high,
+        confidence_level=config.confidence_level,
+        total_case_denominator=len(cases),
+        all_pose_denominator=total_pose_count,
+        successful_labeled_pose_count=len(scored_labels),
+        positive_pose_count=positive_count,
+        negative_pose_count=negative_count,
+        failed_pose_count=failed_pose_count,
+        bootstrap_unit="case",
+        bootstrap_requested_sample_count=config.bootstrap_samples,
+        bootstrap_valid_sample_count=len(valid_samples),
+        blockers=tuple(blockers),
+    )
+
+
 @dataclass(frozen=True)
 class PoseRankingEvaluationReport:
     model_sha256: str
@@ -1062,12 +1498,174 @@ class PoseRankingEvaluationReport:
     config: PoseRankingEvaluationConfig
     cases: tuple[PoseRankingCaseEvaluation, ...]
     overall_metrics: tuple[PoseRankingMetricEstimate, ...]
+    overall_pose_metrics: tuple[PoseRankingCurveMetricEstimate, ...]
     family_metrics: tuple[PoseRankingFamilyEvaluation, ...]
     schema_id: str = POSE_RANKING_EVALUATION_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != POSE_RANKING_EVALUATION_SCHEMA_ID:
+            raise PoseRankingCalibrationError("unsupported pose-ranking evaluation schema")
+        for name in (
+            "model_sha256",
+            "evaluation_partition_sha256",
+            "leakage_audit_sha256",
+        ):
+            object.__setattr__(self, name, _digest(getattr(self, name), name=name))
+        if not isinstance(self.config, PoseRankingEvaluationConfig):
+            raise PoseRankingCalibrationError("evaluation config type is invalid")
+        cases = tuple(self.cases)
+        if (
+            not cases
+            or any(not isinstance(case, PoseRankingCaseEvaluation) for case in cases)
+            or tuple(case.case_id for case in cases)
+            != tuple(sorted(case.case_id for case in cases))
+            or len({case.case_id for case in cases}) != len(cases)
+        ):
+            raise PoseRankingCalibrationError(
+                "evaluation cases must be non-empty, unique, and canonically ordered"
+            )
+        overall_metrics = tuple(self.overall_metrics)
+        expected_case_metric_ids = (
+            "top1_native_like_rate",
+            "top5_native_like_rate",
+            "scored_case_coverage",
+        )
+        if (
+            len(overall_metrics) != len(expected_case_metric_ids)
+            or any(
+                not isinstance(metric, PoseRankingMetricEstimate)
+                for metric in overall_metrics
+            )
+        ):
+            raise PoseRankingCalibrationError(
+                "overall case metrics are incomplete or disagree with the evaluation config"
+            )
+        self._validate_case_metrics(
+            overall_metrics,
+            cases=cases,
+            confidence_level=self.config.confidence_level,
+        )
+        overall_pose_metrics = tuple(self.overall_pose_metrics)
+        if len(overall_pose_metrics) != 1 or not isinstance(
+            overall_pose_metrics[0], PoseRankingCurveMetricEstimate
+        ):
+            raise PoseRankingCalibrationError(
+                "evaluation requires one overall pose-level curve metric"
+            )
+        self._validate_pose_metric(
+            overall_pose_metrics[0],
+            cases=cases,
+            config=self.config,
+        )
+        family_metrics = tuple(self.family_metrics)
+        expected_families = tuple(sorted({case.target_family for case in cases}))
+        if (
+            len(family_metrics) != len(expected_families)
+            or any(
+                not isinstance(family, PoseRankingFamilyEvaluation)
+                for family in family_metrics
+            )
+        ):
+            raise PoseRankingCalibrationError(
+                "family metrics must cover each target family in canonical order"
+            )
+        family_names = tuple(family.target_family for family in family_metrics)
+        if family_names != expected_families:
+            raise PoseRankingCalibrationError(
+                "family metrics must cover each target family in canonical order"
+            )
+        for family in family_metrics:
+            family_cases = tuple(
+                case for case in cases if case.target_family == family.target_family
+            )
+            if family.case_count != len(family_cases):
+                raise PoseRankingCalibrationError(
+                    "family metrics disagree with the evaluation cases or config"
+                )
+            self._validate_case_metrics(
+                family.metrics,
+                cases=family_cases,
+                confidence_level=self.config.confidence_level,
+            )
+            if any(
+                metric.confidence_level != self.config.confidence_level
+                for metric in family.pose_metrics
+            ):
+                raise PoseRankingCalibrationError(
+                    "family metrics disagree with the evaluation cases or config"
+                )
+            self._validate_pose_metric(
+                family.pose_metrics[0],
+                cases=family_cases,
+                config=self.config,
+            )
+        object.__setattr__(self, "cases", cases)
+        object.__setattr__(self, "overall_metrics", overall_metrics)
+        object.__setattr__(self, "overall_pose_metrics", overall_pose_metrics)
+        object.__setattr__(self, "family_metrics", family_metrics)
+
+    @staticmethod
+    def _validate_case_metrics(
+        metrics: Sequence[PoseRankingMetricEstimate],
+        *,
+        cases: Sequence[PoseRankingCaseEvaluation],
+        confidence_level: float,
+    ) -> None:
+        expected_numerators = {
+            "top1_native_like_rate": sum(case.top1_native_like for case in cases),
+            "top5_native_like_rate": sum(case.top5_native_like for case in cases),
+            "scored_case_coverage": sum(
+                case.successful_pose_count > 0 for case in cases
+            ),
+        }
+        if (
+            tuple(metric.metric_id for metric in metrics)
+            != tuple(expected_numerators)
+            or any(
+                metric.all_case_denominator != len(cases)
+                or metric.confidence_level != confidence_level
+                or metric.numerator != expected_numerators[metric.metric_id]
+                for metric in metrics
+            )
+        ):
+            raise PoseRankingCalibrationError(
+                "case metrics disagree with retained case evidence or evaluation config"
+            )
+
+    @staticmethod
+    def _validate_pose_metric(
+        metric: PoseRankingCurveMetricEstimate,
+        *,
+        cases: Sequence[PoseRankingCaseEvaluation],
+        config: PoseRankingEvaluationConfig,
+    ) -> None:
+        successful = sum(case.successful_pose_count for case in cases)
+        positive = sum(sum(case.ranked_native_like) for case in cases)
+        expected = (
+            metric.metric_id == "average_precision_pr_auc"
+            and metric.confidence_level == config.confidence_level
+            and metric.bootstrap_requested_sample_count == config.bootstrap_samples
+            and metric.total_case_denominator == len(cases)
+            and metric.all_pose_denominator
+            == sum(case.total_pose_count for case in cases)
+            and metric.successful_labeled_pose_count == successful
+            and metric.positive_pose_count == positive
+            and metric.negative_pose_count == successful - positive
+            and metric.failed_pose_count
+            == sum(case.failed_pose_count for case in cases)
+        )
+        if not expected:
+            raise PoseRankingCalibrationError(
+                "pose-level metric counts disagree with retained case evidence"
+            )
 
     @property
     def all_case_denominator(self) -> int:
         return len(self.cases)
+
+    @property
+    def all_pose_denominator(self) -> int:
+        return sum(case.total_pose_count for case in self.cases)
 
     @property
     def claim_safe(self) -> bool:
@@ -1081,12 +1679,18 @@ class PoseRankingEvaluationReport:
             "leakage_audit_sha256": self.leakage_audit_sha256,
             "config": self.config.to_dict(),
             "all_case_denominator": self.all_case_denominator,
+            "all_pose_denominator": self.all_pose_denominator,
             "cases": [case.to_dict() for case in self.cases],
             "overall_metrics": [metric.to_dict() for metric in self.overall_metrics],
+            "overall_pose_metrics": [
+                metric.to_dict() for metric in self.overall_pose_metrics
+            ],
             "family_metrics": [family.to_dict() for family in self.family_metrics],
             "claim_safe": False,
             "blockers": [
                 "public_dataset_result_not_established",
+                "pose_pr_auc_acceptance_threshold_not_independently_reviewed",
+                "pose_ranking_confidence_calibration_missing",
                 "independent_external_rerun_missing",
                 "scientific_review_missing",
             ],
@@ -1104,7 +1708,7 @@ def evaluate_pose_ranking_calibration(
     *,
     config: PoseRankingEvaluationConfig | None = None,
 ) -> PoseRankingEvaluationReport:
-    """Evaluate one held-out partition with failures retained in every denominator."""
+    """Evaluate a holdout while retaining failures in coverage and all-pose counts."""
 
     if evaluation.split_role == "fit":
         raise PoseRankingCalibrationError("evaluation cannot consume a fit partition")
@@ -1133,6 +1737,8 @@ def evaluate_pose_ranking_calibration(
             successful,
             key=lambda row: (model.score_terms(row.term_values), row.pose_id),
         )
+        ranked_scores = tuple(model.score_terms(row.term_values) for row in ranked)
+        ranked_labels = tuple(bool(row.native_like) for row in ranked)
         case_results.append(
             PoseRankingCaseEvaluation(
                 case_id=case_id,
@@ -1146,7 +1752,10 @@ def evaluate_pose_ranking_calibration(
                     bool(row.native_like) for row in ranked[:5]
                 ),
                 ranked_pose_ids=tuple(row.pose_id for row in ranked),
+                ranked_scores=ranked_scores,
+                ranked_native_like=ranked_labels,
                 failed_pose_ids=tuple(row.pose_id for row in failed),
+                failed_pose_error_codes=tuple(row.error_code for row in failed),
             )
         )
     families: dict[str, list[PoseRankingCaseEvaluation]] = {}
@@ -1161,6 +1770,13 @@ def evaluate_pose_ranking_calibration(
                 config=active,
                 scope=f"family:{family}",
             ),
+            pose_metrics=(
+                _curve_metric(
+                    families[family],
+                    config=active,
+                    scope=f"family:{family}",
+                ),
+            ),
         )
         for family in sorted(families)
     )
@@ -1171,6 +1787,9 @@ def evaluate_pose_ranking_calibration(
         config=active,
         cases=tuple(case_results),
         overall_metrics=_metrics(case_results, config=active, scope="overall"),
+        overall_pose_metrics=(
+            _curve_metric(case_results, config=active, scope="overall"),
+        ),
         family_metrics=family_results,
     )
 
@@ -1184,6 +1803,7 @@ __all__ = [
     "POSE_RANKING_CALIBRATION_PARTITION_SCHEMA_ID",
     "POSE_RANKING_CALIBRATION_ROW_SCHEMA_ID",
     "POSE_RANKING_EVALUATION_SCHEMA_ID",
+    "POSE_RANKING_LEGACY_EVALUATION_SCHEMA_ID_V1",
     "POSE_RANKING_LEAKAGE_AUDIT_SCHEMA_ID",
     "PoseRankingCalibrationConfig",
     "PoseRankingCalibrationError",
@@ -1191,6 +1811,7 @@ __all__ = [
     "PoseRankingCalibrationPartition",
     "PoseRankingCalibrationRow",
     "PoseRankingCaseEvaluation",
+    "PoseRankingCurveMetricEstimate",
     "PoseRankingEvaluationConfig",
     "PoseRankingEvaluationReport",
     "PoseRankingFamilyEvaluation",

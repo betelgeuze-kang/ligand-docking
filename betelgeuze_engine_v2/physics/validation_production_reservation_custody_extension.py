@@ -52,16 +52,13 @@ from betelgeuze_engine_v2.physics.validation_production_review_authorization_cus
 )
 
 
-VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_validation_production_reservation_custody_extension_"
-    "contract/3.0.0"
-)
+VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_validation_production_reservation_custody_extension_contract/4.0.0"
 VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_ID = (
-    "engine_v2_synthetic_validation_production_reservation_custody_extension/3.0.0"
+    "engine_v2_synthetic_validation_production_reservation_custody_extension/4.0.0"
 )
-VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_VERSION = "3.0.0"
+VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_VERSION = "4.0.0"
 VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_FROZEN_AT_UTC = (
-    "2026-07-22T01:17:31Z"
+    "2026-07-22T12:00:00Z"
 )
 PRODUCTION_RESERVATION_INTENT_SCHEMA_ID = (
     "betelgeuze.engine_v2_production_reservation_intent/1.0.0"
@@ -81,6 +78,9 @@ PRODUCTION_RESERVATION_MAX_JSON_DEPTH = 128
 PRODUCTION_RESERVATION_MAX_REGISTRY_SEQUENCE = 2**63 - 1
 
 FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = (
+    "9ccec88f2901af355aa41bc34aaf72c5629a9f2e8e94438198a94770a2c0ccf9"
+)
+FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3 = (
     "52583222d95cf342d5a2aa5db575cf6936343cbc12e69982903362408d3f481f"
 )
 FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2 = (
@@ -2441,9 +2441,9 @@ def _contract_projection() -> dict[str, Any]:
             VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_FROZEN_AT_UTC
         ),
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3
         ),
-        "refreeze_reason": "binds_refrozen_minimization_projection_headroom_custody_and_nonce_chain",
+        "refreeze_reason": "binds_energy_force_ed25519_review_authorization_and_nonce_chain",
         "purpose": {
             "additive_sequence_five_companion_only": True,
             "base_or_sequence_three_four_contract_modified": False,
@@ -2605,6 +2605,7 @@ def validation_production_reservation_custody_extension_decision() -> dict[str, 
 
 
 __all__ = [
+    "FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3",
     "FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2",
     "FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V1",
     "FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256",

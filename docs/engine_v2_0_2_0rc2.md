@@ -23,6 +23,7 @@ Execution:    CPU reference
 - two isolated builds with a byte-identical wheel SHA-256 at the same source
   epoch;
 - PEP 561 metadata, clean isolated install, and `pip check`;
+- installed `betelgeuze-engine-v2-s0-review` console-entrypoint smoke checks;
 - SPDX 2.3 SBOM binding the wheel SHA-256;
 - exact pre-import and pre-evaluation byte manifests for Python, the standard
   library, OpenSSL, cryptography, NumPy, and Torch;
@@ -52,3 +53,10 @@ privileged immutable storage or an external signed transparency system.
 No production result receipt, independent result review, reviewed parameter
 set, real-molecule corpus, external solver comparison, or public docking
 benchmark is bundled.
+
+The S0 review command is workflow tooling, not bundled evidence. It accepts no
+private key: after two raw host chains have been verified through the Python
+API, it emits exact canonical approval bytes for an external/HSM signer and
+verifies the returned detached signature with a public key before attachment.
+Full raw-evidence verification, current revocation state, authenticated custody,
+and independent human judgment remain mandatory.

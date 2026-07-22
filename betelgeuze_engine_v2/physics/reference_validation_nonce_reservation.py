@@ -37,19 +37,22 @@ from .reference_validation_review import ScientificReviewerTrustAnchor
 
 
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/3.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_nonce_reservation/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_nonce_reservation/3.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_ID = (
-    "cpu_reference_validation_atomic_nonce_reservation/2.0.0"
+    "cpu_reference_validation_atomic_nonce_reservation/3.0.0"
 )
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "2.0.0"
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "3.0.0"
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
 REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
+    "d496c1593e072b30269a742d5f94ae920a6d205dd6613dbc39f1b259cda481c6"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2 = (
     "1e9cc7d18b78f57a34f7399da0bd6f7a755658142dfd5c91b86e952b02e94f5f"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V1 = (
@@ -237,6 +240,10 @@ def _contract_projection() -> dict[str, Any]:
         "frozen_at_utc": (
             REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC
         ),
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "binds_public_key_ed25519_authorization_and_receipt_contracts",
         "purpose": {
             "scope": "local_single_run_authorization_nonce_consumption",
             "raw_review_and_authorization_reverification_required": True,
@@ -1020,6 +1027,7 @@ def reference_validation_nonce_reservation_contract_decision() -> dict[str, Any]
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2",
     "FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_ID",
     "REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID",

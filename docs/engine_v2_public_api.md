@@ -32,9 +32,15 @@ The following V2-M modules are intentionally importable but provisional:
 betelgeuze_engine_v2.io
 betelgeuze_engine_v2.molecular.mmcif_*
 betelgeuze_engine_v2.docking
+betelgeuze_engine_v2.docking.flexible_geometric_scoring
+betelgeuze_engine_v2.docking.geometric_refinement
+betelgeuze_engine_v2.docking.molecular_torsion
 betelgeuze_engine_v2.benchmark
+betelgeuze_engine_v2.benchmark.public_flexible_diagnostic
 betelgeuze_engine_v2.benchmark.public_materialization
 betelgeuze_engine_v2.benchmark.public_protocol
+betelgeuze_engine_v2.benchmark.public_rigid_diagnostic
+betelgeuze_engine_v2.benchmark.public_suite_materialization
 betelgeuze_engine_v2.physics.registry
 betelgeuze_engine_v2.physics.reference_parameter_applicability
 betelgeuze_engine_v2.physics.reference_diagnostics
@@ -89,8 +95,54 @@ betelgeuze_engine_v2.physics.validation_production_reservation_witness_quorum_no
 betelgeuze_engine_v2.physics.validation_production_reservation_epoch_transition_continuity
 betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
 betelgeuze_engine_v2.physics.validation_source_identity
+betelgeuze_engine_v2.offline.openmm_reference_oracle
+betelgeuze_engine_v2.offline.openmm_reference_receipts
+betelgeuze_engine_v2.offline.openmm_reference_result_review
+betelgeuze_engine_v2.offline.s0_production_evidence_bundle
 betelgeuze_engine_v2.runtime
 ```
+
+The four `betelgeuze_engine_v2.offline` modules are optional external-evidence
+adapters, not product runtime APIs. Importing them does not import OpenMM. An
+explicit observation requires the exact pinned `OpenMM==8.4.0.post2` native
+build and selects only the `Reference` platform. The mapping contract covers
+all 47 supported 27/59 variants, preserves 12 fail-closed rows as N/A, and also
+binds the eight supported plus six N/A minimization cases. Receipt builders
+record exact inputs, component/total energies, forces, fixed-Born self/pair
+terms, runtime/binary/environment identities, and predefined max/RMS errors.
+Builders reobserve runtime and adapter-source identity before and after the
+calculation; readers independently recompute nested output, comparison, and
+summary digests. This is not immutable external custody.
+The separate Ed25519 result-review contract freshly reverifies both Engine
+result-review chains and both complete OpenMM receipts, then crosschecks the
+exact 27/59 Engine component/total/force outputs and all fourteen retained
+operational traces before signing a host/CPU/session/custody-scoped canonical
+projection. It requires an out-of-band reviewer key, role separation, bounded
+freshness, and explicit revocation/supersession inputs. No key, attestation,
+production receipt, or populated two-host evidence bundle is included.
+The final S0 bundle module freshly invokes that verifier for exactly two raw
+host evidence sets. It rejects reused host/CPU/session/custody, artifact,
+environment, authorization-nonce, and review-nonce identities while requiring
+exact equality of commit, source, dependency, OpenMM runtime/source, seed, and
+both physics projections. Its final Ed25519 approval is canonical, time-bounded,
+revocable/supersedable, cannot outlive either host review, and requires a human
+reviewer distinct from every nested role. Successful runtime verification
+authorizes only frozen synthetic S0 acceptance and entry into S1; it explicitly
+does not authorize a real-chemistry, validated-refinement, fitting, benchmark,
+product, customer, or broad scientific claim. Its detached-signing API produces
+a canonical secret-free request only after both host inputs verify, exposes the
+exact approval bytes for an external or hardware Ed25519 signer, and verifies a
+returned signature with a public key before attachment. The installed
+`betelgeuze-engine-v2-s0-review` command supports `contract`, `signing-bytes`,
+and `attach-signature`; it deliberately has no private-key option, rejects
+symlinked or changing inputs, and creates mode-0600 outputs without overwrite.
+Signature attachment never replaces full raw-evidence re-verification. No host
+evidence, key, external custody assertion, or final approval is included, so
+the static decision is closed.
+OpenMM L-BFGS is exposed only as a separate endpoint result and is never
+interpreted as Engine Armijo/Jacobi trace or checkpoint equivalence. These APIs
+do not authorize production protocol execution, install OpenMM for customers,
+or validate parameters, chemistry, or a product claim.
 
 The frozen public-benchmark protocol symbols under
 `betelgeuze_engine_v2.benchmark` define input identities, endpoint rules, and a
@@ -102,10 +154,14 @@ to generate bounded graph matches and symmetry permutations. Its RMSD helper
 does no ligand-only alignment and minimizes direct receptor-frame heavy-atom
 RMSD across all matched reference records and admitted symmetries. Canonical
 receipts bind the v1.1 protocol, artifacts, limits, rows, mappings, and binary64
-coordinates. These APIs do not fetch or bundle data, interpret atom stereo
+coordinates. The separate suite materializer consumes either an offline mapping
+or a non-symlink local root, verifies all twelve receptor/seed/reference
+artifacts, and retains exactly four case rows with an embedded per-case receipt
+or an explicit failure. Its installable command writes mode-0600 canonical
+output and refuses overwrite. These APIs do not fetch or bundle data, interpret atom stereo
 beyond directional V2000 bond marks, standardize chemistry independently,
-authorize docking benchmark execution or publication, or promote a scientific
-claim.
+generate docking poses, evaluate receptor-ligand validity, score/rank poses,
+authorize benchmark execution or publication, or promote a scientific claim.
 
 The provisional docking symbols include an atomic score-breakdown contract and
 an explicitly uncalibrated CPU `float64` reference scorer. The scorer requires
@@ -119,8 +175,50 @@ validity, fitted ranking weights, uncertainty, or a customer route. The
 fit-only ranking-calibration symbols separately require an exact term schema
 and a passing identity-overlap audit, fit pairwise logistic weights from the
 `fit` partition only, and retain failed evaluation poses in all-case and
-target-family Top-1/Top-5/coverage bootstrap denominators. They do not bundle a
-public partition, fitted model, holdout result, independent rerun, or promotion.
+target-family Top-1/Top-5/coverage bootstrap denominators. Evaluation schema v2
+also retains every ranked score/label and failure code, reports tie-invariant
+pose-level average-precision PR-AUC over the successfully scored, labeled poses,
+with explicit successful/failed/all-pose counts and coverage so scoring failures
+cannot disappear from the receipt. It bootstraps by case rather than treating
+poses as independent. A family with no positive and negative successful pose
+labels emits an unavailable metric with explicit blockers instead of a
+fabricated value. A separate claim-closed confidence evaluator binds this v2
+ranking report and transforms the top-1/runner-up minimize-score margin with a
+logistic function. It reports case-level decisions, Brier score, fixed-bin ECE,
+threshold coverage/risk, tie-inclusive selective-risk curves, reliability bins,
+case-cluster intervals, and the same outputs per target family. Cases with fewer
+than two successful poses abstain and remain in the all-case/all-pose
+denominators. The margin signal is explicitly a diagnostic proxy: it has no
+disjoint probability-calibration fit, its threshold is not independently
+reviewed, and every confidence report remains `probability_calibrated=false` and
+`claim_safe=false`. These APIs do not
+bundle a public partition, fitted model, holdout result, independent rerun, or
+promotion.
+
+The public rigid-diagnostic symbols reverify the full input suite, derive a
+single redocking pocket from the lowest-index graph-matched native record,
+rigidly de-leak the seed orientation with a fixed rotation, generate bounded
+rigid poses, and retain every candidate's element-radius score decomposition,
+apply receipt-bearing deterministic rigid coordinate descent to the initial
+diverse score Top-K, re-rank, and retain geometric validity plus direct
+receptor-frame symmetry-aware RMSD. Case rows include complete accept/reject
+refinement traces, Top-1/Top-5, and oracle-best generation diagnostics so
+proposal coverage is distinguishable from ranking failure. The report always
+records that native coordinates defined the pocket, the cohort is not a
+scientific holdout, and torsions, supported-force-field refinement, charge-aware
+force-field scoring, external baselines, probability calibration, independent
+rerun, and claim promotion are absent.
+
+The separate public flexible-diagnostic symbols materialize the bounded
+bridge-only molecular torsion tree for each seed, generate candidate zero at
+zero torsion followed by deterministic independent uniform torsion samples,
+then use the same failure-complete scoring, validity, receptor-frame RMSD, and
+Top-K rigid geometry refinement path. Every case embeds its all-bond torsion
+receipt. Its flexible scorer adds a fixed element-radius nonbonded self-overlap
+term while excluding covalent 1-2 and angular 1-3 pairs. This is not a
+torsion-energy or bonded-force-field model or validated conformer generation;
+final Top-K selection excludes invalid poses before score-order diversity, but
+torsions are not refined and all rigid diagnostic nonclaims continue to apply.
 
 The frozen H5 reference-parameter applicability symbols under
 `betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact
@@ -452,10 +550,12 @@ retained raw energy/force arrays and require bitwise equality with retained
 float values; validate successful input/component/total/force evidence; and
 require pairwise separation of the implementation author, scientific reviewer,
 authorization operator, and result reviewer. A verified signature proves only
-the leaf review artifact and caller-provided result-reviewer key. The upstream
-scientific-review and authorization artifacts remain symmetric-HMAC records, so
-the leaf does not make that chain asymmetric. It also does not independently
-reverify the live dependency manifest or establish external custody. No
+the leaf review artifact and caller-provided result-reviewer key. Its upstream
+scientific-review and authorization artifacts are also Ed25519 records verified
+with exact caller- or trust-store-provided public keys; private or symmetric
+verification material is rejected throughout the active chain. The leaf still
+does not independently reverify the live dependency manifest or establish
+external custody. No
 production receipt, review attestation, trusted key, independent human approval,
 or scientific claim is bundled.
 
@@ -476,8 +576,8 @@ and user-site overrides, skip `sitecustomize`/`.pth` execution, admit only
 root-owned read-only dependency roots, and bind the bootstrap,
 dependency-identity helper, and runner sources into the signed runner-source
 identity. Before importing the package
-initializer the inner stage verifies the authorization operator HMAC against
-the external root-owned trust store, requires reservation and artifact roots
+initializer the inner stage verifies the authorization operator Ed25519
+signature against a public key in the external root-owned trust store, requires reservation and artifact roots
 outside the checkout, and uses root-owned Git to prove the exact signed commit,
 execution-source identity, and clean worktree. Before package import, it
 independently verifies the signed raw commit/tree object bytes using Git SHA-1
@@ -513,7 +613,8 @@ closure, kernel vDSO identity, PID start-time/boot-ID, and externally authentica
 worker launch custody remain production blockers. The energy-force lane has a
 role-separated Ed25519 post-result-review leaf contract, but no actual production
 receipt, attestation, trusted result-reviewer key, or independent result review;
-its upstream review/authorization chain remains symmetric HMAC. Remaining cooperative budget is rechecked
+its upstream review/authorization chain is implemented as public-key-only
+Ed25519 but no production keys or signed artifacts are provisioned. Remaining cooperative budget is rechecked
 before the start marker is consumed, and a parent hard deadline can terminate
 blocked native code. The result
 is a canonical in-memory observation that retains
@@ -560,9 +661,9 @@ production-only Ed25519 wrappers for sequence 3 `pre_execution_review` and
 sequence 4 `authorization`. It binds the lane-specific upstream review and
 authorization artifacts, the supplied process-launch-identity digest, exact
 permit/status ancestry, causal time ordering, global role/key/material separation,
-and logical plus raw revocation/supersession state. The energy-force upstream
-review/authorization remains symmetric HMAC, the supplied process identity digest
-is not external process authenticity, and neither carriers, events, keys nor an
+and logical plus raw revocation/supersession state. Both lanes' upstream
+review/authorization chains use public-key-only Ed25519 verification. The
+supplied process identity digest is not external process authenticity, and neither carriers, events, keys nor an
 append-only successor registry are provisioned. Consequently these contracts
 neither authorize execution nor record
 production results and every scientific, fitting, benchmark, product, and claim
@@ -677,13 +778,13 @@ canonical comparison and fail closed on omission, reorder, cross-wire,
 non-finite values, or digest tamper. Its production, S0, scientific, and S1
 flags remain false.
 
-Runtime-integrity companion v13 binds the exact frozen SHA-256 of the refrozen
-minimization trajectory-comparison contract, custody-v1,
+Runtime-integrity companion v14 binds the complete energy-force Ed25519 chain
+and the exact frozen SHA-256 of the refrozen minimization trajectory-comparison contract, custody-v1,
 the review/authorization extension, the sequence-5 reservation companion, the
 external registry-proof verifier, the authenticated head/status receipt
 verifier, the same-epoch later-head consistency verifier, the fixed-policy
 anchor-scoped witness-quorum verifier, the adjacent epoch-transition continuity
-verifier, and the process-launch-identity contract. Runtime v8 through v12 are retained only in
+verifier, and the process-launch-identity contract. Runtime v8 through v13 are retained only in
 the read-only legacy-contract registry.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
@@ -708,13 +809,14 @@ replacement resistance is not established, and result review remains
 `pending_independent_review`. No production receipt or scientific promotion is
 bundled.
 
-The active energy-force base carrier chain uses v2 identities with a v4 runner
-and result writer. The active minimization base chain uses v4 review and
+The active energy-force base carrier chain uses v3 identities through run start,
+a v5 runner/result writer, and a v2 result-review identity. The active minimization base chain uses v4 review and
 execution-environment identities, v5 authorization, result-receipt,
 nonce-reservation, and run-start identities, a v8 runner, and v7 result
 writer/result review. Current hashes are frozen over the
-complete upstream contract DAG. The read-only legacy-contract verifier
-recognizes 64 superseded contract documents by canonical projection hash and
+complete upstream contract DAG. The production review/authorization and
+reservation custody extensions are v4 and runtime-integrity is v14. The read-only legacy-contract verifier
+recognizes 76 superseded contract documents by canonical projection hash and
 fixed identity metadata. It does not verify or claim compatibility with
 superseded signed attestations, receipts, run records, or observations.
 

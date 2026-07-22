@@ -26,6 +26,12 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
+from .reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    sign_ed25519,
+    verify_ed25519,
+)
+
 from .reference_validation_bootstrap import (
     REFERENCE_VALIDATION_APPLICATION_SEED_ENV,
     REFERENCE_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE,
@@ -76,22 +82,25 @@ from .validation_source_identity import (
 
 
 REFERENCE_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_run_start_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_run_start_contract/3.0.0"
 )
 REFERENCE_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_network_isolation_attestation/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_network_isolation_attestation/3.0.0"
 )
 REFERENCE_VALIDATION_RUN_START_CONTRACT_ID = (
-    "cpu_reference_validation_run_start_environment/2.0.0"
+    "cpu_reference_validation_run_start_environment/3.0.0"
 )
-REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "2.0.0"
-REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "3.0.0"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS = 180.0
 REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES = 64 * 1024 * 1024
 REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES = 16 * 1024 * 1024
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
+    "eb14e8e7b4dd1bd1cf3ce2258ddfb5c7894eb9552b0f088729835855b6ccc39e"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V2 = (
     "826024deb27c8e20fc8a47960bf63780dabb7ec35a9ef16a5c252ceda69570ff"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V1 = (
@@ -198,10 +207,20 @@ def _require_key_id(value: object) -> str:
 
 
 def _require_key(value: bytes | str) -> bytes:
-    key = value.encode("utf-8") if isinstance(value, str) else value
-    if not isinstance(key, bytes) or len(key) < 32:
+    if isinstance(value, bytes):
+        key = value
+    elif isinstance(value, str):
+        try:
+            key = bytes.fromhex(value)
+        except ValueError as exc:
+            raise ReferenceValidationRunStartError(
+                "network attestation signing key is not hexadecimal"
+            ) from exc
+    else:
+        key = value
+    if not isinstance(key, bytes) or len(key) != 32:
         raise ReferenceValidationRunStartError(
-            "network attestation signing key must contain at least 32 bytes"
+            "network attestation signing key must contain exactly 32 bytes"
         )
     return key
 
@@ -424,14 +443,16 @@ def build_signed_reference_validation_network_isolation_attestation(
     )
     payload = dict(projection)
     payload["attestation_sha256"] = _sha256(projection)
+    try:
+        signature = sign_ed25519(_canonical_bytes(payload), _require_key(signing_key))
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceValidationRunStartError(
+            "network isolation attestation Ed25519 signing failed"
+        ) from exc
     payload["signature"] = {
         "algorithm": REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
         "key_id": authorization_key_id,
-        "value": hmac.new(
-            _require_key(signing_key),
-            _canonical_bytes(payload),
-            hashlib.sha256,
-        ).hexdigest(),
+        "value": signature,
     }
     return payload
 
@@ -540,15 +561,15 @@ def verify_signed_reference_validation_network_isolation_attestation(
             "network isolation attestation signature algorithm is invalid"
         )
     signature_value = signature.get("value")
-    expected_signature = hmac.new(
-        anchor.verification_key,
-        _canonical_bytes(payload),
-        hashlib.sha256,
-    ).hexdigest()
-    if not isinstance(signature_value, str) or not hmac.compare_digest(
-        signature_value,
-        expected_signature,
-    ):
+    try:
+        verified = verify_ed25519(
+            _canonical_bytes(payload), signature_value, anchor.verification_key
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceValidationRunStartError(
+            "network isolation attestation Ed25519 verifier is unavailable"
+        ) from exc
+    if not verified:
         raise ReferenceValidationRunStartError(
             "network isolation attestation signature verification failed"
         )
@@ -999,6 +1020,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_RUN_START_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "binds_public_key_ed25519_authorization_and_network_attestation",
         "purpose": {
             "scope": "pre_evaluation_dependency_and_environment_reverification",
             "contract_and_primitive_only": True,
@@ -1056,6 +1081,9 @@ def _contract_projection() -> dict[str, Any]:
         },
         "network_isolation": {
             "operator_signed_short_lived_attestation_required": True,
+            "signature_algorithm": REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
+            "operator_trust_anchor_contains_public_key_only": True,
+            "private_signing_key_remains_external_to_verifier": True,
             "maximum_attestation_validity_seconds": int(
                 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY.total_seconds()
             ),
@@ -2397,6 +2425,7 @@ def reference_validation_run_start_contract_decision() -> dict[str, Any]:
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V2",
     "FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_APPLICATION_SEED_ENV",
     "REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES",

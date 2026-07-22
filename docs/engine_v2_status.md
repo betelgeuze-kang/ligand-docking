@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_at_public_benchmark_reference_materialization_contract
+v2_at_s0_production_evidence_bundle_contract
 ```
 
 The current `main` branch contains:
@@ -105,8 +105,47 @@ The current `main` branch contains:
   contract accepts only an identity-audited `fit` partition, deterministically
   fits pairwise logistic term weights, binds the holdout identity commitment,
   and evaluates retained failure poses with all-case and target-family Top-1/
-  Top-5/coverage bootstrap intervals. No public partition, fitted model, or
-  result is bundled;
+  Top-5/coverage bootstrap intervals. Evaluation schema v2 additionally retains
+  ranked scores/labels and failure codes and reports tie-invariant pose-level
+  average-precision PR-AUC over successfully scored, labeled poses, while
+  all-pose coverage/failure counts keep scoring failures visible in the receipt.
+  Deterministic case-cluster bootstrap intervals are reported overall and per
+  family. Missing positive or negative successful labels produce an explicit
+  unavailable metric. A bound confidence-diagnostic receipt additionally
+  evaluates a logistic top-1/runner-up score-margin proxy with Brier, fixed-bin
+  ECE, reliability bins, threshold abstention/coverage/risk, and tie-inclusive
+  selective-risk curves overall and per family. Failed and single-success cases
+  abstain but remain in all-case/all-pose denominators. This is not a fitted
+  probability calibrator: no disjoint calibration partition, independently
+  reviewed threshold, public partition, fitted model, or result is bundled;
+- a failure-inclusive four-case rigid redocking diagnostic. It uses the
+  lowest-index graph-matched native reference only to define the pocket center,
+  applies a fixed non-identity rotation to the seed conformer before bounded
+  rigid proposals, retains every candidate score/failure, evaluates complete
+  bounded geometric validity and direct receptor-frame symmetry-aware RMSD, and
+  applies deterministic rigid coordinate descent to the initial diverse score
+  Top-K, re-ranks, and reports complete refinement traces, Top-1/Top-5, plus
+  oracle-best generation diagnostics. The score and refinement objective use
+  only fixed unvalidated element radii, contact/overlap/penetration terms, and a
+  pocket-centroid restraint. They are not force-field energy, a molecular
+  minimizer, or a calibrated ranker; there is no torsion sampling,
+  supported-force-field refinement, charge-aware physics, disjoint holdout
+  status, same-input external baseline, independent rerun, or public benchmark
+  claim;
+- a separate bounded molecular-graph torsion-tree materializer. It retains one
+  receipt row per source bond, selects only non-ring/non-terminal heavy-atom
+  single-bond bridges, excludes narrow amide/sulfonamide/phosphoramidate
+  patterns, verifies zero-angle reconstruction, and preserves covalent bond
+  lengths under proposal sampling. It is not full resonance perception,
+  ring/macrocycle closure, a torsion-energy model, or validated conformer
+  generation. A separate failure-complete flexible four-case diagnostic embeds
+  the torsion receipt, retains the zero-torsion seed baseline, samples later
+  torsions deterministically and uniformly, and adds a fixed element-radius
+  ligand nonbonded self-overlap term excluding 1-2/1-3 pairs before
+  validity/RMSD evaluation plus Top-K rigid refinement. Final selection excludes
+  invalid poses before score-order diversity. It has no torsion-energy or bonded
+  force-field strain term, does not refine torsions, and has no holdout or
+  docking claim;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen v1.1 four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -120,11 +159,15 @@ The current `main` branch contains:
   ignores identity-seed coordinates, selects all stereo-aware labeled-graph
   matches, enumerates bounded graph automorphisms, and takes the minimum direct
   receptor-frame RMSD over every matched reference and admitted symmetry. Its
-  exact source is protocol-bound. No raw data is bundled, no network fetch or
-  docking benchmark execution is implemented or authorized, no result document
-  exists, and the four fixtures do not establish statistical representativeness,
-  independent chemical standardization, full atom-stereo interpretation, or
-  PoseBusters Benchmark equivalence;
+  exact source is protocol-bound. The separate installable offline suite command
+  reads the exact protocol-relative files from a non-symlink local root, verifies
+  all four receptors plus all eight ligand artifacts, and retains exactly four
+  case rows with embedded canonical per-case receipts or failure codes. Its
+  output explicitly records that no network fetch, docking prediction,
+  pose-validity evaluation, or benchmark execution occurred. No raw data or
+  public result is bundled, and the four fixtures do not establish statistical
+  representativeness, independent chemical standardization, full atom-stereo
+  interpretation, or PoseBusters Benchmark equivalence;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that
   every runtime value is supplied explicitly by the caller, and enumerates the
@@ -393,13 +436,13 @@ The current `main` branch contains:
   is not bound into the workers, cannot exclude same-tick PID reuse, and is not
   external launch authenticity or durable uniqueness. Final signed
   evidence-class carrier propagation and external custody remain blockers. The
-  active energy-force base chain uses v2 identities
-  with a v4 runner/result writer; the active minimization base chain uses v4
+  active energy-force base chain uses v3 identities through run start, a v5
+  runner/result writer, and a v2 result review; the active minimization base chain uses v4
   review/execution-environment identities, v5 authorization/result-receipt/
   nonce/run-start identities, a v8 runner, and v7 result writer/result review.
   Their hashes were
   refrozen through the full upstream dependency DAG. A separate read-only
-  verifier recognizes 64 superseded contract documents by canonical projection
+  verifier recognizes 76 superseded contract documents by canonical projection
   hash. Superseded signed attestations, receipts, and run records are not
   supported and no compatibility claim is made for them.
   The energy-force lane now has a frozen Ed25519 result-review leaf with full
@@ -407,9 +450,9 @@ The current `main` branch contains:
   all 56 required metric occurrences from retained raw energy/force arrays with
   bitwise retained-value equality, and four-role separation. No
   production result, attestation, trusted result-reviewer key, or independent
-  human approval is bundled; upstream scientific review and authorization remain
-  symmetric HMAC, and live dependency-manifest re-verification/external custody
-  remain open.
+  human approval is bundled. Upstream scientific review and authorization now
+  use Ed25519 with public-key-only trust anchors; live dependency-manifest
+  re-verification and external custody remain open.
   A common claim-closed Ed25519 base foundation freezes the exact
   `synthetic_validation_production` evidence class, pre-execution permit,
   adjacent monotonic status snapshots, bounded carrier inputs, and a two-event
@@ -425,8 +468,8 @@ The current `main` branch contains:
   internally re-verifies that raw prefix and implements production-only Ed25519
   sequence-3 review and sequence-4 authorization carriers/events with causal-time,
   exact scalar-type, role/key/material-separation, and raw/logical revocation checks.
-  These artifacts and keys are not provisioned; the energy-force upstream chain
-  remains symmetric HMAC and the process digest is bound but not externally
+  These artifacts and keys are not provisioned; both lanes' upstream chains use
+  public-key-only Ed25519, while the process digest is bound but not externally
   authenticated. A sequence-5 companion now re-verifies the complete exact raw
   sequence-1-through-4 prefix and lane-local reservation record, binds a
   custodian-signed intent to exact registry/witness authority material and
@@ -495,12 +538,13 @@ The current `main` branch contains:
   exclude separately quorum-signed sibling successors, prove global latest or
   realm-wide non-equivocation, or commit CAS. No transition proof, next policy,
   keys, votes, or post-transition status descendant is provisioned.
-  Runtime-integrity companion v13 additionally binds the refrozen minimization
+  Runtime-integrity companion v14 additionally binds the complete energy-force
+  Ed25519 chain and the refrozen minimization
   trajectory-comparison contract together with the exact frozen custody-v1,
   review/authorization, reservation, external registry-proof, authenticated
   head/status receipt, later-head consistency, witness-quorum, adjacent epoch-
   transition continuity, and process-launch-identity contract SHA-256 values;
-  runtime v8 through v12 are retained in the read-only legacy registry.
+  runtime v8 through v13 are retained in the read-only legacy registry.
   The separate process-launch measurement primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
@@ -536,12 +580,12 @@ The current `main` branch contains:
   reviewed runtime parameter values, independent scientific acceptance, or
   signed authorization receipt exists. A separate frozen review-attestation
   contract now fixes the required review checks, acknowledged limitations,
-  author/reviewer identity separation, out-of-band trusted reviewer key,
-  HMAC-SHA256 integrity, and a maximum 30-day validity window. No attestation or
+  author/reviewer identity separation, an out-of-band trusted Ed25519 reviewer
+  public key, signature integrity, and a maximum 30-day validity window. No attestation or
   trusted key is bundled, and even a verified review cannot itself authorize
   execution or fitting. The current gate denies validation execution and parameter-fitting proposals.
   A separate authorization contract now binds a future verified review to a
-  pairwise-distinct operator identity, out-of-band HMAC key, exact code/runner/
+  pairwise-distinct operator identity, out-of-band Ed25519 operator public key, exact code/runner/
   environment/result/dependency identities, at most 24 hours of validity,
   external receipt/review revocation sets, and a one-time nonce. No operator key
   or receipt is bundled. Verification only makes a receipt eligible for a
@@ -612,9 +656,8 @@ The current `main` branch contains:
   Environment/later carriers, an external serializable registry, atomic permit
   consumption, realm-wide non-equivocation, externally enforced transition
   uniqueness, and a provisioned chain,
-  independent result-review
-  dependency-manifest re-verification, and an end-to-end asymmetric upstream
-  review/authorization chain remain absent. The energy-force Ed25519
+  independent result-review dependency-manifest re-verification and provisioned
+  end-to-end production custody remain absent. The energy-force Ed25519
   post-result-review leaf contract is implemented, but no actual production
   receipt, review attestation, trusted key, or independent review exists.
   The inner bootstrap carries one 180-second cooperative preflight deadline
@@ -667,8 +710,9 @@ The current `main` branch contains:
   case/variant/metric/expected-failure/worker dispositions, checks
   successful input/component/total/force evidence, and requires separation of
   all four governance roles. Its upstream scientific-review and authorization
-  records remain symmetric HMAC, and it does not independently reverify the live
-  dependency manifest or establish external custody. No production receipt,
+  records are Ed25519 artifacts verified with public keys only, but it does not
+  independently reverify the live dependency manifest or establish external
+  custody. No production receipt,
   attestation, trusted result-reviewer key, or independent human approval is
   bundled; every production, scientific, fitting, benchmark, and product flag
   remains false.
@@ -690,6 +734,57 @@ The current `main` branch contains:
   scientific, fitting, and product gates closed. No production key, attestation,
   receipt, root, runner start, validation result, independent result-review receipt,
   or scientific acceptance is bundled.
+- an offline-only OpenMM Reference external-oracle adapter. It pins the
+  `OpenMM==8.4.0.post2` distribution, native build
+  `8.4.0.dev-4768436`/commit `47684368dbbe4185d068be77d32a962059cfc37c`,
+  and the `Reference` platform without a CPU fallback. The frozen mapping
+  retains all 27 cases and 59 variants, evaluates the 47 pass variants, and
+  records the 12 Engine-contract failures as
+  `not_applicable_engine_contract`. Native bond/angle/periodic torsion forces
+  and explicit CustomForce expressions preserve atom order, units,
+  orthorhombic PBC, exclusions, pair scaling, the quintic switch, ordered-star
+  improper, and fixed-Born self/pair components. A second canonical builder
+  accepts all fourteen operational minimization trace rows, re-evaluates every
+  coordinate from the eight passing cases, and retains the six empty expected
+  fail-closed rows. The local Reference integration test covers 47 variants and
+  572 trace coordinates, including 246 fixed-Born coordinates, under the
+  predefined `1e-10 kcal/mol` energy and `1e-8 kcal/mol/angstrom` force max/RMS
+  bounds. It hashes the complete installed OpenMM distribution, Python wrapper,
+  `_openmm` binary, Python executable, and path-free environment identity, then
+  requires exact runtime and adapter-source equality before and after each
+  observation. These checks are snapshots and do not establish immutable
+  external custody or same-UID replacement resistance.
+  OpenMM remains a lazy optional offline dependency; no product import or route
+  loads it. A frozen Ed25519 external result-review verifier now freshly
+  reverifies both Engine result-review chains and both OpenMM receipts, binds
+  the exact 27/59 component/total/force output match and all fourteen retained
+  operational traces, and signs host, CPU, evidence-session, custody-terminal,
+  runtime, source, dependency, seed, and nonce identities. It enforces reviewer
+  separation, freshness, and explicit revocation/supersession inputs. The
+  repository bundles no reviewer key or attestation; one verified host review
+  remains non-production and cannot establish two-host reproducibility,
+  external custody, S0 acceptance, or scientific promotion.
+- a frozen final S0 production-evidence bundle verifier. It freshly reverifies
+  exactly two complete host-review evidence inputs, rejects reuse across host,
+  CPU, session, custody, result/review/OpenMM/environment receipt, authorization
+  nonce, and outer-review nonce identities, and requires exact equality of the
+  commit, source manifests, dependency rows, OpenMM runtime/source, seed, and
+  energy-force/minimization physics projections. It then verifies a bounded,
+  canonical, revocable/supersedable Ed25519 approval from a final human reviewer
+  distinct from every nested author, scientific reviewer, operator, result
+  reviewer, and external-oracle reviewer. An accepted runtime verification opens
+  only the frozen synthetic S0 protocols and S1 admission; real-chemistry,
+  fitting, benchmark, product, customer, and broad scientific claims remain
+  false. The package exposes `betelgeuze-engine-v2-s0-review`: it validates a
+  canonical secret-free signing request produced only after both hosts verify,
+  writes the exact approval bytes for an external or hardware signer, and
+  verifies the detached signature with a public key before attachment. The CLI
+  has no private-key input and creates mode-0600 outputs with no overwrite.
+  Detached attachment is not acceptance: the full verifier still freshly
+  checks both raw host evidence chains and current revocation/supersession state.
+  The repository provides no two-host production evidence, trust keys,
+  authenticated external custody, or final approval, so its static S0 and S1
+  decisions remain closed.
 
 ## What the implementation does not establish
 
@@ -714,11 +809,13 @@ not currently establish:
   observations and receipts are implementation checks, not production
   validation results or parameter-fit data;
 - an accepted production trajectory-level minimization comparison, reproduction
-  on two CPU hosts, or independent external-implementation comparison; the
-  refrozen v2.1 comparison contract and non-production 14/14 implementation
-  result do not satisfy the remaining S0 scientific or production exit
-  conditions, and no production result has been dispositioned by an independent
-  human reviewer;
+  on two CPU hosts, or a signed and independently reviewed production
+  external-implementation receipt; the refrozen v2.1 comparison contract,
+  non-production 14/14 implementation result, offline OpenMM Reference
+  development observations, unprovisioned single-host external-review verifier,
+  and unprovisioned two-host/final-approval bundle verifier do not satisfy the
+  remaining S0 scientific or production exit conditions, and no production
+  result has been dispositioned by an independent human reviewer;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime

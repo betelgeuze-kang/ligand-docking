@@ -1,0 +1,90 @@
+name: ci-engine-v2-openmm-reference
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/offline/**"
+      - "betelgeuze_engine_v2/physics/reference_forcefield*.py"
+      - "betelgeuze_engine_v2/physics/reference_solvation.py"
+      - "betelgeuze_engine_v2/physics/reference_validation_*.py"
+      - "betelgeuze_engine_v2/physics/reference_minimization_validation_*.py"
+      - "tests/unit/test_engine_v2_openmm_reference_*.py"
+      - "tests/unit/test_engine_v2_s0_production_evidence_bundle*.py"
+      - ".github/workflows/ci-engine-v2-openmm-reference.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/offline/**"
+      - "betelgeuze_engine_v2/physics/reference_forcefield*.py"
+      - "betelgeuze_engine_v2/physics/reference_solvation.py"
+      - "betelgeuze_engine_v2/physics/reference_validation_*.py"
+      - "betelgeuze_engine_v2/physics/reference_minimization_validation_*.py"
+      - "tests/unit/test_engine_v2_openmm_reference_*.py"
+      - "tests/unit/test_engine_v2_s0_production_evidence_bundle*.py"
+      - ".github/workflows/ci-engine-v2-openmm-reference.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-openmm-reference-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  openmm-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tools/check_engine_v2_architecture.py
+            tests/unit/test_engine_v2_openmm_reference_contract.py
+            tests/unit/test_engine_v2_openmm_reference_runtime.py
+            tests/unit/test_engine_v2_openmm_reference_result_review_contract.py
+            tests/unit/test_engine_v2_openmm_reference_result_review_runtime.py
+            tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py
+            tests/unit/test_engine_v2_s0_production_evidence_bundle.py
+            tests/unit/test_engine_v2_reference_validation_result_review.py
+            tests/unit/test_engine_v2_reference_validation_result_writer.py
+            tests/unit/test_engine_v2_reference_minimization_validation_result_review.py
+            tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py
+            .github/workflows/ci-engine-v2-openmm-reference.yml
+            .github/workflows/ci-engine-v2-main.yml
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.10"
+
+      - name: Install pinned CPU and offline-reference dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 numpy==1.26.4 cryptography==46.0.5 openmm==8.4.0.post2
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce architecture boundary
+        run: |
+          python -m compileall -q betelgeuze_engine_v2
+          python tools/check_engine_v2_architecture.py
+
+      - name: Run pinned OpenMM Reference contracts and actual comparisons
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_openmm_reference_contract.py \
+            tests/unit/test_engine_v2_openmm_reference_runtime.py \
+            tests/unit/test_engine_v2_openmm_reference_result_review_contract.py \
+            tests/unit/test_engine_v2_openmm_reference_result_review_runtime.py \
+            tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py \
+            tests/unit/test_engine_v2_s0_production_evidence_bundle.py

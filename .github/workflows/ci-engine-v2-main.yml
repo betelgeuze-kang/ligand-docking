@@ -17,6 +17,7 @@ on:
       - "README.md"
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
+      - ".github/workflows/ci-engine-v2-openmm-reference.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
@@ -51,6 +52,7 @@ on:
       - "README.md"
       - "README.ko.md"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
+      - ".github/workflows/ci-engine-v2-openmm-reference.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml"
       - ".github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml"
@@ -177,9 +179,16 @@ jobs:
             tests/unit/test_engine_v2_post_merge_state.py
             tests/unit/test_engine_v2_input_identity.py
             tests/unit/test_engine_v2_docking_semantics.py
+            tests/unit/test_engine_v2_geometric_docking_scorer.py
+            tests/unit/test_engine_v2_flexible_geometric_scorer.py
+            tests/unit/test_engine_v2_geometric_rigid_refinement.py
+            tests/unit/test_engine_v2_molecular_torsion_search.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
             tests/unit/test_engine_v2_public_benchmark_materialization.py
+            tests/unit/test_engine_v2_public_benchmark_suite_materialization.py
+            tests/unit/test_engine_v2_public_rigid_docking_diagnostic.py
+            tests/unit/test_engine_v2_public_flexible_docking_diagnostic.py
             tests/unit/test_engine_v2_reference_constrained_minimization.py
             tests/unit/test_engine_v2_reference_diagnostics.py
             tests/unit/test_engine_v2_reference_forcefield_v2.py
@@ -205,6 +214,10 @@ jobs:
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_external_baseline.py
+            tests/unit/test_engine_v2_openmm_reference_contract.py
+            tests/unit/test_engine_v2_openmm_reference_result_review_contract.py
+            tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py
+            tests/unit/test_engine_v2_s0_production_evidence_bundle.py
             docs/engine_v2_pr_overlap_matrix.md
             docs/engine_v2_status.md
             docs/engine_v2_public_api.md
@@ -214,6 +227,7 @@ jobs:
             README.md
             README.ko.md
             .github/workflows/ci-engine-v2-external-baseline.yml
+            .github/workflows/ci-engine-v2-openmm-reference.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-preparation.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-hydrogen-coordinates.yml
             .github/workflows/ci-engine-v2-mmcif-nonpoly-all-atom-systems.yml
@@ -326,9 +340,16 @@ jobs:
             tests/unit/test_engine_v2_post_merge_state.py \
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
+            tests/unit/test_engine_v2_geometric_docking_scorer.py \
+            tests/unit/test_engine_v2_flexible_geometric_scorer.py \
+            tests/unit/test_engine_v2_geometric_rigid_refinement.py \
+            tests/unit/test_engine_v2_molecular_torsion_search.py \
             tests/unit/test_engine_v2_benchmark_contracts.py \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
             tests/unit/test_engine_v2_public_benchmark_materialization.py \
+            tests/unit/test_engine_v2_public_benchmark_suite_materialization.py \
+            tests/unit/test_engine_v2_public_rigid_docking_diagnostic.py \
+            tests/unit/test_engine_v2_public_flexible_docking_diagnostic.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_diagnostics.py \
             tests/unit/test_engine_v2_reference_forcefield_v2.py \
@@ -353,7 +374,11 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
-            tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
+            tests/unit/test_engine_v2_external_baseline.py \
+            tests/unit/test_engine_v2_openmm_reference_contract.py \
+            tests/unit/test_engine_v2_openmm_reference_result_review_contract.py \
+            tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py \
+            tests/unit/test_engine_v2_s0_production_evidence_bundle.py > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
           exit "$status"
@@ -536,8 +561,8 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_at_public_benchmark_reference_materialization_contract"
-          assert len(capability_snapshot()["capabilities"]) == 48
+          assert capability_snapshot()["implementation_stage"] == "v2_at_s0_production_evidence_bundle_contract"
+          assert len(capability_snapshot()["capabilities"]) == 50
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (
               FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256

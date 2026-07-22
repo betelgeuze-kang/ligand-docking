@@ -117,6 +117,18 @@ jobs:
           assert not any(name == "api" or name.startswith("api.") for name in sys.modules)
           assert not any(name == "core" or name.startswith("core.") for name in sys.modules)
           PY
+          "$venv/bin/betelgeuze-engine-v2-s0-review" contract > s0-contract.json
+          "$venv/bin/python" - <<'PY'
+          import json
+          from pathlib import Path
+          from betelgeuze_engine_v2.offline.s0_production_evidence_bundle import (
+              FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256,
+          )
+
+          contract = json.loads(Path("s0-contract.json").read_text(encoding="ascii"))
+          assert contract["contract_sha256"] == FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256
+          PY
+          "$venv/bin/betelgeuze-engine-v2-s0-review" --help | grep -q "never accepts a private key"
 
       - name: Record support boundary
         run: |

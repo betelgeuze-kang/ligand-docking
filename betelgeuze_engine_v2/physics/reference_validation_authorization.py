@@ -11,10 +11,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import hashlib
-import hmac
 import json
 import re
 from typing import Any, Mapping, Sequence
+
+from .reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    sign_ed25519,
+    verify_ed25519,
+)
 
 from .reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
@@ -33,20 +38,23 @@ from .reference_validation_review import (
 
 
 REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_authorization_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_authorization_contract/3.0.0"
 )
 REFERENCE_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_authorization_receipt/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_authorization_receipt/3.0.0"
 )
 REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
-    "cpu_reference_validation_execution_authorization_contract/2.0.0"
+    "cpu_reference_validation_execution_authorization_contract/3.0.0"
 )
-REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "2.0.0"
-REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
-REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "hmac-sha256"
+REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "3.0.0"
+REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
+    "5a89ce5c7e7e9b0f1e298e0633f17f3cf5cbad37e10ece6e3fb9fe8e268be202"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V2 = (
     "39ba89968afdeb6886bfc0bb3c67a99a516a7db46e475c02b7f0ee1728b10cfb"
 )
 LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID_V1 = (
@@ -141,15 +149,20 @@ def _require_key_id(value: object) -> str:
 
 
 def _require_key(value: bytes | str, *, name: str) -> bytes:
-    if isinstance(value, str):
-        key = value.encode("utf-8")
-    elif isinstance(value, bytes):
+    if isinstance(value, bytes):
         key = value
+    elif isinstance(value, str):
+        try:
+            key = bytes.fromhex(value)
+        except ValueError as exc:
+            raise ReferenceValidationAuthorizationError(
+                f"{name} is not hexadecimal"
+            ) from exc
     else:
-        raise ReferenceValidationAuthorizationError(f"{name} must be bytes or text")
-    if len(key) < 32:
+        raise ReferenceValidationAuthorizationError(f"{name} must be bytes or hex")
+    if len(key) != 32:
         raise ReferenceValidationAuthorizationError(
-            f"{name} must contain at least 32 bytes"
+            f"{name} must contain exactly 32 bytes"
         )
     return key
 
@@ -223,6 +236,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "replace_symmetric_hmac_with_public_key_ed25519_verification",
         "purpose": {
             "scope": "future_single_run_synthetic_cpu_validation_authorization",
             "contract_definition_only": True,
@@ -252,6 +269,8 @@ def _contract_projection() -> dict[str, Any]:
             "authorization_operator_identity_required": True,
             "all_three_identities_must_be_pairwise_distinct": True,
             "trusted_operator_key_supplied_out_of_band": True,
+            "verifier_trust_anchor_contains_public_key_only": True,
+            "private_signing_key_remains_external_to_verifier": True,
             "repository_does_not_choose_or_bundle_trusted_operator_keys": True,
         },
         "receipt_schema": {
@@ -331,7 +350,7 @@ def require_reference_validation_authorization_contract_document(
 
 @dataclass(frozen=True, slots=True)
 class AuthorizationOperatorTrustAnchor:
-    """Out-of-band operator identity and HMAC verification key."""
+    """Out-of-band operator identity and Ed25519 public key."""
 
     operator_identity_sha256: str
     verification_key: bytes = field(repr=False)
@@ -665,10 +684,16 @@ def build_signed_reference_validation_authorization_receipt(
     payload = dict(projection)
     payload["receipt_sha256"] = _sha256(projection)
     key = _require_key(signing_key, name="authorization signing key")
+    try:
+        signature = sign_ed25519(_canonical_bytes(payload), key)
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceValidationAuthorizationError(
+            "authorization receipt Ed25519 signing failed"
+        ) from exc
     payload["signature"] = {
         "algorithm": REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM,
         "key_id": _require_key_id(authorization_key_id),
-        "value": hmac.new(key, _canonical_bytes(payload), hashlib.sha256).hexdigest(),
+        "value": signature,
     }
     return payload
 
@@ -766,16 +791,16 @@ def verify_signed_reference_validation_authorization_receipt(
         raise ReferenceValidationAuthorizationError(
             "trusted authorization operator entry has an invalid type"
         )
-    expected_signature = hmac.new(
-        anchor.verification_key,
-        _canonical_bytes(payload),
-        hashlib.sha256,
-    ).hexdigest()
     signature_value = signature.get("value")
-    if not isinstance(signature_value, str) or not hmac.compare_digest(
-        signature_value,
-        expected_signature,
-    ):
+    try:
+        verified = verify_ed25519(
+            _canonical_bytes(payload), signature_value, anchor.verification_key
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceValidationAuthorizationError(
+            "authorization receipt Ed25519 verifier is unavailable"
+        ) from exc
+    if not verified:
         raise ReferenceValidationAuthorizationError(
             "authorization receipt signature verification failed"
         )
@@ -957,6 +982,7 @@ def reference_validation_authorization_contract_decision() -> dict[str, Any]:
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V2",
     "FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_ID",
     "REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID",

@@ -5,6 +5,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
+
 from betelgeuze_engine_v2.physics.reference_validation_artifact_binding import (
     FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
 )
@@ -29,8 +33,10 @@ REVIEWER_IDENTITY = "b" * 64
 OTHER_REVIEWER_IDENTITY = "c" * 64
 NONCE_SHA256 = "d" * 64
 KEY_ID = "independent-reviewer-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OTHER_KEY = b"other-key-material-is-test-only-32-bytes-minimum"
+REVIEW_PRIVATE_KEY = bytes.fromhex("11" * 32)
+REVIEW_KEY = ed25519_public_key_bytes(REVIEW_PRIVATE_KEY)
+OTHER_PRIVATE_KEY = bytes.fromhex("12" * 32)
+OTHER_KEY = ed25519_public_key_bytes(OTHER_PRIVATE_KEY)
 REVIEWED_AT = datetime(2026, 7, 17, 4, 0, 0, tzinfo=timezone.utc)
 EXPIRES_AT = REVIEWED_AT + timedelta(days=7)
 CHECKED_AT = REVIEWED_AT + timedelta(hours=1)
@@ -52,7 +58,7 @@ def _attestation(**overrides: object) -> dict[str, object]:
         "implementation_author_identity_sha256": AUTHOR_IDENTITY,
         "independent_reviewer_identity_sha256": REVIEWER_IDENTITY,
         "reviewer_key_id": KEY_ID,
-        "signing_key": REVIEW_KEY,
+        "signing_key": REVIEW_PRIVATE_KEY,
         "reviewed_at": REVIEWED_AT,
         "expires_at": EXPIRES_AT,
         "nonce_sha256": NONCE_SHA256,
@@ -184,6 +190,16 @@ def test_signed_review_attestation_rejects_duplicate_json_or_signature_fields() 
         _verify(attestation)
 
 
+def test_signed_review_attestation_rejects_legacy_hmac_algorithm() -> None:
+    attestation = deepcopy(_attestation())
+    attestation["signature"]["algorithm"] = "hmac-sha256"  # type: ignore[index]
+
+    with pytest.raises(
+        ReferenceValidationReviewError, match="algorithm is unsupported"
+    ):
+        _verify(attestation)
+
+
 @pytest.mark.parametrize(
     ("field", "replacement", "message"),
     (
@@ -285,13 +301,13 @@ def test_signed_review_attestation_enforces_freshness_window() -> None:
 
 def test_review_trust_anchor_redacts_key_from_repr_and_rejects_short_key() -> None:
     anchor = _anchor()
-    assert "review-key-material" not in repr(anchor)
-    with pytest.raises(ReferenceValidationReviewError, match="at least 32 bytes"):
+    assert REVIEW_KEY.hex() not in repr(anchor)
+    with pytest.raises(ReferenceValidationReviewError, match="exactly 32 bytes"):
         ScientificReviewerTrustAnchor(
             reviewer_identity_sha256=REVIEWER_IDENTITY,
             verification_key=b"short",
         )
-    with pytest.raises(ReferenceValidationReviewError, match="bytes or text"):
+    with pytest.raises(ReferenceValidationReviewError, match="bytes or hex"):
         ScientificReviewerTrustAnchor(
             reviewer_identity_sha256=REVIEWER_IDENTITY,
             verification_key=32,  # type: ignore[arg-type]

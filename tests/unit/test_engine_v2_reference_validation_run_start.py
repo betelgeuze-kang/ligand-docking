@@ -11,6 +11,10 @@ import stat
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
+
 from betelgeuze_engine_v2.physics.reference_validation_authorization import (
     AuthorizationOperatorTrustAnchor,
     build_signed_reference_validation_authorization_receipt,
@@ -60,8 +64,10 @@ AUTHORIZATION_NONCE = "e" * 64
 NETWORK_NAMESPACE_IDENTITY = "f" * 64
 REVIEW_KEY_ID = "independent-reviewer-2026-07"
 OPERATOR_KEY_ID = "validation-operator-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OPERATOR_KEY = b"operator-key-material-is-test-only-32-bytes-minimum"
+REVIEW_PRIVATE_KEY = bytes.fromhex("41" * 32)
+REVIEW_KEY = ed25519_public_key_bytes(REVIEW_PRIVATE_KEY)
+OPERATOR_PRIVATE_KEY = bytes.fromhex("42" * 32)
+OPERATOR_KEY = ed25519_public_key_bytes(OPERATOR_PRIVATE_KEY)
 REVIEWED_AT = datetime(2026, 7, 17, 5, 0, 0, tzinfo=timezone.utc)
 REVIEW_EXPIRES_AT = REVIEWED_AT + timedelta(days=7)
 ISSUED_AT = REVIEWED_AT + timedelta(hours=1)
@@ -150,7 +156,7 @@ def _review_attestation() -> dict[str, object]:
         implementation_author_identity_sha256=AUTHOR_IDENTITY,
         independent_reviewer_identity_sha256=REVIEWER_IDENTITY,
         reviewer_key_id=REVIEW_KEY_ID,
-        signing_key=REVIEW_KEY,
+        signing_key=REVIEW_PRIVATE_KEY,
         reviewed_at=REVIEWED_AT,
         expires_at=REVIEW_EXPIRES_AT,
         nonce_sha256=REVIEW_NONCE,
@@ -174,7 +180,7 @@ def _authorization_receipt(
         expected_implementation_author_identity_sha256=AUTHOR_IDENTITY,
         authorization_operator_identity_sha256=OPERATOR_IDENTITY,
         authorization_key_id=OPERATOR_KEY_ID,
-        signing_key=OPERATOR_KEY,
+        signing_key=OPERATOR_PRIVATE_KEY,
         issued_at=issued_at,
         expires_at=EXPIRES_AT,
         authorization_nonce_sha256=AUTHORIZATION_NONCE,
@@ -290,7 +296,7 @@ def _network_attestation(
         authorization_nonce_sha256=AUTHORIZATION_NONCE,
         authorization_operator_identity_sha256=OPERATOR_IDENTITY,
         authorization_key_id=OPERATOR_KEY_ID,
-        signing_key=OPERATOR_KEY,
+        signing_key=OPERATOR_PRIVATE_KEY,
         code_commit_sha=CODE_COMMIT_SHA,
         runner_source_sha256=RUNNER_SOURCE_SHA256,
         artifact_output_root_identity_sha256=(

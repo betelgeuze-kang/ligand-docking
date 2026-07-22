@@ -7,9 +7,9 @@ an execution gate.
 
 The implemented carrier primitives are production-only Ed25519 wrappers for
 the lane-specific pre-execution review and authorization.  Each wrapper
-reverifies the exact raw ancestor artifacts.  Energy/force still has HMAC
-upstream review and authorization artifacts; the wrappers therefore must not
-be described as a fully asymmetric chain.
+reverifies the exact raw ancestor artifacts.  Both energy/force and
+minimization use public-key-only Ed25519 upstream review and authorization
+artifacts.  No private or symmetric upstream verification material is accepted.
 """
 
 from __future__ import annotations
@@ -83,26 +83,20 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
 )
 
 
-VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_validation_production_review_authorization_custody_"
-    "extension_contract/3.0.0"
-)
-VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_ID = (
-    "engine_v2_synthetic_validation_production_review_authorization_custody_"
-    "extension/3.0.0"
-)
-VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_VERSION = "3.0.0"
+VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/4.0.0"
+VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_ID = "engine_v2_synthetic_validation_production_review_authorization_custody_extension/4.0.0"
+VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_VERSION = "4.0.0"
 VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_FROZEN_AT_UTC = (
-    "2026-07-22T01:17:31Z"
+    "2026-07-22T12:00:00Z"
 )
 PRODUCTION_PRE_EXECUTION_REVIEW_CARRIER_SCHEMA_ID = (
-    "betelgeuze.engine_v2_production_pre_execution_review_carrier/1.0.0"
+    "betelgeuze.engine_v2_production_pre_execution_review_carrier/2.0.0"
 )
 PRODUCTION_AUTHORIZATION_CARRIER_SCHEMA_ID = (
-    "betelgeuze.engine_v2_production_authorization_carrier/1.0.0"
+    "betelgeuze.engine_v2_production_authorization_carrier/2.0.0"
 )
 PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_EVENT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_production_review_authorization_custody_extension_event/1.0.0"
+    "betelgeuze.engine_v2_production_review_authorization_custody_extension_event/2.0.0"
 )
 PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_SIGNATURE_ALGORITHM = "ed25519"
 PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_LANES = (
@@ -123,8 +117,11 @@ PRODUCTION_REVIEW_AUTHORIZATION_MAX_ARGV_ITEM_BYTES = 4 * 1024
 PRODUCTION_REVIEW_AUTHORIZATION_MAX_ARGV_TOTAL_BYTES = 64 * 1024
 PRODUCTION_REVIEW_AUTHORIZATION_MAX_EXTERNAL_SEQUENCE_ITEMS = 4096
 PRODUCTION_REVIEW_AUTHORIZATION_MAX_EXTERNAL_SEQUENCE_TOTAL_BYTES = 256 * 1024
-PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_BYTES = 4 * 1024
-PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_TOTAL_BYTES = 4 * 1024 * 1024
+PRODUCTION_REVIEW_AUTHORIZATION_ED25519_PUBLIC_KEY_BYTES = 32
+PRODUCTION_REVIEW_AUTHORIZATION_MAX_PUBLIC_KEY_TOTAL_BYTES = (
+    PRODUCTION_REVIEW_AUTHORIZATION_MAX_TRUST_ANCHORS
+    * PRODUCTION_REVIEW_AUTHORIZATION_ED25519_PUBLIC_KEY_BYTES
+)
 PRODUCTION_REVIEW_AUTHORIZATION_MAX_JSON_DEPTH = 128
 PRODUCTION_REVIEW_AUTHORIZATION_MAX_STATUS_LINEAGE_ITEMS = 64
 PRODUCTION_REVIEW_AUTHORIZATION_MAX_STATUS_LINEAGE_TOTAL_BYTES = 16 * 1024 * 1024
@@ -132,6 +129,9 @@ PRODUCTION_REVIEW_AUTHORIZATION_MAX_STATUS_LINEAGE_TOTAL_BYTES = 16 * 1024 * 102
 # Filled after the canonical projection is finalized.  Contract access fails
 # closed if any later edit changes the projection.
 FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = (
+    "4cd2e6d080628ab0f371ee97caa6347e4535a11109f3d1ea4937deba95f8f275"
+)
+FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3 = (
     "b41e48da2d11118e3e3fabae0ef83694f4b0fbebb28b6f46cb6ab39613f961c3"
 )
 FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2 = (
@@ -158,7 +158,6 @@ _BLOCKERS = (
     "production_pre_execution_review_carrier_not_provisioned",
     "production_authorization_carrier_not_provisioned",
     "production_review_authorization_custody_events_not_provisioned",
-    "energy_force_upstream_symmetric_hmac_chain",
     "trusted_production_review_key_not_provisioned",
     "trusted_production_authorization_key_not_provisioned",
     "external_custody_successor_uniqueness_not_provisioned",
@@ -657,14 +656,14 @@ def _trusted_review_keys(arguments: object, *, lane: str) -> dict[str, object]:
             raise ValidationProductionReviewAuthorizationCustodyExtensionError(
                 "upstream reviewer trust material is invalid"
             )
-        if lane == "energy_force" and len(material) > (
-            PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_BYTES
-        ):
+        if len(material) != PRODUCTION_REVIEW_AUTHORIZATION_ED25519_PUBLIC_KEY_BYTES:
             raise ValidationProductionReviewAuthorizationCustodyExtensionError(
-                "upstream HMAC reviewer key exceeds its fixed byte bound"
+                "upstream reviewer public key must contain exactly 32 bytes"
             )
         total_key_bytes += len(material)
-        if total_key_bytes > (PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_TOTAL_BYTES):
+        if total_key_bytes > (
+            PRODUCTION_REVIEW_AUTHORIZATION_MAX_PUBLIC_KEY_TOTAL_BYTES
+        ):
             raise ValidationProductionReviewAuthorizationCustodyExtensionError(
                 "upstream reviewer trust material exceeds its aggregate byte bound"
             )
@@ -1045,7 +1044,7 @@ def _review_projection(
         "signed_at_utc": signed_at_utc,
         "expires_at_utc": expires_at_utc,
         "upstream_review_reverified": True,
-        "full_asymmetric_chain_established": False,
+        "full_asymmetric_chain_established": True,
         **_CLAIM_POLICY,
         "superseded": False,
         "revoked": False,
@@ -1625,14 +1624,14 @@ def _trusted_operator_keys(
             raise ValidationProductionReviewAuthorizationCustodyExtensionError(
                 "upstream authorization operator trust material is invalid"
             )
-        if lane == "energy_force" and len(material) > (
-            PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_BYTES
-        ):
+        if len(material) != PRODUCTION_REVIEW_AUTHORIZATION_ED25519_PUBLIC_KEY_BYTES:
             raise ValidationProductionReviewAuthorizationCustodyExtensionError(
-                "upstream HMAC operator key exceeds its fixed byte bound"
+                "upstream operator public key must contain exactly 32 bytes"
             )
         total_key_bytes += len(material)
-        if total_key_bytes > (PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_TOTAL_BYTES):
+        if total_key_bytes > (
+            PRODUCTION_REVIEW_AUTHORIZATION_MAX_PUBLIC_KEY_TOTAL_BYTES
+        ):
             raise ValidationProductionReviewAuthorizationCustodyExtensionError(
                 "upstream operator trust material exceeds its aggregate byte bound"
             )
@@ -2125,7 +2124,7 @@ def _authorization_projection(
         "pre_execution_review_reverified": True,
         "upstream_review_and_authorization_reverified": True,
         "eligible_for_atomic_execution_reservation": False,
-        "full_asymmetric_chain_established": False,
+        "full_asymmetric_chain_established": True,
         **_CLAIM_POLICY,
         "superseded": False,
         "revoked": False,
@@ -3623,7 +3622,7 @@ def _extension_event_projection(
         "requires_full_raw_prefix_reverification": True,
         "custody_successor_uniqueness_enforced": False,
         "eligible_for_atomic_execution_reservation": False,
-        "full_asymmetric_chain_established": False,
+        "full_asymmetric_chain_established": True,
         **_CLAIM_POLICY,
         "superseded": False,
         "revoked": False,
@@ -4684,9 +4683,9 @@ def _contract_projection() -> dict[str, Any]:
             VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_FROZEN_AT_UTC
         ),
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3
         ),
-        "refreeze_reason": "binds_refrozen_minimization_projection_headroom_review_authorization_chain",
+        "refreeze_reason": "binds_energy_force_ed25519_public_key_review_authorization_chain",
         "purpose": {
             "additive_companion_only": True,
             "base_custody_v1_modified": False,
@@ -4742,9 +4741,12 @@ def _contract_projection() -> dict[str, Any]:
             "maximum_validity_seconds": int(
                 PRODUCTION_PRE_EXECUTION_REVIEW_CARRIER_MAX_VALIDITY.total_seconds()
             ),
-            "energy_force_upstream_signature_algorithm": "hmac-sha256",
+            "energy_force_upstream_signature_algorithm": "ed25519",
             "minimization_upstream_signature_algorithm": "ed25519",
-            "full_asymmetric_chain_established": False,
+            "upstream_public_key_verification_only": True,
+            "upstream_private_or_symmetric_verification_material_accepted": False,
+            "full_asymmetric_signature_chain_implemented": True,
+            "production_asymmetric_signature_chain_provisioned": False,
         },
         "authorization": {
             "stage": "authorization",
@@ -4765,9 +4767,12 @@ def _contract_projection() -> dict[str, Any]:
                 PRODUCTION_AUTHORIZATION_CARRIER_MAX_VALIDITY.total_seconds()
             ),
             "eligible_for_atomic_execution_reservation": False,
-            "energy_force_upstream_signature_algorithm": "hmac-sha256",
+            "energy_force_upstream_signature_algorithm": "ed25519",
             "minimization_upstream_signature_algorithm": "ed25519",
-            "full_asymmetric_chain_established": False,
+            "upstream_public_key_verification_only": True,
+            "upstream_private_or_symmetric_verification_material_accepted": False,
+            "full_asymmetric_signature_chain_implemented": True,
+            "production_asymmetric_signature_chain_provisioned": False,
         },
         "custody_extension_event": {
             "implemented_sequences": [3, 4],
@@ -4791,7 +4796,8 @@ def _contract_projection() -> dict[str, Any]:
             "custody_successor_uniqueness_enforced": False,
             "external_append_only_compare_and_set_log_required": True,
             "eligible_for_atomic_execution_reservation": False,
-            "full_asymmetric_chain_established": False,
+            "full_asymmetric_signature_chain_implemented": True,
+            "production_asymmetric_signature_chain_provisioned": False,
         },
         "custody_scope": {
             "base_verified_stage_sequence": [
@@ -4839,11 +4845,11 @@ def _contract_projection() -> dict[str, Any]:
             "external_sequence_max_total_bytes": (
                 PRODUCTION_REVIEW_AUTHORIZATION_MAX_EXTERNAL_SEQUENCE_TOTAL_BYTES
             ),
-            "energy_hmac_key_max_bytes": (
-                PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_BYTES
+            "upstream_ed25519_public_key_exact_bytes": (
+                PRODUCTION_REVIEW_AUTHORIZATION_ED25519_PUBLIC_KEY_BYTES
             ),
-            "energy_hmac_key_total_max_bytes": (
-                PRODUCTION_REVIEW_AUTHORIZATION_MAX_HMAC_KEY_TOTAL_BYTES
+            "upstream_public_key_total_max_bytes": (
+                PRODUCTION_REVIEW_AUTHORIZATION_MAX_PUBLIC_KEY_TOTAL_BYTES
             ),
             "json_maximum_nesting_depth": (
                 PRODUCTION_REVIEW_AUTHORIZATION_MAX_JSON_DEPTH
@@ -4915,8 +4921,9 @@ def validation_production_review_authorization_custody_extension_decision() -> d
         "authorization_carrier_implemented": True,
         "custody_extension_event_implemented": True,
         "base_custody_v1_modified": False,
-        "full_asymmetric_chain_established": False,
-        "energy_force_upstream_symmetric_hmac_chain": True,
+        "full_asymmetric_signature_chain_implemented": True,
+        "production_asymmetric_signature_chain_provisioned": False,
+        "energy_force_upstream_symmetric_hmac_chain": False,
         "custody_successor_uniqueness_enforced": False,
         "actual_production_artifact_present": False,
         "production_validation_execution_authorized": False,
@@ -4930,6 +4937,7 @@ def validation_production_review_authorization_custody_extension_decision() -> d
 
 
 __all__ = [
+    "FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3",
     "FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2",
     "FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V1",
     "FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256",

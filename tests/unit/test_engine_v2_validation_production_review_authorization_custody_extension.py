@@ -45,7 +45,7 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
     build_signed_production_evidence_status_snapshot,
 )
 from betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension import (
-    FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2,
+    FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3,
     FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
     PRODUCTION_AUTHORIZATION_CARRIER_SCHEMA_ID,
     PRODUCTION_PRE_EXECUTION_REVIEW_CARRIER_SCHEMA_ID,
@@ -100,7 +100,8 @@ MINIMIZATION_REVIEW_KEY_ID = "minimization-upstream-reviewer-2026-07"
 PRODUCTION_REVIEW_KEY_ID = "production-reviewer-2026-07"
 EVIDENCE_AUTHORITY_KEY_ID = "evidence-authority-2026-07"
 STATUS_AUTHORITY_KEY_ID = "status-authority-2026-07"
-ENERGY_REVIEW_KEY = b"energy-hmac-review-key-material-for-test-only"
+ENERGY_REVIEW_KEY = bytes.fromhex("01" * 32)
+ENERGY_REVIEW_PUBLIC_KEY = ed25519_public_key_bytes(ENERGY_REVIEW_KEY)
 MINIMIZATION_REVIEW_PRIVATE_KEY = bytes.fromhex("11" * 32)
 PRODUCTION_REVIEW_PRIVATE_KEY = bytes.fromhex("22" * 32)
 UPSTREAM_AUTHORIZATION_OPERATOR_IDENTITY = "81" * 32
@@ -108,7 +109,8 @@ PRODUCTION_AUTHORIZATION_OPERATOR_IDENTITY = "91" * 32
 ENERGY_AUTHORIZATION_KEY_ID = "energy-upstream-authorization-2026-07"
 MINIMIZATION_AUTHORIZATION_KEY_ID = "minimization-upstream-authorization-2026-07"
 PRODUCTION_AUTHORIZATION_KEY_ID = "production-authorization-2026-07"
-ENERGY_AUTHORIZATION_KEY = b"energy-hmac-authorization-key-material-for-test-only"
+ENERGY_AUTHORIZATION_KEY = bytes.fromhex("02" * 32)
+ENERGY_AUTHORIZATION_PUBLIC_KEY = ed25519_public_key_bytes(ENERGY_AUTHORIZATION_KEY)
 MINIMIZATION_AUTHORIZATION_PRIVATE_KEY = bytes.fromhex("33" * 32)
 PRODUCTION_AUTHORIZATION_PRIVATE_KEY = bytes.fromhex("44" * 32)
 AUTHORIZATION_ISSUED_AT = SIGNED_AT + timedelta(minutes=15)
@@ -252,7 +254,7 @@ def _upstream_arguments(lane: str) -> dict[str, object]:
         trust = {
             ENERGY_REVIEW_KEY_ID: ScientificReviewerTrustAnchor(
                 UPSTREAM_REVIEWER_IDENTITY,
-                ENERGY_REVIEW_KEY,
+                ENERGY_REVIEW_PUBLIC_KEY,
             )
         }
     else:
@@ -375,7 +377,7 @@ def _authorization_arguments(lane: str, **overrides: object) -> dict[str, object
         operator_trust: dict[str, object] = {
             ENERGY_AUTHORIZATION_KEY_ID: AuthorizationOperatorTrustAnchor(
                 UPSTREAM_AUTHORIZATION_OPERATOR_IDENTITY,
-                ENERGY_AUTHORIZATION_KEY,
+                ENERGY_AUTHORIZATION_PUBLIC_KEY,
             )
         }
         environment_sha256 = ENERGY_EXECUTION_ENVIRONMENT_SHA256
@@ -1142,7 +1144,7 @@ def test_contract_is_frozen_additive_and_claim_closed() -> None:
         FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
     )
     assert contract["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2
+        FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3
     )
     assert contract["purpose"]["base_custody_v1_modified"] is False
     assert contract["purpose"]["pre_execution_review_carrier_implemented"] is True
@@ -1186,10 +1188,11 @@ def test_contract_is_frozen_additive_and_claim_closed() -> None:
         )
         == contract
     )
-    assert decision["full_asymmetric_chain_established"] is False
+    assert decision["full_asymmetric_signature_chain_implemented"] is True
+    assert decision["production_asymmetric_signature_chain_provisioned"] is False
     assert decision["authorization_carrier_implemented"] is True
     assert decision["custody_extension_event_implemented"] is True
-    assert decision["energy_force_upstream_symmetric_hmac_chain"] is True
+    assert decision["energy_force_upstream_symmetric_hmac_chain"] is False
     assert decision["production_validation_execution_authorized"] is False
     assert decision["claim_safe"] is False
 
@@ -1668,7 +1671,7 @@ def test_stage3_carrier_reverifies_exact_raw_review_for_both_lanes(lane: str) ->
     assert carrier["process_launch_identity_sha256"] == (PROCESS_LAUNCH_IDENTITY_SHA256)
     assert carrier["prior_custody_event_sha256"] == PRIOR_CUSTODY_EVENT_SHA256
     assert carrier["upstream_review_reverified"] is True
-    assert carrier["full_asymmetric_chain_established"] is False
+    assert carrier["full_asymmetric_chain_established"] is True
     assert carrier["production_validation_execution_authorized"] is False
     assert carrier["scientifically_validated"] is False
     assert carrier["claim_safe"] is False
@@ -1680,7 +1683,7 @@ def test_stage3_carrier_reverifies_exact_raw_review_for_both_lanes(lane: str) ->
     assert verified.claim_safe is False
 
 
-def test_stage3_rejects_hmac_upstream_tamper_and_raw_transplant() -> None:
+def test_stage3_rejects_ed25519_upstream_tamper_and_raw_transplant() -> None:
     carrier_bytes, raw_review = _carrier("energy_force")
     tampered = json.loads(raw_review.decode("ascii"))
     tampered["review_recommendation"] = "tampered"
@@ -1995,11 +1998,11 @@ def test_stage3_rejects_unused_cross_trust_alias_and_same_ed25519_keypair() -> N
     author_alias_arguments["trusted_reviewer_keys"] = {
         ENERGY_REVIEW_KEY_ID: ScientificReviewerTrustAnchor(
             UPSTREAM_REVIEWER_IDENTITY,
-            ENERGY_REVIEW_KEY,
+            ENERGY_REVIEW_PUBLIC_KEY,
         ),
         "unused-author-alias-2026-07": ScientificReviewerTrustAnchor(
             AUTHOR_IDENTITY,
-            b"unused-upstream-hmac-key-material-for-test",
+            ed25519_public_key_bytes(bytes.fromhex("12" * 32)),
         ),
     }
     with pytest.raises(
@@ -2055,7 +2058,7 @@ def test_stage3_rejects_bound_context_internal_role_alias(
         )
 
 
-def test_stage3_preflights_json_depth_and_energy_hmac_key_bytes() -> None:
+def test_stage3_preflights_json_depth_and_energy_public_key_bytes() -> None:
     raw_review = _raw_review("energy_force")
     deeply_nested = b'{"x":' + (b"[" * 129) + b"0" + (b"]" * 129) + b"}"
     with pytest.raises(
@@ -2079,16 +2082,20 @@ def test_stage3_preflights_json_depth_and_energy_hmac_key_bytes() -> None:
             checked_at=CHECKED_AT,
         )
 
+    invalid_anchor = object.__new__(ScientificReviewerTrustAnchor)
+    object.__setattr__(
+        invalid_anchor,
+        "reviewer_identity_sha256",
+        UPSTREAM_REVIEWER_IDENTITY,
+    )
+    object.__setattr__(invalid_anchor, "verification_key", b"x" * 31)
     oversized_arguments = _upstream_arguments("energy_force")
     oversized_arguments["trusted_reviewer_keys"] = {
-        ENERGY_REVIEW_KEY_ID: ScientificReviewerTrustAnchor(
-            UPSTREAM_REVIEWER_IDENTITY,
-            b"x" * 4097,
-        )
+        ENERGY_REVIEW_KEY_ID: invalid_anchor
     }
     with pytest.raises(
         ValidationProductionReviewAuthorizationCustodyExtensionError,
-        match="HMAC reviewer key exceeds",
+        match="public key must contain exactly 32 bytes",
     ):
         build_signed_production_pre_execution_review_carrier(
             raw_review_attestation_bytes=raw_review,
@@ -2151,7 +2158,7 @@ def test_stage4_authorization_carrier_reverifies_full_raw_prefix_and_is_claim_cl
     assert carrier["pre_execution_review_reverified"] is True
     assert carrier["upstream_review_and_authorization_reverified"] is True
     assert carrier["eligible_for_atomic_execution_reservation"] is False
-    assert carrier["full_asymmetric_chain_established"] is False
+    assert carrier["full_asymmetric_chain_established"] is True
     assert carrier["production_validation_execution_authorized"] is False
     assert carrier["production_validation_results_collected"] is False
     assert carrier["scientifically_validated"] is False
@@ -2653,7 +2660,7 @@ def test_stage4_rejects_unused_cross_role_trust_aliases() -> None:
         **authorization_arguments["trusted_operator_keys"],  # type: ignore[dict-item]
         "unused-upstream-operator-2026-07": AuthorizationOperatorTrustAnchor(
             "13" * 32,
-            ENERGY_REVIEW_KEY,
+            ENERGY_REVIEW_PUBLIC_KEY,
         ),
     }
     with pytest.raises(
@@ -2687,9 +2694,9 @@ def test_stage4_rejects_unused_stage3_reviewer_anchor_aliasing_upstream_operator
         else "14" * 32
     )
     material = (
-        ENERGY_AUTHORIZATION_KEY
+        ENERGY_AUTHORIZATION_PUBLIC_KEY
         if alias_kind == "material"
-        else b"unused-stage3-reviewer-hmac-material-for-test"
+        else ed25519_public_key_bytes(bytes.fromhex("13" * 32))
     )
     stage3_review_arguments["trusted_reviewer_keys"] = {
         **stage3_review_arguments["trusted_reviewer_keys"],  # type: ignore[dict-item]

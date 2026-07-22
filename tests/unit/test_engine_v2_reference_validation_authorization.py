@@ -6,6 +6,10 @@ import json
 
 import pytest
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+)
+
 from betelgeuze_engine_v2.physics.reference_validation_authorization import (
     FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
     REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID,
@@ -39,9 +43,12 @@ REVIEW_NONCE = "e" * 64
 AUTHORIZATION_NONCE = "f" * 64
 REVIEW_KEY_ID = "independent-reviewer-2026-07"
 OPERATOR_KEY_ID = "validation-operator-2026-07"
-REVIEW_KEY = b"review-key-material-is-test-only-32-bytes-minimum"
-OPERATOR_KEY = b"operator-key-material-is-test-only-32-bytes-minimum"
-OTHER_KEY = b"other-key-material-is-test-only-32-bytes-minimum"
+REVIEW_PRIVATE_KEY = bytes.fromhex("21" * 32)
+REVIEW_KEY = ed25519_public_key_bytes(REVIEW_PRIVATE_KEY)
+OPERATOR_PRIVATE_KEY = bytes.fromhex("22" * 32)
+OPERATOR_KEY = ed25519_public_key_bytes(OPERATOR_PRIVATE_KEY)
+OTHER_PRIVATE_KEY = bytes.fromhex("23" * 32)
+OTHER_KEY = ed25519_public_key_bytes(OTHER_PRIVATE_KEY)
 REVIEWED_AT = datetime(2026, 7, 17, 4, 0, 0, tzinfo=timezone.utc)
 REVIEW_EXPIRES_AT = REVIEWED_AT + timedelta(days=7)
 ISSUED_AT = REVIEWED_AT + timedelta(hours=2)
@@ -68,7 +75,7 @@ def _review_attestation() -> dict[str, object]:
         implementation_author_identity_sha256=AUTHOR_IDENTITY,
         independent_reviewer_identity_sha256=REVIEWER_IDENTITY,
         reviewer_key_id=REVIEW_KEY_ID,
-        signing_key=REVIEW_KEY,
+        signing_key=REVIEW_PRIVATE_KEY,
         reviewed_at=REVIEWED_AT,
         expires_at=REVIEW_EXPIRES_AT,
         nonce_sha256=REVIEW_NONCE,
@@ -101,7 +108,7 @@ def _receipt(**overrides: object) -> dict[str, object]:
         "expected_implementation_author_identity_sha256": AUTHOR_IDENTITY,
         "authorization_operator_identity_sha256": OPERATOR_IDENTITY,
         "authorization_key_id": OPERATOR_KEY_ID,
-        "signing_key": OPERATOR_KEY,
+        "signing_key": OPERATOR_PRIVATE_KEY,
         "issued_at": ISSUED_AT,
         "expires_at": EXPIRES_AT,
         "authorization_nonce_sha256": AUTHORIZATION_NONCE,
@@ -253,6 +260,17 @@ def test_signed_authorization_receipt_rejects_duplicate_json_or_signature_fields
     assert isinstance(signature, dict)
     signature["unexpected"] = False
     with pytest.raises(ReferenceValidationAuthorizationError, match="signature fields"):
+        _verify(receipt)
+
+
+def test_signed_authorization_receipt_rejects_legacy_hmac_algorithm() -> None:
+    receipt = deepcopy(_receipt())
+    receipt["signature"]["algorithm"] = "hmac-sha256"  # type: ignore[index]
+
+    with pytest.raises(
+        ReferenceValidationAuthorizationError,
+        match="signature algorithm is unsupported",
+    ):
         _verify(receipt)
 
 
@@ -467,12 +485,10 @@ def test_signed_authorization_receipt_rejects_expected_dependency_crosswire(
 
 def test_authorization_trust_anchor_redacts_key_and_rejects_invalid_keys() -> None:
     anchor = AuthorizationOperatorTrustAnchor(OPERATOR_IDENTITY, OPERATOR_KEY)
-    assert "operator-key-material" not in repr(anchor)
-    with pytest.raises(
-        ReferenceValidationAuthorizationError, match="at least 32 bytes"
-    ):
+    assert OPERATOR_KEY.hex() not in repr(anchor)
+    with pytest.raises(ReferenceValidationAuthorizationError, match="exactly 32 bytes"):
         AuthorizationOperatorTrustAnchor(OPERATOR_IDENTITY, b"short")
-    with pytest.raises(ReferenceValidationAuthorizationError, match="bytes or text"):
+    with pytest.raises(ReferenceValidationAuthorizationError, match="bytes or hex"):
         AuthorizationOperatorTrustAnchor(
             OPERATOR_IDENTITY,
             32,  # type: ignore[arg-type]

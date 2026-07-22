@@ -495,11 +495,95 @@ _IDENTITIES = (
         "2026-07-22T00:00:00Z",
         "cf1eafa05f58320ae71a2e2a781dc801d0dcedb326d29b310c8a734daae63069",
     ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_review_contract/2.0.0",
+        "cpu_reference_validation_independent_review_contract/2.0.0",
+        "2.0.0",
+        "2026-07-18T22:48:58Z",
+        "24508ab9947688ae981479148fbcb9cf67b3fa9147631609f49864c71be421d2",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_authorization_contract/2.0.0",
+        "cpu_reference_validation_execution_authorization_contract/2.0.0",
+        "2.0.0",
+        "2026-07-18T22:48:58Z",
+        "39ba89968afdeb6886bfc0bb3c67a99a516a7db46e475c02b7f0ee1728b10cfb",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_execution_environment_contract/2.0.0",
+        "cpu_reference_validation_execution_environment_contract/2.0.0",
+        "2.0.0",
+        "2026-07-18T22:48:58Z",
+        "e6e5e124e5391ba0f04cc2db60f5195f6a31f73782f13956eec878a4ceae5894",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_result_receipt_contract/2.0.0",
+        "cpu_reference_validation_result_receipt_contract/2.0.0",
+        "2.0.0",
+        "2026-07-18T22:48:58Z",
+        "e746de80faa7950cddc05c9bb575f053a63b1427e8c6c3a4f5cc9bb8a20ccb89",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/2.0.0",
+        "cpu_reference_validation_atomic_nonce_reservation/2.0.0",
+        "2.0.0",
+        "2026-07-18T22:48:58Z",
+        "1e9cc7d18b78f57a34f7399da0bd6f7a755658142dfd5c91b86e952b02e94f5f",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_run_start_contract/2.0.0",
+        "cpu_reference_validation_run_start_environment/2.0.0",
+        "2.0.0",
+        "2026-07-18T22:48:58Z",
+        "826024deb27c8e20fc8a47960bf63780dabb7ec35a9ef16a5c252ceda69570ff",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_runner_contract/4.0.0",
+        "cpu_reference_validation_bounded_runner/4.0.0",
+        "4.0.0",
+        "2026-07-19T00:00:00Z",
+        "baeb0ae59234cf69154b0ed34658d779fdc0cfec05c969856056a586be13bad8",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_result_writer_contract/4.0.0",
+        "cpu_reference_validation_result_receipt_writer/4.0.0",
+        "4.0.0",
+        "2026-07-19T00:00:00Z",
+        "183ff823795a166bb72647b34f118c480f2f785788123a31a4a95900d196dc24",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_validation_result_review_contract/1.0.0",
+        "cpu_reference_energy_force_independent_result_review_contract/1.0.0",
+        "1.0.0",
+        "2026-07-19T01:00:00Z",
+        "6c8cfb583f6d52ca17338fa0e84d5c5740da0820750dd9d99df1f309b888140a",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/3.0.0",
+        "engine_v2_synthetic_validation_production_review_authorization_custody_extension/3.0.0",
+        "3.0.0",
+        "2026-07-22T01:17:31Z",
+        "b41e48da2d11118e3e3fabae0ef83694f4b0fbebb28b6f46cb6ab39613f961c3",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_custody_extension_contract/3.0.0",
+        "engine_v2_synthetic_validation_production_reservation_custody_extension/3.0.0",
+        "3.0.0",
+        "2026-07-22T01:17:31Z",
+        "52583222d95cf342d5a2aa5db575cf6936343cbc12e69982903362408d3f481f",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/13.0.0",
+        "engine_v2_synthetic_validation_runtime_integrity/13.0.0",
+        "13.0.0",
+        "2026-07-22T03:00:00Z",
+        "1121a8a8a68fd8d2b41618404a8bff389307dc55de754a6400f00567f83c94d6",
+    ),
 )
 
-LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID: Mapping[str, LegacyValidationContractIdentity] = MappingProxyType(
-    {identity.schema_id: identity for identity in _IDENTITIES}
-)
+LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID: Mapping[
+    str, LegacyValidationContractIdentity
+] = MappingProxyType({identity.schema_id: identity for identity in _IDENTITIES})
 
 if len(LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID) != len(_IDENTITIES):
     raise RuntimeError("legacy validation contract schema IDs must be unique")
@@ -511,7 +595,9 @@ def _require_json_tree(value: object, *, path: str = "$") -> None:
     if isinstance(value, float):
         if math.isfinite(value):
             return
-        raise LegacyValidationContractError(f"legacy validation contract document has a non-finite value at {path}")
+        raise LegacyValidationContractError(
+            f"legacy validation contract document has a non-finite value at {path}"
+        )
     if isinstance(value, list):
         for index, item in enumerate(value):
             _require_json_tree(item, path=f"{path}[{index}]")
@@ -519,10 +605,14 @@ def _require_json_tree(value: object, *, path: str = "$") -> None:
     if isinstance(value, dict):
         for key, item in value.items():
             if not isinstance(key, str):
-                raise LegacyValidationContractError("legacy validation contract document has a non-string JSON key")
+                raise LegacyValidationContractError(
+                    "legacy validation contract document has a non-string JSON key"
+                )
             _require_json_tree(item, path=f"{path}.{key}")
         return
-    raise LegacyValidationContractError(f"legacy validation contract document has a non-JSON value at {path}")
+    raise LegacyValidationContractError(
+        f"legacy validation contract document has a non-JSON value at {path}"
+    )
 
 
 def _canonical_ascii_json_bytes(value: object) -> bytes:
@@ -536,7 +626,9 @@ def _canonical_ascii_json_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError, UnicodeError) as exc:
-        raise LegacyValidationContractError("legacy validation contract document is not canonical ASCII JSON") from exc
+        raise LegacyValidationContractError(
+            "legacy validation contract document is not canonical ASCII JSON"
+        ) from exc
 
 
 def require_legacy_validation_contract_document(
@@ -549,16 +641,22 @@ def require_legacy_validation_contract_document(
     """
 
     if not isinstance(value, Mapping):
-        raise LegacyValidationContractError("legacy validation contract document must be a mapping")
+        raise LegacyValidationContractError(
+            "legacy validation contract document must be a mapping"
+        )
     document = dict(value)
     _canonical_ascii_json_bytes(document)
 
     schema_id = document.get("schema_id")
     if not isinstance(schema_id, str):
-        raise LegacyValidationContractError("legacy validation contract document schema_id must be a string")
+        raise LegacyValidationContractError(
+            "legacy validation contract document schema_id must be a string"
+        )
     identity = LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID.get(schema_id)
     if identity is None:
-        raise LegacyValidationContractError("legacy validation contract document schema is not registered")
+        raise LegacyValidationContractError(
+            "legacy validation contract document schema is not registered"
+        )
 
     expected_metadata = {
         "schema_id": identity.schema_id,
@@ -566,14 +664,22 @@ def require_legacy_validation_contract_document(
         "contract_version": identity.contract_version,
         "frozen_at_utc": identity.frozen_at_utc,
     }
-    if any(document.get(key) != expected for key, expected in expected_metadata.items()):
-        raise LegacyValidationContractError("legacy validation contract document metadata does not match the registry")
+    if any(
+        document.get(key) != expected for key, expected in expected_metadata.items()
+    ):
+        raise LegacyValidationContractError(
+            "legacy validation contract document metadata does not match the registry"
+        )
     if document.get("contract_sha256") != identity.contract_sha256:
-        raise LegacyValidationContractError("legacy validation contract document hash does not match the registry")
+        raise LegacyValidationContractError(
+            "legacy validation contract document hash does not match the registry"
+        )
 
     projection = dict(document)
     projection.pop("contract_sha256")
-    projection_sha256 = hashlib.sha256(_canonical_ascii_json_bytes(projection)).hexdigest()
+    projection_sha256 = hashlib.sha256(
+        _canonical_ascii_json_bytes(projection)
+    ).hexdigest()
     if projection_sha256 != identity.contract_sha256:
         raise LegacyValidationContractError(
             "legacy validation contract document projection does not match the registry"

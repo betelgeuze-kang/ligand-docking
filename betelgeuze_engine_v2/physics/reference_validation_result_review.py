@@ -1,10 +1,9 @@
 """Independent post-result review for the frozen energy/force validation lane.
 
-The pre-execution scientific-review and execution-authorization artifacts in
-this lane are legacy symmetric-HMAC records.  This leaf review uses Ed25519 so
-that a verifier needs only a result-reviewer public key, but it deliberately
-does not describe the upstream HMAC chain as asymmetric or as external
-custody.  A verified review remains synthetic implementation evidence only.
+The complete scientific-review, execution-authorization, network-attestation,
+and result-review signature chain uses Ed25519 public-key verification.  A
+verified review remains synthetic implementation evidence only and does not by
+itself establish production custody, two-host reproduction, or chemistry.
 """
 
 from __future__ import annotations
@@ -66,16 +65,16 @@ from .reference_validation_runner import (
 
 
 REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_review_contract/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_review_contract/2.0.0"
 )
 REFERENCE_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_review_attestation/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_review_attestation/2.0.0"
 )
 REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_ID = (
-    "cpu_reference_energy_force_independent_result_review_contract/1.0.0"
+    "cpu_reference_energy_force_independent_result_review_contract/2.0.0"
 )
-REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "1.0.0"
-REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-19T01:00:00Z"
+REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "2.0.0"
+REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
 REFERENCE_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_VALIDATION_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
@@ -119,6 +118,9 @@ _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 # Filled after the frozen projection is finalized.  Contract access fails
 # closed if source or any bound dependency drifts.
 FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256 = (
+    "f3fa49486901e7f52046d821a8b026001276fb2e9925067e720b8fba84588d95"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V1 = (
     "6c8cfb583f6d52ca17338fa0e84d5c5740da0820750dd9d99df1f309b888140a"
 )
 
@@ -131,13 +133,12 @@ _REQUIRED_RESULT_REVIEW_CHECK_IDS = (
     "successful_variant_input_component_total_and_force_evidence_reviewed",
     "all_case_variant_metric_and_failure_dispositions_derived",
     "manifest_and_case_worker_requests_transcripts_frames_and_pids_reviewed",
-    "raw_upstream_hmac_review_authorization_and_four_role_chain_reviewed",
+    "raw_upstream_ed25519_review_authorization_and_four_role_chain_reviewed",
     "freshness_revocation_and_supersession_state_reviewed",
     "nonpromotion_and_synthetic_parameter_limitations_acknowledged",
 )
 _REQUIRED_LIMITATION_IDS = (
-    "energy_force_upstream_review_and_authorization_use_symmetric_hmac",
-    "ed25519_leaf_review_does_not_make_the_upstream_chain_asymmetric",
+    "ed25519_signatures_do_not_by_themselves_authenticate_external_custody",
     "synthetic_fixture_values_are_not_reviewed_runtime_parameter_values",
     "contract_result_review_is_not_scientific_force_field_validation",
     "result_review_does_not_establish_two_host_reproducibility",
@@ -151,7 +152,6 @@ _CLOSED_GATE_BLOCKERS = (
     "trusted_independent_result_reviewer_key_not_provided",
     "production_result_receipt_missing",
     "independent_human_production_result_approval_missing",
-    "energy_force_upstream_symmetric_hmac_chain",
     "independent_result_review_dependency_manifest_reverification_missing",
     "result_receipt_external_authenticity_or_custody_missing",
     "worker_process_starttime_and_boot_id_binding_missing",
@@ -164,7 +164,6 @@ _POST_ATTESTATION_BLOCKERS = (
     "production_result_receipt_missing",
     "test_only_result_review_attestation_is_not_production_evidence",
     "independent_human_production_result_approval_missing",
-    "energy_force_upstream_symmetric_hmac_chain",
     "independent_result_review_dependency_manifest_reverification_missing",
     "result_receipt_external_authenticity_or_custody_missing",
     "worker_process_starttime_and_boot_id_binding_missing",
@@ -1665,7 +1664,7 @@ def _verify_upstream_role_chain(
         )
     except ReferenceValidationAuthorizationError as exc:
         raise ReferenceValidationResultReviewError(
-            "result review upstream signed HMAC chain verification failed"
+            "result review upstream signed Ed25519 chain verification failed"
         ) from exc
     expected_rows = {
         "receipt_sha256": binding["authorization_receipt_sha256"],
@@ -1690,7 +1689,7 @@ def _verify_upstream_role_chain(
         for field_name, expected_value in expected_rows.items()
     ):
         raise ReferenceValidationResultReviewError(
-            "result review upstream HMAC roles or identities are cross-wired"
+            "result review upstream Ed25519 roles or identities are cross-wired"
         )
 
 
@@ -1725,6 +1724,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V1
+        ),
+        "refreeze_reason": "binds_complete_public_key_ed25519_upstream_chain",
         "purpose": {
             "scope": "independent_post_result_review_of_one_exact_energy_force_receipt",
             "contract_definition_only": True,
@@ -1750,9 +1753,11 @@ def _contract_projection() -> dict[str, Any]:
             "exact_result_receipt_self_hash_and_out_of_band_hash_required": True,
             "full_current_writer_receipt_validation_required": True,
             "raw_upstream_signed_review_and_authorization_required": True,
-            "upstream_signature_algorithm": "hmac-sha256",
+            "upstream_signature_algorithm": "ed25519",
             "leaf_result_review_signature_algorithm": "ed25519",
-            "full_asymmetric_chain_claimed": False,
+            "full_asymmetric_signature_chain_verified": True,
+            "upstream_verifier_trust_anchors_contain_public_keys_only": True,
+            "private_or_symmetric_verification_keys_allowed": False,
             "independent_live_dependency_manifest_reverification_performed": False,
             "external_worker_launch_authenticity_or_custody_established": False,
             "worker_process_starttime_and_boot_id_bound": False,
@@ -2335,7 +2340,7 @@ def verify_signed_reference_validation_result_review_attestation(
     revoked_result_review_attestation_sha256s: Sequence[str],
     superseded_result_review_attestation_sha256s: Sequence[str],
 ) -> ReferenceValidationResultReviewVerification:
-    """Verify the exact receipt, upstream HMAC chain, and Ed25519 leaf review."""
+    """Verify the exact receipt and complete Ed25519 review chain."""
 
     validated = _validated_result_receipt_document(result_receipt)
     binding = _result_receipt_binding(validated)
@@ -2644,6 +2649,7 @@ __all__ = [
     "CASE_DISPOSITION_REJECTED",
     "FAILURE_DISPOSITION_ACCEPTED",
     "FAILURE_DISPOSITION_REJECTED",
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V1",
     "FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256",
     "METRIC_DISPOSITION_ACCEPTED",
     "METRIC_DISPOSITION_REJECTED",

@@ -35,6 +35,14 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
     assert VERSION_TAXONOMY.engine_api_version != DISTRIBUTION_VERSION
     assert metadata["project"]["version"] == DISTRIBUTION_VERSION
     assert metadata["project"]["requires-python"] == ">=3.10,<3.13"
+    assert metadata["project"]["scripts"] == {
+        "betelgeuze-engine-v2-public-materialize": (
+            "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"
+        ),
+        "betelgeuze-engine-v2-s0-review": (
+            "betelgeuze_engine_v2.offline.s0_production_evidence_bundle:main"
+        )
+    }
     assert set(metadata["project"]["dependencies"]) == {
         "cryptography==46.0.5",
         "numpy>=1.26,<3",
@@ -105,6 +113,8 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert '"$venv/bin/python" -m pip install pip==25.0.1' in workflow
     assert "docs/engine_v2_pr_overlap_matrix.md" in workflow
     assert ".github/workflows/ci-engine-v2-release-candidate.yml" in workflow
+    assert workflow.count("betelgeuze-engine-v2-s0-review") >= 2
+    assert "FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256" in workflow
     action_refs = re.findall(r"uses: [^@\s]+@([^\s]+)", workflow)
     assert action_refs
     assert all(re.fullmatch(r"[0-9a-f]{40}", ref) for ref in action_refs)

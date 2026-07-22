@@ -28,7 +28,7 @@ exact module entrypoint, 그리고 raw chain·environment·runner-start·observa
 sidecar와 digest chain, bounded source/dependency streaming, request-bound worker
 pre/payload/post lifecycle, child-PID 결속, stdout hard byte bound도 구현됐고 minimization과
 energy-force result-review 계약은 source digest와 accepted/rejected disposition을 Ed25519 서명에 결속한다. 그러나 production receipt,
-실제 independent result-review 승인·attestation·trusted result-reviewer key는 포함하지 않는다. Energy-force의 upstream scientific-review와 authorization은 여전히 symmetric HMAC이며, leaf review의 독립 dependency-manifest 재검증과 외부 custody도 미완료다.
+실제 independent result-review 승인·attestation·trusted result-reviewer key는 포함하지 않는다. Energy-force의 upstream scientific-review와 authorization도 공개키 전용 Ed25519로 전환됐으며, leaf review의 독립 dependency-manifest 재검증과 외부 custody는 여전히 미완료다.
 두 lane 공통으로 exact `synthetic_validation_production` evidence class, Ed25519
 pre-execution permit, monotonic status snapshot, permit→status snapshot의 frozen base
 custody와 이를 raw byte로 다시 검증하는 additive companion을 추가했다. Companion은
@@ -184,15 +184,17 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_tautomer_selection_corpus` | CID 177·11199·702 factual identity와 license-review boundary를 결속한 6-case real-world-identity corpus; supported 2·failure 4를 모두 실행 | raw PubChem record·contributor text·conformer bundling, source identity 인증, general chemistry coverage, thermodynamic evidence, legal determination, parameter fitting·과학/benchmark/product 승격 |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
-| `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 v1.1 protocol; bounded offline materializer가 caller-provided exact SDF byte를 검증하고 모든 multi-record parse/match/failure 행, directional V2000 stereo-aware labeled-graph match, bounded automorphism, 모든 일치 reference에 대한 무정렬 receptor-frame RMSD 최솟값과 canonical receipt를 보존 | raw data bundling·network fetch·도킹 benchmark 실행/결과/발표 승인, ligand-only alignment, 독립 chemical standardization, directional bond mark를 넘는 완전한 atom stereo 해석, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
+| `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 v1.1 protocol; bounded offline materializer가 caller-provided exact SDF byte를 검증하고 모든 multi-record parse/match/failure 행, directional V2000 stereo-aware labeled-graph match, bounded automorphism, 모든 일치 reference에 대한 무정렬 receptor-frame RMSD 최솟값과 canonical receipt를 보존; 별도 installable offline suite command가 symlink 없는 local root의 receptor 포함 12개 artifact를 검증하고 4개 case 성공/실패 행을 누락 없이 no-overwrite receipt로 기록 | raw data bundling·network fetch·pose 생성·receptor-ligand validity·scoring/ranking·도킹 benchmark 실행/결과/발표 승인, ligand-only alignment, 독립 chemical standardization, directional bond mark를 넘는 완전한 atom stereo 해석, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 | `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
 | `v2_bounded_cpu_reference_minimization` | single-model CPU float64 입력과 caller-supplied explicit parameter에 한정한 deterministic force-steepest-descent, Armijo backtracking, iteration/backtrack/displacement/neighbor hard bound, failure-inclusive evaluation row, source/topology/parameter/config identity와 exact little-endian binary64 좌표를 결속한 checkpoint/restart | production parameter set·assignment, general chemistry/applicability, improper·constraint·long-range·solvation, 독립 minimization reference/validation, 과학·benchmark·product/customer 승격 |
 | `v2_bounded_cpu_reference_term_diagnostics` | unchanged frozen evaluator의 5개 component energy를 single-model CPU float64의 모든 `6N` plus/minus perturbation에서 중앙차분해 per-term force를 만들고 analytic total force 합계·component net force를 검증하며, non-periodic 입력에 `sum((r-r_center) outer F)` configurational virial·대칭성·uniform-strain derivative를 제공 | independent scientific reference, parameter/applicability validation, pressure/stress, periodic cell-strain virial, improper·constraint·long-range·solvation, 과학·benchmark·product/customer 승격 |
 | `v2_bounded_cpu_reference_improper_constraint_extension` | frozen v1 evaluator·parameter source를 변경하지 않는 별도 versioned schema에서 ordered-star `asin` out-of-plane harmonic improper energy·autograd force와 simultaneous equal-weight degree-relaxed Jacobi distance projection을 제공하고, single-model CPU float64에서 초기 상태와 모든 trial을 제약면에 투영한 뒤 bounded iterative tangent-force projection과 실제 projected displacement Armijo 감소를 적용하는 constrained minimization·exact checkpoint/restart를 제공; position/force iteration·pair correction·capacity hard bound, minimum-image PBC distance, 모든 nested residual/failure row와 identity digest를 보존 | reviewed parameter·general improper/constraint assignment와 coverage, atomic-mass-weighted constraints, independent force·constraint·constrained-minimization validation, long-range vacuum electrostatics·fixed-radius polar GB 이외 solvation, MD integrator 연계, 과학·benchmark·product/customer 승격 |
 | `v2_bounded_cpu_fixed_born_polar_solvation` | Still DOI `10.1021/ja00172a038`의 `sqrt(r² + alpha_i alpha_j exp(-r²/(4 alpha_i alpha_j)))` pair function을 고정하고, exact topology·v2 charge-parameter fingerprint·caller radius-source SHA-256에 결속된 전 원자 fixed effective Born radius로 non-periodic single-model CPU float64 polar dielectric-transfer self/pair energy와 autograd force를 계산하며 v2 energy/force 결합 evaluator와 solvation fingerprint를 결속한 optional constrained minimization·exact checkpoint/restart를 제공; 512 atom·130816 pair hard bound와 minimum-distance admission 적용 | effective Born radius geometry 추정·reviewed radius/charge parameter와 applicability, nonpolar solvation, salt·explicit ion, PBC solvent, MD 통합, independent solvation·solvated-minimization reference/validation, 과학·benchmark·product/customer 승격 |
-| `v2_cpu_reference_minimization_validation_protocol` | unsolvated v1·constrained v2·fixed-Born constrained v2·checkpoint/restart·identity/applicability failure의 ordered 14-case, CPU float64 사전 10개 metric, all-case failure denominator, exact minimizer/evaluator source SHA-256와 independent-reference import 분리 요구사항을 결과 전에 고정한 execution-disabled protocol; 별도 exact materializer와 source-bound 표준 라이브러리 독립 reference를 구현하고, HMAC-SHA256 independent-review attestation·CPU-only network-disabled execution-environment/failure-inclusive result-receipt·single-run authorization 계약을 고정함; 별도 local POSIX atomic reservation primitive가 raw signed review/authorization을 재검증하고 caller-provisioned mode-0700 root에 `O_EXCL`·`O_NOFOLLOW`·mode-0600 canonical record·file/directory `fsync`로 one-time nonce를 소비하며, 별도 run-start primitive가 raw chain과 durable nonce·실제 CPU-only deterministic process·network namespace를 다시 검증하고 최대 5분 operator-signed network-isolation attestation을 확인한 뒤 separate private root에 canonical mode-0600 secret-free environment receipt 하나를 원자적으로 기록함; 두 stdlib-only bootstrap은 signed raw Git commit/tree object를 Git SHA-1 framing으로 자체 재검증하고 전체 tracked `betelgeuze_engine_v2` file의 mode·blob OID·SHA-256·size를 root-owned read-only live tree와 비교한 canonical source manifest를 6-tuple state로 전달함; run-start는 이를 `<nonce>.source-tree.json`으로 mode-0600·`O_EXCL`·`O_NOFOLLOW`·fsync 보존하고 runner/writer는 persisted/live exact equality와 environment→start→observation→result digest chain을 확인함; bounded runner는 선택된 6개 aggregate dependency identity·manifest를 함께 재검증하고 bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline 아래 nonce별 start marker를 소비한 뒤 ordered 14-case를 실행해 성공·실패, 독립 오라클 비교, checkpoint exactness와 complete ordered coordinate trace를 writer receipt에 결속함; frozen trajectory-comparison 계약은 exact evaluation index·iteration·trial·outcome 정렬, 사전 `1e-8 Å` coordinate와 `1e-10 kcal/mol` energy max/RMS, branch·rejection·count·fail-closed disposition, 3개 checkpoint case의 uninterrupted/paused/resumed digest를 runner·writer·result review에 결속하고 omission·reorder·cross-wire·non-finite·digest tamper를 거부함; 외부 acceptance threshold를 유지한 채 declared constraint tolerance의 절반을 내부 projection convergence headroom으로 쓰는 v2.1 protocol로 refreeze했으며, 비-production 점검은 fixed-Born 2건을 포함해 14/14 comparison과 3/3 restart equality를 모두 통과함; exact canonical-input entrypoint는 package import 전에 signed nonce·author·source·dependency를 결속하고 고정 외부 root-owned mode-0600 trust store에서만 reviewer/operator key를 재로딩하며 고정 supervised evaluator subprocess를 검증한 뒤 같은 verified process에서 result receipt를 finalize함; 별도 Ed25519 result-review 계약은 full writer-schema validation 뒤 raw signed pre-execution chain, source-manifest digest, exact receipt, 14개 case, retained/missing metric, runtime/oracle/result hash, status/error, exact count, finite energy ledger, complete coordinate trace와 모든 disposition을 role-separated caller public key signature에 결속하되 어떤 claim도 승격하지 않음; release/delete API는 없고 실제 key/trust store/attestation/authorization receipt/production root/reservation/environment receipt/start/result/result-review approval은 bundle하지 않음 | externally provisioned root-owned/read-only source/dependency runtime, kernel-backed source/Git-metadata immutability·custody, pre-bootstrap stdlib closure, mapped native-DSO lifetime closure·worker pre/post-state, lane별 status 이후 carrier propagation·provisioned external custody, 실제 independent scientific review와 attestation/trusted key, signed authorization receipt·trusted operator key·production nonce reservation/root와 environment receipt, production result receipt·independent result-review approval, 승인된 production trajectory comparison, 두 CPU host 재현, external implementation comparison, reviewed parameter/applicability, validation 실행·결과·human review·parameter fitting·과학/제품 승격 |
-| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·ordered 27 case·59 deterministic CPU float64 variant·19 metric·failure-inclusive denominator, exact materializer/evaluator/oracle, signed pre-execution review와 single-run authorization, CPU environment/result receipt, atomic nonce/run-start, full source/dependency manifest, request/PID/transcript-bound supervised worker, failure-inclusive result writer를 고정함; 별도 Ed25519 result-review leaf는 exact receipt와 retained raw energy/force array에서 56개 required metric occurrence를 독립 재계산한 bitwise-equal 값, 모든 case/variant/metric/failure/worker disposition, 성공 input/component/total/force evidence, four-role separation을 결속하고 모든 claim flag를 false로 유지함 | 실제 independent scientific/result review와 production result-review attestation/trusted key, upstream symmetric-HMAC review/authorization의 asymmetric 전환, independent dependency-manifest 재검증, lane별 status 이후 carrier propagation·provisioned external custody, externally provisioned root-owned source/dependency runtime, signed native-DSO lifetime closure, 실제 nonce/environment/start/result receipt, external receipt authenticity, 실제 27/59 production run·두 CPU host·external comparison·human approval, reviewed runtime parameter/applicability, energy/force/minimization validation, parameter fitting·제품 승격 |
-| `v2_synthetic_validation_production_evidence_custody_foundation` | 두 synthetic lane의 exact production evidence class, 24시간 이내 one-use-intent Ed25519 permit, adjacent previous-hash와 full-row 누적 불변을 요구하는 monotonic status snapshot, 4 MiB signed-carrier 및 argv/bundle/status-row hard bound, frozen seq1 permit→seq2 status base를 변경하지 않고 raw prefix를 내부 재검증하는 additive production-only Ed25519 review/authorization carrier와 seq3·seq4 custody event, 전체 seq1~4 raw ancestry·lane-local nonce record·realm-global slot·registry/witness authority를 결속하고 dual-signed commit 주장과 post-commit status descendant를 검증하는 attestation-only seq5 companion, seq5를 다시 검증하고 고정 순서의 정확한 3-leaf 인접-root 전이·분리된 backend/observer 서명·공급되어 재검증된 status-lineage-tail denial·caller-expected native checkpoint 일치를 검사하는 verifier-only same-epoch boundary, fixed `/proc`의 PID·nonnegative parent·start tick·boot ID·PID namespace 측정 digest 결속; caller expectation provenance와 global latest status head는 인증하지 않으며 downgrade·bounded replay-list·key alias·status rewrite·stale/retroactive status·exact-scalar 혼동·causal-time 위반·raw/logical revoke·context transplant를 fail-closed하고 모든 actual/scientific/product claim을 false로 유지 | 실제 external serializable CAS·permit/nonce/predecessor global one-use 소비·status-head CAS·non-equivocation·epoch continuity·successor uniqueness, 실제 Evidence Authority/Run Custodian/review/authorization/registry/witness/backend/observer key와 carrier/event/proof/authenticated head receipt, permit·external append-only log/TSA·global one-use registry, enrolled host·immutable store·실제 custody chain, worker carrier 결속, same-tick PID reuse 배제, procfs/host/launch external authenticity, environment→start→worker-transcript→observation→result→review→response carrier, upstream energy-force HMAC의 asymmetric 전환, production result·과학/제품 승격 |
+| `v2_cpu_reference_minimization_validation_protocol` | unsolvated v1·constrained v2·fixed-Born constrained v2·checkpoint/restart·identity/applicability failure의 ordered 14-case, CPU float64 사전 10개 metric, all-case failure denominator, exact minimizer/evaluator source SHA-256와 independent-reference import 분리 요구사항을 결과 전에 고정한 execution-disabled protocol; 별도 exact materializer와 source-bound 표준 라이브러리 독립 reference를 구현하고, Ed25519 independent-review attestation·CPU-only network-disabled execution-environment/failure-inclusive result-receipt·single-run authorization 계약을 고정함; 별도 local POSIX atomic reservation primitive가 raw signed review/authorization을 재검증하고 caller-provisioned mode-0700 root에 `O_EXCL`·`O_NOFOLLOW`·mode-0600 canonical record·file/directory `fsync`로 one-time nonce를 소비하며, 별도 run-start primitive가 raw chain과 durable nonce·실제 CPU-only deterministic process·network namespace를 다시 검증하고 최대 5분 operator-signed network-isolation attestation을 확인한 뒤 separate private root에 canonical mode-0600 secret-free environment receipt 하나를 원자적으로 기록함; 두 stdlib-only bootstrap은 signed raw Git commit/tree object를 Git SHA-1 framing으로 자체 재검증하고 전체 tracked `betelgeuze_engine_v2` file의 mode·blob OID·SHA-256·size를 root-owned read-only live tree와 비교한 canonical source manifest를 6-tuple state로 전달함; run-start는 이를 `<nonce>.source-tree.json`으로 mode-0600·`O_EXCL`·`O_NOFOLLOW`·fsync 보존하고 runner/writer는 persisted/live exact equality와 environment→start→observation→result digest chain을 확인함; bounded runner는 선택된 6개 aggregate dependency identity·manifest를 함께 재검증하고 bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline 아래 nonce별 start marker를 소비한 뒤 ordered 14-case를 실행해 성공·실패, 독립 오라클 비교, checkpoint exactness와 complete ordered coordinate trace를 writer receipt에 결속함; frozen trajectory-comparison 계약은 exact evaluation index·iteration·trial·outcome 정렬, 사전 `1e-8 Å` coordinate와 `1e-10 kcal/mol` energy max/RMS, branch·rejection·count·fail-closed disposition, 3개 checkpoint case의 uninterrupted/paused/resumed digest를 runner·writer·result review에 결속하고 omission·reorder·cross-wire·non-finite·digest tamper를 거부함; 외부 acceptance threshold를 유지한 채 declared constraint tolerance의 절반을 내부 projection convergence headroom으로 쓰는 v2.1 protocol로 refreeze했으며, 비-production 점검은 fixed-Born 2건을 포함해 14/14 comparison과 3/3 restart equality를 모두 통과함; exact canonical-input entrypoint는 package import 전에 signed nonce·author·source·dependency를 결속하고 고정 외부 root-owned mode-0600 trust store에서만 reviewer/operator key를 재로딩하며 고정 supervised evaluator subprocess를 검증한 뒤 같은 verified process에서 result receipt를 finalize함; 별도 Ed25519 result-review 계약은 full writer-schema validation 뒤 raw signed pre-execution chain, source-manifest digest, exact receipt, 14개 case, retained/missing metric, runtime/oracle/result hash, status/error, exact count, finite energy ledger, complete coordinate trace와 모든 disposition을 role-separated caller public key signature에 결속하되 어떤 claim도 승격하지 않음; release/delete API는 없고 실제 key/trust store/attestation/authorization receipt/production root/reservation/environment receipt/start/result/result-review approval은 bundle하지 않음 | externally provisioned root-owned/read-only source/dependency runtime, kernel-backed source/Git-metadata immutability·custody, pre-bootstrap stdlib closure, mapped native-DSO lifetime closure·worker pre/post-state, lane별 status 이후 carrier propagation·provisioned external custody, 실제 independent scientific review와 attestation/trusted key, signed authorization receipt·trusted operator key·production nonce reservation/root와 environment receipt, production result receipt·independent result-review approval, 승인된 production trajectory comparison, 두 CPU host 재현, 승인된 production external implementation receipt, reviewed parameter/applicability, validation 실행·결과·human review·parameter fitting·과학/제품 승격 |
+| `v2_cpu_reference_energy_force_validation_protocol` | 7개 synthetic fixture profile·20개 mutation contract·ordered 27 case·59 deterministic CPU float64 variant·19 metric·failure-inclusive denominator, exact materializer/evaluator/oracle, 공개키 전용 Ed25519 pre-execution review와 single-run authorization, CPU environment/result receipt, atomic nonce/run-start, full source/dependency manifest, request/PID/transcript-bound supervised worker, failure-inclusive result writer를 고정함; 별도 Ed25519 result-review leaf는 exact receipt와 retained raw energy/force array에서 56개 required metric occurrence를 독립 재계산한 bitwise-equal 값, 모든 case/variant/metric/failure/worker disposition, 성공 input/component/total/force evidence, four-role separation을 결속하고 모든 claim flag를 false로 유지함 | 실제 independent scientific/result review와 production result-review attestation/trusted key, independent dependency-manifest 재검증, lane별 status 이후 carrier propagation·provisioned external custody, externally provisioned root-owned source/dependency runtime, signed native-DSO lifetime closure, 실제 nonce/environment/start/result receipt, external receipt authenticity, 실제 27/59 production run·두 CPU host·승인된 production external comparison·human approval, reviewed runtime parameter/applicability, energy/force/minimization validation, parameter fitting·제품 승격 |
+| `v2_openmm_reference_offline_oracle` | `OpenMM==8.4.0.post2`, native build `8.4.0.dev-4768436`/commit, `Reference` platform만 허용하고 CPU 대체를 금지하는 offline mapping; 27/59의 47 pass variant를 exact atom order·Å↔nm·kcal↔kJ·orthorhombic PBC·exclusion·scaled pair·quintic switch·5개 force group으로 비교하고 12 failure variant는 `not_applicable_engine_contract`로 보존; 14-case operational trace 중 8개 pass의 모든 좌표를 재평가하고 6개 fail-closed 빈 행을 보존하며 ordered-star improper와 fixed-Born self/pair CustomForce를 별도 기록; 전체 OpenMM distribution·Python wrapper·`_openmm`·Python executable·path-free environment identity와 사전 energy `1e-10`, force `1e-8` max/RMS를 canonical receipt에 결속; 별도 Ed25519 verifier가 두 Engine result-review chain·두 OpenMM receipt·exact 27/59 Engine output·14개 operational trace·host/CPU/session/custody identity·역할 분리·freshness·revocation/supersession을 재검증하고 단일 host comparison을 서명; OpenMM L-BFGS는 Engine trace와 다른 별도 endpoint | development observation이나 단일-host review를 production evidence로 해석, 실제 reviewer key/attestation·signed production external-oracle receipt·두 CPU host exact physics equality·외부 custody·최종 human S0 approval, parameter 값·chemical applicability·과학 검증, OpenMM customer runtime 의존성, Engine Armijo/Jacobi trace 또는 checkpoint 동등성, 과학/benchmark/product 승격 |
+| `v2_s0_production_evidence_bundle` | 정확히 두 raw host evidence를 single-host verifier로 새로 검증하고 host·CPU·session·custody·result/review/OpenMM/environment receipt·authorization/review nonce의 상이성, commit·source manifest·dependency·OpenMM runtime/source·seed·energy-force/minimization physics projection의 exact equality를 요구하는 frozen S0 bundle; 모든 하위 역할과 분리되고 host review보다 늦게 시작하며 더 오래 유효하지 않은 최종 human Ed25519 승인, canonical transport, freshness, revocation/supersession을 검증함; 두 host 검증 후 secret-free detached signing request와 exact canonical approval byte를 생성하고 설치형 CLI가 private key 없이 외부/HSM signature를 public key로 검증·attachment하며 output overwrite를 금지함; attachment 뒤에도 full raw evidence 재검증이 필수이고 통과 시 frozen synthetic S0 protocol acceptance와 S1 admission만 true | 실제 두-host production evidence·trust key·authenticated external custody·최종 승인, real-molecule chemistry/applicability·validated refinement claim, parameter fitting·benchmark·product·customer·broad scientific 승격 |
+| `v2_synthetic_validation_production_evidence_custody_foundation` | 두 synthetic lane의 exact production evidence class, 24시간 이내 one-use-intent Ed25519 permit, adjacent previous-hash와 full-row 누적 불변을 요구하는 monotonic status snapshot, 4 MiB signed-carrier 및 argv/bundle/status-row hard bound, frozen seq1 permit→seq2 status base를 변경하지 않고 raw prefix를 내부 재검증하는 additive production-only Ed25519 review/authorization carrier와 seq3·seq4 custody event, 전체 seq1~4 raw ancestry·lane-local nonce record·realm-global slot·registry/witness authority를 결속하고 dual-signed commit 주장과 post-commit status descendant를 검증하는 attestation-only seq5 companion, seq5를 다시 검증하고 고정 순서의 정확한 3-leaf 인접-root 전이·분리된 backend/observer 서명·공급되어 재검증된 status-lineage-tail denial·caller-expected native checkpoint 일치를 검사하는 verifier-only same-epoch boundary, fixed `/proc`의 PID·nonnegative parent·start tick·boot ID·PID namespace 측정 digest 결속; caller expectation provenance와 global latest status head는 인증하지 않으며 downgrade·bounded replay-list·key alias·status rewrite·stale/retroactive status·exact-scalar 혼동·causal-time 위반·raw/logical revoke·context transplant를 fail-closed하고 모든 actual/scientific/product claim을 false로 유지 | 실제 external serializable CAS·permit/nonce/predecessor global one-use 소비·status-head CAS·non-equivocation·epoch continuity·successor uniqueness, 실제 Evidence Authority/Run Custodian/review/authorization/registry/witness/backend/observer key와 carrier/event/proof/authenticated head receipt, permit·external append-only log/TSA·global one-use registry, enrolled host·immutable store·실제 custody chain, worker carrier 결속, same-tick PID reuse 배제, procfs/host/launch external authenticity, environment→start→worker-transcript→observation→result→review→response carrier, production result·과학/제품 승격 |
 
 표의 `worker pre/post-state` blocker는 endpoint snapshot 자체의 부재가 아니라, signed
 native allowlist와 load/execute/unload 전체 수명·외부 custody가 결합된 production-grade
@@ -207,13 +209,13 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > `O_EXCL`·`O_NOFOLLOW`·fsync 보존하며 runner/writer는 persisted/live exact
 > equality와 environment→start→observation→result digest chain을 확인한다.
 > minimization과 energy-force result-review의 Ed25519 signature도 이 digest를 결속한다.
-> Runtime-integrity v13은 refreeze된 minimization trajectory-comparison 계약과 permit→status snapshot custody-v1, review/authorization
+> Runtime-integrity v14는 공개키 전용 energy-force Ed25519 chain, refreeze된 minimization trajectory-comparison 계약과 permit→status snapshot custody-v1, review/authorization
 > custody extension, seq5 reservation extension, verifier-only external registry-
 > proof boundary, verifier-only authenticated head/status receipt boundary,
 > verifier-only same-epoch later-head consistency boundary, fixed-policy exact-
 > anchor witness-quorum boundary, verifier-only adjacent epoch-transition
 > continuity boundary, process-launch-identity의 exact frozen SHA-256을
-> 직접 결속해 독립 drift를 차단한다. Runtime v8~v12는 read-only legacy
+> 직접 결속해 독립 drift를 차단한다. Runtime v8~v13은 read-only legacy
 > identity로 보존한다.
 > 공급된 registry proof가 검증할 수 있는 것은 backend의 serializable/committed
 > attestation, 고정 순서의 정확한 3-leaf 전이, observer-signed native checkpoint와
@@ -257,18 +259,19 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > `rglob`·`os.walk`·`distribution.files` 기반 열거와 unbounded source read는
 > bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline으로
 > 교체됐다. 다만 외부 root-owned source/dependency runtime은 아직
-> provision되지 않았다. 활성 energy-force base 계약은 v2이며 runner/result writer는
-> v4, minimization base 계약은 v4이며 runner는 v8, writer/result review는 v7로
-> 전환해 전체 upstream hash DAG를 다시 고정했다.
-> superseded 계약 문서 64개는 canonical
+> provision되지 않았다. 활성 energy-force base 계약은 run-start까지 v3이며
+> runner/result writer는 v5, result review는 v2다. Minimization base 계약은 v4이며
+> runner는 v8, writer/result review는 v7이다. Production review/authorization 및
+> reservation custody extension은 v4, runtime-integrity는 v14로 전환해 전체 upstream hash DAG를 다시 고정했다.
+> superseded 계약 문서 76개는 canonical
 > projection hash 기반 read-only verifier로 보존하지만, 과거 signed artifact나
 > receipt 호환을 claim하지 않는다. 외부 runtime provisioning, kernel source/Git-
 > metadata immutability·custody, pre-bootstrap stdlib closure, signed native-DSO
 > allowlist·full lifetime closure·kernel vDSO identity, measured process identity의
 > worker-carrier 결속·same-tick collision resistance와 외부 launch authenticity/custody,
 > 최종 evidence-class carrier·provisioned custody chain, energy-force의 실제
-> receipt/result-review/attestation/trusted key, upstream symmetric-HMAC chain과 leaf의
-> independent dependency-manifest 재검증, 실제 run·두 host·human review는 여전히 blocker이며 모든
+> receipt/result-review/attestation/trusted key, leaf의 independent dependency-manifest
+> 재검증, 실제 run·두 host·human review는 여전히 blocker이며 모든
 > production/scientific/fitting/product claim은 false다.
 
 두 declaration capability는 source row의 identity와 tamper/crosswire 경계를
@@ -463,7 +466,7 @@ solver import가 없음을 AST로 검사한다. 두 구현을 비교하는 test-
 receipt writer는 존재하지만 production validation study, production result receipt 또는
 independent result acceptance는 없다. 별도 frozen review contract는 exact dependency, ordered review
 check/limitation, implementation-author/reviewer SHA-256 identity 분리, 외부 trusted
-reviewer key, HMAC-SHA256 integrity와 최대 30일 validity를 요구한다. 저장소는 trusted
+Ed25519 reviewer public key, signature integrity와 최대 30일 validity를 요구한다. 저장소는 trusted
 key나 실제 attestation을 bundle하지 않고, verified review만으로 실행 또는 fitting을
 승인하지 않는다. 별도 authorization contract는 verified review, author/reviewer와
 pairwise-distinct operator identity, 외부 trusted key, exact code·runner·environment·
@@ -477,7 +480,7 @@ reservation은 bundle하지 않으며 filesystem locality와 same-UID replacemen
 별도 run-start primitive는 raw review/authorization과 durable nonce record를 다시
 교차검증하고 실제 Linux·Python·Torch·NumPy·GPU visibility·seed·thread·determinism·
 고정 logical argv를 관측한다. exact authorization/operator/network namespace에 결속된
-최대 5분의 HMAC-SHA256 network-isolation attestation을 외부 trust anchor로 검증한 뒤
+최대 5분의 Ed25519 network-isolation attestation을 외부 trust anchor로 검증한 뒤
 private artifact root 아래 mode-0600 canonical environment receipt 하나를 `O_EXCL`과
 file/directory `fsync`로 기록한다. 실제 path와 secret-bearing argv는 기록하지 않고,
 library 자체는 network namespace를 만들거나 kernel isolation·same-UID resistance를
@@ -532,7 +535,7 @@ probe도 verified receipt에서만 유도해 평가 전에 확인하며 mutable 
 복사하지 않는다. Exact process chain은 absolute checked-out bootstrap path를 사용하고
 `PYTHONPATH`·user-site override와 `sitecustomize`·`.pth` 실행을 무시하며 root-owned
 read-only dependency root만 허용한다. Package initializer import 전에 external operator
-HMAC, signed commit/source와 clean checkout을 검증하며 reservation/artifact root는
+Ed25519 signature, signed commit/source와 clean checkout을 검증하며 reservation/artifact root는
 checkout과 ancestry가 겹치지 않는 private 외부 directory만 허용한다. trust key가 없는 bounded canonical stdin 요청만 받고,
 reviewer/operator anchor는 저장소가 bundle하지 않는 고정 `/etc/betelgeuze/engine-v2/
 reference-validation-trust-anchors.json` root-owned mode-0600 외부 store에서만 읽는다.
@@ -553,8 +556,8 @@ runner start/result·independent acceptance를 bundle하지 않는다.
 variant·19 metric을 재검증하고 retained raw energy/force array에서 56개 required metric
 occurrence를 독립 재계산해 retained float와 bitwise equality를 요구하며,
 case/variant/metric/expected-failure/worker disposition,
-성공 input/component/total/force evidence와 four-role separation을 결속한다. 다만
-upstream scientific-review와 authorization은 symmetric HMAC이며, leaf는 live dependency
+성공 input/component/total/force evidence와 four-role separation을 결속한다. Upstream
+scientific-review와 authorization도 공개키 전용 Ed25519이며, leaf는 live dependency
 manifest를 독립 재검증하거나 external custody를 확립하지 않는다. 실제 production
 receipt, result-review attestation, trusted result-reviewer key, independent human approval은
 없고 모든 production/scientific/fitting/benchmark/product flag는 false다.
@@ -563,9 +566,9 @@ CPU-only·network-disabled Linux 환경, Python 3.10–3.12, Torch 2.6.0, NumPy 
 empty GPU visibility, deterministic seed/thread/argv/dependency와 confined artifact path를
 고정하고 27개 case·59개 variant·19개 metric 전체의 failure-inclusive 결과 형식을
 고정한다. 그러나 production environment receipt·runner start, durable observed value 또는
-result receipt는 포함하지 않는다. Energy-force Ed25519 post-result-review 계약은
-구현됐지만 실제 독립 과학 review·result-review 승인, production attestation/trusted key,
-upstream HMAC chain의 asymmetric 전환, independent dependency-manifest 재검증과 외부
+result receipt는 포함하지 않는다. Energy-force Ed25519 post-result-review 계약과
+upstream review·authorization·run-start 공개키 chain은 구현됐지만 실제 독립 과학
+review·result-review 승인, production attestation/trusted key, independent dependency-manifest 재검증과 외부
 custody는 아직 없다. 계약의 source-digest 서명 결속은 이 부재를 대체하지 않는다.
 synthetic 값은 parameter-fit data가 아니며 scientific parameterized-force-field
 lane의 reviewed runtime 값, chemical applicability, holdout과 독립 reference도 아직
@@ -647,9 +650,28 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    미지원으로 유지한다.
 8. 완료된 v1.1 four-case public benchmark protocol/manifest의 exact source·license
    metadata·endpoint·failure denominator·scorer identity와 source-bound offline
-   materializer를 유지한다. 모든 reference record·graph match/mismatch/failure,
-   stereo-preserving bounded automorphism과 무정렬 receptor-frame RMSD 최솟값을
-   보존하되 데이터 fetch/bundle·도킹 실행·결과·발표·과학 승격은 계속 금지한다.
+   materializer를 유지한다. 별도 suite command로 receptor를 포함한 12개 입력 identity와
+   4개 failure-inclusive case receipt를 보존한다. 모든 reference record·graph
+   match/mismatch/failure, stereo-preserving bounded automorphism과 무정렬 receptor-frame
+   RMSD 최솟값을 보존하되 데이터 fetch/bundle·pose 생성·validity·scoring·도킹 결과·
+   발표·과학 승격은 계속 금지한다.
+   별도 rigid diagnostic은 lowest-index graph-matched native record로 pocket center를
+   정의하고 seed orientation을 고정 회전한 뒤 모든 candidate의 geometry score·validity·
+   receptor-frame symmetry-aware RMSD와 oracle-best generation gap을 보존한다. 초기
+   diverse score Top-K에는 deterministic rigid coordinate descent를 적용하고 모든
+   accept/reject trace를 보존한 뒤 다시 ranking한다. 이 geometry refinement는 힘장
+   최소화가 아니다. 이 4-case는 개발에 사용됐으므로 disjoint scientific holdout이
+   아니며 torsion·supported-force-field refinement·charge-aware physics·external
+   baseline·독립 재실행 전에는 benchmark claim을 열지 않는다.
+   별도 bounded molecular torsion materializer는 모든 source bond 행을 보존하고
+   non-ring/non-terminal heavy single-bond bridge와 좁은 amide-like exclusion만
+   구현했다. zero-angle coordinate reconstruction과 bond-length 보존은 검증하고,
+   별도 failure-complete flexible 4-case diagnostic에서 receipt와 함께 사용한다.
+   candidate 0의 zero-torsion seed baseline 뒤 deterministic uniform torsion을
+   sampling하고, 1-2/1-3 pair를 제외한 고정 원소 반경 nonbonded self-overlap을
+   ranking term으로 기록하며 최종 selection 전에 invalid pose를 제외한다. 그러나
+   ring closure·torsion energy·bonded force-field strain·torsion refinement·독립
+   conformer science를 제공하지 않는다.
 9. 완료된 H5 parameter-origin/runtime-envelope record를 유지한다. 이 record는
    caller-supplied 값과 기존 reviewed Sage candidate identity를 분리하고 code-enforced
    execution admission을 scientific applicability와 분리한다. production parameter
@@ -662,8 +684,8 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    attestation/receipt, trusted reviewer/operator key, production nonce reservation/root,
    production environment receipt·runner start/result receipt, kernel-enforced network
    isolation, external receipt authenticity가 없다. Energy-force Ed25519 post-result-review
-   leaf 계약은 구현됐지만 실제 receipt/review attestation/trusted key·independent 승인,
-   upstream symmetric-HMAC chain 전환과 dependency-manifest 독립 재검증이 없으므로
+   leaf 계약과 upstream 공개키 전용 Ed25519 chain은 구현됐지만 실제 receipt/review
+   attestation/trusted key·independent 승인과 dependency-manifest 독립 재검증이 없으므로
    실행과 parameter-fitting proposal은 계속 fail-closed한다.
    공통 production-evidence base와 additive companion은 permit→status→review→authorization
    4-event exact raw-byte custody와 seq5 reservation commit-attestation primitive를
@@ -718,6 +740,16 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    path만 고정하며 production key·attestation·root·receipt·runner를 bundle하지 않는다.
    따라서 review·실행 승인·production result receipt와 결과가
    없으므로 minimization validation 차단을 해제하지 않는다.
+   별도 OpenMM Reference offline oracle은 product import와 분리된 lazy optional
+   dependency로, frozen 27/59의 47개 지원 variant와 14-case의 8개 지원 operational
+   trace를 같은 사전 max/RMS 기준으로 재평가하고 모든 N/A failure row를 보존한다.
+   complete wheel/native/environment identity와 fixed-Born self/pair를 canonical receipt에
+   결속하지만 현재 실행은 test-only development observation이다. 별도 Ed25519 external
+   result-review verifier는 두 Engine review와 두 OpenMM receipt, exact output/trace 및
+   host/CPU/session/custody identity를 fail-closed로 결속하지만 실제 key·attestation은 없다.
+   따라서 signed production receipt, 두 CPU host 재현, 외부 custody와 최종 human
+   acceptance가 생기기 전에는 S0의
+   `independent external implementation comparison` 종료 조건을 충족한 것으로 보지 않는다.
 11. 과학적으로 검증된 CPU energy·force·minimization 이후 structure metric과
    torsion-aware docking으로 진행한다.
 12. PBC·long-range·solvent·MD, production AI, ROCm/HIP, 제품 route는 각 선행

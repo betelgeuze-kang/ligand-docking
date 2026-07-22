@@ -10,7 +10,6 @@ disabled throughout the bootstrap.
 from __future__ import annotations
 
 import hashlib
-import hmac
 import importlib.util
 import json
 import os
@@ -79,11 +78,13 @@ REFERENCE_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH = (
     "/etc/betelgeuze/engine-v2/reference-validation-trust-anchors.json"
 )
 _REFERENCE_VALIDATION_TRUST_STORE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_trust_store/1.0.0"
+    "betelgeuze.engine_v2_reference_validation_trust_store/2.0.0"
 )
-_REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "hmac-sha256"
+_REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
+_REFERENCE_VALIDATION_OPENSSL_EXECUTABLE = "/usr/bin/openssl"
+_ED25519_SUBJECT_PUBLIC_KEY_INFO_PREFIX = bytes.fromhex("302a300506032b6570032100")
 _REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_request/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_request/3.0.0"
 )
 _BOOTSTRAP_REQUEST_FIELDS = {
     "schema_id",
@@ -926,8 +927,7 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
             )
             != identity
             or not isinstance(key_hex, str)
-            or len(key_hex) < 64
-            or len(key_hex) % 2
+            or len(key_hex) != 64
             or any(character not in "0123456789abcdef" for character in key_hex)
         ):
             raise _ReferenceValidationBootstrapError(
@@ -939,6 +939,113 @@ def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
             "bootstrap operator keys are unavailable"
         )
     return result
+
+
+def _require_trusted_root_executable(path: str, *, name: str) -> str:
+    try:
+        file_stat = os.lstat(path)
+    except OSError as exc:
+        raise _ReferenceValidationBootstrapError(
+            f"validation bootstrap {name} is unavailable"
+        ) from exc
+    if (
+        os.path.islink(path)
+        or not stat.S_ISREG(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) & 0o022
+    ):
+        raise _ReferenceValidationBootstrapError(
+            f"validation bootstrap {name} is not trusted"
+        )
+    return path
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    remaining = memoryview(payload)
+    while remaining:
+        written = os.write(descriptor, remaining)
+        if written <= 0:
+            raise OSError("secure bootstrap memory file write failed")
+        remaining = remaining[written:]
+
+
+def _verify_ed25519_with_trusted_openssl(
+    message: bytes,
+    signature_hex: object,
+    public_key: bytes,
+) -> bool:
+    if (
+        not isinstance(signature_hex, str)
+        or len(signature_hex) != 128
+        or any(character not in "0123456789abcdef" for character in signature_hex)
+        or not isinstance(public_key, bytes)
+        or len(public_key) != 32
+        or not hasattr(os, "memfd_create")
+    ):
+        return False
+    executable = _require_trusted_root_executable(
+        _REFERENCE_VALIDATION_OPENSSL_EXECUTABLE,
+        name="OpenSSL",
+    )
+    message_descriptor = -1
+    key_descriptor = -1
+    signature_descriptor = -1
+    try:
+        message_descriptor = os.memfd_create("ed25519-message", flags=0)
+        key_descriptor = os.memfd_create("ed25519-public-key", flags=0)
+        signature_descriptor = os.memfd_create("ed25519-signature", flags=0)
+        _write_all(message_descriptor, message)
+        _write_all(
+            key_descriptor,
+            _ED25519_SUBJECT_PUBLIC_KEY_INFO_PREFIX + public_key,
+        )
+        _write_all(signature_descriptor, bytes.fromhex(signature_hex))
+        os.lseek(message_descriptor, 0, os.SEEK_SET)
+        os.lseek(key_descriptor, 0, os.SEEK_SET)
+        os.lseek(signature_descriptor, 0, os.SEEK_SET)
+        completed = subprocess.run(
+            [
+                executable,
+                "pkeyutl",
+                "-verify",
+                "-pubin",
+                "-keyform",
+                "DER",
+                "-inkey",
+                f"/proc/self/fd/{key_descriptor}",
+                "-rawin",
+                "-in",
+                f"/proc/self/fd/{message_descriptor}",
+                "-sigfile",
+                f"/proc/self/fd/{signature_descriptor}",
+            ],
+            env={
+                "HOME": "/nonexistent",
+                "LANG": "C.UTF-8",
+                "LC_ALL": "C.UTF-8",
+                "PATH": "/usr/bin:/bin",
+            },
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            pass_fds=(
+                message_descriptor,
+                key_descriptor,
+                signature_descriptor,
+            ),
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+    finally:
+        if signature_descriptor >= 0:
+            os.close(signature_descriptor)
+        if key_descriptor >= 0:
+            os.close(key_descriptor)
+        if message_descriptor >= 0:
+            os.close(message_descriptor)
+    return completed.returncode == 0
 
 
 def _require_bootstrap_authorization_signature(
@@ -972,12 +1079,9 @@ def _require_bootstrap_authorization_signature(
             "bootstrap authorization key is not trusted"
         )
     operator_identity, verification_key = operator_keys[key_id]
-    expected_signature = hmac.new(
-        verification_key,
-        _canonical_bytes(payload),
-        hashlib.sha256,
-    ).hexdigest()
-    if not hmac.compare_digest(signature["value"], expected_signature):
+    if not _verify_ed25519_with_trusted_openssl(
+        _canonical_bytes(payload), signature["value"], verification_key
+    ):
         raise _ReferenceValidationBootstrapError(
             "bootstrap authorization signature verification failed"
         )

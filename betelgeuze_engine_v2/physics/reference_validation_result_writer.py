@@ -66,16 +66,19 @@ from .reference_validation_runner import (
 )
 
 REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_writer_contract/4.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_writer_contract/5.0.0"
 )
 REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_validation_result_receipt_writer/4.0.0"
+    "cpu_reference_validation_result_receipt_writer/5.0.0"
 )
-REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "4.0.0"
-REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-19T00:00:00Z"
+REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
 REFERENCE_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "dfd660b14d13a95c63b6d30a22b9e81e3b18cc43c39e919504b1fc8724dd84ba"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4 = (
     "183ff823795a166bb72647b34f118c480f2f785788123a31a4a95900d196dc24"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3 = (
@@ -205,6 +208,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4
+        ),
+        "refreeze_reason": "binds_public_key_ed25519_upstream_chain_and_refrozen_runner",
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "failure_inclusive_result_receipt_writer_primitive": True,
@@ -215,6 +222,9 @@ def _contract_projection() -> dict[str, Any]:
             "raw_signed_review_required": True,
             "raw_signed_authorization_required": True,
             "external_trust_anchors_required": True,
+            "upstream_signature_algorithm": "ed25519",
+            "external_trust_anchors_contain_public_keys_only": True,
+            "private_or_symmetric_verification_keys_allowed": False,
             "external_revocation_inputs_required": True,
             "persisted_environment_receipt_and_live_process_required": True,
             "durable_runner_start_record_required": True,
@@ -1225,6 +1235,7 @@ def reference_validation_result_writer_contract_decision() -> dict[str, Any]:
 __all__ = [
     "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V1",
     "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3",
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4",
     "FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_RESULT_RECEIPT_MAX_BYTES",
     "REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_ID",

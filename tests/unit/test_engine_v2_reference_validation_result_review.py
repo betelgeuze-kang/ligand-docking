@@ -69,6 +69,10 @@ UPSTREAM_REVIEW_KEY_ID = "test-energy-scientific-reviewer"
 UPSTREAM_AUTHORIZATION_KEY_ID = "test-energy-authorization-operator"
 UPSTREAM_REVIEW_SIGNING_KEY = b"s" * 32
 UPSTREAM_AUTHORIZATION_SIGNING_KEY = b"o" * 32
+UPSTREAM_REVIEW_VERIFICATION_KEY = ed25519_public_key_bytes(UPSTREAM_REVIEW_SIGNING_KEY)
+UPSTREAM_AUTHORIZATION_VERIFICATION_KEY = ed25519_public_key_bytes(
+    UPSTREAM_AUTHORIZATION_SIGNING_KEY
+)
 UPSTREAM_REVIEW_NONCE_SHA256 = "b" * 64
 REVIEWED_AT = writer_support.FINAL_NOW + timedelta(minutes=1)
 EXPIRES_AT = REVIEWED_AT + timedelta(days=1)
@@ -467,7 +471,7 @@ def test_contract_is_frozen_with_exact_energy_force_coverage() -> None:
     assert (
         contract["schema_id"] == REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID
     )
-    assert contract["frozen_at_utc"] == "2026-07-19T01:00:00Z"
+    assert contract["frozen_at_utc"] == "2026-07-22T12:00:00Z"
     assert contract["contract_sha256"] == (
         FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
     )
@@ -484,13 +488,17 @@ def test_contract_is_frozen_with_exact_energy_force_coverage() -> None:
     )
 
 
-def test_contract_documents_upstream_hmac_and_ed25519_leaf_only() -> None:
+def test_contract_documents_complete_ed25519_chain() -> None:
     dependencies = reference_validation_result_review_contract_document()[
         "dependencies"
     ]
-    assert dependencies["upstream_signature_algorithm"] == "hmac-sha256"
+    assert dependencies["upstream_signature_algorithm"] == "ed25519"
     assert dependencies["leaf_result_review_signature_algorithm"] == "ed25519"
-    assert dependencies["full_asymmetric_chain_claimed"] is False
+    assert dependencies["full_asymmetric_signature_chain_verified"] is True
+    assert (
+        dependencies["upstream_verifier_trust_anchors_contain_public_keys_only"] is True
+    )
+    assert dependencies["private_or_symmetric_verification_keys_allowed"] is False
 
 
 def test_contract_decision_remains_closed_and_nonpromotional() -> None:
@@ -503,7 +511,7 @@ def test_contract_decision_remains_closed_and_nonpromotional() -> None:
     assert decision["benchmark_validated"] is False
     assert decision["product_qualified"] is False
     assert decision["claim_safe"] is False
-    assert "energy_force_upstream_symmetric_hmac_chain" in decision["blockers"]
+    assert "energy_force_upstream_symmetric_hmac_chain" not in decision["blockers"]
     assert (
         "independent_result_review_dependency_manifest_reverification_missing"
         in decision["blockers"]
@@ -880,7 +888,7 @@ def test_out_of_band_expected_receipt_hash_is_mandatory(
         )
 
 
-def test_real_upstream_hmac_chain_verifies_before_ed25519_result_review(
+def test_real_upstream_ed25519_chain_verifies_before_ed25519_result_review(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -891,13 +899,13 @@ def test_real_upstream_hmac_chain_verifies_before_ed25519_result_review(
     reviewer_keys = {
         UPSTREAM_REVIEW_KEY_ID: ScientificReviewerTrustAnchor(
             writer_support.REVIEWER_IDENTITY_SHA256,
-            UPSTREAM_REVIEW_SIGNING_KEY,
+            UPSTREAM_REVIEW_VERIFICATION_KEY,
         )
     }
     operator_keys = {
         UPSTREAM_AUTHORIZATION_KEY_ID: AuthorizationOperatorTrustAnchor(
             writer_support.OPERATOR_IDENTITY_SHA256,
-            UPSTREAM_AUTHORIZATION_SIGNING_KEY,
+            UPSTREAM_AUTHORIZATION_VERIFICATION_KEY,
         )
     }
     pre_execution_review = build_signed_reference_validation_review_attestation(
@@ -967,7 +975,7 @@ def test_real_upstream_hmac_chain_verifies_before_ed25519_result_review(
         )
     )
 
-    root = writer_support._private_root(tmp_path, "real-upstream-hmac-chain")
+    root = writer_support._private_root(tmp_path, "real-upstream-ed25519-chain")
     environment = writer_support._environment(
         root,
         review_attestation_sha256=pre_execution_review["attestation_sha256"],
@@ -1004,8 +1012,8 @@ def test_real_upstream_hmac_chain_verifies_before_ed25519_result_review(
         externally_conflicting_nonce_sha256s=(),
     ).to_dict()
 
-    assert pre_execution_review["signature"]["algorithm"] == "hmac-sha256"
-    assert authorization["signature"]["algorithm"] == "hmac-sha256"
+    assert pre_execution_review["signature"]["algorithm"] == "ed25519"
+    assert authorization["signature"]["algorithm"] == "ed25519"
     assert review_verification.independent_scientific_review_verified is True
     assert review_verification.implementation_author_separation_verified is True
     assert review_verification.validation_execution_authorized is False
@@ -1145,7 +1153,7 @@ def test_real_upstream_hmac_chain_verifies_before_ed25519_result_review(
         assert verification.to_dict()[claim] is False
 
 
-def test_raw_upstream_hmac_chain_is_reverified_with_exact_receipt_time(
+def test_raw_upstream_ed25519_chain_is_reverified_with_exact_receipt_time(
     receipts: ReceiptBundle,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

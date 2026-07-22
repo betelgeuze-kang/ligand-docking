@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_at_public_benchmark_reference_materialization_contract
+v2_at_s0_production_evidence_bundle_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -137,7 +137,9 @@ v2_at_public_benchmark_reference_materialization_contract
   외부 trusted reviewer key를 요구하지만 실제 review는 포함하지 않는 signed
   independent-review attestation 계약, 별도 operator identity·24시간 만료·외부
   revocation 목록·one-time nonce를 요구하지만 receipt는 포함하지 않는 single-run
-  execution-authorization 계약, 그리고 27개 case·59개 variant 전체의 CPU 실행 환경과
+  execution-authorization 계약. 두 artifact 모두 Ed25519를 사용하고 활성 verifier는
+  정확히 32-byte 공개키 trust anchor만 허용하며 private/symmetric 검증 material을 거부함.
+  그리고 27개 case·59개 variant 전체의 CPU 실행 환경과
   failure-inclusive 결과 receipt 형식을 고정하고 raw signed artifact 두 개를 다시 검증한 뒤
   POSIX `O_EXCL`/`fsync`로 one-time nonce를 로컬에서 소비하는 primitive, 이어서 전체
   chain과 실제 CPU-only deterministic process를 다시 검증하고 짧은 수명의 operator-signed
@@ -163,11 +165,58 @@ v2_at_public_benchmark_reference_materialization_contract
   canonical JSON byte transport·필수 최신 revocation/supersession 입력·네 governance 역할의
   분리·caller-provided public key를 요구함. 실제 key, attestation, production receipt,
   reviewer approval 또는 과학 evidence는 bundle하지 않음
-- 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold, 후보별 score-term
-  receipt, cross LJ·screened Coulomb·signed ligand internal strain delta·
+- `OpenMM==8.4.0.post2`와 `Reference` platform으로 고정된 lazy offline 전용
+  adapter. 지원되는 energy/force variant 47개를 모두 mapping하고 Engine-contract
+  failure 12개를 N/A로 보존하며, 지원 minimization trace 8개의 모든 좌표를
+  재평가하고 fail-closed trace 6개를 보존함. canonical receipt는 전체 OpenMM
+  distribution·native/runtime identity, fixed-Born self/pair, 재계산한 nested error를
+  결속함. 별도 Ed25519 verifier는 두 Engine result-review chain과 두 OpenMM receipt를
+  새로 검증하고 exact Engine output/14개 operational trace·역할 분리·freshness·
+  revocation/supersession을 확인한 뒤 단일 host-scoped comparison을 서명함. 최종
+  S0 bundle 계약은 정확히 두 host 입력을 새로 재검증하고 host·CPU·session·custody·
+  artifact·nonce의 상이성과 commit·source·dependency·runtime·seed·physics projection의
+  exact equality를 요구하며, 모든 하위 역할과 분리된 최종 human Ed25519 승인을
+  검증함. 검증된 bundle도 frozen synthetic S0 protocol과 S1 진입만 열고 chemistry·
+  fitting·benchmark·product·customer·broad scientific claim은 닫아 둠. 설치형
+  `betelgeuze-engine-v2-s0-review` 명령은 secret-free detached signing request를
+  검증하고 외부/HSM signer가 서명할 exact canonical byte를 내보낸 뒤, 반환된 서명을
+  public key로 확인하고 attachment함. private-key option이나 기존 output overwrite는
+  제공하지 않음. 실제 host evidence·trust key·최종 승인·외부 custody를 bundle하지
+  않으므로 저장소의 static S0 decision은 false임
+- 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold. 별도 receipt-bearing
+  molecular-graph materializer는 ring이 아니고 양쪽에 heavy atom이 둘 이상인
+  heavy-atom single-bond bridge만 선택하며 좁은 amide/sulfonamide/phosphoramidate
+  pattern은 제외한다. seed bond length/angle은 보존하지만 full resonance perception·
+  ring closure·torsion energy·검증된 conformer generation은 아니다. 후보별 score-term
+  receipt와 cross LJ·screened Coulomb·signed ligand internal strain delta·
   VDW-overlap penalty를 분리하는 명시 파라미터 CPU `float64` 진단 scorer,
   identity overlap audit와 실패 포함 all-case/target-family bootstrap 평가를
-  갖춘 fit-only pairwise ranking calibration 계약
+  갖춘 fit-only pairwise ranking calibration 계약. pose-level 평가는 동점 순서에
+  독립적인 average-precision PR-AUC를 성공적으로 scoring되고 label된 pose에서
+  계산하고, scoring 실패가 사라지지 않도록 전체 pose coverage/failure denominator와
+  deterministic case-cluster bootstrap 구간을 함께 보존함. 별도의 claim-closed
+  confidence evaluator는 raw top-1/runner-up score margin의 logistic proxy에 대해
+  Brier·fixed-bin ECE·reliability bin·threshold abstention/coverage/risk와 동점
+  group을 분리하지 않는 selective-risk curve를 전체 및 family별로 기록함. 실패 및
+  성공 pose가 하나뿐인 case는 abstain하지만 all-case/all-pose 분모에 남음. disjoint
+  probability-calibration fit이나 독립 검토된 threshold는 없으므로 confidence claim을
+  열지 않음
+- failure-inclusive rigid-body public diagnostic. 가장 낮은 record index의 graph-matched
+  native reference centroid로 redocking pocket 하나를 정하고, seed conformer에 고정된
+  non-identity rotation을 적용한 뒤 pose를 생성한다. 모든 candidate의 원소 반경 기반
+  geometry score를 계산하고 초기 diverse score Top-K에 deterministic rigid coordinate
+  descent를 적용한 뒤 다시 ranking한다. 모든 accept/reject trace·validity·무정렬
+  receptor-frame symmetry-aware RMSD·Top-1/Top-5·oracle-best generation 진단과
+  search/refinement/evaluation 실패 행을 기록한다. 이 정련은 힘장 최소화가 아니다.
+  torsion sampling·supported-force-field refinement·charge-aware physics·fitted score·
+  disjoint holdout·external baseline·claim-grade benchmark 결과는 없음
+- 별도 failure-inclusive flexible 4-case diagnostic은 case별 all-bond torsion receipt를
+  포함하고 candidate 0은 zero torsion, 이후 candidate는 결정론적 independent uniform
+  torsion으로 생성한다. 1-2/1-3 pair를 제외한 고정 원소 반경 ligand nonbonded
+  self-overlap 항을 더한 뒤 같은 validity/RMSD·Top-K rigid refinement를 적용한다.
+  최종 score-order diversity selection에서는 invalid pose를 제외한다. torsion energy·
+  bonded-force-field strain·torsion refinement·힘장 refinement·holdout 지위·도킹
+  claim은 없음
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 - frozen four-case PoseBusters contract cohort의 bounded offline materializer.
   caller가 제공한 seed/reference SDF byte를 검증하고 multi-record의 모든
@@ -175,8 +224,12 @@ v2_at_public_benchmark_reference_materialization_contract
   isotope·aromatic·directional V2000 stereo로 표지한 graph identity와 제한된
   stereo-preserving symmetry mapping을 생성하고, ligand-only alignment 없이 모든
   일치 reference pose에 대해 receptor frame의 heavy-atom RMSD 최솟값을 계산한다.
-  exact materializer source는 protocol v1.1에 결속된다. 데이터·도킹 실행·benchmark
-  결과·독립 검토·과학/제품 claim은 포함하지 않는다
+  installable `betelgeuze-engine-v2-public-materialize` 명령은 symlink가 아닌 로컬
+  입력 root에서 receptor/seed/reference 12개 파일을 모두 검증하고 case별 성공·실패를
+  누락 없이 담은 canonical no-overwrite suite receipt를 출력한다. exact per-case
+  materializer source는 protocol v1.1에 결속된다. 이 명령은 network fetch·pose 생성·
+  pose validity·scoring을 수행하지 않으며 데이터·도킹 실행·benchmark 결과·독립 검토·
+  과학/제품 claim은 포함하지 않는다
 
 이 표면은 calibrated docking, MD, free energy, GPU 또는 고객 제품 기능이
 아닙니다. 현재 모든 V2 capability는 `claim_safe=false`,

@@ -19,6 +19,14 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
     assert '"torch==2.6.0"' in text
     assert '"numpy>=1.26,<3"' in text
     assert 'include = ["betelgeuze_engine_v2*"]' in text
+    assert (
+        'betelgeuze-engine-v2-s0-review = "betelgeuze_engine_v2.offline.s0_production_evidence_bundle:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-public-materialize = "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"'
+        in text
+    )
 
 
 def test_ast_architecture_guard_accepts_canonical_engine_package() -> None:

@@ -11,9 +11,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import hashlib
-import hmac
 import json
 from typing import Any, Mapping, Sequence
+
+from .reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    sign_ed25519,
+    verify_ed25519,
+)
 
 from .reference_validation_artifact_binding import (
     FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256,
@@ -25,20 +30,23 @@ from .reference_validation_artifact_binding import (
 
 
 REFERENCE_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_review_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_review_contract/3.0.0"
 )
 REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_review_attestation/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_review_attestation/3.0.0"
 )
 REFERENCE_VALIDATION_REVIEW_CONTRACT_ID = (
-    "cpu_reference_validation_independent_review_contract/2.0.0"
+    "cpu_reference_validation_independent_review_contract/3.0.0"
 )
-REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION = "2.0.0"
-REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
-REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "hmac-sha256"
+REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION = "3.0.0"
+REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256 = (
+    "1a50da432e28629f0d4d8e04a3939281990a2640b0c91599a8a91dabdf40770a"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V2 = (
     "24508ab9947688ae981479148fbcb9cf67b3fa9147631609f49864c71be421d2"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V1 = (
@@ -137,14 +145,17 @@ def _format_utc(value: datetime, *, name: str) -> str:
 
 
 def _require_key(value: bytes | str, *, name: str) -> bytes:
-    if isinstance(value, str):
-        key = value.encode("utf-8")
-    elif isinstance(value, bytes):
+    if isinstance(value, bytes):
         key = value
+    elif isinstance(value, str):
+        try:
+            key = bytes.fromhex(value)
+        except ValueError as exc:
+            raise ReferenceValidationReviewError(f"{name} is not hexadecimal") from exc
     else:
-        raise ReferenceValidationReviewError(f"{name} must be bytes or text")
-    if len(key) < 32:
-        raise ReferenceValidationReviewError(f"{name} must contain at least 32 bytes")
+        raise ReferenceValidationReviewError(f"{name} must be bytes or hex")
+    if len(key) != 32:
+        raise ReferenceValidationReviewError(f"{name} must contain exactly 32 bytes")
     return key
 
 
@@ -171,6 +182,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_REVIEW_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "replace_symmetric_hmac_with_public_key_ed25519_verification",
         "purpose": {
             "scope": "future_independent_review_of_cpu_validation_implementation_artifacts",
             "contract_definition_only": True,
@@ -200,6 +215,8 @@ def _contract_projection() -> dict[str, Any]:
             "implementation_author_and_reviewer_must_differ": True,
             "reviewer_key_id_required": True,
             "trusted_reviewer_key_supplied_out_of_band": True,
+            "verifier_trust_anchor_contains_public_key_only": True,
+            "private_signing_key_remains_external_to_verifier": True,
             "repository_does_not_choose_or_bundle_trusted_reviewer_keys": True,
             "organizational_independence_requires_external_governance_review": True,
         },
@@ -278,7 +295,7 @@ def require_reference_validation_review_contract_document(
 
 @dataclass(frozen=True, slots=True)
 class ScientificReviewerTrustAnchor:
-    """Out-of-band reviewer identity and HMAC verification key."""
+    """Out-of-band reviewer identity and Ed25519 public key."""
 
     reviewer_identity_sha256: str
     verification_key: bytes = field(repr=False)
@@ -453,10 +470,16 @@ def build_signed_reference_validation_review_attestation(
     payload = dict(projection)
     payload["attestation_sha256"] = _sha256(projection)
     key = _require_key(signing_key, name="review signing key")
+    try:
+        signature = sign_ed25519(_canonical_bytes(payload), key)
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceValidationReviewError(
+            "review attestation Ed25519 signing failed"
+        ) from exc
     payload["signature"] = {
         "algorithm": REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM,
         "key_id": _require_key_id(reviewer_key_id),
-        "value": hmac.new(key, _canonical_bytes(payload), hashlib.sha256).hexdigest(),
+        "value": signature,
     }
     return payload
 
@@ -536,15 +559,16 @@ def verify_signed_reference_validation_review_attestation(
         raise ReferenceValidationReviewError(
             "trusted reviewer entry has an invalid type"
         )
-    expected_signature = hmac.new(
-        anchor.verification_key,
-        _canonical_bytes(payload),
-        hashlib.sha256,
-    ).hexdigest()
     signature_value = signature.get("value")
-    if not isinstance(signature_value, str) or not hmac.compare_digest(
-        signature_value, expected_signature
-    ):
+    try:
+        verified = verify_ed25519(
+            _canonical_bytes(payload), signature_value, anchor.verification_key
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise ReferenceValidationReviewError(
+            "review attestation Ed25519 verifier is unavailable"
+        ) from exc
+    if not verified:
         raise ReferenceValidationReviewError(
             "review attestation signature verification failed"
         )
@@ -663,6 +687,7 @@ def reference_validation_review_contract_authorization_decision() -> dict[str, A
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V2",
     "FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID",
     "REFERENCE_VALIDATION_REVIEW_CONTRACT_ID",

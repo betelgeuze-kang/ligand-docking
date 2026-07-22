@@ -4,7 +4,6 @@ import ast
 from copy import copy, deepcopy
 from datetime import datetime, timedelta, timezone
 import hashlib
-import hmac
 import io
 import inspect
 import json
@@ -19,6 +18,11 @@ from types import SimpleNamespace
 from typing import Any, Mapping, Sequence
 
 import pytest
+
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+    sign_ed25519,
+)
 
 from betelgeuze_engine_v2.physics.reference_validation_authorization import (
     AuthorizationOperatorTrustAnchor,
@@ -703,7 +707,7 @@ def test_runner_contract_is_frozen_and_current_decision_remains_closed() -> None
     assert first["bounds"]["variant_count"] == (
         REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
     )
-    assert first["frozen_at_utc"] == "2026-07-19T00:00:00Z"
+    assert first["frozen_at_utc"] == "2026-07-22T12:00:00Z"
     assert first["bounds"]["worker_canonical_jsonl_frame_protocol_required"] is True
     assert (
         first["bounds"]["retained_worker_environment_internal_coherence_reverified"]
@@ -826,7 +830,6 @@ def test_stdlib_bootstrap_and_dependency_identity_helper_are_exactly_scoped() ->
         "__future__",
         "betelgeuze_engine_v2.physics",
         "hashlib",
-        "hmac",
         "importlib.util",
         "json",
         "os",
@@ -2721,7 +2724,8 @@ def test_bootstrap_trusts_only_operator_signed_commit_and_source(
 ) -> None:
     key_id = "bootstrap-operator"
     operator_identity = "8" * 64
-    verification_key = b"bootstrap-operator-verification-key-material"
+    signing_key = bytes.fromhex("61" * 32)
+    verification_key = ed25519_public_key_bytes(signing_key)
     commit = reference_validation_checked_out_code_commit_sha()
     source = reference_validation_runner_source_sha256()
     author_identity = "7" * 64
@@ -2742,13 +2746,9 @@ def test_bootstrap_trusts_only_operator_signed_commit_and_source(
         bootstrap_module._canonical_bytes(projection)
     ).hexdigest()
     receipt["signature"] = {
-        "algorithm": "hmac-sha256",
+        "algorithm": "ed25519",
         "key_id": key_id,
-        "value": hmac.new(
-            verification_key,
-            bootstrap_module._canonical_bytes(receipt),
-            hashlib.sha256,
-        ).hexdigest(),
+        "value": sign_ed25519(bootstrap_module._canonical_bytes(receipt), signing_key),
     }
     request: dict[str, object] = {
         "authorization_receipt": receipt,
@@ -2767,6 +2767,16 @@ def test_bootstrap_trusts_only_operator_signed_commit_and_source(
         expected_commit=commit,
         expected_source=source,
     )
+    legacy_hmac_request = deepcopy(request)
+    legacy_hmac_request["authorization_receipt"]["signature"]["algorithm"] = (  # type: ignore[index]
+        "hmac-sha256"
+    )
+    with pytest.raises(RuntimeError, match="authorization signature is invalid"):
+        bootstrap_module._require_bootstrap_authorization_signature(
+            legacy_hmac_request,
+            expected_commit=commit,
+            expected_source=source,
+        )
     with pytest.raises(
         RuntimeError,
         match="source binding is invalid",
@@ -3013,8 +3023,10 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
     operator_identity = "3" * 64
     review_key_id = "entrypoint-reviewer"
     operator_key_id = "entrypoint-operator"
-    review_key = b"entrypoint-review-key-material-32-bytes-minimum"
-    operator_key = b"entrypoint-operator-key-material-32-bytes-minimum"
+    review_signing_key = bytes.fromhex("51" * 32)
+    review_key = ed25519_public_key_bytes(review_signing_key)
+    operator_signing_key = bytes.fromhex("52" * 32)
+    operator_key = ed25519_public_key_bytes(operator_signing_key)
     nonce = hashlib.sha256(os.fspath(tmp_path).encode("utf-8")).hexdigest()
     review_nonce = hashlib.sha256(f"review:{tmp_path}".encode("utf-8")).hexdigest()
     code_commit = reference_validation_checked_out_code_commit_sha()
@@ -3031,7 +3043,7 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
         implementation_author_identity_sha256=author_identity,
         independent_reviewer_identity_sha256=reviewer_identity,
         reviewer_key_id=review_key_id,
-        signing_key=review_key,
+        signing_key=review_signing_key,
         reviewed_at=reviewed_at,
         expires_at=review_expires_at,
         nonce_sha256=review_nonce,
@@ -3048,7 +3060,7 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
         expected_implementation_author_identity_sha256=author_identity,
         authorization_operator_identity_sha256=operator_identity,
         authorization_key_id=operator_key_id,
-        signing_key=operator_key,
+        signing_key=operator_signing_key,
         issued_at=now,
         expires_at=authorization_expires_at,
         authorization_nonce_sha256=nonce,
@@ -3088,7 +3100,7 @@ def test_exact_module_invocation_cannot_self_authorize_with_request_keys(
         authorization_nonce_sha256=nonce,
         authorization_operator_identity_sha256=operator_identity,
         authorization_key_id=operator_key_id,
-        signing_key=operator_key,
+        signing_key=operator_signing_key,
         code_commit_sha=code_commit,
         runner_source_sha256=runner_source,
         artifact_output_root_identity_sha256=(

@@ -8,6 +8,24 @@ scientific claim from a package version.
 
 ### Added
 
+- The active 27-case/59-variant energy-force production-evidence chain now uses
+  Ed25519 from pre-execution scientific review through authorization,
+  run-start/bootstrap trust loading, result review, single-host OpenMM review,
+  and two-host S0 approval. Verifiers accept exact public keys only; private and
+  symmetric trust material are not part of the active chain. The refrozen v3/v5
+  base contracts, v4 custody companions, v14 runtime-integrity contract, and
+  read-only legacy identities do not provision keys or evidence and do not open
+  any production, S0, scientific, fitting, or product claim.
+- A pinned OpenMM Reference offline mapping and receipt path for the frozen
+  27-case/59-variant energy-force and 14-case minimization protocols, including
+  fixed-Born self/pair components and complete retained traces, plus a
+  role-separated single-host external result review and an exact two-host S0
+  evidence-bundle verifier. The installable
+  `betelgeuze-engine-v2-s0-review` command supports secret-free detached final
+  review: it emits canonical bytes for an external/HSM Ed25519 signer and
+  verifies the returned signature with a public key before no-overwrite
+  attachment. No production evidence, trust key, authenticated custody, final
+  approval, S0 acceptance, or scientific/product promotion is bundled.
 - A bounded offline reference-pose materializer for the frozen PoseBusters
   four-case contract cohort. Protocol v1.1 now selects every reference SDF
   record matching the identity seed's labeled graph instead of requiring one
@@ -17,6 +35,35 @@ scientific claim from a package version.
   across all matched records without ligand alignment. Canonical receipts and
   the protocol bind the exact materializer source. No data, public benchmark
   run, result, independent review, or scientific/product claim is included.
+- An installable `betelgeuze-engine-v2-public-materialize` offline suite command
+  verifies all twelve frozen receptor/seed/reference artifacts, rejects symlink
+  inputs, retains all four success/failure case rows, embeds canonical reference
+  receipts, and writes a mode-0600 no-overwrite suite receipt. It does not fetch
+  data, generate poses, evaluate pose validity, score, or create docking evidence.
+- A claim-closed four-case rigid redocking diagnostic now generates bounded
+  poses after a fixed seed-conformer rotation, uses the lowest-index matched
+  native record only to define the pocket center, retains every score/failure,
+  evaluates geometric validity and direct receptor-frame symmetry-aware RMSD,
+  deterministically rigid-refines the initial diverse score Top-K with complete
+  accept/reject traces, re-ranks, and reports Top-1/Top-5 plus oracle-best
+  generation gaps. Its element-radius heuristic and rigid coordinate descent are
+  not a force field, molecular minimizer, or calibrated ranker; torsions,
+  supported-force-field refinement, disjoint holdout evidence, and external
+  baselines remain missing.
+- A bounded molecular-graph torsion-tree materializer emits a canonical
+  all-bond receipt and deterministically selects only non-ring, non-terminal
+  heavy-atom single-bond bridges, with narrow amide-, sulfonamide-, and
+  phosphoramidate-like exclusions. It verifies zero-angle coordinate
+  reconstruction and preserves covalent bond lengths across generated poses.
+  It is not full resonance perception, ring/macrocycle closure, a torsion-energy
+  model, or validated conformer generation. A separate failure-complete public
+  flexible diagnostic now embeds these receipts, retains the zero-torsion seed
+  baseline, samples later torsions deterministically and uniformly, and adds a
+  fixed element-radius ligand nonbonded self-overlap term that excludes 1-2 and
+  1-3 pairs before validity/RMSD evaluation and Top-K rigid refinement. Final
+  score-order diversity selection excludes invalid poses. Torsion energy,
+  bonded force-field strain, torsion refinement, force-field refinement, holdout
+  evidence, and every docking claim remain absent.
 - A bounded CPU `float64` canonical-ensemble reference path with constrained
   BAOAB Langevin NVT and optional molecular-centre isotropic Monte Carlo NPT.
   A domain-separated SHA-256 counter RNG, mutable orthorhombic cell, complete
@@ -70,8 +117,21 @@ scientific claim from a package version.
   fitting, and a non-promoted scorer wrapper. Held-out evaluation preserves
   failed poses and reports Top-1, Top-5, and scored-case coverage against the
   all-case denominator, both overall and per target family, with deterministic
-  bootstrap intervals. No public dataset, fitted model, result, independent
-  rerun, or scientific/product claim is bundled.
+  bootstrap intervals. Evaluation schema v2 also retains ranked scores/labels
+  and failure codes, computes tie-invariant pose-level average-precision PR-AUC,
+  over successfully scored/labeled poses, records successful/failed/all-pose
+  denominators so scoring failures remain visible, and uses case-cluster
+  bootstrap intervals overall and per target family. Single-class or
+  failure-only families remain explicitly unavailable. No public dataset,
+  fitted model, result, independent rerun, or scientific/product claim is
+  bundled.
+- A claim-closed pose-ranking confidence evaluation bound to evaluation schema
+  v2. It retains case decisions and failure denominators, reports Brier score,
+  fixed-bin ECE/reliability rows, threshold abstention/coverage/selective risk,
+  tie-inclusive risk-coverage points, deterministic case-cluster intervals, and
+  target-family scopes. Its logistic top-1/runner-up score-margin signal is
+  explicitly an uncalibrated proxy; no disjoint probability calibrator,
+  reviewed threshold, public result, or confidence claim is bundled.
 - Candidate-level docking score decomposition with canonical term IDs, raw
   values, weights, contributions, units, parameter-source digests, and
   failure-row preservation. A new explicitly uncalibrated CPU `float64`

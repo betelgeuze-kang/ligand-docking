@@ -35,30 +35,36 @@ from .reference_validation_protocol import (
 
 
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_execution_environment_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_execution_environment_contract/3.0.0"
 )
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_execution_environment_receipt/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_execution_environment_receipt/3.0.0"
 )
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID = (
-    "cpu_reference_validation_execution_environment_contract/2.0.0"
+    "cpu_reference_validation_execution_environment_contract/3.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_receipt_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_receipt_contract/3.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_receipt/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_receipt/3.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_ID = (
-    "cpu_reference_validation_result_receipt_contract/2.0.0"
+    "cpu_reference_validation_result_receipt_contract/3.0.0"
 )
-REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "2.0.0"
-REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-18T22:48:58Z"
+REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "3.0.0"
+REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
 
 FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "e6e5e124e5391ba0f04cc2db60f5195f6a31f73782f13956eec878a4ceae5894"
+    "1b2722273c2c2424de6dcb1be8b2b9011f906cebab06bc25f6e8c2b9c688f863"
 )
 FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
+    "55a36bfcf085147d11ba5c213fd4381b8c7ed6bf7c57d23f8432be9ed82f6511"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2 = (
+    "e6e5e124e5391ba0f04cc2db60f5195f6a31f73782f13956eec878a4ceae5894"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V2 = (
     "e746de80faa7950cddc05c9bb575f053a63b1427e8c6c3a4f5cc9bb8a20ccb89"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V1 = (
@@ -114,6 +120,10 @@ def _environment_contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "binds_public_key_ed25519_execution_authorization_contract",
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "contract_definition_only": True,
@@ -300,6 +310,10 @@ def _result_contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_ID,
         "contract_version": REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "binds_public_key_ed25519_execution_authorization_contract",
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "contract_definition_only": True,
@@ -591,6 +605,8 @@ def require_reference_validation_execution_ready() -> NoReturn:
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2",
+    "FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V2",
     "FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256",
     "FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256",
     "REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID",

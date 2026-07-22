@@ -12,6 +12,7 @@ dependencies = [
   "numpy>=1.26,<3",
   "torch==2.6.0",
 ]
+
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
@@ -21,6 +22,10 @@ classifiers = [
   "Operating System :: OS Independent",
   "Typing :: Typed",
 ]
+
+[project.scripts]
+betelgeuze-engine-v2-public-materialize = "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"
+betelgeuze-engine-v2-s0-review = "betelgeuze_engine_v2.offline.s0_production_evidence_bundle:main"
 
 [tool.setuptools.packages.find]
 include = ["betelgeuze_engine_v2*"]

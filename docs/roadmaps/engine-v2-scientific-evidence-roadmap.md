@@ -30,7 +30,7 @@ collapsed or inferred from one another.
 | 1. Contract correctness | Deterministic identities; serialization round trips; units and dimensions; failure-inclusive ledgers; finite-difference energy/force checks; invariance and fail-closed tests | Does not calibrate a force field or validate docking accuracy. |
 | 2. Frozen public benchmark protocol | Versioned CASF/PDBBind-style protocol where licensing permits; split provenance; symmetry-aware RMSD; PoseBusters-style validity; failure-inclusive denominators; frozen manifest and executable/scorer fingerprints; predefined thresholds; no test-set tuning | Protocol readiness is not a successful benchmark result. |
 | 3. External baseline receipts | Reviewed offline Vina/GNINA/Smina receipts; binary/version/container identity; exact case coverage; retained failures; input/output hashes; comparable score semantics | Receipt integrity is not public benchmark validation or endorsement of an external engine. |
-| 4. Docking evidence | Pose success, scoring, ranking, and valid screening/enrichment metrics; uncertainty intervals; predefined acceptance thresholds; complete denominator | Passing one metric does not establish general docking accuracy or commercial fitness. |
+| 4. Docking evidence | Pose success, scoring, ranking, and valid screening/enrichment metrics; disjoint probability calibration; Brier/ECE and reliability rows; selective-risk/coverage and abstention; uncertainty intervals; predefined acceptance thresholds; complete denominator | A raw score-margin diagnostic or one passing metric does not establish calibrated confidence, general docking accuracy, or commercial fitness. |
 | 5. Physics evidence | Reviewed parameter provenance and applicability domain; independent energy/force references; force validation before dynamics; dedicated protocol for any free-energy claim | Stable execution alone is not physical accuracy. |
 | 6. GPU parity | CPU/GPU tolerance contract; deterministic fixtures; kernel-level and end-to-end comparisons; failures retained; performance measured separately | Throughput is not numerical correctness, and CPU tests do not imply GPU parity. |
 | 7. Product qualification | Threat model; tenant isolation; artifact integrity; durable quota/rate state; rollback; operational evidence; explicit authorization review | Customer routes remain disabled until every required gate is accepted. |
@@ -187,6 +187,19 @@ claim status without revalidating the dependency and freshness chain.
   neither independent chemical standardization, complete atom-stereo support,
   a statistically representative public benchmark result, nor a PoseBusters-
   equivalence claim.
+- Preserve the separate offline suite materializer that verifies all twelve
+  receptor/identity-seed/reference files and emits exactly four canonical
+  success/failure rows. Completion of all four reference-materialization rows is
+  only an input-readiness observation. Pose generation, receptor-ligand validity,
+  scoring/ranking, same-input Vina/GNINA/Smina receipts, public denominators and
+  confidence intervals, and an independent rerun remain subsequent gates.
+- Treat the executable four-case rigid geometry lane only as a pipeline
+  diagnostic. It now separates proposal coverage (oracle-best valid RMSD and
+  generated-hit count) from score selection (Top-1/Top-5) while retaining all
+  candidate failures. Because its pocket is native-defined and its score is an
+  unfitted element-radius heuristic, any observed number is development evidence
+  rather than a holdout result. Do not tune and then promote this four-case
+  cohort; freeze a disjoint public evaluation partition before threshold review.
 - Preserve the frozen H5 parameter-origin and runtime-envelope record. It binds
   exact runtime equations, code-enforced admission, configurable capacity
   defaults, and seven implementation-source hashes while recording that values
@@ -326,12 +339,12 @@ claim status without revalidating the dependency and freshness chain.
 - Preserve the separate frozen independent-review attestation contract. It
   requires exact artifact dependencies, complete ordered review checks and
   limitations, implementation-author/reviewer identity separation, an
-  out-of-band trusted reviewer key, HMAC-SHA256 integrity, and at most 30 days
+  out-of-band trusted reviewer public key, Ed25519 integrity, and at most 30 days
   of validity. No trusted key or attestation is bundled, and review verification
   alone cannot authorize execution or fitting.
 - Preserve the separate frozen single-run authorization receipt contract. It
   requires a still-valid verified review, pairwise-distinct authorization
-  operator identity, an out-of-band trusted key, exact code/runner/environment/
+  operator identity, an out-of-band Ed25519 public key, exact code/runner/environment/
   result/dependency hashes, at most 24 hours of validity, external revocation
   inputs, and an unused one-time nonce. No key or receipt is bundled; receipt
   verification alone cannot open execution.

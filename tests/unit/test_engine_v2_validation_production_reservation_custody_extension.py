@@ -21,7 +21,7 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
     build_signed_production_evidence_status_snapshot,
 )
 from betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension import (
-    FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2,
+    FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3,
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
     PRODUCTION_RESERVATION_MAX_REGISTRY_SEQUENCE,
     ProductionAtomicReservationCommitVerification,
@@ -238,9 +238,7 @@ def _build_commit(
         ],
         expected_run_context=scenario["context"],  # type: ignore[arg-type]
         expected_intent_sha256=intent["intent_sha256"],  # type: ignore[arg-type]
-        expected_external_launch_nonce_sha256=(
-            expected_external_launch_nonce_sha256
-        ),
+        expected_external_launch_nonce_sha256=(expected_external_launch_nonce_sha256),
         expected_registry_realm_identity_sha256=REGISTRY_REALM_IDENTITY_SHA256,
         expected_registry_epoch=REGISTRY_EPOCH,
         expected_prior_registry_sequence=expected_prior_registry_sequence,
@@ -370,7 +368,7 @@ def test_contract_is_frozen_additive_and_claim_closed() -> None:
         FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
     )
     assert contract["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2
+        FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3
     )
     assert contract["purpose"]["additive_sequence_five_companion_only"] is True
     assert (
@@ -390,16 +388,11 @@ def test_contract_is_frozen_additive_and_claim_closed() -> None:
         is True
     )
     assert (
-        contract["atomic_commit"][
-            "external_serializable_commit_independently_verified"
-        ]
+        contract["atomic_commit"]["external_serializable_commit_independently_verified"]
         is False
     )
     assert contract["atomic_commit"]["permit_one_use_slot_consumed"] is False
-    assert (
-        contract["atomic_commit"]["custody_successor_uniqueness_enforced"]
-        is False
-    )
+    assert contract["atomic_commit"]["custody_successor_uniqueness_enforced"] is False
     assert contract["claim_policy"]["claim_safe"] is False
     assert decision["actual_atomic_reservation_commit_present"] is False
     assert decision["external_serializable_registry_commit_verified"] is False
@@ -986,6 +979,7 @@ def test_final_verifier_rejects_status_descendant_that_predates_commit(
                 _reverification_arguments(stale)
             ),
         )
+
 
 @pytest.mark.parametrize(
     "identity_field",

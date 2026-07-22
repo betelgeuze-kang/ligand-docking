@@ -516,7 +516,7 @@ def test_anchor_and_common_lineage_match_independent_golden_projections(
     }
     fork_scope_sha256 = _sha256(fork_projection)
     assert fork_scope_sha256 == (
-        "ef0d2eeeaec82947fdea40728bdb07d7abb16f217f3dc1aca581a40c42f4cd5d"
+        "9acf96938722a7410938b6d17f8b178428d180a1121665dcbed64768b0e67158"
     )
     assert document["fork_scope"] == {
         **fork_projection,
@@ -549,7 +549,7 @@ def test_anchor_and_common_lineage_match_independent_golden_projections(
     }
     common_lineage_sha256 = _sha256(common_projection)
     assert common_lineage_sha256 == (
-        "ce660b331d7262a73eb0e0acb86458bb73e3693dd5866cd8ba297af616b35848"
+        "2707006b57b915d3177bd4a67bda446cb2893582c26a92ae9cc4e03eb5488a76"
     )
     assert document["common_lineage_statement"] == {
         **common_projection,

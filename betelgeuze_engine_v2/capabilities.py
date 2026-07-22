@@ -25,7 +25,7 @@ from .physics.reference_ensemble_statistics import (
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_at_public_benchmark_reference_materialization_contract"
+IMPLEMENTATION_STAGE = "v2_at_s0_production_evidence_bundle_contract"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -73,6 +73,8 @@ CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = "v2_bounded_cpu_reference_impr
 CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = "v2_bounded_cpu_fixed_born_polar_solvation"
 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = "v2_cpu_reference_energy_force_validation_protocol"
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID = "v2_cpu_reference_minimization_validation_protocol"
+OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID = "v2_openmm_reference_offline_oracle"
+S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID = "v2_s0_production_evidence_bundle"
 VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID = "v2_synthetic_validation_production_evidence_custody_foundation"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
@@ -493,9 +495,8 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "signed_independent_result_review_attestation_missing",
         "trusted_independent_result_reviewer_key_not_provided",
         "implementation_author_and_independent_result_reviewer_separation_not_attested",
-        "energy_force_upstream_symmetric_hmac_chain",
         "two_cpu_host_reproducibility_missing",
-        "independent_external_implementation_comparison_missing",
+        "independent_external_implementation_production_receipt_missing",
         "result_receipt_external_authenticity_not_established",
         "same_uid_artifact_replacement_resistance_not_established",
         "validation_execution_not_authorized",
@@ -528,11 +529,39 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "trusted_independent_result_reviewer_key_not_provided",
         "implementation_author_and_independent_result_reviewer_separation_not_attested",
         "two_cpu_host_reproducibility_missing",
-        "independent_external_implementation_comparison_missing",
+        "independent_external_implementation_production_receipt_missing",
         "reviewed_runtime_parameter_values_not_bound",
         "scientific_parameter_applicability_not_established",
         "parameter_fitting_not_authorized",
         "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID: (
+        "offline_development_observation_is_not_production_result_evidence",
+        "signed_external_oracle_production_receipt_missing",
+        "signed_external_oracle_result_review_attestation_not_provisioned",
+        "trusted_external_oracle_result_reviewer_key_not_provisioned",
+        "two_cpu_host_external_oracle_reproducibility_missing",
+        "host_to_host_exact_physics_projection_equality_missing",
+        "externally_authenticated_production_custody_missing",
+        "final_independent_human_s0_approval_missing",
+        "runtime_and_source_pre_post_checks_do_not_establish_immutable_custody",
+        "openmm_reference_agreement_does_not_validate_parameter_values",
+        "openmm_reference_agreement_does_not_establish_chemical_applicability",
+        "openmm_is_optional_offline_evidence_dependency_only",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
+    S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID: (
+        "two_distinct_cpu_host_result_sets_not_provisioned",
+        "signed_host_external_result_reviews_not_provisioned",
+        "trusted_host_external_result_reviewer_keys_not_provisioned",
+        "authenticated_external_production_custody_not_provisioned",
+        "final_independent_human_s0_approval_not_provisioned",
+        "trusted_final_s0_reviewer_key_not_provisioned",
+        "s0_reference_physics_evidence_not_accepted",
+        "s1_admission_not_authorized",
+        "scientific_parameter_applicability_not_established",
         "product_integration_not_qualified",
     ),
     VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID: (
@@ -593,6 +622,13 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "docking_proposal_scaffold_not_scientifically_validated",
         "validated_docking_scorer_missing",
         "public_pose_ranking_calibration_fit_missing",
+        "pose_ranking_confidence_calibration_missing",
+        "disjoint_pose_probability_calibrator_missing",
+        "selective_risk_acceptance_criteria_not_independently_reviewed",
+        "public_rigid_diagnostic_is_geometry_only",
+        "public_rigid_diagnostic_torsion_and_supported_force_field_refinement_missing",
+        "public_flexible_diagnostic_torsion_energy_and_bonded_internal_strain_missing",
+        "public_rigid_diagnostic_cohort_is_not_a_scientific_holdout",
         "metals_and_cofactors_outside_reference_scorer_scope",
         "aromatic_and_stereo_specific_scoring_missing",
         "public_pose_validity_and_ranking_evidence_missing",
@@ -608,8 +644,12 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "posebusters_benchmark_equivalence_not_established",
         "v2000_labeled_graph_identity_not_independent_chemical_standardization",
         "atom_stereo_parity_beyond_directional_v2000_bonds_not_interpreted",
+        "docking_predictions_missing",
+        "pose_validity_not_evaluated",
         "public_benchmark_not_executed",
         "public_holdout_results_missing",
+        "same_input_vina_gnina_smina_receipts_missing",
+        "independent_external_rerun_missing",
         "independent_attestation_missing",
         "legal_compliance_determination_not_made",
         "scientific_validation_missing",
@@ -949,7 +989,8 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "result_writer_and_independent_result_review_contract_without_production_receipt_or_review"
+                    "full_ed25519_public_key_chain_result_writer_and_independent_"
+                    "result_review_contract_without_production_receipt_or_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -960,6 +1001,27 @@ def capability_snapshot() -> dict[str, Any]:
                     "failure_inclusive_complete_coordinate_trace_checkpoint_"
                     "restart_trajectory_comparison_contract_and_result_review_"
                     "without_production_result_receipt_or_review"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID: _row(
+                OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID,
+                current_state=(
+                    "pinned_openmm_reference_offline_mapping_runtime_identity_"
+                    "and_canonical_energy_force_minimization_trace_receipt_"
+                    "builders_plus_fail_closed_ed25519_external_result_review_"
+                    "verifier_without_provisioned_production_receipt_or_attestation"
+                ),
+                internal_execution_enabled=False,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
+            S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID: _row(
+                S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID,
+                current_state=(
+                    "fail_closed_two_host_exact_physics_full_ed25519_public_key_"
+                    "chain_and_secret_free_detached_final_human_approval_without_"
+                    "provisioned_evidence_or_keys"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -984,7 +1046,15 @@ def capability_snapshot() -> dict[str, Any]:
                 current_state=(
                     "bounded_internal_search_with_uncalibrated_parameter_bound_"
                     "four_term_interaction_strain_score_decomposition_and_"
-                    "leakage_audited_fit_evaluation_contract_without_public_fit"
+                    "leakage_audited_fit_evaluation_with_tie_aware_pr_auc_case_"
+                    "cluster_bootstrap_all_pose_denominator_and_claim_closed_raw_"
+                    "margin_ece_brier_threshold_abstention_selective_risk_and_"
+                    "failure_inclusive_four_case_rigid_geometry_diagnostic_"
+                    "with_topk_geometry_rigid_refinement_and_separate_bridge_"
+                    "torsion_flexible_self_overlap_diagnostic_without_torsion_"
+                    "energy_bonded_internal_strain_supported_force_field_"
+                    "refinement_public_fit_or_"
+                    "probability_calibrator"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -998,9 +1068,9 @@ def capability_snapshot() -> dict[str, Any]:
             PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_four_case_public_redocking_protocol_with_verified_"
-                    "multirecord_stereo_aware_reference_materialization_without_"
-                    "benchmark_execution_or_results"
+                    "frozen_four_case_public_redocking_protocol_with_receptor_"
+                    "bound_failure_inclusive_offline_suite_materialization_"
+                    "without_docking_execution_or_results"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -1030,6 +1100,9 @@ def capability_snapshot() -> dict[str, Any]:
             "require_validated_independent_physics": True,
             "require_predefined_minimization_trajectory_thresholds": True,
             "require_minimization_checkpoint_restart_equality": True,
+            "require_two_cpu_host_s0_bundle": True,
+            "require_final_human_s0_approval": True,
+            "require_external_or_hardware_detached_final_signing": True,
             "require_adjacent_epoch_transition_continuity_proof": True,
             "require_joint_epoch_transition_witness_quorums": True,
             "require_gpu_parity_before_acceleration_claim": True,
@@ -1098,10 +1171,12 @@ __all__ = [
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",
+    "OPENMM_REFERENCE_OFFLINE_ORACLE_CAPABILITY_ID",
     "PDB_INGEST_CAPABILITY_ID",
     "PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",
     "PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID",
+    "S0_PRODUCTION_EVIDENCE_BUNDLE_CAPABILITY_ID",
     "SDF_INGEST_CAPABILITY_ID",
     "capability_snapshot",
     "require_capability_snapshot",
