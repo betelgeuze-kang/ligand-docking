@@ -299,11 +299,200 @@ _IDENTITIES = (
         "2026-07-20T01:25:00Z",
         "dcc7f0901a235b13afe8d71df3b806e2c2a623b8e1d362c04a8e4008665686e6",
     ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/3.0.0",
+        "cpu_reference_minimization_validation_execution_authorization_contract/3.0.0",
+        "3.0.0",
+        "2026-07-18T22:48:58Z",
+        "ccecce01b07020b97856c2dca15d5e93d2857bb2b87490874d02d69922055018",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/3.0.0",
+        "cpu_reference_minimization_validation_result_receipt_contract/3.0.0",
+        "3.0.0",
+        "2026-07-18T22:48:58Z",
+        "814ea0ec6464acb77cdf41ccba8070c03ed79cc6e605805a55719c54c55b6745",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation_contract/3.0.0",
+        "cpu_reference_minimization_validation_atomic_nonce_reservation/3.0.0",
+        "3.0.0",
+        "2026-07-18T22:48:58Z",
+        "c5397b6ea8ea1d8291630dc5b5a0f0761133509cc3d1b5ce3403464a498635a3",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/3.0.0",
+        "cpu_reference_minimization_validation_run_start_environment/3.0.0",
+        "3.0.0",
+        "2026-07-18T22:48:58Z",
+        "ca0b546fe9c5a43b5ff625ed17413af25b768c5be981805085eb507ad9795cec",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/6.0.0",
+        "cpu_reference_minimization_validation_bounded_runner/6.0.0",
+        "6.0.0",
+        "2026-07-19T00:00:00Z",
+        "678d34e58ed5a1ad6763cd072afda07889940f5d63b056687eb47f3616a217f9",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/5.0.0",
+        "cpu_reference_minimization_validation_result_receipt_writer/5.0.0",
+        "5.0.0",
+        "2026-07-19T00:00:00Z",
+        "9a3c4a22cc60dc06a468e8fa62f55b23766a106d2781c3ea485360ce3131a040",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/5.0.0",
+        "cpu_reference_minimization_validation_independent_result_review_contract/5.0.0",
+        "5.0.0",
+        "2026-07-19T00:00:00Z",
+        "fef2198e4cc18b07f3607cc4036555f737eb423f51264179738b261dee3ea420",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/10.0.0",
+        "engine_v2_synthetic_validation_runtime_integrity/10.0.0",
+        "10.0.0",
+        "2026-07-20T02:20:00Z",
+        "6a260a1b4572c6331e19f8ed8bad8c942d04abe6b485b69738ebb69154ab2ef6",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/1.0.0",
+        "engine_v2_synthetic_validation_production_review_authorization_custody_extension/1.0.0",
+        "1.0.0",
+        "2026-07-19T04:30:00Z",
+        "3cb1d5c4289ac5026e5cbc8dc623239469f0fafe8bdce2ffc32bac11cfa549db",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_custody_extension_contract/1.0.0",
+        "engine_v2_synthetic_validation_production_reservation_custody_extension/1.0.0",
+        "1.0.0",
+        "2026-07-19T12:25:00Z",
+        "b9f63eefaf4277a1e93463a6192fc03e2d2cc99aaddd7748ad4da5e3e58b7ce9",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_registry_proof_contract/1.0.0",
+        "engine_v2_validation_production_reservation_registry_proof/1.0.0",
+        "1.0.0",
+        "2026-07-19T15:30:00Z",
+        "a204a1d3859d382fdc248b8c11589d2a7c08560124e2dde8e82b537ce833e756",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_authenticated_head_receipt_contract/1.0.0",
+        "engine_v2_validation_production_reservation_authenticated_head_receipt/1.0.0",
+        "1.0.0",
+        "2026-07-19T18:20:00Z",
+        "0e9ddbab2978ad679eb040faebaa49524d08a59a939d22e7f38029d2fc4b1639",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_later_head_consistency_contract/1.0.0",
+        "engine_v2_validation_production_reservation_later_head_consistency/1.0.0",
+        "1.0.0",
+        "2026-07-20T00:40:00Z",
+        "ee4e5d624e5f565e2fd591ddae899cea5f12b5a07c2a694b23cdb777bfb1d834",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_witness_quorum_contract/1.0.0",
+        "engine_v2_validation_production_reservation_witness_quorum/1.0.0",
+        "1.0.0",
+        "2026-07-20T02:10:00Z",
+        "d7962b6a48fc25c0ff5ce83ad784800a50defa0f3d2022b2deed9ac3ce53f3f4",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_trajectory_comparison_contract/1.0.0",
+        "cpu_reference_minimization_validation_trajectory_comparison/1.0.0",
+        "1.0.0",
+        "2026-07-22T00:00:00Z",
+        "588f07cfe239ffd418a4743522fb9a71910da62d9ac5452109234349f29e8a6f",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_review_contract/3.0.0",
+        "cpu_reference_minimization_validation_independent_review_contract/3.0.0",
+        "3.0.0",
+        "2026-07-18T22:48:58Z",
+        "9aee9223b5842f1ddbc2509079fd417958edb24b11262398b74853c9fe44d8a7",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/3.0.0",
+        "cpu_reference_minimization_validation_execution_environment_contract/3.0.0",
+        "3.0.0",
+        "2026-07-18T22:48:58Z",
+        "b639cc7ead5ea15678183c855b14bcaa289b7f62d36d1fc98706e2a32c44ed9f",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/4.0.0",
+        "cpu_reference_minimization_validation_result_receipt_contract/4.0.0",
+        "4.0.0",
+        "2026-07-22T00:00:00Z",
+        "eb47782990fc643938ad166d52d55ebd0680625c551b763643b0fb8482e53732",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/4.0.0",
+        "cpu_reference_minimization_validation_execution_authorization_contract/4.0.0",
+        "4.0.0",
+        "2026-07-22T00:00:00Z",
+        "a321deb2ffbfcf32e3da651d970689a602c6b0e9ca16b751e62e081a70a8de36",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation_contract/4.0.0",
+        "cpu_reference_minimization_validation_atomic_nonce_reservation/4.0.0",
+        "4.0.0",
+        "2026-07-22T00:00:00Z",
+        "09a5d401577fe7ae53ed4d22d088e1e9ef1377bdff02c2a4d82d87f7c37a24ab",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/4.0.0",
+        "cpu_reference_minimization_validation_run_start_environment/4.0.0",
+        "4.0.0",
+        "2026-07-22T00:00:00Z",
+        "7b5682a49063808e7e73554a81bd80248b14065cde5d0f2defe3eccfeea73bf9",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/7.0.0",
+        "cpu_reference_minimization_validation_bounded_runner/7.0.0",
+        "7.0.0",
+        "2026-07-22T00:00:00Z",
+        "5045242591ef028a5461a49936242998c2ced42a31fe3242ec06a0253b12f066",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/6.0.0",
+        "cpu_reference_minimization_validation_result_receipt_writer/6.0.0",
+        "6.0.0",
+        "2026-07-22T00:00:00Z",
+        "533913643878a3f0a7235dc0bd4ca5ca32b197a253d526a2aa7f51a7943c6329",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/6.0.0",
+        "cpu_reference_minimization_validation_independent_result_review_contract/6.0.0",
+        "6.0.0",
+        "2026-07-22T00:00:00Z",
+        "b62a476bac963b63ee48c3a763d2423103676db0ec568380dc28104d246c4fe2",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/11.0.0",
+        "engine_v2_synthetic_validation_runtime_integrity/11.0.0",
+        "11.0.0",
+        "2026-07-22T00:00:00Z",
+        "24a95d5c42efcd63235614f491d7c2dc818cd3d4f3a6a40317ec8ee6f2d6018d",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/2.0.0",
+        "engine_v2_synthetic_validation_production_review_authorization_custody_extension/2.0.0",
+        "2.0.0",
+        "2026-07-22T00:00:00Z",
+        "d7c0a32d52777b3406cd7e820e36addd5d7e98af7662f9400d6f1b450ee8dda3",
+    ),
+    _identity(
+        "betelgeuze.engine_v2_validation_production_reservation_custody_extension_contract/2.0.0",
+        "engine_v2_synthetic_validation_production_reservation_custody_extension/2.0.0",
+        "2.0.0",
+        "2026-07-22T00:00:00Z",
+        "cf1eafa05f58320ae71a2e2a781dc801d0dcedb326d29b310c8a734daae63069",
+    ),
 )
 
-LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID: Mapping[
-    str, LegacyValidationContractIdentity
-] = MappingProxyType({identity.schema_id: identity for identity in _IDENTITIES})
+LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID: Mapping[str, LegacyValidationContractIdentity] = MappingProxyType(
+    {identity.schema_id: identity for identity in _IDENTITIES}
+)
 
 if len(LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID) != len(_IDENTITIES):
     raise RuntimeError("legacy validation contract schema IDs must be unique")
@@ -315,9 +504,7 @@ def _require_json_tree(value: object, *, path: str = "$") -> None:
     if isinstance(value, float):
         if math.isfinite(value):
             return
-        raise LegacyValidationContractError(
-            f"legacy validation contract document has a non-finite value at {path}"
-        )
+        raise LegacyValidationContractError(f"legacy validation contract document has a non-finite value at {path}")
     if isinstance(value, list):
         for index, item in enumerate(value):
             _require_json_tree(item, path=f"{path}[{index}]")
@@ -325,14 +512,10 @@ def _require_json_tree(value: object, *, path: str = "$") -> None:
     if isinstance(value, dict):
         for key, item in value.items():
             if not isinstance(key, str):
-                raise LegacyValidationContractError(
-                    "legacy validation contract document has a non-string JSON key"
-                )
+                raise LegacyValidationContractError("legacy validation contract document has a non-string JSON key")
             _require_json_tree(item, path=f"{path}.{key}")
         return
-    raise LegacyValidationContractError(
-        f"legacy validation contract document has a non-JSON value at {path}"
-    )
+    raise LegacyValidationContractError(f"legacy validation contract document has a non-JSON value at {path}")
 
 
 def _canonical_ascii_json_bytes(value: object) -> bytes:
@@ -346,9 +529,7 @@ def _canonical_ascii_json_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError, UnicodeError) as exc:
-        raise LegacyValidationContractError(
-            "legacy validation contract document is not canonical ASCII JSON"
-        ) from exc
+        raise LegacyValidationContractError("legacy validation contract document is not canonical ASCII JSON") from exc
 
 
 def require_legacy_validation_contract_document(
@@ -361,22 +542,16 @@ def require_legacy_validation_contract_document(
     """
 
     if not isinstance(value, Mapping):
-        raise LegacyValidationContractError(
-            "legacy validation contract document must be a mapping"
-        )
+        raise LegacyValidationContractError("legacy validation contract document must be a mapping")
     document = dict(value)
     _canonical_ascii_json_bytes(document)
 
     schema_id = document.get("schema_id")
     if not isinstance(schema_id, str):
-        raise LegacyValidationContractError(
-            "legacy validation contract document schema_id must be a string"
-        )
+        raise LegacyValidationContractError("legacy validation contract document schema_id must be a string")
     identity = LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID.get(schema_id)
     if identity is None:
-        raise LegacyValidationContractError(
-            "legacy validation contract document schema is not registered"
-        )
+        raise LegacyValidationContractError("legacy validation contract document schema is not registered")
 
     expected_metadata = {
         "schema_id": identity.schema_id,
@@ -384,22 +559,14 @@ def require_legacy_validation_contract_document(
         "contract_version": identity.contract_version,
         "frozen_at_utc": identity.frozen_at_utc,
     }
-    if any(
-        document.get(key) != expected for key, expected in expected_metadata.items()
-    ):
-        raise LegacyValidationContractError(
-            "legacy validation contract document metadata does not match the registry"
-        )
+    if any(document.get(key) != expected for key, expected in expected_metadata.items()):
+        raise LegacyValidationContractError("legacy validation contract document metadata does not match the registry")
     if document.get("contract_sha256") != identity.contract_sha256:
-        raise LegacyValidationContractError(
-            "legacy validation contract document hash does not match the registry"
-        )
+        raise LegacyValidationContractError("legacy validation contract document hash does not match the registry")
 
     projection = dict(document)
     projection.pop("contract_sha256")
-    projection_sha256 = hashlib.sha256(
-        _canonical_ascii_json_bytes(projection)
-    ).hexdigest()
+    projection_sha256 = hashlib.sha256(_canonical_ascii_json_bytes(projection)).hexdigest()
     if projection_sha256 != identity.contract_sha256:
         raise LegacyValidationContractError(
             "legacy validation contract document projection does not match the registry"

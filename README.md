@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ao_minimization_validation_production_entrypoint
+v2_ap_minimization_trajectory_comparison
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -99,10 +99,16 @@ Implemented and GitHub-hosted CPU tested:
   review contract fully revalidates one exact receipt, binds all fourteen case
   outcomes and retained/missing metric dispositions, and derives ordered trace-
   and step-level dispositions before preserving an explicit accepted or rejected
-  decision under a caller-provided, role-separated reviewer public key. These
-  implementation contracts do not establish a trajectory-level scientific
-  comparison. They bundle no key, attestation, production receipt, human
-  approval, or scientific evidence. The exact bootstrap entrypoint now accepts
+  decision under a caller-provided, role-separated reviewer public key. The
+  refrozen v2.1 comparison contract aligns every evaluation under frozen coordinate and
+  energy thresholds and binds exact uninterrupted/paused/resumed evidence for
+  three checkpoint cases. Internal half-tolerance projection convergence
+  headroom leaves the declared acceptance threshold unchanged, and the
+  non-production implementation check passes all 14/14 rows, including both
+  fixed-Born cases. This
+  is not an accepted production trajectory comparison and bundles no key,
+  attestation, production receipt, human approval, or scientific evidence. The
+  exact bootstrap entrypoint now accepts
   only bounded canonical input, rebinds the signed nonce, author, source, and
   dependency identities before import, reloads reviewer/operator anchors only
   from the fixed external root-owned mode-0600 trust store, rechecks the fixed

@@ -52,6 +52,7 @@ betelgeuze_engine_v2.physics.reference_minimization_validation_run_start
 betelgeuze_engine_v2.physics.reference_minimization_validation_runner
 betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer
 betelgeuze_engine_v2.physics.reference_minimization_validation_result_review
+betelgeuze_engine_v2.physics.reference_minimization_validation_trajectory_comparison
 betelgeuze_engine_v2.physics.reference_solvation
 betelgeuze_engine_v2.physics.reference_validation_protocol
 betelgeuze_engine_v2.physics.reference_validation_materializer
@@ -537,13 +538,23 @@ latest, epoch continuity, execution, and promotion therefore remain false.
 No policy, witness key, certificate, journal, or post-certificate status is
 provisioned.
 
-Runtime-integrity companion v10 binds the exact frozen SHA-256 of custody-v1,
+`reference_minimization_validation_trajectory_comparison` freezes exact
+evaluation-index/iteration/trial/outcome alignment, coordinate and energy
+max/RMS thresholds, branch/rejection/count dispositions, expected-failure
+non-comparability, and uninterrupted/paused/resumed digest equality for three
+checkpoint cases. The runner, writer, and result-review verifier recompute the
+canonical comparison and fail closed on omission, reorder, cross-wire,
+non-finite values, or digest tamper. Its production, S0, scientific, and S1
+flags remain false.
+
+Runtime-integrity companion v12 binds the exact frozen SHA-256 of the refrozen
+minimization trajectory-comparison contract, custody-v1,
 the review/authorization extension, the sequence-5 reservation companion, the
 external registry-proof verifier, the authenticated head/status receipt
 verifier, the same-epoch later-head consistency verifier, the fixed-policy
 anchor-scoped witness-quorum verifier, and the
-process-launch-identity contract. Runtime v8 is retained only in the read-only
-legacy-contract registry together with runtime v9.
+process-launch-identity contract. Runtime v8 through v11 are retained only in
+the read-only legacy-contract registry.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
 shape and the failure-inclusive result-receipt shape for the exact 27 cases, 59
@@ -568,10 +579,12 @@ replacement resistance is not established, and result review remains
 bundled.
 
 The active energy-force base carrier chain uses v2 identities with a v4 runner
-and result writer. The active minimization base chain uses v3 identities with a
-v6 runner and v5 result writer/result review. Current hashes are frozen over the
+and result writer. The active minimization base chain uses v4 review and
+execution-environment identities, v5 authorization, result-receipt,
+nonce-reservation, and run-start identities, a v8 runner, and v7 result
+writer/result review. Current hashes are frozen over the
 complete upstream contract DAG. The read-only legacy-contract verifier
-recognizes 36 superseded contract documents by canonical projection hash and
+recognizes 63 superseded contract documents by canonical projection hash and
 fixed identity metadata. It does not verify or claim compatibility with
 superseded signed attestations, receipts, run records, or observations.
 

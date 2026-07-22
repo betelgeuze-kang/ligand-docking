@@ -13,6 +13,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_artifact_bin
     FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256,
     FROZEN_INDEPENDENT_MINIMIZATION_ORACLE_SOURCE_SHA256,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
+    SUPERSEDED_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256,
     ReferenceMinimizationValidationArtifactBindingError,
     independent_analytic_oracle_source_sha256,
     independent_minimization_oracle_source_sha256,
@@ -32,6 +33,9 @@ def test_binding_freezes_exact_protocol_materializer_and_oracles() -> None:
     dependencies = document["dependencies"]
     assert document["artifact_binding_sha256"] == (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
+    )
+    assert document["superseded_artifact_binding_sha256"] == (
+        SUPERSEDED_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
     )
     assert dependencies["materializer_source_sha256"] == (
         FROZEN_CPU_MINIMIZATION_VALIDATION_MATERIALIZER_SOURCE_SHA256

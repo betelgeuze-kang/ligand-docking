@@ -44,6 +44,18 @@ scientific claim from a package version.
   step digests, a whole-trace digest, exact accepted/rejected/evaluation counts,
   and accepted-energy-ledger consistency. Expected pre-evaluation failures use
   an explicit canonical empty trace.
+- A frozen minimization trajectory-comparison contract now aligns operational
+  and independent evaluations by exact index, iteration, trial, and outcome;
+  applies the predefined `1e-8 Å` coordinate and `1e-10 kcal/mol` energy max/RMS
+  limits; retains branch, rejection, count, and fail-closed non-comparability
+  dispositions; and binds uninterrupted/paused/resumed digests for three
+  checkpoint cases. Runner, writer, and independent result review recompute the
+  canonical evidence and reject omission, reorder, cross-wire, non-finite
+  values, and digest tamper. The refrozen v2.1 protocol uses half of the declared
+  constraint tolerance as internal projection convergence headroom without
+  changing the external acceptance threshold. The non-production implementation
+  check passes all 14/14 comparison rows and all three restart-equality rows,
+  including both fixed-Born rows, with no production or scientific promotion.
 - A fail-closed Ed25519 minimization result-review contract that fully
   revalidates one exact result-writer receipt, derives accepted or rejected
   dispositions for all fourteen cases, every retained or missing metric, every
@@ -130,7 +142,8 @@ scientific claim from a package version.
 
 - The distribution version is `0.2.0rc2`, separating the runtime-byte-identity
   and Ed25519 trust boundary from the accumulated `0.2.0rc1` surface.
-- Runtime-integrity contract v10 now binds the exact frozen custody-v1,
+- Runtime-integrity contract v12 now additionally binds the refrozen minimization
+  trajectory-comparison contract and the exact frozen custody-v1,
   review/authorization-extension, reservation-extension, external
   registry-proof-verifier, authenticated head/status-receipt verifier, and
   same-epoch later-head consistency verifier, fixed-policy anchor-scoped
@@ -139,8 +152,10 @@ scientific claim from a package version.
   provisioned external registry CAS,
   slot consumption, successor uniqueness, external process authenticity/custody,
   production execution/results, and every scientific/product promotion flag
-  false. The v8 and v9 runtime documents are retained as read-only legacy
-  identities.
+  false. The v8 through v11 runtime documents are retained as read-only legacy
+  identities; the dependent production custody/proof contracts are refrozen as
+  v2 or v3 over the current minimization chain, and the legacy registry contains 63
+  superseded documents.
 
 ### Scientific boundary
 

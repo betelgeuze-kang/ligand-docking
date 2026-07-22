@@ -13,6 +13,9 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol imp
     cpu_minimization_validation_protocol_document,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_receipts import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V3,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V4,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID,
@@ -28,6 +31,11 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_receipts imp
 from betelgeuze_engine_v2.physics.reference_minimization_validation_review import (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256,
 )
+from betelgeuze_engine_v2.physics.reference_minimization_validation_trajectory_comparison import (
+    FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
+    REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COORDINATE_THRESHOLD_ANGSTROM,
+    REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_ENERGY_THRESHOLD_KCAL_PER_MOL,
+)
 
 
 def test_environment_contract_is_frozen_dependency_bound_and_receipt_free() -> None:
@@ -37,6 +45,9 @@ def test_environment_contract_is_frozen_dependency_bound_and_receipt_free() -> N
     assert first == second
     assert first["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID
     assert first["contract_sha256"] == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+    assert first["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V3
+    )
     assert first["dependencies"]["protocol_sha256"] == FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
     assert (
         first["dependencies"]["artifact_binding_sha256"]
@@ -67,6 +78,17 @@ def test_result_contract_is_exact_failure_inclusive_and_result_free() -> None:
 
     assert contract["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID
     assert contract["contract_sha256"] == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+    assert contract["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V4
+    )
+    assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V3
+        == "814ea0ec6464acb77cdf41ccba8070c03ed79cc6e605805a55719c54c55b6745"
+    )
+    assert (
+        contract["dependencies"]["trajectory_comparison_contract_sha256"]
+        == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+    )
     coverage = contract["coverage_contract"]
     assert coverage["case_count"] == 14
     assert coverage["expected_pass_case_count"] == 8
@@ -84,9 +106,7 @@ def test_result_contract_is_exact_failure_inclusive_and_result_free() -> None:
     assert contract["purpose"]["result_values_present"] is False
     assert contract["current_state"]["validation_runner_implemented"] is True
     assert contract["current_state"]["result_receipt_writer_implemented"] is True
-    assert contract["current_state"][
-        "complete_coordinate_trace_contract_implemented"
-    ] is True
+    assert contract["current_state"]["complete_coordinate_trace_contract_implemented"] is True
     trace_contract = contract["coordinate_trace_contract"]
     assert trace_contract["trace_sources_in_order"] == [
         "operational",
@@ -96,9 +116,22 @@ def test_result_contract_is_exact_failure_inclusive_and_result_free() -> None:
     assert trace_contract["whole_trace_canonical_sha256_required"] is True
     assert trace_contract["missing_empty_or_reordered_trace_is_failure"] is True
     assert "coordinate_traces" in contract["receipt_schema"]["required_case_fields"]
-    assert "step_identity_sha256" in contract["receipt_schema"][
-        "required_coordinate_trace_step_fields"
+    assert "trajectory_comparison" in contract["receipt_schema"]["required_case_fields"]
+    assert "step_identity_sha256" in contract["receipt_schema"]["required_coordinate_trace_step_fields"]
+    comparison = contract["trajectory_comparison_contract"]
+    assert comparison["comparison_required_for_every_case"] is True
+    assert comparison["coordinate_threshold_angstrom"] == (
+        REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COORDINATE_THRESHOLD_ANGSTROM
+    )
+    assert comparison["energy_threshold_kcal_per_mol"] == (
+        REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_ENERGY_THRESHOLD_KCAL_PER_MOL
+    )
+    assert [row["case_id"] for row in comparison["checkpoint_cases"]] == [
+        "v1_checkpoint_restart_exact",
+        "v2_constrained_checkpoint_restart_exact",
+        "v2_fixed_born_checkpoint_restart_exact",
     ]
+    assert contract["current_state"]["trajectory_comparison_contract_implemented"] is True
     assert contract["claim_policy"]["minimization_validated"] is False
     assert require_reference_minimization_validation_result_receipt_contract_document(contract) == contract
 

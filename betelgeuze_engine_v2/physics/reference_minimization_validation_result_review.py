@@ -59,17 +59,26 @@ from .reference_minimization_validation_runner import (
     REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID,
     REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID,
 )
+from .reference_minimization_validation_trajectory_comparison import (
+    FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
+    TRAJECTORY_COMPARISON_ACCEPTED,
+    TRAJECTORY_COMPARISON_EXPECTED_FAIL_CLOSED,
+    ReferenceMinimizationValidationTrajectoryComparisonError,
+    require_reference_minimization_validation_trajectory_comparison,
+)
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/7.0.0"
+)
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/7.0.0"
+)
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_result_review_contract/5.0.0"
+    "cpu_reference_minimization_validation_independent_result_review_contract/7.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-19T00:00:00Z"
-)
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "7.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
 RESULT_REVIEW_OUTCOME_ACCEPTED = "accepted"
@@ -89,8 +98,17 @@ COORDINATE_TRACE_REJECTED = "coordinate_trace_rejected"
 COORDINATE_TRACE_STEP_ACCEPTED = "coordinate_trace_step_accepted"
 WORKER_EXECUTION_EVIDENCE_ACCEPTED = "worker_execution_evidence_accepted"
 WORKER_EXECUTION_EVIDENCE_REJECTED = "worker_execution_evidence_rejected"
+TRAJECTORY_COMPARISON_EVIDENCE_ACCEPTED = "trajectory_comparison_evidence_accepted"
+EXPECTED_FAIL_CLOSED_TRAJECTORY_COMPARISON_ACCEPTED = "expected_fail_closed_trajectory_comparison_accepted"
+TRAJECTORY_COMPARISON_EVIDENCE_REJECTED = "trajectory_comparison_evidence_rejected"
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256 = (
+    "85be6ec706b0220b5a10e80c10d158601ce438016903e0695a8ea22f3ed1bca5"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6 = (
+    "b62a476bac963b63ee48c3a763d2423103676db0ec568380dc28104d246c4fe2"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V5 = (
     "fef2198e4cc18b07f3607cc4036555f737eb423f51264179738b261dee3ea420"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V4 = (
@@ -111,6 +129,7 @@ _REQUIRED_RESULT_REVIEW_CHECK_IDS = (
     "retained_metric_dispositions_complete_and_ordered_reviewed",
     "iteration_rejection_evaluation_and_energy_trace_reviewed",
     "complete_ordered_coordinate_traces_and_step_identities_reviewed",
+    "trajectory_alignment_threshold_and_checkpoint_restart_evidence_reviewed",
     "cryptographic_pre_execution_review_authorization_and_role_chain_reviewed",
     "supersession_and_external_revocation_state_reviewed",
     "source_dependency_and_environment_identity_rows_reviewed",
@@ -138,7 +157,6 @@ _CLOSED_GATE_BLOCKERS = (
     "independent_result_review_dependency_manifest_reverification_missing",
     "worker_process_starttime_and_boot_id_binding_missing",
     "incomplete_raw_partial_transcript_not_independently_replayable",
-    "trajectory_level_minimization_comparison_missing",
     "two_cpu_host_reproducibility_missing",
     "independent_external_implementation_comparison_missing",
     "reviewed_runtime_parameter_values_not_bound",
@@ -156,7 +174,6 @@ _POST_ATTESTATION_BLOCKERS = (
     "independent_result_review_dependency_manifest_reverification_missing",
     "worker_process_starttime_and_boot_id_binding_missing",
     "incomplete_raw_partial_transcript_not_independently_replayable",
-    "trajectory_level_minimization_comparison_missing",
     "two_cpu_host_reproducibility_missing",
     "independent_external_implementation_comparison_missing",
     "reviewed_runtime_parameter_values_not_bound",
@@ -185,9 +202,7 @@ def _canonical_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review artifact is not canonical JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationResultReviewError("result review artifact is not canonical JSON") from exc
 
 
 def _sha256(value: object) -> str:
@@ -196,42 +211,28 @@ def _sha256(value: object) -> str:
 
 def _require_sha256(value: object, *, name: str) -> str:
     if not isinstance(value, str) or len(value) != 64:
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be a lowercase SHA-256"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be a lowercase SHA-256")
     if any(character not in "0123456789abcdef" for character in value):
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be a lowercase SHA-256"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be a lowercase SHA-256")
     return value
 
 
 def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be second-resolution UTC"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be second-resolution UTC")
     try:
-        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
-            tzinfo=timezone.utc
-        )
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError as exc:
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be second-resolution UTC"
-        ) from exc
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be second-resolution UTC") from exc
     return parsed
 
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be timezone-aware"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must use second resolution"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must use second resolution")
     return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -241,13 +242,9 @@ def _require_key(value: bytes | str, *, name: str) -> bytes:
     elif isinstance(value, bytes):
         key = value
     else:
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be bytes or text"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be bytes or text")
     if len(key) != 32:
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must contain exactly 32 bytes"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must contain exactly 32 bytes")
     return key
 
 
@@ -256,14 +253,8 @@ def _require_key_id(value: object) -> str:
         raise ReferenceMinimizationValidationResultReviewError(
             "result reviewer key id must contain 1 to 128 characters"
         )
-    if any(
-        character
-        not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
-        for character in value
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result reviewer key id contains unsupported characters"
-        )
+    if any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-" for character in value):
+        raise ReferenceMinimizationValidationResultReviewError("result reviewer key id contains unsupported characters")
     return value
 
 
@@ -273,13 +264,9 @@ def _validated_result_receipt_document(
     """Normalize and fully revalidate one result-writer receipt."""
 
     if not isinstance(result_receipt, Mapping):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt must be a mapping"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt must be a mapping")
     document = json.loads(_canonical_bytes(dict(result_receipt)).decode("ascii"))
-    receipt_sha256 = _require_sha256(
-        document.get("receipt_sha256"), name="result receipt"
-    )
+    receipt_sha256 = _require_sha256(document.get("receipt_sha256"), name="result receipt")
     try:
         validated = ReferenceMinimizationValidationResultReceipt(
             receipt_sha256=receipt_sha256,
@@ -294,9 +281,7 @@ def _validated_result_receipt_document(
 
 def _metric_contract_rows() -> dict[str, dict[str, Any]]:
     protocol = cpu_minimization_validation_protocol_document()
-    return {
-        row["metric_id"]: dict(row) for row in protocol["numerical_protocol"]["metrics"]
-    }
+    return {row["metric_id"]: dict(row) for row in protocol["numerical_protocol"]["metrics"]}
 
 
 def _threshold_pass(operator: str, value: float, threshold: float) -> bool:
@@ -306,17 +291,11 @@ def _threshold_pass(operator: str, value: float, threshold: float) -> bool:
         return value <= threshold
     if operator == "greater_than_or_equal":
         return value >= threshold
-    raise ReferenceMinimizationValidationResultReviewError(
-        "result review metric threshold operator is unsupported"
-    )
+    raise ReferenceMinimizationValidationResultReviewError("result review metric threshold operator is unsupported")
 
 
 def _is_sha256(value: object) -> bool:
-    return (
-        isinstance(value, str)
-        and len(value) == 64
-        and all(character in "0123456789abcdef" for character in value)
-    )
+    return isinstance(value, str) and len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
 
 def _is_nonzero_sha256(value: object) -> bool:
@@ -328,21 +307,14 @@ def _is_exact_nonnegative_int(value: object) -> bool:
 
 
 def _is_finite_number(value: object) -> bool:
-    return (
-        type(value) in {int, float}
-        and not isinstance(value, bool)
-        and math.isfinite(float(value))
-    )
+    return type(value) in {int, float} and not isinstance(value, bool) and math.isfinite(float(value))
 
 
-def _allowed_pass_status_error_pairs(
-    *, lane: str, evaluator_scope: str
-) -> frozenset[tuple[str, str | None]]:
+def _allowed_pass_status_error_pairs(*, lane: str, evaluator_scope: str) -> frozenset[tuple[str, str | None]]:
     if lane == "unconstrained_v1" and evaluator_scope == "reference_forcefield_v1":
         line_search_error = "bounded_backtracking_exhausted"
     elif lane in {"constrained_v2", "fixed_born_constrained_v2"} and (
-        evaluator_scope
-        in {"reference_forcefield_v2", "reference_forcefield_v2_with_fixed_born"}
+        evaluator_scope in {"reference_forcefield_v2", "reference_forcefield_v2_with_fixed_born"}
     ):
         line_search_error = "bounded_projected_backtracking_exhausted"
     else:
@@ -364,18 +336,14 @@ def _ordered_protocol_case_rows() -> list[dict[str, Any]]:
     protocol_cases = protocol["case_manifest"]["cases"]
     materialized_cases = materialization["cases"]
     if len(protocol_cases) != 14 or len(materialized_cases) != 14:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "protocol and materialization case counts diverged"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("protocol and materialization case counts diverged")
     rows: list[dict[str, Any]] = []
     for ordinal, (protocol_case, materialized_case) in enumerate(
         zip(protocol_cases, materialized_cases, strict=True),
         start=1,
     ):
         if protocol_case["case_id"] != materialized_case["case_id"]:
-            raise ReferenceMinimizationValidationResultReviewError(
-                "protocol and materialization case order diverged"
-            )
+            raise ReferenceMinimizationValidationResultReviewError("protocol and materialization case order diverged")
         rows.append(
             {
                 "ordinal": ordinal,
@@ -383,22 +351,12 @@ def _ordered_protocol_case_rows() -> list[dict[str, Any]]:
                 "lane": protocol_case["lane"],
                 "evaluator_scope": protocol_case["evaluator_scope"],
                 "case_input_sha256": materialized_case["case_input_sha256"],
-                "materialization_runtime_input_sha256": materialized_case[
-                    "runtime_input_sha256"
-                ],
+                "materialization_runtime_input_sha256": materialized_case["runtime_input_sha256"],
                 "runtime_input_sha256": _sha256(materialized_case),
-                "independent_oracle_input_sha256": materialized_case[
-                    "independent_oracle_input_sha256"
-                ],
-                "maximum_iterations": protocol_case["canonical_input"][
-                    "maximum_iterations"
-                ],
-                "maximum_backtracks": protocol_case["canonical_input"][
-                    "maximum_backtracks"
-                ],
-                "atom_count": cpu_minimization_validation_case_atom_count(
-                    protocol_case["case_id"]
-                ),
+                "independent_oracle_input_sha256": materialized_case["independent_oracle_input_sha256"],
+                "maximum_iterations": protocol_case["canonical_input"]["maximum_iterations"],
+                "maximum_backtracks": protocol_case["canonical_input"]["maximum_backtracks"],
+                "atom_count": cpu_minimization_validation_case_atom_count(protocol_case["case_id"]),
                 "expected_outcome": protocol_case["expected_outcome"],
                 "expected_error_code": protocol_case["expected_error_code"],
                 "required_metric_ids": list(protocol_case["required_metric_ids"]),
@@ -437,18 +395,12 @@ def _coordinate_trace_review_dispositions(
 ) -> list[dict[str, Any]]:
     traces = case_row.get("coordinate_traces")
     if not isinstance(traces, list) or len(traces) != 2:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt coordinate traces are incomplete"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt coordinate traces are incomplete")
     expected_sources = ("operational", "independent_oracle")
     dispositions: list[dict[str, Any]] = []
-    for source_ordinal, (trace, expected_source) in enumerate(
-        zip(traces, expected_sources, strict=True), start=1
-    ):
+    for source_ordinal, (trace, expected_source) in enumerate(zip(traces, expected_sources, strict=True), start=1):
         if not isinstance(trace, Mapping):
-            raise ReferenceMinimizationValidationResultReviewError(
-                "result receipt coordinate trace must be a mapping"
-            )
+            raise ReferenceMinimizationValidationResultReviewError("result receipt coordinate trace must be a mapping")
         steps = trace.get("steps")
         if not isinstance(steps, list):
             raise ReferenceMinimizationValidationResultReviewError(
@@ -463,12 +415,8 @@ def _coordinate_trace_review_dispositions(
             trace_reasons.append("coordinate_trace_length_mismatch")
         if trace.get("energy_force_evaluation_count") != len(steps):
             trace_reasons.append("coordinate_trace_evaluation_count_mismatch")
-        trace_projection = {
-            key: value for key, value in trace.items() if key != "trace_sha256"
-        }
-        if not _is_sha256(trace.get("trace_sha256")) or _sha256(
-            trace_projection
-        ) != trace.get("trace_sha256"):
+        trace_projection = {key: value for key, value in trace.items() if key != "trace_sha256"}
+        if not _is_sha256(trace.get("trace_sha256")) or _sha256(trace_projection) != trace.get("trace_sha256"):
             trace_reasons.append("coordinate_trace_canonical_digest_mismatch")
         step_dispositions: list[dict[str, Any]] = []
         for step_ordinal, step in enumerate(steps, start=1):
@@ -477,15 +425,9 @@ def _coordinate_trace_review_dispositions(
                     "result receipt coordinate trace step must be a mapping"
                 )
             step_reasons: list[str] = []
-            if (
-                step.get("case_id") != template["case_id"]
-                or step.get("trace_source") != expected_source
-            ):
+            if step.get("case_id") != template["case_id"] or step.get("trace_source") != expected_source:
                 step_reasons.append("coordinate_trace_step_identity_crosswire")
-            if (
-                step.get("trace_ordinal") != step_ordinal
-                or step.get("evaluation_index") != step_ordinal
-            ):
+            if step.get("trace_ordinal") != step_ordinal or step.get("evaluation_index") != step_ordinal:
                 step_reasons.append("coordinate_trace_step_order_mismatch")
             raw_sha256 = _coordinate_payload_f64le_sha256(
                 step.get("raw_coordinates_angstrom_hex"),
@@ -495,30 +437,16 @@ def _coordinate_trace_review_dispositions(
                 step.get("evaluated_coordinates_angstrom_hex"),
                 atom_count=template["atom_count"],
             )
-            if raw_sha256 is None or raw_sha256 != step.get(
-                "raw_coordinates_f64le_sha256"
-            ):
+            if raw_sha256 is None or raw_sha256 != step.get("raw_coordinates_f64le_sha256"):
                 step_reasons.append("coordinate_trace_raw_coordinate_digest_mismatch")
-            if evaluated_sha256 is None or evaluated_sha256 != step.get(
-                "evaluated_coordinates_f64le_sha256"
+            if evaluated_sha256 is None or evaluated_sha256 != step.get("evaluated_coordinates_f64le_sha256"):
+                step_reasons.append("coordinate_trace_evaluated_coordinate_digest_mismatch")
+            step_projection = {key: value for key, value in step.items() if key != "step_identity_sha256"}
+            if not _is_sha256(step.get("step_identity_sha256")) or _sha256(step_projection) != step.get(
+                "step_identity_sha256"
             ):
-                step_reasons.append(
-                    "coordinate_trace_evaluated_coordinate_digest_mismatch"
-                )
-            step_projection = {
-                key: value
-                for key, value in step.items()
-                if key != "step_identity_sha256"
-            }
-            if not _is_sha256(step.get("step_identity_sha256")) or _sha256(
-                step_projection
-            ) != step.get("step_identity_sha256"):
                 step_reasons.append("coordinate_trace_step_digest_mismatch")
-            step_disposition = (
-                COORDINATE_TRACE_STEP_ACCEPTED
-                if not step_reasons
-                else COORDINATE_TRACE_REJECTED
-            )
+            step_disposition = COORDINATE_TRACE_STEP_ACCEPTED if not step_reasons else COORDINATE_TRACE_REJECTED
             if step_reasons:
                 trace_reasons.append(f"coordinate_trace_step_{step_ordinal}_rejected")
             step_dispositions.append(
@@ -529,39 +457,24 @@ def _coordinate_trace_review_dispositions(
                     "trial": step.get("trial"),
                     "outcome": step.get("outcome"),
                     "step_identity_sha256": step.get("step_identity_sha256"),
-                    "raw_coordinates_f64le_sha256": step.get(
-                        "raw_coordinates_f64le_sha256"
-                    ),
-                    "evaluated_coordinates_f64le_sha256": step.get(
-                        "evaluated_coordinates_f64le_sha256"
-                    ),
+                    "raw_coordinates_f64le_sha256": step.get("raw_coordinates_f64le_sha256"),
+                    "evaluated_coordinates_f64le_sha256": step.get("evaluated_coordinates_f64le_sha256"),
                     "disposition": step_disposition,
                     "rejection_reasons": step_reasons,
                 }
             )
         trace_state = trace.get("trace_state")
         expected_empty = template["expected_outcome"] == "fail_closed" and (
-            expected_source == "operational"
-            or trace.get("energy_force_evaluation_count") == 0
+            expected_source == "operational" or trace.get("energy_force_evaluation_count") == 0
         )
         if steps:
             if trace_state != "evaluated":
                 trace_reasons.append("coordinate_trace_nonempty_state_invalid")
-            disposition = (
-                COORDINATE_TRACE_ACCEPTED
-                if not trace_reasons
-                else COORDINATE_TRACE_REJECTED
-            )
+            disposition = COORDINATE_TRACE_ACCEPTED if not trace_reasons else COORDINATE_TRACE_REJECTED
         else:
-            if not expected_empty or trace_state != (
-                "not_evaluated_expected_fail_closed"
-            ):
+            if not expected_empty or trace_state != ("not_evaluated_expected_fail_closed"):
                 trace_reasons.append("coordinate_trace_unexpected_empty")
-            disposition = (
-                EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED
-                if not trace_reasons
-                else COORDINATE_TRACE_REJECTED
-            )
+            disposition = EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED if not trace_reasons else COORDINATE_TRACE_REJECTED
         dispositions.append(
             {
                 "source_ordinal": source_ordinal,
@@ -571,9 +484,7 @@ def _coordinate_trace_review_dispositions(
                 "trace_sha256": trace.get("trace_sha256"),
                 "accepted_iteration_count": trace.get("accepted_iteration_count"),
                 "rejected_step_count": trace.get("rejected_step_count"),
-                "energy_force_evaluation_count": trace.get(
-                    "energy_force_evaluation_count"
-                ),
+                "energy_force_evaluation_count": trace.get("energy_force_evaluation_count"),
                 "disposition": disposition,
                 "rejection_reasons": trace_reasons,
                 "step_dispositions": step_dispositions,
@@ -582,55 +493,112 @@ def _coordinate_trace_review_dispositions(
     return dispositions
 
 
+def _trajectory_comparison_review_disposition(
+    case_row: Mapping[str, Any],
+    template: Mapping[str, Any],
+) -> dict[str, Any]:
+    traces = case_row.get("coordinate_traces")
+    if not isinstance(traces, list) or len(traces) != 2 or not all(isinstance(trace, Mapping) for trace in traces):
+        raise ReferenceMinimizationValidationResultReviewError(
+            "trajectory comparison review requires both coordinate traces"
+        )
+    try:
+        comparison = require_reference_minimization_validation_trajectory_comparison(
+            case_row.get("trajectory_comparison"),
+            expected_case_id=template["case_id"],
+            expected_outcome=template["expected_outcome"],
+            operational_trace=traces[0],
+            independent_trace=traces[1],
+        )
+    except ReferenceMinimizationValidationTrajectoryComparisonError as exc:
+        raise ReferenceMinimizationValidationResultReviewError(
+            "trajectory comparison failed independent result-review verification"
+        ) from exc
+    checkpoint = comparison["checkpoint_restart_evidence"]
+    reasons: list[str] = []
+    if comparison["trajectory_comparison_passed"] is not True:
+        reasons.append("trajectory_comparison_rejected")
+    if checkpoint["checkpoint_restart_passed"] is not True:
+        reasons.append("checkpoint_restart_comparison_rejected")
+    if comparison["comparison_passed"] is not True:
+        reasons.append("case_comparison_rejected")
+    if reasons:
+        disposition = TRAJECTORY_COMPARISON_EVIDENCE_REJECTED
+    elif comparison["trajectory_comparison_disposition"] == TRAJECTORY_COMPARISON_EXPECTED_FAIL_CLOSED:
+        disposition = EXPECTED_FAIL_CLOSED_TRAJECTORY_COMPARISON_ACCEPTED
+    else:
+        disposition = TRAJECTORY_COMPARISON_EVIDENCE_ACCEPTED
+    return {
+        "comparison_sha256": comparison["comparison_sha256"],
+        "operational_trace_sha256": comparison["operational_trace_sha256"],
+        "independent_trace_sha256": comparison["independent_trace_sha256"],
+        "operational_trace_length": comparison["operational_trace_length"],
+        "independent_trace_length": comparison["independent_trace_length"],
+        "aligned_step_count": comparison["aligned_step_count"],
+        "trace_length_disposition": comparison["trace_length_disposition"],
+        "step_identity_alignment_disposition": comparison["step_identity_alignment_disposition"],
+        "branch_sequence_disposition": comparison["branch_sequence_disposition"],
+        "rejection_sequence_disposition": comparison["rejection_sequence_disposition"],
+        "accepted_iteration_count_disposition": comparison["accepted_iteration_count_disposition"],
+        "rejected_step_count_disposition": comparison["rejected_step_count_disposition"],
+        "energy_force_evaluation_count_disposition": comparison["energy_force_evaluation_count_disposition"],
+        "raw_coordinate_max_abs_error_angstrom": comparison["raw_coordinate_max_abs_error_angstrom"],
+        "raw_coordinate_rms_error_angstrom": comparison["raw_coordinate_rms_error_angstrom"],
+        "evaluated_coordinate_max_abs_error_angstrom": comparison["evaluated_coordinate_max_abs_error_angstrom"],
+        "evaluated_coordinate_rms_error_angstrom": comparison["evaluated_coordinate_rms_error_angstrom"],
+        "energy_max_abs_error_kcal_per_mol": comparison["energy_max_abs_error_kcal_per_mol"],
+        "energy_rms_error_kcal_per_mol": comparison["energy_rms_error_kcal_per_mol"],
+        "trajectory_comparison_disposition": comparison["trajectory_comparison_disposition"],
+        "checkpoint_restart_disposition": checkpoint["checkpoint_restart_disposition"],
+        "checkpoint_restart_evidence_sha256": checkpoint["checkpoint_restart_evidence_sha256"],
+        "step_dispositions": [
+            {
+                "comparison_ordinal": row["comparison_ordinal"],
+                "evaluation_index": row["evaluation_index"],
+                "iteration": row["iteration"],
+                "trial": row["trial"],
+                "outcome": row["outcome"],
+                "step_comparison_sha256": row["step_comparison_sha256"],
+                "disposition": row["step_comparison_disposition"],
+            }
+            for row in comparison["step_comparisons"]
+        ],
+        "disposition": disposition,
+        "rejection_reasons": reasons,
+    }
+
+
 def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(case_row, Mapping):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case row must be a mapping"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case row must be a mapping")
     ordinal = case_row.get("ordinal")
     case_id = case_row.get("case_id")
     if not isinstance(ordinal, int) or ordinal < 1 or ordinal > 14:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case ordinal is invalid"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case ordinal is invalid")
     if not isinstance(case_id, str) or not case_id:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case id is invalid"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case id is invalid")
     template = next(
         (row for row in _ordered_protocol_case_rows() if row["ordinal"] == ordinal),
         None,
     )
     if template is None or template["case_id"] != case_id:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case order or identity drifted"
-        )
-    case_input_sha256 = _require_sha256(
-        case_row.get("case_input_sha256"), name="result receipt case input"
-    )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case order or identity drifted")
+    case_input_sha256 = _require_sha256(case_row.get("case_input_sha256"), name="result receipt case input")
     if case_input_sha256 != template["case_input_sha256"]:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case input identity drifted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case input identity drifted")
     metric_values = case_row.get("metric_values")
     if not isinstance(metric_values, list):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt metric values are invalid"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt metric values are invalid")
     required_metric_ids = list(template["required_metric_ids"])
     metric_contract = _metric_contract_rows()
     seen_required: set[str] = set()
     metric_dispositions: list[dict[str, Any]] = []
     for retained in metric_values:
         if not isinstance(retained, Mapping):
-            raise ReferenceMinimizationValidationResultReviewError(
-                "result receipt retained metric row is invalid"
-            )
+            raise ReferenceMinimizationValidationResultReviewError("result receipt retained metric row is invalid")
         metric_id = retained.get("metric_id")
         value = retained.get("value")
-        contract_row = (
-            metric_contract.get(metric_id) if isinstance(metric_id, str) else None
-        )
+        contract_row = metric_contract.get(metric_id) if isinstance(metric_id, str) else None
         expected_once = (
             isinstance(metric_id, str)
             and metric_id in required_metric_ids
@@ -641,14 +609,8 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
             seen_required.add(metric_id)
             threshold_operator = str(contract_row["threshold_operator"])
             threshold_value = float(contract_row["threshold_value"])
-            accepted = _is_finite_number(value) and _threshold_pass(
-                threshold_operator, float(value), threshold_value
-            )
-            disposition = (
-                RETAINED_METRIC_VALUE_ACCEPTED
-                if accepted
-                else RETAINED_METRIC_VALUE_REJECTED
-            )
+            accepted = _is_finite_number(value) and _threshold_pass(threshold_operator, float(value), threshold_value)
+            disposition = RETAINED_METRIC_VALUE_ACCEPTED if accepted else RETAINED_METRIC_VALUE_REJECTED
         else:
             threshold_operator = None
             threshold_value = None
@@ -671,16 +633,12 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
         if metric_id not in seen_required
     ]
     retained_metric_values = {
-        row["metric_id"]: row["value"]
-        for row in metric_dispositions
-        if row["threshold_operator"] is not None
+        row["metric_id"]: row["value"] for row in metric_dispositions if row["threshold_operator"] is not None
     }
     case_passed = case_row.get("case_passed") is True
     if template["expected_outcome"] == "fail_closed":
         failure_disposition = (
-            EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED
-            if case_passed
-            else EXPECTED_FAIL_CLOSED_OUTCOME_REJECTED
+            EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED if case_passed else EXPECTED_FAIL_CLOSED_OUTCOME_REJECTED
         )
     else:
         failure_disposition = None if case_passed else PASS_CASE_OUTCOME_REJECTED
@@ -723,18 +681,13 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
         )
     )
     ledger_valid = "accepted_energy_ledger_invalid" not in evidence_rejection_reasons
-    if ledger_valid and any(
-        next_value > value
-        for value, next_value in zip(ledger_for_digest, ledger_for_digest[1:])
-    ):
+    if ledger_valid and any(next_value > value for value, next_value in zip(ledger_for_digest, ledger_for_digest[1:])):
         evidence_rejection_reasons.append("accepted_energy_ledger_not_monotonic")
     maximum_iterations = template["maximum_iterations"]
     maximum_backtracks = template["maximum_backtracks"]
     if counts_valid:
         if accepted_iteration_count > maximum_iterations:
-            evidence_rejection_reasons.append(
-                "accepted_iteration_count_exceeds_case_budget"
-            )
+            evidence_rejection_reasons.append("accepted_iteration_count_exceeds_case_budget")
     if template["expected_outcome"] == "pass":
         if (observed_status, observed_error_code) not in (
             _allowed_pass_status_error_pairs(
@@ -748,83 +701,50 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
         if not _is_nonzero_sha256(independent_result_sha256):
             evidence_rejection_reasons.append("independent_result_identity_missing")
         if counts_valid and ledger_valid:
-            if (
-                observed_status == "max_iterations_reached"
-                and accepted_iteration_count != maximum_iterations
-            ):
-                evidence_rejection_reasons.append(
-                    "maximum_iteration_status_count_mismatch"
-                )
+            if observed_status == "max_iterations_reached" and accepted_iteration_count != maximum_iterations:
+                evidence_rejection_reasons.append("maximum_iteration_status_count_mismatch")
             if observed_status == "line_search_failed":
                 minimum_rejections = maximum_backtracks + 1
-                maximum_rejections = (
-                    accepted_iteration_count * maximum_backtracks + minimum_rejections
-                )
+                maximum_rejections = accepted_iteration_count * maximum_backtracks + minimum_rejections
                 if (
                     accepted_iteration_count >= maximum_iterations
-                    or not minimum_rejections
-                    <= rejected_step_count
-                    <= maximum_rejections
+                    or not minimum_rejections <= rejected_step_count <= maximum_rejections
                 ):
-                    evidence_rejection_reasons.append(
-                        "line_search_failure_status_count_mismatch"
-                    )
+                    evidence_rejection_reasons.append("line_search_failure_status_count_mismatch")
             elif rejected_step_count > (accepted_iteration_count * maximum_backtracks):
-                evidence_rejection_reasons.append(
-                    "accepted_path_rejection_count_exceeds_case_progress"
-                )
+                evidence_rejection_reasons.append("accepted_path_rejection_count_exceeds_case_progress")
             if energy_force_evaluation_count == 0:
-                evidence_rejection_reasons.append(
-                    "pass_energy_force_evaluation_count_empty"
-                )
+                evidence_rejection_reasons.append("pass_energy_force_evaluation_count_empty")
             if len(ledger_for_digest) != accepted_iteration_count + 1:
-                evidence_rejection_reasons.append(
-                    "pass_energy_ledger_iteration_count_mismatch"
-                )
-            if energy_force_evaluation_count != (
-                accepted_iteration_count + rejected_step_count + 1
-            ):
+                evidence_rejection_reasons.append("pass_energy_ledger_iteration_count_mismatch")
+            if energy_force_evaluation_count != (accepted_iteration_count + rejected_step_count + 1):
                 evidence_rejection_reasons.append("pass_evaluation_count_mismatch")
             if ledger_for_digest:
-                if retained_metric_values.get("final_energy_change") != (
-                    ledger_for_digest[-1] - ledger_for_digest[0]
-                ):
-                    evidence_rejection_reasons.append(
-                        "final_energy_change_metric_ledger_mismatch"
-                    )
+                if retained_metric_values.get("final_energy_change") != (ledger_for_digest[-1] - ledger_for_digest[0]):
+                    evidence_rejection_reasons.append("final_energy_change_metric_ledger_mismatch")
                 if "minimum_required_energy_decrease" in retained_metric_values and (
                     retained_metric_values["minimum_required_energy_decrease"]
                     != ledger_for_digest[0] - ledger_for_digest[-1]
                 ):
-                    evidence_rejection_reasons.append(
-                        "minimum_energy_decrease_metric_ledger_mismatch"
-                    )
+                    evidence_rejection_reasons.append("minimum_energy_decrease_metric_ledger_mismatch")
     else:
         if observed_status != "fail_closed":
             evidence_rejection_reasons.append("fail_closed_status_invalid")
         if observed_error_code != template["expected_error_code"]:
             evidence_rejection_reasons.append("fail_closed_error_code_mismatch")
         if operational_result_sha256 is not None:
-            evidence_rejection_reasons.append(
-                "fail_closed_operational_result_must_be_absent"
-            )
+            evidence_rejection_reasons.append("fail_closed_operational_result_must_be_absent")
         if not _is_nonzero_sha256(independent_result_sha256):
             evidence_rejection_reasons.append("independent_result_identity_missing")
         if counts_valid and ledger_valid:
             if template["expected_error_code"] == "line_search_exhausted":
                 minimum_rejections = maximum_backtracks + 1
-                maximum_rejections = (
-                    accepted_iteration_count * maximum_backtracks + minimum_rejections
-                )
+                maximum_rejections = accepted_iteration_count * maximum_backtracks + minimum_rejections
                 if (
                     accepted_iteration_count >= maximum_iterations
-                    or not minimum_rejections
-                    <= rejected_step_count
-                    <= maximum_rejections
+                    or not minimum_rejections <= rejected_step_count <= maximum_rejections
                 ):
-                    evidence_rejection_reasons.append(
-                        "fail_closed_line_search_count_mismatch"
-                    )
+                    evidence_rejection_reasons.append("fail_closed_line_search_count_mismatch")
             elif (
                 any(
                     value != 0
@@ -836,32 +756,16 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
                 )
                 or ledger_for_digest
             ):
-                evidence_rejection_reasons.append(
-                    "pre_evaluation_fail_closed_case_retained_progress"
-                )
+                evidence_rejection_reasons.append("pre_evaluation_fail_closed_case_retained_progress")
             if energy_force_evaluation_count == 0:
-                if (
-                    accepted_iteration_count != 0
-                    or rejected_step_count != 0
-                    or ledger_for_digest
-                ):
-                    evidence_rejection_reasons.append(
-                        "zero_evaluation_failure_evidence_mismatch"
-                    )
+                if accepted_iteration_count != 0 or rejected_step_count != 0 or ledger_for_digest:
+                    evidence_rejection_reasons.append("zero_evaluation_failure_evidence_mismatch")
             else:
                 if len(ledger_for_digest) != accepted_iteration_count + 1:
-                    evidence_rejection_reasons.append(
-                        "fail_closed_energy_ledger_iteration_count_mismatch"
-                    )
-                if energy_force_evaluation_count != (
-                    accepted_iteration_count + rejected_step_count + 1
-                ):
-                    evidence_rejection_reasons.append(
-                        "fail_closed_evaluation_count_mismatch"
-                    )
-    coordinate_trace_dispositions = _coordinate_trace_review_dispositions(
-        case_row, template
-    )
+                    evidence_rejection_reasons.append("fail_closed_energy_ledger_iteration_count_mismatch")
+                if energy_force_evaluation_count != (accepted_iteration_count + rejected_step_count + 1):
+                    evidence_rejection_reasons.append("fail_closed_evaluation_count_mismatch")
+    coordinate_trace_dispositions = _coordinate_trace_review_dispositions(case_row, template)
     if any(
         row["disposition"]
         not in {
@@ -871,12 +775,16 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
         for row in coordinate_trace_dispositions
     ):
         evidence_rejection_reasons.append("coordinate_trace_disposition_rejected")
+    trajectory_comparison_disposition = _trajectory_comparison_review_disposition(case_row, template)
+    if trajectory_comparison_disposition["disposition"] not in {
+        TRAJECTORY_COMPARISON_EVIDENCE_ACCEPTED,
+        EXPECTED_FAIL_CLOSED_TRAJECTORY_COMPARISON_ACCEPTED,
+    }:
+        evidence_rejection_reasons.append("trajectory_comparison_disposition_rejected")
     if type(case_row.get("case_passed")) is not bool:
         evidence_rejection_reasons.append("case_passed_flag_invalid")
     evidence_disposition = (
-        REQUIRED_RESULT_EVIDENCE_ACCEPTED
-        if not evidence_rejection_reasons
-        else REQUIRED_RESULT_EVIDENCE_REJECTED
+        REQUIRED_RESULT_EVIDENCE_ACCEPTED if not evidence_rejection_reasons else REQUIRED_RESULT_EVIDENCE_REJECTED
     )
     return {
         "ordinal": ordinal,
@@ -896,6 +804,7 @@ def _case_review_row_from_result_case(case_row: Mapping[str, Any]) -> dict[str, 
         "accepted_energy_ledger_length": len(ledger_for_digest),
         "accepted_energy_ledger_sha256": _sha256(ledger_for_digest),
         "coordinate_trace_dispositions": coordinate_trace_dispositions,
+        "trajectory_comparison_disposition": trajectory_comparison_disposition,
         "result_evidence_disposition": evidence_disposition,
         "result_evidence_rejection_reasons": evidence_rejection_reasons,
         "case_passed": case_passed,
@@ -910,14 +819,10 @@ def _case_review_rows_from_result_receipt(
 ) -> list[dict[str, Any]]:
     case_results = result_receipt.get("case_results")
     if not isinstance(case_results, list) or len(case_results) != 14:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case coverage is incomplete"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case coverage is incomplete")
     rows = [_case_review_row_from_result_case(row) for row in case_results]
     if tuple(row["ordinal"] for row in rows) != tuple(range(1, 15)):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt case rows are reordered"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt case rows are reordered")
     return rows
 
 
@@ -928,19 +833,15 @@ def _result_review_outcome(
     accepted = (
         worker_execution_review.get("disposition") == WORKER_EXECUTION_EVIDENCE_ACCEPTED
         and worker_execution_review.get("completion_state") == "complete"
-        and worker_execution_review.get("runtime_lifecycle_completion_state")
-        == "complete"
+        and worker_execution_review.get("runtime_lifecycle_completion_state") == "complete"
         and worker_execution_review.get("payload_frame_count") == 14
         and worker_execution_review.get("discarded_partial_payload_count") == 0
-        and worker_execution_review.get("native_pre_post_snapshot_equality_verified")
-        is True
-        and worker_execution_review.get("native_mapping_lifetime_closure_claimed")
-        is False
+        and worker_execution_review.get("native_pre_post_snapshot_equality_verified") is True
+        and worker_execution_review.get("native_mapping_lifetime_closure_claimed") is False
         and not worker_execution_review.get("rejection_reasons")
         and all(
             row.get("case_passed") is True
-            and row.get("result_evidence_disposition")
-            == REQUIRED_RESULT_EVIDENCE_ACCEPTED
+            and row.get("result_evidence_disposition") == REQUIRED_RESULT_EVIDENCE_ACCEPTED
             and not row.get("result_evidence_rejection_reasons")
             and not row.get("missing_metric_dispositions")
             and len(row.get("coordinate_trace_dispositions", ())) == 2
@@ -952,27 +853,35 @@ def _result_review_outcome(
                 }
                 and not trace.get("rejection_reasons")
                 and all(
-                    step.get("disposition") == COORDINATE_TRACE_STEP_ACCEPTED
-                    and not step.get("rejection_reasons")
+                    step.get("disposition") == COORDINATE_TRACE_STEP_ACCEPTED and not step.get("rejection_reasons")
                     for step in trace.get("step_dispositions", ())
                     if isinstance(step, Mapping)
                 )
                 for trace in row.get("coordinate_trace_dispositions", ())
                 if isinstance(trace, Mapping)
             )
+            and isinstance(row.get("trajectory_comparison_disposition"), Mapping)
+            and row["trajectory_comparison_disposition"].get("disposition")
+            in {
+                TRAJECTORY_COMPARISON_EVIDENCE_ACCEPTED,
+                EXPECTED_FAIL_CLOSED_TRAJECTORY_COMPARISON_ACCEPTED,
+            }
+            and not row["trajectory_comparison_disposition"].get("rejection_reasons")
+            and all(
+                step.get("disposition") == TRAJECTORY_COMPARISON_ACCEPTED
+                for step in row["trajectory_comparison_disposition"].get("step_dispositions", ())
+                if isinstance(step, Mapping)
+            )
             and all(
                 metric.get("disposition") == RETAINED_METRIC_VALUE_ACCEPTED
                 for metric in row.get("metric_dispositions", ())
                 if isinstance(metric, Mapping)
             )
-            and row.get("failure_disposition")
-            in {None, EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED}
+            and row.get("failure_disposition") in {None, EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED}
             for row in case_review_rows
         )
     )
-    return (
-        RESULT_REVIEW_OUTCOME_ACCEPTED if accepted else RESULT_REVIEW_OUTCOME_REJECTED
-    )
+    return RESULT_REVIEW_OUTCOME_ACCEPTED if accepted else RESULT_REVIEW_OUTCOME_REJECTED
 
 
 def _dependency_rows(rows: object) -> list[dict[str, str]]:
@@ -983,27 +892,19 @@ def _dependency_rows(rows: object) -> list[dict[str, str]]:
     normalized: list[dict[str, str]] = []
     for row in rows:
         if not isinstance(row, Mapping):
-            raise ReferenceMinimizationValidationResultReviewError(
-                "result receipt dependency row is invalid"
-            )
+            raise ReferenceMinimizationValidationResultReviewError("result receipt dependency row is invalid")
         artifact_id = row.get("artifact_id")
         digest = row.get("sha256")
         if not isinstance(artifact_id, str) or not artifact_id:
-            raise ReferenceMinimizationValidationResultReviewError(
-                "result receipt dependency artifact id is invalid"
-            )
+            raise ReferenceMinimizationValidationResultReviewError("result receipt dependency artifact id is invalid")
         normalized.append(
             {
                 "artifact_id": artifact_id,
                 "sha256": _require_sha256(digest, name="result receipt dependency"),
             }
         )
-    if tuple(row["artifact_id"] for row in normalized) != tuple(
-        sorted(row["artifact_id"] for row in normalized)
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt dependency rows are not sorted"
-        )
+    if tuple(row["artifact_id"] for row in normalized) != tuple(sorted(row["artifact_id"] for row in normalized)):
+        raise ReferenceMinimizationValidationResultReviewError("result receipt dependency rows are not sorted")
     return normalized
 
 
@@ -1029,9 +930,7 @@ def _reconstruct_complete_worker_transcript_for_review(
         payload_aggregate = lifecycle["payload_aggregate_sha256"]
         lifecycle_sha256 = lifecycle["lifecycle_sha256"]
     except (KeyError, TypeError) as exc:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "complete worker lifecycle phases are absent"
-        ) from exc
+        raise ReferenceMinimizationValidationResultReviewError("complete worker lifecycle phases are absent") from exc
     first = finalize(
         {
             "schema_id": REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_SCHEMA_ID,
@@ -1069,9 +968,7 @@ def _reconstruct_complete_worker_transcript_for_review(
                 "worker_request_sha256": worker_request_sha256,
                 "previous_frame_sha256": previous,
                 "case_count": 14,
-                "retained_case_aggregate_sha256": _sha256(
-                    [dict(row) for row in case_results]
-                ),
+                "retained_case_aggregate_sha256": _sha256([dict(row) for row in case_results]),
                 "runtime_payload_evidence": payload,
                 "runtime_post_evidence": post,
                 "runtime_payload_aggregate_sha256": payload_aggregate,
@@ -1101,9 +998,7 @@ def _worker_execution_review_from_result_receipt(
     request_bytes_verified = False
     if isinstance(request_document, Mapping) and isinstance(request_bytes_base64, str):
         try:
-            request_bytes = base64.b64decode(
-                request_bytes_base64.encode("ascii"), validate=True
-            )
+            request_bytes = base64.b64decode(request_bytes_base64.encode("ascii"), validate=True)
         except (UnicodeEncodeError, binascii.Error, ValueError):
             request_bytes = b""
         request_bytes_verified = (
@@ -1111,41 +1006,28 @@ def _worker_execution_review_from_result_receipt(
             and request_bytes == _canonical_bytes(dict(request_document)) + b"\n"
             and len(request_bytes) == evidence["worker_request_byte_count"]
             and _sha256(dict(request_document)) == evidence["worker_request_sha256"]
-            and request_document.get("schema_id")
-            == REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID
+            and request_document.get("schema_id") == REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID
         )
-    materialization_sha256 = (
-        cpu_minimization_validation_materialization_manifest_document()[
-            "materialization_manifest_sha256"
-        ]
-    )
+    materialization_sha256 = cpu_minimization_validation_materialization_manifest_document()[
+        "materialization_manifest_sha256"
+    ]
     expected_request_provenance = {
-        "expected_authorization_nonce_sha256": run_observation[
-            "authorization_nonce_sha256"
-        ],
-        "expected_runner_start_record_sha256": run_observation[
-            "runner_start_record_sha256"
-        ],
+        "expected_authorization_nonce_sha256": run_observation["authorization_nonce_sha256"],
+        "expected_runner_start_record_sha256": run_observation["runner_start_record_sha256"],
         "expected_code_commit_sha": run_observation["code_commit_sha"],
         "expected_runner_source_sha256": run_observation["runner_source_sha256"],
         "expected_source_manifest_sha256": run_observation["source_manifest_sha256"],
         "expected_materialization_manifest_sha256": materialization_sha256,
         "expected_dependency_artifact_sha256_rows": {
-            row["artifact_id"]: row["sha256"]
-            for row in run_observation["dependency_artifact_sha256_rows"]
+            row["artifact_id"]: row["sha256"] for row in run_observation["dependency_artifact_sha256_rows"]
         },
-        "expected_environment_receipt_sha256": run_observation[
-            "environment_receipt_sha256"
-        ],
-        "expected_environment_fingerprint_sha256": run_observation[
-            "environment_fingerprint_sha256"
-        ],
+        "expected_environment_receipt_sha256": run_observation["environment_receipt_sha256"],
+        "expected_environment_fingerprint_sha256": run_observation["environment_fingerprint_sha256"],
         "expected_python_hash_seed": run_observation["python_hash_seed"],
         "expected_application_seed": run_observation["seed"],
     }
     request_provenance_verified = isinstance(request_document, Mapping) and all(
-        request_document.get(name) == expected
-        for name, expected in expected_request_provenance.items()
+        request_document.get(name) == expected for name, expected in expected_request_provenance.items()
     )
 
     retained_case_aggregate_sha256 = _require_sha256(
@@ -1177,9 +1059,7 @@ def _worker_execution_review_from_result_receipt(
         }
         for row in case_frame_rows
     ]
-    case_frame_rows_match_retained_cases = (
-        observed_case_frame_projection == expected_case_frame_rows
-    )
+    case_frame_rows_match_retained_cases = observed_case_frame_projection == expected_case_frame_rows
 
     pre = lifecycle["pre"]
     post = lifecycle["post"]
@@ -1221,21 +1101,17 @@ def _worker_execution_review_from_result_receipt(
         evidence["completion_frame_sha256"],
     ]
     complete_frame_set_verified = (
-        len(frame_sha256s) == 16
-        and all(_is_sha256(value) for value in frame_sha256s)
-        and len(set(frame_sha256s)) == 16
+        len(frame_sha256s) == 16 and all(_is_sha256(value) for value in frame_sha256s) and len(set(frame_sha256s)) == 16
     )
     reconstructed_transcript_sha256: str | None = None
     reconstructed_transcript_byte_count: int | None = None
     canonical_transcript_verified = False
     if completion_state == "complete":
         try:
-            reconstructed_raw, reconstructed_frames = (
-                _reconstruct_complete_worker_transcript_for_review(
-                    worker_request_sha256=evidence["worker_request_sha256"],
-                    case_results=case_results,
-                    lifecycle=lifecycle,
-                )
+            reconstructed_raw, reconstructed_frames = _reconstruct_complete_worker_transcript_for_review(
+                worker_request_sha256=evidence["worker_request_sha256"],
+                case_results=case_results,
+                lifecycle=lifecycle,
             )
         except ReferenceMinimizationValidationResultReviewError:
             reconstructed_raw = b""
@@ -1306,9 +1182,7 @@ def _worker_execution_review_from_result_receipt(
             evidence["worker_request_sha256"],
             name="worker request",
         ),
-        "worker_request_document": (
-            None if request_document is None else dict(request_document)
-        ),
+        "worker_request_document": (None if request_document is None else dict(request_document)),
         "worker_request_canonical_bytes_base64": request_bytes_base64,
         "worker_request_byte_count": evidence["worker_request_byte_count"],
         "worker_request_canonical_bytes_verified": request_bytes_verified,
@@ -1321,9 +1195,7 @@ def _worker_execution_review_from_result_receipt(
         "runtime_payload_aggregate_sha256": lifecycle["payload_aggregate_sha256"],
         "retained_case_count": len(case_results),
         "retained_case_aggregate_sha256": retained_case_aggregate_sha256,
-        "recomputed_retained_case_aggregate_sha256": (
-            recomputed_retained_case_aggregate_sha256
-        ),
+        "recomputed_retained_case_aggregate_sha256": (recomputed_retained_case_aggregate_sha256),
         "payload_frame_count": len(case_frame_rows),
         "case_frame_sha256_rows": case_frame_rows,
         "case_frame_rows_match_retained_cases": (case_frame_rows_match_retained_cases),
@@ -1338,13 +1210,9 @@ def _worker_execution_review_from_result_receipt(
         "partial_prefix_frame_rows": evidence["partial_prefix_frame_rows"],
         "partial_prefix_byte_count": evidence["partial_prefix_byte_count"],
         "partial_prefix_sha256": evidence["partial_prefix_sha256"],
-        "partial_unparsed_suffix_byte_count": evidence[
-            "partial_unparsed_suffix_byte_count"
-        ],
+        "partial_unparsed_suffix_byte_count": evidence["partial_unparsed_suffix_byte_count"],
         "partial_unparsed_suffix_sha256": evidence["partial_unparsed_suffix_sha256"],
-        "raw_partial_not_independently_replayable": evidence[
-            "raw_partial_not_independently_replayable"
-        ],
+        "raw_partial_not_independently_replayable": evidence["raw_partial_not_independently_replayable"],
         "failure_stage": evidence["failure_stage"],
         "worker_exit_code": evidence["worker_exit_code"],
         "worker_timed_out": evidence["worker_timed_out"],
@@ -1358,16 +1226,10 @@ def _worker_execution_review_from_result_receipt(
         "native_pre_process_id": pre_process_id,
         "native_post_process_id": post_process_id,
         "supervisor_child_process_identity_verified": (child_process_identity_verified),
-        "native_pre_post_snapshot_equality_verified": (
-            native_pre_post_snapshot_equality_verified
-        ),
-        "native_mapping_lifetime_closure_claimed": evidence[
-            "native_mapping_lifetime_closure_claimed"
-        ],
+        "native_pre_post_snapshot_equality_verified": (native_pre_post_snapshot_equality_verified),
+        "native_mapping_lifetime_closure_claimed": evidence["native_mapping_lifetime_closure_claimed"],
         "disposition": (
-            WORKER_EXECUTION_EVIDENCE_ACCEPTED
-            if not rejection_reasons
-            else WORKER_EXECUTION_EVIDENCE_REJECTED
+            WORKER_EXECUTION_EVIDENCE_ACCEPTED if not rejection_reasons else WORKER_EXECUTION_EVIDENCE_REJECTED
         ),
         "rejection_reasons": rejection_reasons,
     }
@@ -1375,21 +1237,12 @@ def _worker_execution_review_from_result_receipt(
 
 def _result_receipt_binding(result_receipt: Mapping[str, Any]) -> dict[str, Any]:
     result_receipt = _validated_result_receipt_document(result_receipt)
-    if (
-        result_receipt.get("schema_id")
-        != REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt schema is unsupported"
-        )
-    receipt_sha256 = _require_sha256(
-        result_receipt.get("receipt_sha256"), name="result receipt"
-    )
+    if result_receipt.get("schema_id") != REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID:
+        raise ReferenceMinimizationValidationResultReviewError("result receipt schema is unsupported")
+    receipt_sha256 = _require_sha256(result_receipt.get("receipt_sha256"), name="result receipt")
     return {
         "result_receipt_sha256": receipt_sha256,
-        "protocol_sha256": _require_sha256(
-            result_receipt.get("protocol_sha256"), name="result receipt protocol"
-        ),
+        "protocol_sha256": _require_sha256(result_receipt.get("protocol_sha256"), name="result receipt protocol"),
         "result_contract_sha256": _require_sha256(
             result_receipt.get("result_contract_sha256"),
             name="result receipt result contract",
@@ -1450,9 +1303,7 @@ def _result_receipt_binding(result_receipt: Mapping[str, Any]) -> dict[str, Any]
             result_receipt.get("source_manifest_sha256"),
             name="result receipt source manifest",
         ),
-        "dependency_artifact_sha256_rows": _dependency_rows(
-            result_receipt.get("dependency_artifact_sha256_rows")
-        ),
+        "dependency_artifact_sha256_rows": _dependency_rows(result_receipt.get("dependency_artifact_sha256_rows")),
         "review_attestation_sha256": _require_sha256(
             result_receipt.get("review_attestation_sha256"),
             name="result receipt pre-execution review attestation",
@@ -1461,17 +1312,13 @@ def _result_receipt_binding(result_receipt: Mapping[str, Any]) -> dict[str, Any]
             result_receipt.get("independent_reviewer_identity_sha256"),
             name="result receipt independent scientific reviewer identity",
         ),
-        "worker_execution_review": _worker_execution_review_from_result_receipt(
-            result_receipt
-        ),
+        "worker_execution_review": _worker_execution_review_from_result_receipt(result_receipt),
     }
 
 
 def _external_sha256_set(values: Sequence[str], *, name: str) -> set[str]:
     if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
-        raise ReferenceMinimizationValidationResultReviewError(
-            f"{name} must be an explicit sequence of SHA-256 values"
-        )
+        raise ReferenceMinimizationValidationResultReviewError(f"{name} must be an explicit sequence of SHA-256 values")
     return {_require_sha256(value, name=name) for value in values}
 
 
@@ -1480,12 +1327,8 @@ def _verify_upstream_role_chain(
     result_receipt: Mapping[str, Any],
     pre_execution_review_attestation: str | bytes | Mapping[str, Any],
     authorization_receipt: str | bytes | Mapping[str, Any],
-    trusted_scientific_reviewer_keys: Mapping[
-        str, MinimizationScientificReviewerTrustAnchor
-    ],
-    trusted_authorization_operator_keys: Mapping[
-        str, MinimizationAuthorizationOperatorTrustAnchor
-    ],
+    trusted_scientific_reviewer_keys: Mapping[str, MinimizationScientificReviewerTrustAnchor],
+    trusted_authorization_operator_keys: Mapping[str, MinimizationAuthorizationOperatorTrustAnchor],
     expected_implementation_author_identity_sha256: str,
     expected_independent_scientific_reviewer_identity_sha256: str,
     expected_authorization_operator_identity_sha256: str,
@@ -1520,24 +1363,21 @@ def _verify_upstream_role_chain(
         name="result receipt created_at_utc",
     )
     try:
-        authorization = (
-            verify_signed_reference_minimization_validation_authorization_receipt(
-                authorization_receipt,
-                review_attestation=pre_execution_review_attestation,
-                trusted_reviewer_keys=trusted_scientific_reviewer_keys,
-                expected_implementation_author_identity_sha256=expected_author,
-                trusted_operator_keys=trusted_authorization_operator_keys,
-                checked_at=receipt_created_at,
-                expected_code_commit_sha=binding["code_commit_sha"],
-                expected_runner_source_sha256=binding["runner_source_sha256"],
-                expected_dependency_artifact_sha256_rows={
-                    row["artifact_id"]: row["sha256"]
-                    for row in binding["dependency_artifact_sha256_rows"]
-                },
-                revoked_receipt_sha256s=tuple(sorted(revoked_authorizations)),
-                revoked_review_attestation_sha256s=tuple(sorted(revoked_reviews)),
-                consumed_nonce_sha256s=(),
-            )
+        authorization = verify_signed_reference_minimization_validation_authorization_receipt(
+            authorization_receipt,
+            review_attestation=pre_execution_review_attestation,
+            trusted_reviewer_keys=trusted_scientific_reviewer_keys,
+            expected_implementation_author_identity_sha256=expected_author,
+            trusted_operator_keys=trusted_authorization_operator_keys,
+            checked_at=receipt_created_at,
+            expected_code_commit_sha=binding["code_commit_sha"],
+            expected_runner_source_sha256=binding["runner_source_sha256"],
+            expected_dependency_artifact_sha256_rows={
+                row["artifact_id"]: row["sha256"] for row in binding["dependency_artifact_sha256_rows"]
+            },
+            revoked_receipt_sha256s=tuple(sorted(revoked_authorizations)),
+            revoked_review_attestation_sha256s=tuple(sorted(revoked_reviews)),
+            consumed_nonce_sha256s=(),
         )
     except ReferenceMinimizationValidationAuthorizationError as exc:
         raise ReferenceMinimizationValidationResultReviewError(
@@ -1552,18 +1392,14 @@ def _verify_upstream_role_chain(
         "authorization_nonce_sha256": binding["authorization_nonce_sha256"],
         "code_commit_sha": binding["code_commit_sha"],
         "runner_source_sha256": binding["runner_source_sha256"],
-        "execution_environment_contract_sha256": binding[
-            "execution_environment_contract_sha256"
-        ],
+        "execution_environment_contract_sha256": binding["execution_environment_contract_sha256"],
         "result_receipt_contract_sha256": binding["result_contract_sha256"],
         "dependency_artifact_sha256_rows": tuple(
-            (row["artifact_id"], row["sha256"])
-            for row in binding["dependency_artifact_sha256_rows"]
+            (row["artifact_id"], row["sha256"]) for row in binding["dependency_artifact_sha256_rows"]
         ),
     }
     if any(
-        getattr(authorization, field_name) != expected_value
-        for field_name, expected_value in expected_rows.items()
+        getattr(authorization, field_name) != expected_value for field_name, expected_value in expected_rows.items()
     ):
         raise ReferenceMinimizationValidationResultReviewError(
             "result review upstream signed-chain roles or identities are cross-wired"
@@ -1578,6 +1414,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID,
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6
+        ),
+        "refreeze_reason": "binds_refrozen_projection_headroom_complete_result_evidence_chain",
         "purpose": {
             "scope": "future_independent_review_of_one_exact_minimization_validation_result_receipt",
             "contract_definition_only": True,
@@ -1596,13 +1436,10 @@ def _contract_projection() -> dict[str, Any]:
             "result_receipt_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
             "result_writer_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
             "runner_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256,
-            "fixture_manifest_sha256": protocol["fixture_manifest"][
-                "fixture_manifest_sha256"
-            ],
+            "trajectory_comparison_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
+            "fixture_manifest_sha256": protocol["fixture_manifest"]["fixture_manifest_sha256"],
             "case_manifest_sha256": protocol["case_manifest"]["case_manifest_sha256"],
-            "materialization_manifest_sha256": materialization[
-                "materialization_manifest_sha256"
-            ],
+            "materialization_manifest_sha256": materialization["materialization_manifest_sha256"],
             "exact_result_receipt_sha256_required": True,
             "full_result_writer_receipt_validation_required": True,
             "raw_signed_pre_execution_review_and_authorization_required": True,
@@ -1619,6 +1456,11 @@ def _contract_projection() -> dict[str, Any]:
             "canonical_empty_trace_required_for_pre_evaluation_failure": True,
             "coordinate_trace_step_and_whole_trace_digests_recomputed": True,
             "coordinate_trace_counts_and_energy_ledger_must_be_consistent": True,
+            "trajectory_comparison_recomputed_from_both_coordinate_traces": True,
+            "trajectory_alignment_branch_rejection_and_counts_reverified": True,
+            "trajectory_raw_evaluated_coordinate_and_energy_errors_reverified": True,
+            "trajectory_predefined_threshold_dispositions_reverified": True,
+            "checkpoint_uninterrupted_paused_and_resumed_digests_reverified": True,
             "worker_execution_evidence_extracted_from_validated_run_observation": True,
             "exact_worker_request_document_and_transport_bytes_reverified": True,
             "worker_request_nonce_start_code_source_dependency_environment_seed_and_materialization_crosschecked": True,
@@ -1668,6 +1510,9 @@ def _contract_projection() -> dict[str, Any]:
             "ordered_coordinate_trace_dispositions_required_for_all_cases": True,
             "ordered_coordinate_trace_step_dispositions_required": True,
             "expected_empty_coordinate_trace_disposition_is_explicit": True,
+            "trajectory_comparison_disposition_required_for_all_cases": True,
+            "trajectory_step_dispositions_required_for_all_aligned_steps": True,
+            "checkpoint_restart_disposition_required_for_all_cases": True,
             "review_outcomes": [
                 RESULT_REVIEW_OUTCOME_ACCEPTED,
                 RESULT_REVIEW_OUTCOME_REJECTED,
@@ -1675,6 +1520,7 @@ def _contract_projection() -> dict[str, Any]:
             "review_outcome_derived_from_frozen_case_semantics": True,
             "accepted_outcome_requires_complete_result_evidence_disposition": True,
             "accepted_outcome_requires_all_trace_and_step_dispositions": True,
+            "accepted_outcome_requires_trajectory_and_checkpoint_comparison_acceptance": True,
             "accepted_outcome_requires_complete_worker_lifecycle": True,
             "accepted_outcome_requires_exact_request_provenance_binding": True,
             "accepted_outcome_requires_reconstructed_canonical_transcript": True,
@@ -1706,6 +1552,7 @@ def _contract_projection() -> dict[str, Any]:
         },
         "claim_policy": {
             "result_review_contract_implemented": True,
+            "trajectory_comparison_review_implemented": True,
             "independent_result_review_completed": False,
             "minimization_validated": False,
             "scientific_applicability_established": False,
@@ -1719,15 +1566,12 @@ def _contract_projection() -> dict[str, Any]:
     }
 
 
-def reference_minimization_validation_result_review_contract_document() -> dict[
-    str, Any
-]:
+def reference_minimization_validation_result_review_contract_document() -> dict[str, Any]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
     if (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
-        and document["contract_sha256"]
-        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
+        and document["contract_sha256"] != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
     ):
         raise ReferenceMinimizationValidationResultReviewError(
             "frozen validation result review contract SHA-256 drifted"
@@ -1739,15 +1583,11 @@ def require_reference_minimization_validation_result_review_contract_document(
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review contract document must be a mapping"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review contract document must be a mapping")
     try:
         observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review contract document is invalid"
-        ) from exc
+        raise ReferenceMinimizationValidationResultReviewError("result review contract document is invalid") from exc
     expected = reference_minimization_validation_result_review_contract_document()
     if observed != expected:
         raise ReferenceMinimizationValidationResultReviewError(
@@ -1833,12 +1673,8 @@ class ReferenceMinimizationValidationResultReviewVerification:
                 "result review verification identities must be pairwise distinct"
             )
         _require_key_id(self.result_reviewer_key_id)
-        reviewed_at = _parse_utc(
-            self.reviewed_at_utc, name="result review verification reviewed_at_utc"
-        )
-        expires_at = _parse_utc(
-            self.expires_at_utc, name="result review verification expires_at_utc"
-        )
+        reviewed_at = _parse_utc(self.reviewed_at_utc, name="result review verification reviewed_at_utc")
+        expires_at = _parse_utc(self.expires_at_utc, name="result review verification expires_at_utc")
         if expires_at <= reviewed_at:
             raise ReferenceMinimizationValidationResultReviewError(
                 "result review verification expiry must follow review time"
@@ -1855,12 +1691,8 @@ class ReferenceMinimizationValidationResultReviewVerification:
             RESULT_REVIEW_OUTCOME_ACCEPTED,
             RESULT_REVIEW_OUTCOME_REJECTED,
         }:
-            raise ReferenceMinimizationValidationResultReviewError(
-                "result review verification outcome is invalid"
-            )
-        if self.result_receipt_accepted is not (
-            self.result_receipt_review_outcome == RESULT_REVIEW_OUTCOME_ACCEPTED
-        ):
+            raise ReferenceMinimizationValidationResultReviewError("result review verification outcome is invalid")
+        if self.result_receipt_accepted is not (self.result_receipt_review_outcome == RESULT_REVIEW_OUTCOME_ACCEPTED):
             raise ReferenceMinimizationValidationResultReviewError(
                 "result review verification acceptance contradicts its outcome"
             )
@@ -1926,10 +1758,7 @@ def _attestation_projection(
         independent_scientific_reviewer_identity_sha256,
         name="independent scientific reviewer identity",
     )
-    if (
-        scientific_reviewer_identity
-        != binding["independent_scientific_reviewer_identity_sha256"]
-    ):
+    if scientific_reviewer_identity != binding["independent_scientific_reviewer_identity_sha256"]:
         raise ReferenceMinimizationValidationResultReviewError(
             "independent scientific reviewer identity is cross-wired"
         )
@@ -1952,17 +1781,13 @@ def _attestation_projection(
         )
         != 4
     ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review roles must be pairwise distinct"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review roles must be pairwise distinct")
     if list(accepted_check_ids) != list(_REQUIRED_RESULT_REVIEW_CHECK_IDS):
         raise ReferenceMinimizationValidationResultReviewError(
             "result review check coverage is incomplete or reordered"
         )
     if list(acknowledged_limitation_ids) != list(_REQUIRED_LIMITATION_IDS):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review limitations are incomplete or reordered"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review limitations are incomplete or reordered")
     rows = [dict(row) for row in case_review_rows]
     review_outcome = _result_review_outcome(
         rows,
@@ -1980,12 +1805,8 @@ def _attestation_projection(
         "authorization_contract_sha256": binding["authorization_contract_sha256"],
         "authorization_receipt_sha256": binding["authorization_receipt_sha256"],
         "authorization_nonce_sha256": binding["authorization_nonce_sha256"],
-        "execution_environment_contract_sha256": binding[
-            "execution_environment_contract_sha256"
-        ],
-        "execution_environment_receipt_sha256": binding[
-            "execution_environment_receipt_sha256"
-        ],
+        "execution_environment_contract_sha256": binding["execution_environment_contract_sha256"],
+        "execution_environment_receipt_sha256": binding["execution_environment_receipt_sha256"],
         "environment_fingerprint_sha256": binding["environment_fingerprint_sha256"],
         "observation_sha256": binding["observation_sha256"],
         "result_receipt_created_at_utc": binding["result_receipt_created_at_utc"],
@@ -2025,12 +1846,8 @@ def build_signed_reference_minimization_validation_result_review_attestation(
     result_receipt: Mapping[str, Any],
     pre_execution_review_attestation: str | bytes | Mapping[str, Any],
     authorization_receipt: str | bytes | Mapping[str, Any],
-    trusted_scientific_reviewer_keys: Mapping[
-        str, MinimizationScientificReviewerTrustAnchor
-    ],
-    trusted_authorization_operator_keys: Mapping[
-        str, MinimizationAuthorizationOperatorTrustAnchor
-    ],
+    trusted_scientific_reviewer_keys: Mapping[str, MinimizationScientificReviewerTrustAnchor],
+    trusted_authorization_operator_keys: Mapping[str, MinimizationAuthorizationOperatorTrustAnchor],
     implementation_author_identity_sha256: str,
     independent_scientific_reviewer_identity_sha256: str,
     authorization_operator_identity_sha256: str,
@@ -2059,18 +1876,10 @@ def build_signed_reference_minimization_validation_result_review_attestation(
         authorization_receipt=authorization_receipt,
         trusted_scientific_reviewer_keys=trusted_scientific_reviewer_keys,
         trusted_authorization_operator_keys=trusted_authorization_operator_keys,
-        expected_implementation_author_identity_sha256=(
-            implementation_author_identity_sha256
-        ),
-        expected_independent_scientific_reviewer_identity_sha256=(
-            independent_scientific_reviewer_identity_sha256
-        ),
-        expected_authorization_operator_identity_sha256=(
-            authorization_operator_identity_sha256
-        ),
-        revoked_pre_execution_review_attestation_sha256s=(
-            revoked_pre_execution_review_attestation_sha256s
-        ),
+        expected_implementation_author_identity_sha256=(implementation_author_identity_sha256),
+        expected_independent_scientific_reviewer_identity_sha256=(independent_scientific_reviewer_identity_sha256),
+        expected_authorization_operator_identity_sha256=(authorization_operator_identity_sha256),
+        revoked_pre_execution_review_attestation_sha256s=(revoked_pre_execution_review_attestation_sha256s),
         revoked_authorization_receipt_sha256s=(revoked_authorization_receipt_sha256s),
     )
     revoked_environments = _external_sha256_set(
@@ -2086,22 +1895,13 @@ def build_signed_reference_minimization_validation_result_review_attestation(
         name="superseded result receipt",
     )
     if binding["execution_environment_receipt_sha256"] in revoked_environments:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "execution environment receipt is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("execution environment receipt is externally revoked")
     if binding["result_receipt_sha256"] in revoked_results:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt is externally revoked")
     if binding["result_receipt_sha256"] in superseded_results:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt is externally superseded"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt is externally superseded")
     expected_rows = _case_review_rows_from_result_receipt(validated_receipt)
-    if (
-        case_review_rows is not None
-        and [dict(row) for row in case_review_rows] != expected_rows
-    ):
+    if case_review_rows is not None and [dict(row) for row in case_review_rows] != expected_rows:
         raise ReferenceMinimizationValidationResultReviewError(
             "caller-supplied case review dispositions contradict the result receipt"
         )
@@ -2113,10 +1913,7 @@ def build_signed_reference_minimization_validation_result_review_attestation(
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation expiry must follow review time"
         )
-    if (
-        expires_time - reviewed_time
-        > REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY
-    ):
+    if expires_time - reviewed_time > REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation validity exceeds the frozen maximum"
         )
@@ -2125,19 +1922,13 @@ def build_signed_reference_minimization_validation_result_review_attestation(
         name="result receipt created_at_utc",
     )
     if reviewed_time < receipt_created_at:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation predates the result receipt"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation predates the result receipt")
     projection = _attestation_projection(
         result_receipt=validated_receipt,
         implementation_author_identity_sha256=implementation_author_identity_sha256,
-        independent_scientific_reviewer_identity_sha256=(
-            independent_scientific_reviewer_identity_sha256
-        ),
+        independent_scientific_reviewer_identity_sha256=(independent_scientific_reviewer_identity_sha256),
         authorization_operator_identity_sha256=authorization_operator_identity_sha256,
-        independent_result_reviewer_identity_sha256=(
-            independent_result_reviewer_identity_sha256
-        ),
+        independent_result_reviewer_identity_sha256=(independent_result_reviewer_identity_sha256),
         result_reviewer_key_id=result_reviewer_key_id,
         reviewed_at_utc=reviewed_at_utc,
         expires_at_utc=expires_at_utc,
@@ -2188,13 +1979,9 @@ def _load_attestation(source: str | bytes | Mapping[str, Any]) -> dict[str, Any]
             object_pairs_hook=reject_duplicate_keys,
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation must be UTF-8 JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation must be UTF-8 JSON") from exc
     if not isinstance(loaded, dict):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation root must be an object"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation root must be an object")
     if _canonical_bytes(loaded) != raw:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation transport is not canonical JSON"
@@ -2208,12 +1995,8 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
     result_receipt: Mapping[str, Any],
     pre_execution_review_attestation: str | bytes | Mapping[str, Any],
     authorization_receipt: str | bytes | Mapping[str, Any],
-    trusted_scientific_reviewer_keys: Mapping[
-        str, MinimizationScientificReviewerTrustAnchor
-    ],
-    trusted_authorization_operator_keys: Mapping[
-        str, MinimizationAuthorizationOperatorTrustAnchor
-    ],
+    trusted_scientific_reviewer_keys: Mapping[str, MinimizationScientificReviewerTrustAnchor],
+    trusted_authorization_operator_keys: Mapping[str, MinimizationAuthorizationOperatorTrustAnchor],
     expected_result_receipt_sha256: str,
     trusted_result_reviewer_keys: Mapping[str, MinimizationResultReviewerTrustAnchor],
     expected_implementation_author_identity_sha256: str,
@@ -2251,9 +2034,7 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         expected_authorization_operator_identity_sha256,
         name="expected authorization operator identity",
     )
-    checked_at_utc = _parse_utc(
-        _format_utc(checked_at, name="checked_at"), name="checked_at"
-    )
+    checked_at_utc = _parse_utc(_format_utc(checked_at, name="checked_at"), name="checked_at")
     validated_receipt = _validated_result_receipt_document(result_receipt)
     receipt_binding = _result_receipt_binding(validated_receipt)
     revoked_pre_execution_reviews = _external_sha256_set(
@@ -2285,85 +2066,47 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         name="superseded result review attestation",
     )
     if receipt_binding["result_receipt_sha256"] != expected_receipt:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt identity is cross-wired"
-        )
-    if (
-        receipt_binding["protocol_sha256"]
-        != FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt protocol identity drifted"
-        )
-    if (
-        receipt_binding["artifact_binding_sha256"]
-        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt artifact binding drifted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt identity is cross-wired")
+    if receipt_binding["protocol_sha256"] != FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256:
+        raise ReferenceMinimizationValidationResultReviewError("result receipt protocol identity drifted")
+    if receipt_binding["artifact_binding_sha256"] != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256:
+        raise ReferenceMinimizationValidationResultReviewError("result receipt artifact binding drifted")
     if (
         receipt_binding["authorization_contract_sha256"]
         != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
     ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt authorization contract drifted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt authorization contract drifted")
     if (
         receipt_binding["execution_environment_contract_sha256"]
         != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
     ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt environment contract drifted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt environment contract drifted")
     if (
         receipt_binding["result_contract_sha256"]
         != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
     ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt result contract drifted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt result contract drifted")
     if (
         receipt_binding["result_writer_contract_sha256"]
         != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
     ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt result writer contract drifted"
-        )
-    if (
-        receipt_binding["runner_contract_sha256"]
-        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt runner contract drifted"
-        )
-    if (
-        receipt_binding["independent_scientific_reviewer_identity_sha256"]
-        != expected_scientific_reviewer
-    ):
+        raise ReferenceMinimizationValidationResultReviewError("result receipt result writer contract drifted")
+    if receipt_binding["runner_contract_sha256"] != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256:
+        raise ReferenceMinimizationValidationResultReviewError("result receipt runner contract drifted")
+    if receipt_binding["independent_scientific_reviewer_identity_sha256"] != expected_scientific_reviewer:
         raise ReferenceMinimizationValidationResultReviewError(
             "result receipt scientific reviewer identity is cross-wired"
         )
     if receipt_binding["review_attestation_sha256"] in revoked_pre_execution_reviews:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "pre-execution review attestation is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("pre-execution review attestation is externally revoked")
     if receipt_binding["authorization_receipt_sha256"] in revoked_authorizations:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "authorization receipt is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("authorization receipt is externally revoked")
     if receipt_binding["execution_environment_receipt_sha256"] in revoked_environments:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "execution environment receipt is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("execution environment receipt is externally revoked")
     if expected_receipt in revoked_results:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt is externally revoked")
     if expected_receipt in superseded_results:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result receipt is externally superseded"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result receipt is externally superseded")
     _verify_upstream_role_chain(
         result_receipt=validated_receipt,
         pre_execution_review_attestation=pre_execution_review_attestation,
@@ -2371,13 +2114,9 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         trusted_scientific_reviewer_keys=trusted_scientific_reviewer_keys,
         trusted_authorization_operator_keys=trusted_authorization_operator_keys,
         expected_implementation_author_identity_sha256=expected_author,
-        expected_independent_scientific_reviewer_identity_sha256=(
-            expected_scientific_reviewer
-        ),
+        expected_independent_scientific_reviewer_identity_sha256=(expected_scientific_reviewer),
         expected_authorization_operator_identity_sha256=expected_operator,
-        revoked_pre_execution_review_attestation_sha256s=tuple(
-            sorted(revoked_pre_execution_reviews)
-        ),
+        revoked_pre_execution_review_attestation_sha256s=tuple(sorted(revoked_pre_execution_reviews)),
         revoked_authorization_receipt_sha256s=tuple(sorted(revoked_authorizations)),
     )
     expected_case_rows = _case_review_rows_from_result_receipt(validated_receipt)
@@ -2385,35 +2124,22 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
     payload = _load_attestation(source)
     signature = payload.pop("signature", None)
     if not isinstance(signature, Mapping):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation signature is missing"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation signature is missing")
     if set(signature) != {"algorithm", "key_id", "value"}:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation signature fields are invalid"
-        )
-    if (
-        signature.get("algorithm")
-        != REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM
-    ):
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation signature fields are invalid")
+    if signature.get("algorithm") != REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation signature algorithm is unsupported"
         )
     key_id = _require_key_id(signature.get("key_id"))
     if key_id not in trusted_result_reviewer_keys:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result reviewer key id is not trusted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result reviewer key id is not trusted")
     anchor = trusted_result_reviewer_keys[key_id]
     if not isinstance(anchor, MinimizationResultReviewerTrustAnchor):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "trusted result reviewer entry has an invalid type"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("trusted result reviewer entry has an invalid type")
     signature_value = signature.get("value")
     try:
-        verified = verify_ed25519(
-            _canonical_bytes(payload), signature_value, anchor.verification_key
-        )
+        verified = verify_ed25519(_canonical_bytes(payload), signature_value, anchor.verification_key)
     except ReferenceMinimizationValidationEd25519Error as exc:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation Ed25519 verifier is unavailable"
@@ -2425,29 +2151,16 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
 
     attestation_sha256 = payload.pop("attestation_sha256", None)
     if attestation_sha256 != _sha256(payload):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation SHA-256 verification failed"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation SHA-256 verification failed")
     if attestation_sha256 in revoked_result_reviews:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation is externally revoked")
     if attestation_sha256 in superseded_result_reviews:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation is externally superseded"
-        )
-    if (
-        payload.get("schema_id")
-        != REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID
-    ):
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation schema is unsupported"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation is externally superseded")
+    if payload.get("schema_id") != REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID:
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation schema is unsupported")
     contract = reference_minimization_validation_result_review_contract_document()
     if payload.get("contract_sha256") != contract["contract_sha256"]:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation contract identity drifted"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation contract identity drifted")
     if payload.get("result_receipt_sha256") != expected_receipt:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation result receipt identity drifted"
@@ -2461,10 +2174,7 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation implementation author identity drifted"
         )
-    if (
-        payload.get("independent_scientific_reviewer_identity_sha256")
-        != expected_scientific_reviewer
-    ):
+    if payload.get("independent_scientific_reviewer_identity_sha256") != expected_scientific_reviewer:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation scientific reviewer identity drifted"
         )
@@ -2487,13 +2197,9 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         result_reviewer,
     }
     if len(identities) != 4:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review roles must be pairwise distinct"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review roles must be pairwise distinct")
     if payload.get("result_reviewer_key_id") != key_id:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result reviewer key id is cross-wired"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result reviewer key id is cross-wired")
 
     reviewed_at = _parse_utc(payload.get("reviewed_at_utc"), name="reviewed_at_utc")
     expires_at = _parse_utc(payload.get("expires_at_utc"), name="expires_at_utc")
@@ -2502,28 +2208,19 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         name="result receipt created_at_utc",
     )
     if reviewed_at < receipt_created_at:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation predates the result receipt"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation predates the result receipt")
     if expires_at <= reviewed_at:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation expiry must follow review time"
         )
-    if (
-        expires_at - reviewed_at
-        > REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY
-    ):
+    if expires_at - reviewed_at > REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY:
         raise ReferenceMinimizationValidationResultReviewError(
             "result review attestation validity exceeds the frozen maximum"
         )
     if checked_at_utc < reviewed_at:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation is not yet valid"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation is not yet valid")
     if checked_at_utc >= expires_at:
-        raise ReferenceMinimizationValidationResultReviewError(
-            "result review attestation is expired"
-        )
+        raise ReferenceMinimizationValidationResultReviewError("result review attestation is expired")
 
     expected_checks = list(_REQUIRED_RESULT_REVIEW_CHECK_IDS)
     expected_limitations = list(_REQUIRED_LIMITATION_IDS)
@@ -2565,9 +2262,7 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         contract_sha256=contract["contract_sha256"],
         result_receipt_sha256=expected_receipt,
         source_manifest_sha256=receipt_binding["source_manifest_sha256"],
-        attestation_sha256=_require_sha256(
-            attestation_sha256, name="result review attestation"
-        ),
+        attestation_sha256=_require_sha256(attestation_sha256, name="result review attestation"),
         implementation_author_identity_sha256=expected_author,
         independent_scientific_reviewer_identity_sha256=expected_scientific_reviewer,
         authorization_operator_identity_sha256=expected_operator,
@@ -2578,9 +2273,7 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
         independent_result_review_verified=True,
         implementation_author_separation_verified=True,
         result_receipt_review_outcome=result_review_outcome,
-        result_receipt_accepted=(
-            result_review_outcome == RESULT_REVIEW_OUTCOME_ACCEPTED
-        ),
+        result_receipt_accepted=(result_review_outcome == RESULT_REVIEW_OUTCOME_ACCEPTED),
         scientifically_validated=False,
         parameter_fitting_proposal_authorized=False,
         parameter_fitting_authorized=False,
@@ -2592,9 +2285,7 @@ def verify_signed_reference_minimization_validation_result_review_attestation(
     )
 
 
-def reference_minimization_validation_result_review_contract_decision() -> dict[
-    str, Any
-]:
+def reference_minimization_validation_result_review_contract_decision() -> dict[str, Any]:
     """Return the current closed decision; no result review attestation is bundled."""
 
     contract = reference_minimization_validation_result_review_contract_document()
@@ -2617,6 +2308,8 @@ __all__ = [
     "COORDINATE_TRACE_REJECTED",
     "COORDINATE_TRACE_STEP_ACCEPTED",
     "EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V5",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V4",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256",

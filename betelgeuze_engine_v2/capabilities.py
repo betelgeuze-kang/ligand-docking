@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_ao_minimization_validation_production_entrypoint"
+IMPLEMENTATION_STAGE = "v2_ap_minimization_trajectory_comparison"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -26,92 +26,38 @@ MMCIF_SEMANTICS_CAPABILITY_ID = "v2_bounded_mmcif_semantic_projection"
 MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID = "v2_bounded_mmcif_zero_occupancy_declarations"
 MMCIF_ALTLOC_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_altloc_declarations"
 MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID = "v2_bounded_mmcif_atom_site_model_policy"
-MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID = (
-    "v2_bounded_mmcif_biological_assembly_policy"
-)
-MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID = (
-    "v2_bounded_mmcif_missing_atom_residue_policy"
-)
-MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_modified_residue_declarations"
-)
+MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID = "v2_bounded_mmcif_biological_assembly_policy"
+MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID = "v2_bounded_mmcif_missing_atom_residue_policy"
+MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_modified_residue_declarations"
 MMCIF_NONPOLY_IDENTITY_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_identity"
-MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_component_declarations"
-)
+MMCIF_NONPOLY_COMPONENT_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_component_declarations"
 MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_component_roles"
-MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_struct_conn_declarations"
-)
-MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_atom_site_observations"
-)
-MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_coordinate_values"
-)
-MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_atom_site_scalar_values"
-)
-MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_canonical_topology"
-)
-MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_neutral_coh_preparation"
-)
-MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_hydrogen_coordinates"
-)
-MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_all_atom_systems"
-)
-MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_parameter_source_binding"
-)
-MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_partial_charge_assignment"
-)
-MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_all_atom_round_trip"
-)
-MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_ph_dependent_protonation"
-)
-MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_ph_protonation_corpus"
-)
-MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_reference_tautomer_selection"
-)
-MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_tautomer_selection_corpus"
-)
+MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID = "v2_bounded_mmcif_struct_conn_declarations"
+MMCIF_NONPOLY_ATOM_SITE_OBSERVATIONS_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_atom_site_observations"
+MMCIF_NONPOLY_COORDINATE_VALUES_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_coordinate_values"
+MMCIF_NONPOLY_ATOM_SITE_SCALAR_VALUES_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_atom_site_scalar_values"
+MMCIF_NONPOLY_CANONICAL_TOPOLOGY_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_canonical_topology"
+MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_neutral_coh_preparation"
+MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_hydrogen_coordinates"
+MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_all_atom_systems"
+MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_parameter_source_binding"
+MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_partial_charge_assignment"
+MMCIF_NONPOLY_ALL_ATOM_ROUND_TRIP_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_all_atom_round_trip"
+MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_ph_dependent_protonation"
+MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_ph_protonation_corpus"
+MMCIF_NONPOLY_TAUTOMER_SELECTION_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_reference_tautomer_selection"
+MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_tautomer_selection_corpus"
 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID = "v2_reviewed_parameter_source_provenance"
-MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = (
-    "v2_bounded_mmcif_nonpoly_preparation_corpus"
-)
+MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_preparation_corpus"
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
-H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = (
-    "v2_h5_reference_physics_parameter_applicability_record"
-)
+H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = "v2_h5_reference_physics_parameter_applicability_record"
 CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = "v2_bounded_cpu_reference_minimization"
-CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = (
-    "v2_bounded_cpu_reference_term_diagnostics"
-)
-CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = (
-    "v2_bounded_cpu_reference_improper_constraint_extension"
-)
-CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = (
-    "v2_bounded_cpu_fixed_born_polar_solvation"
-)
-CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = (
-    "v2_cpu_reference_energy_force_validation_protocol"
-)
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID = (
-    "v2_cpu_reference_minimization_validation_protocol"
-)
-VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID = (
-    "v2_synthetic_validation_production_evidence_custody_foundation"
-)
+CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = "v2_bounded_cpu_reference_term_diagnostics"
+CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = "v2_bounded_cpu_reference_improper_constraint_extension"
+CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = "v2_bounded_cpu_fixed_born_polar_solvation"
+CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID = "v2_cpu_reference_energy_force_validation_protocol"
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID = "v2_cpu_reference_minimization_validation_protocol"
+VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CAPABILITY_ID = "v2_synthetic_validation_production_evidence_custody_foundation"
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID = "v2_frozen_public_benchmark_protocol"
@@ -533,7 +479,6 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "signed_independent_result_review_attestation_missing",
         "trusted_independent_result_reviewer_key_not_provided",
         "implementation_author_and_independent_result_reviewer_separation_not_attested",
-        "trajectory_level_minimization_comparison_missing",
         "two_cpu_host_reproducibility_missing",
         "independent_external_implementation_comparison_missing",
         "reviewed_runtime_parameter_values_not_bound",
@@ -720,34 +665,25 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID: _row(
                 MMCIF_ATOM_SITE_MODEL_POLICY_CAPABILITY_ID,
-                current_state=(
-                    "bounded_complete_atom_site_model_set_and_single_model_1_"
-                    "execution_policy"
-                ),
+                current_state=("bounded_complete_atom_site_model_set_and_single_model_1_execution_policy"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID: _row(
                 MMCIF_BIOLOGICAL_ASSEMBLY_POLICY_CAPABILITY_ID,
-                current_state=(
-                    "bounded_source_declared_biological_assembly_preparation_admission"
-                ),
+                current_state=("bounded_source_declared_biological_assembly_preparation_admission"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID: _row(
                 MMCIF_MISSING_ATOM_RESIDUE_POLICY_CAPABILITY_ID,
-                current_state=(
-                    "bounded_source_declared_observation_gap_preparation_admission"
-                ),
+                current_state=("bounded_source_declared_observation_gap_preparation_admission"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID: _row(
                 MMCIF_MODIFIED_RESIDUE_DECLARATIONS_CAPABILITY_ID,
-                current_state=(
-                    "bounded_source_declared_modified_polymer_residue_identity"
-                ),
+                current_state=("bounded_source_declared_modified_polymer_residue_identity"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -765,9 +701,7 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_COMPONENT_ROLE_CAPABILITY_ID,
-                current_state=(
-                    "bounded_water_monoatomic_metal_and_nonmetal_ion_composition_roles"
-                ),
+                current_state=("bounded_water_monoatomic_metal_and_nonmetal_ion_composition_roles"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -803,44 +737,33 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CAPABILITY_ID,
-                current_state=(
-                    "bounded_neutral_acyclic_coh_graph_preparation_and_"
-                    "parameterability_report"
-                ),
+                current_state=("bounded_neutral_acyclic_coh_graph_preparation_and_parameterability_report"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_HYDROGEN_COORDINATE_CAPABILITY_ID,
-                current_state=(
-                    "bounded_graph_bound_fixed_parent_offset_angstrom_coordinates"
-                ),
+                current_state=("bounded_graph_bound_fixed_parent_offset_angstrom_coordinates"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_ALL_ATOM_SYSTEM_CAPABILITY_ID,
-                current_state=(
-                    "bounded_instance_canonical_all_atom_system_materialization"
-                ),
+                current_state=("bounded_instance_canonical_all_atom_system_materialization"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PARAMETER_SOURCE_BINDING_CAPABILITY_ID,
                 current_state=(
-                    "reviewed_parameter_source_identity_bound_to_bounded_"
-                    "canonical_systems_without_assignment"
+                    "reviewed_parameter_source_identity_bound_to_bounded_canonical_systems_without_assignment"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PARTIAL_CHARGE_ASSIGNMENT_CAPABILITY_ID,
-                current_state=(
-                    "bounded_explicit_charge_vector_application_without_"
-                    "generation_or_validation"
-                ),
+                current_state=("bounded_explicit_charge_vector_application_without_generation_or_validation"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -853,18 +776,14 @@ def capability_snapshot() -> dict[str, Any]:
             MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PH_PROTONATION_CAPABILITY_ID,
                 current_state=(
-                    "bounded_pubchem_cid_176_dominant_ph_state_selection_"
-                    "with_abstention_and_canonical_round_trip"
+                    "bounded_pubchem_cid_176_dominant_ph_state_selection_with_abstention_and_canonical_round_trip"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PH_PROTONATION_CORPUS_CAPABILITY_ID,
-                current_state=(
-                    "frozen_7_case_pubchem_identity_supported_abstention_"
-                    "and_failure_corpus"
-                ),
+                current_state=("frozen_7_case_pubchem_identity_supported_abstention_and_failure_corpus"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -879,26 +798,19 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_TAUTOMER_SELECTION_CORPUS_CAPABILITY_ID,
-                current_state=(
-                    "frozen_6_case_pubchem_identity_supported_and_failure_"
-                    "tautomer_corpus"
-                ),
+                current_state=("frozen_6_case_pubchem_identity_supported_and_failure_tautomer_corpus"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID: _row(
                 PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID,
-                current_state=(
-                    "reviewed_openff_sage_2_2_1_identity_license_scope_only"
-                ),
+                current_state=("reviewed_openff_sage_2_2_1_identity_license_scope_only"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID: _row(
                 MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID,
-                current_state=(
-                    "frozen_30_case_failure_complete_corpus_and_52_axis_coverage_ledger"
-                ),
+                current_state=("frozen_30_case_failure_complete_corpus_and_52_axis_coverage_ledger"),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -920,8 +832,7 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID: _row(
                 CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
                 current_state=(
-                    "bounded_deterministic_cpu_float64_steepest_descent_with_"
-                    "failure_ledger_and_checkpoint_restart"
+                    "bounded_deterministic_cpu_float64_steepest_descent_with_failure_ledger_and_checkpoint_restart"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -929,8 +840,7 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: _row(
                 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
                 current_state=(
-                    "bounded_cpu_float64_per_term_energy_central_difference_"
-                    "force_and_nonperiodic_virial_diagnostics"
+                    "bounded_cpu_float64_per_term_energy_central_difference_force_and_nonperiodic_virial_diagnostics"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -956,8 +866,7 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "result_writer_and_independent_result_review_contract_"
-                    "without_production_receipt_or_review"
+                    "result_writer_and_independent_result_review_contract_without_production_receipt_or_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -965,9 +874,9 @@ def capability_snapshot() -> dict[str, Any]:
             CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID: _row(
                 CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "failure_inclusive_complete_coordinate_trace_production_"
-                    "entrypoint_result_writer_and_independent_result_review_"
-                    "contract_without_production_result_receipt_or_review"
+                    "failure_inclusive_complete_coordinate_trace_checkpoint_"
+                    "restart_trajectory_comparison_contract_and_result_review_"
+                    "without_production_result_receipt_or_review"
                 ),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -1000,10 +909,7 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
-                current_state=(
-                    "frozen_four_case_public_redocking_protocol_definition_"
-                    "without_execution_or_results"
-                ),
+                current_state=("frozen_four_case_public_redocking_protocol_definition_without_execution_or_results"),
                 internal_execution_enabled=False,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -1030,6 +936,8 @@ def capability_snapshot() -> dict[str, Any]:
             "require_public_evidence_attestation": True,
             "require_reviewed_external_baseline_results": True,
             "require_validated_independent_physics": True,
+            "require_predefined_minimization_trajectory_thresholds": True,
+            "require_minimization_checkpoint_restart_equality": True,
             "require_gpu_parity_before_acceleration_claim": True,
             "external_state_mutated": False,
         },

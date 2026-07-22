@@ -85,26 +85,28 @@ from .validation_source_identity import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/5.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/3.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/5.0.0"
+)
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_run_start_environment/3.0.0"
+    "cpu_reference_minimization_validation_run_start_environment/5.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION = "3.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T22:48:58Z"
-)
+REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION = "5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS = 180.0
-REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES = (
-    64 * 1024 * 1024
-)
+REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES = 64 * 1024 * 1024
 REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES = 16 * 1024 * 1024
-REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(
-    minutes=5
-)
+REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256 = (
+    "24f89b8d1479d3d46d374fb8ab52cedc146c5ccea745358e66d3913f10c58e41"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4 = (
+    "7b5682a49063808e7e73554a81bd80248b14065cde5d0f2defe3eccfeea73bf9"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V3 = (
     "ca0b546fe9c5a43b5ff625ed17413af25b768c5be981805085eb507ad9795cec"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V2 = (
@@ -163,9 +165,7 @@ class ReferenceMinimizationValidationRunStartError(ValueError):
     """Run-start trust, runtime, persistence, or receipt verification failed."""
 
 
-class ReferenceMinimizationValidationEnvironmentReceiptAlreadyExistsError(
-    ReferenceMinimizationValidationRunStartError
-):
+class ReferenceMinimizationValidationEnvironmentReceiptAlreadyExistsError(ReferenceMinimizationValidationRunStartError):
     """The environment-receipt path for the one-time nonce already exists."""
 
 
@@ -179,9 +179,7 @@ def _canonical_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "run-start artifact is not canonical JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("run-start artifact is not canonical JSON") from exc
 
 
 def _sha256(value: object) -> str:
@@ -190,9 +188,7 @@ def _sha256(value: object) -> str:
 
 def _require_sha256(value: object, *, name: str) -> str:
     if not isinstance(value, str) or not _SHA256_RE.fullmatch(value):
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be a lowercase SHA-256"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be a lowercase SHA-256")
     return value
 
 
@@ -206,9 +202,7 @@ def _require_git_commit(value: object) -> str:
 
 def _require_key_id(value: object) -> str:
     if not isinstance(value, str) or not _KEY_ID_RE.fullmatch(value):
-        raise ReferenceMinimizationValidationRunStartError(
-            "network attestation key id is invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("network attestation key id is invalid")
     return value
 
 
@@ -223,30 +217,20 @@ def _require_key(value: bytes | str) -> bytes:
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be timezone-aware"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must use second resolution"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must use second resolution")
     return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be second-resolution UTC"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be second-resolution UTC")
     try:
-        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
-            tzinfo=timezone.utc
-        )
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be second-resolution UTC"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be second-resolution UTC") from exc
 
 
 def _utc_now() -> datetime:
@@ -258,28 +242,19 @@ def _normalize_dependency_rows(
 ) -> tuple[tuple[str, str], ...]:
     if isinstance(rows, Mapping):
         candidates: Sequence[Mapping[str, str]] = tuple(
-            {"artifact_id": artifact_id, "sha256": digest}
-            for artifact_id, digest in rows.items()
+            {"artifact_id": artifact_id, "sha256": digest} for artifact_id, digest in rows.items()
         )
     elif isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
         candidates = rows
     else:
-        raise ReferenceMinimizationValidationRunStartError(
-            "run-start dependency rows must be a mapping or sequence"
-        )
+        raise ReferenceMinimizationValidationRunStartError("run-start dependency rows must be a mapping or sequence")
     normalized: list[tuple[str, str]] = []
     for row in candidates:
         if not isinstance(row, Mapping) or set(row) != {"artifact_id", "sha256"}:
-            raise ReferenceMinimizationValidationRunStartError(
-                "run-start dependency row fields are invalid"
-            )
+            raise ReferenceMinimizationValidationRunStartError("run-start dependency row fields are invalid")
         artifact_id = row.get("artifact_id")
-        if not isinstance(artifact_id, str) or not _ARTIFACT_ID_RE.fullmatch(
-            artifact_id
-        ):
-            raise ReferenceMinimizationValidationRunStartError(
-                "run-start dependency artifact id is invalid"
-            )
+        if not isinstance(artifact_id, str) or not _ARTIFACT_ID_RE.fullmatch(artifact_id):
+            raise ReferenceMinimizationValidationRunStartError("run-start dependency artifact id is invalid")
         normalized.append(
             (
                 artifact_id,
@@ -291,9 +266,7 @@ def _normalize_dependency_rows(
         )
     normalized.sort()
     if not normalized or len({row[0] for row in normalized}) != len(normalized):
-        raise ReferenceMinimizationValidationRunStartError(
-            "run-start dependency rows must be non-empty and unique"
-        )
+        raise ReferenceMinimizationValidationRunStartError("run-start dependency rows must be non-empty and unique")
     return tuple(normalized)
 
 
@@ -305,15 +278,8 @@ def reference_minimization_validation_artifact_output_root_identity_sha256(
     try:
         candidate = Path(root)
     except (TypeError, ValueError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "artifact output root is invalid"
-        ) from exc
-    if (
-        os.name != "posix"
-        or not candidate.is_absolute()
-        or candidate.anchor != os.sep
-        or ".." in candidate.parts
-    ):
+        raise ReferenceMinimizationValidationRunStartError("artifact output root is invalid") from exc
+    if os.name != "posix" or not candidate.is_absolute() or candidate.anchor != os.sep or ".." in candidate.parts:
         raise ReferenceMinimizationValidationRunStartError(
             "artifact output root must be an absolute POSIX path without '..'"
         )
@@ -332,15 +298,9 @@ def _require_reference_minimization_validation_root_outside_checkout(
         candidate = Path(root).resolve(strict=True)
         repository_root = Path(__file__).resolve(strict=True).parents[2]
     except (OSError, TypeError, ValueError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} is unavailable"
-        ) from exc
-    if candidate.is_relative_to(repository_root) or repository_root.is_relative_to(
-        candidate
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be outside the source checkout"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} is unavailable") from exc
+    if candidate.is_relative_to(repository_root) or repository_root.is_relative_to(candidate):
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be outside the source checkout")
     return candidate
 
 
@@ -359,9 +319,7 @@ def _network_attestation_projection(
 ) -> dict[str, Any]:
     return {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID,
-        "run_start_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256
-        ),
+        "run_start_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256),
         "authorization_receipt_sha256": _require_sha256(
             authorization_receipt_sha256,
             name="network attestation authorization receipt",
@@ -390,9 +348,7 @@ def _network_attestation_projection(
         ),
         "observed_at_utc": observed_at_utc,
         "expires_at_utc": expires_at_utc,
-        "verification_method": (
-            "privileged_operator_linux_network_namespace_attestation"
-        ),
+        "verification_method": ("privileged_operator_linux_network_namespace_attestation"),
         "non_loopback_interfaces_present": False,
         "ipv4_or_ipv6_routes_present": False,
         "dns_resolution_enabled": False,
@@ -424,9 +380,7 @@ def build_signed_reference_minimization_validation_network_isolation_attestation
     if not observed < expiry or expiry - observed > (
         REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "network attestation validity window is invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("network attestation validity window is invalid")
     projection = _network_attestation_projection(
         authorization_receipt_sha256=authorization_receipt_sha256,
         authorization_nonce_sha256=authorization_nonce_sha256,
@@ -442,9 +396,7 @@ def build_signed_reference_minimization_validation_network_isolation_attestation
     payload = dict(projection)
     payload["attestation_sha256"] = _sha256(projection)
     try:
-        signature_value = sign_ed25519(
-            _canonical_bytes(payload), _require_key(signing_key)
-        )
+        signature_value = sign_ed25519(_canonical_bytes(payload), _require_key(signing_key))
     except ReferenceMinimizationValidationEd25519Error as exc:
         raise ReferenceMinimizationValidationRunStartError(
             "network isolation attestation Ed25519 signing failed"
@@ -486,9 +438,7 @@ class ReferenceMinimizationValidationNetworkIsolationVerification:
             self.observed_at_utc,
             name="network observation",
         ):
-            raise ReferenceMinimizationValidationRunStartError(
-                "verified network attestation validity is invalid"
-            )
+            raise ReferenceMinimizationValidationRunStartError("verified network attestation validity is invalid")
 
 
 def _load_json_artifact(
@@ -500,32 +450,22 @@ def _load_json_artifact(
         return dict(source)
     raw = source.encode("utf-8") if isinstance(source, str) else source
     if not isinstance(raw, bytes):
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be a mapping, string, or bytes"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be a mapping, string, or bytes")
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in pairs:
             if key in result:
-                raise ReferenceMinimizationValidationRunStartError(
-                    f"{name} contains a duplicate JSON key"
-                )
+                raise ReferenceMinimizationValidationRunStartError(f"{name} contains a duplicate JSON key")
             result[key] = value
         return result
 
     try:
-        loaded = json.loads(
-            raw.decode("utf-8"), object_pairs_hook=reject_duplicate_keys
-        )
+        loaded = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate_keys)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} is not valid JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError(f"{name} is not valid JSON") from exc
     if not isinstance(loaded, dict):
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} root must be an object"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} root must be an object")
     return loaded
 
 
@@ -548,9 +488,7 @@ def verify_signed_reference_minimization_validation_network_isolation_attestatio
         "key_id",
         "value",
     }:
-        raise ReferenceMinimizationValidationRunStartError(
-            "network isolation attestation signature fields are invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("network isolation attestation signature fields are invalid")
     key_id = _require_key_id(signature.get("key_id"))
     try:
         anchor = trusted_operator_keys[key_id]
@@ -562,17 +500,13 @@ def verify_signed_reference_minimization_validation_network_isolation_attestatio
         raise ReferenceMinimizationValidationRunStartError(
             "network isolation attestation trust anchor has an invalid type"
         )
-    if signature.get("algorithm") != (
-        REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM
-    ):
+    if signature.get("algorithm") != (REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM):
         raise ReferenceMinimizationValidationRunStartError(
             "network isolation attestation signature algorithm is invalid"
         )
     signature_value = signature.get("value")
     try:
-        signature_verified = verify_ed25519(
-            _canonical_bytes(payload), signature_value, anchor.verification_key
-        )
+        signature_verified = verify_ed25519(_canonical_bytes(payload), signature_value, anchor.verification_key)
     except ReferenceMinimizationValidationEd25519Error as exc:
         raise ReferenceMinimizationValidationRunStartError(
             "network isolation attestation Ed25519 verifier is unavailable"
@@ -583,60 +517,38 @@ def verify_signed_reference_minimization_validation_network_isolation_attestatio
         )
     attestation_sha256 = payload.pop("attestation_sha256", None)
     if attestation_sha256 != _sha256(payload):
-        raise ReferenceMinimizationValidationRunStartError(
-            "network isolation attestation SHA-256 verification failed"
-        )
+        raise ReferenceMinimizationValidationRunStartError("network isolation attestation SHA-256 verification failed")
     attestation_sha256 = _require_sha256(
         attestation_sha256,
         name="network isolation attestation",
     )
     revoked = {
-        _require_sha256(value, name="revoked network isolation attestation")
-        for value in revoked_attestation_sha256s
+        _require_sha256(value, name="revoked network isolation attestation") for value in revoked_attestation_sha256s
     }
     if attestation_sha256 in revoked:
-        raise ReferenceMinimizationValidationRunStartError(
-            "network isolation attestation is externally revoked"
-        )
+        raise ReferenceMinimizationValidationRunStartError("network isolation attestation is externally revoked")
     observed_at = _parse_utc(payload.get("observed_at_utc"), name="network observed_at")
     expires_at = _parse_utc(payload.get("expires_at_utc"), name="network expires_at")
-    checked = _parse_utc(
-        _format_utc(checked_at, name="network checked_at"), name="network checked_at"
-    )
+    checked = _parse_utc(_format_utc(checked_at, name="network checked_at"), name="network checked_at")
     if not observed_at <= checked < expires_at:
-        raise ReferenceMinimizationValidationRunStartError(
-            "network isolation attestation is not currently valid"
-        )
-    if (
-        expires_at - observed_at
-        > REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "network isolation attestation exceeds the maximum validity"
-        )
+        raise ReferenceMinimizationValidationRunStartError("network isolation attestation is not currently valid")
+    if expires_at - observed_at > REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY:
+        raise ReferenceMinimizationValidationRunStartError("network isolation attestation exceeds the maximum validity")
     expected_projection = _network_attestation_projection(
         authorization_receipt_sha256=expected_authorization.receipt_sha256,
         authorization_nonce_sha256=(expected_authorization.authorization_nonce_sha256),
-        authorization_operator_identity_sha256=(
-            expected_authorization.authorization_operator_identity_sha256
-        ),
+        authorization_operator_identity_sha256=(expected_authorization.authorization_operator_identity_sha256),
         authorization_key_id=expected_authorization.authorization_key_id,
         code_commit_sha=expected_authorization.code_commit_sha,
         runner_source_sha256=expected_authorization.runner_source_sha256,
-        artifact_output_root_identity_sha256=(
-            expected_artifact_output_root_identity_sha256
-        ),
+        artifact_output_root_identity_sha256=(expected_artifact_output_root_identity_sha256),
         network_namespace_identity_sha256=(expected_network_namespace_identity_sha256),
         observed_at_utc=payload["observed_at_utc"],
         expires_at_utc=payload["expires_at_utc"],
     )
     if payload != expected_projection:
-        raise ReferenceMinimizationValidationRunStartError(
-            "network isolation attestation fields are cross-wired"
-        )
-    if anchor.operator_identity_sha256 != (
-        expected_authorization.authorization_operator_identity_sha256
-    ):
+        raise ReferenceMinimizationValidationRunStartError("network isolation attestation fields are cross-wired")
+    if anchor.operator_identity_sha256 != (expected_authorization.authorization_operator_identity_sha256):
         raise ReferenceMinimizationValidationRunStartError(
             "network isolation attestation operator identity is cross-wired"
         )
@@ -645,9 +557,7 @@ def verify_signed_reference_minimization_validation_network_isolation_attestatio
         authorization_operator_identity_sha256=anchor.operator_identity_sha256,
         authorization_key_id=key_id,
         network_namespace_identity_sha256=(expected_network_namespace_identity_sha256),
-        artifact_output_root_identity_sha256=(
-            expected_artifact_output_root_identity_sha256
-        ),
+        artifact_output_root_identity_sha256=(expected_artifact_output_root_identity_sha256),
         observed_at_utc=payload["observed_at_utc"],
         expires_at_utc=payload["expires_at_utc"],
     )
@@ -679,33 +589,22 @@ class _RuntimeObservation:
             "operating_system": self.operating_system,
             "operating_system_release": self.operating_system_release,
             "machine_architecture": (
-                "x86_64"
-                if self.machine_architecture in {"x86_64", "amd64"}
-                else self.machine_architecture
+                "x86_64" if self.machine_architecture in {"x86_64", "amd64"} else self.machine_architecture
             ),
             "cpu_identity": self.cpu_identity_sha256,
             "python_version": self.python_version,
             "torch_version": self.torch_version,
             "numpy_version": self.numpy_version,
             "environment_variable_rows": [
-                {"name": name, "value": value}
-                for name, value in self.environment_variable_rows
+                {"name": name, "value": value} for name, value in self.environment_variable_rows
             ],
-            "network_namespace_identity_sha256": (
-                self.network_namespace_identity_sha256
-            ),
+            "network_namespace_identity_sha256": (self.network_namespace_identity_sha256),
             "command_argv": list(self.command_argv),
             "python_hash_seed": self.python_hash_seed,
             "application_seed": self.application_seed,
-            "thread_count_rows": [
-                {"name": name, "value": value} for name, value in self.thread_count_rows
-            ],
-            "torch_deterministic_algorithms_enabled": (
-                self.torch_deterministic_algorithms_enabled
-            ),
-            "artifact_output_root_identity_sha256": (
-                artifact_output_root_identity_sha256
-            ),
+            "thread_count_rows": [{"name": name, "value": value} for name, value in self.thread_count_rows],
+            "torch_deterministic_algorithms_enabled": (self.torch_deterministic_algorithms_enabled),
+            "artifact_output_root_identity_sha256": (artifact_output_root_identity_sha256),
         }
 
 
@@ -716,14 +615,10 @@ def _parse_seed(
     maximum: int = 2**63 - 1,
 ) -> int:
     if not isinstance(value, str) or not value.isascii() or not value.isdigit():
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} must be an ASCII integer"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} must be an ASCII integer")
     parsed = int(value)
     if not 0 <= parsed <= maximum or str(parsed) != value:
-        raise ReferenceMinimizationValidationRunStartError(
-            f"{name} is outside the frozen range"
-        )
+        raise ReferenceMinimizationValidationRunStartError(f"{name} is outside the frozen range")
     return parsed
 
 
@@ -735,10 +630,7 @@ def reference_minimization_validation_bootstrap_path() -> str:
     live observation fails closed until that checked-out regular file exists.
     """
 
-    return os.fspath(
-        Path(__file__).resolve().parents[2]
-        / REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH
-    )
+    return os.fspath(Path(__file__).resolve().parents[2] / REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH)
 
 
 def _read_logical_runner_argv() -> tuple[str, ...]:
@@ -747,9 +639,7 @@ def _read_logical_runner_argv() -> tuple[str, ...]:
         tokens = raw.rstrip(b"\0").split(b"\0")
         decoded = tuple(token.decode("utf-8") for token in tokens)
     except (OSError, UnicodeDecodeError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "exact Linux process argv cannot be observed"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("exact Linux process argv cannot be observed") from exc
     expected_bootstrap = Path(reference_minimization_validation_bootstrap_path())
     try:
         observed_bootstrap = Path(decoded[-1])
@@ -779,9 +669,7 @@ def _observe_current_runtime() -> _RuntimeObservation:
     try:
         import numpy as np
     except ImportError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "runtime NumPy dependency is unavailable"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("runtime NumPy dependency is unavailable") from exc
 
     environment_names = (
         *_REQUIRED_EMPTY_ENVIRONMENT_VARIABLES,
@@ -789,14 +677,10 @@ def _observe_current_runtime() -> _RuntimeObservation:
         "PYTHONHASHSEED",
         REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV,
     )
-    environment_rows = tuple(
-        sorted((name, os.environ.get(name, "<unset>")) for name in environment_names)
-    )
+    environment_rows = tuple(sorted((name, os.environ.get(name, "<unset>")) for name in environment_names))
     cpu_identity = platform.processor() or platform.machine()
     if not cpu_identity:
-        raise ReferenceMinimizationValidationRunStartError(
-            "CPU identity cannot be observed"
-        )
+        raise ReferenceMinimizationValidationRunStartError("CPU identity cannot be observed")
     try:
         namespace = os.readlink("/proc/self/ns/net")
     except OSError as exc:
@@ -812,9 +696,7 @@ def _observe_current_runtime() -> _RuntimeObservation:
         torch_version=str(torch.__version__).split("+", 1)[0],
         numpy_version=str(np.__version__),
         environment_variable_rows=environment_rows,
-        network_namespace_identity_sha256=hashlib.sha256(
-            namespace.encode("utf-8")
-        ).hexdigest(),
+        network_namespace_identity_sha256=hashlib.sha256(namespace.encode("utf-8")).hexdigest(),
         command_argv=_read_logical_runner_argv(),
         python_hash_seed=_parse_seed(
             os.environ.get("PYTHONHASHSEED"),
@@ -850,9 +732,7 @@ def _observe_current_runtime() -> _RuntimeObservation:
             ("torch_num_interop_threads", int(torch.get_num_interop_threads())),
             ("torch_num_threads", int(torch.get_num_threads())),
         ),
-        torch_deterministic_algorithms_enabled=bool(
-            torch.are_deterministic_algorithms_enabled()
-        ),
+        torch_deterministic_algorithms_enabled=bool(torch.are_deterministic_algorithms_enabled()),
     )
 
 
@@ -861,23 +741,14 @@ def _dependency_rows_from_manifest(
 ) -> dict[str, str]:
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list):
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest artifacts are invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest artifacts are invalid")
     rows = {
         row["artifact_id"]: row["sha256"]
         for row in artifacts
-        if isinstance(row, Mapping)
-        and isinstance(row.get("artifact_id"), str)
-        and isinstance(row.get("sha256"), str)
+        if isinstance(row, Mapping) and isinstance(row.get("artifact_id"), str) and isinstance(row.get("sha256"), str)
     }
-    if (
-        tuple(sorted(rows))
-        != REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest artifact rows drifted"
-        )
+    if tuple(sorted(rows)) != REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS:
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest artifact rows drifted")
     return rows
 
 
@@ -897,27 +768,21 @@ def _observe_dependency_manifest_document(
         or not isinstance(state[3], tuple)
         or not state[3]
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency identity requires the isolated trust bootstrap"
-        )
+        raise ReferenceMinimizationValidationRunStartError("dependency identity requires the isolated trust bootstrap")
     try:
         return observed_reference_minimization_validation_dependency_manifest_document(
             state[3],
             deadline=deadline,
         )
     except ReferenceMinimizationValidationDependencyIdentityError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "live dependency bytes cannot be measured"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("live dependency bytes cannot be measured") from exc
 
 
 def _observe_dependency_artifact_sha256_rows(
     *,
     deadline: float | None = None,
 ) -> dict[str, str]:
-    return _dependency_rows_from_manifest(
-        _observe_dependency_manifest_document(deadline=deadline)
-    )
+    return _dependency_rows_from_manifest(_observe_dependency_manifest_document(deadline=deadline))
 
 
 def _observe_source_manifest_document(
@@ -937,76 +802,45 @@ def _observe_source_manifest_document(
         or not isinstance(state[2], str)
         or not isinstance(state[5], bytes)
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "source identity requires the isolated trust bootstrap"
-        )
+        raise ReferenceMinimizationValidationRunStartError("source identity requires the isolated trust bootstrap")
     try:
         bootstrap_manifest = json.loads(state[5].decode("ascii"))
-        if (
-            not isinstance(bootstrap_manifest, dict)
-            or _canonical_bytes(bootstrap_manifest) != state[5]
-        ):
-            raise ValidationSourceIdentityError(
-                "bootstrap source manifest bytes are not canonical"
-            )
-        bootstrap_manifest = require_validation_source_manifest_document(
-            bootstrap_manifest
-        )
+        if not isinstance(bootstrap_manifest, dict) or _canonical_bytes(bootstrap_manifest) != state[5]:
+            raise ValidationSourceIdentityError("bootstrap source manifest bytes are not canonical")
+        bootstrap_manifest = require_validation_source_manifest_document(bootstrap_manifest)
         if bootstrap_manifest.get("code_commit_sha") != code_commit_sha:
-            raise ValidationSourceIdentityError(
-                "bootstrap source manifest commit is cross-wired"
-            )
+            raise ValidationSourceIdentityError("bootstrap source manifest commit is cross-wired")
         live_manifest = observed_validation_source_manifest_document(
             state[2],
             _require_git_commit(code_commit_sha),
             deadline=deadline,
         )
         if live_manifest != bootstrap_manifest:
-            raise ValidationSourceIdentityError(
-                "live source manifest changed after bootstrap"
-            )
+            raise ValidationSourceIdentityError("live source manifest changed after bootstrap")
         return live_manifest
     except ValidationSourceIdentityError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "live source bytes cannot be measured"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("live source bytes cannot be measured") from exc
 
 
 def _require_runtime_observation(observation: _RuntimeObservation) -> None:
     if not isinstance(observation, _RuntimeObservation):
-        raise ReferenceMinimizationValidationRunStartError(
-            "runtime observation type is invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("runtime observation type is invalid")
     if observation.operating_system != "linux":
-        raise ReferenceMinimizationValidationRunStartError(
-            "validation runtime must be Linux"
-        )
+        raise ReferenceMinimizationValidationRunStartError("validation runtime must be Linux")
     if observation.machine_architecture not in {"x86_64", "amd64"}:
-        raise ReferenceMinimizationValidationRunStartError(
-            "validation runtime architecture must be x86_64"
-        )
+        raise ReferenceMinimizationValidationRunStartError("validation runtime architecture must be x86_64")
     if not observation.operating_system_release:
-        raise ReferenceMinimizationValidationRunStartError(
-            "Linux release must be observed"
-        )
+        raise ReferenceMinimizationValidationRunStartError("Linux release must be observed")
     _require_sha256(observation.cpu_identity_sha256, name="runtime CPU identity")
     if not _PYTHON_VERSION_RE.fullmatch(observation.python_version):
-        raise ReferenceMinimizationValidationRunStartError(
-            "runtime Python patch version is outside 3.10-3.12"
-        )
+        raise ReferenceMinimizationValidationRunStartError("runtime Python patch version is outside 3.10-3.12")
     if observation.torch_version != "2.6.0":
-        raise ReferenceMinimizationValidationRunStartError(
-            "runtime Torch version must be 2.6.0"
-        )
+        raise ReferenceMinimizationValidationRunStartError("runtime Torch version must be 2.6.0")
     if observation.numpy_version != "1.26.4":
-        raise ReferenceMinimizationValidationRunStartError(
-            "runtime NumPy version must be 1.26.4"
-        )
+        raise ReferenceMinimizationValidationRunStartError("runtime NumPy version must be 1.26.4")
     environment = dict(observation.environment_variable_rows)
     if len(environment) != len(observation.environment_variable_rows):
-        raise ReferenceMinimizationValidationRunStartError(
-            "runtime environment variable rows must be unique"
-        )
+        raise ReferenceMinimizationValidationRunStartError("runtime environment variable rows must be unique")
     for name in _REQUIRED_EMPTY_ENVIRONMENT_VARIABLES:
         if environment.get(name) != "":
             raise ReferenceMinimizationValidationRunStartError(
@@ -1014,26 +848,13 @@ def _require_runtime_observation(observation: _RuntimeObservation) -> None:
             )
     for name, expected in _REQUIRED_ENVIRONMENT_VALUES:
         if environment.get(name) != expected:
-            raise ReferenceMinimizationValidationRunStartError(
-                f"runtime environment variable {name} is not frozen"
-            )
+            raise ReferenceMinimizationValidationRunStartError(f"runtime environment variable {name} is not frozen")
     if environment.get("PYTHONHASHSEED") != str(observation.python_hash_seed):
-        raise ReferenceMinimizationValidationRunStartError(
-            "PYTHONHASHSEED is cross-wired"
-        )
-    if environment.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV) != str(
-        observation.application_seed
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "application seed is cross-wired"
-        )
-    if (
-        observation.command_argv
-        != REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "logical runner argv is cross-wired"
-        )
+        raise ReferenceMinimizationValidationRunStartError("PYTHONHASHSEED is cross-wired")
+    if environment.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV) != str(observation.application_seed):
+        raise ReferenceMinimizationValidationRunStartError("application seed is cross-wired")
+    if observation.command_argv != REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV:
+        raise ReferenceMinimizationValidationRunStartError("logical runner argv is cross-wired")
     if observation.thread_count_rows != (
         ("mkl_num_threads", 1),
         ("omp_num_threads", 1),
@@ -1045,9 +866,7 @@ def _require_runtime_observation(observation: _RuntimeObservation) -> None:
             "runtime thread counts do not match the frozen single-thread lane"
         )
     if not observation.torch_deterministic_algorithms_enabled:
-        raise ReferenceMinimizationValidationRunStartError(
-            "Torch deterministic algorithms must be enabled"
-        )
+        raise ReferenceMinimizationValidationRunStartError("Torch deterministic algorithms must be enabled")
     _require_sha256(
         observation.network_namespace_identity_sha256,
         name="runtime network namespace",
@@ -1077,6 +896,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_ID,
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4
+        ),
+        "refreeze_reason": "binds_refrozen_projection_headroom_authorization_reservation_and_receipts",
         "purpose": {
             "scope": "pre_evaluation_dependency_and_environment_reverification",
             "contract_and_primitive_only": True,
@@ -1086,21 +909,15 @@ def _contract_projection() -> dict[str, Any]:
         },
         "dependencies": {
             "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
-            "artifact_binding_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-            ),
-            "authorization_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
-            ),
+            "artifact_binding_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256),
+            "authorization_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256),
             "nonce_reservation_contract_sha256": (
                 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
             ),
             "execution_environment_contract_sha256": (
                 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
             ),
-            "result_receipt_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
-            ),
+            "result_receipt_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256),
             "raw_signed_review_and_authorization_reverification_required": True,
             "durable_nonce_record_reverification_required": True,
             "exact_code_runner_source_and_dependency_rows_required": True,
@@ -1123,9 +940,7 @@ def _contract_projection() -> dict[str, Any]:
             "source_only_python_import_environment_exact": True,
             "ignored_timestamp_bytecode_cache_execution_allowed": False,
             "trusted_isolated_outer_launcher_required": True,
-            "trusted_outer_launcher_argv": list(
-                REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV
-            ),
+            "trusted_outer_launcher_argv": list(REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV),
             "seeded_controlled_inner_exec_required": True,
             "automatic_site_initialization_allowed": False,
             "python_import_path_environment_removed_before_inner_exec": True,
@@ -1134,16 +949,12 @@ def _contract_projection() -> dict[str, Any]:
             "python_hash_seed_uint32_required": True,
             "python_hash_seed_applied_at_interpreter_initialization": True,
             "torch_single_thread_and_deterministic_algorithms_required": True,
-            "logical_runner_argv": list(
-                REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV
-            ),
+            "logical_runner_argv": list(REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV),
             "arbitrary_or_secret_bearing_argv_allowed": False,
         },
         "network_isolation": {
             "operator_signed_short_lived_attestation_required": True,
-            "signature_algorithm": (
-                REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM
-            ),
+            "signature_algorithm": (REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM),
             "verifier_uses_operator_public_key_only": True,
             "maximum_attestation_validity_seconds": int(
                 REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY.total_seconds()
@@ -1158,12 +969,8 @@ def _contract_projection() -> dict[str, Any]:
             "reservation_and_artifact_roots_outside_checkout_required": True,
             "artifact_root_path_stored_as_sha256_only": True,
             "receipt_filename": "<authorization_nonce_sha256>.environment.json",
-            "source_manifest_filename": (
-                "<authorization_nonce_sha256>.source-tree.json"
-            ),
-            "dependency_manifest_filename": (
-                "<authorization_nonce_sha256>.dependencies.json"
-            ),
+            "source_manifest_filename": ("<authorization_nonce_sha256>.source-tree.json"),
+            "dependency_manifest_filename": ("<authorization_nonce_sha256>.dependencies.json"),
             "exclusive_nofollow_create_and_file_directory_fsync_required": True,
             "receipt_mode": "0600",
             "duplicate_or_poisoned_path_fails_closed": True,
@@ -1189,12 +996,8 @@ def _contract_projection() -> dict[str, Any]:
 def reference_minimization_validation_run_start_contract_document() -> dict[str, Any]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != (
-        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "frozen run-start environment contract SHA-256 drifted"
-        )
+    if document["contract_sha256"] != (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256):
+        raise ReferenceMinimizationValidationRunStartError("frozen run-start environment contract SHA-256 drifted")
     return document
 
 
@@ -1202,9 +1005,7 @@ def require_reference_minimization_validation_run_start_contract_document(
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
-        raise ReferenceMinimizationValidationRunStartError(
-            "run-start contract document must be a mapping"
-        )
+        raise ReferenceMinimizationValidationRunStartError("run-start contract document must be a mapping")
     observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     expected = reference_minimization_validation_run_start_contract_document()
     if observed != expected:
@@ -1288,26 +1089,17 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
             )
             != self.dependency_artifact_sha256_rows
         ):
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt dependency rows are not canonical"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt dependency rows are not canonical")
         if not self.operating_system_release or self.machine_architecture != "x86_64":
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt Linux runtime identity is invalid"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt Linux runtime identity is invalid")
         if not _PYTHON_VERSION_RE.fullmatch(self.python_version):
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt Python version is invalid"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt Python version is invalid")
         if self.torch_version != "2.6.0" or self.numpy_version != "1.26.4":
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt dependency versions drifted"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt dependency versions drifted")
         environment = dict(self.environment_variable_rows)
         if (
             len(environment) != len(self.environment_variable_rows)
-            or tuple(sorted(self.environment_variable_rows))
-            != self.environment_variable_rows
+            or tuple(sorted(self.environment_variable_rows)) != self.environment_variable_rows
         ):
             raise ReferenceMinimizationValidationRunStartError(
                 "environment receipt variable rows must be canonical and unique"
@@ -1319,25 +1111,18 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
                 )
         for name, expected in _REQUIRED_ENVIRONMENT_VALUES:
             if environment.get(name) != expected:
-                raise ReferenceMinimizationValidationRunStartError(
-                    "environment receipt frozen variables drifted"
-                )
+                raise ReferenceMinimizationValidationRunStartError("environment receipt frozen variables drifted")
         if (
             type(self.python_hash_seed) is not int
             or type(self.application_seed) is not int
             or not 0 <= self.python_hash_seed <= 2**32 - 1
             or not 0 <= self.application_seed <= 2**63 - 1
             or environment.get("PYTHONHASHSEED") != str(self.python_hash_seed)
-            or environment.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV)
-            != str(self.application_seed)
+            or environment.get(REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV) != str(self.application_seed)
         ):
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt seeds are invalid or cross-wired"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt seeds are invalid or cross-wired")
         if self.command_argv != REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV:
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt runner argv drifted"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt runner argv drifted")
         if self.thread_count_rows != (
             ("mkl_num_threads", 1),
             ("omp_num_threads", 1),
@@ -1345,13 +1130,9 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
             ("torch_num_interop_threads", 1),
             ("torch_num_threads", 1),
         ):
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt thread counts drifted"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt thread counts drifted")
         if self.blockers != _POST_ENVIRONMENT_RECEIPT_BLOCKERS:
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt downstream blockers drifted"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt downstream blockers drifted")
         _parse_utc(self.started_at_utc, name="environment receipt started_at")
         reconstructed = _RuntimeObservation(
             operating_system="linux",
@@ -1371,14 +1152,10 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
         )
         if self.environment_fingerprint_sha256 != _sha256(
             reconstructed.fingerprint_projection(
-                artifact_output_root_identity_sha256=(
-                    self.artifact_output_root_identity_sha256
-                )
+                artifact_output_root_identity_sha256=(self.artifact_output_root_identity_sha256)
             )
         ):
-            raise ReferenceMinimizationValidationRunStartError(
-                "environment receipt fingerprint is cross-wired"
-            )
+            raise ReferenceMinimizationValidationRunStartError("environment receipt fingerprint is cross-wired")
 
     @property
     def eligible_for_bounded_validation_runner(self) -> bool:
@@ -1387,34 +1164,22 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
     def projection(self) -> dict[str, Any]:
         return {
             "schema_id": REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID,
-            "run_start_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256
-            ),
+            "run_start_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256),
             "environment_contract_sha256": (
                 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
             ),
             "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
-            "artifact_binding_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-            ),
-            "authorization_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
-            ),
+            "artifact_binding_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256),
+            "authorization_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256),
             "nonce_reservation_contract_sha256": (
                 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
             ),
             "nonce_reservation_record_sha256": self.nonce_reservation_record_sha256,
             "authorization_receipt_sha256": self.authorization_receipt_sha256,
             "review_attestation_sha256": self.review_attestation_sha256,
-            "implementation_author_identity_sha256": (
-                self.implementation_author_identity_sha256
-            ),
-            "independent_reviewer_identity_sha256": (
-                self.independent_reviewer_identity_sha256
-            ),
-            "authorization_operator_identity_sha256": (
-                self.authorization_operator_identity_sha256
-            ),
+            "implementation_author_identity_sha256": (self.implementation_author_identity_sha256),
+            "independent_reviewer_identity_sha256": (self.independent_reviewer_identity_sha256),
+            "authorization_operator_identity_sha256": (self.authorization_operator_identity_sha256),
             "authorization_nonce_sha256": self.authorization_nonce_sha256,
             "code_commit_sha": self.code_commit_sha,
             "runner_source_sha256": self.runner_source_sha256,
@@ -1430,14 +1195,11 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
             "torch_version": self.torch_version,
             "numpy_version": self.numpy_version,
             "environment_variable_rows": [
-                {"name": name, "value": value}
-                for name, value in self.environment_variable_rows
+                {"name": name, "value": value} for name, value in self.environment_variable_rows
             ],
             "network_disabled_verification": {
                 "attestation_sha256": self.network_isolation_attestation_sha256,
-                "network_namespace_identity_sha256": (
-                    self.network_namespace_identity_sha256
-                ),
+                "network_namespace_identity_sha256": (self.network_namespace_identity_sha256),
                 "operator_signed": True,
                 "network_access_disabled": True,
                 "kernel_enforced_by_this_library": False,
@@ -1445,9 +1207,7 @@ class ReferenceMinimizationValidationExecutionEnvironmentReceipt:
             "command_argv": list(self.command_argv),
             "python_hash_seed": self.python_hash_seed,
             "application_seed": self.application_seed,
-            "thread_count_rows": [
-                {"name": name, "value": value} for name, value in self.thread_count_rows
-            ],
+            "thread_count_rows": [{"name": name, "value": value} for name, value in self.thread_count_rows],
             "artifact_output_root": {
                 "absolute_path_sha256": self.artifact_output_root_identity_sha256,
                 "mode": "0700",
@@ -1489,19 +1249,13 @@ def _assert_reservation_matches_authorization(
     expected = {
         "authorization_receipt_sha256": verification.receipt_sha256,
         "review_attestation_sha256": verification.review_attestation_sha256,
-        "authorization_operator_identity_sha256": (
-            verification.authorization_operator_identity_sha256
-        ),
+        "authorization_operator_identity_sha256": (verification.authorization_operator_identity_sha256),
         "authorization_nonce_sha256": verification.authorization_nonce_sha256,
         "code_commit_sha": verification.code_commit_sha,
         "runner_source_sha256": verification.runner_source_sha256,
-        "execution_environment_contract_sha256": (
-            verification.execution_environment_contract_sha256
-        ),
+        "execution_environment_contract_sha256": (verification.execution_environment_contract_sha256),
         "result_receipt_contract_sha256": (verification.result_receipt_contract_sha256),
-        "dependency_artifact_sha256_rows": (
-            verification.dependency_artifact_sha256_rows
-        ),
+        "dependency_artifact_sha256_rows": (verification.dependency_artifact_sha256_rows),
     }
     observed = {name: getattr(reservation, name) for name in expected}
     if observed != expected:
@@ -1521,23 +1275,15 @@ def _build_environment_receipt(
     started_at_utc: str,
 ) -> ReferenceMinimizationValidationExecutionEnvironmentReceipt:
     fingerprint = _sha256(
-        observation.fingerprint_projection(
-            artifact_output_root_identity_sha256=(artifact_output_root_identity_sha256)
-        )
+        observation.fingerprint_projection(artifact_output_root_identity_sha256=(artifact_output_root_identity_sha256))
     )
     values = {
         "nonce_reservation_record_sha256": reservation.reservation_record_sha256,
         "authorization_receipt_sha256": verification.receipt_sha256,
         "review_attestation_sha256": verification.review_attestation_sha256,
-        "implementation_author_identity_sha256": (
-            verification.implementation_author_identity_sha256
-        ),
-        "independent_reviewer_identity_sha256": (
-            verification.independent_reviewer_identity_sha256
-        ),
-        "authorization_operator_identity_sha256": (
-            verification.authorization_operator_identity_sha256
-        ),
+        "implementation_author_identity_sha256": (verification.implementation_author_identity_sha256),
+        "independent_reviewer_identity_sha256": (verification.independent_reviewer_identity_sha256),
+        "authorization_operator_identity_sha256": (verification.authorization_operator_identity_sha256),
         "authorization_nonce_sha256": verification.authorization_nonce_sha256,
         "code_commit_sha": verification.code_commit_sha,
         "runner_source_sha256": verification.runner_source_sha256,
@@ -1545,9 +1291,7 @@ def _build_environment_receipt(
             source_manifest_sha256,
             name="source manifest",
         ),
-        "dependency_artifact_sha256_rows": (
-            verification.dependency_artifact_sha256_rows
-        ),
+        "dependency_artifact_sha256_rows": (verification.dependency_artifact_sha256_rows),
         "operating_system_release": observation.operating_system_release,
         "machine_architecture": "x86_64",
         "cpu_identity_sha256": observation.cpu_identity_sha256,
@@ -1556,9 +1300,7 @@ def _build_environment_receipt(
         "numpy_version": observation.numpy_version,
         "environment_variable_rows": observation.environment_variable_rows,
         "network_isolation_attestation_sha256": network.attestation_sha256,
-        "network_namespace_identity_sha256": (
-            network.network_namespace_identity_sha256
-        ),
+        "network_namespace_identity_sha256": (network.network_namespace_identity_sha256),
         "command_argv": observation.command_argv,
         "python_hash_seed": observation.python_hash_seed,
         "application_seed": observation.application_seed,
@@ -1583,17 +1325,10 @@ def _persist_dependency_manifest(
     authorization_nonce_sha256: str,
     manifest: Mapping[str, Any],
 ) -> None:
-    verified = require_reference_minimization_validation_dependency_manifest_document(
-        dict(manifest)
-    )
+    verified = require_reference_minimization_validation_dependency_manifest_document(dict(manifest))
     payload = _canonical_bytes(verified) + b"\n"
-    if (
-        len(payload)
-        > REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest exceeds the persistence bound"
-        )
+    if len(payload) > REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES:
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest exceeds the persistence bound")
     filename = f"{authorization_nonce_sha256}.dependencies.json"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
@@ -1603,9 +1338,7 @@ def _persist_dependency_manifest(
             "dependency manifest already exists for the nonce"
         ) from exc
     except (OSError, ValueError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest cannot be created securely"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest cannot be created securely") from exc
     try:
         try:
             _validate_record_stat(os.fstat(descriptor))
@@ -1638,17 +1371,10 @@ def _persist_source_manifest(
     try:
         verified = require_validation_source_manifest_document(manifest)
     except ValidationSourceIdentityError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest identity verification failed"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("source manifest identity verification failed") from exc
     payload = _canonical_bytes(verified) + b"\n"
-    if (
-        len(payload)
-        > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest exceeds the persistence bound"
-        )
+    if len(payload) > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES:
+        raise ReferenceMinimizationValidationRunStartError("source manifest exceeds the persistence bound")
     filename = f"{authorization_nonce_sha256}.source-tree.json"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
@@ -1658,9 +1384,7 @@ def _persist_source_manifest(
             "source manifest already exists for the nonce"
         ) from exc
     except (OSError, ValueError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest cannot be created securely"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("source manifest cannot be created securely") from exc
     try:
         try:
             _validate_record_stat(os.fstat(descriptor))
@@ -1747,10 +1471,7 @@ def create_reference_minimization_validation_execution_environment_receipt(
 ) -> ReferenceMinimizationValidationExecutionEnvironmentReceipt:
     """Reverify the full chain and persist one pre-evaluation receipt."""
 
-    preflight_deadline = (
-        time.monotonic()
-        + REFERENCE_MINIMIZATION_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS
-    )
+    preflight_deadline = time.monotonic() + REFERENCE_MINIMIZATION_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS
     _require_reference_minimization_validation_root_outside_checkout(
         reservation_root,
         name="reservation root",
@@ -1765,45 +1486,31 @@ def create_reference_minimization_validation_execution_environment_receipt(
     )
     checked_at = _utc_now()
     try:
-        verification = (
-            verify_signed_reference_minimization_validation_authorization_receipt(
-                authorization_receipt,
-                review_attestation=review_attestation,
-                trusted_reviewer_keys=trusted_reviewer_keys,
-                expected_implementation_author_identity_sha256=(
-                    expected_implementation_author_identity_sha256
-                ),
-                trusted_operator_keys=trusted_operator_keys,
-                checked_at=checked_at,
-                expected_code_commit_sha=expected_code_commit_sha,
-                expected_runner_source_sha256=expected_runner_source_sha256,
-                expected_dependency_artifact_sha256_rows=(
-                    expected_dependency_artifact_sha256_rows
-                ),
-                revoked_receipt_sha256s=revoked_receipt_sha256s,
-                revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
-                consumed_nonce_sha256s=externally_conflicting_nonce_sha256s,
-            )
+        verification = verify_signed_reference_minimization_validation_authorization_receipt(
+            authorization_receipt,
+            review_attestation=review_attestation,
+            trusted_reviewer_keys=trusted_reviewer_keys,
+            expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
+            trusted_operator_keys=trusted_operator_keys,
+            checked_at=checked_at,
+            expected_code_commit_sha=expected_code_commit_sha,
+            expected_runner_source_sha256=expected_runner_source_sha256,
+            expected_dependency_artifact_sha256_rows=(expected_dependency_artifact_sha256_rows),
+            revoked_receipt_sha256s=revoked_receipt_sha256s,
+            revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
+            consumed_nonce_sha256s=externally_conflicting_nonce_sha256s,
         )
     except ReferenceMinimizationValidationAuthorizationError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "run-start authorization re-verification failed"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("run-start authorization re-verification failed") from exc
     if verification.authorization_nonce_sha256 != nonce:
-        raise ReferenceMinimizationValidationRunStartError(
-            "requested nonce and signed authorization are cross-wired"
-        )
-    dependency_manifest = _observe_dependency_manifest_document(
-        deadline=preflight_deadline
-    )
+        raise ReferenceMinimizationValidationRunStartError("requested nonce and signed authorization are cross-wired")
+    dependency_manifest = _observe_dependency_manifest_document(deadline=preflight_deadline)
     source_manifest = _observe_source_manifest_document(
         verification.code_commit_sha,
         deadline=preflight_deadline,
     )
     observed_dependency_rows = _dependency_rows_from_manifest(dependency_manifest)
-    if tuple(sorted(observed_dependency_rows.items())) != (
-        verification.dependency_artifact_sha256_rows
-    ):
+    if tuple(sorted(observed_dependency_rows.items())) != (verification.dependency_artifact_sha256_rows):
         raise ReferenceMinimizationValidationRunStartError(
             "live dependency bytes do not match the signed authorization"
         )
@@ -1819,23 +1526,15 @@ def create_reference_minimization_validation_execution_environment_receipt(
     _assert_reservation_matches_authorization(reservation, verification)
     observation = _observe_current_runtime()
     _require_runtime_observation(observation)
-    output_root_identity = (
-        reference_minimization_validation_artifact_output_root_identity_sha256(
-            artifact_output_root
-        )
-    )
-    network = (
-        verify_signed_reference_minimization_validation_network_isolation_attestation(
-            network_isolation_attestation,
-            trusted_operator_keys=trusted_operator_keys,
-            checked_at=checked_at,
-            expected_authorization=verification,
-            expected_artifact_output_root_identity_sha256=output_root_identity,
-            expected_network_namespace_identity_sha256=(
-                observation.network_namespace_identity_sha256
-            ),
-            revoked_attestation_sha256s=revoked_network_attestation_sha256s,
-        )
+    output_root_identity = reference_minimization_validation_artifact_output_root_identity_sha256(artifact_output_root)
+    network = verify_signed_reference_minimization_validation_network_isolation_attestation(
+        network_isolation_attestation,
+        trusted_operator_keys=trusted_operator_keys,
+        checked_at=checked_at,
+        expected_authorization=verification,
+        expected_artifact_output_root_identity_sha256=output_root_identity,
+        expected_network_namespace_identity_sha256=(observation.network_namespace_identity_sha256),
+        revoked_attestation_sha256s=revoked_network_attestation_sha256s,
     )
     receipt = _build_environment_receipt(
         reservation=reservation,
@@ -1862,21 +1561,14 @@ def create_reference_minimization_validation_execution_environment_receipt(
 
 
 def _load_persisted_receipt(raw: bytes) -> dict[str, Any]:
-    if (
-        not raw
-        or len(raw) > REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt size is invalid"
-        )
+    if not raw or len(raw) > REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES:
+        raise ReferenceMinimizationValidationRunStartError("environment receipt size is invalid")
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in pairs:
             if key in result:
-                raise ReferenceMinimizationValidationRunStartError(
-                    "environment receipt contains a duplicate JSON key"
-                )
+                raise ReferenceMinimizationValidationRunStartError("environment receipt contains a duplicate JSON key")
             result[key] = value
         return result
 
@@ -1886,34 +1578,25 @@ def _load_persisted_receipt(raw: bytes) -> dict[str, Any]:
             object_pairs_hook=reject_duplicate_keys,
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt must be canonical ASCII JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("environment receipt must be canonical ASCII JSON") from exc
     if not isinstance(loaded, dict) or raw != _canonical_bytes(loaded) + b"\n":
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt bytes are not canonical"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt bytes are not canonical")
     return loaded
 
 
 def _load_persisted_dependency_manifest(raw: bytes) -> dict[str, Any]:
     if (
         not raw
-        or len(raw)
-        > REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
+        or len(raw) > REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
         or not raw.endswith(b"\n")
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest size or framing is invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest size or framing is invalid")
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in pairs:
             if key in result:
-                raise ReferenceMinimizationValidationRunStartError(
-                    "dependency manifest contains a duplicate JSON key"
-                )
+                raise ReferenceMinimizationValidationRunStartError("dependency manifest contains a duplicate JSON key")
             result[key] = value
         return result
 
@@ -1923,21 +1606,13 @@ def _load_persisted_dependency_manifest(raw: bytes) -> dict[str, Any]:
             object_pairs_hook=reject_duplicate_keys,
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest must be canonical ASCII JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest must be canonical ASCII JSON") from exc
     if not isinstance(loaded, dict) or raw != _canonical_bytes(loaded) + b"\n":
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest bytes are not canonical"
-        )
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest bytes are not canonical")
     try:
-        return require_reference_minimization_validation_dependency_manifest_document(
-            loaded
-        )
+        return require_reference_minimization_validation_dependency_manifest_document(loaded)
     except ReferenceMinimizationValidationDependencyIdentityError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "dependency manifest identity verification failed"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("dependency manifest identity verification failed") from exc
 
 
 def _load_persisted_source_manifest(raw: bytes) -> dict[str, Any]:
@@ -1946,17 +1621,13 @@ def _load_persisted_source_manifest(raw: bytes) -> dict[str, Any]:
         or len(raw) > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
         or not raw.endswith(b"\n")
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest size or framing is invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("source manifest size or framing is invalid")
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in pairs:
             if key in result:
-                raise ReferenceMinimizationValidationRunStartError(
-                    "source manifest contains a duplicate JSON key"
-                )
+                raise ReferenceMinimizationValidationRunStartError("source manifest contains a duplicate JSON key")
             result[key] = value
         return result
 
@@ -1966,19 +1637,13 @@ def _load_persisted_source_manifest(raw: bytes) -> dict[str, Any]:
             object_pairs_hook=reject_duplicate_keys,
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest must be canonical ASCII JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("source manifest must be canonical ASCII JSON") from exc
     if not isinstance(loaded, dict) or raw != _canonical_bytes(loaded) + b"\n":
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest bytes are not canonical"
-        )
+        raise ReferenceMinimizationValidationRunStartError("source manifest bytes are not canonical")
     try:
         return require_validation_source_manifest_document(loaded)
     except ValidationSourceIdentityError as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest identity verification failed"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("source manifest identity verification failed") from exc
 
 
 def read_reference_minimization_validation_dependency_manifest(
@@ -2003,17 +1668,11 @@ def read_reference_minimization_validation_dependency_manifest(
         try:
             descriptor = os.open(filename, flags, dir_fd=root_fd)
         except OSError as exc:
-            raise ReferenceMinimizationValidationRunStartError(
-                "dependency manifest is unavailable"
-            ) from exc
+            raise ReferenceMinimizationValidationRunStartError("dependency manifest is unavailable") from exc
         try:
             before = os.fstat(descriptor)
             _validate_record_stat(before)
-            if not (
-                0
-                < before.st_size
-                <= REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
-            ):
+            if not (0 < before.st_size <= REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES):
                 raise ReferenceMinimizationValidationRunStartError(
                     "dependency manifest violates its pre-read size bound"
                 )
@@ -2024,27 +1683,18 @@ def read_reference_minimization_validation_dependency_manifest(
                     descriptor,
                     min(
                         8192,
-                        REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
-                        + 1
-                        - total,
+                        REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES + 1 - total,
                     ),
                 )
                 if not chunk:
                     break
                 chunks.append(chunk)
                 total += len(chunk)
-                if (
-                    total
-                    > REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES
-                ):
-                    raise ReferenceMinimizationValidationRunStartError(
-                        "dependency manifest exceeds the read bound"
-                    )
+                if total > REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES:
+                    raise ReferenceMinimizationValidationRunStartError("dependency manifest exceeds the read bound")
             after = os.fstat(descriptor)
             if _stable_record_identity(before) != _stable_record_identity(after):
-                raise ReferenceMinimizationValidationRunStartError(
-                    "dependency manifest changed while it was read"
-                )
+                raise ReferenceMinimizationValidationRunStartError("dependency manifest changed while it was read")
         finally:
             os.close(descriptor)
     except (OSError, ReferenceMinimizationValidationNonceReservationError) as exc:
@@ -2078,20 +1728,12 @@ def read_reference_minimization_validation_source_manifest(
         try:
             descriptor = os.open(filename, flags, dir_fd=root_fd)
         except OSError as exc:
-            raise ReferenceMinimizationValidationRunStartError(
-                "source manifest is unavailable"
-            ) from exc
+            raise ReferenceMinimizationValidationRunStartError("source manifest is unavailable") from exc
         try:
             before = os.fstat(descriptor)
             _validate_record_stat(before)
-            if not (
-                0
-                < before.st_size
-                <= REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
-            ):
-                raise ReferenceMinimizationValidationRunStartError(
-                    "source manifest violates its pre-read size bound"
-                )
+            if not (0 < before.st_size <= REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES):
+                raise ReferenceMinimizationValidationRunStartError("source manifest violates its pre-read size bound")
             chunks: list[bytes] = []
             total = 0
             while True:
@@ -2099,33 +1741,22 @@ def read_reference_minimization_validation_source_manifest(
                     descriptor,
                     min(
                         8192,
-                        REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
-                        + 1
-                        - total,
+                        REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES + 1 - total,
                     ),
                 )
                 if not chunk:
                     break
                 chunks.append(chunk)
                 total += len(chunk)
-                if (
-                    total
-                    > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES
-                ):
-                    raise ReferenceMinimizationValidationRunStartError(
-                        "source manifest exceeds the read bound"
-                    )
+                if total > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES:
+                    raise ReferenceMinimizationValidationRunStartError("source manifest exceeds the read bound")
             after = os.fstat(descriptor)
             if _stable_record_identity(before) != _stable_record_identity(after):
-                raise ReferenceMinimizationValidationRunStartError(
-                    "source manifest changed while it was read"
-                )
+                raise ReferenceMinimizationValidationRunStartError("source manifest changed while it was read")
         finally:
             os.close(descriptor)
     except (OSError, ReferenceMinimizationValidationNonceReservationError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "source manifest file policy verification failed"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("source manifest file policy verification failed") from exc
     finally:
         os.close(root_fd)
     return _load_persisted_source_manifest(b"".join(chunks))
@@ -2139,24 +1770,14 @@ def _receipt_from_payload(
     projection = dict(payload)
     receipt_sha256 = projection.pop("receipt_sha256", None)
     if receipt_sha256 != _sha256(projection):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt SHA-256 verification failed"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt SHA-256 verification failed")
     fixed = {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID,
-        "run_start_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256
-        ),
-        "environment_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
-        ),
+        "run_start_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256),
+        "environment_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256),
         "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
-        "artifact_binding_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-        ),
-        "authorization_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
-        ),
+        "artifact_binding_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256),
+        "authorization_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256),
         "nonce_reservation_contract_sha256": (
             FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
         ),
@@ -2175,17 +1796,13 @@ def _receipt_from_payload(
         "blockers": list(_POST_ENVIRONMENT_RECEIPT_BLOCKERS),
     }
     if any(projection.get(key) != value for key, value in fixed.items()):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt fixed fields drifted"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt fixed fields drifted")
     nonce = _require_sha256(
         projection.get("authorization_nonce_sha256"),
         name="environment receipt authorization nonce",
     )
     if nonce != expected_nonce_sha256:
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt filename and nonce are cross-wired"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt filename and nonce are cross-wired")
     network = projection.get("network_disabled_verification")
     artifact_root = projection.get("artifact_output_root")
     confinement = projection.get("artifact_path_confinement_verification")
@@ -2204,26 +1821,15 @@ def _receipt_from_payload(
         or network.get("network_access_disabled") is not True
         or network.get("kernel_enforced_by_this_library") is not False
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt network verification state drifted"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt network verification state drifted")
     if not isinstance(artifact_root, Mapping) or artifact_root.get("mode") != "0700":
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt artifact root fields are invalid"
-        )
-    if (
-        not isinstance(confinement, Mapping)
-        or confinement.get("secure_dir_fd_traversal") is not True
-    ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt confinement fields are invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt artifact root fields are invalid")
+    if not isinstance(confinement, Mapping) or confinement.get("secure_dir_fd_traversal") is not True:
+        raise ReferenceMinimizationValidationRunStartError("environment receipt confinement fields are invalid")
     environment_rows = projection.get("environment_variable_rows")
     thread_rows = projection.get("thread_count_rows")
     if not isinstance(environment_rows, list) or not isinstance(thread_rows, list):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt runtime rows are invalid"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt runtime rows are invalid")
     try:
         receipt = ReferenceMinimizationValidationExecutionEnvironmentReceipt(
             receipt_sha256=_require_sha256(
@@ -2273,9 +1879,7 @@ def _receipt_from_payload(
             python_version=projection["python_version"],
             torch_version=projection["torch_version"],
             numpy_version=projection["numpy_version"],
-            environment_variable_rows=tuple(
-                (row["name"], row["value"]) for row in environment_rows
-            ),
+            environment_variable_rows=tuple((row["name"], row["value"]) for row in environment_rows),
             network_isolation_attestation_sha256=_require_sha256(
                 network.get("attestation_sha256"),
                 name="environment receipt network attestation",
@@ -2300,13 +1904,9 @@ def _receipt_from_payload(
             blockers=_POST_ENVIRONMENT_RECEIPT_BLOCKERS,
         )
     except (KeyError, TypeError) as exc:
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt fields are invalid"
-        ) from exc
+        raise ReferenceMinimizationValidationRunStartError("environment receipt fields are invalid") from exc
     if receipt.to_dict() != dict(payload):
-        raise ReferenceMinimizationValidationRunStartError(
-            "environment receipt fields are not exact"
-        )
+        raise ReferenceMinimizationValidationRunStartError("environment receipt fields are not exact")
     return receipt
 
 
@@ -2330,10 +1930,7 @@ def read_reference_minimization_validation_execution_environment_receipt(
         try:
             descriptor = os.open(
                 f"{nonce}.environment.json",
-                os.O_RDONLY
-                | os.O_NOFOLLOW
-                | os.O_CLOEXEC
-                | getattr(os, "O_NONBLOCK", 0),
+                os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | getattr(os, "O_NONBLOCK", 0),
                 dir_fd=root_fd,
             )
         except (OSError, ValueError) as exc:
@@ -2343,14 +1940,8 @@ def read_reference_minimization_validation_execution_environment_receipt(
         try:
             file_stat = os.fstat(descriptor)
             _validate_record_stat(file_stat)
-            if (
-                not 0
-                < file_stat.st_size
-                <= REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES
-            ):
-                raise ReferenceMinimizationValidationRunStartError(
-                    "environment receipt size is invalid"
-                )
+            if not 0 < file_stat.st_size <= REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES:
+                raise ReferenceMinimizationValidationRunStartError("environment receipt size is invalid")
             chunks: list[bytes] = []
             total = 0
             while True:
@@ -2360,15 +1951,9 @@ def read_reference_minimization_validation_execution_environment_receipt(
                 chunks.append(chunk)
                 total += len(chunk)
                 if total > REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES:
-                    raise ReferenceMinimizationValidationRunStartError(
-                        "environment receipt exceeds the size limit"
-                    )
-            if _stable_record_identity(os.fstat(descriptor)) != (
-                _stable_record_identity(file_stat)
-            ):
-                raise ReferenceMinimizationValidationRunStartError(
-                    "environment receipt changed while it was read"
-                )
+                    raise ReferenceMinimizationValidationRunStartError("environment receipt exceeds the size limit")
+            if _stable_record_identity(os.fstat(descriptor)) != (_stable_record_identity(file_stat)):
+                raise ReferenceMinimizationValidationRunStartError("environment receipt changed while it was read")
         finally:
             os.close(descriptor)
     except ReferenceMinimizationValidationNonceReservationError as exc:
@@ -2401,27 +1986,17 @@ def require_reference_minimization_validation_execution_environment_receipt_for_
         authorization_nonce_sha256,
     )
     if not hmac.compare_digest(receipt.receipt_sha256, expected_receipt):
-        raise ReferenceMinimizationValidationRunStartError(
-            "runner environment receipt identity is cross-wired"
-        )
-    root_identity = (
-        reference_minimization_validation_artifact_output_root_identity_sha256(
-            artifact_output_root
-        )
-    )
+        raise ReferenceMinimizationValidationRunStartError("runner environment receipt identity is cross-wired")
+    root_identity = reference_minimization_validation_artifact_output_root_identity_sha256(artifact_output_root)
     if not hmac.compare_digest(
         receipt.artifact_output_root_identity_sha256,
         root_identity,
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "runner artifact output root identity is cross-wired"
-        )
+        raise ReferenceMinimizationValidationRunStartError("runner artifact output root identity is cross-wired")
     observation = _observe_current_runtime()
     _require_runtime_observation(observation)
     observed_architecture = (
-        "x86_64"
-        if observation.machine_architecture in {"x86_64", "amd64"}
-        else observation.machine_architecture
+        "x86_64" if observation.machine_architecture in {"x86_64", "amd64"} else observation.machine_architecture
     )
     observed_fields = {
         "operating_system_release": observation.operating_system_release,
@@ -2431,9 +2006,7 @@ def require_reference_minimization_validation_execution_environment_receipt_for_
         "torch_version": observation.torch_version,
         "numpy_version": observation.numpy_version,
         "environment_variable_rows": observation.environment_variable_rows,
-        "network_namespace_identity_sha256": (
-            observation.network_namespace_identity_sha256
-        ),
+        "network_namespace_identity_sha256": (observation.network_namespace_identity_sha256),
         "command_argv": observation.command_argv,
         "python_hash_seed": observation.python_hash_seed,
         "application_seed": observation.application_seed,
@@ -2471,18 +2044,12 @@ def require_reference_minimization_validation_execution_environment_receipt_for_
         raise ReferenceMinimizationValidationRunStartError(
             "durable or live source manifest does not match the environment receipt"
         )
-    fingerprint = _sha256(
-        observation.fingerprint_projection(
-            artifact_output_root_identity_sha256=root_identity
-        )
-    )
+    fingerprint = _sha256(observation.fingerprint_projection(artifact_output_root_identity_sha256=root_identity))
     if not hmac.compare_digest(
         receipt.environment_fingerprint_sha256,
         fingerprint,
     ):
-        raise ReferenceMinimizationValidationRunStartError(
-            "live runner environment fingerprint is cross-wired"
-        )
+        raise ReferenceMinimizationValidationRunStartError("live runner environment fingerprint is cross-wired")
     return receipt
 
 
@@ -2505,6 +2072,8 @@ def reference_minimization_validation_run_start_contract_decision() -> dict[str,
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256",
     "REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV",
     "REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES",

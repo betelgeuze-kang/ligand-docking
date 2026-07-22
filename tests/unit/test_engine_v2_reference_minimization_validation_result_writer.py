@@ -25,6 +25,8 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_runner impor
     run_bounded_cpu_reference_minimization_validation,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
@@ -86,9 +88,7 @@ def _synthetic_native_runtime_snapshot() -> dict[str, object]:
     }
     file_row = {
         **file_projection,
-        "file_identity_sha256": native_identity._sha256(
-            native_identity._file_identity_projection(file_projection)
-        ),
+        "file_identity_sha256": native_identity._sha256(native_identity._file_identity_projection(file_projection)),
     }
     projection: dict[str, object] = {
         "schema_id": native_identity.NATIVE_RUNTIME_SNAPSHOT_SCHEMA_ID,
@@ -360,38 +360,23 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
     decision = reference_minimization_validation_result_writer_contract_decision()
 
     assert first == second
-    assert (
-        first["schema_id"]
-        == REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID
+    assert first["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID
+    assert first["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256)
+    assert first["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6
     )
-    assert first["contract_sha256"] == (
-        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
-    )
-    assert (
-        first["coverage"]["case_count"]
-        == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
-    )
+    assert first["coverage"]["case_count"] == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
     assert first["coverage"]["failed_cases_and_metrics_retained"] is True
+    assert first["coverage"]["trajectory_comparison_and_checkpoint_restart_rows_retained"]
+    assert first["verification"]["trajectory_comparison_recomputed_from_both_retained_traces"]
     assert first["verification"]["receipt_signature_implemented"] is False
+    assert first["verification"]["exact_worker_execution_evidence_reverified_by_runner_schema"] is True
+    assert first["verification"]["retained_case_aggregate_recomputed_from_exact_case_rows"] is True
+    assert first["verification"]["native_mapping_lifetime_closure_claim_remains_false"] is True
+    assert first["coverage"]["incomplete_worker_lifecycle_eligible_for_accepted_result_review"] is False
     assert (
-        first["verification"][
-            "exact_worker_execution_evidence_reverified_by_runner_schema"
-        ]
-        is True
-    )
-    assert (
-        first["verification"]["retained_case_aggregate_recomputed_from_exact_case_rows"]
-        is True
-    )
-    assert (
-        first["verification"]["native_mapping_lifetime_closure_claim_remains_false"]
-        is True
-    )
-    assert (
-        first["coverage"][
-            "incomplete_worker_lifecycle_eligible_for_accepted_result_review"
-        ]
-        is False
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5
+        == "9a3c4a22cc60dc06a468e8fa62f55b23766a106d2781c3ea485360ce3131a040"
     )
     assert (
         FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4
@@ -402,34 +387,25 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
         == "a02d29c915fa56a55b22a3109cafd8a95a1397e382c85dbb0c9cacfba8b9694b"
     )
     assert first["claim_policy"]["claim_safe"] is False
-    assert (
-        require_reference_minimization_validation_result_writer_contract_document(first)
-        == first
-    )
+    assert require_reference_minimization_validation_result_writer_contract_document(first) == first
 
     assert decision["result_receipt_writer_implemented"] is True
     assert decision["production_result_receipt_present"] is False
     assert decision["production_validation_results_collected"] is False
     assert decision["independent_result_review_complete"] is False
-    assert (
-        "worker_process_starttime_and_boot_id_binding_missing" in decision["blockers"]
-    )
+    assert "worker_process_starttime_and_boot_id_binding_missing" in decision["blockers"]
     assert decision["parameter_fitting_authorized"] is False
     assert decision["claim_safe"] is False
 
 
 def test_result_writer_contract_rejects_tamper() -> None:
-    tampered = deepcopy(
-        reference_minimization_validation_result_writer_contract_document()
-    )
+    tampered = deepcopy(reference_minimization_validation_result_writer_contract_document())
     tampered["claim_policy"]["claim_safe"] = True
     with pytest.raises(
         ReferenceMinimizationValidationResultWriterError,
         match="does not match the frozen record",
     ):
-        require_reference_minimization_validation_result_writer_contract_document(
-            tampered
-        )
+        require_reference_minimization_validation_result_writer_contract_document(tampered)
 
 
 def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
@@ -467,40 +443,29 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     assert payload["coverage_summary"] == {
         **observation.to_dict()["coverage_summary"],
     }
-    assert (
-        len(payload["case_results"])
-        == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
-    )
-    assert any(
-        row["observed_status"] == "fail_closed" for row in payload["case_results"]
-    )
+    assert len(payload["case_results"]) == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
+    assert any(row["observed_status"] == "fail_closed" for row in payload["case_results"])
     assert all(row["case_passed"] for row in payload["case_results"])
     assert all(len(row["coordinate_traces"]) == 2 for row in payload["case_results"])
+    assert all("trajectory_comparison" in row for row in payload["case_results"])
+    assert sum(row["trajectory_comparison"]["comparison_passed"] for row in payload["case_results"]) == 14
+    assert all(len(row["trajectory_comparison"]["comparison_sha256"]) == 64 for row in payload["case_results"])
     assert all(
-        trace["trace_length"] == len(trace["steps"])
-        and len(trace["trace_sha256"]) == 64
+        trace["trace_length"] == len(trace["steps"]) and len(trace["trace_sha256"]) == 64
         for row in payload["case_results"]
         for trace in row["coordinate_traces"]
     )
-    assert (
-        payload["case_results"][12]["coordinate_traces"][1]["rejected_step_count"] > 0
-    )
+    assert payload["case_results"][12]["coordinate_traces"][1]["rejected_step_count"] > 0
     worker_evidence = payload["run_observation"]["worker_execution_evidence"]
     assert worker_evidence["completion_state"] == "complete"
     assert worker_evidence["failure_code"] is None
     assert len(worker_evidence["case_frame_sha256_rows"]) == 14
-    assert worker_evidence["retained_case_aggregate_sha256"] == runner_module._sha256(
-        payload["case_results"]
-    )
-    assert (
-        worker_evidence["runtime_lifecycle_evidence"]["completion_state"] == "complete"
-    )
+    assert worker_evidence["retained_case_aggregate_sha256"] == runner_module._sha256(payload["case_results"])
+    assert worker_evidence["runtime_lifecycle_evidence"]["completion_state"] == "complete"
     assert worker_evidence["native_pre_post_snapshot_equality_verified"] is True
     assert worker_evidence["native_mapping_lifetime_closure_claimed"] is False
     assert payload["independent_result_review_state"] == "pending_independent_review"
-    assert payload["review_scope"] == (
-        "implementation_and_artifact_review_pre_execution"
-    )
+    assert payload["review_scope"] == ("implementation_and_artifact_review_pre_execution")
     assert payload["validation_results_collected"] is True
     assert payload["production_validation_results_collected"] is False
     assert payload["parameter_fitting_authorized"] is False
@@ -508,23 +473,13 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
     assert payload["claim_safe"] is False
     assert payload["artifact_path_confinement_verification"]["path_disclosed"] is False
     assert (
-        payload["artifact_path_confinement_verification"][
-            "same_uid_content_mutation_detected_by_out_of_band_sha256"
-        ]
+        payload["artifact_path_confinement_verification"]["same_uid_content_mutation_detected_by_out_of_band_sha256"]
         is True
     )
-    assert (
-        payload["artifact_path_confinement_verification"][
-            "same_uid_replacement_resistance_established"
-        ]
-        is False
-    )
+    assert payload["artifact_path_confinement_verification"]["same_uid_replacement_resistance_established"] is False
     assert "test-only-32-bytes" not in json.dumps(payload, sort_keys=True)
 
-    assert (
-        read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
-        == receipt
-    )
+    assert read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE) == receipt
     assert (
         verify_reference_minimization_validation_result_receipt(
             root,
@@ -537,21 +492,12 @@ def test_writer_reverifies_chain_and_persists_every_failure_in_one_receipt(
         )
         == receipt
     )
-    assert (
-        require_reference_minimization_validation_run_observation_document(
-            payload["run_observation"]
-        )
-        == observation
-    )
+    assert require_reference_minimization_validation_run_observation_document(payload["run_observation"]) == observation
 
     crosswired_trace = deepcopy(payload)
-    crosswired_trace["case_results"][0]["coordinate_traces"][0]["trace_sha256"] = (
-        "0" * 64
-    )
+    crosswired_trace["case_results"][0]["coordinate_traces"][0]["trace_sha256"] = "0" * 64
     crosswired_trace.pop("receipt_sha256")
-    crosswired_trace["receipt_sha256"] = hashlib.sha256(
-        module._canonical_bytes(crosswired_trace)
-    ).hexdigest()
+    crosswired_trace["receipt_sha256"] = hashlib.sha256(module._canonical_bytes(crosswired_trace)).hexdigest()
     with pytest.raises(
         ReferenceMinimizationValidationResultWriterError,
         match="run observation are cross-wired",
@@ -583,16 +529,12 @@ def test_writer_revalidates_exact_worker_lifecycle_frames_and_retained_aggregate
     mutations: list[dict[str, object]] = []
 
     aggregate_tamper = deepcopy(payload)
-    aggregate_evidence = aggregate_tamper["run_observation"][
-        "worker_execution_evidence"
-    ]
+    aggregate_evidence = aggregate_tamper["run_observation"]["worker_execution_evidence"]
     aggregate_evidence["retained_case_aggregate_sha256"] = "0" * 64
     mutations.append(rehash(aggregate_tamper))
 
     lifecycle_tamper = deepcopy(payload)
-    lifecycle_evidence = lifecycle_tamper["run_observation"][
-        "worker_execution_evidence"
-    ]
+    lifecycle_evidence = lifecycle_tamper["run_observation"]["worker_execution_evidence"]
     lifecycle_evidence["runtime_lifecycle_evidence"]["lifecycle_sha256"] = "0" * 64
     mutations.append(rehash(lifecycle_tamper))
 
@@ -605,6 +547,16 @@ def test_writer_revalidates_exact_worker_lifecycle_frames_and_retained_aggregate
     omitted_evidence = omitted["run_observation"]["worker_execution_evidence"]
     omitted_evidence["case_frame_sha256_rows"].pop()
     mutations.append(rehash(omitted))
+
+    comparison_omission = deepcopy(payload)
+    comparison_omission["case_results"][0]["trajectory_comparison"]["step_comparisons"].pop()
+    comparison_omission["run_observation"]["case_results"][0]["trajectory_comparison"]["step_comparisons"].pop()
+    mutations.append(rehash(comparison_omission))
+
+    comparison_reorder = deepcopy(payload)
+    comparison_reorder["case_results"][0]["trajectory_comparison"]["step_comparisons"].reverse()
+    comparison_reorder["run_observation"]["case_results"][0]["trajectory_comparison"]["step_comparisons"].reverse()
+    mutations.append(rehash(comparison_reorder))
 
     for tampered in mutations:
         with pytest.raises(
@@ -685,24 +637,17 @@ def _self_consistent_worker_request_replacement(
     if application_seed is not None:
         payload["seed"] = application_seed
         request["expected_application_seed"] = application_seed
-        request["expected_worker_environment"][
-            runner_module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV
-        ] = str(application_seed)
+        request["expected_worker_environment"][runner_module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV] = (
+            str(application_seed)
+        )
     if dependency_roots is not None:
         request["dependency_roots"] = dependency_roots
-        request["expected_worker_environment"]["PYTHONPATH"] = os.pathsep.join(
-            dependency_roots
-        )
+        request["expected_worker_environment"]["PYTHONPATH"] = os.pathsep.join(dependency_roots)
     if python_hash_probe_sha256 is not None:
         request["expected_python_hash_probe_sha256"] = python_hash_probe_sha256
-    request["expected_worker_environment_sha256"] = runner_module._sha256(
-        request["expected_worker_environment"]
-    )
+    request["expected_worker_environment_sha256"] = runner_module._sha256(request["expected_worker_environment"])
     request_sha256 = runner_module._sha256(request)
-    case_rows = tuple(
-        runner_module._case_observation_from_payload(row)
-        for row in payload["case_results"]
-    )
+    case_rows = tuple(runner_module._case_observation_from_payload(row) for row in payload["case_results"])
     snapshot = evidence["runtime_lifecycle_evidence"]["pre"]["snapshot"]
     pre_evidence = native_identity.build_worker_runtime_pre_evidence(
         lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
@@ -721,13 +666,11 @@ def _self_consistent_worker_request_replacement(
         case_results=case_rows,
         runtime_lifecycle_evidence=lifecycle,
     )
-    payload["worker_execution_evidence"] = (
-        runner_module._decode_complete_matrix_worker_transcript(
-            transcript,
-            worker_preflight_request=request,
-            supervisor_child_process_id=evidence["supervisor_child_process_id"],
-        ).worker_execution_evidence.to_dict()
-    )
+    payload["worker_execution_evidence"] = runner_module._decode_complete_matrix_worker_transcript(
+        transcript,
+        worker_preflight_request=request,
+        supervisor_child_process_id=evidence["supervisor_child_process_id"],
+    ).worker_execution_evidence.to_dict()
     return require_reference_minimization_validation_run_observation_document(payload)
 
 
@@ -772,13 +715,9 @@ def test_writer_rejects_tampered_runner_start_and_observation_before_result(
     environment = _environment(root)
     observation = _observation(root, monkeypatch, environment=environment)
     _install_verified_chain(monkeypatch, environment)
-    start_path = root / (
-        f"reference-minimization-validation-runner-start-{AUTHORIZATION_NONCE}.json"
-    )
+    start_path = root / (f"reference-minimization-validation-runner-start-{AUTHORIZATION_NONCE}.json")
     start = json.loads(start_path.read_text(encoding="ascii"))
-    start["started_at_utc"] = (RUN_NOW - timedelta(seconds=1)).strftime(
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
+    start["started_at_utc"] = (RUN_NOW - timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     unsigned_start = dict(start)
     unsigned_start.pop("runner_start_record_sha256")
     start["runner_start_record_sha256"] = hashlib.sha256(
@@ -815,9 +754,7 @@ def test_writer_rejects_tampered_runner_start_and_observation_before_result(
     crosswired_source_manifest = observation.to_dict()
     crosswired_source_manifest["source_manifest_sha256"] = "not-a-digest"
     with pytest.raises(ReferenceMinimizationValidationRunnerError):
-        require_reference_minimization_validation_run_observation_document(
-            crosswired_source_manifest
-        )
+        require_reference_minimization_validation_run_observation_document(crosswired_source_manifest)
 
 
 def test_writer_rejects_passing_case_with_failed_retained_metric(
@@ -838,18 +775,14 @@ def test_writer_rejects_passing_case_with_failed_retained_metric(
         strict=True,
     ):
         frame_row["case_observation_sha256"] = runner_module._sha256(case)
-    evidence["retained_case_aggregate_sha256"] = runner_module._sha256(
-        payload["case_results"]
-    )
+    evidence["retained_case_aggregate_sha256"] = runner_module._sha256(payload["case_results"])
     lifecycle = evidence["runtime_lifecycle_evidence"]
-    evidence["runtime_lifecycle_evidence"] = (
-        native_identity.build_complete_worker_runtime_lifecycle_evidence(
-            lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
-            worker_request_sha256=evidence["worker_request_sha256"],
-            pre_evidence=lifecycle["pre"],
-            payload_rows=payload["case_results"],
-            post_snapshot=lifecycle["pre"]["snapshot"],
-        )
+    evidence["runtime_lifecycle_evidence"] = native_identity.build_complete_worker_runtime_lifecycle_evidence(
+        lane=native_identity.WORKER_RUNTIME_LANE_MINIMIZATION,
+        worker_request_sha256=evidence["worker_request_sha256"],
+        pre_evidence=lifecycle["pre"],
+        payload_rows=payload["case_results"],
+        post_snapshot=lifecycle["pre"]["snapshot"],
     )
 
     with pytest.raises(
@@ -896,16 +829,12 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
         json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
         encoding="ascii",
     )
-    with pytest.raises(
-        ReferenceMinimizationValidationResultWriterError, match="SHA-256"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="SHA-256"):
         read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
 
     path.write_bytes(original)
     path.chmod(0o644)
-    with pytest.raises(
-        ReferenceMinimizationValidationResultWriterError, match="securely"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="securely"):
         read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
 
     path.chmod(0o600)
@@ -914,15 +843,11 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
         os.link(path, hardlink)
     except OSError:
         pytest.skip("hard links unavailable")
-    with pytest.raises(
-        ReferenceMinimizationValidationResultWriterError, match="securely"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="securely"):
         read_reference_minimization_validation_result_receipt(root, AUTHORIZATION_NONCE)
     hardlink.unlink()
 
-    with pytest.raises(
-        ReferenceMinimizationValidationResultWriterError, match="cross-wired"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="cross-wired"):
         verify_reference_minimization_validation_result_receipt(
             root,
             AUTHORIZATION_NONCE,
@@ -932,9 +857,7 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
             revoked_result_receipt_sha256s=(),
             superseded_result_receipt_sha256s=(),
         )
-    with pytest.raises(
-        ReferenceMinimizationValidationResultWriterError, match="revoked"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="revoked"):
         verify_reference_minimization_validation_result_receipt(
             root,
             AUTHORIZATION_NONCE,
@@ -970,9 +893,7 @@ def test_result_reader_rejects_tamper_mode_hardlink_and_external_state(
             revoked_result_receipt_sha256s=(),
             superseded_result_receipt_sha256s=(),
         )
-    with pytest.raises(
-        ReferenceMinimizationValidationResultWriterError, match="superseded"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationResultWriterError, match="superseded"):
         verify_reference_minimization_validation_result_receipt(
             root,
             AUTHORIZATION_NONCE,
@@ -1015,9 +936,7 @@ def test_result_reader_binds_filename_nonce_and_opens_special_files_nonblocking(
 
 
 def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() -> None:
-    signature = inspect.signature(
-        write_reference_minimization_validation_result_receipt
-    )
+    signature = inspect.signature(write_reference_minimization_validation_result_receipt)
     assert "checked_at" not in signature.parameters
     for name in (
         "revoked_authorization_receipt_sha256s",
@@ -1025,9 +944,7 @@ def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() ->
         "externally_conflicting_nonce_sha256s",
     ):
         assert signature.parameters[name].default is inspect.Parameter.empty
-    verify_signature = inspect.signature(
-        verify_reference_minimization_validation_result_receipt
-    )
+    verify_signature = inspect.signature(verify_reference_minimization_validation_result_receipt)
     for name in (
         "expected_receipt_sha256",
         "revoked_review_attestation_sha256s",
@@ -1044,9 +961,7 @@ def test_writer_public_surface_has_no_clock_delete_release_signature_or_cli() ->
 
     source = inspect.getsource(module)
     tree = ast.parse(source)
-    top_level_imports = [
-        node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))
-    ]
+    top_level_imports = [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))]
     imported_modules = {
         alias.name.split(".", 1)[0]
         for node in top_level_imports

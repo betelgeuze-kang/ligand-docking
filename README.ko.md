@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_ao_minimization_validation_production_entrypoint
+v2_ap_minimization_trajectory_comparison
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -73,8 +73,15 @@ v2_ao_minimization_validation_production_entrypoint
   trust store에서만 reviewer/operator 공개키를 다시 읽음. 같은 검증 프로세스에서
   environment receipt→14-case 고정 supervised subprocess→result receipt를 연결하고 worker도
   source·dependency·deterministic single-thread runtime을 평가 전에 재검증함.
-  실제 attestation·trusted key·production root/receipt·승인된 실행·독립 인간 result
-  review·trajectory-level 과학 비교·과학 승격은 없으며, 외부 trust store와 signed
+  evaluation index·iteration·trial·outcome 정렬과 사전 coordinate/energy threshold,
+  branch·rejection·count disposition, 3개 checkpoint case의 uninterrupted/paused/
+  resumed digest를 결속하는 비교 계약도 runner·writer·result review에 연결됨.
+  외부 acceptance threshold를 바꾸지 않고 선언된 constraint tolerance의 절반을 내부
+  projection convergence headroom으로 사용하는 v2.1 protocol로 refreeze했으며,
+  비-production 14-case 구현 점검은 fixed-Born 2건을 포함한 14/14 비교 row와 3개
+  restart equality를 모두 통과함. 실제
+  attestation·trusted key·production root/receipt·승인된 실행·독립 인간 result
+  review·승인된 production trajectory 비교·과학 승격은 없으며, 외부 trust store와 signed
   artifact·private root·reserved nonce가 없으면 entrypoint는 fail-closed함
 - exact synthetic case identity·사전 허용오차·failure row를 고정하고 실행 및
   parameter fitting 승인 gate를 닫아 둔 CPU reference energy/force 검증 protocol,

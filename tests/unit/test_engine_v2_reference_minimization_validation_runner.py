@@ -33,8 +33,10 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol imp
     cpu_minimization_validation_protocol_document,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_runner import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V6,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V5,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7,
     REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES,
     ReferenceMinimizationValidationRunnerAlreadyStartedError,
     ReferenceMinimizationValidationRunnerError,
@@ -71,9 +73,7 @@ def _environment_rows(
     return tuple(
         sorted(
             {
-                module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV: str(
-                    application_seed
-                ),
+                module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV: str(application_seed),
                 "CUDA_VISIBLE_DEVICES": "",
                 "HIP_VISIBLE_DEVICES": "",
                 "LANG": "C.UTF-8",
@@ -123,9 +123,7 @@ def _install_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
         "require_reference_minimization_validation_execution_environment_receipt_for_runner",
         lambda *args, **kwargs: receipt,
     )
-    monkeypatch.setattr(
-        module, "_require_clean_checked_out_code_commit", lambda expected: None
-    )
+    monkeypatch.setattr(module, "_require_clean_checked_out_code_commit", lambda expected: None)
     monkeypatch.setattr(
         module,
         "_require_isolated_python_bootstrap_runtime",
@@ -143,9 +141,7 @@ def _install_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
         request = kwargs["worker_preflight_request"]
         assert isinstance(request, dict)
         expected = _worker_request(source_sha256=receipt.runner_source_sha256)
-        expected["expected_runner_start_record_sha256"] = request[
-            "expected_runner_start_record_sha256"
-        ]
+        expected["expected_runner_start_record_sha256"] = request["expected_runner_start_record_sha256"]
         assert request == expected
         return _complete_supervised_result(
             monkeypatch,
@@ -192,18 +188,14 @@ def _worker_request(
         roots,
     )
     return {
-        "schema_id": (
-            module.REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID
-        ),
+        "schema_id": (module.REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_REQUEST_SCHEMA_ID),
         "expected_authorization_nonce_sha256": NONCE,
         "expected_runner_start_record_sha256": RUNNER_START_SHA256,
         "expected_code_commit_sha": COMMIT_SHA,
         "expected_runner_source_sha256": source_sha256,
         "expected_source_manifest_sha256": SOURCE_MANIFEST_SHA256,
         "expected_materialization_manifest_sha256": (
-            module.cpu_minimization_validation_materialization_manifest_document()[
-                "materialization_manifest_sha256"
-            ]
+            module.cpu_minimization_validation_materialization_manifest_document()["materialization_manifest_sha256"]
         ),
         "expected_dependency_artifact_sha256_rows": dict(DEPENDENCIES),
         "dependency_roots": roots,
@@ -235,9 +227,7 @@ def _native_snapshot() -> dict[str, object]:
     }
     file_row = {
         **file_projection,
-        "file_identity_sha256": native_identity._sha256(
-            native_identity._file_identity_projection(file_projection)
-        ),
+        "file_identity_sha256": native_identity._sha256(native_identity._file_identity_projection(file_projection)),
     }
     projection: dict[str, object] = {
         "schema_id": native_identity.NATIVE_RUNTIME_SNAPSHOT_SCHEMA_ID,
@@ -292,14 +282,10 @@ def _complete_worker_transcript(
         context.setattr(
             module.sys,
             "stdin",
-            SimpleNamespace(
-                buffer=io.BytesIO(module._canonical_bytes(dict(request)) + b"\n")
-            ),
+            SimpleNamespace(buffer=io.BytesIO(module._canonical_bytes(dict(request)) + b"\n")),
         )
         context.setattr(module.sys, "stdout", SimpleNamespace(buffer=output))
-        context.setattr(
-            module, "_require_matrix_worker_preflight", lambda _request: None
-        )
+        context.setattr(module, "_require_matrix_worker_preflight", lambda _request: None)
         context.setattr(module, "_run_case_matrix_in_process", lambda: rows)
         assert module._matrix_worker_main_from_standard_streams() == 0
     return output.getvalue()
@@ -339,16 +325,14 @@ def _supervise_raw_transcript(
     monkeypatch.setattr(
         module,
         "_communicate_fixed_matrix_worker",
-        lambda *_args, **_kwargs: (
-            native_identity.BoundedWorkerProcessCommunicationEvidence(
-                raw_output_prefix=raw,
-                timed_out=timed_out,
-                output_exceeded=False,
-                communication_failed=False,
-                request_fully_written=True,
-                succeeded=succeeded,
-                final_returncode=0 if succeeded else 2,
-            )
+        lambda *_args, **_kwargs: native_identity.BoundedWorkerProcessCommunicationEvidence(
+            raw_output_prefix=raw,
+            timed_out=timed_out,
+            output_exceeded=False,
+            communication_failed=False,
+            request_fully_written=True,
+            succeeded=succeeded,
+            final_returncode=0 if succeeded else 2,
         ),
     )
     return module._run_supervised_case_matrix(
@@ -377,37 +361,37 @@ def _run(root: Path):
 def test_contract_is_frozen_and_all_claims_remain_closed() -> None:
     document = reference_minimization_validation_runner_contract_document()
     decision = reference_minimization_validation_runner_contract_decision()
-    assert document["contract_sha256"] == (
-        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
+    assert document["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256)
+    assert document["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7
     )
     assert document["bounds"]["case_count"] == 14
     assert REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES == 14
     assert document["observation"]["failure_inclusive"] is True
+    assert document["observation"]["trajectory_comparison_bound_for_every_case"]
+    assert document["observation"]["three_checkpoint_cases_bind_uninterrupted_paused_and_resumed_digests"]
     assert document["observation"]["result_receipt_written"] is False
     assert document["entrypoint"]["result_receipt_finalized_in_same_verified_process"]
     assert document["worker"]["fresh_fixed_subprocess"] is True
     assert document["worker"]["multiprocessing_spawn_used"] is False
     assert document["worker"]["failure_complete_start_error_observation"] is True
-    assert (
-        document["worker"]["failure_complete_communication_error_observation"] is True
-    )
+    assert document["worker"]["failure_complete_communication_error_observation"] is True
     assert document["worker"]["child_dependency_roots_and_bytes_reverified"]
     assert document["worker"]["child_preflight_failure_emits_case_rows"] is False
     assert document["worker"]["exact_frame_count"] == 16
     assert document["worker"]["ordered_case_payload_frame_count"] == 14
     assert document["worker"]["native_mapping_lifetime_closure_claimed"] is False
     assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V6
+        == "678d34e58ed5a1ad6763cd072afda07889940f5d63b056687eb47f3616a217f9"
+    )
+    assert (
         FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V5
         == "c27ff1ae8797db615e1aeb1625e70c476ff011026963b3a678880a4cc9fa7d33"
     )
-    assert document["worker"][
-        "timeout_nonzero_or_incomplete_transcript_discards_all_child_payloads"
-    ]
+    assert document["worker"]["timeout_nonzero_or_incomplete_transcript_discards_all_child_payloads"]
     assert all(value is False for value in document["claim_policy"].values())
-    assert (
-        require_reference_minimization_validation_runner_contract_document(document)
-        == document
-    )
+    assert require_reference_minimization_validation_runner_contract_document(document) == document
     assert decision["bounded_validation_runner_implemented"] is True
     assert decision["production_process_entrypoint_wired"] is True
     assert decision["preconfigured_trust_store_present"] is False
@@ -433,9 +417,7 @@ def test_contract_rejects_tamper_and_source_binds_bootstrap_and_runner() -> None
     runner_path = Path(inspect.getsourcefile(module) or "")
     bootstrap_path = Path(bootstrap.reference_minimization_validation_bootstrap_path())
     source_identity = {
-        "schema_id": (
-            "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/4.0.0"
-        ),
+        "schema_id": ("betelgeuze.engine_v2_reference_minimization_validation_execution_sources/4.0.0"),
         "sources": [
             {
                 "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_bootstrap.py",
@@ -445,26 +427,20 @@ def test_contract_rejects_tamper_and_source_binds_bootstrap_and_runner() -> None
                 "path": "betelgeuze_engine_v2/physics/reference_minimization_validation_dependency_identity.py",
                 "sha256": hashlib.sha256(
                     Path(module.__file__)
-                    .with_name(
-                        "reference_minimization_validation_dependency_identity.py"
-                    )
+                    .with_name("reference_minimization_validation_dependency_identity.py")
                     .read_bytes()
                 ).hexdigest(),
             },
             {
                 "path": "betelgeuze_engine_v2/physics/validation_source_identity.py",
                 "sha256": hashlib.sha256(
-                    Path(module.__file__)
-                    .with_name("validation_source_identity.py")
-                    .read_bytes()
+                    Path(module.__file__).with_name("validation_source_identity.py").read_bytes()
                 ).hexdigest(),
             },
             {
                 "path": "betelgeuze_engine_v2/physics/validation_native_runtime_identity.py",
                 "sha256": hashlib.sha256(
-                    Path(module.__file__)
-                    .with_name("validation_native_runtime_identity.py")
-                    .read_bytes()
+                    Path(module.__file__).with_name("validation_native_runtime_identity.py").read_bytes()
                 ).hexdigest(),
             },
             {
@@ -540,16 +516,13 @@ def test_dependency_byte_identity_helper_is_stdlib_only_and_exactly_scoped() -> 
         "time",
         "typing",
     }
-    assert (
-        dependency_identity.REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS
-        == (
-            "cryptography-distribution",
-            "numpy-distribution",
-            "openssl-executable",
-            "python-runtime-executable",
-            "python-standard-library",
-            "torch-distribution",
-        )
+    assert dependency_identity.REFERENCE_MINIMIZATION_VALIDATION_REQUIRED_DEPENDENCY_ARTIFACT_IDS == (
+        "cryptography-distribution",
+        "numpy-distribution",
+        "openssl-executable",
+        "python-runtime-executable",
+        "python-standard-library",
+        "torch-distribution",
     )
 
 
@@ -559,12 +532,8 @@ def test_stdlib_bootstrap_verifies_ed25519_without_importing_package_crypto() ->
     message = b"canonical-bootstrap-authorization"
     signature = sign_ed25519(message, private_key)
 
-    assert bootstrap._verify_ed25519_with_trusted_openssl(
-        message, signature, public_key
-    )
-    assert not bootstrap._verify_ed25519_with_trusted_openssl(
-        message + b"-tampered", signature, public_key
-    )
+    assert bootstrap._verify_ed25519_with_trusted_openssl(message, signature, public_key)
+    assert not bootstrap._verify_ed25519_with_trusted_openssl(message + b"-tampered", signature, public_key)
 
 
 def test_runner_defers_numpy_and_torch_imports_until_bootstrap_verification() -> None:
@@ -587,6 +556,13 @@ def test_exact_matrix_retains_all_success_and_fail_closed_rows() -> None:
     assert [row.ordinal for row in rows] == list(range(1, 15))
     assert len(rows) == 14
     assert all(row.case_passed for row in rows)
+    assert sum(row.trajectory_comparison["comparison_passed"] for row in rows) == 14
+    assert all(
+        row.trajectory_comparison["comparison_sha256"]
+        and row.trajectory_comparison["operational_trace_sha256"] == row.coordinate_traces[0].trace_sha256
+        and row.trajectory_comparison["independent_trace_sha256"] == row.coordinate_traces[1].trace_sha256
+        for row in rows
+    )
     assert len(module._canonical_bytes([row.to_dict() for row in rows])) < (
         module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WORKER_OUTPUT_BYTES
     )
@@ -601,25 +577,17 @@ def test_exact_matrix_retains_all_success_and_fail_closed_rows() -> None:
     assert all(
         len(trace.trace_sha256) == 64
         and len(trace.steps) == trace.energy_force_evaluation_count
-        and [step.evaluation_index for step in trace.steps]
-        == list(range(1, len(trace.steps) + 1))
+        and [step.evaluation_index for step in trace.steps] == list(range(1, len(trace.steps) + 1))
         and all(len(step.step_identity_sha256) == 64 for step in trace.steps)
         for row in rows
         for trace in row.coordinate_traces
     )
-    assert all(
-        all(trace.trace_state == "evaluated" for trace in row.coordinate_traces)
-        for row in rows[:8]
-    )
-    assert all(
-        row.coordinate_traces[0].trace_state == "not_evaluated_expected_fail_closed"
-        for row in rows[8:]
-    )
+    assert all(all(trace.trace_state == "evaluated" for trace in row.coordinate_traces) for row in rows[:8])
+    assert all(row.coordinate_traces[0].trace_state == "not_evaluated_expected_fail_closed" for row in rows[8:])
     assert rows[12].coordinate_traces[1].trace_state == "evaluated"
     assert rows[12].coordinate_traces[1].rejected_step_count > 0
     assert all(
-        row.coordinate_traces[1].trace_state == "not_evaluated_expected_fail_closed"
-        for row in (*rows[8:12], rows[13])
+        row.coordinate_traces[1].trace_state == "not_evaluated_expected_fail_closed" for row in (*rows[8:12], rows[13])
     )
     checkpoint_rows = {row.case_id: dict(row.metric_values) for row in rows}
     for case_id in (
@@ -628,6 +596,15 @@ def test_exact_matrix_retains_all_success_and_fail_closed_rows() -> None:
         "v2_fixed_born_checkpoint_restart_exact",
     ):
         assert checkpoint_rows[case_id]["checkpoint_resume_bitwise_equal"] == 1.0
+        comparison = next(row.trajectory_comparison for row in rows if row.case_id == case_id)
+        assert (
+            comparison["checkpoint_restart_evidence"]["checkpoint_restart_disposition"]
+            == "checkpoint_restart_exactly_verified"
+        )
+    assert all(
+        row.trajectory_comparison["trajectory_comparison_disposition"] == "not_comparable_expected_fail_closed"
+        for row in rows[8:]
+    )
 
 
 @pytest.fixture(scope="module")
@@ -647,11 +624,7 @@ def test_worker_emits_exact_pre_fourteen_payload_completion_frames(
         rows=complete_case_rows,
     )
     frames = [json.loads(line) for line in raw.splitlines()]
-    assert (
-        len(frames)
-        == module.REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT
-        == 16
-    )
+    assert len(frames) == module.REFERENCE_MINIMIZATION_VALIDATION_MATRIX_WORKER_FRAME_COUNT == 16
     assert [frame["frame_type"] for frame in frames] == [
         "preflight_complete",
         *(["case_payload"] * 14),
@@ -662,8 +635,7 @@ def test_worker_emits_exact_pre_fourteen_payload_completion_frames(
     assert all(frame["worker_request_sha256"] == request_sha256 for frame in frames)
     assert frames[0]["previous_frame_sha256"] is None
     assert all(
-        frame["previous_frame_sha256"] == previous["frame_sha256"]
-        for previous, frame in zip(frames, frames[1:])
+        frame["previous_frame_sha256"] == previous["frame_sha256"] for previous, frame in zip(frames, frames[1:])
     )
     result = module._decode_complete_matrix_worker_transcript(
         raw,
@@ -677,24 +649,17 @@ def test_worker_emits_exact_pre_fourteen_payload_completion_frames(
     assert evidence.native_mapping_lifetime_closure_claimed is False
     assert evidence.supervisor_child_process_id == 1
     assert evidence.worker_request_document == request
-    assert evidence.worker_request_byte_count == len(
-        module._canonical_bytes(request) + b"\n"
-    )
+    assert evidence.worker_request_byte_count == len(module._canonical_bytes(request) + b"\n")
     assert evidence.transcript_frame_count == 16
     assert evidence.canonical_transcript_reconstructed is True
     assert evidence.partial_prefix_frame_rows == ()
     assert evidence.raw_partial_not_independently_replayable is False
     assert len(evidence.case_frame_sha256_rows) == 14
-    assert evidence.retained_case_aggregate_sha256 == module._sha256(
-        [row.to_dict() for row in result.case_results]
-    )
+    assert evidence.retained_case_aggregate_sha256 == module._sha256([row.to_dict() for row in result.case_results])
     assert tuple(row[2] for row in evidence.case_frame_sha256_rows) == tuple(
         module._sha256(row.to_dict()) for row in result.case_results
     )
-    assert all(
-        row["coordinate_traces"]
-        for row in (frame["case_observation"] for frame in frames[1:15])
-    )
+    assert all(row["coordinate_traces"] for row in (frame["case_observation"] for frame in frames[1:15]))
 
 
 @pytest.mark.parametrize(
@@ -755,9 +720,7 @@ def test_supervisor_discards_every_payload_for_incomplete_or_tampered_transcript
     )
     assert len(result) == 14
     assert all(row.case_passed is False for row in result)
-    assert all(
-        row.observed_error_code == "runner_worker_output_invalid" for row in result
-    )
+    assert all(row.observed_error_code == "runner_worker_output_invalid" for row in result)
     evidence = result.worker_execution_evidence
     assert evidence.completion_state == "incomplete"
     assert evidence.case_frame_sha256_rows == ()
@@ -789,9 +752,7 @@ def test_timeout_after_partial_payload_discards_all_child_successes(
         succeeded=False,
     )
     assert len(result) == 14
-    assert all(
-        row.observed_error_code == "runner_wall_time_exhausted" for row in result
-    )
+    assert all(row.observed_error_code == "runner_wall_time_exhausted" for row in result)
     assert all(row.operational_result_sha256 is None for row in result)
     assert result.worker_execution_evidence.completion_state == "incomplete"
     assert result.worker_execution_evidence.case_frame_sha256_rows == ()
@@ -824,9 +785,7 @@ def test_nonzero_exit_discards_even_a_complete_valid_transcript(
         succeeded=False,
     )
     assert len(result) == 14
-    assert all(
-        row.observed_error_code == "runner_worker_output_invalid" for row in result
-    )
+    assert all(row.observed_error_code == "runner_worker_output_invalid" for row in result)
     assert result.worker_execution_evidence.completion_state == "incomplete"
 
 
@@ -911,16 +870,12 @@ def test_self_consistent_request_lifecycle_transplant_is_rejected_by_observation
         request=transplanted_request,
         rows=complete_case_rows,
     )
-    observation["worker_execution_evidence"] = (
-        transplanted.worker_execution_evidence.to_dict()
-    )
+    observation["worker_execution_evidence"] = transplanted.worker_execution_evidence.to_dict()
     with pytest.raises(
         ReferenceMinimizationValidationRunnerError,
         match="provenance identities are cross-wired",
     ):
-        module.require_reference_minimization_validation_run_observation_document(
-            observation
-        )
+        module.require_reference_minimization_validation_run_observation_document(observation)
 
 
 def test_frame_loader_rejects_duplicate_keys_and_noncanonical_transport() -> None:
@@ -955,6 +910,22 @@ def test_case_observation_rejects_missing_reordered_or_crosswired_trace_data() -
     drifted_ledger["coordinate_traces"][0]["accepted_energy_ledger"] = []
     mutations.append(drifted_ledger)
 
+    missing_comparison = deepcopy(source)
+    missing_comparison.pop("trajectory_comparison")
+    mutations.append(missing_comparison)
+
+    reordered_comparison_steps = deepcopy(source)
+    reordered_comparison_steps["trajectory_comparison"]["step_comparisons"].reverse()
+    mutations.append(reordered_comparison_steps)
+
+    crosswired_comparison = deepcopy(source)
+    crosswired_comparison["trajectory_comparison"]["case_id"] = "v1_mixed_term_energy_decrease"
+    mutations.append(crosswired_comparison)
+
+    nonfinite_comparison = deepcopy(source)
+    nonfinite_comparison["trajectory_comparison"]["energy_rms_error_kcal_per_mol"] = float("nan")
+    mutations.append(nonfinite_comparison)
+
     for payload in mutations:
         with pytest.raises(ReferenceMinimizationValidationRunnerError):
             module._case_observation_from_payload(payload)
@@ -979,9 +950,7 @@ def test_supervisor_hard_stops_a_stalled_child_and_retains_all_rows(
             self.calls = 0
             self.killed = False
 
-        def communicate(
-            self, *, input: bytes | None = None, timeout: float
-        ) -> tuple[bytes, bytes]:
+        def communicate(self, *, input: bytes | None = None, timeout: float) -> tuple[bytes, bytes]:
             self.calls += 1
             if self.calls == 1:
                 assert input == module._canonical_bytes(_worker_request()) + b"\n"
@@ -1053,9 +1022,7 @@ def test_supervisor_reaps_communication_failure_and_retains_fourteen_rows(
             self.calls = 0
             self.killed = False
 
-        def communicate(
-            self, *, input: bytes | None = None, timeout: float
-        ) -> tuple[bytes, bytes]:
+        def communicate(self, *, input: bytes | None = None, timeout: float) -> tuple[bytes, bytes]:
             self.calls += 1
             if self.calls == 1:
                 raise BrokenPipeError("secret")
@@ -1092,9 +1059,7 @@ def test_supervisor_reaps_communication_failure_and_retains_fourteen_rows(
         worker_preflight_request=_worker_request(),
     )
     assert len(rows) == 14
-    assert all(
-        row.observed_error_code == "runner_worker_output_invalid" for row in rows
-    )
+    assert all(row.observed_error_code == "runner_worker_output_invalid" for row in rows)
     assert process.killed is True
 
 
@@ -1116,16 +1081,14 @@ def test_supervisor_retains_only_bounded_prefix_when_worker_exceeds_output_cap(
     monkeypatch.setattr(
         module,
         "_communicate_fixed_matrix_worker",
-        lambda *_args, **_kwargs: (
-            native_identity.BoundedWorkerProcessCommunicationEvidence(
-                raw_output_prefix=retained_prefix,
-                timed_out=False,
-                output_exceeded=True,
-                communication_failed=False,
-                request_fully_written=True,
-                succeeded=False,
-                final_returncode=-9,
-            )
+        lambda *_args, **_kwargs: native_identity.BoundedWorkerProcessCommunicationEvidence(
+            raw_output_prefix=retained_prefix,
+            timed_out=False,
+            output_exceeded=True,
+            communication_failed=False,
+            request_fully_written=True,
+            succeeded=False,
+            final_returncode=-9,
         ),
     )
 
@@ -1137,9 +1100,7 @@ def test_supervisor_retains_only_bounded_prefix_when_worker_exceeds_output_cap(
     evidence = rows.worker_execution_evidence
     serialized = evidence.to_dict()
     assert len(rows) == 14
-    assert all(
-        row.observed_error_code == "runner_worker_output_invalid" for row in rows
-    )
+    assert all(row.observed_error_code == "runner_worker_output_invalid" for row in rows)
     assert evidence.completion_state == "incomplete"
     assert evidence.failure_stage == "worker_output_bound"
     assert evidence.supervisor_child_process_id == 17
@@ -1256,10 +1217,7 @@ def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(
     _install_preflight(monkeypatch)
     root = _root(tmp_path)
     observation = _run(root)
-    marker = (
-        root
-        / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
-    )
+    marker = root / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
     payload = marker.read_bytes()
     assert stat.S_IMODE(marker.stat().st_mode) == 0o600
     assert marker.stat().st_nlink == 1
@@ -1275,33 +1233,24 @@ def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(
     assert marker.exists()
 
 
-def test_manifest_failure_does_not_consume_start_marker(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_manifest_failure_does_not_consume_start_marker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _install_preflight(monkeypatch)
     root = _root(tmp_path)
     monkeypatch.setattr(
         module,
         "_validate_manifest_before_start",
-        lambda: (_ for _ in ()).throw(
-            ReferenceMinimizationValidationRunnerError("manifest tamper")
-        ),
+        lambda: (_ for _ in ()).throw(ReferenceMinimizationValidationRunnerError("manifest tamper")),
     )
     with pytest.raises(ReferenceMinimizationValidationRunnerError, match="tamper"):
         _run(root)
     assert list(root.iterdir()) == []
 
 
-def test_marker_reader_rejects_hardlink_and_tamper(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_marker_reader_rejects_hardlink_and_tamper(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _install_preflight(monkeypatch)
     root = _root(tmp_path)
     observation = _run(root)
-    marker = (
-        root
-        / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
-    )
+    marker = root / f"{module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX}{NONCE}.json"
     document = module.read_reference_minimization_validation_runner_start_record(
         root,
         NONCE,
@@ -1310,9 +1259,7 @@ def test_marker_reader_rejects_hardlink_and_tamper(
         expected_runner_source_sha256=observation.runner_source_sha256,
         expected_source_manifest_sha256=observation.source_manifest_sha256,
     )
-    assert document["runner_start_record_sha256"] == (
-        observation.runner_start_record_sha256
-    )
+    assert document["runner_start_record_sha256"] == (observation.runner_start_record_sha256)
     alias = tmp_path / "marker-alias"
     os.link(marker, alias)
     with pytest.raises(ReferenceMinimizationValidationRunnerError, match="securely"):
@@ -1339,9 +1286,7 @@ def test_marker_reader_rejects_hardlink_and_tamper(
         )
 
 
-def test_preflight_rejects_receipt_crosswire_before_marker(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_preflight_rejects_receipt_crosswire_before_marker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _install_preflight(monkeypatch)
     root = _root(tmp_path)
     receipt = _receipt()
@@ -1406,8 +1351,7 @@ def test_runner_request_rejects_noncanonical_or_self_authorizing_input_silently(
         json.dumps(request).encode("ascii") + b"\n",
         module._canonical_bytes(self_authorizing) + b"\n",
         duplicate_nested,
-        b"x" * module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_REQUEST_BYTES
-        + b"\n",
+        b"x" * module.REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_REQUEST_BYTES + b"\n",
     )
     calls = 0
 
@@ -1523,10 +1467,7 @@ def test_execute_runner_request_orders_environment_run_and_finalization(
         assert kwargs["trusted_reviewer_keys"] is reviewer_keys
         assert kwargs["expected_implementation_author_identity_sha256"] == "9" * 64
         assert kwargs["trusted_operator_keys"] is operator_keys
-        assert (
-            kwargs["network_isolation_attestation"]
-            is request["network_isolation_attestation"]
-        )
+        assert kwargs["network_isolation_attestation"] is request["network_isolation_attestation"]
         assert kwargs["expected_code_commit_sha"] == COMMIT_SHA
         assert kwargs["expected_runner_source_sha256"] == "8" * 64
         assert kwargs["expected_dependency_artifact_sha256_rows"] == dict(DEPENDENCIES)
@@ -1539,9 +1480,7 @@ def test_execute_runner_request_orders_environment_run_and_finalization(
     def run(*args: object, **kwargs: object) -> object:
         events.append("run")
         assert args == (request["artifact_output_root"], NONCE)
-        assert kwargs["expected_environment_receipt_sha256"] == (
-            environment.receipt_sha256
-        )
+        assert kwargs["expected_environment_receipt_sha256"] == (environment.receipt_sha256)
         assert kwargs["expected_code_commit_sha"] == COMMIT_SHA
         assert kwargs["expected_dependency_artifact_sha256_rows"] == dict(DEPENDENCIES)
         return observation
@@ -1619,12 +1558,7 @@ def test_entrypoint_emits_nothing_when_finalization_fails(
         "_execute_runner_request",
         lambda _request: (_ for _ in ()).throw(RuntimeError("secret")),
     )
-    assert (
-        module._main_from_canonical_request(
-            module._canonical_bytes(_runner_request()) + b"\n"
-        )
-        == 2
-    )
+    assert module._main_from_canonical_request(module._canonical_bytes(_runner_request()) + b"\n") == 2
     assert output.getvalue() == b""
 
 
@@ -1668,13 +1602,9 @@ def test_preconfigured_trust_store_parses_exact_ed25519_keys_and_stats(
 
     assert reviewer_keys["reviewer"].verification_key == b"\xaa" * 32
     assert operator_keys["operator"].verification_key == b"\xbb" * 32
-    module._validate_preconfigured_trust_directory(
-        SimpleNamespace(st_mode=stat.S_IFDIR | 0o755, st_uid=0)
-    )
+    module._validate_preconfigured_trust_directory(SimpleNamespace(st_mode=stat.S_IFDIR | 0o755, st_uid=0))
     with pytest.raises(ReferenceMinimizationValidationRunnerError):
-        module._validate_preconfigured_trust_directory(
-            SimpleNamespace(st_mode=stat.S_IFDIR | 0o777, st_uid=0)
-        )
+        module._validate_preconfigured_trust_directory(SimpleNamespace(st_mode=stat.S_IFDIR | 0o777, st_uid=0))
     validate_file(
         SimpleNamespace(
             st_mode=stat.S_IFREG | 0o600,
@@ -1698,11 +1628,7 @@ def test_preconfigured_trust_store_parses_exact_ed25519_keys_and_stats(
         module._canonical_bytes({**payload, "operator_keys": []}) + b"\n",
         (
             b'{"operator_keys":[],"operator_keys":[],"reviewer_keys":[],'
-            b'"schema_id":"'
-            + module.REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID.encode(
-                "ascii"
-            )
-            + b'"}\n'
+            b'"schema_id":"' + module.REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID.encode("ascii") + b'"}\n'
         ),
         module._canonical_bytes(payload),
     )
@@ -1773,17 +1699,11 @@ def test_preconfigured_trust_store_rejects_special_or_mutable_files() -> None:
         {"st_mode": stat.S_IFREG | 0o640},
         {"st_nlink": 2},
         {"st_size": 0},
-        {
-            "st_size": (
-                module.REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_MAX_BYTES + 1
-            )
-        },
+        {"st_size": (module.REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_MAX_BYTES + 1)},
     )
     for mutation in mutations:
         with pytest.raises(ReferenceMinimizationValidationRunnerError):
-            module._validate_preconfigured_trust_file(
-                SimpleNamespace(**{**valid, **mutation})
-            )
+            module._validate_preconfigured_trust_file(SimpleNamespace(**{**valid, **mutation}))
 
 
 def test_bootstrap_trust_store_open_is_nofollow_and_nonblocking(
@@ -1792,9 +1712,7 @@ def test_bootstrap_trust_store_open_is_nofollow_and_nonblocking(
     payload = (
         bootstrap._canonical_bytes(
             {
-                "schema_id": (
-                    bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID
-                ),
+                "schema_id": (bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID),
                 "reviewer_keys": [],
                 "operator_keys": [
                     {
@@ -1830,9 +1748,7 @@ def test_bootstrap_trust_store_open_is_nofollow_and_nonblocking(
     monkeypatch.setattr(bootstrap.os, "open", open_file)
     monkeypatch.setattr(bootstrap.os, "fstat", lambda descriptor: file_stat)
     monkeypatch.setattr(bootstrap.os, "read", lambda descriptor, size: next(reads))
-    monkeypatch.setattr(
-        bootstrap.os, "close", lambda descriptor: seen.setdefault("closed", descriptor)
-    )
+    monkeypatch.setattr(bootstrap.os, "close", lambda descriptor: seen.setdefault("closed", descriptor))
 
     keys = bootstrap._load_bootstrap_operator_keys()
     assert keys == {"operator": ("7" * 64, b"\xaa" * 32)}
@@ -1851,9 +1767,7 @@ def test_bootstrap_authorization_binds_nonce_author_and_dependencies_before_impo
         "authorization_key_id": "operator",
         "authorization_operator_identity_sha256": "7" * 64,
         "authorization_nonce_sha256": request["authorization_nonce_sha256"],
-        "implementation_author_identity_sha256": request[
-            "expected_implementation_author_identity_sha256"
-        ],
+        "implementation_author_identity_sha256": request["expected_implementation_author_identity_sha256"],
         "code_commit_sha": request["expected_code_commit_sha"],
         "runner_source_sha256": request["expected_runner_source_sha256"],
         "dependency_artifact_sha256_rows": [
@@ -1861,9 +1775,7 @@ def test_bootstrap_authorization_binds_nonce_author_and_dependencies_before_impo
         ],
     }
     signed = dict(projection)
-    signed["receipt_sha256"] = hashlib.sha256(
-        bootstrap._canonical_bytes(projection)
-    ).hexdigest()
+    signed["receipt_sha256"] = hashlib.sha256(bootstrap._canonical_bytes(projection)).hexdigest()
     signed["signature"] = {
         "algorithm": "ed25519",
         "key_id": "operator",
@@ -1960,9 +1872,7 @@ def test_minimization_bootstrap_outer_reexecs_before_reading_request(
     environment = seen["environment"]
     assert isinstance(environment, dict)
     assert environment["PYTHONHASHSEED"] == "0"
-    assert environment[
-        module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV
-    ] == str(2**63 - 1)
+    assert environment[module.REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV] == str(2**63 - 1)
     assert "PYTHONHOME" not in environment
 
 
@@ -2020,9 +1930,7 @@ def test_bootstrap_main_checks_source_and_dependencies_before_runner_import(
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, request, **kwargs: (
-            events.append("signed-clean") or source_manifest
-        ),
+        lambda repository_root, request, **kwargs: events.append("signed-clean") or source_manifest,
     )
     monkeypatch.setattr(
         bootstrap,
@@ -2080,9 +1988,7 @@ def test_bootstrap_main_blocks_runner_when_dependency_observation_fails(
     monkeypatch.setattr(
         bootstrap,
         "_require_observed_dependency_artifact_rows_before_import",
-        lambda repository_root, roots, request, **kwargs: (_ for _ in ()).throw(
-            RuntimeError("secret")
-        ),
+        lambda repository_root, roots, request, **kwargs: (_ for _ in ()).throw(RuntimeError("secret")),
     )
     monkeypatch.setattr(
         module,
@@ -2184,9 +2090,7 @@ def test_matrix_worker_preflight_failure_emits_no_case_rows_and_exits_nonzero(
     monkeypatch.setattr(
         module.sys,
         "stdin",
-        SimpleNamespace(
-            buffer=io.BytesIO(module._canonical_bytes(_worker_request()) + b"\n")
-        ),
+        SimpleNamespace(buffer=io.BytesIO(module._canonical_bytes(_worker_request()) + b"\n")),
     )
     monkeypatch.setattr(module.sys, "stdout", SimpleNamespace(buffer=output))
     monkeypatch.setattr(

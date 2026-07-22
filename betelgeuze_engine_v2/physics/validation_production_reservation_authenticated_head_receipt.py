@@ -60,16 +60,16 @@ from betelgeuze_engine_v2.physics.validation_production_review_authorization_cus
 
 
 VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_validation_production_reservation_authenticated_head_receipt_contract/1.0.0"
+    "betelgeuze.engine_v2_validation_production_reservation_authenticated_head_receipt_contract/2.0.0"
 )
 VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_ID = (
-    "engine_v2_validation_production_reservation_authenticated_head_receipt/1.0.0"
+    "engine_v2_validation_production_reservation_authenticated_head_receipt/2.0.0"
 )
 VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_VERSION = (
-    "1.0.0"
+    "2.0.0"
 )
 VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_FROZEN_AT_UTC = (
-    "2026-07-19T18:20:00Z"
+    "2026-07-22T00:00:00Z"
 )
 PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_external_reservation_authenticated_head_receipt/1.0.0"
@@ -83,6 +83,9 @@ PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_MAX_VALIDITY = timedelta(
     minutes=15
 )
 FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256 = (
+    "e2e749bf91ee7961cc8b9890ec36e58602be85e23949cb8bec4e8587bc316d72"
+)
+FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256_V1 = (
     "0e9ddbab2978ad679eb040faebaa49524d08a59a939d22e7f38029d2fc4b1639"
 )
 
@@ -1390,6 +1393,7 @@ def validation_production_reservation_authenticated_head_receipt_decision() -> d
 
 
 __all__ = [
+    "FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256_V1",
     "FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256",
     "PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_MAX_AGE",
     "PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_MAX_BYTES",

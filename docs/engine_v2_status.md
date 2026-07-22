@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ao_minimization_validation_production_entrypoint
+v2_ap_minimization_trajectory_comparison
 ```
 
 The current `main` branch contains:
@@ -243,8 +243,20 @@ The current `main` branch contains:
   preserves complete ordered operational and independent-oracle coordinate
   traces with canonical binary64 raw/evaluated coordinates, per-step coordinate
   and identity digests, whole-trace digests, exact counts, and accepted-energy
-  ledgers, compares operational endpoints with the import-separated independent
-  oracle, and verifies exact checkpoint/restart equality under a 120-second budget.
+  ledgers. A frozen trajectory-comparison contract aligns every evaluation by
+  index, iteration, trial, and outcome; applies predefined coordinate `1e-8 Å`
+  and energy `1e-10 kcal/mol` max/RMS limits; retains branch, rejection, count,
+  and expected-failure dispositions; and binds uninterrupted, paused, and
+  resumed result/checkpoint/trajectory digests for three checkpoint cases. The
+  runner, writer, and independent result-review verifier recompute this evidence
+  and reject omission, reorder, cross-wire, non-finite values, or digest tamper.
+  A non-production in-process 14-case implementation check passes all 14
+  comparison rows, including both fixed-Born rows, and exact restart equality
+  for all three checkpoint cases. The observed implementation-only maxima are
+  `3.907985046680551e-14 kcal/mol` for trajectory energy and
+  `1.6653345369377348e-15 Å` for raw/evaluated coordinates, within the frozen
+  pre-observation bounds; six expected fail-closed rows remain explicitly
+  non-comparable and there are no unexpected failures.
   The production entrypoint now rejects a caller-owned mutable checkout and
   requires the complete Engine v2 package tree to be a canonical root-owned,
   non-replaceable source snapshot before package import. The current development
@@ -278,10 +290,12 @@ The current `main` branch contains:
   external launch authenticity or durable uniqueness. Final signed
   evidence-class carrier propagation and external custody remain blockers. The
   active energy-force base chain uses v2 identities
-  with a v4 runner/result writer; the active minimization base chain uses v3
-  identities with a v6 runner and v5 result writer/result review. Their hashes were
+  with a v4 runner/result writer; the active minimization base chain uses v4
+  review/execution-environment identities, v5 authorization/result-receipt/
+  nonce/run-start identities, a v8 runner, and v7 result writer/result review.
+  Their hashes were
   refrozen through the full upstream dependency DAG. A separate read-only
-  verifier recognizes 36 superseded contract documents by canonical projection
+  verifier recognizes 63 superseded contract documents by canonical projection
   hash. Superseded signed attestations, receipts, and run records are not
   supported and no compatibility claim is made for them.
   The energy-force lane now has a frozen Ed25519 result-review leaf with full
@@ -366,11 +380,12 @@ The current `main` branch contains:
   hidden sibling certificate. Realm-wide non-equivocation and every promotion
   fact remain false, and no policy, keys, proof, journals, or post-quorum status
   are provisioned.
-  Runtime-integrity companion v10 binds the exact frozen custody-v1,
+  Runtime-integrity companion v12 additionally binds the refrozen minimization
+  trajectory-comparison contract together with the exact frozen custody-v1,
   review/authorization, reservation, external registry-proof, authenticated
   head/status receipt, later-head consistency, and process-launch-identity
-  contract SHA-256 values including the witness-quorum contract; runtime v8 and
-  v9 are retained in the read-only legacy registry.
+  contract SHA-256 values including the witness-quorum contract; runtime v8
+  through v11 are retained in the read-only legacy registry.
   The separate process-launch measurement primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
@@ -581,11 +596,12 @@ not currently establish:
   result receipt, or accepted energy/force evidence; test-only synthetic
   observations and receipts are implementation checks, not production
   validation results or parameter-fit data;
-- a trajectory-level minimization comparison, reproduction on two CPU hosts, or
-  independent external-implementation comparison; complete ordered coordinate
-  traces are now retained and dispositioned in the test-only receipt/review
-  contract, but that integrity evidence alone does not satisfy the remaining S0
-  scientific or production exit conditions;
+- an accepted production trajectory-level minimization comparison, reproduction
+  on two CPU hosts, or independent external-implementation comparison; the
+  refrozen v2.1 comparison contract and non-production 14/14 implementation
+  result do not satisfy the remaining S0 scientific or production exit
+  conditions, and no production result has been dispositioned by an independent
+  human reviewer;
 - a shipped production/reference parameter set, reviewed caller-supplied
   parameter values, a Sage-to-runtime value binding, or a scientifically
   validated molecule/element/charge applicability domain; the H5 runtime

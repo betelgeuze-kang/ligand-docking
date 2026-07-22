@@ -9,8 +9,10 @@ from pathlib import Path
 import pytest
 
 from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol import (
+    CPU_MINIMIZATION_VALIDATION_PROTOCOL_REFREEZE_REASON,
     CPU_MINIMIZATION_VALIDATION_PROTOCOL_SCHEMA_ID,
     FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
+    SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
     CPUMinimizationValidationProtocolError,
     cpu_minimization_validation_authorization_decision,
     cpu_minimization_validation_case_atom_count,
@@ -42,7 +44,16 @@ def test_protocol_freezes_exact_source_case_and_metric_identities() -> None:
         FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
     )
     assert FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 == (
+        "41be727dca217152ec57c7194f128196f4cd7e88c7297ffe68bccaf64274d7cb"
+    )
+    assert SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 == (
         "46c775ea0c815b4414f02d6613984ad7117aa488787fb7f9b23889c591f0812c"
+    )
+    assert document["superseded_protocol_sha256"] == (
+        SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
+    )
+    assert document["refreeze_reason"] == (
+        CPU_MINIMIZATION_VALIDATION_PROTOCOL_REFREEZE_REASON
     )
     assert document["dependencies"]["exact_source_identity_required_at_execution"]
     source_hashes = document["dependencies"]["source_sha256"]

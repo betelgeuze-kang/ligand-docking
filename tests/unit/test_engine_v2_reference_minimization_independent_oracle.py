@@ -13,9 +13,12 @@ from betelgeuze_engine_v2.physics.reference_minimization import (
     minimize_reference_force_field,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_independent_oracle import (
+    INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE,
     IndependentMinimizationCoordinateTraceStep,
     IndependentMinimizationOracleError,
     _checkpoint,
+    _constraint_residual,
+    _project_constraints,
     evaluate_independent_minimization_oracle,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_materializer import (
@@ -77,6 +80,47 @@ def test_all_frozen_cases_bind_result_free_independent_inputs() -> None:
         )
         assert materialized_row["minimization_executed"] is False
         assert materialized_row["validation_result_collected"] is False
+
+
+def test_independent_projection_uses_separate_half_tolerance_headroom() -> None:
+    case = materialize_frozen_cpu_minimization_validation_case(
+        "v2_fixed_born_constrained_energy_decrease"
+    )
+    tolerance = 1.0e-10
+    coordinates = (
+        (0.0, 0.0, 0.0),
+        (1.0 + 0.75 * tolerance, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+    )
+    source = replace(
+        case.independent_oracle_input,
+        constraints=((0, 1, 1.0, tolerance),),
+        constraint_projection_max_iterations=2,
+    )
+    initial_residual = abs(
+        _constraint_residual(coordinates, source.constraints[0], source.energy_input)
+    )
+    assert initial_residual <= tolerance
+    assert initial_residual > (
+        INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+        * tolerance
+    )
+
+    projected, residual, converged, failure_code = _project_constraints(
+        coordinates,
+        source,
+    )
+
+    assert converged is True
+    assert failure_code is None
+    assert projected != coordinates
+    assert residual <= (
+        INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+        * tolerance
+    )
+    assert source.to_dict()[
+        "constraint_projection_convergence_tolerance_scale"
+    ] == INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
 
 
 @pytest.mark.parametrize("case_id", PASS_CASE_IDS)

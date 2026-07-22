@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_ao_minimization_validation_production_entrypoint
+implementation_stage: v2_ap_minimization_trajectory_comparison
 
 claim_policy:
   customer_execution_enabled: false
@@ -904,7 +904,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_cpu_reference_minimization_validation_protocol:
-    current_state: failure_inclusive_complete_coordinate_trace_production_entrypoint_result_writer_and_independent_result_review_contract_without_production_result_receipt_or_review
+    current_state: failure_inclusive_complete_coordinate_trace_checkpoint_restart_trajectory_comparison_contract_and_result_review_without_production_result_receipt_or_review
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -938,7 +938,6 @@ capabilities:
       - signed_independent_result_review_attestation_missing
       - trusted_independent_result_reviewer_key_not_provided
       - implementation_author_and_independent_result_reviewer_separation_not_attested
-      - trajectory_level_minimization_comparison_missing
       - two_cpu_host_reproducibility_missing
       - independent_external_implementation_comparison_missing
       - reviewed_runtime_parameter_values_not_bound
@@ -1122,5 +1121,7 @@ promotion_requirements:
   require_public_evidence_attestation: true
   require_reviewed_external_baseline_results: true
   require_validated_independent_physics: true
+  require_predefined_minimization_trajectory_thresholds: true
+  require_minimization_checkpoint_restart_equality: true
   require_gpu_parity_before_acceleration_claim: true
   external_state_mutated: false

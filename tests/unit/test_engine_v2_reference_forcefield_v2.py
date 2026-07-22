@@ -24,6 +24,7 @@ from betelgeuze_engine_v2.molecular import (  # noqa: E402
     canonical_topology_sha256,
 )
 from betelgeuze_engine_v2.physics.reference_forcefield_v2 import (  # noqa: E402
+    REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE,
     REFERENCE_FORCEFIELD_V2_SCIENTIFIC_BLOCKERS,
     DistanceConstraintParameter,
     DistanceConstraintProjectionConfig,
@@ -380,6 +381,34 @@ def test_distance_constraint_projection_converges_deterministically_and_preserve
     assert not first.scientifically_validated
 
 
+def test_projection_convergence_retains_half_tolerance_roundoff_headroom() -> None:
+    tolerance = 1.0e-10
+    initial_distance = 1.0 + 0.75 * tolerance
+    system = _free_system(
+        torch.tensor(
+            [[[0.0, 0.0, 0.0], [initial_distance, 0.0, 0.0]]],
+            dtype=torch.float64,
+        )
+    )
+    parameters = _free_v2_parameters(
+        system,
+        (DistanceConstraintParameter(0, 1, 1.0, tolerance_angstrom=tolerance),),
+    )
+
+    result = project_distance_constraints(system, parameters)
+
+    assert result.iterations[0].constraint_observations[0].satisfied is True
+    assert len(result.iterations) == 2
+    assert result.converged
+    assert result.final_observation.max_absolute_residual_angstrom <= (
+        REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+        * tolerance
+    )
+    assert DistanceConstraintProjectionConfig().to_dict()[
+        "convergence_tolerance_scale"
+    ] == REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+
+
 def test_periodic_constraint_uses_minimum_image_distance() -> None:
     system = _free_system(
         torch.tensor([[[0.1, 0.0, 0.0], [9.7, 0.0, 0.0]]], dtype=torch.float64),
@@ -518,6 +547,7 @@ def test_collinear_improper_plane_fails_closed() -> None:
         ({"max_iterations": 0}, "max_iterations"),
         ({"max_iterations": 1001}, "max_iterations"),
         ({"max_pair_correction_angstrom": 0.0}, "max_pair_correction"),
+        ({"convergence_tolerance_scale": 1.0}, "frozen value"),
     ),
 )
 def test_constraint_projection_config_is_bounded(

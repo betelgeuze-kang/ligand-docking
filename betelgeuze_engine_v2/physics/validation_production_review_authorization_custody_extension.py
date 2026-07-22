@@ -85,15 +85,15 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
 
 VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SCHEMA_ID = (
     "betelgeuze.engine_v2_validation_production_review_authorization_custody_"
-    "extension_contract/1.0.0"
+    "extension_contract/3.0.0"
 )
 VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_ID = (
     "engine_v2_synthetic_validation_production_review_authorization_custody_"
-    "extension/1.0.0"
+    "extension/3.0.0"
 )
-VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_VERSION = "1.0.0"
+VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_VERSION = "3.0.0"
 VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_FROZEN_AT_UTC = (
-    "2026-07-19T04:30:00Z"
+    "2026-07-22T01:17:31Z"
 )
 PRODUCTION_PRE_EXECUTION_REVIEW_CARRIER_SCHEMA_ID = (
     "betelgeuze.engine_v2_production_pre_execution_review_carrier/1.0.0"
@@ -132,6 +132,12 @@ PRODUCTION_REVIEW_AUTHORIZATION_MAX_STATUS_LINEAGE_TOTAL_BYTES = 16 * 1024 * 102
 # Filled after the canonical projection is finalized.  Contract access fails
 # closed if any later edit changes the projection.
 FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256 = (
+    "b41e48da2d11118e3e3fabae0ef83694f4b0fbebb28b6f46cb6ab39613f961c3"
+)
+FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2 = (
+    "d7c0a32d52777b3406cd7e820e36addd5d7e98af7662f9400d6f1b450ee8dda3"
+)
+FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V1 = (
     "3cb1d5c4289ac5026e5cbc8dc623239469f0fafe8bdce2ffc32bac11cfa549db"
 )
 
@@ -4677,6 +4683,10 @@ def _contract_projection() -> dict[str, Any]:
         "frozen_at_utc": (
             VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_FROZEN_AT_UTC
         ),
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2
+        ),
+        "refreeze_reason": "binds_refrozen_minimization_projection_headroom_review_authorization_chain",
         "purpose": {
             "additive_companion_only": True,
             "base_custody_v1_modified": False,
@@ -4920,6 +4930,8 @@ def validation_production_review_authorization_custody_extension_decision() -> d
 
 
 __all__ = [
+    "FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2",
+    "FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V1",
     "FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256",
     "PRODUCTION_AUTHORIZATION_CARRIER_SCHEMA_ID",
     "PRODUCTION_AUTHORIZATION_CARRIER_MAX_VALIDITY",

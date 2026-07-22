@@ -33,11 +33,12 @@ REFERENCE_FORCEFIELD_V2_EVALUATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_forcefield_evaluation/2.0.0"
 )
 REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_distance_constraint_projection/2.0.0"
+    "betelgeuze.engine_v2_distance_constraint_projection/2.1.0"
 )
 REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONFIG_SCHEMA_ID = (
-    "betelgeuze.engine_v2_distance_constraint_projection_config/2.0.0"
+    "betelgeuze.engine_v2_distance_constraint_projection_config/2.1.0"
 )
+REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE = 0.5
 REFERENCE_FORCEFIELD_V2_MAX_IMPROPERS = 4_096
 REFERENCE_FORCEFIELD_V2_MAX_CONSTRAINTS = 4_096
 REFERENCE_CONSTRAINT_PROJECTION_MAX_ITERATIONS = 1_000
@@ -547,6 +548,21 @@ def _constraint_observations(
     return tuple(rows)
 
 
+def _constraint_projection_converged(
+    observations: tuple[DistanceConstraintObservation, ...],
+) -> bool:
+    """Require projection headroom while retaining the declared acceptance tolerance."""
+
+    return all(
+        abs(row.residual_angstrom)
+        <= (
+            REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+            * row.tolerance_angstrom
+        )
+        for row in observations
+    )
+
+
 def evaluate_reference_force_field_v2(
     system: AllAtomSystem,
     neighbors: CompactNeighborList,
@@ -629,6 +645,9 @@ def evaluate_reference_force_field_v2(
 class DistanceConstraintProjectionConfig:
     max_iterations: int = 100
     max_pair_correction_angstrom: float = 0.25
+    convergence_tolerance_scale: float = (
+        REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+    )
     schema_id: str = REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONFIG_SCHEMA_ID
 
     def __post_init__(self) -> None:
@@ -655,6 +674,21 @@ class DistanceConstraintProjectionConfig:
                 maximum=100.0,
             ),
         )
+        convergence_tolerance_scale = _finite_float(
+            self.convergence_tolerance_scale,
+            name="convergence_tolerance_scale",
+        )
+        if convergence_tolerance_scale != (
+            REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+        ):
+            raise ReferenceForceFieldV2Error(
+                "convergence_tolerance_scale must equal the frozen value"
+            )
+        object.__setattr__(
+            self,
+            "convergence_tolerance_scale",
+            convergence_tolerance_scale,
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -665,6 +699,7 @@ class DistanceConstraintProjectionConfig:
             ),
             "max_iterations": self.max_iterations,
             "max_pair_correction_angstrom": self.max_pair_correction_angstrom,
+            "convergence_tolerance_scale": self.convergence_tolerance_scale,
         }
 
     @property
@@ -742,7 +777,11 @@ def project_distance_constraints(
     parameters: ReferenceForceFieldV2Parameters,
     config: DistanceConstraintProjectionConfig | None = None,
 ) -> DistanceConstraintProjectionResult:
-    """Project distances with symmetric degree-relaxed equal-weight Jacobi sweeps."""
+    """Project distances with symmetric degree-relaxed equal-weight Jacobi sweeps.
+
+    Projection convergence uses half the declared constraint tolerance so the
+    externally reported acceptance bound retains binary64 round-off headroom.
+    """
 
     config = DistanceConstraintProjectionConfig() if config is None else config
     if not isinstance(config, DistanceConstraintProjectionConfig):
@@ -787,7 +826,7 @@ def project_distance_constraints(
     observe(0)
     status = "converged"
     failure_code: str | None = None
-    if not all(row.satisfied for row in rows[-1].constraint_observations):
+    if not _constraint_projection_converged(rows[-1].constraint_observations):
         constraint_degrees = [0] * system.atom_count
         for constraint in parameters.constraints:
             constraint_degrees[constraint.atom_i] += 1
@@ -824,7 +863,9 @@ def project_distance_constraints(
             observe(iteration, failure_code if degenerate else None)
             if degenerate:
                 break
-            if all(row.satisfied for row in rows[-1].constraint_observations):
+            if _constraint_projection_converged(
+                rows[-1].constraint_observations
+            ):
                 status = "converged"
                 failure_code = None
                 break
@@ -860,6 +901,7 @@ def project_distance_constraints(
 
 __all__ = [
     "REFERENCE_CONSTRAINT_PROJECTION_MAX_ITERATIONS",
+    "REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE",
     "REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_CONFIG_SCHEMA_ID",
     "REFERENCE_DISTANCE_CONSTRAINT_PROJECTION_SCHEMA_ID",
     "REFERENCE_FORCEFIELD_V2_EVALUATION_SCHEMA_ID",

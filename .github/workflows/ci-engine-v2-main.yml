@@ -193,6 +193,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py
             tests/unit/test_engine_v2_reference_minimization_validation_result_review.py
+            tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
@@ -334,6 +335,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_review.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
@@ -427,6 +429,7 @@ jobs:
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256,
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
               FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
               FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256,
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
@@ -448,6 +451,7 @@ jobs:
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
@@ -487,6 +491,8 @@ jobs:
               reference_minimization_validation_run_start_contract_document,
               reference_minimization_validation_result_review_contract_decision,
               reference_minimization_validation_result_review_contract_document,
+              reference_minimization_validation_trajectory_comparison_contract_decision,
+              reference_minimization_validation_trajectory_comparison_contract_document,
               process_launch_identity_contract_document,
               process_launch_identity_decision,
               validation_production_evidence_custody_contract_document,
@@ -512,7 +518,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_ao_minimization_validation_production_entrypoint"
+          assert capability_snapshot()["implementation_stage"] == "v2_ap_minimization_trajectory_comparison"
           assert len(capability_snapshot()["capabilities"]) == 45
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (
@@ -526,6 +532,13 @@ jobs:
               FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
           )
           runtime_integrity = validation_runtime_integrity_contract_document()
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "minimization_trajectory_comparison_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+              == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+          )
           assert (
               runtime_integrity["bound_contracts"][
                   "production_evidence_custody_contract_sha256"
@@ -751,6 +764,14 @@ jobs:
           minimization_result_review_decision = reference_minimization_validation_result_review_contract_decision()
           assert minimization_result_review_decision["result_review_attestation_present"] is False
           assert minimization_result_review_decision["result_receipt_accepted"] is False
+          minimization_trajectory_comparison = reference_minimization_validation_trajectory_comparison_contract_document()
+          assert minimization_trajectory_comparison["contract_sha256"] == (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+          )
+          minimization_trajectory_comparison_decision = reference_minimization_validation_trajectory_comparison_contract_decision()
+          assert minimization_trajectory_comparison_decision["trajectory_comparison_contract_frozen"] is True
+          assert minimization_trajectory_comparison_decision["production_comparison_receipt_present"] is False
+          assert minimization_trajectory_comparison_decision["s0_accepted"] is False
           assert DockingProblemIdentity.unbound().fingerprint_sha256
           assert ExternalBaselineEngine(
               engine_id="vina",

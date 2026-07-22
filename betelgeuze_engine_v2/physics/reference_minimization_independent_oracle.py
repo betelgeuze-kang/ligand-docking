@@ -26,18 +26,19 @@ from .reference_validation_oracle import (
 
 
 INDEPENDENT_MINIMIZATION_ORACLE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_independent_minimization_oracle/2.0.0"
+    "betelgeuze.engine_v2_independent_minimization_oracle/2.1.0"
 )
 INDEPENDENT_MINIMIZATION_ORACLE_INPUT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_independent_minimization_oracle_input/1.0.0"
+    "betelgeuze.engine_v2_independent_minimization_oracle_input/1.1.0"
 )
 INDEPENDENT_MINIMIZATION_ORACLE_CHECKPOINT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_independent_minimization_oracle_checkpoint/2.0.0"
+    "betelgeuze.engine_v2_independent_minimization_oracle_checkpoint/2.1.0"
 )
 INDEPENDENT_MINIMIZATION_ORACLE_ID = (
-    "cpu_reference_minimization_independent_oracle/2.0.0"
+    "cpu_reference_minimization_independent_oracle/2.1.0"
 )
-INDEPENDENT_MINIMIZATION_ORACLE_VERSION = "2.0.0"
+INDEPENDENT_MINIMIZATION_ORACLE_VERSION = "2.1.0"
+INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE = 0.5
 
 
 class IndependentMinimizationOracleError(ValueError):
@@ -572,6 +573,9 @@ class IndependentMinimizationOracleInput:
             "constraint_max_pair_correction_angstrom": (
                 self.constraint_max_pair_correction_angstrom
             ),
+            "constraint_projection_convergence_tolerance_scale": (
+                INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+            ),
             "force_projection_max_sweeps": self.force_projection_max_sweeps,
             "force_projection_tolerance_kcal_per_mol_angstrom": (
                 self.force_projection_tolerance_kcal_per_mol_angstrom
@@ -886,7 +890,12 @@ def _project_constraints(
         )
         maximum = max((abs(value) for value in residuals), default=0.0)
         if all(
-            abs(value) <= row[3] for value, row in zip(residuals, source.constraints)
+            abs(value)
+            <= (
+                INDEPENDENT_MINIMIZATION_CONSTRAINT_PROJECTION_CONVERGENCE_TOLERANCE_SCALE
+                * row[3]
+            )
+            for value, row in zip(residuals, source.constraints)
         ):
             return current, maximum, True, None
         if iteration == source.constraint_projection_max_iterations:

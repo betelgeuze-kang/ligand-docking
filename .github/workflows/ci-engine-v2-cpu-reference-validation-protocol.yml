@@ -21,6 +21,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_result_review.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -76,6 +77,7 @@ on:
       - "tests/unit/test_engine_v2_reference_minimization_validation_runner.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_result_review.py"
+      - "tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_validation_artifacts.py"
       - "tests/unit/test_engine_v2_reference_validation_review.py"
@@ -157,6 +159,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py
             tests/unit/test_engine_v2_reference_minimization_validation_result_review.py
+            tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py
             tests/unit/test_engine_v2_reference_validation_artifacts.py
             tests/unit/test_engine_v2_reference_validation_review.py
@@ -230,6 +233,7 @@ jobs:
             betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_result_writer.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_result_review.py \
+            betelgeuze_engine_v2/physics/reference_minimization_validation_trajectory_comparison.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_validation_oracle.py \
@@ -271,6 +275,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_review.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -312,6 +317,7 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_runner.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_writer.py \
             tests/unit/test_engine_v2_reference_minimization_validation_result_review.py \
+            tests/unit/test_engine_v2_reference_minimization_validation_trajectory_comparison.py \
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_validation_artifacts.py \
             tests/unit/test_engine_v2_reference_validation_review.py \
@@ -352,6 +358,7 @@ jobs:
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256,
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256,
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256,
               FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256,
               FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
@@ -371,6 +378,7 @@ jobs:
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
@@ -425,6 +433,8 @@ jobs:
               reference_minimization_validation_result_writer_contract_document,
               reference_minimization_validation_result_review_contract_decision,
               reference_minimization_validation_result_review_contract_document,
+              reference_minimization_validation_trajectory_comparison_contract_decision,
+              reference_minimization_validation_trajectory_comparison_contract_document,
           )
 
           loaded = yaml.safe_load(
@@ -434,7 +444,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 45
-          assert loaded["implementation_stage"] == "v2_ao_minimization_validation_production_entrypoint"
+          assert loaded["implementation_stage"] == "v2_ap_minimization_trajectory_comparison"
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (
               FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
@@ -447,6 +457,13 @@ jobs:
               FROZEN_VALIDATION_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256
           )
           runtime_integrity = validation_runtime_integrity_contract_document()
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "minimization_trajectory_comparison_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+              == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+          )
           assert (
               runtime_integrity["bound_contracts"][
                   "production_evidence_custody_contract_sha256"
@@ -690,6 +707,14 @@ jobs:
           assert minimization_result_review_decision["result_review_attestation_present"] is False
           assert minimization_result_review_decision["independent_result_review_verified"] is False
           assert minimization_result_review_decision["result_receipt_accepted"] is False
+          minimization_trajectory_comparison = reference_minimization_validation_trajectory_comparison_contract_document()
+          assert minimization_trajectory_comparison["contract_sha256"] == (
+              FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
+          )
+          minimization_trajectory_comparison_decision = reference_minimization_validation_trajectory_comparison_contract_decision()
+          assert minimization_trajectory_comparison_decision["trajectory_comparison_contract_frozen"] is True
+          assert minimization_trajectory_comparison_decision["production_comparison_receipt_present"] is False
+          assert minimization_trajectory_comparison_decision["s0_accepted"] is False
           binding = reference_validation_artifact_binding_document()
           assert binding["binding_sha256"] == FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256
           decision = reference_validation_artifact_authorization_decision(binding)

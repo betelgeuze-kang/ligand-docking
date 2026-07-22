@@ -492,7 +492,7 @@ def test_anchor_and_common_lineage_match_independent_golden_projections(
             "betelgeuze.engine_v2_external_reservation_witness_fork_scope/1.0.0"
         ),
         "witness_quorum_contract_sha256": (
-            "d7962b6a48fc25c0ff5ce83ad784800a50defa0f3d2022b2deed9ac3ce53f3f4"
+            FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
         ),
         "witness_quorum_policy_sha256": document[
             "witness_quorum_policy_sha256"
@@ -516,7 +516,7 @@ def test_anchor_and_common_lineage_match_independent_golden_projections(
     }
     fork_scope_sha256 = _sha256(fork_projection)
     assert fork_scope_sha256 == (
-        "16aeffdb22e1f1db17d3078d69fe19753cad5e2ddb2facafc78d3425aa3a94c1"
+        "ef0d2eeeaec82947fdea40728bdb07d7abb16f217f3dc1aca581a40c42f4cd5d"
     )
     assert document["fork_scope"] == {
         **fork_projection,
@@ -549,7 +549,7 @@ def test_anchor_and_common_lineage_match_independent_golden_projections(
     }
     common_lineage_sha256 = _sha256(common_projection)
     assert common_lineage_sha256 == (
-        "ae9689a453681350bd594f015c8df3448c3848c1fcabdf3f501bd0a39966b2d6"
+        "ce660b331d7262a73eb0e0acb86458bb73e3693dd5866cd8ba297af616b35848"
     )
     assert document["common_lineage_statement"] == {
         **common_projection,

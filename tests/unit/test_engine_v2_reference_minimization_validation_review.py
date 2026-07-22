@@ -12,6 +12,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 impo
     ed25519_public_key_bytes,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_review import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
     REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID,
@@ -93,6 +94,9 @@ def test_review_contract_is_frozen_dependency_bound_and_result_free() -> None:
     assert (
         first["contract_sha256"]
         == FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256
+    )
+    assert first["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V3
     )
     assert (
         first["dependencies"]["artifact_binding_sha256"]

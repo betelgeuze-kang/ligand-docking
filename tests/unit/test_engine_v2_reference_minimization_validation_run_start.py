@@ -27,6 +27,8 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_review impor
     build_signed_reference_minimization_validation_review_attestation,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_run_start import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_APPLICATION_SEED_ENV,
     REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID,
@@ -92,9 +94,7 @@ DEPENDENCY_MANIFEST = dependency_identity._dependency_manifest_document(
         )
     ]
 )
-DEPENDENCY_ROWS = {
-    row["artifact_id"]: row["sha256"] for row in DEPENDENCY_MANIFEST["artifacts"]
-}
+DEPENDENCY_ROWS = {row["artifact_id"]: row["sha256"] for row in DEPENDENCY_MANIFEST["artifacts"]}
 SOURCE_MANIFEST = source_identity._manifest_document(
     CODE_COMMIT_SHA,
     [
@@ -289,9 +289,7 @@ def _network_attestation(
         code_commit_sha=CODE_COMMIT_SHA,
         runner_source_sha256=RUNNER_SOURCE_SHA256,
         artifact_output_root_identity_sha256=(
-            reference_minimization_validation_artifact_output_root_identity_sha256(
-                output_root
-            )
+            reference_minimization_validation_artifact_output_root_identity_sha256(output_root)
         ),
         network_namespace_identity_sha256=namespace_sha256,
         observed_at=observed_at,
@@ -341,28 +339,21 @@ def test_run_start_contract_is_frozen_and_current_decision_is_closed() -> None:
     decision = reference_minimization_validation_run_start_contract_decision()
 
     assert first == second
-    assert (
-        first["schema_id"]
-        == REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID
+    assert first["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID
+    assert first["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256)
+    assert first["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4
     )
-    assert first["contract_sha256"] == (
-        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256
+    assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V3
+        == "ca0b546fe9c5a43b5ff625ed17413af25b768c5be981805085eb507ad9795cec"
     )
     assert first["network_isolation"]["signature_algorithm"] == "ed25519"
     assert first["network_isolation"]["verifier_uses_operator_public_key_only"] is True
-    assert (
-        first["runtime_observation"]["arbitrary_or_secret_bearing_argv_allowed"]
-        is False
-    )
-    assert (
-        first["network_isolation"]["kernel_network_isolation_enforced_by_this_library"]
-        is False
-    )
+    assert first["runtime_observation"]["arbitrary_or_secret_bearing_argv_allowed"] is False
+    assert first["network_isolation"]["kernel_network_isolation_enforced_by_this_library"] is False
     assert first["persistence"]["release_or_delete_api_provided"] is False
-    assert (
-        require_reference_minimization_validation_run_start_contract_document(first)
-        == first
-    )
+    assert require_reference_minimization_validation_run_start_contract_document(first) == first
 
     assert decision["run_start_environment_primitive_implemented"] is True
     assert decision["production_environment_receipt_present"] is False
@@ -423,19 +414,15 @@ def test_signed_network_attestation_verifies_exact_authorization_and_namespace(
     receipt = _authorization_receipt(review=review)
     output_root = _private_root(tmp_path, "outputs")
     attestation = _network_attestation(receipt, output_root)
-    verification = (
-        verify_signed_reference_minimization_validation_network_isolation_attestation(
-            attestation,
-            trusted_operator_keys=_trust_inputs()["trusted_operator_keys"],  # type: ignore[arg-type]
-            checked_at=NOW,
-            expected_authorization=_verified_authorization(review, receipt),
-            expected_artifact_output_root_identity_sha256=(
-                reference_minimization_validation_artifact_output_root_identity_sha256(
-                    output_root
-                )
-            ),
-            expected_network_namespace_identity_sha256=NETWORK_NAMESPACE_IDENTITY,
-        )
+    verification = verify_signed_reference_minimization_validation_network_isolation_attestation(
+        attestation,
+        trusted_operator_keys=_trust_inputs()["trusted_operator_keys"],  # type: ignore[arg-type]
+        checked_at=NOW,
+        expected_authorization=_verified_authorization(review, receipt),
+        expected_artifact_output_root_identity_sha256=(
+            reference_minimization_validation_artifact_output_root_identity_sha256(output_root)
+        ),
+        expected_network_namespace_identity_sha256=NETWORK_NAMESPACE_IDENTITY,
     )
 
     assert verification.attestation_sha256 == attestation["attestation_sha256"]
@@ -456,49 +443,37 @@ def test_network_attestation_rejects_tamper_crosswire_expiry_and_revocation(
         "checked_at": NOW,
         "expected_authorization": expected_authorization,
         "expected_artifact_output_root_identity_sha256": (
-            reference_minimization_validation_artifact_output_root_identity_sha256(
-                output_root
-            )
+            reference_minimization_validation_artifact_output_root_identity_sha256(output_root)
         ),
         "expected_network_namespace_identity_sha256": NETWORK_NAMESPACE_IDENTITY,
     }
 
     tampered = deepcopy(attestation)
     tampered["network_access_disabled"] = False
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="signature verification"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="signature verification"):
         verify_signed_reference_minimization_validation_network_isolation_attestation(  # type: ignore[arg-type]
             tampered,
             **kwargs,
         )
 
     crosswired = _network_attestation(receipt, output_root, namespace_sha256="9" * 64)
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="cross-wired"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="cross-wired"):
         verify_signed_reference_minimization_validation_network_isolation_attestation(  # type: ignore[arg-type]
             crosswired,
             **kwargs,
         )
 
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="not currently valid"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="not currently valid"):
         verify_signed_reference_minimization_validation_network_isolation_attestation(
             attestation,
             checked_at=NETWORK_EXPIRES_AT,
             trusted_operator_keys=kwargs["trusted_operator_keys"],  # type: ignore[arg-type]
             expected_authorization=expected_authorization,
-            expected_artifact_output_root_identity_sha256=kwargs[
-                "expected_artifact_output_root_identity_sha256"
-            ],  # type: ignore[arg-type]
+            expected_artifact_output_root_identity_sha256=kwargs["expected_artifact_output_root_identity_sha256"],  # type: ignore[arg-type]
             expected_network_namespace_identity_sha256=NETWORK_NAMESPACE_IDENTITY,
         )
 
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="externally revoked"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="externally revoked"):
         verify_signed_reference_minimization_validation_network_isolation_attestation(
             attestation,
             revoked_attestation_sha256s=(attestation["attestation_sha256"],),  # type: ignore[arg-type]
@@ -525,9 +500,7 @@ def test_network_attestation_rejects_tamper_crosswire_expiry_and_revocation(
             checked_at=NOW,
             expected_authorization=expected_authorization,
             expected_artifact_output_root_identity_sha256=(
-                reference_minimization_validation_artifact_output_root_identity_sha256(
-                    output_root
-                )
+                reference_minimization_validation_artifact_output_root_identity_sha256(output_root)
             ),
             expected_network_namespace_identity_sha256=NETWORK_NAMESPACE_IDENTITY,
         )
@@ -565,8 +538,7 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
     assert created.python_hash_seed == 123
     assert created.application_seed == 456
     overflow_rows = tuple(
-        (name, str(2**32) if name == "PYTHONHASHSEED" else value)
-        for name, value in created.environment_variable_rows
+        (name, str(2**32) if name == "PYTHONHASHSEED" else value) for name, value in created.environment_variable_rows
     )
     with pytest.raises(
         ReferenceMinimizationValidationRunStartError,
@@ -633,9 +605,7 @@ def test_valid_chain_persists_environment_receipt_without_opening_execution(
         )
 
     payload = json.loads(path.read_text(encoding="ascii"))
-    assert payload["schema_id"] == (
-        REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID
-    )
+    assert payload["schema_id"] == (REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID)
     assert payload["run_start_dependencies_reverified"] is True
     assert payload["validation_execution_authorized"] is False
     assert payload["validation_results_collected"] is False
@@ -891,9 +861,7 @@ def test_run_start_rejects_authorization_reservation_crosswire(
     monkeypatch.setattr(module, "_utc_now", lambda: NOW)
     monkeypatch.setattr(module, "_observe_current_runtime", _runtime_observation)
 
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="cross-wired"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="cross-wired"):
         _create(
             reservation_root,
             output_root,
@@ -986,9 +954,7 @@ def test_duplicate_environment_receipt_is_fail_closed(
     )
     original = (output_root / f"{AUTHORIZATION_NONCE}.environment.json").read_bytes()
 
-    with pytest.raises(
-        ReferenceMinimizationValidationEnvironmentReceiptAlreadyExistsError
-    ):
+    with pytest.raises(ReferenceMinimizationValidationEnvironmentReceiptAlreadyExistsError):
         _create(
             reservation_root,
             output_root,
@@ -996,9 +962,7 @@ def test_duplicate_environment_receipt_is_fail_closed(
             receipt=receipt,
             network=network,
         )
-    assert (
-        output_root / f"{AUTHORIZATION_NONCE}.environment.json"
-    ).read_bytes() == original
+    assert (output_root / f"{AUTHORIZATION_NONCE}.environment.json").read_bytes() == original
     assert first.to_dict()["validation_execution_authorized"] is False
 
 
@@ -1015,9 +979,7 @@ def test_artifact_root_policy_and_persisted_receipt_tamper_are_fail_closed(
     monkeypatch.setattr(module, "_observe_current_runtime", _runtime_observation)
     output_root.chmod(0o755)
 
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="private POSIX policy"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="private POSIX policy"):
         _create(
             reservation_root,
             output_root,
@@ -1042,9 +1004,7 @@ def test_artifact_root_policy_and_persisted_receipt_tamper_are_fail_closed(
         json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
         encoding="ascii",
     )
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="SHA-256 verification"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="SHA-256 verification"):
         read_reference_minimization_validation_execution_environment_receipt(
             output_root,
             AUTHORIZATION_NONCE,
@@ -1073,9 +1033,7 @@ def test_read_rejects_unsafe_mode_and_hardlink(
     )
     path = output_root / f"{AUTHORIZATION_NONCE}.environment.json"
     path.chmod(0o644)
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="file policy"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="file policy"):
         read_reference_minimization_validation_execution_environment_receipt(
             output_root,
             AUTHORIZATION_NONCE,
@@ -1086,9 +1044,7 @@ def test_read_rejects_unsafe_mode_and_hardlink(
         os.link(path, tmp_path / "environment-receipt-hardlink.json")
     except OSError:
         pytest.skip("hard links unavailable")
-    with pytest.raises(
-        ReferenceMinimizationValidationRunStartError, match="file policy"
-    ):
+    with pytest.raises(ReferenceMinimizationValidationRunStartError, match="file policy"):
         read_reference_minimization_validation_execution_environment_receipt(
             output_root,
             AUTHORIZATION_NONCE,
@@ -1096,9 +1052,7 @@ def test_read_rejects_unsafe_mode_and_hardlink(
 
 
 def test_module_has_no_clock_override_runner_evaluator_writer_or_delete_api() -> None:
-    create_signature = inspect.signature(
-        create_reference_minimization_validation_execution_environment_receipt
-    )
+    create_signature = inspect.signature(create_reference_minimization_validation_execution_environment_receipt)
     assert "checked_at" not in create_signature.parameters
     public = set(module.__all__)
     assert not any(name.startswith("delete_") for name in public)

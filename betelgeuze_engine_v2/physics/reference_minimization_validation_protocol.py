@@ -33,15 +33,22 @@ from . import (
 
 
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_cpu_minimization_validation_protocol/2.0.0"
+    "betelgeuze.engine_v2_cpu_minimization_validation_protocol/2.1.0"
 )
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_ID = (
-    "cpu_reference_minimization_contract_validation/2.0.0"
+    "cpu_reference_minimization_contract_validation/2.1.0"
 )
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION = "2.0.0"
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-19T06:00:00Z"
-FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 = (
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION = "2.1.0"
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 = (
     "46c775ea0c815b4414f02d6613984ad7117aa488787fb7f9b23889c591f0812c"
+)
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_REFREEZE_REASON = (
+    "constraint_projection_internal_half_tolerance_headroom_without_"
+    "acceptance_threshold_change"
+)
+FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 = (
+    "41be727dca217152ec57c7194f128196f4cd7e88c7297ffe68bccaf64274d7cb"
 )
 
 CPU_MINIMIZATION_VALIDATION_SCIENTIFIC_BLOCKERS = (
@@ -753,6 +760,10 @@ def _protocol_projection() -> dict[str, Any]:
         "protocol_id": CPU_MINIMIZATION_VALIDATION_PROTOCOL_ID,
         "protocol_version": CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION,
         "frozen_at_utc": CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC,
+        "superseded_protocol_sha256": (
+            SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
+        ),
+        "refreeze_reason": CPU_MINIMIZATION_VALIDATION_PROTOCOL_REFREEZE_REASON,
         "status": "frozen_protocol_definition_not_executed",
         "dependencies": {
             "source_sha256": source_hashes,

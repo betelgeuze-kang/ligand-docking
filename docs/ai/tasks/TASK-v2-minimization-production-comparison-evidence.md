@@ -12,6 +12,13 @@ Freeze receipt-verifiable checkpoint/restart and operational-versus-independent 
 - Reuse the frozen final-coordinate `1e-8 angstrom` and final-energy `1e-10 kcal/mol` upper bounds for trajectory max/RMS checks; do not tune after observing production results.
 - Carry comparison rows through the canonical observation, result receipt, and independent result-review verifier with omission, reorder, cross-wire, non-finite, and digest-tamper rejection.
 
+## Current Progress
+
+- The frozen comparison contract, runner/writer/review binding, three checkpoint evidence rows, exact alignment, per-step and aggregate metrics, explicit expected-failure non-comparability, and tamper rejection are implemented.
+- A non-production in-process 14-case implementation check passes all 14 trajectory rows, including both fixed-Born rows, and exact uninterrupted/paused/resumed equality for all three checkpoint cases.
+- The observed implementation-only maxima are `3.907985046680551e-14 kcal/mol` for trajectory energy and `1.6653345369377348e-15 angstrom` for raw/evaluated coordinates, within the frozen pre-observation bounds. Six expected fail-closed rows remain explicitly non-comparable and there are no unexpected failures.
+- No production receipt or independent human disposition exists; S0 and S1 remain closed.
+
 ## Non-goals
 
 - No production execution, key provisioning, second-host claim, external solver result, S0 approval, S1 work, fitting, or product/scientific promotion.

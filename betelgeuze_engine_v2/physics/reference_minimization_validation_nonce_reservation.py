@@ -37,20 +37,26 @@ from .reference_minimization_validation_review import (
 )
 
 
-REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation_contract/3.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation_contract/5.0.0"
+)
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation/3.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_atomic_nonce_reservation/3.0.0"
+    "cpu_reference_minimization_validation_atomic_nonce_reservation/5.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "3.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-18T22:48:58Z"
-)
+REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
+    "db6c1a499986be1bd720319c6ffd51bdf6059dbe47e5c430548334c88830fed5"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4 = (
+    "09a5d401577fe7ae53ed4d22d088e1e9ef1377bdff02c2a4d82d87f7c37a24ab"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V3 = (
     "c5397b6ea8ea1d8291630dc5b5a0f0761133509cc3d1b5ce3403464a498635a3"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2 = (
@@ -92,9 +98,7 @@ class ReferenceMinimizationValidationNonceReservationError(ValueError):
     """The reservation contract, trust chain, root, or record is invalid."""
 
 
-class ReferenceMinimizationValidationNonceAlreadyReservedError(
-    ReferenceMinimizationValidationNonceReservationError
-):
+class ReferenceMinimizationValidationNonceAlreadyReservedError(ReferenceMinimizationValidationNonceReservationError):
     """The one-time authorization nonce already has a reservation path."""
 
 
@@ -119,9 +123,7 @@ def _sha256(value: object) -> str:
 
 def _require_sha256(value: object, *, name: str) -> str:
     if not isinstance(value, str) or not _SHA256_RE.fullmatch(value):
-        raise ReferenceMinimizationValidationNonceReservationError(
-            f"{name} must be a lowercase SHA-256"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError(f"{name} must be a lowercase SHA-256")
     return value
 
 
@@ -135,30 +137,20 @@ def _require_git_commit(value: object) -> str:
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            f"{name} must be timezone-aware"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            f"{name} must use second resolution"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError(f"{name} must use second resolution")
     return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _require_utc(value: object, *, name: str) -> str:
     if not isinstance(value, str) or not value.endswith("Z"):
-        raise ReferenceMinimizationValidationNonceReservationError(
-            f"{name} must be second-resolution UTC"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError(f"{name} must be second-resolution UTC")
     try:
-        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
-            tzinfo=timezone.utc
-        )
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError as exc:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            f"{name} must be second-resolution UTC"
-        ) from exc
+        raise ReferenceMinimizationValidationNonceReservationError(f"{name} must be second-resolution UTC") from exc
     return parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -166,10 +158,7 @@ def _normalize_dependency_rows(
     rows: Mapping[str, str] | Sequence[Mapping[str, str]],
 ) -> tuple[tuple[str, str], ...]:
     if isinstance(rows, Mapping):
-        candidates = [
-            {"artifact_id": artifact_id, "sha256": digest}
-            for artifact_id, digest in rows.items()
-        ]
+        candidates = [{"artifact_id": artifact_id, "sha256": digest} for artifact_id, digest in rows.items()]
     elif isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
         candidates = list(rows)
     else:
@@ -187,9 +176,7 @@ def _normalize_dependency_rows(
                 "nonce reservation dependency row fields are invalid"
             )
         artifact_id = row.get("artifact_id")
-        if not isinstance(artifact_id, str) or not _ARTIFACT_ID_RE.fullmatch(
-            artifact_id
-        ):
+        if not isinstance(artifact_id, str) or not _ARTIFACT_ID_RE.fullmatch(artifact_id):
             raise ReferenceMinimizationValidationNonceReservationError(
                 "nonce reservation dependency artifact id is invalid"
             )
@@ -209,15 +196,17 @@ def _normalize_dependency_rows(
 
 def _contract_projection() -> dict[str, Any]:
     authorization = reference_minimization_validation_authorization_contract_document()
-    environment = (
-        reference_minimization_validation_execution_environment_contract_document()
-    )
+    environment = reference_minimization_validation_execution_environment_contract_document()
     result = reference_minimization_validation_result_receipt_contract_document()
     return {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID,
         "contract_id": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_ID,
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4
+        ),
+        "refreeze_reason": "binds_refrozen_projection_headroom_authorization_and_receipt_chain",
         "purpose": {
             "scope": "local_atomic_one_time_minimization_validation_authorization_nonce_reservation",
             "primitive_definition_only": True,
@@ -229,9 +218,7 @@ def _contract_projection() -> dict[str, Any]:
             "authorization_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256,
             "observed_authorization_contract_sha256": authorization["contract_sha256"],
             "execution_environment_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256,
-            "observed_execution_environment_contract_sha256": environment[
-                "contract_sha256"
-            ],
+            "observed_execution_environment_contract_sha256": environment["contract_sha256"],
             "result_receipt_contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256,
             "observed_result_receipt_contract_sha256": result["contract_sha256"],
             "raw_signed_review_reverification_required": True,
@@ -295,16 +282,12 @@ def _contract_projection() -> dict[str, Any]:
     }
 
 
-def reference_minimization_validation_nonce_reservation_contract_document() -> dict[
-    str, Any
-]:
+def reference_minimization_validation_nonce_reservation_contract_document() -> dict[str, Any]:
     """Return the frozen contract; no root or reservation is bundled."""
 
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
-    if document["contract_sha256"] != (
-        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
-    ):
+    if document["contract_sha256"] != (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256):
         raise ReferenceMinimizationValidationNonceReservationError(
             "frozen minimization nonce reservation contract SHA-256 drifted"
         )
@@ -366,9 +349,7 @@ class ReferenceMinimizationValidationNonceReservation:
         ) or self.result_receipt_contract_sha256 != (
             FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
         ):
-            raise ReferenceMinimizationValidationNonceReservationError(
-                "reserved receipt contract identities drifted"
-            )
+            raise ReferenceMinimizationValidationNonceReservationError("reserved receipt contract identities drifted")
         normalized_rows = _normalize_dependency_rows(
             [
                 {"artifact_id": artifact_id, "sha256": digest}
@@ -376,9 +357,7 @@ class ReferenceMinimizationValidationNonceReservation:
             ]
         )
         if normalized_rows != self.dependency_artifact_sha256_rows:
-            raise ReferenceMinimizationValidationNonceReservationError(
-                "reserved dependency rows must be canonical"
-            )
+            raise ReferenceMinimizationValidationNonceReservationError("reserved dependency rows must be canonical")
         issued = _require_utc(
             self.authorization_issued_at_utc,
             name="reserved authorization issued_at_utc",
@@ -472,9 +451,7 @@ def _reservation_from_verification(
         "parameter_fitting_authorized": False,
         "blockers": _POST_RESERVATION_BLOCKERS,
     }
-    provisional = ReferenceMinimizationValidationNonceReservation(
-        reservation_record_sha256="0" * 64, **values
-    )
+    provisional = ReferenceMinimizationValidationNonceReservation(reservation_record_sha256="0" * 64, **values)
     return ReferenceMinimizationValidationNonceReservation(
         reservation_record_sha256=_sha256(provisional.projection()), **values
     )
@@ -498,14 +475,8 @@ def _root_components(root: str | os.PathLike[str]) -> tuple[str, ...]:
     try:
         candidate = Path(root)
     except (TypeError, ValueError) as exc:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "nonce reservation root is invalid"
-        ) from exc
-    if (
-        not candidate.is_absolute()
-        or ".." in candidate.parts
-        or candidate.anchor != os.sep
-    ):
+        raise ReferenceMinimizationValidationNonceReservationError("nonce reservation root is invalid") from exc
+    if not candidate.is_absolute() or ".." in candidate.parts or candidate.anchor != os.sep:
         raise ReferenceMinimizationValidationNonceReservationError(
             "nonce reservation root must be an absolute POSIX path without '..'"
         )
@@ -517,9 +488,7 @@ def _open_secure_root(root: str | os.PathLike[str]) -> int:
     try:
         current_fd = os.open(os.sep, flags)
     except (OSError, ValueError) as exc:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "filesystem root cannot be opened securely"
-        ) from exc
+        raise ReferenceMinimizationValidationNonceReservationError("filesystem root cannot be opened securely") from exc
     try:
         for component in _root_components(root):
             previous_fd = current_fd
@@ -584,18 +553,11 @@ def _write_all(descriptor: int, payload: bytes) -> None:
         remaining = remaining[written:]
 
 
-def _persist(
-    root_fd: int, reservation: ReferenceMinimizationValidationNonceReservation
-) -> None:
+def _persist(root_fd: int, reservation: ReferenceMinimizationValidationNonceReservation) -> None:
     filename = f"{reservation.authorization_nonce_sha256}.json"
     encoded = _canonical_bytes(reservation.to_dict()) + b"\n"
-    if (
-        len(encoded)
-        > REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES
-    ):
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "nonce reservation record exceeds the size limit"
-        )
+    if len(encoded) > REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES:
+        raise ReferenceMinimizationValidationNonceReservationError("nonce reservation record exceeds the size limit")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC
     try:
         descriptor = os.open(filename, flags, 0o600, dir_fd=root_fd)
@@ -646,25 +608,19 @@ def reserve_reference_minimization_validation_authorization_nonce(
 
     reserved_at_utc = _format_utc(reserved_at, name="reserved_at")
     try:
-        verification = (
-            verify_signed_reference_minimization_validation_authorization_receipt(
-                authorization_receipt,
-                review_attestation=review_attestation,
-                trusted_reviewer_keys=trusted_reviewer_keys,
-                expected_implementation_author_identity_sha256=(
-                    expected_implementation_author_identity_sha256
-                ),
-                trusted_operator_keys=trusted_operator_keys,
-                checked_at=reserved_at,
-                expected_code_commit_sha=expected_code_commit_sha,
-                expected_runner_source_sha256=expected_runner_source_sha256,
-                expected_dependency_artifact_sha256_rows=(
-                    expected_dependency_artifact_sha256_rows
-                ),
-                revoked_receipt_sha256s=revoked_receipt_sha256s,
-                revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
-                consumed_nonce_sha256s=externally_consumed_nonce_sha256s,
-            )
+        verification = verify_signed_reference_minimization_validation_authorization_receipt(
+            authorization_receipt,
+            review_attestation=review_attestation,
+            trusted_reviewer_keys=trusted_reviewer_keys,
+            expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
+            trusted_operator_keys=trusted_operator_keys,
+            checked_at=reserved_at,
+            expected_code_commit_sha=expected_code_commit_sha,
+            expected_runner_source_sha256=expected_runner_source_sha256,
+            expected_dependency_artifact_sha256_rows=(expected_dependency_artifact_sha256_rows),
+            revoked_receipt_sha256s=revoked_receipt_sha256s,
+            revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
+            consumed_nonce_sha256s=externally_consumed_nonce_sha256s,
         )
     except ReferenceMinimizationValidationAuthorizationError as exc:
         raise ReferenceMinimizationValidationNonceReservationError(
@@ -674,9 +630,7 @@ def reserve_reference_minimization_validation_authorization_nonce(
         raise ReferenceMinimizationValidationNonceReservationError(
             "authorization receipt is not eligible for atomic nonce reservation"
         )
-    reservation = _reservation_from_verification(
-        verification, reserved_at_utc=reserved_at_utc
-    )
+    reservation = _reservation_from_verification(verification, reserved_at_utc=reserved_at_utc)
     root_fd = _open_secure_root(reservation_root)
     try:
         _persist(root_fd, reservation)
@@ -686,12 +640,8 @@ def reserve_reference_minimization_validation_authorization_nonce(
 
 
 def _load_record(raw: bytes) -> dict[str, Any]:
-    if not raw or len(raw) > (
-        REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES
-    ):
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "nonce reservation record size is invalid"
-        )
+    if not raw or len(raw) > (REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES):
+        raise ReferenceMinimizationValidationNonceReservationError("nonce reservation record size is invalid")
 
     def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -704,9 +654,7 @@ def _load_record(raw: bytes) -> dict[str, Any]:
         return result
 
     try:
-        loaded = json.loads(
-            raw.decode("ascii"), object_pairs_hook=reject_duplicate_keys
-        )
+        loaded = json.loads(raw.decode("ascii"), object_pairs_hook=reject_duplicate_keys)
     except ReferenceMinimizationValidationNonceReservationError:
         raise
     except (UnicodeDecodeError, ValueError, RecursionError) as exc:
@@ -714,9 +662,7 @@ def _load_record(raw: bytes) -> dict[str, Any]:
             "nonce reservation record must be canonical ASCII JSON"
         ) from exc
     if not isinstance(loaded, dict) or raw != _canonical_bytes(loaded) + b"\n":
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "nonce reservation record bytes are not canonical"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError("nonce reservation record bytes are not canonical")
     return loaded
 
 
@@ -753,9 +699,7 @@ def _reservation_from_record(
         "reservation_record_sha256",
     }
     if set(payload) != expected_fields:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "nonce reservation record fields are invalid"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError("nonce reservation record fields are invalid")
     fixed = {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_SCHEMA_ID,
         "contract_sha256": FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
@@ -774,16 +718,9 @@ def _reservation_from_record(
         "claim_safe": False,
         "blockers": list(_POST_RESERVATION_BLOCKERS),
     }
-    if any(
-        _canonical_bytes(payload.get(key)) != _canonical_bytes(value)
-        for key, value in fixed.items()
-    ):
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "nonce reservation record fixed fields drifted"
-        )
-    nonce = _require_sha256(
-        payload.get("authorization_nonce_sha256"), name="record authorization nonce"
-    )
+    if any(_canonical_bytes(payload.get(key)) != _canonical_bytes(value) for key, value in fixed.items()):
+        raise ReferenceMinimizationValidationNonceReservationError("nonce reservation record fixed fields drifted")
+    nonce = _require_sha256(payload.get("authorization_nonce_sha256"), name="record authorization nonce")
     if nonce != expected_nonce_sha256:
         raise ReferenceMinimizationValidationNonceReservationError(
             "nonce reservation filename and record identity are cross-wired"
@@ -795,9 +732,7 @@ def _reservation_from_record(
             "nonce reservation record SHA-256 verification failed"
         )
     return ReferenceMinimizationValidationNonceReservation(
-        reservation_record_sha256=_require_sha256(
-            record_sha256, name="reservation record"
-        ),
+        reservation_record_sha256=_require_sha256(record_sha256, name="reservation record"),
         authorization_receipt_sha256=_require_sha256(
             payload.get("authorization_receipt_sha256"),
             name="record authorization receipt",
@@ -811,16 +746,10 @@ def _reservation_from_record(
         ),
         authorization_nonce_sha256=nonce,
         code_commit_sha=_require_git_commit(payload.get("code_commit_sha")),
-        runner_source_sha256=_require_sha256(
-            payload.get("runner_source_sha256"), name="record runner source"
-        ),
-        execution_environment_contract_sha256=payload[
-            "execution_environment_contract_sha256"
-        ],
+        runner_source_sha256=_require_sha256(payload.get("runner_source_sha256"), name="record runner source"),
+        execution_environment_contract_sha256=payload["execution_environment_contract_sha256"],
         result_receipt_contract_sha256=payload["result_receipt_contract_sha256"],
-        dependency_artifact_sha256_rows=_normalize_dependency_rows(
-            payload["dependency_artifact_sha256_rows"]
-        ),
+        dependency_artifact_sha256_rows=_normalize_dependency_rows(payload["dependency_artifact_sha256_rows"]),
         authorization_issued_at_utc=_require_utc(
             payload.get("authorization_issued_at_utc"),
             name="record authorization issued_at_utc",
@@ -829,9 +758,7 @@ def _reservation_from_record(
             payload.get("authorization_expires_at_utc"),
             name="record authorization expires_at_utc",
         ),
-        reserved_at_utc=_require_utc(
-            payload.get("reserved_at_utc"), name="record reserved_at_utc"
-        ),
+        reserved_at_utc=_require_utc(payload.get("reserved_at_utc"), name="record reserved_at_utc"),
         reservation_persisted=True,
         validation_execution_authorized=False,
         validation_results_collected=False,
@@ -848,9 +775,7 @@ def verify_reference_minimization_validation_nonce_reservation_record(
     """Verify exact canonical raw reservation bytes without reading a path."""
 
     if type(source) is not bytes:
-        raise ReferenceMinimizationValidationNonceReservationError(
-            "raw nonce reservation record must be bytes"
-        )
+        raise ReferenceMinimizationValidationNonceReservationError("raw nonce reservation record must be bytes")
     nonce = _require_sha256(
         expected_authorization_nonce_sha256,
         name="expected authorization nonce",
@@ -883,20 +808,14 @@ def read_reference_minimization_validation_nonce_reservation(
             if file_stat.st_size <= 0 or file_stat.st_size > (
                 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES
             ):
-                raise ReferenceMinimizationValidationNonceReservationError(
-                    "nonce reservation record size is invalid"
-                )
+                raise ReferenceMinimizationValidationNonceReservationError("nonce reservation record size is invalid")
             raw = b""
-            while len(raw) <= (
-                REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES
-            ):
+            while len(raw) <= (REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES):
                 chunk = os.read(descriptor, 65_536)
                 if not chunk:
                     break
                 raw += chunk
-            if _stable_record_identity(os.fstat(descriptor)) != (
-                _stable_record_identity(file_stat)
-            ):
+            if _stable_record_identity(os.fstat(descriptor)) != (_stable_record_identity(file_stat)):
                 raise ReferenceMinimizationValidationNonceReservationError(
                     "nonce reservation record changed while it was read"
                 )
@@ -910,9 +829,7 @@ def read_reference_minimization_validation_nonce_reservation(
     )
 
 
-def reference_minimization_validation_nonce_reservation_contract_decision() -> dict[
-    str, Any
-]:
+def reference_minimization_validation_nonce_reservation_contract_decision() -> dict[str, Any]:
     """Return the closed current decision without reserving a nonce."""
 
     contract = reference_minimization_validation_nonce_reservation_contract_document()
@@ -930,6 +847,8 @@ def reference_minimization_validation_nonce_reservation_contract_decision() -> d
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256",
     "REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_ID",
     "REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID",

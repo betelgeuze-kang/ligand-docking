@@ -57,19 +57,28 @@ from .reference_minimization_validation_runner import (
     read_reference_minimization_validation_runner_start_record,
     require_reference_minimization_validation_run_observation_document,
 )
+from .reference_minimization_validation_trajectory_comparison import (
+    FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
+)
 
 
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/7.0.0"
+)
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_writer/5.0.0"
+    "cpu_reference_minimization_validation_result_receipt_writer/7.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = (
-    "2026-07-19T00:00:00Z"
-)
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "7.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "6633d9cdb2d96eb18758919629eab495ed8ba5d2eea102bbd814fa7bfe86b194"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6 = (
+    "533913643878a3f0a7235dc0bd4ca5ca32b197a253d526a2aa7f51a7943c6329"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5 = (
     "9a3c4a22cc60dc06a468e8fa62f55b23766a106d2781c3ea485360ce3131a040"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4 = (
@@ -91,7 +100,6 @@ _RECEIPT_BLOCKERS = (
     "scientific_parameter_applicability_domain_missing",
     "scientific_holdout_manifest_missing",
     "parameter_fitting_not_authorized",
-    "trajectory_level_minimization_comparison_missing",
     "scientific_validation_missing",
     "product_integration_not_qualified",
 )
@@ -119,9 +127,7 @@ class ReferenceMinimizationValidationResultWriterError(RuntimeError):
     """Result finalization, persistence, or verification failed closed."""
 
 
-class ReferenceMinimizationValidationResultReceiptAlreadyExistsError(
-    ReferenceMinimizationValidationResultWriterError
-):
+class ReferenceMinimizationValidationResultReceiptAlreadyExistsError(ReferenceMinimizationValidationResultWriterError):
     """The nonce-bound result-receipt path already exists."""
 
 
@@ -135,9 +141,7 @@ def _canonical_bytes(value: object) -> bytes:
             separators=(",", ":"),
         ).encode("ascii")
     except (TypeError, ValueError) as exc:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt is not canonical JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationResultWriterError("result receipt is not canonical JSON") from exc
 
 
 def _sha256(value: object) -> str:
@@ -150,38 +154,26 @@ def _require_sha256(value: object, *, name: str) -> str:
         or len(value) != 64
         or any(character not in "0123456789abcdef" for character in value)
     ):
-        raise ReferenceMinimizationValidationResultWriterError(
-            f"{name} must be a lowercase SHA-256"
-        )
+        raise ReferenceMinimizationValidationResultWriterError(f"{name} must be a lowercase SHA-256")
     return value
 
 
 def _format_utc(value: datetime, *, name: str) -> str:
     if not isinstance(value, datetime) or value.tzinfo is None:
-        raise ReferenceMinimizationValidationResultWriterError(
-            f"{name} must be timezone-aware"
-        )
+        raise ReferenceMinimizationValidationResultWriterError(f"{name} must be timezone-aware")
     normalized = value.astimezone(timezone.utc)
     if normalized.microsecond:
-        raise ReferenceMinimizationValidationResultWriterError(
-            f"{name} must use second resolution"
-        )
+        raise ReferenceMinimizationValidationResultWriterError(f"{name} must use second resolution")
     return normalized.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _parse_utc(value: object, *, name: str) -> datetime:
     if not isinstance(value, str):
-        raise ReferenceMinimizationValidationResultWriterError(
-            f"{name} must be UTC text"
-        )
+        raise ReferenceMinimizationValidationResultWriterError(f"{name} must be UTC text")
     try:
-        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
-            tzinfo=timezone.utc
-        )
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     except ValueError as exc:
-        raise ReferenceMinimizationValidationResultWriterError(
-            f"{name} must use second-resolution UTC"
-        ) from exc
+        raise ReferenceMinimizationValidationResultWriterError(f"{name} must use second-resolution UTC") from exc
 
 
 def _utc_now() -> datetime:
@@ -210,6 +202,10 @@ def _contract_projection() -> dict[str, Any]:
         "contract_id": REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID,
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6
+        ),
+        "refreeze_reason": "binds_refrozen_projection_headroom_runner_and_receipt_chain",
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "failure_inclusive_result_receipt_writer_primitive": True,
@@ -218,20 +214,15 @@ def _contract_projection() -> dict[str, Any]:
         },
         "dependencies": {
             "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
-            "artifact_binding_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-            ),
-            "authorization_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
-            ),
+            "artifact_binding_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256),
+            "authorization_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256),
             "execution_environment_contract_sha256": (
                 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
             ),
-            "result_receipt_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
-            ),
-            "runner_contract_sha256": (
-                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
+            "result_receipt_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256),
+            "runner_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256),
+            "trajectory_comparison_contract_sha256": (
+                FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
             ),
         },
         "pre_finalize_reverification": {
@@ -266,6 +257,9 @@ def _contract_projection() -> dict[str, Any]:
             "complete_coordinate_traces_reverified_by_runner_schema": True,
             "trace_step_and_whole_trace_digests_recomputed": True,
             "trace_counts_and_energy_ledgers_crosschecked": True,
+            "trajectory_comparison_recomputed_from_both_retained_traces": True,
+            "trajectory_step_alignment_and_predefined_thresholds_reverified": True,
+            "checkpoint_restart_digest_and_count_equality_reverified": True,
             "exact_worker_execution_evidence_reverified_by_runner_schema": True,
             "worker_request_and_frame_lifecycle_reverified": True,
             "exact_worker_request_document_and_transport_bytes_reverified": True,
@@ -286,6 +280,7 @@ def _contract_projection() -> dict[str, Any]:
             "case_count": 14,
             "failed_cases_and_metrics_retained": True,
             "operational_and_independent_coordinate_traces_retained": True,
+            "trajectory_comparison_and_checkpoint_restart_rows_retained": True,
             "raw_and_evaluated_coordinates_retained_for_every_evaluation": True,
             "canonical_empty_trace_retained_for_pre_evaluation_failure": True,
             "partial_or_skipped_results_allowed": False,
@@ -301,25 +296,21 @@ def _contract_projection() -> dict[str, Any]:
             "production_validation_results_collected": False,
             "independent_result_review_complete": False,
             "complete_coordinate_trace_receipt_schema_implemented": True,
+            "trajectory_comparison_receipt_schema_implemented": True,
         },
         "claim_policy": _closed_claim_policy(),
         "blockers": list(_CURRENT_BLOCKERS),
     }
 
 
-def reference_minimization_validation_result_writer_contract_document() -> dict[
-    str, Any
-]:
+def reference_minimization_validation_result_writer_contract_document() -> dict[str, Any]:
     document = _contract_projection()
     document["contract_sha256"] = _sha256(document)
     if (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
-        and document["contract_sha256"]
-        != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
+        and document["contract_sha256"] != FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
     ):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "frozen result writer contract SHA-256 drifted"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("frozen result writer contract SHA-256 drifted")
     return document
 
 
@@ -327,9 +318,7 @@ def require_reference_minimization_validation_result_writer_contract_document(
     payload: Mapping[str, Any],
 ) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result writer contract document must be a mapping"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result writer contract document must be a mapping")
     observed = json.loads(_canonical_bytes(dict(payload)).decode("ascii"))
     expected = reference_minimization_validation_result_writer_contract_document()
     if observed != expected:
@@ -349,8 +338,7 @@ class ReferenceMinimizationValidationResultReceipt:
         if (
             not isinstance(self.canonical_document_bytes, bytes)
             or not self.canonical_document_bytes
-            or len(self.canonical_document_bytes)
-            > REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES
+            or len(self.canonical_document_bytes) > REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES
         ):
             raise ReferenceMinimizationValidationResultWriterError(
                 "result receipt canonical document bytes are invalid"
@@ -400,39 +388,25 @@ def _result_projection(
     run_document = observation.to_dict()
     return {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID,
-        "result_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
-        ),
-        "result_writer_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
-        ),
-        "runner_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
-        ),
+        "result_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256),
+        "result_writer_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256),
+        "runner_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256),
         "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
-        "artifact_binding_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-        ),
-        "authorization_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
-        ),
+        "artifact_binding_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256),
+        "authorization_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256),
         "authorization_receipt_sha256": authorization_receipt_sha256,
         "authorization_nonce_sha256": observation.authorization_nonce_sha256,
         "execution_environment_contract_sha256": (
             FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
         ),
-        "execution_environment_receipt_sha256": (
-            observation.environment_receipt_sha256
-        ),
+        "execution_environment_receipt_sha256": (observation.environment_receipt_sha256),
         "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
         "runner_start_record_sha256": observation.runner_start_record_sha256,
         "observation_sha256": _sha256(run_document),
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
         "source_manifest_sha256": observation.source_manifest_sha256,
-        "dependency_artifact_sha256_rows": run_document[
-            "dependency_artifact_sha256_rows"
-        ],
+        "dependency_artifact_sha256_rows": run_document["dependency_artifact_sha256_rows"],
         "command_argv": run_document["command_argv"],
         "seed": observation.seed,
         "started_at_utc": observation.started_at_utc,
@@ -442,9 +416,7 @@ def _result_projection(
         "coverage_summary": run_document["coverage_summary"],
         "run_observation": run_document,
         "artifact_path_confinement_verification": {
-            "artifact_output_root_identity_sha256": (
-                environment.artifact_output_root_identity_sha256
-            ),
+            "artifact_output_root_identity_sha256": (environment.artifact_output_root_identity_sha256),
             "caller_owned_private_posix_root_verified": True,
             "receipt_file_mode": "0600",
             "path_disclosed": False,
@@ -489,9 +461,7 @@ def _validate_result_receipt_payload(
     observed_receipt = payload.pop("receipt_sha256", None)
     receipt = _require_sha256(observed_receipt, name="result receipt")
     if not hmac.compare_digest(receipt, _sha256(payload)):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt SHA-256 verification failed"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt SHA-256 verification failed")
     expected_field_names = {
         "schema_id",
         "result_contract_sha256",
@@ -541,37 +511,19 @@ def _validate_result_receipt_payload(
         "blockers",
     }
     if set(payload) != expected_field_names:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt fields are invalid"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt fields are invalid")
     try:
-        observation = (
-            require_reference_minimization_validation_run_observation_document(
-                payload["run_observation"]
-            )
-        )
+        observation = require_reference_minimization_validation_run_observation_document(payload["run_observation"])
     except ReferenceMinimizationValidationRunnerError as exc:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt run observation is invalid"
-        ) from exc
+        raise ReferenceMinimizationValidationResultWriterError("result receipt run observation is invalid") from exc
     constant_rows = {
         "schema_id": REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID,
-        "result_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
-        ),
-        "result_writer_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
-        ),
-        "runner_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256
-        ),
+        "result_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256),
+        "result_writer_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256),
+        "runner_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256),
         "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
-        "artifact_binding_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
-        ),
-        "authorization_contract_sha256": (
-            FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
-        ),
+        "artifact_binding_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256),
+        "authorization_contract_sha256": (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256),
         "execution_environment_contract_sha256": (
             FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
         ),
@@ -591,25 +543,19 @@ def _validate_result_receipt_payload(
         "blockers": list(_RECEIPT_BLOCKERS),
     }
     if any(payload.get(name) != value for name, value in constant_rows.items()):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt constants or claim boundary drifted"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt constants or claim boundary drifted")
     run_document = observation.to_dict()
     mirrored = {
         "authorization_receipt_sha256": payload["authorization_receipt_sha256"],
         "authorization_nonce_sha256": observation.authorization_nonce_sha256,
-        "execution_environment_receipt_sha256": (
-            observation.environment_receipt_sha256
-        ),
+        "execution_environment_receipt_sha256": (observation.environment_receipt_sha256),
         "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
         "runner_start_record_sha256": observation.runner_start_record_sha256,
         "observation_sha256": _sha256(run_document),
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
         "source_manifest_sha256": observation.source_manifest_sha256,
-        "dependency_artifact_sha256_rows": run_document[
-            "dependency_artifact_sha256_rows"
-        ],
+        "dependency_artifact_sha256_rows": run_document["dependency_artifact_sha256_rows"],
         "command_argv": run_document["command_argv"],
         "seed": observation.seed,
         "started_at_utc": observation.started_at_utc,
@@ -618,9 +564,7 @@ def _validate_result_receipt_payload(
         "coverage_summary": run_document["coverage_summary"],
     }
     if any(payload.get(name) != value for name, value in mirrored.items()):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt and run observation are cross-wired"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt and run observation are cross-wired")
     for name in (
         "review_attestation_sha256",
         "independent_reviewer_identity_sha256",
@@ -636,9 +580,7 @@ def _validate_result_receipt_payload(
         name="receipt_created_at",
     )
     if reviewed_at > completed_at or created_at < completed_at:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt lifecycle timestamps are invalid"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt lifecycle timestamps are invalid")
     expected_supersession = {
         "state": "active_initial_receipt",
         "supersedes_receipt_sha256": None,
@@ -667,8 +609,7 @@ def _validate_result_receipt_payload(
         or confinement.get("caller_owned_private_posix_root_verified") is not True
         or confinement.get("receipt_file_mode") != "0600"
         or confinement.get("path_disclosed") is not False
-        or confinement.get("same_uid_content_mutation_detected_by_out_of_band_sha256")
-        is not True
+        or confinement.get("same_uid_content_mutation_detected_by_out_of_band_sha256") is not True
         or confinement.get("same_uid_replacement_resistance_established") is not False
     ):
         raise ReferenceMinimizationValidationResultWriterError(
@@ -699,9 +640,7 @@ def _persist_result_receipt(
 ) -> None:
     encoded = _canonical_bytes(dict(payload)) + b"\n"
     if len(encoded) > REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt exceeds the size limit"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt exceeds the size limit")
     try:
         root_fd = _open_secure_root(artifact_output_root)
     except ReferenceMinimizationValidationNonceReservationError as exc:
@@ -722,9 +661,7 @@ def _persist_result_receipt(
                 "result receipt already exists for this nonce"
             ) from exc
         except (OSError, ValueError) as exc:
-            raise ReferenceMinimizationValidationResultWriterError(
-                "result receipt cannot be created securely"
-            ) from exc
+            raise ReferenceMinimizationValidationResultWriterError("result receipt cannot be created securely") from exc
         try:
             _validate_record_stat(os.fstat(descriptor))
             remaining = memoryview(encoded)
@@ -769,15 +706,9 @@ def write_reference_minimization_validation_result_receipt(
     """Reverify one completed bounded run and atomically write its receipt."""
 
     if not isinstance(observation, ReferenceMinimizationValidationRunObservation):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result writer requires a bounded run observation"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result writer requires a bounded run observation")
     try:
-        observation = (
-            require_reference_minimization_validation_run_observation_document(
-                observation.to_dict()
-            )
-        )
+        observation = require_reference_minimization_validation_run_observation_document(observation.to_dict())
     except ReferenceMinimizationValidationRunnerError as exc:
         raise ReferenceMinimizationValidationResultWriterError(
             "result writer run observation verification failed"
@@ -791,18 +722,14 @@ def write_reference_minimization_validation_result_receipt(
         review = verify_signed_reference_minimization_validation_review_attestation(
             review_attestation,
             trusted_reviewer_keys=trusted_reviewer_keys,
-            expected_implementation_author_identity_sha256=(
-                expected_implementation_author_identity_sha256
-            ),
+            expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
             checked_at=checked_at,
         )
         authorization = verify_signed_reference_minimization_validation_authorization_receipt(
             authorization_receipt,
             review_attestation=review_attestation,
             trusted_reviewer_keys=trusted_reviewer_keys,
-            expected_implementation_author_identity_sha256=(
-                expected_implementation_author_identity_sha256
-            ),
+            expected_implementation_author_identity_sha256=(expected_implementation_author_identity_sha256),
             trusted_operator_keys=trusted_operator_keys,
             checked_at=checked_at,
             expected_code_commit_sha=observation.code_commit_sha,
@@ -813,9 +740,7 @@ def write_reference_minimization_validation_result_receipt(
             expected_result_receipt_contract_sha256=(
                 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
             ),
-            expected_dependency_artifact_sha256_rows=dict(
-                observation.dependency_artifact_sha256_rows
-            ),
+            expected_dependency_artifact_sha256_rows=dict(observation.dependency_artifact_sha256_rows),
             revoked_receipt_sha256s=(revoked_authorization_receipt_sha256s),
             revoked_review_attestation_sha256s=(revoked_review_attestation_sha256s),
             consumed_nonce_sha256s=externally_conflicting_nonce_sha256s,
@@ -830,23 +755,14 @@ def write_reference_minimization_validation_result_receipt(
     expected_authorization_rows = {
         "receipt_sha256": authorization.receipt_sha256,
         "review_attestation_sha256": review.attestation_sha256,
-        "implementation_author_identity_sha256": (
-            review.implementation_author_identity_sha256
-        ),
-        "independent_reviewer_identity_sha256": (
-            review.independent_reviewer_identity_sha256
-        ),
+        "implementation_author_identity_sha256": (review.implementation_author_identity_sha256),
+        "independent_reviewer_identity_sha256": (review.independent_reviewer_identity_sha256),
         "authorization_nonce_sha256": nonce,
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
-        "dependency_artifact_sha256_rows": (
-            observation.dependency_artifact_sha256_rows
-        ),
+        "dependency_artifact_sha256_rows": (observation.dependency_artifact_sha256_rows),
     }
-    if any(
-        getattr(authorization, name) != value
-        for name, value in expected_authorization_rows.items()
-    ):
+    if any(getattr(authorization, name) != value for name, value in expected_authorization_rows.items()):
         raise ReferenceMinimizationValidationResultWriterError(
             "result writer authorization and observation are cross-wired"
         )
@@ -864,41 +780,27 @@ def write_reference_minimization_validation_result_receipt(
         "receipt_sha256": observation.environment_receipt_sha256,
         "authorization_receipt_sha256": authorization.receipt_sha256,
         "review_attestation_sha256": review.attestation_sha256,
-        "implementation_author_identity_sha256": (
-            review.implementation_author_identity_sha256
-        ),
-        "independent_reviewer_identity_sha256": (
-            review.independent_reviewer_identity_sha256
-        ),
-        "authorization_operator_identity_sha256": (
-            authorization.authorization_operator_identity_sha256
-        ),
+        "implementation_author_identity_sha256": (review.implementation_author_identity_sha256),
+        "independent_reviewer_identity_sha256": (review.independent_reviewer_identity_sha256),
+        "authorization_operator_identity_sha256": (authorization.authorization_operator_identity_sha256),
         "authorization_nonce_sha256": nonce,
         "code_commit_sha": observation.code_commit_sha,
         "runner_source_sha256": observation.runner_source_sha256,
         "source_manifest_sha256": observation.source_manifest_sha256,
-        "dependency_artifact_sha256_rows": (
-            observation.dependency_artifact_sha256_rows
-        ),
+        "dependency_artifact_sha256_rows": (observation.dependency_artifact_sha256_rows),
         "environment_fingerprint_sha256": (observation.environment_fingerprint_sha256),
         "python_hash_seed": observation.python_hash_seed,
         "application_seed": observation.seed,
     }
-    if any(
-        getattr(environment, name) != value
-        for name, value in expected_environment_rows.items()
-    ):
+    if any(getattr(environment, name) != value for name, value in expected_environment_rows.items()):
         raise ReferenceMinimizationValidationResultWriterError(
             "result writer environment and observation are cross-wired"
         )
-    durable_worker_request = (
-        observation.worker_execution_evidence.worker_request_document
-    )
+    durable_worker_request = observation.worker_execution_evidence.worker_request_document
     if durable_worker_request is not None:
         try:
             dependency_roots = tuple(
-                os.fspath(root)
-                for root in _runner_module._require_isolated_python_bootstrap_runtime()
+                os.fspath(root) for root in _runner_module._require_isolated_python_bootstrap_runtime()
             )
             expected_worker_environment = _runner_module._matrix_worker_environment(
                 environment.environment_variable_rows,
@@ -917,10 +819,7 @@ def write_reference_minimization_validation_result_receipt(
             "expected_worker_environment_sha256": _sha256(expected_worker_environment),
             "expected_python_hash_probe_sha256": expected_hash_probe_sha256,
         }
-        if any(
-            durable_worker_request.get(name) != value
-            for name, value in expected_worker_runtime_rows.items()
-        ):
+        if any(durable_worker_request.get(name) != value for name, value in expected_worker_runtime_rows.items()):
             raise ReferenceMinimizationValidationResultWriterError(
                 "result writer worker request and trusted environment are cross-wired"
             )
@@ -929,9 +828,7 @@ def write_reference_minimization_validation_result_receipt(
             artifact_output_root,
             nonce,
             expected_record_sha256=observation.runner_start_record_sha256,
-            expected_environment_receipt_sha256=(
-                observation.environment_receipt_sha256
-            ),
+            expected_environment_receipt_sha256=(observation.environment_receipt_sha256),
             expected_runner_source_sha256=observation.runner_source_sha256,
             expected_source_manifest_sha256=observation.source_manifest_sha256,
         )
@@ -945,26 +842,20 @@ def write_reference_minimization_validation_result_receipt(
         "source_manifest_sha256": observation.source_manifest_sha256,
     }
     if any(start_record.get(name) != value for name, value in start_crosscheck.items()):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result writer runner-start record is cross-wired"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result writer runner-start record is cross-wired")
     completed_at = _parse_utc(
         observation.completed_at_utc,
         name="observation completed_at",
     )
     if checked_at < completed_at:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result writer clock precedes the completed observation"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result writer clock precedes the completed observation")
     created_at_utc = _format_utc(checked_at, name="result receipt created_at")
     projection = _result_projection(
         observation,
         environment,
         authorization_receipt_sha256=authorization.receipt_sha256,
         review_attestation_sha256=review.attestation_sha256,
-        independent_reviewer_identity_sha256=(
-            review.independent_reviewer_identity_sha256
-        ),
+        independent_reviewer_identity_sha256=(review.independent_reviewer_identity_sha256),
         reviewed_at_utc=review.reviewed_at_utc,
         receipt_created_at_utc=created_at_utc,
     )
@@ -1011,17 +902,13 @@ def _read_result_receipt_bytes(
                 chunks.append(chunk)
                 total += len(chunk)
                 if total > REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES:
-                    raise ReferenceMinimizationValidationResultWriterError(
-                        "result receipt exceeds the size limit"
-                    )
+                    raise ReferenceMinimizationValidationResultWriterError("result receipt exceeds the size limit")
         except (
             OSError,
             ValueError,
             ReferenceMinimizationValidationNonceReservationError,
         ) as exc:
-            raise ReferenceMinimizationValidationResultWriterError(
-                "result receipt cannot be read securely"
-            ) from exc
+            raise ReferenceMinimizationValidationResultWriterError("result receipt cannot be read securely") from exc
     finally:
         if descriptor is not None:
             os.close(descriptor)
@@ -1048,34 +935,24 @@ def read_reference_minimization_validation_result_receipt(
         result: dict[str, Any] = {}
         for key, value in pairs:
             if key in result:
-                raise ReferenceMinimizationValidationResultWriterError(
-                    "result receipt contains a duplicate JSON key"
-                )
+                raise ReferenceMinimizationValidationResultWriterError("result receipt contains a duplicate JSON key")
             result[key] = value
         return result
 
     try:
         if not raw.endswith(b"\n"):
-            raise ReferenceMinimizationValidationResultWriterError(
-                "result receipt is not canonical JSON"
-            )
+            raise ReferenceMinimizationValidationResultWriterError("result receipt is not canonical JSON")
         payload = json.loads(
             raw[:-1].decode("ascii"),
             object_pairs_hook=reject_duplicate_keys,
         )
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt is not canonical JSON"
-        ) from exc
+        raise ReferenceMinimizationValidationResultWriterError("result receipt is not canonical JSON") from exc
     if not isinstance(payload, dict) or _canonical_bytes(payload) + b"\n" != raw:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt is not canonical JSON"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt is not canonical JSON")
     receipt = _receipt_from_payload(payload)
     if not hmac.compare_digest(receipt.authorization_nonce_sha256, nonce):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt authorization nonce is cross-wired"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt authorization nonce is cross-wired")
     return receipt
 
 
@@ -1100,24 +977,18 @@ def verify_reference_minimization_validation_result_receipt(
         authorization_nonce_sha256,
     )
     if not hmac.compare_digest(receipt.receipt_sha256, expected):
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt identity is cross-wired"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt identity is cross-wired")
     revoked_reviews = {
-        _require_sha256(value, name="revoked review attestation")
-        for value in revoked_review_attestation_sha256s
+        _require_sha256(value, name="revoked review attestation") for value in revoked_review_attestation_sha256s
     }
     revoked_authorizations = {
-        _require_sha256(value, name="revoked authorization receipt")
-        for value in revoked_authorization_receipt_sha256s
+        _require_sha256(value, name="revoked authorization receipt") for value in revoked_authorization_receipt_sha256s
     }
     revoked_results = {
-        _require_sha256(value, name="revoked result receipt")
-        for value in revoked_result_receipt_sha256s
+        _require_sha256(value, name="revoked result receipt") for value in revoked_result_receipt_sha256s
     }
     superseded = {
-        _require_sha256(value, name="superseded result receipt")
-        for value in superseded_result_receipt_sha256s
+        _require_sha256(value, name="superseded result receipt") for value in superseded_result_receipt_sha256s
     }
     payload = receipt.to_dict()
     if payload["review_attestation_sha256"] in revoked_reviews:
@@ -1125,23 +996,15 @@ def verify_reference_minimization_validation_result_receipt(
             "result receipt review attestation is externally revoked"
         )
     if payload["authorization_receipt_sha256"] in revoked_authorizations:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt authorization is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt authorization is externally revoked")
     if receipt.receipt_sha256 in revoked_results:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt is externally revoked"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt is externally revoked")
     if receipt.receipt_sha256 in superseded:
-        raise ReferenceMinimizationValidationResultWriterError(
-            "result receipt is externally superseded"
-        )
+        raise ReferenceMinimizationValidationResultWriterError("result receipt is externally superseded")
     return receipt
 
 
-def reference_minimization_validation_result_writer_contract_decision() -> dict[
-    str, Any
-]:
+def reference_minimization_validation_result_writer_contract_decision() -> dict[str, Any]:
     contract = reference_minimization_validation_result_writer_contract_document()
     return {
         "contract_sha256": contract["contract_sha256"],
@@ -1157,6 +1020,8 @@ def reference_minimization_validation_result_writer_contract_decision() -> dict[
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3",
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256",

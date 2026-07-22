@@ -19,6 +19,8 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_authorizatio
     build_signed_reference_minimization_validation_authorization_receipt,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_nonce_reservation import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V3,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256,
     REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID,
     REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES,
@@ -80,11 +82,7 @@ def _review() -> dict[str, object]:
 def _receipt(review: object | None = None) -> dict[str, object]:
     return build_signed_reference_minimization_validation_authorization_receipt(
         review_attestation=review or _review(),  # type: ignore[arg-type]
-        trusted_reviewer_keys={
-            REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(
-                REVIEWER, REVIEW_PUBLIC_KEY
-            )
-        },
+        trusted_reviewer_keys={REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)},
         expected_implementation_author_identity_sha256=AUTHOR,
         authorization_operator_identity_sha256=OPERATOR,
         authorization_key_id=OPERATOR_KEY_ID,
@@ -111,15 +109,11 @@ def _reserve(root: Path, **overrides: object):
         "authorization_receipt": _receipt(),
         "review_attestation": _review(),
         "trusted_reviewer_keys": {
-            REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(
-                REVIEWER, REVIEW_PUBLIC_KEY
-            )
+            REVIEW_KEY_ID: MinimizationScientificReviewerTrustAnchor(REVIEWER, REVIEW_PUBLIC_KEY)
         },
         "expected_implementation_author_identity_sha256": AUTHOR,
         "trusted_operator_keys": {
-            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(
-                OPERATOR, OPERATOR_PUBLIC_KEY
-            )
+            OPERATOR_KEY_ID: MinimizationAuthorizationOperatorTrustAnchor(OPERATOR, OPERATOR_PUBLIC_KEY)
         },
         "reserved_at": RESERVED_AT,
         "expected_code_commit_sha": CODE_COMMIT,
@@ -136,12 +130,14 @@ def test_contract_is_frozen_and_current_decision_stays_closed() -> None:
     contract = reference_minimization_validation_nonce_reservation_contract_document()
     decision = reference_minimization_validation_nonce_reservation_contract_decision()
 
-    assert (
-        contract["schema_id"]
-        == REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID
+    assert contract["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID
+    assert contract["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256)
+    assert contract["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4
     )
-    assert contract["contract_sha256"] == (
-        FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256
+    assert (
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V3
+        == "c5397b6ea8ea1d8291630dc5b5a0f0761133509cc3d1b5ce3403464a498635a3"
     )
     assert contract["dependencies"]["authorization_contract_sha256"] == (
         FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
@@ -152,29 +148,20 @@ def test_contract_is_frozen_and_current_decision_stays_closed() -> None:
     assert contract["storage_contract"]["release_or_delete_api_present"] is False
     assert contract["claim_policy"]["scientifically_validated"] is False
     assert contract["claim_policy"]["claim_safe"] is False
-    assert (
-        require_reference_minimization_validation_nonce_reservation_contract_document(
-            contract
-        )
-        == contract
-    )
+    assert require_reference_minimization_validation_nonce_reservation_contract_document(contract) == contract
     assert decision["atomic_nonce_reservation_primitive_implemented"] is True
     assert decision["authorization_nonce_reserved"] is False
     assert decision["validation_execution_authorized"] is False
 
 
 def test_contract_rejects_tamper() -> None:
-    contract = deepcopy(
-        reference_minimization_validation_nonce_reservation_contract_document()
-    )
+    contract = deepcopy(reference_minimization_validation_nonce_reservation_contract_document())
     contract["claim_policy"]["claim_safe"] = True
     with pytest.raises(
         ReferenceMinimizationValidationNonceReservationError,
         match="does not match the frozen record",
     ):
-        require_reference_minimization_validation_nonce_reservation_contract_document(
-            contract
-        )
+        require_reference_minimization_validation_nonce_reservation_contract_document(contract)
 
 
 def test_reservation_reverifies_and_persists_canonical_private_record(
@@ -194,16 +181,12 @@ def test_reservation_reverifies_and_persists_canonical_private_record(
     assert stat.S_IMODE(record_stat.st_mode) == 0o600
     assert record_stat.st_nlink == 1
     raw = record.read_bytes()
-    assert (
-        len(raw) <= REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES
-    )
+    assert len(raw) <= REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES
     assert raw.endswith(b"\n")
     assert b"review-key-material" not in raw
     assert b"operator-key-material" not in raw
 
-    loaded = read_reference_minimization_validation_nonce_reservation(
-        root, authorization_nonce_sha256=AUTH_NONCE
-    )
+    loaded = read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=AUTH_NONCE)
     assert loaded == reservation
     assert loaded.reservation_record_sha256 == reservation.reservation_record_sha256
 
@@ -219,10 +202,7 @@ def test_duplicate_reservation_is_atomic_and_keeps_first_record(tmp_path: Path) 
         _reserve(root)
     assert (root / f"{AUTH_NONCE}.json").read_bytes() == before
     assert (
-        read_reference_minimization_validation_nonce_reservation(
-            root, authorization_nonce_sha256=AUTH_NONCE
-        )
-        == first
+        read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=AUTH_NONCE) == first
     )
 
 
@@ -310,9 +290,7 @@ def test_reader_rejects_tamper_hardlink_and_filename_crosswire(tmp_path: Path) -
         ReferenceMinimizationValidationNonceReservationError,
         match="fixed fields drifted",
     ):
-        read_reference_minimization_validation_nonce_reservation(
-            root, authorization_nonce_sha256=AUTH_NONCE
-        )
+        read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=AUTH_NONCE)
 
     record.unlink()
     _reserve(root)
@@ -322,9 +300,7 @@ def test_reader_rejects_tamper_hardlink_and_filename_crosswire(tmp_path: Path) -
         ReferenceMinimizationValidationNonceReservationError,
         match="single-link regular file",
     ):
-        read_reference_minimization_validation_nonce_reservation(
-            root, authorization_nonce_sha256=AUTH_NONCE
-        )
+        read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=AUTH_NONCE)
     hardlink.unlink()
 
     other_nonce = "f" * 64
@@ -334,9 +310,7 @@ def test_reader_rejects_tamper_hardlink_and_filename_crosswire(tmp_path: Path) -
         ReferenceMinimizationValidationNonceReservationError,
         match="cross-wired",
     ):
-        read_reference_minimization_validation_nonce_reservation(
-            root, authorization_nonce_sha256=other_nonce
-        )
+        read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=other_nonce)
 
 
 def test_reader_rejects_symlink_and_noncanonical_record(tmp_path: Path) -> None:
@@ -350,9 +324,7 @@ def test_reader_rejects_symlink_and_noncanonical_record(tmp_path: Path) -> None:
         ReferenceMinimizationValidationNonceReservationError,
         match="cannot be opened securely",
     ):
-        read_reference_minimization_validation_nonce_reservation(
-            root, authorization_nonce_sha256=AUTH_NONCE
-        )
+        read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=AUTH_NONCE)
 
     record.unlink()
     target.rename(record)
@@ -363,9 +335,7 @@ def test_reader_rejects_symlink_and_noncanonical_record(tmp_path: Path) -> None:
         ReferenceMinimizationValidationNonceReservationError,
         match="bytes are not canonical",
     ):
-        read_reference_minimization_validation_nonce_reservation(
-            root, authorization_nonce_sha256=AUTH_NONCE
-        )
+        read_reference_minimization_validation_nonce_reservation(root, authorization_nonce_sha256=AUTH_NONCE)
 
 
 def test_reader_rejects_fifo_without_blocking(tmp_path: Path) -> None:
@@ -453,9 +423,7 @@ def test_contract_rejects_bool_integer_alias() -> None:
         ReferenceMinimizationValidationNonceReservationError,
         match="does not match",
     ):
-        require_reference_minimization_validation_nonce_reservation_contract_document(
-            document
-        )
+        require_reference_minimization_validation_nonce_reservation_contract_document(document)
 
     deeply_nested: dict[str, object] = {}
     cursor = deeply_nested
@@ -467,9 +435,7 @@ def test_contract_rejects_bool_integer_alias() -> None:
         ReferenceMinimizationValidationNonceReservationError,
         match="not canonical JSON",
     ):
-        require_reference_minimization_validation_nonce_reservation_contract_document(
-            deeply_nested
-        )
+        require_reference_minimization_validation_nonce_reservation_contract_document(deeply_nested)
 
 
 def test_module_exposes_no_release_or_delete_api() -> None:

@@ -349,14 +349,21 @@ claim status without revalidating the dependency and freshness chain.
   roles, and explicit current revocation/supersession state for the receipt chain
   and result-review attestation. A verified rejection is never promoted to acceptance,
   and a verified test-only acceptance still leaves production receipt/review,
-  trajectory comparison, two-host reproduction, external-implementation
-  comparison, applicability, fitting, and scientific gates closed. Complete
+  accepted production trajectory disposition, two-host reproduction, external-
+  implementation comparison, applicability, fitting, and scientific gates closed. Complete
   ordered operational and independent-oracle coordinate traces, including every
   canonical binary64 raw/evaluated coordinate, per-step identities and digests,
   whole-trace digests, exact counts, accepted-energy-ledger consistency, and
   trace/step review dispositions, are now implemented as contract-integrity
-  evidence. They are not trajectory-level scientific comparison or production
-  evidence. No key, attestation, approval, or production evidence is bundled.
+  evidence. A frozen comparison contract additionally aligns every evaluation,
+  applies predefined coordinate/energy max/RMS thresholds, retains branch,
+  rejection, count, and expected-failure dispositions, and binds three exact
+  checkpoint/restart digest comparisons through runner, writer, and result
+  review. The refrozen v2.1 protocol uses internal half-tolerance projection
+  convergence headroom while preserving the declared acceptance threshold. The
+  non-production check passes all 14/14 rows and all three checkpoint equality
+  rows, including both fixed-Born rows. This is not accepted production evidence.
+  No key, attestation, approval, or production evidence is bundled.
 - Preserve the separate frozen execution-environment and result-receipt
   contracts. The environment contract fixes a CPU-only, network-disabled Linux
   lane, Python 3.10–3.12, Torch 2.6.0, NumPy 1.26.4, empty GPU visibility,

@@ -45,6 +45,7 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
     build_signed_production_evidence_status_snapshot,
 )
 from betelgeuze_engine_v2.physics.validation_production_review_authorization_custody_extension import (
+    FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2,
     FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
     PRODUCTION_AUTHORIZATION_CARRIER_SCHEMA_ID,
     PRODUCTION_PRE_EXECUTION_REVIEW_CARRIER_SCHEMA_ID,
@@ -1139,6 +1140,9 @@ def test_contract_is_frozen_additive_and_claim_closed() -> None:
 
     assert contract["contract_sha256"] == (
         FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256
+    )
+    assert contract["superseded_contract_sha256"] == (
+        FROZEN_LEGACY_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V2
     )
     assert contract["purpose"]["base_custody_v1_modified"] is False
     assert contract["purpose"]["pre_execution_review_carrier_implemented"] is True
