@@ -176,12 +176,17 @@ claim status without revalidating the dependency and freshness chain.
 - Preserve the now-closed tautomer implementation row and its bounded real-world
   identity corpus without treating it as scientific validation. Original mmCIF
   lexical re-emission remains explicitly outside the canonical identity receipt.
-- Preserve the frozen four-case public redocking protocol definition and its
+- Preserve the frozen v1.1 four-case public redocking protocol definition and its
   exact PoseBusters-commit input, license-metadata, endpoint, failure-denominator,
   ligand-identity-seed, fixed-receptor-frame RMSD, and scorer-source identities.
-  Seed coordinates are ignored. It bundles and fetches no data, authorizes no
-  execution or publication, and is neither statistically representative nor a
-  public benchmark result or PoseBusters-equivalence claim.
+  Preserve its bounded source-bound offline materializer: seed coordinates are
+  ignored; every reference record is retained; all directional-V2000-stereo-
+  preserving labeled-graph matches and bounded seed automorphisms contribute to
+  the minimum direct receptor-frame RMSD without ligand alignment. It bundles
+  and fetches no data, authorizes no docking execution or publication, and is
+  neither independent chemical standardization, complete atom-stereo support,
+  a statistically representative public benchmark result, nor a PoseBusters-
+  equivalence claim.
 - Preserve the frozen H5 parameter-origin and runtime-envelope record. It binds
   exact runtime equations, code-enforced admission, configurable capacity
   defaults, and seven implementation-source hashes while recording that values
@@ -272,8 +277,8 @@ claim status without revalidating the dependency and freshness chain.
   real/reciprocal/self/exclusion-scaling components and is restart-bound. It
   does not assign general solute constraints or masses and does not satisfy an NVE-drift or
   Ewald-convergence acceptance protocol, independent SHAKE/RATTLE/Ewald or
-  two-host reproduction, PME, net-charge-background,
-  thermostat/barostat, triclinic-PBC, NVT/NPT-statistics, CPU/GPU-parity,
+  two-host reproduction, PME, net-charge-background, independently accepted
+  thermostat/barostat or NVT/NPT-statistics, triclinic-PBC, CPU/GPU-parity,
   scientific, or product gates.
   A separate bounded preparation now freezes one exact Amber TIP3P/
   Joung--Cheatham Na+/Cl- source snapshot and deterministically materializes
@@ -284,6 +289,19 @@ claim status without revalidating the dependency and freshness chain.
   explicit-particle wiring only: the initial lattice is unequilibrated and no
   independent source transcription, energy/force parity, water/ion observable,
   two-host, or scientific acceptance receipt exists.
+  A bounded canonical-ensemble path now layers constrained BAOAB Langevin NVT
+  and molecular-centre isotropic Monte Carlo NPT over that exact force,
+  constraint, PBC, and explicit-particle stack. Seeded counter-RNG position,
+  mutable cell, all barostat proposals and dispositions, energy/coordinate/
+  volume/finite-difference molecular-pressure traces, and trajectory/barostat
+  hash heads survive canonical pause/serialize/resume. A separate all-step
+  analyzer emits autocorrelation time, effective sample size, confidence
+  intervals, target bias, constraint residual, acceptance count/fraction,
+  exact-restart, and every predeclared failed metric. This closes the missing
+  thermostat/barostat/statistics implementation surface only. Independent
+  integrator and pressure comparison, reviewed burn-in and thresholds,
+  production-length liquid/ion distributions, density/compressibility/heat
+  capacity, two-host reproduction, and CPU/GPU parity remain required.
   A bounded analyzer now requires every evaluated frame plus a genuine
   pause/resume run and emits energy max/RMS/slope, momentum max/RMS, instantaneous
   kinetic-temperature, current constraint residual, trajectory-byte identity,

@@ -38,7 +38,7 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     assert protocol.schema_id == PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID
     assert protocol.protocol_sha256 == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
     assert protocol.protocol_sha256 == (
-        "4ae0919cdbb65038cb64bd5fb014c99cd6107de9d25852c67c313cf3459e089c"
+        "1dc41af780d5e362f0d623267802d3dc25fda9f89f5735ca47c43e86a026ccfa"
     )
     assert POSEBUSTERS_SOURCE_COMMIT_SHA == ("1a5f26aa7270fafba21b7fec8b3633f4c4e45ead")
     assert [case.pdb_id for case in protocol.cases] == [
@@ -55,7 +55,7 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     ]
     manifest = protocol.benchmark_manifest
     assert manifest.fingerprint_sha256 == (
-        "9df57fdf0b694af42e668180a890a9c5686e1284aed334f3b3334343ca14eba8"
+        "b4b62be3b28048ff3990e6ddba3d95cfcb5f4b5432ea8c9a5ad03b37a958c8d9"
     )
     assert [definition.metric_id for definition in manifest.metric_definitions] == [
         PRIMARY_RMSD_METRIC_ID,
@@ -65,6 +65,12 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     assert manifest.metric_definition_map[PRIMARY_RMSD_METRIC_ID].pass_threshold == 2.0
     assert manifest.metadata["failure_rows_retained"] is True
     assert manifest.metadata["denominator"] == "all_manifest_cases"
+    assert manifest.metadata["reference_selection_rule"] == (
+        "all_reference_records_matching_seed_labeled_graph_identity"
+    )
+    assert manifest.metadata["reference_pose_aggregation"] == (
+        "minimum_over_all_matched_records"
+    )
 
 
 def test_protocol_keeps_source_licensing_and_nonpromotion_boundaries_explicit() -> None:
@@ -106,6 +112,13 @@ def test_protocol_keeps_source_licensing_and_nonpromotion_boundaries_explicit() 
         assert claims[key] is False
     assert "public_benchmark_not_executed" in document["blockers"]
     assert "posebusters_benchmark_equivalence_not_established" in document["blockers"]
+    assert "symmetry_mapping_materializer_not_implemented" not in document["blockers"]
+    assert (
+        "reference_ligand_match_materializer_not_implemented"
+        not in document["blockers"]
+    )
+    assert execution["offline_reference_materialization_implemented"] is True
+    assert execution["direct_reference_rmsd_evaluation_implemented"] is True
 
 
 def test_raw_inputs_are_external_commit_bound_and_not_bundled() -> None:
@@ -130,6 +143,11 @@ def test_raw_inputs_are_external_commit_bound_and_not_bundled() -> None:
     assert endpoint["ligand_only_alignment_allowed"] is False
     assert endpoint["ligand_identity_seed_coordinates_used"] is False
     assert "direct_receptor_frame_rmsd" in endpoint["rmsd_method"]
+    assert endpoint["symmetry_mapping_generation_implemented"] is True
+    assert endpoint["reference_ligand_match_materializer_implemented"] is True
+    assert endpoint["reference_selection_rule"] == (
+        "all_reference_records_matching_seed_labeled_graph_identity"
+    )
 
 
 def test_artifact_byte_verifier_is_offline_and_fail_closed() -> None:
@@ -304,6 +322,10 @@ def test_scorer_source_identities_verify_and_detect_checkout_drift(
     assert set(observed) == {
         "failure_inclusive_report",
         "pose_validity",
+        "reference_materialization",
+        "reference_molecular_models",
+        "reference_molecular_validation",
+        "reference_sdf_parser",
         "symmetry_aware_rmsd",
     }
 
@@ -320,19 +342,21 @@ def test_scorer_source_identities_verify_and_detect_checkout_drift(
         verify_public_benchmark_scorer_sources(tmp_path)
 
 
-def test_protocol_module_contains_no_network_or_process_execution_surface() -> None:
-    source = Path("betelgeuze_engine_v2/benchmark/public_protocol.py").read_text(
-        encoding="utf-8"
-    )
-    for forbidden in (
-        "urllib.request",
-        "requests.",
-        "httpx.",
-        "subprocess",
-        "urlopen(",
-        "socket.",
+def test_public_protocol_and_materializer_have_no_network_or_process_surface() -> None:
+    for relative_path in (
+        "betelgeuze_engine_v2/benchmark/public_protocol.py",
+        "betelgeuze_engine_v2/benchmark/public_materialization.py",
     ):
-        assert forbidden not in source
+        source = Path(relative_path).read_text(encoding="utf-8")
+        for forbidden in (
+            "urllib.request",
+            "requests.",
+            "httpx.",
+            "subprocess",
+            "urlopen(",
+            "socket.",
+        ):
+            assert forbidden not in source
 
 
 def test_dedicated_protocol_workflow_is_hosted_and_has_no_fetch_step() -> None:
@@ -344,5 +368,6 @@ def test_dedicated_protocol_workflow_is_hosted_and_has_no_fetch_step() -> None:
     assert "self-hosted" not in source
     assert "persist-credentials: false" in source
     assert "test_engine_v2_public_benchmark_protocol.py" in source
+    assert "test_engine_v2_public_benchmark_materialization.py" in source
     assert "curl " not in source
     assert "wget " not in source

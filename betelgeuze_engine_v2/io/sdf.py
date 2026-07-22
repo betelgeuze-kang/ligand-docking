@@ -210,6 +210,12 @@ def parse_sdf_v2000(
                 aromatic=bond_type == 4,
                 stereo=_BOND_STEREO[stereo_code],
                 source="sdf_v2000_bond_table",
+                metadata={
+                    "v2000_source_atom_i": first,
+                    "v2000_source_atom_j": second,
+                    "v2000_bond_type": bond_type,
+                    "v2000_stereo_code": stereo_code,
+                },
             )
         )
 

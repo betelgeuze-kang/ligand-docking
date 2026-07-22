@@ -28,6 +28,14 @@ from betelgeuze_engine_v2.physics.reference_ewald import (  # noqa: E402
     ReferenceEwaldConfig,
     evaluate_reference_force_field_with_ewald,
 )
+from betelgeuze_engine_v2.physics.reference_canonical_ensemble import (  # noqa: E402
+    ReferenceCanonicalEnsembleCheckpoint,
+    ReferenceCanonicalEnsembleConfig,
+    ReferenceLangevinThermostatConfig,
+    ReferenceMonteCarloBarostatConfig,
+    resume_reference_canonical_ensemble,
+    run_reference_npt,
+)
 from betelgeuze_engine_v2.physics.reference_explicit_solvent import (  # noqa: E402
     JC_CL_CHARGE_E,
     JC_NA_CHARGE_E,
@@ -392,6 +400,92 @@ def test_explicit_solvent_runs_constrained_ewald_nve_with_exact_restart() -> Non
         resumed.checkpoint.velocities_angstrom_per_ps,
     )
     assert uninterrupted.max_abs_energy_drift_kcal_per_mol < 1.0e-6
+    assert (
+        uninterrupted.checkpoint.max_abs_position_constraint_residual_angstrom
+        <= 1.0e-8
+    )
+    assert (
+        uninterrupted.checkpoint.max_abs_velocity_constraint_residual_angstrom_per_ps
+        <= 1.0e-10
+    )
+
+
+def test_explicit_solvent_runs_constrained_ewald_npt_with_exact_restart() -> None:
+    source = _solute()
+    preparation = prepare_reference_explicit_solvent(
+        source,
+        _parameters(source),
+        _config(),
+    )
+    config = ReferenceCanonicalEnsembleConfig(
+        timestep_ps=1.0e-6,
+        trajectory_stride=1,
+        max_neighbors=32,
+        max_atoms_per_cell=32,
+        thermostat=ReferenceLangevinThermostatConfig(
+            temperature_kelvin=300.0,
+            collision_rate_per_ps=1.0,
+            random_seed=20260722,
+        ),
+        barostat=ReferenceMonteCarloBarostatConfig(
+            pressure_bar=1.0,
+            interval_steps=1,
+            max_delta_volume_angstrom3=0.1,
+            pressure_observation_stride=1,
+            pressure_log_length_step=1.0e-5,
+        ),
+        ewald_config=ReferenceEwaldConfig(
+            alpha_per_angstrom=0.35,
+            reciprocal_max_indices=(2, 2, 2),
+        ),
+    )
+    velocities = torch.zeros_like(preparation.system.coordinates)
+
+    uninterrupted = run_reference_npt(
+        preparation.system,
+        preparation.parameters,
+        velocities,
+        steps=2,
+        config=config,
+        constraint_config=preparation.constraint_config,
+    )
+    paused = run_reference_npt(
+        preparation.system,
+        preparation.parameters,
+        velocities,
+        steps=1,
+        config=config,
+        constraint_config=preparation.constraint_config,
+    )
+    restored = ReferenceCanonicalEnsembleCheckpoint.from_json_bytes(
+        paused.checkpoint.to_json_bytes()
+    )
+    resumed = resume_reference_canonical_ensemble(
+        preparation.system,
+        preparation.parameters,
+        restored,
+        additional_steps=1,
+    )
+
+    assert uninterrupted.checkpoint.checkpoint_sha256 == (
+        resumed.checkpoint.checkpoint_sha256
+    )
+    assert uninterrupted.checkpoint.barostat_head_sha256 == (
+        resumed.checkpoint.barostat_head_sha256
+    )
+    assert torch.equal(
+        uninterrupted.checkpoint.coordinates,
+        resumed.checkpoint.coordinates,
+    )
+    assert torch.equal(
+        uninterrupted.system.cell.vectors,
+        resumed.system.cell.vectors,
+    )
+    assert uninterrupted.checkpoint.cumulative_barostat_attempt_count == 2
+    assert all(
+        frame.instantaneous_pressure_bar is not None
+        for frame in uninterrupted.frames
+    )
     assert (
         uninterrupted.checkpoint.max_abs_position_constraint_residual_angstrom
         <= 1.0e-8

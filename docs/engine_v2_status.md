@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_at_explicit_solvent_ion_preparation_contract
+v2_at_public_benchmark_reference_materialization_contract
 ```
 
 The current `main` branch contains:
@@ -108,17 +108,23 @@ The current `main` branch contains:
   Top-5/coverage bootstrap intervals. No public partition, fitted model, or
   result is bundled;
 - a benchmark manifest and one-row-per-case success/failure ledger;
-- a frozen four-case public redocking protocol definition bound to the
+- a frozen v1.1 four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
   `1a5f26aa7270fafba21b7fec8b3633f4c4e45ead`, exact external receptor/reference
   SHA-256 values, MIT repository-license metadata, the RCSB CC0 usage-policy
   identity, an exact ligand-graph identity seed whose coordinates are ignored,
   predefined 2 Å symmetry-aware direct RMSD in the fixed receptor frame plus
-  bounded-validity endpoints,
-  all-case failure denominators, and exact scorer-source hashes. No raw data is
-  bundled, no network fetch or benchmark execution is implemented or authorized,
-  no result document exists, and the four fixtures do not establish statistical
-  representativeness or PoseBusters Benchmark equivalence;
+  bounded-validity endpoints, all-case failure denominators, and exact scorer-
+  source hashes. A separate bounded offline materializer verifies caller-
+  supplied artifact bytes, retains every multi-record parse/match/failure row,
+  ignores identity-seed coordinates, selects all stereo-aware labeled-graph
+  matches, enumerates bounded graph automorphisms, and takes the minimum direct
+  receptor-frame RMSD over every matched reference and admitted symmetry. Its
+  exact source is protocol-bound. No raw data is bundled, no network fetch or
+  docking benchmark execution is implemented or authorized, no result document
+  exists, and the four fixtures do not establish statistical representativeness,
+  independent chemical standardization, full atom-stereo interpretation, or
+  PoseBusters Benchmark equivalence;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that
   every runtime value is supplied explicitly by the caller, and enumerates the
@@ -167,9 +173,9 @@ The current `main` branch contains:
   has no general solute constraint or mass assignment, independent
   SHAKE/RATTLE/Ewald
   comparison, accepted drift/convergence study, or cross-host/GPU evidence and
-  no PME, net-charge background convention, thermostat/barostat,
-  triclinic-cell, NVT/NPT-statistics, scientific, product,
-  or customer claim.
+  no PME, net-charge background convention, independently accepted
+  thermostat/barostat or NVT/NPT-statistics, triclinic-cell, scientific,
+  product, or customer claim.
 - a bounded deterministic CPU `float64` explicit-solvent and monovalent-ion
   preparation. It freezes the exact OpenMM Force Fields Amber TIP3P standard
   XML snapshot at commit `89cd3a18d19c207b595269f36cb7e0d63950944e`
@@ -188,6 +194,40 @@ The current `main` branch contains:
   external energy/force comparison, liquid-density/diffusion/dielectric/RDF or
   ion-property evidence, two-host receipt, scientific validation, product
   qualification, or customer route exists.
+- a bounded CPU `float64` canonical-ensemble reference path. NVT uses the
+  `B-A-O-A-B` Langevin splitting described by Leimkuhler and Matthews
+  ([DOI 10.1063/1.4802990](https://doi.org/10.1063/1.4802990)), removes
+  center-of-mass motion, and applies SHAKE after each coordinate drift plus
+  RATTLE after the stochastic velocity update and final force kick. The normal
+  draws come from a domain-separated SHA-256 counter stream whose seed and
+  exact word index are checkpoint-bound. NPT adds fixed-absolute-delta-volume,
+  isotropic Monte Carlo moves that scale mass-weighted molecular centres while
+  preserving intramolecular coordinates, include the molecular-component
+  Jacobian and pressure work in the Metropolis decision, and retain every
+  accepted, Metropolis-rejected, or domain-rejected attempt. Pressure is
+  observed through a central finite-difference molecular virial, matching the
+  documented convention of OpenMM's
+  [MonteCarloBarostat](https://docs.openmm.org/latest/api-python/generated/openmm.openmm.MonteCarloBarostat.html).
+  Canonical checkpoints bind source/topology/parameters, thermostat/barostat/
+  Ewald/constraint configs, coordinates, velocities, mutable cell, RNG index,
+  energies, temperature, pressure observation, constraint iterations and
+  residuals, attempt counts, and trajectory/barostat hash heads. Explicit
+  TIP3P/Na+/Cl- preparations execute this constrained direct-Ewald NPT path and
+  reproduce pause/serialize/resume bit-exactly in the same runtime.
+- a bounded all-step NVT/NPT statistics analyzer. It requires
+  `trajectory_stride=1`, and for NPT `pressure_observation_stride=1`, plus a
+  genuine pause/resume endpoint. After a caller-fixed burn-in it reports
+  potential, kinetic and total energy, kinetic temperature, and for NPT volume
+  and molecular pressure. Each series includes mean, sample deviation,
+  initial-positive-sequence autocorrelation time, effective sample size,
+  standard error and a caller-fixed normal-approximation confidence interval.
+  Predeclared metrics retain temperature/pressure target bias and CI coverage,
+  effective sample size, constraint residuals, barostat acceptance bounds,
+  minimum attempts, and exact restart failures. These are implementation
+  contracts only: no accepted equilibration or production length, external
+  distribution comparison, density/compressibility/heat-capacity result,
+  independently reviewed thresholds, two-host receipt, GPU parity, scientific
+  validation, product qualification, or customer route exists.
 - a bounded all-step NVE drift analyzer that rejects subsampled trajectories,
   requires a genuine pause/resume execution, and retains every energy,
   instantaneous kinetic-temperature, linear-momentum, current constraint

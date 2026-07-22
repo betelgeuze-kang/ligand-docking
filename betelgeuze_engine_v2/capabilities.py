@@ -16,10 +16,16 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 from .physics.reference_explicit_solvent import (
     REFERENCE_EXPLICIT_SOLVENT_SCIENTIFIC_BLOCKERS,
 )
+from .physics.reference_canonical_ensemble import (
+    REFERENCE_CANONICAL_ENSEMBLE_SCIENTIFIC_BLOCKERS,
+)
+from .physics.reference_ensemble_statistics import (
+    REFERENCE_ENSEMBLE_STATISTICS_SCIENTIFIC_BLOCKERS,
+)
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_at_explicit_solvent_ion_preparation_contract"
+IMPLEMENTATION_STAGE = "v2_at_public_benchmark_reference_materialization_contract"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -58,6 +64,9 @@ CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = "v2_bounded_cpu_reference_minimizatio
 CPU_REFERENCE_NVE_CAPABILITY_ID = "v2_bounded_cpu_reference_nve"
 CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID = (
     "v2_bounded_cpu_reference_explicit_solvent_ions"
+)
+CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID = (
+    "v2_bounded_cpu_reference_nvt_npt"
 )
 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = "v2_bounded_cpu_reference_term_diagnostics"
 CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = "v2_bounded_cpu_reference_improper_constraint_extension"
@@ -417,13 +426,21 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "pme_not_implemented",
         "net_charge_background_and_triclinic_ewald_not_supported",
         "explicit_solvent_and_ion_preparation_not_independently_validated",
-        "thermostat_and_barostat_not_implemented",
-        "nvt_npt_ensemble_statistics_missing",
+        "thermostat_and_barostat_not_independently_validated",
+        "nvt_npt_ensemble_statistics_not_independently_reviewed",
         "triclinic_periodic_cells_not_supported",
         "product_integration_not_qualified",
     ),
     CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID: tuple(
         REFERENCE_EXPLICIT_SOLVENT_SCIENTIFIC_BLOCKERS
+    ),
+    CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID: tuple(
+        dict.fromkeys(
+            (
+                *REFERENCE_CANONICAL_ENSEMBLE_SCIENTIFIC_BLOCKERS,
+                *REFERENCE_ENSEMBLE_STATISTICS_SCIENTIFIC_BLOCKERS,
+            )
+        )
     ),
     CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: (
         "caller_supplied_parameter_values_not_independently_reviewed",
@@ -589,8 +606,8 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: (
         "four_case_contract_cohort_not_statistically_representative",
         "posebusters_benchmark_equivalence_not_established",
-        "symmetry_mapping_materializer_not_implemented",
-        "reference_ligand_match_materializer_not_implemented",
+        "v2000_labeled_graph_identity_not_independent_chemical_standardization",
+        "atom_stereo_parity_beyond_directional_v2000_bonds_not_interpreted",
         "public_benchmark_not_executed",
         "public_holdout_results_missing",
         "independent_attestation_missing",
@@ -892,6 +909,17 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID: _row(
+                CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID,
+                current_state=(
+                    "bounded_cpu_float64_constrained_baoab_nvt_and_molecular_"
+                    "centre_mc_npt_with_counter_rng_exact_restart_barostat_"
+                    "attempt_volume_pressure_energy_traces_and_autocorrelation_"
+                    "aware_confidence_interval_statistics"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: _row(
                 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
                 current_state=(
@@ -969,8 +997,12 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
-                current_state=("frozen_four_case_public_redocking_protocol_definition_without_execution_or_results"),
-                internal_execution_enabled=False,
+                current_state=(
+                    "frozen_four_case_public_redocking_protocol_with_verified_"
+                    "multirecord_stereo_aware_reference_materialization_without_"
+                    "benchmark_execution_or_results"
+                ),
+                internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             EXTERNAL_BASELINE_CAPABILITY_ID: _row(
@@ -1024,6 +1056,7 @@ __all__ = [
     "CAPABILITY_SCHEMA_VERSION",
     "CIF_SYNTAX_CAPABILITY_ID",
     "CPU_REFERENCE_CAPABILITY_ID",
+    "CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID",
     "CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID",
     "CPU_REFERENCE_NVE_CAPABILITY_ID",
     "CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID",

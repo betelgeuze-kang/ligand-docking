@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_at_explicit_solvent_ion_preparation_contract
+implementation_stage: v2_at_public_benchmark_reference_materialization_contract
 
 claim_policy:
   customer_execution_enabled: false
@@ -817,8 +817,8 @@ capabilities:
       - pme_not_implemented
       - net_charge_background_and_triclinic_ewald_not_supported
       - explicit_solvent_and_ion_preparation_not_independently_validated
-      - thermostat_and_barostat_not_implemented
-      - nvt_npt_ensemble_statistics_missing
+      - thermostat_and_barostat_not_independently_validated
+      - nvt_npt_ensemble_statistics_not_independently_reviewed
       - triclinic_periodic_cells_not_supported
       - product_integration_not_qualified
 
@@ -843,10 +843,51 @@ capabilities:
       - explicit_solvent_energy_force_external_comparison_missing
       - direct_ewald_convergence_acceptance_evidence_missing
       - water_density_diffusion_dielectric_and_rdf_evidence_missing
-      - nvt_npt_ensemble_statistics_missing
+      - nvt_npt_ensemble_acceptance_evidence_missing
       - two_cpu_host_reproducibility_missing
       - cpu_gpu_parity_evidence_missing
       - product_integration_not_qualified
+
+  v2_bounded_cpu_reference_nvt_npt:
+    current_state: bounded_cpu_float64_constrained_baoab_nvt_and_molecular_centre_mc_npt_with_counter_rng_exact_restart_barostat_attempt_volume_pressure_energy_traces_and_autocorrelation_aware_confidence_interval_statistics
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_parameter_values_not_independently_reviewed
+      - reference_force_field_not_scientifically_validated
+      - caller_supplied_temperature_pressure_and_integrator_settings_not_reviewed
+      - baoab_langevin_thermostat_not_independently_validated
+      - counter_rng_cross_host_reproducibility_not_validated
+      - molecular_com_mc_barostat_not_independently_validated
+      - finite_difference_molecular_virial_not_independently_validated
+      - nvt_npt_ensemble_acceptance_evidence_missing
+      - equilibration_and_production_length_protocol_missing
+      - autocorrelation_and_effective_sample_size_review_missing
+      - cross_host_reproducibility_missing
+      - cpu_gpu_parity_evidence_missing
+      - pme_not_implemented
+      - net_charge_background_and_triclinic_ewald_not_supported
+      - triclinic_periodic_cells_not_supported
+      - product_integration_not_qualified
+      - caller_supplied_acceptance_thresholds_not_independently_reviewed
+      - finite_trajectory_may_not_be_equilibrated
+      - burn_in_selection_not_independently_reviewed
+      - initial_positive_autocorrelation_estimator_not_independently_validated
+      - normal_approximation_confidence_interval_not_independently_validated
+      - temperature_and_pressure_observables_not_independently_compared
+      - ensemble_distribution_against_external_oracle_missing
+      - liquid_density_compressibility_and_heat_capacity_evidence_missing
+      - two_cpu_host_reproduction_missing
+      - independent_scientific_review_missing
 
   v2_bounded_cpu_reference_term_diagnostics:
     current_state: bounded_cpu_float64_per_term_energy_central_difference_force_and_nonperiodic_virial_diagnostics
@@ -1114,10 +1155,10 @@ capabilities:
       - public_asymmetric_attestation_and_transparency_missing
 
   v2_frozen_public_benchmark_protocol:
-    current_state: frozen_four_case_public_redocking_protocol_definition_without_execution_or_results
+    current_state: frozen_four_case_public_redocking_protocol_with_verified_multirecord_stereo_aware_reference_materialization_without_benchmark_execution_or_results
     implemented: true
     reference_contract_ready: true
-    internal_reference_execution_enabled: false
+    internal_reference_execution_enabled: true
     calibrated: false
     scientifically_validated: false
     public_evidence_ready: false
@@ -1129,8 +1170,8 @@ capabilities:
     blockers:
       - four_case_contract_cohort_not_statistically_representative
       - posebusters_benchmark_equivalence_not_established
-      - symmetry_mapping_materializer_not_implemented
-      - reference_ligand_match_materializer_not_implemented
+      - v2000_labeled_graph_identity_not_independent_chemical_standardization
+      - atom_stereo_parity_beyond_directional_v2000_bonds_not_interpreted
       - public_benchmark_not_executed
       - public_holdout_results_missing
       - independent_attestation_missing

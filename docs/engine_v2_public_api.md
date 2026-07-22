@@ -33,6 +33,8 @@ betelgeuze_engine_v2.io
 betelgeuze_engine_v2.molecular.mmcif_*
 betelgeuze_engine_v2.docking
 betelgeuze_engine_v2.benchmark
+betelgeuze_engine_v2.benchmark.public_materialization
+betelgeuze_engine_v2.benchmark.public_protocol
 betelgeuze_engine_v2.physics.registry
 betelgeuze_engine_v2.physics.reference_parameter_applicability
 betelgeuze_engine_v2.physics.reference_diagnostics
@@ -41,6 +43,8 @@ betelgeuze_engine_v2.physics.reference_forcefield_v2
 betelgeuze_engine_v2.physics.reference_minimization
 betelgeuze_engine_v2.physics.reference_ewald
 betelgeuze_engine_v2.physics.reference_explicit_solvent
+betelgeuze_engine_v2.physics.reference_canonical_ensemble
+betelgeuze_engine_v2.physics.reference_ensemble_statistics
 betelgeuze_engine_v2.physics.reference_nve
 betelgeuze_engine_v2.physics.reference_nve_drift
 betelgeuze_engine_v2.physics.reference_shake_rattle
@@ -90,8 +94,18 @@ betelgeuze_engine_v2.runtime
 
 The frozen public-benchmark protocol symbols under
 `betelgeuze_engine_v2.benchmark` define input identities, endpoint rules, and a
-failure-inclusive reporting contract only. They do not authorize data fetch,
-benchmark execution, result publication, or scientific promotion.
+failure-inclusive reporting contract. The companion offline materializer
+verifies caller-supplied frozen SDF bytes, parses bounded multi-record
+references with a row for every match, mismatch, or failure, ignores identity-
+seed coordinates, and uses atom/bond labels including directional V2000 stereo
+to generate bounded graph matches and symmetry permutations. Its RMSD helper
+does no ligand-only alignment and minimizes direct receptor-frame heavy-atom
+RMSD across all matched reference records and admitted symmetries. Canonical
+receipts bind the v1.1 protocol, artifacts, limits, rows, mappings, and binary64
+coordinates. These APIs do not fetch or bundle data, interpret atom stereo
+beyond directional V2000 bond marks, standardize chemistry independently,
+authorize docking benchmark execution or publication, or promote a scientific
+claim.
 
 The provisional docking symbols include an atomic score-breakdown contract and
 an explicitly uncalibrated CPU `float64` reference scorer. The scorer requires
@@ -169,6 +183,21 @@ independent reviewer, reproduce liquid or ion observables, compare energy or
 forces with an external implementation, authorize broad chemistry, or enable
 scientific/product/customer use.
 
+The bounded canonical-ensemble symbols expose immutable NVT/NPT integration
+configs, constrained BAOAB Langevin dynamics, a domain-separated counter random
+stream, optional molecular-centre isotropic Monte Carlo volume moves, complete
+barostat attempt rows, mutable-cell trajectory frames, and canonical
+checkpoint/restart. The checkpoint binds the exact RNG word index as well as
+source, parameter, thermostat, barostat, Ewald, constraint, coordinate,
+velocity, cell, energy, pressure-observation, and trace-head identities. The
+separate ensemble-statistics symbols require an all-step fresh trajectory and a
+genuine pause/resume endpoint; they report energy, temperature, and for NPT
+volume and finite-difference molecular-pressure series with autocorrelation,
+effective sample size, confidence intervals, threshold rows, and all failures.
+These provisional APIs neither establish equilibration nor validate the
+thermostat, barostat, pressure estimator, random stream, ensemble distribution,
+liquid observables, cross-host/GPU parity, or any scientific/product claim.
+
 The bounded reference-NVE symbols implement CPU `float64` velocity-Verlet for
 one canonical model with explicit atom masses and caller-bound reference
 parameters. Every force evaluation rebuilds the compact neighbor list;
@@ -189,8 +218,8 @@ that selection and the entire Ewald config survive canonical checkpoint parsing
 and bit-exact restart. This is an implementation contract only:
 general solute constraint/mass assignment, accepted drift or Ewald-convergence evidence,
 independent SHAKE/RATTLE/Ewald or cross-host reproduction, PME, net-charge
-background, thermostats, barostats, triclinic cells,
-NVT/NPT statistics, GPU parity, and all scientific/product/customer promotion
+background, independently accepted thermostat/barostat and NVT/NPT statistics,
+triclinic cells, GPU parity, and all scientific/product/customer promotion
 remain unavailable.
 
 The bounded reference-NVE-drift symbols require a fresh all-step NVE result and

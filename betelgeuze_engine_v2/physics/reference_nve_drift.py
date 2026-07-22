@@ -69,7 +69,7 @@ REFERENCE_NVE_DRIFT_SCIENTIFIC_BLOCKERS = (
     "cpu_gpu_parity_evidence_missing",
     "force_field_and_parameter_accuracy_not_scientifically_validated",
     "public_nve_drift_result_receipt_missing",
-    "nvt_npt_ensemble_statistics_missing",
+    "nvt_npt_ensemble_statistics_not_independently_reviewed",
 )
 
 

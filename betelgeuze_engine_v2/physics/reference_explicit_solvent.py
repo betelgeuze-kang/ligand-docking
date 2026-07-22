@@ -125,7 +125,7 @@ REFERENCE_EXPLICIT_SOLVENT_SCIENTIFIC_BLOCKERS = (
     "explicit_solvent_energy_force_external_comparison_missing",
     "direct_ewald_convergence_acceptance_evidence_missing",
     "water_density_diffusion_dielectric_and_rdf_evidence_missing",
-    "nvt_npt_ensemble_statistics_missing",
+    "nvt_npt_ensemble_acceptance_evidence_missing",
     "two_cpu_host_reproducibility_missing",
     "cpu_gpu_parity_evidence_missing",
     "product_integration_not_qualified",

@@ -6,9 +6,11 @@ on:
       - "betelgeuze_engine_v2/benchmark/**"
       - "betelgeuze_engine_v2/docking/metrics.py"
       - "betelgeuze_engine_v2/docking/validity.py"
+      - "betelgeuze_engine_v2/io/sdf.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/unit/test_engine_v2_public_benchmark_materialization.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -18,9 +20,11 @@ on:
       - "betelgeuze_engine_v2/benchmark/**"
       - "betelgeuze_engine_v2/docking/metrics.py"
       - "betelgeuze_engine_v2/docking/validity.py"
+      - "betelgeuze_engine_v2/io/sdf.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/unit/test_engine_v2_public_benchmark_materialization.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -56,6 +60,7 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
+            tests/unit/test_engine_v2_public_benchmark_materialization.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
             .github/workflows/ci-engine-v2-main.yml
@@ -81,4 +86,5 @@ jobs:
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
+            tests/unit/test_engine_v2_public_benchmark_materialization.py \
             tests/unit/test_engine_v2_benchmark_contracts.py

@@ -62,7 +62,7 @@ REFERENCE_NVE_ALGORITHM_ID = (
 REFERENCE_NVE_CONFIG_SCHEMA_ID = "betelgeuze.engine_v2_reference_nve_config/1.1.0"
 REFERENCE_NVE_FRAME_SCHEMA_ID = "betelgeuze.engine_v2_reference_nve_frame/1.2.0"
 REFERENCE_NVE_CHECKPOINT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_nve_checkpoint/1.2.0"
+    "betelgeuze.engine_v2_reference_nve_checkpoint/1.3.0"
 )
 REFERENCE_NVE_RESULT_SCHEMA_ID = "betelgeuze.engine_v2_reference_nve_result/1.2.0"
 REFERENCE_NVE_TRAJECTORY_CHAIN_SCHEMA_ID = (
@@ -91,8 +91,8 @@ REFERENCE_NVE_SCIENTIFIC_BLOCKERS = (
     "pme_not_implemented",
     "net_charge_background_and_triclinic_ewald_not_supported",
     "explicit_solvent_and_ion_preparation_not_independently_validated",
-    "thermostat_and_barostat_not_implemented",
-    "nvt_npt_ensemble_statistics_missing",
+    "thermostat_and_barostat_not_independently_validated",
+    "nvt_npt_ensemble_statistics_not_independently_reviewed",
     "triclinic_periodic_cells_not_supported",
     "product_integration_not_qualified",
 )
@@ -556,12 +556,23 @@ class ReferenceNVECheckpoint:
     evaluated_frame_count: int
     schema_id: str = REFERENCE_NVE_CHECKPOINT_SCHEMA_ID
     algorithm_id: str = REFERENCE_NVE_ALGORITHM_ID
+    device: str = "cpu"
+    dtype: str = "float64"
+    torch_version: str = str(torch.__version__)
 
     def __post_init__(self) -> None:
         if self.schema_id != REFERENCE_NVE_CHECKPOINT_SCHEMA_ID:
             raise ReferenceNVEError("unsupported reference NVE checkpoint schema")
         if self.algorithm_id != REFERENCE_NVE_ALGORITHM_ID:
             raise ReferenceNVEError("unsupported reference NVE algorithm")
+        if self.device != "cpu" or self.dtype != "float64":
+            raise ReferenceNVEError("reference NVE checkpoint requires CPU float64")
+        version = str(self.torch_version).strip()
+        if not version:
+            raise ReferenceNVEError(
+                "reference NVE checkpoint requires a Torch runtime version"
+            )
+        object.__setattr__(self, "torch_version", version)
         for name in (
             "source_system_sha256",
             "topology_sha256",
@@ -702,6 +713,9 @@ class ReferenceNVECheckpoint:
         return {
             "schema_id": self.schema_id,
             "algorithm_id": self.algorithm_id,
+            "device": self.device,
+            "dtype": self.dtype,
+            "torch_version": self.torch_version,
             "source_system_sha256": self.source_system_sha256,
             "topology_sha256": self.topology_sha256,
             "parameter_fingerprint_sha256": self.parameter_fingerprint_sha256,
@@ -774,6 +788,9 @@ class ReferenceNVECheckpoint:
         expected_keys = {
             "schema_id",
             "algorithm_id",
+            "device",
+            "dtype",
+            "torch_version",
             "source_system_sha256",
             "topology_sha256",
             "parameter_fingerprint_sha256",
@@ -889,6 +906,9 @@ class ReferenceNVECheckpoint:
             ),
             schema_id=str(value["schema_id"]),
             algorithm_id=str(value["algorithm_id"]),
+            device=str(value["device"]),
+            dtype=str(value["dtype"]),
+            torch_version=str(value["torch_version"]),
         )
         if checkpoint.checkpoint_sha256 != _digest(
             value["checkpoint_sha256"],
@@ -1725,9 +1745,9 @@ def resume_reference_nve(
             checkpoint.constraint_config.fingerprint_sha256
         ),
         "algorithm_id": checkpoint.algorithm_id,
-        "device": "cpu",
-        "dtype": "float64",
-        "torch_version": str(torch.__version__),
+        "device": checkpoint.device,
+        "dtype": checkpoint.dtype,
+        "torch_version": checkpoint.torch_version,
     }
     if observed != expected:
         raise ReferenceNVEError(

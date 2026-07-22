@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_at_explicit_solvent_ion_preparation_contract
+v2_at_public_benchmark_reference_materialization_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -53,8 +53,8 @@ v2_at_explicit_solvent_ion_preparation_contract
   일반 solute constraint/mass 자동 할당, 검증된 parameter, 독립
   SHAKE/RATTLE/Ewald 비교,
   Ewald convergence·NVE drift acceptance evidence, PME, net-charge background,
-  thermostat/barostat·triclinic cell·NVT/NPT 통계·GPU parity·
-  제품 route는 구현하지 않음
+  독립 승인된 thermostat/barostat·NVT/NPT 통계, triclinic cell·GPU parity·
+  제품 route는 없음
 - OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source snapshot을
   고정하고 water/ion atom·residue·bond·angle·nonbonded value, intrawater
   exclusion, rigid-water SHAKE/RATTLE constraint, full 3D orthorhombic PBC,
@@ -64,6 +64,17 @@ v2_at_explicit_solvent_ion_preparation_contract
   실행 검증함. SHA-256 순서 lattice는 minimization·equilibration된 액체가 아니며
   source 전사, 액체 물성·ion 거동·energy/force parity·두-host 재현·과학/제품
   사용은 계속 미검증
+- constrained BAOAB Langevin NVT와 선택적 isotropic molecular-centre Monte
+  Carlo NPT barostat를 제공하는 bounded CPU `float64` canonical-ensemble MD.
+  domain-separated SHA-256 counter random stream, 가변 orthorhombic cell,
+  SHAKE/RATTLE 전체 상태, barostat proposal/acceptance 행, energy·coordinate·
+  volume·finite-difference molecular-pressure trace와 trajectory/barostat hash
+  head를 checkpoint에 결속해 동일 runtime bit-exact restart를 보장함. 별도
+  all-step 분석은 initial-positive-sequence autocorrelation, effective sample
+  size, normal-approximation confidence interval, target bias, constraint
+  residual, barostat acceptance, exact restart와 실패 metric 행을 모두 보존함.
+  accepted equilibration/production protocol, 외부 ensemble 비교, 액체 물성,
+  두-host 재현, CPU/GPU parity 또는 과학/제품 승격은 없음
 - `trajectory_stride=1`인 fresh run과 실제 pause/resume 재실행을 요구하는 bounded
   all-step NVE drift 분석. 모든 energy·kinetic-temperature·linear-momentum·현재
   constraint residual·frame/coordinate/velocity digest 관측, energy·momentum의
@@ -158,6 +169,14 @@ v2_at_explicit_solvent_ion_preparation_contract
   identity overlap audit와 실패 포함 all-case/target-family bootstrap 평가를
   갖춘 fit-only pairwise ranking calibration 계약
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
+- frozen four-case PoseBusters contract cohort의 bounded offline materializer.
+  caller가 제공한 seed/reference SDF byte를 검증하고 multi-record의 모든
+  parse·match·failure 행을 보존하며, seed 좌표는 사용하지 않는다. 원자번호·전하·
+  isotope·aromatic·directional V2000 stereo로 표지한 graph identity와 제한된
+  stereo-preserving symmetry mapping을 생성하고, ligand-only alignment 없이 모든
+  일치 reference pose에 대해 receptor frame의 heavy-atom RMSD 최솟값을 계산한다.
+  exact materializer source는 protocol v1.1에 결속된다. 데이터·도킹 실행·benchmark
+  결과·독립 검토·과학/제품 claim은 포함하지 않는다
 
 이 표면은 calibrated docking, MD, free energy, GPU 또는 고객 제품 기능이
 아닙니다. 현재 모든 V2 capability는 `claim_safe=false`,

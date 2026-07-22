@@ -35,15 +35,15 @@ from .manifest import (
 )
 
 PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_benchmark_protocol/1.0.0"
+    "betelgeuze.engine_v2_public_benchmark_protocol/1.1.0"
 )
 PUBLIC_BENCHMARK_PROTOCOL_ID = (
-    "posebusters_packaged_public_redocking_contract_cohort/1.0.0"
+    "posebusters_packaged_public_redocking_contract_cohort/1.1.0"
 )
-PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.0.0"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-17T01:30:00Z"
+PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.0"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-22T07:57:34Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "4ae0919cdbb65038cb64bd5fb014c99cd6107de9d25852c67c313cf3459e089c"
+    "1dc41af780d5e362f0d623267802d3dc25fda9f89f5735ca47c43e86a026ccfa"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -385,13 +385,14 @@ class FrozenPublicBenchmarkProtocol:
                 "statistical_representativeness_claimed": False,
                 "posebusters_benchmark_equivalence_claimed": False,
                 "reference_selection_rule": (
-                    "exactly_one_reference_record_must_match_seed_graph_identity"
+                    "all_reference_records_matching_seed_labeled_graph_identity"
                 ),
                 "ligand_identity_seed_coordinates_used": False,
                 "rmsd_method": (
-                    "explicit_heavy_atom_bijections_then_minimum_direct_"
-                    "receptor_frame_rmsd"
+                    "minimum_direct_receptor_frame_rmsd_across_all_graph_matched_"
+                    "reference_records_and_stereo_preserving_graph_automorphisms"
                 ),
+                "reference_pose_aggregation": "minimum_over_all_matched_records",
                 "ligand_only_alignment_allowed": False,
                 "receptor_frame_required": True,
             },
@@ -435,7 +436,9 @@ class FrozenPublicBenchmarkProtocol:
                 ),
                 "reviewed_at_utc": self.frozen_at_utc,
                 "superseded": False,
-                "supersedes_protocol_sha256": "",
+                "supersedes_protocol_sha256": (
+                    "4ae0919cdbb65038cb64bd5fb014c99cd6107de9d25852c67c313cf3459e089c"
+                ),
                 "revoked": False,
                 "revocation_reason": "",
             },
@@ -449,13 +452,14 @@ class FrozenPublicBenchmarkProtocol:
                 "rmsd_metric_id": PRIMARY_RMSD_METRIC_ID,
                 "rmsd_threshold_angstrom": PRIMARY_RMSD_THRESHOLD_ANGSTROM,
                 "rmsd_method": (
-                    "explicit_heavy_atom_bijections_then_minimum_direct_"
-                    "receptor_frame_rmsd"
+                    "minimum_direct_receptor_frame_rmsd_across_all_graph_matched_"
+                    "reference_records_and_stereo_preserving_graph_automorphisms"
                 ),
+                "reference_pose_aggregation": "minimum_over_all_matched_records",
                 "ligand_only_alignment_allowed": False,
                 "receptor_frame_required": True,
                 "reference_selection_rule": (
-                    "exactly_one_reference_record_must_match_seed_graph_identity"
+                    "all_reference_records_matching_seed_labeled_graph_identity"
                 ),
                 "ligand_identity_seed_coordinates_used": False,
                 "validity_metric_id": BOUNDED_VALIDITY_METRIC_ID,
@@ -469,8 +473,8 @@ class FrozenPublicBenchmarkProtocol:
                 "failure_rows_retained": True,
                 "denominator": "all_manifest_cases",
                 "missing_or_failed_case_counts_as_primary_failure": True,
-                "symmetry_mapping_generation_implemented": False,
-                "reference_ligand_match_materializer_implemented": False,
+                "symmetry_mapping_generation_implemented": True,
+                "reference_ligand_match_materializer_implemented": True,
                 "posebusters_parity_claimed": False,
             },
             "split_policy": {
@@ -485,6 +489,8 @@ class FrozenPublicBenchmarkProtocol:
             "execution_policy": {
                 "network_fetch_implemented": False,
                 "raw_data_bundled": False,
+                "offline_reference_materialization_implemented": True,
+                "direct_reference_rmsd_evaluation_implemented": True,
                 "benchmark_execution_authorized": False,
                 "result_document_created": False,
                 "result_publication_authorized": False,
@@ -514,8 +520,8 @@ class FrozenPublicBenchmarkProtocol:
             "blockers": [
                 "four_case_contract_cohort_not_statistically_representative",
                 "posebusters_benchmark_equivalence_not_established",
-                "symmetry_mapping_materializer_not_implemented",
-                "reference_ligand_match_materializer_not_implemented",
+                "v2000_labeled_graph_identity_not_independent_chemical_standardization",
+                "atom_stereo_parity_beyond_directional_v2000_bonds_not_interpreted",
                 "public_benchmark_not_executed",
                 "public_holdout_results_missing",
                 "independent_attestation_missing",
@@ -675,6 +681,40 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 relative_path="betelgeuze_engine_v2/docking/validity.py",
                 source_sha256=(
                     "8511e3dbb7ad6c009af7bfb32b6ae21a68de6b1c0fb76443f7406ff680623dd7"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="reference_materialization",
+                module="betelgeuze_engine_v2.benchmark.public_materialization",
+                relative_path=(
+                    "betelgeuze_engine_v2/benchmark/public_materialization.py"
+                ),
+                source_sha256=(
+                    "3feca800603b22e1ad89fb7a9d5a42ac412d7c4b3f4fa2ea539b3228da8987b2"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="reference_molecular_models",
+                module="betelgeuze_engine_v2.molecular.models",
+                relative_path="betelgeuze_engine_v2/molecular/models.py",
+                source_sha256=(
+                    "6e048062e5e8988855785841c8b044e805ddccd3b541b6f1ac109902a9e14448"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="reference_molecular_validation",
+                module="betelgeuze_engine_v2.molecular.validation",
+                relative_path="betelgeuze_engine_v2/molecular/validation.py",
+                source_sha256=(
+                    "dfc5dbae1900095a74019db939efb4d4066dc1f50a0712bbcd5db125be9f6aba"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="reference_sdf_parser",
+                module="betelgeuze_engine_v2.io.sdf",
+                relative_path="betelgeuze_engine_v2/io/sdf.py",
+                source_sha256=(
+                    "b0dd24c2902127606f053c09383bd0573f2c98fe3610a57557e4cc12098cc42e"
                 ),
             ),
             PublicBenchmarkScorerIdentity(

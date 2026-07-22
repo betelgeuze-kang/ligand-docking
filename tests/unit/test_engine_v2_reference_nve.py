@@ -365,6 +365,21 @@ def test_checkpoint_transport_and_restart_identity_fail_closed() -> None:
     with pytest.raises(ReferenceNVEError, match="transport is not canonical"):
         ReferenceNVECheckpoint.from_json_bytes(raw.rstrip(b"\n"))
 
+    foreign_runtime = replace(
+        result.checkpoint,
+        torch_version="0.0.0-foreign-runtime",
+    )
+    parsed_foreign_runtime = ReferenceNVECheckpoint.from_json_bytes(
+        foreign_runtime.to_json_bytes()
+    )
+    with pytest.raises(ReferenceNVEError, match="provenance mismatch"):
+        resume_reference_nve(
+            system,
+            parameters,
+            parsed_foreign_runtime,
+            additional_steps=1,
+        )
+
     different_source = replace(
         system,
         coordinates=system.coordinates + torch.tensor([[[0.1, 0.0, 0.0]]]),

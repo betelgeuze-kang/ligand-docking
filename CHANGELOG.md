@@ -8,6 +8,28 @@ scientific claim from a package version.
 
 ### Added
 
+- A bounded offline reference-pose materializer for the frozen PoseBusters
+  four-case contract cohort. Protocol v1.1 now selects every reference SDF
+  record matching the identity seed's labeled graph instead of requiring one
+  record, retains parse/mismatch/search-failure rows, ignores seed coordinates,
+  preserves directional V2000 bond stereo, enumerates bounded stereo-preserving
+  automorphisms, and computes the minimum direct receptor-frame heavy-atom RMSD
+  across all matched records without ligand alignment. Canonical receipts and
+  the protocol bind the exact materializer source. No data, public benchmark
+  run, result, independent review, or scientific/product claim is included.
+- A bounded CPU `float64` canonical-ensemble reference path with constrained
+  BAOAB Langevin NVT and optional molecular-centre isotropic Monte Carlo NPT.
+  A domain-separated SHA-256 counter RNG, mutable orthorhombic cell, complete
+  SHAKE/RATTLE state, accepted/Metropolis-rejected/domain-rejected barostat
+  rows, finite-difference molecular pressure, and trajectory/barostat hash
+  chains survive canonical bit-exact same-runtime restart. A separate all-step
+  analyzer reports energy/temperature/volume/pressure series,
+  initial-positive-sequence autocorrelation time, effective sample size,
+  normal-approximation confidence intervals, target bias, constraint residuals,
+  barostat acceptance, exact restart, and every failed metric row. Explicit
+  TIP3P/Na+/Cl- direct-Ewald NPT is exercised, but no accepted equilibration,
+  external ensemble comparison, liquid-property evidence, two-host receipt,
+  GPU parity, or scientific/product claim exists.
 - A bounded deterministic CPU `float64` explicit-solvent preparation bound to
   an exact OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source
   snapshot. It materializes water/ion atoms and residues, water bonds and
@@ -25,15 +47,16 @@ scientific claim from a package version.
   orthorhombic PBC with per-step wrapping, and optionally applies canonical-pair
   inverse-mass SHAKE position corrections plus RATTLE radial-velocity
   projection. Binary64 frames and canonical checkpoints bind constraint
-  configuration, residual maxima, cumulative iterations, and bit-exact
-  same-runtime restart. An optional neutral orthorhombic direct-Ewald mode now
+  configuration, residual maxima, cumulative iterations, explicit CPU/dtype/
+  Torch runtime identity, and bit-exact same-runtime restart. An optional
+  neutral orthorhombic direct-Ewald mode now
   exactly replaces the frozen v1 screened-Coulomb energy/force with bounded
   shifted-real, reciprocal, self, and exclusion/1-4 correction components and
   binds its canonical config into restart identity. Constraint/mass assignment,
   scientific drift or Ewald-convergence acceptance, independent
   SHAKE/RATTLE/Ewald and cross-host reproduction, PME, net-charge background,
-  thermostat/barostat, triclinic-cell,
-  NVT/NPT-statistics, GPU-parity, and product claims remain blocked.
+  independently accepted thermostat/barostat or NVT/NPT statistics,
+  triclinic-cell, GPU-parity, and product claims remain blocked.
 - A bounded all-step NVE drift analyzer requiring a fresh `trajectory_stride=1`
   run and a genuine pause/resume execution. It retains energy, raw kinetic
   temperature, linear momentum, current constraint residuals, and exact

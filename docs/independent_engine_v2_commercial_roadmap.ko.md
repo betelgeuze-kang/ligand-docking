@@ -184,7 +184,7 @@ V2-0은 스캐폴드 기준선일 뿐 calibrated physics나 상용 solver가 아
 | `v2_bounded_mmcif_nonpoly_tautomer_selection_corpus` | CID 177·11199·702 factual identity와 license-review boundary를 결속한 6-case real-world-identity corpus; supported 2·failure 4를 모두 실행 | raw PubChem record·contributor text·conformer bundling, source identity 인증, general chemistry coverage, thermodynamic evidence, legal determination, parameter fitting·과학/benchmark/product 승격 |
 | `v2_reviewed_parameter_source_provenance` | OpenFF Sage 2.2.1 unconstrained의 release tag·commit·immutable artifact URL·byte size·SHA-256, repository license identity·license-text SHA-256와 검토 범위를 고정한 offline provenance 계약 | OFFXML semantic parsing·artifact bundling/network fetch·graph binding·parameter/partial-charge assignment·coverage/applicability/calibration·force/energy·과학/benchmark 검증·법률 판단 |
 | `v2_bounded_mmcif_nonpoly_preparation_corpus` | SHA-256으로 고정한 exact ASCII 30-case synthetic contract corpus와 별도 7-case pH·6-case tautomer real-world-identity corpus를 결속한 52-axis executable coverage ledger; supported 25·explicitly unsupported 27·not implemented 0 | zero implementation gap을 과학·commercial readiness로 해석, parameter fitting·V2-1 종료·과학/benchmark/product 승격 |
-| `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 protocol definition | raw data bundling·network fetch·benchmark 실행/결과/발표 승인, ligand-only alignment, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
+| `v2_frozen_public_benchmark_protocol` | PoseBusters 공식 저장소 고정 commit의 packaged PDB example 4건에 대해 external receptor/reference/ligand-identity-seed SHA-256, MIT·RCSB CC0 license metadata, seed 좌표를 무시하는 fixed-receptor-frame 2 Å symmetry-aware direct RMSD·bounded validity endpoint, all-case failure denominator와 scorer source SHA-256을 고정한 v1.1 protocol; bounded offline materializer가 caller-provided exact SDF byte를 검증하고 모든 multi-record parse/match/failure 행, directional V2000 stereo-aware labeled-graph match, bounded automorphism, 모든 일치 reference에 대한 무정렬 receptor-frame RMSD 최솟값과 canonical receipt를 보존 | raw data bundling·network fetch·도킹 benchmark 실행/결과/발표 승인, ligand-only alignment, 독립 chemical standardization, directional bond mark를 넘는 완전한 atom stereo 해석, 통계적 대표성, PoseBusters Benchmark 동등성, 법률 판단, 과학/benchmark/product 승격 |
 | `v2_h5_reference_physics_parameter_applicability_record` | caller-supplied explicit parameter origin, 구현된 5개 energy term·mixing/switch/pair semantics, code-enforced topology·neighbor·orthorhombic-PBC·capacity admission, 7개 runtime source SHA-256을 고정한 H5 record | production parameter set, Sage-to-runtime value binding, OFFXML parsing·assignment, scientific chemical applicability, fitting·calibration·force/energy validation, physics/customer 실행 승인 |
 | `v2_bounded_cpu_reference_minimization` | single-model CPU float64 입력과 caller-supplied explicit parameter에 한정한 deterministic force-steepest-descent, Armijo backtracking, iteration/backtrack/displacement/neighbor hard bound, failure-inclusive evaluation row, source/topology/parameter/config identity와 exact little-endian binary64 좌표를 결속한 checkpoint/restart | production parameter set·assignment, general chemistry/applicability, improper·constraint·long-range·solvation, 독립 minimization reference/validation, 과학·benchmark·product/customer 승격 |
 | `v2_bounded_cpu_reference_term_diagnostics` | unchanged frozen evaluator의 5개 component energy를 single-model CPU float64의 모든 `6N` plus/minus perturbation에서 중앙차분해 per-term force를 만들고 analytic total force 합계·component net force를 검증하며, non-periodic 입력에 `sum((r-r_center) outer F)` configurational virial·대칭성·uniform-strain derivative를 제공 | independent scientific reference, parameter/applicability validation, pressure/stress, periodic cell-strain virial, improper·constraint·long-range·solvation, 과학·benchmark·product/customer 승격 |
@@ -645,9 +645,11 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    유지한다. 52-axis ledger의 implementation gap이 0이어도 scientific 또는
    commercial readiness로 승격하지 않으며 original mmCIF lexical 재출력은 별도
    미지원으로 유지한다.
-8. 완료된 four-case public benchmark protocol/manifest의 exact source·license
-   metadata·endpoint·failure denominator·scorer identity를 결과 실행·발표 없이
-   유지한다.
+8. 완료된 v1.1 four-case public benchmark protocol/manifest의 exact source·license
+   metadata·endpoint·failure denominator·scorer identity와 source-bound offline
+   materializer를 유지한다. 모든 reference record·graph match/mismatch/failure,
+   stereo-preserving bounded automorphism과 무정렬 receptor-frame RMSD 최솟값을
+   보존하되 데이터 fetch/bundle·도킹 실행·결과·발표·과학 승격은 계속 금지한다.
 9. 완료된 H5 parameter-origin/runtime-envelope record를 유지한다. 이 record는
    caller-supplied 값과 기존 reviewed Sage candidate identity를 분리하고 code-enforced
    execution admission을 scientific applicability와 분리한다. production parameter
@@ -764,8 +766,8 @@ checkpoint/restart, 그리고 중성 CPU `float64` orthorhombic cell에서 scree
 Coulomb을 real·reciprocal·self·exclusion/1-4 correction으로 교체하는 bounded
 direct-Ewald 선택 경로까지 구현됐다. 이는 constraint/mass assignment,
 drift·Ewald convergence acceptance, 독립 SHAKE/RATTLE/Ewald 비교나 독립·두-host
-재현 결과가 아니며 PME, net-charge background,
-thermostat/barostat, triclinic PBC, NVT/NPT 통계, CPU/GPU parity와 제품 승격은 계속
+재현 결과가 아니며 PME, net-charge background, 독립 승인된
+thermostat/barostat·NVT/NPT 통계, triclinic PBC, CPU/GPU parity와 제품 승격은 계속
 차단된다.
 별도 bounded preparation은 exact Amber TIP3P/Joung--Cheatham Na+/Cl- source
 snapshot을 고정하고 water/ion topology·parameter·intrawater exclusion·rigid-water
@@ -774,6 +776,18 @@ trace를 생성한다. 중성/반대이온 case는 실제 direct-Ewald와 constr
 restart까지 실행된다. 다만 초기 lattice는 미평형이며 독립 source 전사 검토,
 external energy/force parity, 물/이온 관측량, 두-host 또는 과학 acceptance receipt는
 없다.
+동일 force·constraint·PBC·explicit-particle stack 위에 constrained BAOAB
+Langevin NVT와 molecular-centre isotropic Monte Carlo NPT를 제공하는 bounded
+canonical-ensemble 경로도 구현했다. seeded counter RNG 위치, 가변 cell, 모든
+barostat proposal/disposition, energy·coordinate·volume·finite-difference
+molecular-pressure trace와 trajectory/barostat hash head가 canonical
+pause/serialize/resume에서 보존된다. 별도 all-step 분석은 autocorrelation time,
+effective sample size, confidence interval, target bias, constraint residual,
+acceptance count/fraction, exact restart와 사전 선언된 모든 실패 metric을 기록한다.
+이는 thermostat/barostat/statistics 구현 표면만 닫는다. 독립 integrator·pressure
+비교, 검토된 burn-in/threshold, production-length 액체·ion 분포,
+density/compressibility/heat capacity, 두-host 재현과 CPU/GPU parity는 계속
+필수다.
 또한 모든 evaluated frame과 실제 pause/resume 재실행을 요구하고 energy·momentum
 max/RMS·slope, instantaneous kinetic temperature, 현재 constraint residual,
 trajectory byte identity, exact restart, 실패 포함 사전 9개 metric 행을 기록하는

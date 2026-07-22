@@ -13,6 +13,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     CIF_SYNTAX_CAPABILITY_ID,
     CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID,
     CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
+    CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID,
     CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID,
     CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID,
     CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
@@ -319,7 +320,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 47
+    assert len(loaded["capabilities"]) == 48
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -366,6 +367,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID in rows
     assert CPU_REFERENCE_NVE_CAPABILITY_ID in rows
     assert CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID in rows
+    assert CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID in rows
     assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
@@ -640,10 +642,21 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     public_protocol = rows[PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert public_protocol["current_state"] == (
-        "frozen_four_case_public_redocking_protocol_definition_without_execution_or_results"
+        "frozen_four_case_public_redocking_protocol_with_verified_multirecord_"
+        "stereo_aware_reference_materialization_without_benchmark_execution_or_results"
     )
-    assert public_protocol["internal_reference_execution_enabled"] is False
+    assert public_protocol["internal_reference_execution_enabled"] is True
     assert "public_benchmark_not_executed" in public_protocol["blockers"]
+    assert "symmetry_mapping_materializer_not_implemented" not in (
+        public_protocol["blockers"]
+    )
+    assert "reference_ligand_match_materializer_not_implemented" not in (
+        public_protocol["blockers"]
+    )
+    assert (
+        "v2000_labeled_graph_identity_not_independent_chemical_standardization"
+        in public_protocol["blockers"]
+    )
 
     h5_record = rows[H5_PARAMETER_APPLICABILITY_CAPABILITY_ID]
     assert h5_record["current_state"] == (
@@ -694,7 +707,14 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         nve["blockers"]
     )
     assert "pme_not_implemented" in nve["blockers"]
-    assert "nvt_npt_ensemble_statistics_missing" in nve["blockers"]
+    assert "thermostat_and_barostat_not_implemented" not in nve["blockers"]
+    assert "nvt_npt_ensemble_statistics_missing" not in nve["blockers"]
+    assert "thermostat_and_barostat_not_independently_validated" in (
+        nve["blockers"]
+    )
+    assert "nvt_npt_ensemble_statistics_not_independently_reviewed" in (
+        nve["blockers"]
+    )
 
     explicit_solvent = rows[CPU_REFERENCE_EXPLICIT_SOLVENT_CAPABILITY_ID]
     assert explicit_solvent["current_state"] == (
@@ -711,7 +731,33 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "explicit_solvent_energy_force_external_comparison_missing" in (
         explicit_solvent["blockers"]
     )
-    assert "nvt_npt_ensemble_statistics_missing" in explicit_solvent["blockers"]
+    assert "nvt_npt_ensemble_statistics_missing" not in (
+        explicit_solvent["blockers"]
+    )
+    assert "nvt_npt_ensemble_acceptance_evidence_missing" in (
+        explicit_solvent["blockers"]
+    )
+
+    canonical_ensemble = rows[CPU_REFERENCE_CANONICAL_ENSEMBLE_CAPABILITY_ID]
+    assert canonical_ensemble["current_state"] == (
+        "bounded_cpu_float64_constrained_baoab_nvt_and_molecular_centre_mc_npt_"
+        "with_counter_rng_exact_restart_barostat_attempt_volume_pressure_energy_"
+        "traces_and_autocorrelation_aware_confidence_interval_statistics"
+    )
+    assert canonical_ensemble["internal_reference_execution_enabled"] is True
+    assert canonical_ensemble["scientifically_validated"] is False
+    assert "baoab_langevin_thermostat_not_independently_validated" in (
+        canonical_ensemble["blockers"]
+    )
+    assert "molecular_com_mc_barostat_not_independently_validated" in (
+        canonical_ensemble["blockers"]
+    )
+    assert "nvt_npt_ensemble_acceptance_evidence_missing" in (
+        canonical_ensemble["blockers"]
+    )
+    assert "two_cpu_host_reproduction_missing" in (
+        canonical_ensemble["blockers"]
+    )
 
     diagnostics = rows[CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID]
     assert diagnostics["current_state"] == (
@@ -962,6 +1008,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_docking_semantics.py",
         "test_engine_v2_benchmark_contracts.py",
         "test_engine_v2_public_benchmark_protocol.py",
+        "test_engine_v2_public_benchmark_materialization.py",
         "test_engine_v2_reference_constrained_minimization.py",
         "test_engine_v2_reference_diagnostics.py",
         "test_engine_v2_reference_forcefield_v2.py",

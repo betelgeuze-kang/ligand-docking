@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_at_explicit_solvent_ion_preparation_contract
+v2_at_public_benchmark_reference_materialization_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -61,8 +61,8 @@ Implemented and GitHub-hosted CPU tested:
   constraint/mass assignment,
   validated parameters, independent SHAKE/RATTLE/Ewald comparison, accepted
   convergence or NVE-drift evidence, PME, net-charge background convention,
-  thermostats, barostats, triclinic cells, NVT/NPT
-  statistics, GPU parity, or a product route;
+  independently accepted thermostat/barostat or NVT/NPT statistics, triclinic
+  cells, GPU parity, or a product route;
 - bounded deterministic CPU `float64` explicit-solvent preparation that binds a
   frozen OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source snapshot
   and materializes water/ion atoms, residues, bonds, angles, nonbonded values,
@@ -73,6 +73,18 @@ Implemented and GitHub-hosted CPU tested:
   SHA-256-ordered lattice is not minimized or equilibrated; source transcription,
   liquid properties, ion behavior, energy/force parity, two-host reproduction,
   and scientific/product use remain unvalidated;
+- bounded CPU `float64` canonical-ensemble MD using constrained BAOAB Langevin
+  NVT and an optional isotropic molecular-centre Monte Carlo NPT barostat. A
+  domain-separated SHA-256 counter stream, mutable orthorhombic cell, complete
+  SHAKE/RATTLE state, barostat proposal/acceptance rows, energy/coordinate/
+  volume/finite-difference molecular-pressure traces, and trajectory/barostat
+  hash heads are checkpoint-bound for bit-exact same-runtime restart. A separate
+  all-step analyzer reports initial-positive-sequence autocorrelation, effective
+  sample size, normal-approximation confidence intervals, target bias,
+  constraint residuals, barostat acceptance, exact restart, and every failed
+  metric row. This implementation has no accepted equilibration/production
+  protocol, external ensemble comparison, liquid-property evidence, two-host
+  reproduction, CPU/GPU parity, or scientific/product promotion;
 - bounded all-step NVE drift analysis that requires `trajectory_stride=1` and
   a genuine independently executed pause/resume segment. It retains every
   energy, kinetic-temperature, linear-momentum, current constraint-residual,
@@ -215,6 +227,15 @@ Implemented and GitHub-hosted CPU tested:
   ranking-calibration contract with strict identity-overlap audit and
   failure-inclusive all-case/target-family bootstrap evaluation;
 - benchmark manifests with exactly one ordered success/failure row per case.
+- a bounded offline materializer for the frozen four-case PoseBusters contract
+  cohort. It verifies caller-supplied seed/reference SDF bytes, retains every
+  multi-record parse/match/failure row, ignores seed coordinates, matches
+  atomic-number/charge/isotope/aromatic/directional-V2000-stereo labeled
+  graphs, enumerates bounded stereo-preserving symmetry mappings, and computes
+  the minimum heavy-atom RMSD directly in the receptor frame across every
+  matched reference pose without ligand-only alignment. The exact materializer
+  source is bound into protocol v1.1. No data, docking run, benchmark result,
+  independent review, or scientific/product claim is bundled.
 
 These surfaces are **not** calibrated docking, MD, free-energy, GPU, or customer
 product capabilities. Every current V2 capability remains `claim_safe=false` and
