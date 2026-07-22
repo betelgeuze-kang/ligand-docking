@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_ap_minimization_trajectory_comparison
+v2_at_deterministic_reference_nve_restart_contract
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
@@ -32,8 +32,20 @@ v2_ap_minimization_trajectory_comparison
 - Python 3.10–3.12용 독립 `betelgeuze-engine-v2` wheel
 - 단일 모델 PDB와 단일 분자 SDF V2000 제한형 파서
 - 독립 physics term registry 계약
+- 이전 same-epoch witness quorum을 다시 검증하고 exact ordinal adjacency,
+  terminal state root의 변경 없는 sequence-zero genesis 이관, 전체 transition
+  context에서 유도한 checkpoint, 동일 statement에 대한 상이한 이전/다음
+  Ed25519 quorum을 요구하는 verifier-only 인접 registry-epoch 전환 계약. 실제
+  proof/key는 포함하지 않으며 successor uniqueness·witness locking·독립 journal
+  일치·realm-wide non-equivocation·실행·모든 과학/제품 claim은 계속 미확립
 - failure row와 exact checkpoint/restart identity를 보존하는 bounded
   deterministic CPU `float64` reference minimization; 과학·제품 승격은 없음
+- force 평가마다 compact neighbor list를 재구축하고 full 3D orthorhombic PBC와
+  좌표 wrapping, binary64 trajectory-chain identity, canonical checkpoint 직렬화,
+  동일 runtime bit-exact 재시작을 제공하는 bounded deterministic CPU `float64`
+  velocity-Verlet NVE. 검증된 parameter나 NVE drift evidence는 포함하지 않으며
+  SHAKE/RATTLE·PME/Ewald·explicit solvent/ion·thermostat/barostat·triclinic cell·
+  NVT/NPT 통계·GPU parity·제품 route는 구현하지 않음
 - 모든 perturbation을 보존하는 bounded component-energy central-difference
   force와 non-periodic configurational virial diagnostics; periodic virial은 fail-closed
 - 별도 versioned reference-forcefield 확장에 ordered-star harmonic out-of-plane
@@ -116,7 +128,11 @@ v2_ap_minimization_trajectory_comparison
   canonical JSON byte transport·필수 최신 revocation/supersession 입력·네 governance 역할의
   분리·caller-provided public key를 요구함. 실제 key, attestation, production receipt,
   reviewer approval 또는 과학 evidence는 bundle하지 않음
-- 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold
+- 결정론적 제한형 torsion/rigid 도킹 후보·검색 scaffold, 후보별 score-term
+  receipt, cross LJ·screened Coulomb·signed ligand internal strain delta·
+  VDW-overlap penalty를 분리하는 명시 파라미터 CPU `float64` 진단 scorer,
+  identity overlap audit와 실패 포함 all-case/target-family bootstrap 평가를
+  갖춘 fit-only pairwise ranking calibration 계약
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 
 이 표면은 calibrated docking, MD, free energy, GPU 또는 고객 제품 기능이

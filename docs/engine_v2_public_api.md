@@ -39,6 +39,7 @@ betelgeuze_engine_v2.physics.reference_diagnostics
 betelgeuze_engine_v2.physics.reference_constrained_minimization
 betelgeuze_engine_v2.physics.reference_forcefield_v2
 betelgeuze_engine_v2.physics.reference_minimization
+betelgeuze_engine_v2.physics.reference_nve
 betelgeuze_engine_v2.physics.reference_minimization_independent_oracle
 betelgeuze_engine_v2.physics.reference_minimization_validation_artifact_binding
 betelgeuze_engine_v2.physics.reference_minimization_validation_materializer
@@ -77,6 +78,7 @@ betelgeuze_engine_v2.physics.validation_production_reservation_registry_proof
 betelgeuze_engine_v2.physics.validation_production_reservation_authenticated_head_receipt
 betelgeuze_engine_v2.physics.validation_production_reservation_later_head_consistency
 betelgeuze_engine_v2.physics.validation_production_reservation_witness_quorum_non_equivocation
+betelgeuze_engine_v2.physics.validation_production_reservation_epoch_transition_continuity
 betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
 betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.runtime
@@ -86,6 +88,21 @@ The frozen public-benchmark protocol symbols under
 `betelgeuze_engine_v2.benchmark` define input identities, endpoint rules, and a
 failure-inclusive reporting contract only. They do not authorize data fetch,
 benchmark execution, result publication, or scientific promotion.
+
+The provisional docking symbols include an atomic score-breakdown contract and
+an explicitly uncalibrated CPU `float64` reference scorer. The scorer requires
+caller-bound canonical receptor/ligand systems plus explicit nonbonded and
+ligand bonded parameters; it reports cross Lennard-Jones, screened Coulomb,
+signed ligand internal-energy delta, and VDW-overlap contributions separately.
+Its first scope admits only H/C/N/O/F/P/S/Cl/Br/I with exact partial-charge
+agreement, rejects receptor nonpolymer cofactors and unsupported elements, and
+does not implement metal coordination, aromatic-specific interactions, stereo
+validity, fitted ranking weights, uncertainty, or a customer route. The
+fit-only ranking-calibration symbols separately require an exact term schema
+and a passing identity-overlap audit, fit pairwise logistic weights from the
+`fit` partition only, and retain failed evaluation poses in all-case and
+target-family Top-1/Top-5/coverage bootstrap denominators. They do not bundle a
+public partition, fitted model, holdout result, independent rerun, or promotion.
 
 The frozen H5 reference-parameter applicability symbols under
 `betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact
@@ -117,6 +134,18 @@ that trusted-input replay boundary. These provisional symbols do not ship or
 assign parameters, establish chemical
 applicability, validate minimization accuracy, satisfy the frozen independent
 validation protocol, or enable a scientific/product/customer route.
+
+The bounded reference-NVE symbols implement CPU `float64` velocity-Verlet for
+one canonical model with explicit atom masses and caller-bound reference
+parameters. Every force evaluation rebuilds the compact neighbor list;
+non-periodic and full 3D orthorhombic PBC inputs are admitted, with periodic
+coordinates wrapped each step. Canonical binary64 frames form a trajectory hash
+chain, and the checkpoint binds source, topology, parameter, configuration,
+runtime, state, energy-drift, and chain identities for bit-exact continuation.
+This is an implementation contract only: accepted drift evidence, independent
+or cross-host reproduction, SHAKE/RATTLE, PME/Ewald, explicit solvent/ions,
+thermostats, barostats, triclinic cells, NVT/NPT statistics, GPU parity, and all
+scientific/product/customer promotion remain unavailable.
 
 The bounded reference-diagnostics symbols leave the frozen evaluator source
 unchanged and numerically differentiate its five component energies over every
@@ -538,6 +567,19 @@ latest, epoch continuity, execution, and promotion therefore remain false.
 No policy, witness key, certificate, journal, or post-certificate status is
 provisioned.
 
+`validation_production_reservation_epoch_transition_continuity` adds a
+verifier-only boundary for one caller-pinned adjacent registry-epoch
+transition. It freshly re-verifies the previous same-epoch witness-quorum
+proof, requires integer ordinals with `next = previous + 1`, carries the
+previous terminal state root unchanged into sequence-zero genesis, derives the
+genesis checkpoint from the full transition context, and verifies disjoint
+previous/next fixed-roster Ed25519 quorums over the same exact statement. A
+successful DTO proves continuity only for that supplied transition. It does not
+enforce exclusive witness locking, compare independent journals, rule out a
+separately quorum-signed sibling successor, prove global latest or realm-wide
+non-equivocation, or commit external CAS. No transition proof, next policy,
+keys, votes, or post-transition status descendant is provisioned.
+
 `reference_minimization_validation_trajectory_comparison` freezes exact
 evaluation-index/iteration/trial/outcome alignment, coordinate and energy
 max/RMS thresholds, branch/rejection/count dispositions, expected-failure
@@ -547,13 +589,13 @@ canonical comparison and fail closed on omission, reorder, cross-wire,
 non-finite values, or digest tamper. Its production, S0, scientific, and S1
 flags remain false.
 
-Runtime-integrity companion v12 binds the exact frozen SHA-256 of the refrozen
+Runtime-integrity companion v13 binds the exact frozen SHA-256 of the refrozen
 minimization trajectory-comparison contract, custody-v1,
 the review/authorization extension, the sequence-5 reservation companion, the
 external registry-proof verifier, the authenticated head/status receipt
 verifier, the same-epoch later-head consistency verifier, the fixed-policy
-anchor-scoped witness-quorum verifier, and the
-process-launch-identity contract. Runtime v8 through v11 are retained only in
+anchor-scoped witness-quorum verifier, the adjacent epoch-transition continuity
+verifier, and the process-launch-identity contract. Runtime v8 through v12 are retained only in
 the read-only legacy-contract registry.
 
 The receipt-contract symbols freeze the CPU-only execution-environment receipt
@@ -584,7 +626,7 @@ execution-environment identities, v5 authorization, result-receipt,
 nonce-reservation, and run-start identities, a v8 runner, and v7 result
 writer/result review. Current hashes are frozen over the
 complete upstream contract DAG. The read-only legacy-contract verifier
-recognizes 63 superseded contract documents by canonical projection hash and
+recognizes 64 superseded contract documents by canonical projection hash and
 fixed identity metadata. It does not verify or claim compatibility with
 superseded signed attestations, receipts, run records, or observations.
 

@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_ap_minimization_trajectory_comparison"
+IMPLEMENTATION_STAGE = "v2_at_deterministic_reference_nve_restart_contract"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -52,6 +52,7 @@ MMCIF_NONPOLY_PREPARATION_CORPUS_CAPABILITY_ID = "v2_bounded_mmcif_nonpoly_prepa
 PHYSICS_REGISTRY_CAPABILITY_ID = "v2_independent_physics_registry"
 H5_PARAMETER_APPLICABILITY_CAPABILITY_ID = "v2_h5_reference_physics_parameter_applicability_record"
 CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID = "v2_bounded_cpu_reference_minimization"
+CPU_REFERENCE_NVE_CAPABILITY_ID = "v2_bounded_cpu_reference_nve"
 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID = "v2_bounded_cpu_reference_term_diagnostics"
 CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID = "v2_bounded_cpu_reference_improper_constraint_extension"
 CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID = "v2_bounded_cpu_fixed_born_polar_solvation"
@@ -394,6 +395,21 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "public_minimization_validation_missing",
         "product_integration_not_qualified",
     ),
+    CPU_REFERENCE_NVE_CAPABILITY_ID: (
+        "caller_supplied_parameter_values_not_independently_reviewed",
+        "atom_mass_assignment_not_implemented",
+        "reference_force_field_not_scientifically_validated",
+        "nve_energy_drift_acceptance_evidence_missing",
+        "cross_host_reproducibility_missing",
+        "cpu_gpu_parity_evidence_missing",
+        "shake_rattle_constraints_not_implemented",
+        "pme_ewald_long_range_electrostatics_not_implemented",
+        "explicit_solvent_and_ion_preparation_not_implemented",
+        "thermostat_and_barostat_not_implemented",
+        "nvt_npt_ensemble_statistics_missing",
+        "triclinic_periodic_cells_not_supported",
+        "product_integration_not_qualified",
+    ),
     CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: (
         "caller_supplied_parameter_values_not_independently_reviewed",
         "finite_difference_diagnostics_not_independent_scientific_validation",
@@ -529,7 +545,7 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "production_reservation_intent_not_provisioned",
         "production_atomic_reservation_commit_not_provisioned",
         "external_registry_non_equivocation_proof_not_provisioned",
-        "registry_epoch_transition_continuity_not_provisioned",
+        "external_adjacent_epoch_transition_proof_not_provisioned",
         "process_launch_identity_not_bound_to_worker_carriers",
         "same_tick_pid_reuse_collision_not_excluded",
         "external_worker_launch_custody_missing",
@@ -544,6 +560,9 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     DOCKING_CAPABILITY_ID: (
         "docking_proposal_scaffold_not_scientifically_validated",
         "validated_docking_scorer_missing",
+        "public_pose_ranking_calibration_fit_missing",
+        "metals_and_cofactors_outside_reference_scorer_scope",
+        "aromatic_and_stereo_specific_scoring_missing",
         "public_pose_validity_and_ranking_evidence_missing",
         "product_integration_not_qualified",
     ),
@@ -837,6 +856,16 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            CPU_REFERENCE_NVE_CAPABILITY_ID: _row(
+                CPU_REFERENCE_NVE_CAPABILITY_ID,
+                current_state=(
+                    "bounded_deterministic_cpu_float64_velocity_verlet_nve_with_"
+                    "every_force_neighbor_rebuild_full_orthorhombic_pbc_binary64_"
+                    "trajectory_chain_and_exact_checkpoint_restart"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID: _row(
                 CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
                 current_state=(
@@ -888,8 +917,9 @@ def capability_snapshot() -> dict[str, Any]:
                     "four_event_custody_process_identity_seq5_attestation_and_"
                     "same_epoch_external_registry_proof_and_authenticated_head_"
                     "status_receipt_later_head_consistency_and_anchor_scoped_"
-                    "fixed_policy_witness_quorum_verifiers_without_provisioned_"
-                    "receipt_registry_consistency_or_witness_quorum_proof_or_"
+                    "fixed_policy_witness_quorum_and_adjacent_epoch_transition_"
+                    "continuity_verifiers_without_provisioned_receipt_registry_"
+                    "consistency_witness_quorum_or_epoch_transition_proof_or_"
                     "realm_wide_non_equivocation"
                 ),
                 internal_execution_enabled=False,
@@ -897,7 +927,11 @@ def capability_snapshot() -> dict[str, Any]:
             ),
             DOCKING_CAPABILITY_ID: _row(
                 DOCKING_CAPABILITY_ID,
-                current_state="bounded_internal_scaffold",
+                current_state=(
+                    "bounded_internal_search_with_uncalibrated_parameter_bound_"
+                    "four_term_interaction_strain_score_decomposition_and_"
+                    "leakage_audited_fit_evaluation_contract_without_public_fit"
+                ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
@@ -938,6 +972,8 @@ def capability_snapshot() -> dict[str, Any]:
             "require_validated_independent_physics": True,
             "require_predefined_minimization_trajectory_thresholds": True,
             "require_minimization_checkpoint_restart_equality": True,
+            "require_adjacent_epoch_transition_continuity_proof": True,
+            "require_joint_epoch_transition_witness_quorums": True,
             "require_gpu_parity_before_acceleration_claim": True,
             "external_state_mutated": False,
         },
@@ -963,6 +999,7 @@ __all__ = [
     "CIF_SYNTAX_CAPABILITY_ID",
     "CPU_REFERENCE_CAPABILITY_ID",
     "CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID",
+    "CPU_REFERENCE_NVE_CAPABILITY_ID",
     "CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID",
     "CPU_FIXED_BORN_POLAR_SOLVATION_CAPABILITY_ID",
     "CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID",

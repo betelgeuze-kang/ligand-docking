@@ -31,8 +31,11 @@ from betelgeuze_engine_v2.physics.validation_production_reservation_registry_pro
 from betelgeuze_engine_v2.physics.validation_production_reservation_witness_quorum_non_equivocation import (
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
 )
+from betelgeuze_engine_v2.physics.validation_production_reservation_epoch_transition_continuity import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
+)
 from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
-    FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V11,
+    FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12,
     FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V10,
     FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
@@ -40,6 +43,7 @@ from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
     VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
+    VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
     VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
@@ -59,9 +63,13 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
 
     assert first == second
     assert first["contract_sha256"] == (FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256)
-    assert first["contract_version"] == VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION == "12.0.0"
+    assert first["contract_version"] == VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION == "13.0.0"
     assert first["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V11
+        FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12
+    )
+    assert (
+        FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12
+        == "8e260d43a7cb6d6da93e519075a22f14f6a21bd06d069d428ad327b210065dba"
     )
     assert (
         FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V10
@@ -143,6 +151,17 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         == FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
     )
     assert (
+        first["bound_contracts"][
+            "production_reservation_epoch_transition_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+    )
+    assert (
+        decision["bound_reservation_epoch_transition_contract_sha256"]
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+    )
+    assert (
         first["bound_contracts"]["process_launch_identity_contract_sha256"]
         == VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
         == FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
@@ -197,6 +216,11 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         "exclusive_vote_statement_signature_verification_implemented",
         "fixed_policy_full_roster_validity_and_denial_verification_implemented",
         "anchor_scoped_quorum_certificate_does_not_prove_registry_non_equivocation",
+        "adjacent_registry_epoch_transition_continuity_verifier_implemented",
+        "previous_terminal_state_root_to_next_genesis_carry_forward_verification_implemented",
+        "derived_next_genesis_checkpoint_verification_implemented",
+        "joint_previous_and_next_epoch_transition_quorum_verification_implemented",
+        "transition_successor_uniqueness_without_external_locking_not_claimed",
     ):
         assert first["implemented_enforcement"][field_name] is True
         assert decision[field_name] is True
@@ -252,6 +276,7 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         "independent_witness_journal_consistency_not_established",
         "witness_locking_enforcement_not_established",
         "realm_wide_external_registry_non_equivocation_not_established",
+        "external_adjacent_epoch_transition_proof_not_provisioned",
     ):
         assert blocker in first["blockers"]
     assert "status_head_compare_and_set_not_independently_verified" in first["blockers"]
@@ -325,6 +350,11 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         "quorum_intersection_above_declared_fault_bound_verification_implemented",
         "exclusive_vote_statement_signature_verification_implemented",
         "fixed_policy_full_roster_validity_and_denial_verification_implemented",
+        "adjacent_registry_epoch_transition_continuity_verifier_implemented",
+        "previous_terminal_state_root_to_next_genesis_carry_forward_verification_implemented",
+        "derived_next_genesis_checkpoint_verification_implemented",
+        "joint_previous_and_next_epoch_transition_quorum_verification_implemented",
+        "transition_successor_uniqueness_without_external_locking_not_claimed",
     ):
         assert first["external_custody"][field_name] is True
     for field_name in (
@@ -338,6 +368,11 @@ def test_runtime_integrity_companion_is_frozen_truthful_and_closed() -> None:
         "fixed_policy_witness_keys_provisioned",
         "fixed_policy_witness_quorum_policy_provisioned",
         "post_quorum_current_status_descendant_provisioned",
+        "adjacent_epoch_transition_proof_provisioned",
+        "previous_epoch_transition_votes_provisioned",
+        "next_epoch_transition_votes_provisioned",
+        "next_epoch_transition_policy_provisioned",
+        "post_transition_current_status_descendant_provisioned",
     ):
         assert first["external_custody"][field_name] is False
     assert first["external_custody"]["external_registry_transaction_proof_provisioned"] is False

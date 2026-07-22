@@ -41,11 +41,14 @@ from betelgeuze_engine_v2.physics.validation_production_reservation_registry_pro
 from betelgeuze_engine_v2.physics.validation_production_reservation_witness_quorum_non_equivocation import (
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
 )
+from betelgeuze_engine_v2.physics.validation_production_reservation_epoch_transition_continuity import (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
+)
 
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_validation_runtime_integrity_contract/12.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID = "engine_v2_synthetic_validation_runtime_integrity/12.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "12.0.0"
-VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SCHEMA_ID = "betelgeuze.engine_v2_validation_runtime_integrity_contract/13.0.0"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_ID = "engine_v2_synthetic_validation_runtime_integrity/13.0.0"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION = "13.0.0"
+VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC = "2026-07-22T03:00:00Z"
 VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256 = (
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
 )
@@ -73,7 +76,13 @@ VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_S
 VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256 = (
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
 )
+VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256 = (
+    FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+)
 FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256 = (
+    "1121a8a8a68fd8d2b41618404a8bff389307dc55de754a6400f00567f83c94d6"
+)
+FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12 = (
     "8e260d43a7cb6d6da93e519075a22f14f6a21bd06d069d428ad327b210065dba"
 )
 FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V11 = (
@@ -125,7 +134,7 @@ _BLOCKERS = (
     "production_reservation_intent_not_provisioned",
     "production_atomic_reservation_commit_not_provisioned",
     "external_registry_non_equivocation_proof_not_provisioned",
-    "registry_epoch_transition_continuity_not_provisioned",
+    "external_adjacent_epoch_transition_proof_not_provisioned",
     "external_custody_successor_uniqueness_not_provisioned",
     "external_runtime_integrity_manifest_store_missing",
     "energy_force_independent_result_review_missing",
@@ -163,9 +172,9 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": VALIDATION_RUNTIME_INTEGRITY_CONTRACT_VERSION,
         "frozen_at_utc": VALIDATION_RUNTIME_INTEGRITY_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V11
+            FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12
         ),
-        "refreeze_reason": "binds_refrozen_minimization_projection_headroom_trajectory_contract",
+        "refreeze_reason": "binds_adjacent_registry_epoch_transition_continuity_contract",
         "lanes": [
             "27-case-59-variant-energy-force",
             "14-case-minimization",
@@ -194,6 +203,9 @@ def _contract_projection() -> dict[str, Any]:
             ),
             "production_reservation_witness_quorum_contract_sha256": (
                 VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256
+            ),
+            "production_reservation_epoch_transition_contract_sha256": (
+                VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
             ),
             "process_launch_identity_contract_sha256": (
                 VALIDATION_RUNTIME_INTEGRITY_BOUND_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
@@ -253,6 +265,11 @@ def _contract_projection() -> dict[str, Any]:
             "exclusive_vote_statement_signature_verification_implemented": True,
             "fixed_policy_full_roster_validity_and_denial_verification_implemented": True,
             "anchor_scoped_quorum_certificate_does_not_prove_registry_non_equivocation": True,
+            "adjacent_registry_epoch_transition_continuity_verifier_implemented": True,
+            "previous_terminal_state_root_to_next_genesis_carry_forward_verification_implemented": True,
+            "derived_next_genesis_checkpoint_verification_implemented": True,
+            "joint_previous_and_next_epoch_transition_quorum_verification_implemented": True,
+            "transition_successor_uniqueness_without_external_locking_not_claimed": True,
             "authenticated_out_of_band_registry_head_receipt_verified": False,
             "caller_challenge_freshness_verified": False,
             "caller_challenge_one_use_verified": False,
@@ -327,6 +344,9 @@ def _contract_projection() -> dict[str, Any]:
             "same_epoch_later_head_consistency_proof_verifier_implemented": True,
             "fixed_policy_same_epoch_anchor_scoped_witness_quorum_verifier_implemented": True,
             "anchor_scoped_quorum_certificate_does_not_prove_registry_non_equivocation": True,
+            "adjacent_registry_epoch_transition_continuity_verifier_implemented": True,
+            "joint_previous_and_next_epoch_transition_quorum_verification_implemented": True,
+            "transition_successor_uniqueness_without_external_locking_not_claimed": True,
             "production_permit_one_use_enforced": False,
             "verified_custody_stage_sequence": [
                 "production_permit",
@@ -391,6 +411,11 @@ def _contract_projection() -> dict[str, Any]:
             "quorum_intersection_above_declared_fault_bound_verification_implemented": True,
             "exclusive_vote_statement_signature_verification_implemented": True,
             "fixed_policy_full_roster_validity_and_denial_verification_implemented": True,
+            "adjacent_registry_epoch_transition_continuity_verifier_implemented": True,
+            "previous_terminal_state_root_to_next_genesis_carry_forward_verification_implemented": True,
+            "derived_next_genesis_checkpoint_verification_implemented": True,
+            "joint_previous_and_next_epoch_transition_quorum_verification_implemented": True,
+            "transition_successor_uniqueness_without_external_locking_not_claimed": True,
             "sparse_merkle_permit_nonce_predecessor_transition_verification_implemented": True,
             "caller_expected_exact_current_registry_head_required": True,
             "exact_registry_head_status_tail_and_challenge_binding_implemented": True,
@@ -449,6 +474,11 @@ def _contract_projection() -> dict[str, Any]:
             "fixed_policy_witness_keys_provisioned": False,
             "fixed_policy_witness_quorum_policy_provisioned": False,
             "post_quorum_current_status_descendant_provisioned": False,
+            "adjacent_epoch_transition_proof_provisioned": False,
+            "previous_epoch_transition_votes_provisioned": False,
+            "next_epoch_transition_votes_provisioned": False,
+            "next_epoch_transition_policy_provisioned": False,
+            "post_transition_current_status_descendant_provisioned": False,
             "actual_production_reservation_commit_present": False,
             "root_owned_source_snapshot_provisioned": False,
             "root_owned_dependency_runtime_provisioned": False,
@@ -518,6 +548,9 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
         "bound_reservation_witness_quorum_contract_sha256": (
             contract["bound_contracts"]["production_reservation_witness_quorum_contract_sha256"]
         ),
+        "bound_reservation_epoch_transition_contract_sha256": (
+            contract["bound_contracts"]["production_reservation_epoch_transition_contract_sha256"]
+        ),
         "bound_process_launch_identity_contract_sha256": contract["bound_contracts"][
             "process_launch_identity_contract_sha256"
         ],
@@ -562,6 +595,11 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
         "exclusive_vote_statement_signature_verification_implemented": True,
         "fixed_policy_full_roster_validity_and_denial_verification_implemented": True,
         "anchor_scoped_quorum_certificate_does_not_prove_registry_non_equivocation": True,
+        "adjacent_registry_epoch_transition_continuity_verifier_implemented": True,
+        "previous_terminal_state_root_to_next_genesis_carry_forward_verification_implemented": True,
+        "derived_next_genesis_checkpoint_verification_implemented": True,
+        "joint_previous_and_next_epoch_transition_quorum_verification_implemented": True,
+        "transition_successor_uniqueness_without_external_locking_not_claimed": True,
         "authenticated_out_of_band_registry_head_receipt_verified": False,
         "authenticated_external_head_status_receipt_provisioned": False,
         "post_receipt_current_status_descendant_provisioned": False,
@@ -571,6 +609,11 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
         "fixed_policy_witness_keys_provisioned": False,
         "fixed_policy_witness_quorum_policy_provisioned": False,
         "post_quorum_current_status_descendant_provisioned": False,
+        "adjacent_epoch_transition_proof_provisioned": False,
+        "previous_epoch_transition_votes_provisioned": False,
+        "next_epoch_transition_votes_provisioned": False,
+        "next_epoch_transition_policy_provisioned": False,
+        "post_transition_current_status_descendant_provisioned": False,
         "caller_challenge_freshness_verified": False,
         "caller_challenge_one_use_verified": False,
         "supplied_status_lineage_tail_denials_enforced": True,
@@ -618,6 +661,7 @@ def validation_runtime_integrity_decision() -> dict[str, Any]:
 
 
 __all__ = [
+    "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V12",
     "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V11",
     "FROZEN_LEGACY_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256_V10",
     "FROZEN_VALIDATION_RUNTIME_INTEGRITY_CONTRACT_SHA256",
@@ -631,6 +675,7 @@ __all__ = [
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256",
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256",
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256",
+    "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256",
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256",
     "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256",
     "ValidationRuntimeIntegrityContractError",

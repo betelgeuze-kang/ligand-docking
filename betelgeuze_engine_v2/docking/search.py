@@ -25,6 +25,7 @@ from .proposals import (
     generate_bounded_docking_proposals,
 )
 from .scoring import (
+    DockingScoreBreakdown,
     DockingScoreDescriptor,
     component_contract_fingerprint,
     score_sort_key,
@@ -42,7 +43,10 @@ class DockingPoseScorer(Protocol):
     scorer_version: str
     validated_for_docking_ranking: bool
 
-    def score(self, proposal: DockingProposal) -> float | torch.Tensor:
+    def score(
+        self,
+        proposal: DockingProposal,
+    ) -> float | torch.Tensor | DockingScoreBreakdown:
         ...
 
 
@@ -66,6 +70,7 @@ class DockingSearchRow:
     status: str
     score: float | None
     proposal: DockingProposal | None
+    score_breakdown: DockingScoreBreakdown | None = None
     error_code: str = ""
     error_message: str = ""
     private_error_sha256: str = ""
@@ -87,6 +92,9 @@ class DockingSearchRow:
             "status": self.status,
             "succeeded": self.succeeded,
             "score": self.score,
+            "score_breakdown": (
+                None if self.score_breakdown is None else self.score_breakdown.to_dict()
+            ),
             "refined": bool(self.refined),
             "error_code": self.error_code,
             "error_message": self.error_message,
@@ -148,8 +156,25 @@ class DockingSearchResult:
         }
 
 
-def _score_value(value: float | torch.Tensor) -> float:
-    if isinstance(value, torch.Tensor):
+def _score_value(
+    value: float | torch.Tensor | DockingScoreBreakdown,
+    descriptor: DockingScoreDescriptor,
+) -> tuple[float, DockingScoreBreakdown | None]:
+    breakdown: DockingScoreBreakdown | None = None
+    if isinstance(value, DockingScoreBreakdown):
+        if not value.complete:
+            raise DockingSearchError("docking scorer returned an incomplete term breakdown")
+        incompatible_units = sorted(
+            term.term_id for term in value.terms if term.unit != descriptor.unit
+        )
+        if incompatible_units:
+            raise DockingSearchError(
+                "docking score term units do not match the score descriptor: "
+                + ", ".join(incompatible_units)
+            )
+        score = value.total_score
+        breakdown = value
+    elif isinstance(value, torch.Tensor):
         if value.numel() != 1:
             raise DockingSearchError("docking scorer must return one scalar per proposal")
         score = float(value.detach().cpu().item())
@@ -157,7 +182,7 @@ def _score_value(value: float | torch.Tensor) -> float:
         score = float(value)
     if not math.isfinite(score):
         raise DockingSearchError("docking scorer returned a non-finite value")
-    return score
+    return score, breakdown
 
 
 def _search_fingerprint(
@@ -284,7 +309,7 @@ def run_bounded_docking_search(
                     raise DockingSearchError("refiner changed the ligand atom count")
                 _require_refined_lineage(proposal, current, refiner)
                 refined = True
-            score = _score_value(scorer.score(current))
+            score, score_breakdown = _score_value(scorer.score(current), descriptor)
             rows.append(
                 DockingSearchRow(
                     candidate_id=current.candidate_id,
@@ -296,6 +321,7 @@ def run_bounded_docking_search(
                     status="success",
                     score=score,
                     proposal=current,
+                    score_breakdown=score_breakdown,
                     refined=refined,
                 )
             )
@@ -358,6 +384,8 @@ def run_bounded_docking_search(
         blockers.append("docking_score_uncalibrated")
     if not bool(scorer.validated_for_docking_ranking):
         blockers.append("scorer_not_validated_for_docking_ranking")
+    if successful and any(row.score_breakdown is None for row in successful):
+        blockers.append("score_term_decomposition_missing")
     if not successful:
         blockers.append("no_successful_candidates")
     if len(selected) < min(int(budget.top_k), len(successful)):

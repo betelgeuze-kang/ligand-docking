@@ -262,6 +262,14 @@ claim status without revalidating the dependency and freshness chain.
   result review, parameter applicability, or validation result is present. The
   protocol, materializer, and reference cannot authorize execution, fitting, or
   promotion.
+- Keep the bounded CPU `float64` velocity-Verlet NVE path as implementation
+  evidence only. It requires explicit masses and caller-bound parameters,
+  rebuilds compact neighbors at every force evaluation, supports non-periodic
+  or full 3D orthorhombic PBC with wrapping, and binds binary64 trajectory and
+  exact checkpoint/restart identities. It does not satisfy an NVE-drift
+  acceptance protocol, independent or two-host reproduction, SHAKE/RATTLE,
+  PME/Ewald, explicit-solvent/ion, thermostat/barostat, triclinic-PBC,
+  NVT/NPT-statistics, CPU/GPU-parity, scientific, or product gates.
 - Preserve the frozen CPU reference energy/force contract-validation protocol.
   It binds seven synthetic fixture profiles, twenty mutation contracts,
   twenty-seven ordered pass/fail-closed cases, nineteen predefined float64
@@ -376,6 +384,17 @@ claim status without revalidating the dependency and freshness chain.
   execution remains unauthorized. The run-start, bounded-runner, and result-
   writer primitives satisfy only implementation boundaries when test inputs are
   supplied; they do not satisfy any production result or scientific input.
+- Preserve the verifier-only adjacent registry-epoch transition contract as an
+  integrity boundary, not production evidence. It freshly re-verifies the
+  previous same-epoch witness quorum, requires exact integer ordinal adjacency,
+  carries the terminal state root unchanged into sequence-zero genesis, derives
+  the genesis checkpoint from the complete context, and verifies disjoint
+  previous/next Ed25519 quorums over one exact statement. No actual transition
+  proof, next policy, keys, votes, or post-transition status is bundled; the
+  verifier does not enforce witness locking, compare independent journals,
+  exclude a quorum-signed sibling successor, establish realm-wide
+  non-equivocation/global latest, or commit external CAS. Those externally
+  provisioned controls remain prerequisites for any production evidence chain.
 - Obtain an actual independently signed review attestation and separately
   signed non-expired authorization receipt, then atomically reserve its nonce
   and construct a verified production environment receipt; only then may the

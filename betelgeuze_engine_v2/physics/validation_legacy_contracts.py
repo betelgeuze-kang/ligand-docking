@@ -475,6 +475,13 @@ _IDENTITIES = (
         "24a95d5c42efcd63235614f491d7c2dc818cd3d4f3a6a40317ec8ee6f2d6018d",
     ),
     _identity(
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/12.0.0",
+        "engine_v2_synthetic_validation_runtime_integrity/12.0.0",
+        "12.0.0",
+        "2026-07-22T01:17:31Z",
+        "8e260d43a7cb6d6da93e519075a22f14f6a21bd06d069d428ad327b210065dba",
+    ),
+    _identity(
         "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/2.0.0",
         "engine_v2_synthetic_validation_production_review_authorization_custody_extension/2.0.0",
         "2.0.0",

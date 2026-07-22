@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_ap_minimization_trajectory_comparison
+v2_at_deterministic_reference_nve_restart_contract
 ```
 
 The current `main` branch contains:
@@ -95,7 +95,18 @@ The current `main` branch contains:
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
 - an independent physics-term registry contract;
-- deterministic bounded docking proposal/search scaffolds;
+- deterministic bounded docking proposal/search scaffolds with atomic
+  candidate-level term decomposition and an uncalibrated, explicit-parameter
+  CPU `float64` scorer separating receptor--ligand LJ, screened Coulomb, signed
+  ligand internal strain delta, and VDW-overlap penalty. The scorer admits only
+  H/C/N/O/F/P/S/Cl/Br/I, requires exact partial-charge/parameter agreement,
+  abstains on metals and receptor nonpolymer cofactors, and does not add
+  aromatic-specific or stereochemical physics. A separate fit-only calibration
+  contract accepts only an identity-audited `fit` partition, deterministically
+  fits pairwise logistic term weights, binds the holdout identity commitment,
+  and evaluates retained failure poses with all-case and target-family Top-1/
+  Top-5/coverage bootstrap intervals. No public partition, fitted model, or
+  result is bundled;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -134,6 +145,16 @@ The current `main` branch contains:
   is an unvalidated internal numerical contract: it ships no parameter set,
   performs no assignment, and establishes no scientific applicability,
   minimization accuracy, product qualification, or customer execution claim.
+- a bounded deterministic CPU `float64` velocity-Verlet NVE reference path for
+  one-model systems with explicit atomic masses and caller-bound parameters. It
+  rebuilds the compact neighbor list for every force evaluation, supports
+  non-periodic or full 3D orthorhombic PBC with per-step wrapping, retains a
+  binary64 trajectory hash chain, and round-trips a canonical checkpoint whose
+  same-source, same-parameter, same-config, and same-runtime continuation is
+  bit-exact. The implementation has no accepted drift study or cross-host/GPU
+  evidence and no SHAKE/RATTLE, PME/Ewald, explicit solvent/ions,
+  thermostat/barostat, triclinic-cell, NVT/NPT-statistics, scientific, product,
+  or customer claim.
 - bounded per-term numerical diagnostics layered around the unchanged frozen
   reference evaluator. For a single CPU `float64` model it retains all `6N`
   plus/minus coordinate perturbations, reconstructs each of the five component
@@ -295,7 +316,7 @@ The current `main` branch contains:
   nonce/run-start identities, a v8 runner, and v7 result writer/result review.
   Their hashes were
   refrozen through the full upstream dependency DAG. A separate read-only
-  verifier recognizes 63 superseded contract documents by canonical projection
+  verifier recognizes 64 superseded contract documents by canonical projection
   hash. Superseded signed attestations, receipts, and run records are not
   supported and no compatibility claim is made for them.
   The energy-force lane now has a frozen Ed25519 result-review leaf with full
@@ -380,12 +401,23 @@ The current `main` branch contains:
   hidden sibling certificate. Realm-wide non-equivocation and every promotion
   fact remain false, and no policy, keys, proof, journals, or post-quorum status
   are provisioned.
-  Runtime-integrity companion v12 additionally binds the refrozen minimization
+  A verifier-only adjacent registry-epoch transition companion now freshly
+  re-verifies the exact previous same-epoch witness-quorum proof, requires a
+  caller-pinned next epoch with integer ordinal exactly one greater, carries the
+  previous terminal state root unchanged into sequence-zero genesis, derives
+  the genesis checkpoint from the complete transition context, and verifies
+  disjoint previous/next fixed-roster Ed25519 quorums over one exact statement.
+  This establishes continuity for that supplied transition only. The verifier
+  does not enforce exclusive witness locking, compare independent journals,
+  exclude separately quorum-signed sibling successors, prove global latest or
+  realm-wide non-equivocation, or commit CAS. No transition proof, next policy,
+  keys, votes, or post-transition status descendant is provisioned.
+  Runtime-integrity companion v13 additionally binds the refrozen minimization
   trajectory-comparison contract together with the exact frozen custody-v1,
   review/authorization, reservation, external registry-proof, authenticated
-  head/status receipt, later-head consistency, and process-launch-identity
-  contract SHA-256 values including the witness-quorum contract; runtime v8
-  through v11 are retained in the read-only legacy registry.
+  head/status receipt, later-head consistency, witness-quorum, adjacent epoch-
+  transition continuity, and process-launch-identity contract SHA-256 values;
+  runtime v8 through v12 are retained in the read-only legacy registry.
   The separate process-launch measurement primitive creates no network
   namespace, kernel isolation, production key, attestation, root, or receipt.
   A separate failure-inclusive writer now re-verifies the signed chain, live
@@ -488,13 +520,15 @@ The current `main` branch contains:
   base primitive plus additive sequence-3 review/sequence-4 authorization and
   sequence-5 reservation-commit-attestation companions exist. The external
   same-epoch registry transaction-proof, authenticated head/status receipt, and
-  same-epoch later-head consistency and fixed-policy anchor-scoped witness-
-  quorum verifiers also exist, but no proof, backend
+  same-epoch later-head consistency, fixed-policy anchor-scoped witness-quorum,
+  and adjacent epoch-transition continuity verifiers also exist, but no proof, backend
   key, head-observer key, receipt-authority key, challenge, receipt, later-head
   proof, witness policy/keys/quorum certificate, post-consistency or post-quorum
+  status descendant, adjacent transition proof/policy/votes, post-transition
   status descendant, or out-of-band current head is provisioned.
   Environment/later carriers, an external serializable registry, atomic permit
-  consumption, non-equivocation/epoch continuity, and a provisioned chain,
+  consumption, realm-wide non-equivocation, externally enforced transition
+  uniqueness, and a provisioned chain,
   independent result-review
   dependency-manifest re-verification, and an end-to-end asymmetric upstream
   review/authorization chain remain absent. The energy-force Ed25519

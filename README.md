@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_ap_minimization_trajectory_comparison
+v2_at_deterministic_reference_nve_restart_contract
 ```
 
 Implemented and GitHub-hosted CPU tested:
@@ -35,9 +35,23 @@ Implemented and GitHub-hosted CPU tested:
 - independent `betelgeuze-engine-v2` wheel for Python 3.10–3.12;
 - bounded single-model PDB and single-molecule SDF V2000 parsers;
 - independent physics-term registry contracts;
+- a verifier-only adjacent registry-epoch transition contract that re-verifies
+  the previous same-epoch witness quorum, requires exact ordinal adjacency,
+  carries the terminal state root unchanged into a derived sequence-zero
+  genesis checkpoint, and requires disjoint previous/next Ed25519 quorums over
+  one exact statement; no proof or keys are bundled, and successor uniqueness,
+  witness locking, independent journal agreement, realm-wide non-equivocation,
+  execution, and every scientific/product claim remain unestablished;
 - bounded deterministic CPU `float64` reference minimization with retained
   failure rows and exact checkpoint/restart identity, without scientific or
   product promotion;
+- bounded deterministic CPU `float64` velocity-Verlet NVE integration with a
+  compact neighbor-list rebuild at every force evaluation, full 3D
+  orthorhombic PBC and coordinate wrapping, binary64 trajectory-chain
+  identity, exact checkpoint serialization, and bit-exact same-runtime restart.
+  It ships no validated parameters or NVE-drift evidence and does not implement
+  SHAKE/RATTLE, PME/Ewald, explicit solvent/ions, thermostats, barostats,
+  triclinic cells, NVT/NPT statistics, GPU parity, or a product route;
 - bounded component-energy central-difference force diagnostics and
   non-periodic configurational virials, with every perturbation retained and
   periodic virials fail-closed;
@@ -165,7 +179,12 @@ Implemented and GitHub-hosted CPU tested:
   reservation or artifact root, production nonce reservation, production
   environment receipt, runner start/result receipt, authorized production
   execution, independent result review, or scientific acceptance is bundled;
-- deterministic bounded torsion/rigid docking proposal and search scaffolds;
+- deterministic bounded torsion/rigid docking proposal and search scaffolds,
+  candidate-level score-term receipts, and an explicit-parameter CPU `float64`
+  diagnostic scorer that separates cross LJ, screened Coulomb, signed ligand
+  internal strain delta, and VDW-overlap penalty, plus a fit-only pairwise
+  ranking-calibration contract with strict identity-overlap audit and
+  failure-inclusive all-case/target-family bootstrap evaluation;
 - benchmark manifests with exactly one ordered success/failure row per case.
 
 These surfaces are **not** calibrated docking, MD, free-energy, GPU, or customer

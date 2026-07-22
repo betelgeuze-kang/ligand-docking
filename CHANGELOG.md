@@ -8,6 +8,41 @@ scientific claim from a package version.
 
 ### Added
 
+- A bounded deterministic CPU `float64` velocity-Verlet NVE reference path
+  using explicit atom masses and caller-bound parameters. It rebuilds compact
+  neighbors at every force evaluation, supports non-periodic or full 3D
+  orthorhombic PBC with per-step wrapping, records a binary64 trajectory hash
+  chain, and provides canonical checkpoints with bit-exact same-runtime restart.
+  Scientific drift acceptance, independent/cross-host reproduction,
+  SHAKE/RATTLE, PME/Ewald, explicit solvent/ions, thermostat/barostat,
+  triclinic-cell, NVT/NPT-statistics, GPU-parity, and product claims remain
+  blocked.
+- A fit-only pose-ranking calibration contract with canonical success/failure
+  rows, exact receptor/ligand/scaffold/pose identities, configurable target and
+  family overlap rejection, deterministic CPU `float64` pairwise-logistic term
+  fitting, and a non-promoted scorer wrapper. Held-out evaluation preserves
+  failed poses and reports Top-1, Top-5, and scored-case coverage against the
+  all-case denominator, both overall and per target family, with deterministic
+  bootstrap intervals. No public dataset, fitted model, result, independent
+  rerun, or scientific/product claim is bundled.
+- Candidate-level docking score decomposition with canonical term IDs, raw
+  values, weights, contributions, units, parameter-source digests, and
+  failure-row preservation. A new explicitly uncalibrated CPU `float64`
+  reference scorer consumes caller-bound force-field parameters and separates
+  receptor--ligand Lennard-Jones, screened Coulomb, signed ligand internal
+  strain delta, and VDW-overlap penalty terms. Its frozen chemistry admission
+  profile supports H/C/N/O/F/P/S/Cl/Br/I with exact partial-charge binding,
+  abstains on metals and receptor cofactors, and leaves pose-ranking
+  calibration, public evidence, aromatic-specific physics, stereo validity,
+  and all product/scientific claims blocked.
+- A verifier-only adjacent registry-epoch transition contract that freshly
+  re-verifies the previous fixed-policy witness-quorum proof, requires exact
+  epoch-ordinal adjacency and unchanged terminal-root carry-forward into a
+  derived sequence-zero genesis checkpoint, and verifies disjoint previous and
+  next Ed25519 quorums over one exact transition statement. It deliberately
+  leaves successor uniqueness, external witness locking, independent journal
+  agreement, realm-wide non-equivocation, and all production/scientific claims
+  false; no transition proof, policy, or key is bundled.
 - A standard-library-only runtime byte-identity materializer for the active
   Python executable and standard library, the root-owned OpenSSL executable,
   and every `RECORD`-declared cryptography, NumPy, and Torch distribution

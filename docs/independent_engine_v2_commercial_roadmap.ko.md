@@ -207,12 +207,13 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > `O_EXCL`·`O_NOFOLLOW`·fsync 보존하며 runner/writer는 persisted/live exact
 > equality와 environment→start→observation→result digest chain을 확인한다.
 > minimization과 energy-force result-review의 Ed25519 signature도 이 digest를 결속한다.
-> Runtime-integrity v12는 refreeze된 minimization trajectory-comparison 계약과 permit→status snapshot custody-v1, review/authorization
+> Runtime-integrity v13은 refreeze된 minimization trajectory-comparison 계약과 permit→status snapshot custody-v1, review/authorization
 > custody extension, seq5 reservation extension, verifier-only external registry-
 > proof boundary, verifier-only authenticated head/status receipt boundary,
 > verifier-only same-epoch later-head consistency boundary, fixed-policy exact-
-> anchor witness-quorum boundary, process-launch-identity의 exact frozen SHA-256을
-> 직접 결속해 독립 drift를 차단한다. Runtime v8~v11은 read-only legacy
+> anchor witness-quorum boundary, verifier-only adjacent epoch-transition
+> continuity boundary, process-launch-identity의 exact frozen SHA-256을
+> 직접 결속해 독립 drift를 차단한다. Runtime v8~v12는 read-only legacy
 > identity로 보존한다.
 > 공급된 registry proof가 검증할 수 있는 것은 backend의 serializable/committed
 > attestation, 고정 순서의 정확한 3-leaf 전이, observer-signed native checkpoint와
@@ -245,13 +246,21 @@ closure의 부재를 뜻한다. Endpoint snapshot·payload aggregate·child PID 
 > certificate 부재는 관찰하지 못한다. 따라서 참인 것은 conditional same-epoch
 > exact-anchor certificate뿐이며 realm-wide non-equivocation은 계속 false다. 실제
 > policy/key/certificate/journal/post-quorum status는 provision되지 않았다.
+> adjacent epoch-transition verifier는 이전 exact witness-quorum proof를 다시
+> 검증하고 caller-pinned integer ordinal의 정확한 `+1`, terminal state root의
+> 변경 없는 sequence-zero genesis 이관, 전체 transition context에서 유도한 genesis
+> checkpoint, 동일 statement에 대한 상이한 이전/다음 fixed-roster Ed25519 quorum을
+> 요구한다. 이는 공급된 한 전환의 continuity만 증명한다. 외부 locking 없이 별도
+> quorum-signed sibling도 각각 통과할 수 있으므로 successor uniqueness·독립 journal
+> 일치·realm-wide non-equivocation·global latest·CAS는 계속 false다. 실제 transition
+> proof/policy/key/vote/post-transition status는 provision되지 않았다.
 > `rglob`·`os.walk`·`distribution.files` 기반 열거와 unbounded source read는
 > bounded `scandir`·direct `RECORD` streaming·pre-read cap·carried deadline으로
 > 교체됐다. 다만 외부 root-owned source/dependency runtime은 아직
 > provision되지 않았다. 활성 energy-force base 계약은 v2이며 runner/result writer는
-> v4, minimization base 계약은 v4이며 runner는 v7, writer/result review는 v6로
+> v4, minimization base 계약은 v4이며 runner는 v8, writer/result review는 v7로
 > 전환해 전체 upstream hash DAG를 다시 고정했다.
-> superseded 계약 문서 50개는 canonical
+> superseded 계약 문서 64개는 canonical
 > projection hash 기반 read-only verifier로 보존하지만, 과거 signed artifact나
 > receipt 호환을 claim하지 않는다. 외부 runtime provisioning, kernel source/Git-
 > metadata immutability·custody, pre-bootstrap stdlib closure, signed native-DSO
@@ -514,8 +523,10 @@ blocker로 남는다.
 공통 Ed25519 permit/status base, raw prefix를 재검증하는 seq3 review·seq4
 authorization companion, 그리고 attestation-only seq5 reservation companion도
 구현됐다. 그러나 실제 key/carrier/event, 외부 serializable registry/CAS proof,
-slot 소비, non-equivocation·epoch continuity, 유일 successor를 provision하거나
-증명하지 않았고 environment 이후 stage도 없으므로 production blocker를 해제하지 않는다.
+slot 소비는 provision되지 않았다. Same-epoch witness quorum과 adjacent epoch-
+transition continuity verifier도 구현됐지만 실제 proof/policy/key/vote가 없고 외부
+witness locking·journal comparison·유일 successor·realm-wide non-equivocation은
+증명하지 않았으며 environment 이후 stage도 없으므로 production blocker를 해제하지 않는다.
 Worker의 argv·cwd·flag·전체 환경·uint32 hash seed·application seed와 parent/child hash
 probe도 verified receipt에서만 유도해 평가 전에 확인하며 mutable supervisor 환경을
 복사하지 않는다. Exact process chain은 absolute checked-out bootstrap path를 사용하고
@@ -654,12 +665,13 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    실행과 parameter-fitting proposal은 계속 fail-closed한다.
    공통 production-evidence base와 additive companion은 permit→status→review→authorization
    4-event exact raw-byte custody와 seq5 reservation commit-attestation primitive를
-   제공하지만 실제 key/carrier/event/registry를 provision하거나 external CAS,
-   one-use permit·nonce·predecessor slot 소비, non-equivocation·epoch continuity,
-   successor uniqueness를 증명하지 않는다. 다음 구현 slice는 이 test-only 증거를
-   승격하지 않고 외부 immutable registry의 실제 CAS/소비 proof와 independent witness
-   continuity를 결속한 뒤 process launch identity와 chain을 environment 이후 전 단계에
-   연결해야 한다.
+   제공하고 same-epoch quorum 및 adjacent epoch-transition continuity 검증기도
+   구현했지만 실제 key/carrier/event/registry/proof를 provision하거나 external CAS,
+   one-use permit·nonce·predecessor slot 소비, 외부 witness locking·independent journal
+   agreement, successor uniqueness, realm-wide non-equivocation을 증명하지 않는다.
+   다음 구현 slice는 이 test-only 증거를 승격하지 않고 외부 locking/journal 비교와
+   실제 transition/registry proof를 결속한 뒤 process launch identity와 chain을
+   environment 이후 전 단계에 연결해야 한다.
    별도 bounded CPU float64 minimizer는 deterministic backtracking, failure row와
    checkpoint/restart 계약까지 구현됐지만 독립 minimization reference·검증 protocol과
    reviewed parameter/applicability evidence가 아니므로 이 차단을 해제하지 않는다.
@@ -744,6 +756,12 @@ pose validity와 독립 physics score를 구현한다. public holdout protocol�
 differentiable image shift, explicit water/ion, validated PME 또는 조건부 FMM,
 constraint solver, NVE/NVT/NPT integrator, trajectory/restart와 drift/distribution
 진단이 필요하다. tiny reference 밖 direct Coulomb all-pairs는 금지한다.
+현재는 caller-supplied mass·parameter를 쓰는 deterministic CPU `float64`
+velocity-Verlet NVE, force 평가별 compact neighbor-list 재구축, full 3D
+orthorhombic PBC wrapping, binary64 trajectory chain, exact checkpoint/restart까지만
+구현됐다. 이는 drift acceptance나 독립·두-host 재현 결과가 아니며 SHAKE/RATTLE,
+PME/Ewald, explicit solvent·ion, thermostat/barostat, triclinic PBC, NVT/NPT 통계,
+CPU/GPU parity와 제품 승격은 계속 차단된다.
 
 ### V2-5 — Production AI
 

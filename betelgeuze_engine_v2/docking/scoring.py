@@ -7,7 +7,38 @@ from enum import Enum
 import hashlib
 import json
 import math
+from numbers import Real
 from typing import Any
+
+
+DOCKING_SCORE_BREAKDOWN_SCHEMA_ID = (
+    "betelgeuze.engine_v2_docking_score_breakdown/1.0.0"
+)
+
+
+class DockingScoringError(ValueError):
+    """A docking score or term decomposition violates its explicit contract."""
+
+
+def _finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise DockingScoringError(f"{name} must be a finite real number")
+    number = float(value)
+    if not math.isfinite(number):
+        raise DockingScoringError(f"{name} must be finite")
+    return number
+
+
+def _optional_sha256(value: object, *, name: str) -> str:
+    if not isinstance(value, str):
+        raise DockingScoringError(f"{name} must be a string")
+    digest = value.strip().lower()
+    if digest and (
+        len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
+        raise DockingScoringError(f"{name} must be empty or a lowercase SHA-256")
+    return digest
 
 
 class ScoreDirection(str, Enum):
@@ -47,6 +78,120 @@ class DockingScoreDescriptor:
     @property
     def fingerprint_sha256(self) -> str:
         return _canonical_sha256(self.to_dict())
+
+
+@dataclass(frozen=True)
+class DockingScoreTerm:
+    """One explicit, independently inspectable contribution to a docking score."""
+
+    term_id: str
+    raw_value: float
+    weight: float
+    unit: str | None
+    semantics: str
+    parameter_source_sha256: str = ""
+
+    def __post_init__(self) -> None:
+        term_id = str(self.term_id or "").strip()
+        semantics = str(self.semantics or "").strip()
+        if not term_id:
+            raise DockingScoringError("score term_id must be non-empty")
+        if not semantics:
+            raise DockingScoringError("score term semantics must be non-empty")
+        unit = None if self.unit is None else str(self.unit).strip()
+        if unit == "":
+            raise DockingScoringError("score term unit must be non-empty or None")
+        object.__setattr__(self, "term_id", term_id)
+        object.__setattr__(
+            self,
+            "raw_value",
+            _finite_float(self.raw_value, name=f"score term {term_id} raw_value"),
+        )
+        object.__setattr__(
+            self,
+            "weight",
+            _finite_float(self.weight, name=f"score term {term_id} weight"),
+        )
+        object.__setattr__(self, "unit", unit)
+        object.__setattr__(self, "semantics", semantics)
+        object.__setattr__(
+            self,
+            "parameter_source_sha256",
+            _optional_sha256(
+                self.parameter_source_sha256,
+                name=f"score term {term_id} parameter_source_sha256",
+            ),
+        )
+
+    @property
+    def contribution(self) -> float:
+        value = self.raw_value * self.weight
+        if not math.isfinite(value):
+            raise DockingScoringError(
+                f"score term {self.term_id} contribution is not finite"
+            )
+        return value
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "term_id": self.term_id,
+            "raw_value": float(self.raw_value),
+            "weight": float(self.weight),
+            "contribution": float(self.contribution),
+            "unit": self.unit,
+            "semantics": self.semantics,
+            "parameter_source_sha256": self.parameter_source_sha256,
+        }
+
+
+@dataclass(frozen=True)
+class DockingScoreBreakdown:
+    """Complete term decomposition returned atomically with one scalar score."""
+
+    terms: tuple[DockingScoreTerm, ...]
+    complete: bool = True
+    blockers: tuple[str, ...] = ()
+    schema_id: str = DOCKING_SCORE_BREAKDOWN_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != DOCKING_SCORE_BREAKDOWN_SCHEMA_ID:
+            raise DockingScoringError("unsupported docking score breakdown schema")
+        terms = tuple(self.terms)
+        if not terms or not all(isinstance(term, DockingScoreTerm) for term in terms):
+            raise DockingScoringError(
+                "score breakdown must contain at least one DockingScoreTerm"
+            )
+        term_ids = [term.term_id for term in terms]
+        if len(term_ids) != len(set(term_ids)):
+            raise DockingScoringError("score breakdown term IDs must be unique")
+        if not isinstance(self.complete, bool):
+            raise DockingScoringError("score breakdown complete must be boolean")
+        blockers = tuple(str(value or "").strip() for value in self.blockers)
+        if any(not value for value in blockers) or len(blockers) != len(set(blockers)):
+            raise DockingScoringError(
+                "score breakdown blockers must be unique non-empty strings"
+            )
+        object.__setattr__(self, "terms", terms)
+        object.__setattr__(self, "blockers", blockers)
+        _finite_float(self.total_score, name="score breakdown total_score")
+
+    @property
+    def total_score(self) -> float:
+        return math.fsum(term.contribution for term in self.terms)
+
+    @property
+    def claim_safe(self) -> bool:
+        return False
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "complete": bool(self.complete),
+            "total_score": float(self.total_score),
+            "terms": [term.to_dict() for term in self.terms],
+            "blockers": list(self.blockers),
+            "claim_safe": False,
+        }
 
 
 UNCALIBRATED_INTERNAL_DOCKING_SCORE = DockingScoreDescriptor(
@@ -115,7 +260,11 @@ def score_sort_key(value: float, descriptor: DockingScoreDescriptor) -> float:
 
 
 __all__ = [
+    "DOCKING_SCORE_BREAKDOWN_SCHEMA_ID",
+    "DockingScoreBreakdown",
     "DockingScoreDescriptor",
+    "DockingScoreTerm",
+    "DockingScoringError",
     "ScoreDirection",
     "UNCALIBRATED_INTERNAL_DOCKING_SCORE",
     "component_contract_fingerprint",

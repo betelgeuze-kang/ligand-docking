@@ -9,6 +9,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_nve.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
@@ -42,6 +43,7 @@ on:
       - "tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py"
       - "tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py"
       - "tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py"
+      - "tests/unit/test_engine_v2_validation_production_reservation_epoch_transition_continuity.py"
       - "tests/unit/test_engine_v2_validation_runtime_integrity_contract.py"
       - "tests/unit/test_engine_v2_validation_source_identity.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
@@ -65,6 +67,7 @@ on:
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_cpu_reference_validation_protocol.py"
       - "tests/unit/test_engine_v2_reference_minimization.py"
+      - "tests/unit/test_engine_v2_reference_nve.py"
       - "tests/unit/test_engine_v2_reference_constrained_minimization.py"
       - "tests/unit/test_engine_v2_reference_minimization_validation_materializer.py"
       - "tests/unit/test_engine_v2_reference_minimization_independent_oracle.py"
@@ -98,6 +101,7 @@ on:
       - "tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py"
       - "tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py"
       - "tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py"
+      - "tests/unit/test_engine_v2_validation_production_reservation_epoch_transition_continuity.py"
       - "tests/unit/test_engine_v2_validation_runtime_integrity_contract.py"
       - "tests/unit/test_engine_v2_validation_source_identity.py"
       - "tests/unit/test_engine_v2_reference_parameter_applicability.py"
@@ -147,6 +151,7 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py
             tests/unit/test_engine_v2_reference_minimization.py
+            tests/unit/test_engine_v2_reference_nve.py
             tests/unit/test_engine_v2_reference_constrained_minimization.py
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py
@@ -180,6 +185,7 @@ jobs:
             tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py
             tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py
             tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py
+            tests/unit/test_engine_v2_validation_production_reservation_epoch_transition_continuity.py
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py
             tests/unit/test_engine_v2_validation_source_identity.py
             tests/unit/test_engine_v2_reference_parameter_applicability.py
@@ -219,6 +225,7 @@ jobs:
           ruff check \
             betelgeuze_engine_v2/physics/reference_validation_protocol.py \
             betelgeuze_engine_v2/physics/reference_minimization.py \
+            betelgeuze_engine_v2/physics/reference_nve.py \
             betelgeuze_engine_v2/physics/reference_constrained_minimization.py \
             betelgeuze_engine_v2/physics/reference_minimization_validation_materializer.py \
             betelgeuze_engine_v2/physics/reference_minimization_independent_oracle.py \
@@ -257,12 +264,14 @@ jobs:
             betelgeuze_engine_v2/physics/validation_production_reservation_authenticated_head_receipt.py \
             betelgeuze_engine_v2/physics/validation_production_reservation_later_head_consistency.py \
             betelgeuze_engine_v2/physics/validation_production_reservation_witness_quorum_non_equivocation.py \
+            betelgeuze_engine_v2/physics/validation_production_reservation_epoch_transition_continuity.py \
             betelgeuze_engine_v2/physics/validation_runtime_integrity_contract.py \
             betelgeuze_engine_v2/physics/validation_source_identity.py \
             betelgeuze_engine_v2/physics/__init__.py \
             betelgeuze_engine_v2/capabilities.py \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
             tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_nve.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
@@ -296,6 +305,7 @@ jobs:
             tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py \
             tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py \
             tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py \
+            tests/unit/test_engine_v2_validation_production_reservation_epoch_transition_continuity.py \
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
             tests/unit/test_engine_v2_validation_source_identity.py \
             --config packaging/engine-v2/pyproject.toml
@@ -305,6 +315,7 @@ jobs:
           python -m pytest -q \
             tests/unit/test_engine_v2_cpu_reference_validation_protocol.py \
             tests/unit/test_engine_v2_reference_minimization.py \
+            tests/unit/test_engine_v2_reference_nve.py \
             tests/unit/test_engine_v2_reference_constrained_minimization.py \
             tests/unit/test_engine_v2_reference_minimization_validation_materializer.py \
             tests/unit/test_engine_v2_reference_minimization_independent_oracle.py \
@@ -338,6 +349,7 @@ jobs:
             tests/unit/test_engine_v2_validation_production_reservation_authenticated_head_receipt.py \
             tests/unit/test_engine_v2_validation_production_reservation_later_head_consistency.py \
             tests/unit/test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py \
+            tests/unit/test_engine_v2_validation_production_reservation_epoch_transition_continuity.py \
             tests/unit/test_engine_v2_validation_runtime_integrity_contract.py \
             tests/unit/test_engine_v2_validation_source_identity.py \
             tests/unit/test_engine_v2_reference_parameter_applicability.py \
@@ -377,6 +389,7 @@ jobs:
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
               FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_PRODUCTION_EVIDENCE_CUSTODY_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
@@ -385,6 +398,7 @@ jobs:
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
               VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
+              VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
               process_launch_identity_contract_document,
               process_launch_identity_decision,
               validation_production_evidence_custody_contract_document,
@@ -401,6 +415,8 @@ jobs:
               validation_production_reservation_later_head_consistency_decision,
               validation_production_reservation_witness_quorum_contract_document,
               validation_production_reservation_witness_quorum_decision,
+              validation_production_reservation_epoch_transition_contract_document,
+              validation_production_reservation_epoch_transition_decision,
               validation_runtime_integrity_contract_document,
               reference_validation_authorization_contract_decision,
               reference_validation_authorization_contract_document,
@@ -443,8 +459,8 @@ jobs:
               )
           )
           assert loaded == capability_snapshot()
-          assert len(loaded["capabilities"]) == 45
-          assert loaded["implementation_stage"] == "v2_ap_minimization_trajectory_comparison"
+          assert len(loaded["capabilities"]) == 46
+          assert loaded["implementation_stage"] == "v2_at_deterministic_reference_nve_restart_contract"
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (
               FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256
@@ -620,6 +636,30 @@ jobs:
               "external_registry_non_equivocation_verified"
           ] is False
           assert witness_quorum_decision["claim_safe"] is False
+          epoch_transition_contract = (
+              validation_production_reservation_epoch_transition_contract_document()
+          )
+          assert epoch_transition_contract["contract_sha256"] == (
+              FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+          )
+          assert (
+              runtime_integrity["bound_contracts"][
+                  "production_reservation_epoch_transition_contract_sha256"
+              ]
+              == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+              == FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+          )
+          epoch_transition_decision = (
+              validation_production_reservation_epoch_transition_decision()
+          )
+          assert epoch_transition_decision["verifier_implemented"] is True
+          assert epoch_transition_decision[
+              "registry_epoch_transition_continuity_verified"
+          ] is False
+          assert epoch_transition_decision[
+              "transition_successor_uniqueness_enforced"
+          ] is False
+          assert epoch_transition_decision["claim_safe"] is False
           assert reservation_extension_decision[
               "custody_successor_uniqueness_enforced"
           ] is False

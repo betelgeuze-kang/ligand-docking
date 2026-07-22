@@ -421,6 +421,12 @@ def test_registry_pins_all_energy_and_minimization_legacy_documents() -> None:
             "2026-07-22T00:00:00Z",
             "24a95d5c42efcd63235614f491d7c2dc818cd3d4f3a6a40317ec8ee6f2d6018d",
         ),
+        "betelgeuze.engine_v2_validation_runtime_integrity_contract/12.0.0": (
+            "engine_v2_synthetic_validation_runtime_integrity/12.0.0",
+            "12.0.0",
+            "2026-07-22T01:17:31Z",
+            "8e260d43a7cb6d6da93e519075a22f14f6a21bd06d069d428ad327b210065dba",
+        ),
         "betelgeuze.engine_v2_validation_production_review_authorization_custody_extension_contract/2.0.0": (
             "engine_v2_synthetic_validation_production_review_authorization_custody_extension/2.0.0",
             "2.0.0",
@@ -435,7 +441,7 @@ def test_registry_pins_all_energy_and_minimization_legacy_documents() -> None:
         ),
     }
 
-    assert len(expected) == 63
+    assert len(expected) == 64
     assert set(LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID) == set(expected)
     for schema_id, expected_identity in expected.items():
         identity = LEGACY_VALIDATION_CONTRACT_IDENTITIES_BY_SCHEMA_ID[schema_id]

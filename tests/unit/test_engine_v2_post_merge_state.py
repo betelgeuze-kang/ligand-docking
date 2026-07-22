@@ -15,6 +15,7 @@ from betelgeuze_engine_v2.capabilities import (  # noqa: E402
     CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID,
     CPU_REFERENCE_IMPROPER_CONSTRAINT_CAPABILITY_ID,
     CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID,
+    CPU_REFERENCE_NVE_CAPABILITY_ID,
     CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID,
     CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID,
     EXTERNAL_BASELINE_CAPABILITY_ID,
@@ -136,9 +137,16 @@ def test_production_evidence_and_process_identity_public_exports_are_closed() ->
         validation_production_reservation_witness_quorum_contract_document,
         validation_production_reservation_witness_quorum_decision,
     )
+    from betelgeuze_engine_v2.physics.validation_production_reservation_epoch_transition_continuity import (
+        FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
+        __all__ as reservation_epoch_transition_exports,
+        validation_production_reservation_epoch_transition_contract_document,
+        validation_production_reservation_epoch_transition_decision,
+    )
     from betelgeuze_engine_v2.physics.validation_runtime_integrity_contract import (
         VALIDATION_RUNTIME_INTEGRITY_BOUND_MINIMIZATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256,
         VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_AUTHENTICATED_HEAD_RECEIPT_CONTRACT_SHA256,
+        VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256,
         VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256,
         VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256,
         VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256,
@@ -154,6 +162,7 @@ def test_production_evidence_and_process_identity_public_exports_are_closed() ->
     assert set(reservation_authenticated_head_receipt_exports) <= set(physics.__all__)
     assert set(reservation_later_head_consistency_exports) <= set(physics.__all__)
     assert set(reservation_witness_quorum_exports) <= set(physics.__all__)
+    assert set(reservation_epoch_transition_exports) <= set(physics.__all__)
     assert set(runtime_integrity_exports) <= set(physics.__all__)
     process_decision = process_launch_identity_decision()
     custody_contract = validation_production_evidence_custody_contract_document()
@@ -170,6 +179,8 @@ def test_production_evidence_and_process_identity_public_exports_are_closed() ->
     later_head_decision = validation_production_reservation_later_head_consistency_decision()
     witness_quorum_contract = validation_production_reservation_witness_quorum_contract_document()
     witness_quorum_decision = validation_production_reservation_witness_quorum_decision()
+    epoch_transition_contract = validation_production_reservation_epoch_transition_contract_document()
+    epoch_transition_decision = validation_production_reservation_epoch_transition_decision()
     runtime_integrity_contract = validation_runtime_integrity_contract_document()
     assert (
         runtime_integrity_contract["bound_contracts"]["minimization_trajectory_comparison_contract_sha256"]
@@ -281,6 +292,24 @@ def test_production_evidence_and_process_identity_public_exports_are_closed() ->
     assert witness_quorum_decision["fixed_policy_same_epoch_anchor_scoped_quorum_certificate_verified"] is False
     assert witness_quorum_decision["external_registry_non_equivocation_verified"] is False
     assert witness_quorum_decision["claim_safe"] is False
+    assert epoch_transition_contract["contract_sha256"] == (
+        FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+    )
+    assert epoch_transition_contract["purpose"]["verifier_only"] is True
+    assert epoch_transition_contract["purpose"]["transition_successor_uniqueness_supported"] is False
+    assert (
+        runtime_integrity_contract["bound_contracts"][
+            "production_reservation_epoch_transition_contract_sha256"
+        ]
+        == VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+        == FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256
+    )
+    assert epoch_transition_decision["verifier_implemented"] is True
+    assert epoch_transition_decision["external_epoch_transition_proof_present"] is False
+    assert epoch_transition_decision["registry_epoch_transition_continuity_verified"] is False
+    assert epoch_transition_decision["transition_successor_uniqueness_enforced"] is False
+    assert epoch_transition_decision["witness_locking_enforced"] is False
+    assert epoch_transition_decision["claim_safe"] is False
 
 
 def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
@@ -289,7 +318,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 45
+    assert len(loaded["capabilities"]) == 46
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())
@@ -334,6 +363,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID in rows
     assert H5_PARAMETER_APPLICABILITY_CAPABILITY_ID in rows
     assert CPU_REFERENCE_MINIMIZATION_CAPABILITY_ID in rows
+    assert CPU_REFERENCE_NVE_CAPABILITY_ID in rows
     assert CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID in rows
     assert CPU_REFERENCE_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
     assert CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID in rows
@@ -345,9 +375,10 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "claim_closed_ed25519_permit_status_review_authorization_four_event_"
         "custody_process_identity_seq5_attestation_and_same_epoch_external_"
         "registry_proof_and_authenticated_head_status_receipt_later_head_"
-        "consistency_and_anchor_scoped_fixed_policy_witness_quorum_verifiers_"
-        "without_provisioned_receipt_registry_consistency_or_witness_quorum_"
-        "proof_or_realm_wide_non_equivocation"
+        "consistency_and_anchor_scoped_fixed_policy_witness_quorum_and_adjacent_"
+        "epoch_transition_continuity_verifiers_without_provisioned_receipt_"
+        "registry_consistency_witness_quorum_or_epoch_transition_proof_or_realm_"
+        "wide_non_equivocation"
     )
     assert "final_production_carrier_family_not_implemented" in (custody_foundation["blockers"])
     assert "same_tick_pid_reuse_collision_not_excluded" in (custody_foundation["blockers"])
@@ -381,6 +412,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         "independent_witness_journal_consistency_not_established",
         "witness_locking_enforcement_not_established",
         "realm_wide_external_registry_non_equivocation_not_established",
+        "external_adjacent_epoch_transition_proof_not_provisioned",
         "status_head_compare_and_set_not_independently_verified",
         "production_reservation_intent_not_provisioned",
         "production_atomic_reservation_commit_not_provisioned",
@@ -630,6 +662,19 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert "independent_reference_minimization_evidence_missing" in (minimization["blockers"])
     assert "public_minimization_validation_missing" in minimization["blockers"]
 
+    nve = rows[CPU_REFERENCE_NVE_CAPABILITY_ID]
+    assert nve["current_state"] == (
+        "bounded_deterministic_cpu_float64_velocity_verlet_nve_with_every_force_"
+        "neighbor_rebuild_full_orthorhombic_pbc_binary64_trajectory_chain_and_"
+        "exact_checkpoint_restart"
+    )
+    assert nve["internal_reference_execution_enabled"] is True
+    assert nve["scientifically_validated"] is False
+    assert "nve_energy_drift_acceptance_evidence_missing" in nve["blockers"]
+    assert "shake_rattle_constraints_not_implemented" in nve["blockers"]
+    assert "pme_ewald_long_range_electrostatics_not_implemented" in nve["blockers"]
+    assert "nvt_npt_ensemble_statistics_missing" in nve["blockers"]
+
     diagnostics = rows[CPU_REFERENCE_TERM_DIAGNOSTICS_CAPABILITY_ID]
     assert diagnostics["current_state"] == (
         "bounded_cpu_float64_per_term_energy_central_difference_force_and_nonperiodic_virial_diagnostics"
@@ -759,6 +804,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_result_writer" in policy
     assert "reference_minimization_validation_result_review" in policy
     assert "reference_minimization_validation_trajectory_comparison" in policy
+    assert "reference_nve" in policy
     assert "reference_validation_result_review" in policy
     assert "energy-force result-review" in policy
     assert "validation_process_launch_identity" in policy
@@ -769,6 +815,7 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "validation_production_reservation_authenticated_head_receipt" in policy
     assert "validation_production_reservation_later_head_consistency" in policy
     assert "validation_production_reservation_witness_quorum_non_equivocation" in policy
+    assert "validation_production_reservation_epoch_transition_continuity" in policy
     assert "fixed external root-owned mode-0600 trust store" in policy
     assert "child-preflighted fourteen-case run" in status
     assert "Independent Engine v2 reviewer" in entrypoints
@@ -780,9 +827,9 @@ def test_engine_v2_docs_pin_legacy_count_and_declared_witness_scope() -> None:
     readiness = Path("docs/ai/tasks/TASK-v2-production-run-integrity-readiness.md").read_text(encoding="utf-8")
     bundle = Path("docs/ai/tasks/TASK-v2-s0-production-evidence-bundle.md").read_text(encoding="utf-8")
 
-    assert "recognizes 63 superseded contract documents" in status
-    assert "recognizes 63 superseded contract documents" in policy
-    assert "verifies 63 superseded contract documents" in readiness
+    assert "recognizes 64 superseded contract documents" in status
+    assert "recognizes 64 superseded contract documents" in policy
+    assert "verifies 64 superseded contract documents" in readiness
     assert "distinct caller-pinned declared" in status
     assert "distinct declared witness/operator/fault-domain" in policy
     assert "distinct caller-pinned declared" in readiness
@@ -854,6 +901,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_validation_production_reservation_authenticated_head_receipt.py",
         "test_engine_v2_validation_production_reservation_later_head_consistency.py",
         "test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py",
+        "test_engine_v2_validation_production_reservation_epoch_transition_continuity.py",
         "test_engine_v2_validation_runtime_integrity_contract.py",
         "test_engine_v2_validation_legacy_contracts.py",
         "test_engine_v2_mmcif_nonpoly_atom_site_scalar_values.py",
@@ -877,6 +925,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
         "test_engine_v2_reference_diagnostics.py",
         "test_engine_v2_reference_forcefield_v2.py",
         "test_engine_v2_reference_minimization.py",
+        "test_engine_v2_reference_nve.py",
         "test_engine_v2_reference_physics.py",
         "test_engine_v2_reference_solvation.py",
         "test_engine_v2_reference_minimization_validation_protocol.py",
@@ -929,10 +978,13 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     assert "validation_production_reservation_authenticated_head_receipt_decision" in source
     assert "validation_production_reservation_later_head_consistency" in source
     assert "validation_production_reservation_witness_quorum_non_equivocation" in source
+    assert "validation_production_reservation_epoch_transition_continuity" in source
     assert "validation_production_reservation_later_head_consistency_decision" in source
     assert "validation_production_reservation_witness_quorum_decision" in source
     assert "FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256" in source
     assert "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256" in source
+    assert "FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256" in source
+    assert "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256" in source
     assert "external_registry_transaction_proof_present" in source
     assert "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256" in source
     assert "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256" in source
@@ -968,6 +1020,7 @@ def test_cpu_reference_validation_workflow_covers_both_result_reviews() -> None:
     assert "test_engine_v2_validation_production_reservation_authenticated_head_receipt.py" in source
     assert "test_engine_v2_validation_production_reservation_later_head_consistency.py" in source
     assert "test_engine_v2_validation_production_reservation_witness_quorum_non_equivocation.py" in source
+    assert "test_engine_v2_validation_production_reservation_epoch_transition_continuity.py" in source
     assert "test_engine_v2_validation_runtime_integrity_contract.py" in source
     assert "test_engine_v2_validation_legacy_contracts.py" in source
     assert "validation_production_review_authorization_custody_extension.py" in source
@@ -976,6 +1029,7 @@ def test_cpu_reference_validation_workflow_covers_both_result_reviews() -> None:
     assert "validation_production_reservation_authenticated_head_receipt.py" in source
     assert "validation_production_reservation_later_head_consistency.py" in source
     assert "validation_production_reservation_witness_quorum_non_equivocation.py" in source
+    assert "validation_production_reservation_epoch_transition_continuity.py" in source
     assert "FROZEN_VALIDATION_PRODUCTION_REVIEW_AUTHORIZATION_CUSTODY_EXTENSION_CONTRACT_SHA256" in source
     assert "validation_production_review_authorization_custody_extension_decision" in source
     assert "FROZEN_VALIDATION_PRODUCTION_RESERVATION_REGISTRY_PROOF_CONTRACT_SHA256" in source
@@ -986,9 +1040,12 @@ def test_cpu_reference_validation_workflow_covers_both_result_reviews() -> None:
     assert "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_LATER_HEAD_CONSISTENCY_CONTRACT_SHA256" in source
     assert "FROZEN_VALIDATION_PRODUCTION_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256" in source
     assert "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_WITNESS_QUORUM_CONTRACT_SHA256" in source
+    assert "FROZEN_VALIDATION_PRODUCTION_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256" in source
+    assert "VALIDATION_RUNTIME_INTEGRITY_BOUND_RESERVATION_EPOCH_TRANSITION_CONTRACT_SHA256" in source
     assert "validation_production_reservation_registry_proof_decision" in source
     assert "validation_production_reservation_authenticated_head_receipt_decision" in source
     assert "validation_production_reservation_later_head_consistency_decision" in source
     assert "validation_production_reservation_witness_quorum_decision" in source
+    assert "validation_production_reservation_epoch_transition_decision" in source
     assert "external_registry_transaction_proof_present" in source
     assert f'"{IMPLEMENTATION_STAGE}"' in source

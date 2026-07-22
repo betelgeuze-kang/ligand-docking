@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_ap_minimization_trajectory_comparison
+implementation_stage: v2_at_deterministic_reference_nve_restart_contract
 
 claim_policy:
   customer_execution_enabled: false
@@ -788,6 +788,34 @@ capabilities:
       - public_minimization_validation_missing
       - product_integration_not_qualified
 
+  v2_bounded_cpu_reference_nve:
+    current_state: bounded_deterministic_cpu_float64_velocity_verlet_nve_with_every_force_neighbor_rebuild_full_orthorhombic_pbc_binary64_trajectory_chain_and_exact_checkpoint_restart
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - caller_supplied_parameter_values_not_independently_reviewed
+      - atom_mass_assignment_not_implemented
+      - reference_force_field_not_scientifically_validated
+      - nve_energy_drift_acceptance_evidence_missing
+      - cross_host_reproducibility_missing
+      - cpu_gpu_parity_evidence_missing
+      - shake_rattle_constraints_not_implemented
+      - pme_ewald_long_range_electrostatics_not_implemented
+      - explicit_solvent_and_ion_preparation_not_implemented
+      - thermostat_and_barostat_not_implemented
+      - nvt_npt_ensemble_statistics_missing
+      - triclinic_periodic_cells_not_supported
+      - product_integration_not_qualified
+
   v2_bounded_cpu_reference_term_diagnostics:
     current_state: bounded_cpu_float64_per_term_energy_central_difference_force_and_nonperiodic_virial_diagnostics
     implemented: true
@@ -947,7 +975,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_synthetic_validation_production_evidence_custody_foundation:
-    current_state: claim_closed_ed25519_permit_status_review_authorization_four_event_custody_process_identity_seq5_attestation_and_same_epoch_external_registry_proof_and_authenticated_head_status_receipt_later_head_consistency_and_anchor_scoped_fixed_policy_witness_quorum_verifiers_without_provisioned_receipt_registry_consistency_or_witness_quorum_proof_or_realm_wide_non_equivocation
+    current_state: claim_closed_ed25519_permit_status_review_authorization_four_event_custody_process_identity_seq5_attestation_and_same_epoch_external_registry_proof_and_authenticated_head_status_receipt_later_head_consistency_and_anchor_scoped_fixed_policy_witness_quorum_and_adjacent_epoch_transition_continuity_verifiers_without_provisioned_receipt_registry_consistency_witness_quorum_or_epoch_transition_proof_or_realm_wide_non_equivocation
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: false
@@ -1001,7 +1029,7 @@ capabilities:
       - production_reservation_intent_not_provisioned
       - production_atomic_reservation_commit_not_provisioned
       - external_registry_non_equivocation_proof_not_provisioned
-      - registry_epoch_transition_continuity_not_provisioned
+      - external_adjacent_epoch_transition_proof_not_provisioned
       - process_launch_identity_not_bound_to_worker_carriers
       - same_tick_pid_reuse_collision_not_excluded
       - external_worker_launch_custody_missing
@@ -1014,7 +1042,7 @@ capabilities:
       - product_integration_not_qualified
 
   v2_bounded_docking_scaffold:
-    current_state: bounded_internal_scaffold
+    current_state: bounded_internal_search_with_uncalibrated_parameter_bound_four_term_interaction_strain_score_decomposition_and_leakage_audited_fit_evaluation_contract_without_public_fit
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
@@ -1029,6 +1057,9 @@ capabilities:
     blockers:
       - docking_proposal_scaffold_not_scientifically_validated
       - validated_docking_scorer_missing
+      - public_pose_ranking_calibration_fit_missing
+      - metals_and_cofactors_outside_reference_scorer_scope
+      - aromatic_and_stereo_specific_scoring_missing
       - public_pose_validity_and_ranking_evidence_missing
       - product_integration_not_qualified
 
@@ -1123,5 +1154,7 @@ promotion_requirements:
   require_validated_independent_physics: true
   require_predefined_minimization_trajectory_thresholds: true
   require_minimization_checkpoint_restart_equality: true
+  require_adjacent_epoch_transition_continuity_proof: true
+  require_joint_epoch_transition_witness_quorums: true
   require_gpu_parity_before_acceleration_claim: true
   external_state_mutated: false
