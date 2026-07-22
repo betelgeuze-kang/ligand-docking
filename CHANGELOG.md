@@ -26,6 +26,14 @@ scientific claim from a package version.
   verifies the returned signature with a public key before no-overwrite
   attachment. No production evidence, trust key, authenticated custody, final
   approval, S0 acceptance, or scientific/product promotion is bundled.
+- An installable `betelgeuze-engine-v2-openmm-materialize` workflow executes
+  the complete 27/59 energy-force and 14-case operational-trace comparisons,
+  retains all failure rows plus Engine iteration/rejection counts,
+  constraint/tangent-force metrics, energy/coordinate traces, and checkpoint
+  equality in one canonical mode-0600 no-overwrite artifact, and supports
+  structural verification or exact local re-execution. It never
+  accepts private signing material and cannot mark production execution,
+  independent review, two-host reproduction, validation, or claim safety true.
 - A bounded offline reference-pose materializer for the frozen PoseBusters
   four-case contract cohort. Protocol v1.1 now selects every reference SDF
   record matching the identity seed's labeled graph instead of requiring one
@@ -40,6 +48,37 @@ scientific claim from a package version.
   inputs, retains all four success/failure case rows, embeds canonical reference
   receipts, and writes a mode-0600 no-overwrite suite receipt. It does not fetch
   data, generate poses, evaluate pose validity, score, or create docking evidence.
+- A fail-closed same-input external-baseline preparation contract now verifies
+  exact four-case receptor/ligand PDBQT bytes and their source, preparation-tool,
+  configuration, executable, and container identities before emitting three
+  non-executing Vina/GNINA/Smina work orders. All engines receive the same
+  prepared hashes, native-defined receptor-frame centers, frozen 22.5-A boxes,
+  seed, exhaustiveness, mode count, and CPU count; engine binary identities and
+  score semantics remain distinct and exact. No prepared artifacts, engine
+  binaries, executions, result receipts, statistical holdout, independent
+  preparation audit, or independent rerun is bundled.
+- A public split-provenance layer now freezes the official PDBbind v2020,
+  CASF-2016, and published 308-case PoseBusters source/access boundaries. The
+  PoseBusters 308-ID file is fixed by raw and canonical case-projection SHA-256.
+  Caller-provisioned case manifests bind release date, receptor, ligand,
+  scaffold, canonical protein-chain-set, target-family, cofactor, and supported/
+  unsupported chemistry identities. A source-bound Smith-Waterman/BLOSUM62
+  receipt records the maximum identity over every evaluation/fit protein-chain
+  pair and low/medium/high strata. Separate bindings recheck generic
+  calibration partitions, leakage audits, all-case denominators, and exact
+  target-family denominators. No PDBbind license acceptance, dataset archive,
+  full manifest, sequence run, fitted model, benchmark result, or independent
+  rerun is bundled.
+- An installable `betelgeuze-engine-v2-posebusters-intake` command now verifies
+  the exact published PoseBusters Zenodo archive and journal 308-ID selection
+  from caller-provided local files. It uses bounded no-follow regular-file
+  access, audits the ZIP directory without extraction, rejects duplicate,
+  traversal, encrypted, unsupported-compression, symlink, count, size, and
+  metadata-identity violations, and CRC-streams all four artifacts for every
+  selected case into 308 failure-inclusive rows. Its canonical mode-0600 output
+  is no-overwrite and exactly reexecutable. It fetches and accepts no data or
+  terms, extracts nothing, executes no docking or benchmark, and bundles no
+  archive, scientific result, or review.
 - A claim-closed four-case rigid redocking diagnostic now generates bounded
   poses after a fixed seed-conformer rotation, uses the lowest-index matched
   native record only to define the pocket center, retains every score/failure,

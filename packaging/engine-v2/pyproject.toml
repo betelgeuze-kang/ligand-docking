@@ -24,6 +24,8 @@ classifiers = [
 ]
 
 [project.scripts]
+betelgeuze-engine-v2-openmm-materialize = "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"
+betelgeuze-engine-v2-posebusters-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"
 betelgeuze-engine-v2-public-materialize = "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"
 betelgeuze-engine-v2-s0-review = "betelgeuze_engine_v2.offline.s0_production_evidence_bundle:main"
 

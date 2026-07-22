@@ -230,6 +230,8 @@ jobs:
           assert contract["contract_sha256"] == FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256
           PY
           "$venv/bin/betelgeuze-engine-v2-s0-review" --help | grep -q "never accepts a private key"
+          "$venv/bin/betelgeuze-engine-v2-openmm-materialize" --help | grep -q "never accepts a private key"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-intake" --help | grep -q "without extraction"
 
       - name: Upload reproducible wheel and SBOM
         if: matrix.python-version == '3.11'

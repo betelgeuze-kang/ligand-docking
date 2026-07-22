@@ -214,6 +214,11 @@ jobs:
             tests/unit/test_engine_v2_reference_physics.py
             tests/unit/test_engine_v2_reference_solvation.py
             tests/unit/test_engine_v2_external_baseline.py
+            tests/unit/test_engine_v2_public_external_baseline.py
+            tests/unit/test_engine_v2_pose_ranking_calibration.py
+            tests/unit/test_engine_v2_pose_ranking_confidence.py
+            tests/unit/test_engine_v2_public_split_provenance.py
+            tests/unit/test_engine_v2_public_posebusters_intake.py
             tests/unit/test_engine_v2_openmm_reference_contract.py
             tests/unit/test_engine_v2_openmm_reference_result_review_contract.py
             tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py
@@ -375,6 +380,11 @@ jobs:
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
             tests/unit/test_engine_v2_external_baseline.py \
+            tests/unit/test_engine_v2_public_external_baseline.py \
+            tests/unit/test_engine_v2_pose_ranking_calibration.py \
+            tests/unit/test_engine_v2_pose_ranking_confidence.py \
+            tests/unit/test_engine_v2_public_split_provenance.py \
+            tests/unit/test_engine_v2_public_posebusters_intake.py \
             tests/unit/test_engine_v2_openmm_reference_contract.py \
             tests/unit/test_engine_v2_openmm_reference_result_review_contract.py \
             tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py \

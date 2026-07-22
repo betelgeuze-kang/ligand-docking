@@ -6,12 +6,18 @@ on:
       - "betelgeuze_engine_v2/benchmark/**"
       - "betelgeuze_engine_v2/docking/metrics.py"
       - "betelgeuze_engine_v2/docking/validity.py"
+      - "betelgeuze_engine_v2/docking/calibration.py"
+      - "betelgeuze_engine_v2/docking/confidence.py"
       - "betelgeuze_engine_v2/io/sdf.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
       - "tests/unit/test_engine_v2_public_benchmark_materialization.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
+      - "tests/unit/test_engine_v2_pose_ranking_calibration.py"
+      - "tests/unit/test_engine_v2_pose_ranking_confidence.py"
+      - "tests/unit/test_engine_v2_public_split_provenance.py"
+      - "tests/unit/test_engine_v2_public_posebusters_intake.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   push:
@@ -20,12 +26,18 @@ on:
       - "betelgeuze_engine_v2/benchmark/**"
       - "betelgeuze_engine_v2/docking/metrics.py"
       - "betelgeuze_engine_v2/docking/validity.py"
+      - "betelgeuze_engine_v2/docking/calibration.py"
+      - "betelgeuze_engine_v2/docking/confidence.py"
       - "betelgeuze_engine_v2/io/sdf.py"
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
       - "tests/unit/test_engine_v2_public_benchmark_materialization.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
+      - "tests/unit/test_engine_v2_pose_ranking_calibration.py"
+      - "tests/unit/test_engine_v2_pose_ranking_confidence.py"
+      - "tests/unit/test_engine_v2_public_split_provenance.py"
+      - "tests/unit/test_engine_v2_public_posebusters_intake.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
   workflow_dispatch:
@@ -62,6 +74,10 @@ jobs:
             tests/unit/test_engine_v2_public_benchmark_protocol.py
             tests/unit/test_engine_v2_public_benchmark_materialization.py
             tests/unit/test_engine_v2_benchmark_contracts.py
+            tests/unit/test_engine_v2_pose_ranking_calibration.py
+            tests/unit/test_engine_v2_pose_ranking_confidence.py
+            tests/unit/test_engine_v2_public_split_provenance.py
+            tests/unit/test_engine_v2_public_posebusters_intake.py
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
@@ -87,4 +103,8 @@ jobs:
           python -m pytest -q \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
             tests/unit/test_engine_v2_public_benchmark_materialization.py \
-            tests/unit/test_engine_v2_benchmark_contracts.py
+            tests/unit/test_engine_v2_benchmark_contracts.py \
+            tests/unit/test_engine_v2_pose_ranking_calibration.py \
+            tests/unit/test_engine_v2_pose_ranking_confidence.py \
+            tests/unit/test_engine_v2_public_split_provenance.py \
+            tests/unit/test_engine_v2_public_posebusters_intake.py

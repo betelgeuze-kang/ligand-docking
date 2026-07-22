@@ -655,6 +655,25 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    match/mismatch/failure, stereo-preserving bounded automorphism과 무정렬 receptor-frame
    RMSD 최솟값을 보존하되 데이터 fetch/bundle·pose 생성·validity·scoring·도킹 결과·
    발표·과학 승격은 계속 금지한다.
+   별도 same-input 외부 baseline 준비 계약은 frozen source에 결속된 exact receptor/
+   ligand PDBQT byte와 preparation tool/configuration/executable/container identity를
+   검증하고, 동일한 native-defined center·22.5 Å box·seed·exhaustiveness·mode 수·CPU
+   수를 쓰는 Vina/GNINA/Smina 비실행 work order 3개만 만든다. 준비 파일·엔진·실행·
+   결과 receipt·통계적 holdout·독립 준비 audit·독립 재실행은 포함하지 않는다.
+   공개 split provenance 계약은 PDBbind v2020 fit·285-case CASF-2016·논문판
+   308-case PoseBusters Benchmark의 source/access/license/endpoint를 분리하고 공식
+   PoseBusters case list를 raw/canonical SHA-256으로 고정한다. case별 release·receptor/
+   ligand/scaffold/protein-chain-set·target family·cofactor·chemistry disposition과
+   모든 chain pair 최대 Smith-Waterman/BLOSUM62 identity stratum을 결속하며 generic
+   calibration leakage 및 all-case/target-family 분모를 다시 검증한다. PDBbind 접근
+   승인·full manifest·dataset byte·sequence 실행·fit/result·독립 재실행은 포함하지 않는다.
+   별도 extraction-free PoseBusters intake는 공식 Zenodo ZIP·논문판 308-ID byte를
+   exact identity로 고정하고 전체 central directory를 bounded audit한 뒤 선택 case별
+   필수 artifact 4개의 CRC/SHA-256을 308개 failure-inclusive 행으로 보존한다.
+   2026-07-23 local ignored-state 관측은 308/308 ready와 exact 재실행 일치를 확인했지만
+   이는 public input-carrier identity sub-gate만 닫는다. sequence/release provenance·
+   family/chemistry disposition·preparation·pose generation·validity·scoring·CI·external
+   baseline·독립 재실행·과학 승격은 여전히 열려 있다.
    별도 rigid diagnostic은 lowest-index graph-matched native record로 pocket center를
    정의하고 seed orientation을 고정 회전한 뒤 모든 candidate의 geometry score·validity·
    receptor-frame symmetry-aware RMSD와 oracle-best generation gap을 보존한다. 초기

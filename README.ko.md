@@ -170,7 +170,14 @@ v2_at_s0_production_evidence_bundle_contract
   failure 12개를 N/A로 보존하며, 지원 minimization trace 8개의 모든 좌표를
   재평가하고 fail-closed trace 6개를 보존함. canonical receipt는 전체 OpenMM
   distribution·native/runtime identity, fixed-Born self/pair, 재계산한 nested error를
-  결속함. 별도 Ed25519 verifier는 두 Engine result-review chain과 두 OpenMM receipt를
+  결속함. 설치형 `betelgeuze-engine-v2-openmm-materialize` workflow는
+  두 frozen matrix 전체를 실행하고 모든 성공/실패 행과 Engine iteration/rejection count·
+  constraint/tangent-force metric·energy/coordinate trace·checkpoint equality를 하나의
+  canonical mode-0600 no-overwrite artifact로 보존하며, 구조 검증 또는 exact
+  re-execution을 제공함.
+  private key를 받지 않고 `production_protocol_execution=false`·독립 검토 미완료·
+  2-host 재현 미완료·`claim_safe=false`를 고정함. 별도 Ed25519 verifier는
+  두 Engine result-review chain과 두 OpenMM receipt를
   새로 검증하고 exact Engine output/14개 operational trace·역할 분리·freshness·
   revocation/supersession을 확인한 뒤 단일 host-scoped comparison을 서명함. 최종
   S0 bundle 계약은 정확히 두 host 입력을 새로 재검증하고 host·CPU·session·custody·
@@ -217,6 +224,33 @@ v2_at_s0_production_evidence_bundle_contract
   최종 score-order diversity selection에서는 invalid pose를 제외한다. torsion energy·
   bonded-force-field strain·torsion refinement·힘장 refinement·holdout 지위·도킹
   claim은 없음
+- fail-closed 비실행 same-input 외부 baseline work-order 계약. frozen 4-case source에
+  대해 준비된 receptor/ligand PDBQT의 exact byte를 검증하고 preparation tool/version·
+  executable·configuration·container 및 pocket definition과 Vina/GNINA/Smina binary
+  identity를 결속한다. 세 엔진에는 동일한 prepared hash·native-defined receptor-frame
+  center·22.5 Å cube·seed·exhaustiveness·mode 수·CPU 1개를 전달한다. native 좌표는
+  box center에만 쓸 수 있고 ligand preparation에는 쓰지 않았다는 선언을 요구한다.
+  prepared file이나 엔진을 bundle하지 않고 binary를 실행하지 않으며, 결과 검증·
+  통계적 holdout·독립 재실행을 완료하지 않음
+- caller-provisioned PDBbind v2020 fit·CASF-2016 evaluation·논문판 308-case
+  PoseBusters Benchmark를 위한 claim-closed 공개 split provenance 계약. 공식 source·
+  citation·access·license·endpoint·case count를 고정하고, PoseBusters 공식 308-ID
+  파일은 raw SHA-256과 canonical case-ID projection으로 결속한다. case별 exact
+  receptor/ligand/scaffold/protein-chain-set identity·release date·target family·
+  cofactor·지원/미지원 chemistry disposition을 기록한다. exact Smith-Waterman/
+  BLOSUM62 tool receipt는 모든 evaluation/fit protein chain pair 중 최대 identity와
+  similarity stratum을 보존한다. 최종 link는 generic fit/evaluation leakage audit와
+  report의 all-case·target-family 분모를 다시 검증한다. PDBbind 약관을 대신 승인하지
+  않고 dataset을 bundle하지 않으며 sequence 비교·benchmark 실행·결과·독립 검토는
+  포함하지 않음
+- 설치 가능한 extraction-free PoseBusters 308 archive intake. caller가 제공한 공식
+  Zenodo ZIP과 논문판 308-ID 파일의 exact hash·size를 요구하고, 2,570개 ZIP entry와
+  428개 case directory를 hard bound 안에서 검사한다. path traversal·중복·암호화·
+  미지원 압축·symlink·size/count·metadata identity 위반을 fail-closed하고, 선택된
+  모든 case의 필수 artifact 4개를 CRC streaming해 정확히 308개 성공/실패 행과
+  1,232개 artifact identity를 mode-0600 no-overwrite canonical receipt로 기록한다.
+  exact 재실행 검증을 지원하지만 fetch·약관 승인·압축 해제·pose 생성·scoring·
+  benchmark를 수행하지 않고 archive/receipt를 bundle하지 않으며 `claim_safe=false`
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 - frozen four-case PoseBusters contract cohort의 bounded offline materializer.
   caller가 제공한 seed/reference SDF byte를 검증하고 multi-record의 모든

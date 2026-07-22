@@ -24,6 +24,10 @@ Execution:    CPU reference
   epoch;
 - PEP 561 metadata, clean isolated install, and `pip check`;
 - installed `betelgeuze-engine-v2-s0-review` console-entrypoint smoke checks;
+- installed `betelgeuze-engine-v2-openmm-materialize` secret-free workflow
+  smoke checks (OpenMM remains an optional offline runtime);
+- installed `betelgeuze-engine-v2-posebusters-intake` extraction-free local
+  archive-intake smoke checks (the public archive remains caller-provided);
 - SPDX 2.3 SBOM binding the wheel SHA-256;
 - exact pre-import and pre-evaluation byte manifests for Python, the standard
   library, OpenSSL, cryptography, NumPy, and Torch;
@@ -51,8 +55,17 @@ privileged immutable storage or an external signed transparency system.
 - `customer_execution_enabled=false`
 
 No production result receipt, independent result review, reviewed parameter
-set, real-molecule corpus, external solver comparison, or public docking
-benchmark is bundled.
+set, real-molecule corpus, external solver result, or public docking benchmark
+is bundled. The same-input Vina/GNINA/Smina API emits only non-executing work
+orders after prepared-PDBQT and identity checks; it bundles neither prepared
+inputs nor external engines and does not establish comparison evidence. The
+PDBbind/CASF/PoseBusters split-provenance API similarly binds only caller-
+provided identities, leakage evidence, and family denominators. It accepts no
+PDBbind access terms and bundles no dataset, fit, benchmark result, or review.
+The PoseBusters intake command can establish the exact archive, selection, and
+308-case artifact identities without extraction, but it performs no preparation,
+pose generation, scoring, benchmark execution, or independent review and does
+not bundle the public archive or a receipt.
 
 The S0 review command is workflow tooling, not bundled evidence. It accepts no
 private key: after two raw host chains have been verified through the Python

@@ -146,6 +146,34 @@ The current `main` branch contains:
   invalid poses before score-order diversity. It has no torsion-energy or bonded
   force-field strain term, does not refine torsions, and has no holdout or
   docking claim;
+- a non-executing same-input Vina/GNINA/Smina preparation and work-order
+  contract. It verifies exact prepared PDBQT bytes, source and preparation-tool
+  provenance, frozen receptor-frame box definitions, deterministic search
+  parameters, and exact external-engine executable/container identities. It
+  retains all four preparation success/failure rows and emits no work orders if
+  any prepared input fails. No real prepared inputs, external binaries,
+  executions, result receipts, representative holdout, independent preparation
+  audit, or independent rerun is bundled;
+- a public split-provenance and pose-ranking linkage contract for PDBbind v2020,
+  CASF-2016, and the published 308-case PoseBusters Benchmark. It freezes source,
+  license/access, endpoint, official count, and PoseBusters case-list identities;
+  binds case release, receptor/ligand/scaffold/protein-chain-set, family,
+  cofactor, and chemistry dispositions; retains exact all-chain maximum sequence
+  identity strata; and verifies generic calibration leakage plus all-case and
+  target-family result denominators. No PDBbind authorization, actual full
+  manifest, dataset bytes, sequence receipt, fitted model, result, or external
+  review is bundled;
+- an installable extraction-free PoseBusters archive intake. It pins the exact
+  published Zenodo ZIP and journal 308-ID selection, audits all ZIP paths,
+  compression, sizes, counts, metadata, and symlink/encryption boundaries, then
+  CRC-streams the four required members per selected case into a canonical
+  failure-inclusive mode-0600 receipt. It neither fetches nor extracts data and
+  executes no preparation, docking, scoring, or benchmark. A 2026-07-23 local
+  ignored-state observation recorded 308/308 ready rows and 1,232 artifact
+  identities with receipt payload SHA-256
+  `e76c31517be668eb2073cd78a83dd0e2327a041fefe98e9dfed9bab3635b66c6`;
+  exact reexecution matched. This is input identity only, not bundled public
+  benchmark evidence or a docking claim;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen v1.1 four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -754,6 +782,15 @@ The current `main` branch contains:
   requires exact runtime and adapter-source equality before and after each
   observation. These checks are snapshots and do not establish immutable
   external custody or same-UID replacement resistance.
+  The installable `betelgeuze-engine-v2-openmm-materialize` command now runs
+  both complete matrices into one bounded canonical mode-0600 artifact,
+  refuses overwrite and symlink transport, retains all 27/59 and 14-case rows,
+  binds Engine iteration/rejection counts, constraint/tangent-force metrics,
+  energy/coordinate traces, and checkpoint equality, and supports exact
+  re-execution against the live pinned runtime/source bytes.
+  It accepts no private key and fixes production execution, signed result,
+  independent review, two-host reproduction, scientific validation, and claim
+  safety to false.
   OpenMM remains a lazy optional offline dependency; no product import or route
   loads it. A frozen Ed25519 external result-review verifier now freshly
   reverifies both Engine result-review chains and both OpenMM receipts, binds

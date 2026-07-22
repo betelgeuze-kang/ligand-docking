@@ -53,6 +53,7 @@ jobs:
             tests/unit/test_engine_v2_openmm_reference_runtime.py
             tests/unit/test_engine_v2_openmm_reference_result_review_contract.py
             tests/unit/test_engine_v2_openmm_reference_result_review_runtime.py
+            tests/unit/test_engine_v2_openmm_reference_materialization_runtime.py
             tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py
             tests/unit/test_engine_v2_s0_production_evidence_bundle.py
             tests/unit/test_engine_v2_reference_validation_result_review.py
@@ -86,5 +87,6 @@ jobs:
             tests/unit/test_engine_v2_openmm_reference_runtime.py \
             tests/unit/test_engine_v2_openmm_reference_result_review_contract.py \
             tests/unit/test_engine_v2_openmm_reference_result_review_runtime.py \
+            tests/unit/test_engine_v2_openmm_reference_materialization_runtime.py \
             tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py \
             tests/unit/test_engine_v2_s0_production_evidence_bundle.py

@@ -97,12 +97,13 @@ betelgeuze_engine_v2.physics.validation_runtime_integrity_contract
 betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.offline.openmm_reference_oracle
 betelgeuze_engine_v2.offline.openmm_reference_receipts
+betelgeuze_engine_v2.offline.openmm_reference_materialization
 betelgeuze_engine_v2.offline.openmm_reference_result_review
 betelgeuze_engine_v2.offline.s0_production_evidence_bundle
 betelgeuze_engine_v2.runtime
 ```
 
-The four `betelgeuze_engine_v2.offline` modules are optional external-evidence
+The five `betelgeuze_engine_v2.offline` modules are optional external-evidence
 adapters, not product runtime APIs. Importing them does not import OpenMM. An
 explicit observation requires the exact pinned `OpenMM==8.4.0.post2` native
 build and selects only the `Reference` platform. The mapping contract covers
@@ -113,6 +114,14 @@ terms, runtime/binary/environment identities, and predefined max/RMS errors.
 Builders reobserve runtime and adapter-source identity before and after the
 calculation; readers independently recompute nested output, comparison, and
 summary digests. This is not immutable external custody.
+The installed `betelgeuze-engine-v2-openmm-materialize` command executes both
+complete matrices into one canonical mode-0600 artifact, refuses replacement,
+retains every failure row plus Engine iteration/rejection counts,
+constraint/tangent-force metrics, energy/coordinate traces, and checkpoint
+equality, and supports structural verification or exact local re-execution. It
+accepts no private key and permanently records the run as an
+offline observation with production execution, signed result, independent
+review, two-host reproduction, scientific validation, and claim safety false.
 The separate Ed25519 result-review contract freshly reverifies both Engine
 result-review chains and both complete OpenMM receipts, then crosschecks the
 exact 27/59 Engine component/total/force outputs and all fourteen retained
@@ -219,6 +228,71 @@ term while excluding covalent 1-2 and angular 1-3 pairs. This is not a
 torsion-energy or bonded-force-field model or validated conformer generation;
 final Top-K selection excludes invalid poses before score-order diversity, but
 torsions are not refined and all rigid diagnostic nonclaims continue to apply.
+
+`betelgeuze_engine_v2.benchmark.public_external_baseline` provides the separate
+same-input external-baseline preparation boundary. Callers must provide exact
+prepared receptor and ligand PDBQT files plus source hashes and exact
+preparation tool/version, configuration, executable, and optional container
+identities. The builder reverifies all four files without following symlinks,
+derives each receptor-frame pocket center from the lowest-index matched native
+record, freezes a 22.5-A cube and deterministic search parameters, and emits
+exactly one non-executing work order for each of Vina, GNINA, and Smina. Bundle
+construction rechecks that all three orders carry identical prepared input
+hashes and exact engine-specific command and score semantics. Native coordinates
+are admitted only for box definition and are explicitly forbidden as ligand
+preparation coordinates. The API bundles no PDBQT data or external executable,
+launches nothing, and records `results_present=false`,
+`scientifically_validated=false`, and `claim_safe=false`; the development
+four-case cohort is not a statistical holdout or public benchmark result.
+
+`betelgeuze_engine_v2.benchmark.public_split_provenance` is the public-data
+lineage boundary above the generic pose-ranking calibration API. Its frozen
+catalog distinguishes PDBbind v2020 fit inputs, the 285-case/four-endpoint
+CASF-2016 evaluation, and the published 308-case PoseBusters Benchmark. It does
+not download data or accept access terms. Sources must carry exact archive,
+selection, license-text, and—where access is not open—external authorization-
+receipt identities. The official PoseBusters 308-ID attachment is pinned as raw
+SHA-256 `a69a7b6b9a5a52531933078ef983e6c069e3a987a1d7a733bd7d72cbe1793de6`
+and canonical sorted case-ID projection SHA-256
+`fb3d12a98fb61d95f306ecf36188d66dddf64303389915a72b2a9b96cc97f3f6`.
+
+Each split case binds exact receptor, ligand, scaffold, and canonical protein-
+chain-set hashes plus release date, target family, cofactor category, and
+supported/unsupported chemistry disposition. The sequence receipt binds exact
+Smith-Waterman/BLOSUM62 implementation/configuration identity and the maximum
+query-fraction identity over all evaluation/fit protein-chain pairs, retaining
+the paper-compatible low/medium/high strata. The leakage audit records exact
+case/PDB/target/receptor/ligand/scaffold/sequence overlaps, optional temporal
+ordering, and a caller-frozen maximum sequence-identity policy. Public partition
+bindings then match every generic calibration row to this manifest. A final
+result binding verifies the evaluation report's all-case and target-family
+denominators. Every artifact remains `claim_safe=false`; no full source manifest,
+similarity execution, fitted model, benchmark result, or independent rerun is
+bundled.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_intake` is the bounded local
+archive boundary for the published PoseBusters set. The installed
+`betelgeuze-engine-v2-posebusters-intake` command requires the exact frozen
+53,660,397-byte Zenodo ZIP and exact 2,772-byte journal 308-ID selection as
+caller-provided, non-symlink regular files. It checks both identities before
+auditing the ZIP central directory without extraction. Duplicate or unsafe
+names, encryption, unsupported compression, symlinks, unexpected entry,
+uncompressed-byte or case counts, oversize members, and metadata identity
+mismatches fail closed. It then CRC-streams and SHA-256 binds the receptor,
+single reference ligand, reference-ligand collection, and ligand start
+conformer for every selected case. Every selected case remains present as a
+success or failure row.
+
+The canonical receipt is written mode 0600 without replacement and can be
+verified by exact local reexecution. The command performs no network access,
+license acceptance, archive extraction, preparation, pose generation, scoring,
+or benchmark execution. `input_identity_ready=true` means only that the exact
+published input carriers and 1,232 selected members passed intake; scientific
+validation and claim safety remain false. A 2026-07-23 local, unbundled
+observation produced 308/308 ready rows with receipt payload SHA-256
+`e76c31517be668eb2073cd78a83dd0e2327a041fefe98e9dfed9bab3635b66c6`
+and exact reexecution equality. The data files and receipt are ignored runtime
+state, not package evidence.
 
 The frozen H5 reference-parameter applicability symbols under
 `betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact

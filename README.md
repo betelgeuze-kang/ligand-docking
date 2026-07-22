@@ -228,6 +228,15 @@ Implemented and GitHub-hosted CPU tested:
   the eight supported minimization traces while retaining six fail-closed
   traces. Canonical receipts bind complete OpenMM distribution/native/runtime
   identity, fixed-Born self/pair terms, and recomputed nested errors. A separate
+  installable `betelgeuze-engine-v2-openmm-materialize` workflow executes both
+  complete frozen matrices, retains all success/failure rows in one canonical
+  mode-0600 no-overwrite artifact, including Engine iteration/rejection counts,
+  constraint/tangent-force metrics, energy/coordinate traces, and checkpoint
+  equality, and can structurally verify or exactly re-execute it. The workflow
+  never accepts a private key and fixes
+  `production_protocol_execution=false`, independent review and two-host
+  reproduction to false, and `claim_safe=false`;
+  a separate
   Ed25519 verifier freshly checks both Engine result-review chains, both OpenMM
   receipts, exact retained Engine outputs/traces, role separation, freshness,
   and revocation/supersession state before signing one host-scoped comparison.
@@ -282,6 +291,38 @@ Implemented and GitHub-hosted CPU tested:
   refinement; final score-order diversity selection excludes invalid poses. It
   has no torsion-energy or bonded-force-field strain term, torsion refinement,
   force-field refinement, holdout status, or docking claim;
+- a fail-closed, non-executing same-input external-baseline work-order contract.
+  It verifies exact prepared receptor/ligand PDBQT bytes against the frozen
+  four-case sources and binds preparation tool/version, executable,
+  configuration, container, pocket-definition, and Vina/GNINA/Smina binary
+  identities. Each engine receives the same prepared hashes, native-defined
+  receptor-frame center, 22.5-A cube, seed, exhaustiveness, mode count, and one
+  CPU. Native coordinates may define only the box center and are declared
+  forbidden from ligand preparation. This does not bundle prepared files or
+  engines, launch a binary, validate a result, establish a statistical holdout,
+  or complete an independent rerun;
+- a claim-closed public split-provenance contract for caller-provisioned PDBbind
+  v2020 fit data, CASF-2016 evaluation data, and the published 308-case
+  PoseBusters Benchmark. It freezes official source, citation, access, license,
+  endpoint, and case-count facts; the official PoseBusters 308-ID file is bound
+  by raw SHA-256 and canonical case-ID projection. Case manifests carry exact
+  receptor/ligand/scaffold/protein-chain-set identities, release dates, target
+  families, cofactors, and supported/unsupported chemistry dispositions. An
+  exact Smith-Waterman/BLOSUM62 tool receipt reports maximum fit similarity over
+  all protein-chain pairs and similarity strata. The final link rechecks the
+  generic fit/evaluation leakage audit and binds report all-case and target-
+  family denominators. It accepts no PDBbind terms, bundles no dataset, runs no
+  sequence comparison or benchmark, and includes no result or independent
+  review;
+- an installable, extraction-free PoseBusters 308 archive intake. The command
+  requires the exact published Zenodo ZIP and journal 308-ID bytes as local
+  regular files, checks their frozen hashes and sizes, audits all 2,570 ZIP
+  entries and 428 case directories under hard bounds, verifies archive metadata,
+  and CRC-streams the four required artifacts for every selected case. It emits
+  exactly 308 success/failure rows and 1,232 artifact identities in a canonical
+  mode-0600 no-overwrite receipt that supports exact reexecution. It performs no
+  fetch, license acceptance, extraction, pose generation, scoring, or benchmark;
+  the archive and receipt are not bundled and `claim_safe=false`;
 - benchmark manifests with exactly one ordered success/failure row per case.
 - a bounded offline materializer for the frozen four-case PoseBusters contract
   cohort. It verifies caller-supplied seed/reference SDF bytes, retains every

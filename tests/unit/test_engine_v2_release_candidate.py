@@ -36,6 +36,12 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
     assert metadata["project"]["version"] == DISTRIBUTION_VERSION
     assert metadata["project"]["requires-python"] == ">=3.10,<3.13"
     assert metadata["project"]["scripts"] == {
+        "betelgeuze-engine-v2-openmm-materialize": (
+            "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-intake": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"
+        ),
         "betelgeuze-engine-v2-public-materialize": (
             "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"
         ),
@@ -114,6 +120,8 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert "docs/engine_v2_pr_overlap_matrix.md" in workflow
     assert ".github/workflows/ci-engine-v2-release-candidate.yml" in workflow
     assert workflow.count("betelgeuze-engine-v2-s0-review") >= 2
+    assert "betelgeuze-engine-v2-openmm-materialize" in workflow
+    assert "betelgeuze-engine-v2-posebusters-intake" in workflow
     assert "FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256" in workflow
     action_refs = re.findall(r"uses: [^@\s]+@([^\s]+)", workflow)
     assert action_refs

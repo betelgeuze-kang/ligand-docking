@@ -5,12 +5,14 @@ on:
     paths:
       - "betelgeuze_engine_v2/benchmark/**"
       - "tests/unit/test_engine_v2_external_baseline.py"
+      - "tests/unit/test_engine_v2_public_external_baseline.py"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
   push:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/benchmark/**"
       - "tests/unit/test_engine_v2_external_baseline.py"
+      - "tests/unit/test_engine_v2_public_external_baseline.py"
       - ".github/workflows/ci-engine-v2-external-baseline.yml"
   workflow_dispatch:
 
@@ -41,6 +43,7 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_external_baseline.py
+            tests/unit/test_engine_v2_public_external_baseline.py
             .github/workflows/ci-engine-v2-external-baseline.yml
             .github/workflows/ci-engine-v2-main.yml
           sparse-checkout-cone-mode: false
@@ -62,4 +65,7 @@ jobs:
           python tools/check_engine_v2_architecture.py
 
       - name: Run external baseline receipt contracts
-        run: python -m pytest -q tests/unit/test_engine_v2_external_baseline.py
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_external_baseline.py \
+            tests/unit/test_engine_v2_public_external_baseline.py

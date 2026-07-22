@@ -191,8 +191,29 @@ claim status without revalidating the dependency and freshness chain.
   receptor/identity-seed/reference files and emits exactly four canonical
   success/failure rows. Completion of all four reference-materialization rows is
   only an input-readiness observation. Pose generation, receptor-ligand validity,
-  scoring/ranking, same-input Vina/GNINA/Smina receipts, public denominators and
-  confidence intervals, and an independent rerun remain subsequent gates.
+  scoring/ranking, same-input Vina/GNINA/Smina result receipts, public
+  denominators and confidence intervals, and an independent rerun remain
+  subsequent gates. Preserve the separate preparation work-order contract that
+  verifies exact prepared PDBQT and preparation/binary identities and freezes
+  native-defined boxes plus common search parameters without executing an
+  engine. Work-order readiness is not external-baseline evidence.
+- Preserve the public split-provenance layer that distinguishes PDBbind v2020
+  fit, 285-case CASF-2016, and the published 308-case PoseBusters Benchmark;
+  freezes the official PoseBusters case-list identities; and binds exact case,
+  family, cofactor, chemistry, release, and canonical protein-chain-set
+  provenance. Require a source-bound all-chain Smith-Waterman/BLOSUM62 maximum-
+  identity receipt, explicit temporal/similarity policy, generic calibration
+  leakage binding, and exact all-case/target-family denominators. This contract
+  includes no PDBbind access approval, full dataset manifest, executed sequence
+  audit, benchmark result, or independent review; those remain evidence gates.
+- Preserve the bounded extraction-free PoseBusters archive intake that binds
+  the exact published ZIP and 308-ID selection, audits the complete central
+  directory, and retains the four required streamed artifact identities for
+  every selected case in a no-overwrite receipt. The observed 308/308 local
+  intake closes only the public-carrier identity sub-gate. Protein sequence and
+  release-date provenance, chemistry/family assignments, preparation, pose
+  generation, validity, scoring, confidence intervals, external baselines, and
+  independent rerun remain open and must use all 308 denominator rows.
 - Treat the executable four-case rigid geometry lane only as a pipeline
   diagnostic. It now separates proposal coverage (oracle-best valid RMSD and
   generated-hit count) from score selection (Top-1/Top-5) while retaining all

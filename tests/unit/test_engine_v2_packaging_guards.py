@@ -27,6 +27,14 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         'betelgeuze-engine-v2-public-materialize = "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"'
         in text
     )
+    assert (
+        'betelgeuze-engine-v2-openmm-materialize = "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"'
+        in text
+    )
 
 
 def test_ast_architecture_guard_accepts_canonical_engine_package() -> None:
