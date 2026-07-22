@@ -211,9 +211,60 @@ claim status without revalidating the dependency and freshness chain.
   directory, and retains the four required streamed artifact identities for
   every selected case in a no-overwrite receipt. The observed 308/308 local
   intake closes only the public-carrier identity sub-gate. Protein sequence and
-  release-date provenance, chemistry/family assignments, preparation, pose
-  generation, validity, scoring, confidence intervals, external baselines, and
-  independent rerun remain open and must use all 308 denominator rows.
+  release-date provenance, family assignments, preparation, pose generation,
+  validity, scoring, external baselines, and independent rerun remain open and
+  must use all 308 denominator rows.
+- Preserve the extraction-free PoseBusters corpus-audit layer that exactly
+  reexecutes the intake and retains parser failures, heavy labeled connectivity,
+  raw directional/aromatic V2000 representation, element/formal-charge,
+  ligand-capacity, metal, and non-water-cofactor inventories with Wilson 95%
+  intervals over all 308 cases. The observed local receipt audited 308/308 and
+  matched heavy connectivity for 308/308, but only 34/308 reached the
+  provisional scorer chemistry boundary and 0/308 were admitted without
+  parameters and partial charges. Raw bond marks are not an independent
+  aromaticity or atom-stereo oracle, and this preflight is not pose validity,
+  docking, external-baseline, or benchmark evidence.
+- Preserve the extraction-free PoseBusters native-crystal-pose geometry
+  preflight layered on exact intake and corpus receipts. Its all-308 receipt
+  binds fixed-radius receptor overlap, topology-excluded ligand self-overlap,
+  native/start heavy-bond delta, exact target-CCD residue-name retention,
+  implementation sources, and CPU float64 runtime. The observed exact rerun
+  processed 308/308 with zero failures; element geometry was evaluable for
+  159/308, the bounded heuristic conjunction was 89/308, and its intersection
+  with the reference-scorer chemistry boundary was 15/308. Complete pose
+  validity remains 0/308. Treat all values only as native positive-control
+  diagnostics: covalency, explicit-hydrogen completeness, chemistry, force-field
+  strain, generated-pose validity, PoseBusters equivalence, redocking,
+  scoring/ranking, family metrics, and independent rerun remain open.
+- Preserve the strict PoseBusters external-input preparation receipt layered on
+  exact intake and corpus identities. The pinned optional Meeko/RDKit runtime,
+  complete AD4/Gasteiger defaults, Python/dependency payloads, source roles,
+  native-defined box centers, and private PDBQT bytes are bound. The observed
+  exact rerun attempted the 34-case chemistry subset, prepared 18 input pairs,
+  retained 15 template failures plus one receptor-construction failure, and
+  abstained on the other 274 rows. Do not enable `allow_bad_res` or silently
+  repair/delete residues to increase coverage. Preparation availability alone
+  is not charge/type validation, generated-pose evidence, same-input external-
+  engine evidence, target-family performance, leakage control, or an
+  independent rerun; the next layer closes only the bounded Vina execution
+  substep and the denominator stays 308.
+- Preserve the failure-inclusive Vina 1.2.7 execution receipt layered on that
+  exact preparation identity. The frozen single-CPU run retains all 308 rows,
+  generated PDBQT bytes, all five canonical binary64 Vina energy components,
+  bounded diagnostics, and engine/configuration/source payload identities. The
+  observed production run attempted and succeeded on 18/308, recorded zero
+  engine failures, retained 16 preparation blocks and 274 chemistry abstentions,
+  and stored 355 poses; exact source-tree and installed-wheel reexecution
+  matched receipt payload
+  SHA-256
+  `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`.
+  Two pinned-tool wheel builds also matched byte-for-byte at SHA-256
+  `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`.
+  This closes only the bounded Vina execution substep. Next evaluate every
+  generated pose with the pinned PoseBusters redock oracle and direct symmetry-
+  aware receptor-frame RMSD, then produce same-input GNINA/Smina receipts.
+  Charge/type validation, family/leakage metrics, independent external rerun,
+  review, and any benchmark or product claim remain open.
 - Treat the executable four-case rigid geometry lane only as a pipeline
   diagnostic. It now separates proposal coverage (oracle-best valid RMSD and
   generated-hit count) from score selection (Top-1/Top-5) while retaining all

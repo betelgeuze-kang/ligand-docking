@@ -116,6 +116,35 @@ def test_strict_pdb_parser_builds_verified_ingest_without_chemistry_promotion() 
         parse_pdb("MODEL        1\n" + _valid_pdb() + "MODEL        2\nENDMDL\n")
 
 
+def test_nonperiodic_docking_cell_policy_retains_nonorthogonal_cryst1_observation() -> None:
+    source = _valid_pdb().replace(
+        f"{90.0:7.2f}{90.0:7.2f}{90.0:7.2f}",
+        f"{90.0:7.2f}{109.7:7.2f}{90.0:7.2f}",
+        1,
+    )
+    with pytest.raises(PDBParseError, match="orthorhombic CRYST1"):
+        parse_pdb(source)
+
+    system = parse_pdb(
+        source,
+        crystallographic_cell_policy="record_only",
+    )
+
+    assert system.cell is None
+    observation = system.provenance.metadata["crystallographic_cell_observation"]
+    assert observation == {
+        "lengths_angstrom": [10.0, 10.0, 10.0],
+        "angles_degree": [90.0, 109.7, 90.0],
+        "space_group": "P 1",
+        "orthorhombic": False,
+        "source_line": 1,
+    }
+    assert system.provenance.metadata["crystallographic_cell_materialized"] is False
+    assert system.metadata["crystallographic_cell_claim_blocker"] == (
+        "pdb_crystallographic_cell_recorded_not_materialized"
+    )
+
+
 def test_strict_sdf_parser_accepts_explicit_charge_isotope_and_rejects_multi_record() -> None:
     system = parse_sdf_v2000(_valid_sdf(), source_id="sdf-fixture")
     assert system.atom_count == 2

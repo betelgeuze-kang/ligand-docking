@@ -232,6 +232,10 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-s0-review" --help | grep -q "never accepts a private key"
           "$venv/bin/betelgeuze-engine-v2-openmm-materialize" --help | grep -q "never accepts a private key"
           "$venv/bin/betelgeuze-engine-v2-posebusters-intake" --help | grep -q "without extraction"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-corpus-audit" --help | grep -q "without extraction or docking"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-external-prepare" --help | grep -q "without extraction or docking"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-vina-execute" --help | grep -q "all-case rows"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-native-geometry" --help | grep -q "without extraction or docking"
 
       - name: Upload reproducible wheel and SBOM
         if: matrix.python-version == '3.11'

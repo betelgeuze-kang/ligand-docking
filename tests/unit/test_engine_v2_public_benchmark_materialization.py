@@ -16,12 +16,15 @@ from betelgeuze_engine_v2.benchmark.public_materialization import (  # noqa: E40
     materialize_public_benchmark_case,
     minimum_public_reference_rmsd,
 )
+from betelgeuze_engine_v2.benchmark.public_ligand_graph_audit import (  # noqa: E402
+    compare_public_ligand_heavy_atom_graphs,
+)
 from betelgeuze_engine_v2.benchmark.public_protocol import (  # noqa: E402
     POSEBUSTERS_SOURCE_COMMIT_SHA,
     PublicBenchmarkArtifact,
     PublicBenchmarkCaseDefinition,
 )
-from betelgeuze_engine_v2.io import sdf_v2000_string  # noqa: E402
+from betelgeuze_engine_v2.io import parse_sdf_v2000, sdf_v2000_string  # noqa: E402
 from betelgeuze_engine_v2.molecular import (  # noqa: E402
     AllAtomSystem,
     Atom,
@@ -219,6 +222,62 @@ def test_directional_v2000_stereo_prevents_false_graph_automorphism() -> None:
         "rejected_graph_mismatch",
         "rejected_graph_mismatch",
     ]
+
+
+def test_heavy_graph_comparison_allows_explicit_hydrogen_difference_and_retains_stereo() -> None:
+    native = _system(
+        "native-heavy-only",
+        ("C", "O", "N"),
+        ((0.0, 0.0, 0.0), (1.3, 0.0, 0.0), (2.5, 0.2, 0.0)),
+        ((0, 1, "up"), (1, 2, "none")),
+    )
+    start = _system(
+        "start-with-hydrogen",
+        ("C", "O", "N", "H"),
+        (
+            (0.0, 0.0, 0.0),
+            (1.3, 0.0, 0.0),
+            (2.5, 0.2, 0.0),
+            (-0.5, 0.8, 0.0),
+        ),
+        ((0, 1, "up"), (1, 2, "none"), (0, 3, "none")),
+    )
+    native_parsed = parse_sdf_v2000(_sdf(native))
+    start_parsed = parse_sdf_v2000(_sdf(start))
+
+    comparison = compare_public_ligand_heavy_atom_graphs(
+        native_parsed,
+        start_parsed,
+    )
+
+    assert comparison.status == "directional_stereo_match"
+    assert comparison.source_heavy_atom_indices == (0, 1, 2)
+    assert comparison.target_heavy_atom_indices == (0, 1, 2)
+    assert comparison.connectivity_isomorphism_count == 1
+    assert comparison.directional_stereo_isomorphism_count == 1
+    assert comparison.canonical_connectivity_mapping == (0, 1, 2)
+    assert comparison.canonical_directional_stereo_mapping == (0, 1, 2)
+    assert comparison.claim_safe is False
+
+    stereo_mismatch = _system(
+        "start-stereo-mismatch",
+        ("C", "O", "N", "H"),
+        (
+            (0.0, 0.0, 0.0),
+            (1.3, 0.0, 0.0),
+            (2.5, 0.2, 0.0),
+            (-0.5, 0.8, 0.0),
+        ),
+        ((0, 1, "down"), (1, 2, "none"), (0, 3, "none")),
+    )
+    mismatch = compare_public_ligand_heavy_atom_graphs(
+        native_parsed,
+        parse_sdf_v2000(_sdf(stereo_mismatch)),
+    )
+    assert mismatch.status == "directional_stereo_mismatch"
+    assert mismatch.connectivity_isomorphism_count == 1
+    assert mismatch.directional_stereo_isomorphism_count == 0
+    assert mismatch.canonical_connectivity_mapping == (0, 1, 2)
 
 
 def test_receipt_round_trip_is_canonical_and_tamper_evident() -> None:

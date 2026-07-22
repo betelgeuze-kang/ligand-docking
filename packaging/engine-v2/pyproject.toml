@@ -26,6 +26,10 @@ classifiers = [
 [project.scripts]
 betelgeuze-engine-v2-openmm-materialize = "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"
 betelgeuze-engine-v2-posebusters-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"
+betelgeuze-engine-v2-posebusters-corpus-audit = "betelgeuze_engine_v2.benchmark.public_posebusters_corpus_audit:main"
+betelgeuze-engine-v2-posebusters-external-prepare = "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
+betelgeuze-engine-v2-posebusters-vina-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution:main"
+betelgeuze-engine-v2-posebusters-native-geometry = "betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry:main"
 betelgeuze-engine-v2-public-materialize = "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"
 betelgeuze-engine-v2-s0-review = "betelgeuze_engine_v2.offline.s0_production_evidence_bundle:main"
 

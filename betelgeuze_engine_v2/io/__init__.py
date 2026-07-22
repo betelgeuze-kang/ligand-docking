@@ -1,6 +1,7 @@
 """Bounded, fail-closed molecular file ingest and export for Engine v2."""
 
 from .pdb import (
+    PDBCrystallographicCellPolicy,
     PDB_PARSER_NAME,
     PDB_PARSER_VERSION,
     PDBParseError,
@@ -24,6 +25,7 @@ from .writers import (
 __all__ = [
     "MolecularWriteError",
     "PDBConnectivityPolicy",
+    "PDBCrystallographicCellPolicy",
     "PDB_PARSER_NAME",
     "PDB_PARSER_VERSION",
     "PDBParseError",

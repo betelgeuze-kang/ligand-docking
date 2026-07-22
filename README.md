@@ -323,6 +323,44 @@ Implemented and GitHub-hosted CPU tested:
   mode-0600 no-overwrite receipt that supports exact reexecution. It performs no
   fetch, license acceptance, extraction, pose generation, scoring, or benchmark;
   the archive and receipt are not bundled and `claim_safe=false`;
+- an installable, extraction-free PoseBusters 308 corpus audit. It reexecutes
+  the exact intake and records all-case parser, heavy labeled-graph, raw
+  directional-bond, raw aromatic-bond, element/formal-charge, ligand-capacity,
+  metal, and non-water-cofactor inventories with Wilson 95% intervals. It does
+  not perceive aromaticity or atom stereo, parameterize molecules, prepare or
+  generate poses, score, run an external engine, or execute a benchmark;
+- an installable, extraction-free PoseBusters 308 native-geometry preflight. It
+  exactly reexecutes the intake and corpus audit and records all-case fixed-
+  radius receptor/ligand overlap, topology-excluded ligand self-overlap,
+  native/start heavy-bond deltas, unsupported elements, and exact target-CCD
+  residue-name retention. The native ligand is a crystal-pose positive control;
+  the start SDF is a generated conformer, not a pose. The command performs no
+  chemistry perception, force-field strain evaluation, generated-pose validity,
+  docking, scoring/ranking, external oracle, or benchmark;
+- an installable, extraction-free strict PoseBusters external-input preparation
+  receipt. It attempts the provisional 34-case chemistry subset with pinned
+  Meeko 0.7.1/RDKit 2025.9.6 defaults, never deletes unmatched residues, and
+  retains all 308 prepared/failure/abstention rows. The local exact rerun
+  produced 18 private receptor/ligand PDBQT pairs, 16 strict failures, and 274
+  chemistry abstentions. Native coordinates define only the box center; no
+  external engine, generated pose, validity oracle, scoring, or benchmark is
+  executed;
+- an installable, failure-inclusive PoseBusters Vina 1.2.7 execution receipt.
+  The command accepts only the exact strict-preparation receipt and private
+  artifact tree, freezes the single-CPU search configuration, binds the engine
+  and implementation payloads, retains every generated PDBQT pose and five
+  canonical binary64 energy components, and supports exact reexecution. The
+  local ignored-state production receipt attempted and succeeded on all 18
+  prepared pairs with zero engine failures, retained the 16 preparation blocks
+  and 274 chemistry abstentions in the 308-case denominator, and stored 355
+  poses. Receipt payload SHA-256 is
+  `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`.
+  Source-tree and installed-wheel exact verification both reproduced that
+  receipt; two deterministic wheel builds matched byte-for-byte at SHA-256
+  `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`.
+  Generated-pose validity, symmetry-aware RMSD, GNINA/Smina same-input results,
+  target-family and leakage analysis, and independent external review remain
+  unevaluated, so this is not a docking benchmark or product claim;
 - benchmark manifests with exactly one ordered success/failure row per case.
 - a bounded offline materializer for the frozen four-case PoseBusters contract
   cohort. It verifies caller-supplied seed/reference SDF bytes, retains every

@@ -35,6 +35,22 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         'betelgeuze-engine-v2-posebusters-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"'
         in text
     )
+    assert (
+        'betelgeuze-engine-v2-posebusters-corpus-audit = "betelgeuze_engine_v2.benchmark.public_posebusters_corpus_audit:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-native-geometry = "betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-external-prepare = "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-vina-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution:main"'
+        in text
+    )
 
 
 def test_ast_architecture_guard_accepts_canonical_engine_package() -> None:

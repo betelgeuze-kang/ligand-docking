@@ -251,6 +251,40 @@ v2_at_s0_production_evidence_bundle_contract
   1,232개 artifact identity를 mode-0600 no-overwrite canonical receipt로 기록한다.
   exact 재실행 검증을 지원하지만 fetch·약관 승인·압축 해제·pose 생성·scoring·
   benchmark를 수행하지 않고 archive/receipt를 bundle하지 않으며 `claim_safe=false`
+- 설치 가능한 extraction-free PoseBusters 308 corpus audit. exact intake를 다시
+  실행하고 전 case parser·heavy labeled-graph·raw directional bond·raw aromatic
+  bond·원소/formal charge·ligand capacity·metal·non-water cofactor inventory와
+  Wilson 95% 구간을 기록한다. aromaticity/atom stereo를 인식하거나 parameter를
+  할당하지 않고 pose 준비·생성·scoring·외부 엔진·benchmark를 실행하지 않음
+- 설치 가능한 extraction-free PoseBusters 308 native-geometry preflight. exact
+  intake와 corpus audit를 다시 실행하고 전 case fixed-radius receptor/ligand overlap,
+  topology-excluded ligand self-overlap, native/start heavy-bond delta, 미지원 원소,
+  target CCD residue-name의 receptor 잔존 여부를 기록한다. native ligand는 crystal-
+  pose positive control이고 start SDF는 pose가 아닌 generated conformer다. chemistry
+  인식·힘장 strain·generated-pose validity·도킹·scoring/ranking·외부 oracle·benchmark를
+  수행하지 않음
+- 설치 가능한 extraction-free PoseBusters strict external-input preparation
+  receipt. provisional chemistry 범위 34건에만 pinned Meeko 0.7.1/RDKit
+  2025.9.6 default를 적용하고 unmatched residue를 삭제하지 않으며, 308건 전체의
+  prepared/failure/abstention 행을 보존한다. local exact 재실행은 private receptor/
+  ligand PDBQT pair 18건, strict failure 16건, chemistry abstention 274건을 기록했다.
+  native 좌표는 box center에만 사용하며 외부 엔진·generated pose·validity oracle·
+  scoring·benchmark는 실행하지 않음
+- 설치 가능한 failure-inclusive PoseBusters Vina 1.2.7 실행 receipt. exact strict-
+  preparation receipt와 private artifact tree만 입력으로 받고 single-CPU search
+  configuration·engine payload·implementation source를 고정하며 generated PDBQT와
+  Vina energy component 5개를 canonical binary64로 보존하고 exact 재실행을 지원한다.
+  local ignored-state production receipt는 준비된 18건을 모두 실행·성공하고 engine
+  failure 0건, preparation block 16건, chemistry abstention 274건을 308-case 분모에
+  보존했으며 pose 355개를 기록했다. receipt payload SHA-256은
+  `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`이다.
+  source-tree와 installed-wheel exact 검증이 모두 같은 receipt를 재현했고 pinned
+  build-tool wheel 2회도 SHA-256
+  `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`로 byte
+  단위 일치했다.
+  generated-pose validity·symmetry-aware RMSD·GNINA/Smina same-input 결과·target-
+  family/leakage 분석·독립 외부 검토는 아직 없으므로 docking benchmark나 제품
+  claim이 아님
 - 입력 case마다 정확히 하나의 성공/실패 행을 갖는 benchmark manifest
 - frozen four-case PoseBusters contract cohort의 bounded offline materializer.
   caller가 제공한 seed/reference SDF byte를 검증하고 multi-record의 모든

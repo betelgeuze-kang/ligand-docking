@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Literal
 
-from .pdb import PDBParseError, PDBParserLimits, parse_pdb as _parse_pdb_subset
+from .pdb import (
+    PDBCrystallographicCellPolicy,
+    PDBParseError,
+    PDBParserLimits,
+    parse_pdb as _parse_pdb_subset,
+)
 
 PDBConnectivityPolicy = Literal["reject_unrepresented", "record_unrepresented"]
 _UNREPRESENTED_CONNECTIVITY_RECORDS = {"LINK", "SSBOND"}
@@ -30,6 +35,9 @@ def parse_pdb(
     dtype=None,
     device="cpu",
     connectivity_policy: PDBConnectivityPolicy = "reject_unrepresented",
+    crystallographic_cell_policy: PDBCrystallographicCellPolicy = (
+        "require_orthorhombic"
+    ),
 ):
     """Parse a strict PDB subset under an explicit LINK/SSBOND policy.
 
@@ -59,6 +67,7 @@ def parse_pdb(
         "source_id": source_id,
         "limits": limits,
         "device": device,
+        "crystallographic_cell_policy": crystallographic_cell_policy,
     }
     if dtype is not None:
         kwargs["dtype"] = dtype
@@ -90,4 +99,8 @@ def parse_pdb(
     )
 
 
-__all__ = ["PDBConnectivityPolicy", "parse_pdb"]
+__all__ = [
+    "PDBConnectivityPolicy",
+    "PDBCrystallographicCellPolicy",
+    "parse_pdb",
+]

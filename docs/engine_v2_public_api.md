@@ -294,6 +294,155 @@ observation produced 308/308 ready rows with receipt payload SHA-256
 and exact reexecution equality. The data files and receipt are ignored runtime
 state, not package evidence.
 
+`betelgeuze_engine_v2.benchmark.public_posebusters_corpus_audit` adds a second,
+installable extraction-free gate after that intake. The
+`betelgeuze-engine-v2-posebusters-corpus-audit` command reexecutes the exact
+archive-intake receipt, parses the receptor, native ligand, and start conformer
+for every selected case, and retains parser failures, receptor/ligand element
+and formal-charge inventories, operational metals, non-water nonpolymer residue
+names, ligand atom capacity, heavy-atom labeled-graph identity, raw V2000 bond-
+type-4 counts, and raw directional V2000 bond-stereo identity. Every rate uses
+all 308 cases and a Wilson 95% interval. Nonorthogonal `CRYST1` observations are
+validated and retained but not materialized as a periodic docking cell; fixed-
+column `CONECT` parsing supports contiguous five-digit serials.
+The receipt also binds exact source SHA-256 values for the audit, heavy-graph
+comparison, both PDB parser layers, SDF parser, archive intake, frozen graph
+search, and provisional scorer-scope implementation.
+
+The 2026-07-23 local ignored-state receipt audited 308/308 cases with exact
+reexecution equality (receipt payload SHA-256
+`a239aae11a46be01c5f6f11082e6aa51cd57f256e228082c80abae3a6a3b4507`).
+Heavy labeled connectivity matched 308/308, while raw directional bond marks
+matched 128/308 (Wilson 95% CI 0.361916–0.471332). All ligand elements, parsed
+formal charges, and ligand atom counts were inside the provisional scorer
+limits, but only 159/308 receptors were inside its element list, 161/308 cases
+were metal-free, and 34/308 were free of non-water cofactors. Consequently only
+34/308 reached the chemistry-only scope boundary (95% CI 0.080078–0.150300),
+and 0/308 were admitted because no partial-charge or parameter assignment was
+performed. Both ligand files used Kekulized bonds: zero cases contained raw
+V2000 aromatic bond type 4. That is not evidence that the molecules are
+nonaromatic. Likewise, raw directional-bond equality is not atom-stereo
+validation. The receipt runs no aromaticity/stereo oracle, preparation, pose
+generation, validity, scoring, external engine, target-family analysis, or
+benchmark, and remains `claim_safe=false`.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
+installable, extraction-free positive-control preflight. The
+`betelgeuze-engine-v2-posebusters-native-geometry` command exactly reexecutes
+both prerequisite receipts, securely reopens and rehashes the frozen archive,
+and evaluates the native crystal pose in the receptor frame. It records the
+minimum receptor/ligand fixed-radius ratio at overlap scales 0.82 and 0.58,
+topology-excluded ligand self-overlap at scale 0.75, and the maximum native/start
+heavy-bond length delta against 0.15 Å. The start SDF is explicitly treated as
+an RDKit ETKDGv3 then UFF-minimized conformer, not a pose. Each row retains exact
+binary64 values, atom indices, unsupported elements, metals/cofactors, and an
+exact case-CCD residue-name-presence observation without inferring covalency.
+All rates use the full 308-case denominator and Wilson 95% intervals; runtime,
+source, threshold, radius-profile, and coordinate-role identities are bound.
+
+The 2026-07-23 local ignored-state receipt processed 308/308 with zero failures
+and exact reexecution equality (receipt payload SHA-256
+`118c1c0db0424504ad7727e1b7bbbc355138f2693805439061395421da109a12`;
+receipt-file SHA-256
+`f01f9a6e00eab649e73e24a3f2b8871f7cdc936321a86a07fc838fc4951996cd`).
+Element geometry was evaluable for 159/308; 156/308 were free of the deeper
+fixed-radius threshold, 127/308 were free of the overlap threshold, 308/308
+passed the self-overlap heuristic, and 195/308 met the heavy-bond-delta
+tolerance. The bounded geometry conjunction was 89/308 (95% CI
+0.241184–0.341937). Six receptors retained a residue name equal to the case CCD;
+this is an observation, not a covalent-assignment claim. The existing reference-
+scorer chemistry boundary contained 34/308, and its intersection with bounded
+geometry was 15/308 (95% CI 0.029733–0.078789). Complete pose validity remains
+0/308 (95% CI 0–0.012319) by construction. These are unvalidated native-pose
+heuristics, not force-field strain, generated-pose validity, PoseBusters oracle
+results, redocking, scoring/ranking, target-family performance, or benchmark
+evidence; `benchmark_executed=false` and `claim_safe=false`.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation` adds a
+strict, optional-runtime preparation gate after the exact intake and corpus
+audit. The installed `betelgeuze-engine-v2-posebusters-external-prepare`
+command attempts only rows whose provisional scorer scope is blocked solely by
+missing parameters and partial charges. Ligands are read from the explicit-H
+start conformer and prepared with the frozen Meeko 0.7.1 AD4/Gasteiger defaults;
+receptors use default residue templates with no residue deletion, alternate-
+location override, flexible residue, or `allow_bad_res`. The native crystal
+ligand is passed only to the source-bound heavy-atom-centroid box definition.
+
+The receipt binds the resolved Python executable, platform/ABI fields, Torch
+version, and path-independent regular-file payload aggregates for Meeko 0.7.1,
+RDKit 2025.9.6, NumPy 1.26.4, SciPy 1.12.0, Gemmi 0.7.5, and tqdm 4.67.1. It also
+binds the complete configuration SHA-256, every source role/hash, exact PDBQT
+size/hash/path, bounded error-message and diagnostic hashes, failing receptor
+residue keys, and all-case Wilson 95% intervals. Artifact materialization is
+mode 0700/0600 and no-overwrite; verification regenerates every attempted case
+and rejects missing, extra, symlinked, permission-changed, or byte-changed
+artifacts.
+
+The 2026-07-23 local ignored-state receipt attempted 34/308 cases. Ligand
+preparation succeeded for 34/308 (95% CI 0.080078–0.150300), while strict
+receptor preparation and complete input-pair materialization succeeded for
+18/308 (95% CI 0.037283–0.090479). It retained 15 template-matching failures,
+one other receptor-construction failure, and 274 chemistry abstentions. Exact
+reexecution matched receipt payload SHA-256
+`3856706f5b470386e9151bc272f158192839683deaf08a2bc8f1d377b22082ba`,
+receipt-file SHA-256
+`11f76f2571e68232095877e4dd215e51de3d02e4d860267f7b533a56bf9212d4`,
+and artifact-set SHA-256
+`5ff0ae2a54ec1c70f61011b76a24242a0eccbffbd23f523ff035f9e18e040e19`.
+These outputs are ignored local state, not bundled package evidence. Default
+atom types and charges are not independently validated; no Vina, GNINA, or
+Smina engine, generated pose, PoseBusters oracle, RMSD, score, family metric,
+leakage audit, or independent rerun is present. `external_engine_executed=false`,
+`benchmark_executed=false`, and `claim_safe=false` remain mandatory.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution` adds a
+failure-inclusive Vina execution layer after strict preparation. The installed
+`betelgeuze-engine-v2-posebusters-vina-execute` command has `materialize` and
+`verify` modes. Both require the exact expected preparation-receipt payload
+SHA-256, its canonical mode-0600 bytes, and its complete private artifact tree.
+The preparation, output, and scratch roots must be disjoint real paths; output
+materialization is private and no-overwrite.
+
+The runtime is fixed to the Vina 1.2.7 Python distribution and must have the
+same pinned preparation-runtime identity. Its identity covers the Python API
+source, wrapper/native/shared-library payload, Python/platform/ABI, Torch, and
+the Meeko/RDKit dependency closure used for preparation. The frozen search uses
+the Vina scoring function, CPU count 1, seed 20260723, a native-centroid 22.5 Å
+cube, 0.375 Å spacing, exhaustiveness 32, up to 20 modes, 1 Å minimum mode
+separation, and a 20 kcal/mol output range. The receipt records every one of the
+308 dispositions, exact generated PDBQT bytes, pose count, total/inter/intra/
+torsion/intra-best energy components as canonical binary64 hexadecimal values,
+bounded diagnostics, all-case Wilson 95% intervals, configuration and source
+hashes, and exact input/output artifact identities.
+
+The 2026-07-23 local ignored-state production receipt attempted 18/308 and
+succeeded on 18/308 (95% CI 0.037283–0.090479), with zero engine failures (95%
+CI 0–0.012319). It retained 16 strict-preparation blocks and 274 chemistry
+abstentions and stored 355 poses across 18 private artifacts. Exact source-tree
+and installed-wheel reexecution matched receipt payload SHA-256
+`37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`,
+receipt-file SHA-256
+`97cedf1d1f082d60decdf86184b5cf8b7358df1da36f31ddc33ae0ff04902c63`,
+and artifact-set SHA-256
+`706d9beef07d6065a914b0bd03367282a42833ffe1dae3e72adc57fd69dc4f7e`.
+The configuration, implementation, and engine identity SHA-256 values are,
+respectively,
+`bbe44bef15f8620ae33e6358a7206382505c9faa338f36c4b662708cd0abacfb`,
+`1efaf429becda5c7e343328c9157a431d7faa01b1dfb5eda495293baaf2761b8`,
+and `5b620a109866a28293a82ddeb37efe4750ab053cfa1e016b3d72fcc47630e6b2`.
+Two builds under the pinned setuptools 75.8.2 and wheel 0.45.1 toolchain were
+byte-identical at wheel SHA-256
+`68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`;
+the installed-wheel verification imported the package from that isolated wheel
+tree rather than the repository checkout.
+
+These generated poses have not passed the PoseBusters redock oracle or a
+symmetry-aware native RMSD evaluation. Default AD4 types and Gasteiger charges
+remain unvalidated, GNINA/Smina same-input receipts are missing, and no
+target-family, leakage, calibration, independent-host, or reviewer receipt is
+present. Therefore `benchmark_executed=false`, `scientifically_validated=false`,
+and `claim_safe=false` remain mandatory.
+
 The frozen H5 reference-parameter applicability symbols under
 `betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact
 implemented equations, code-enforced execution admission, capacity defaults,

@@ -672,8 +672,56 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    필수 artifact 4개의 CRC/SHA-256을 308개 failure-inclusive 행으로 보존한다.
    2026-07-23 local ignored-state 관측은 308/308 ready와 exact 재실행 일치를 확인했지만
    이는 public input-carrier identity sub-gate만 닫는다. sequence/release provenance·
-   family/chemistry disposition·preparation·pose generation·validity·scoring·CI·external
-   baseline·독립 재실행·과학 승격은 여전히 열려 있다.
+   family provenance·preparation·pose generation·validity·scoring·external baseline·
+   독립 재실행·과학 승격은 여전히 열려 있다.
+   그 위의 별도 extraction-free corpus audit는 exact intake를 재실행하고 receptor/
+   native/start 308건 전부의 parser failure, heavy labeled connectivity, raw V2000
+   directional/aromatic bond 표현, 원소·formal charge·ligand capacity, metal과
+   non-water cofactor를 all-case Wilson 95% CI로 보존한다. 같은 날짜의 ignored-state
+   receipt는 308/308 parse와 heavy connectivity 308/308을 확인했지만 provisional
+   scorer chemistry 범위는 34/308, 실제 admission은 parameter·partial charge 미할당으로
+   0/308이었다. raw directional mark 일치는 128/308이고 raw aromatic bond type 4는
+   0/308이므로, 이를 atom stereo 또는 aromaticity validation으로 해석하면 안 된다.
+   receipt payload SHA-256은
+   `a239aae11a46be01c5f6f11082e6aa51cd57f256e228082c80abae3a6a3b4507`이며 exact
+   재실행이 일치했다. 이 결과는 chemistry/ingest preflight이지 docking benchmark가 아니다.
+   그 다음 native-geometry preflight는 native crystal pose를 receptor frame에서
+   fixed-radius overlap·topology-excluded ligand self-overlap·native/start heavy-bond
+   delta로 진단했다. 2026-07-23 ignored-state receipt는 308/308 처리·failure 0,
+   element geometry 159/308, bounded geometry 교집합 89/308, reference scorer chemistry
+   범위와의 교집합 15/308, complete pose validity 0/308을 기록했고 exact 재실행이
+   일치했다. case CCD와 같은 residue name이 receptor에 남은 6건도 별도 관측했지만
+   covalent 결합으로 판정하지 않았다. receipt payload SHA-256은
+   `118c1c0db0424504ad7727e1b7bbbc355138f2693805439061395421da109a12`이다.
+   이 결과는 native positive-control 휴리스틱이며 force-field strain·generated-pose
+   validity·PoseBusters oracle·redocking·scoring/ranking·benchmark evidence가 아니다.
+   그 위의 strict external-input preparation receipt는 provisional chemistry 범위
+   34건에 pinned Meeko 0.7.1/RDKit 2025.9.6 AD4/Gasteiger default를 적용하고 Python·
+   dependency payload·source role·native-defined box center·private PDBQT byte를
+   고정했다. exact 재실행은 ligand 준비 34/34, receptor/input-pair 준비 18/308,
+   template failure 15건, 기타 receptor-construction failure 1건, chemistry abstention
+   274건을 기록했다. receipt payload SHA-256은
+   `3856706f5b470386e9151bc272f158192839683deaf08a2bc8f1d377b22082ba`,
+   artifact-set SHA-256은
+   `5ff0ae2a54ec1c70f61011b76a24242a0eccbffbd23f523ff035f9e18e040e19`이다.
+   `allow_bad_res`로 residue를 삭제하지 않았으며 이 결과는 preparation coverage일
+   뿐 charge/type 과학 검증·generated pose·Vina/GNINA/Smina result·PoseBusters
+   oracle·family/leakage metric·독립 재실행·docking benchmark evidence가 아니다.
+   그 exact preparation 위의 Vina 1.2.7 production receipt는 single-CPU seed·box·
+   spacing·exhaustiveness·mode/energy 범위와 engine/dependency/source payload를
+   고정하고 308개 disposition, generated PDBQT, canonical binary64 energy component
+   5개를 보존했다. 준비된 18/308을 모두 실행·성공했고 engine failure 0건,
+   preparation block 16건, chemistry abstention 274건, pose 355개를 기록했으며
+   source-tree와 installed-wheel exact 재실행이 일치했다. receipt payload SHA-256은
+   `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`이다.
+   pinned build-tool wheel 2회도 SHA-256
+   `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`로 byte
+   단위 일치했다.
+   이는 bounded Vina execution evidence일 뿐 generated-pose validity·symmetry-aware
+   RMSD·GNINA/Smina same-input result·target-family/leakage metric·독립 외부 재실행·
+   reviewer 승인·docking benchmark evidence가 아니다. 다음 좁은 slice는 pinned
+   PoseBusters redock oracle와 direct receptor-frame RMSD를 모든 generated pose에
+   적용하는 failure-inclusive receipt다.
    별도 rigid diagnostic은 lowest-index graph-matched native record로 pocket center를
    정의하고 seed orientation을 고정 회전한 뒤 모든 candidate의 geometry score·validity·
    receptor-frame symmetry-aware RMSD와 oracle-best generation gap을 보존한다. 초기

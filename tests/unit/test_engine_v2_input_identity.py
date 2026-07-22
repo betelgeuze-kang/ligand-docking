@@ -122,6 +122,22 @@ def test_pdb_connectivity_records_are_rejected_or_explicitly_recorded() -> None:
     assert recorded.provenance.chemistry_validated is False
 
 
+def test_pdb_conect_uses_fixed_columns_for_contiguous_five_digit_serials() -> None:
+    source = "\n".join(
+        (
+            _pdb_atom(10014, "C1", "C", 0.0),
+            _pdb_atom(10015, "O1", "O", 1.25),
+            "CONECT1001510014",
+            "END",
+        )
+    ) + "\n"
+
+    system = parse_pdb(source)
+
+    assert [atom.serial for atom in system.atoms] == [10014, 10015]
+    assert [(bond.atom_i, bond.atom_j) for bond in system.bonds] == [(0, 1)]
+
+
 def _search_space(offset: float = 1.0) -> TorsionSearchSpace:
     return TorsionSearchSpace(
         local_offsets=torch.tensor(

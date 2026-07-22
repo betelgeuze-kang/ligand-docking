@@ -79,6 +79,50 @@ scientific claim from a package version.
   is no-overwrite and exactly reexecutable. It fetches and accepts no data or
   terms, extracts nothing, executes no docking or benchmark, and bundles no
   archive, scientific result, or review.
+- An installable `betelgeuze-engine-v2-posebusters-corpus-audit` command now
+  reexecutes that exact intake and audits every selected receptor, native
+  ligand, and start conformer without extraction. Its failure-inclusive receipt
+  records element/formal-charge, metal, non-water cofactor, ligand-capacity,
+  heavy labeled-graph, raw V2000 aromatic-bond, and raw directional-bond
+  inventories with all-case Wilson 95% intervals. It performs no aromaticity or
+  atom-stereo oracle, preparation, pose generation, scoring, external baseline,
+  family analysis, or benchmark and cannot admit a case without explicit
+  parameters and partial charges.
+- An installable `betelgeuze-engine-v2-posebusters-native-geometry` command now
+  reexecutes the exact intake and corpus audit, then records native-crystal-pose
+  fixed-radius receptor overlap, topology-excluded ligand self-overlap, and
+  native/start heavy-bond delta observations for all 308 cases. It distinguishes
+  unsupported elements and exact target-CCD residue-name retention, binds CPU
+  float64 runtime and implementation identities, and supports byte-exact
+  reexecution. These unvalidated heuristics are a positive-control preflight,
+  not PoseBusters equivalence, generated-pose validity, strain energy, docking,
+  ranking, or benchmark evidence.
+- An installable `betelgeuze-engine-v2-posebusters-external-prepare` command now
+  exactly reexecutes the intake and corpus audit, attempts strict pinned Meeko
+  preparation only for the 34-case provisional chemistry subset, and preserves
+  all 308 dispositions. It binds Python and external dependency payloads, the
+  complete default AD4/Gasteiger configuration, native-defined box centers, and
+  private no-overwrite PDBQT artifacts. The 2026-07-23 local receipt retained
+  274 chemistry abstentions, 18 prepared input pairs, 15 strict receptor-template
+  failures, and one receptor-construction failure. It never enables
+  `allow_bad_res`, executes no Vina/GNINA/Smina binary, evaluates no generated
+  pose, and is preparation evidence rather than docking or benchmark evidence.
+- An installable `betelgeuze-engine-v2-posebusters-vina-execute` command now
+  consumes that exact preparation receipt and private artifact tree, requires a
+  payload-bound Vina 1.2.7 runtime, and freezes the single-CPU search seed, box,
+  spacing, exhaustiveness, mode count, and energy range. It retains one
+  disposition for every one of the 308 cases, private no-overwrite generated
+  PDBQT artifacts, all five Vina energy components as canonical binary64, and
+  bounded failure diagnostics. The 2026-07-23 local production receipt attempted
+  and succeeded on all 18 prepared pairs with zero engine failures, retained 16
+  preparation blocks and 274 chemistry abstentions, and stored 355 poses. Exact
+  source-tree and installed-wheel exact reexecution matched receipt payload SHA-256
+  `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`.
+  Two pinned-build-tool wheel builds were byte-identical at SHA-256
+  `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`.
+  These ignored-state outputs are a Vina execution receipt, not generated-pose
+  validity, symmetry-aware RMSD, same-input GNINA/Smina comparison, leakage or
+  target-family evidence, an independent external rerun, or a docking benchmark.
 - A claim-closed four-case rigid redocking diagnostic now generates bounded
   poses after a fixed seed-conformer rotation, uses the lowest-index matched
   native record only to define the pocket center, retains every score/failure,

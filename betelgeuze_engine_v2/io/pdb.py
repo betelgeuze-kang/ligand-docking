@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass
 import hashlib
 import math
-from typing import Any
+from typing import Any, Literal
 
 import torch
 
@@ -29,7 +29,8 @@ from betelgeuze_engine_v2.molecular import (
 
 
 PDB_PARSER_NAME = "betelgeuze_engine_v2.strict_pdb"
-PDB_PARSER_VERSION = "1.0.0"
+PDB_PARSER_VERSION = "1.1.0"
+PDBCrystallographicCellPolicy = Literal["require_orthorhombic", "record_only"]
 
 
 class PDBParseError(ValueError):
@@ -128,6 +129,28 @@ def _formal_charge(text: str) -> int:
     return magnitude if value[1] == "+" else -magnitude
 
 
+def _conect_serials(raw_line: str) -> tuple[int, ...]:
+    """Parse fixed-width PDB CONECT serial fields from columns 7 onward."""
+
+    body = raw_line.rstrip("\r\n")[6:]
+    fields = tuple(
+        body[offset : offset + 5].strip()
+        for offset in range(0, len(body), 5)
+    )
+    populated = tuple(value for value in fields if value)
+    if len(populated) < 2:
+        raise PDBParseError("CONECT record must contain a center and target")
+    try:
+        serials = tuple(int(value) for value in populated)
+    except ValueError as exc:
+        raise PDBParseError(
+            "CONECT records must use fixed-width integer serial fields"
+        ) from exc
+    if any(value < 1 for value in serials):
+        raise PDBParseError("CONECT serials must be positive integers")
+    return serials
+
+
 def parse_pdb(
     source: str | bytes,
     *,
@@ -135,6 +158,9 @@ def parse_pdb(
     limits: PDBParserLimits | None = None,
     dtype: torch.dtype = torch.float64,
     device: torch.device | str = "cpu",
+    crystallographic_cell_policy: PDBCrystallographicCellPolicy = (
+        "require_orthorhombic"
+    ),
 ) -> AllAtomSystem:
     """Parse one explicit PDB coordinate model without chemistry inference."""
 
@@ -145,6 +171,11 @@ def parse_pdb(
         raise PDBParseError("PDB input exceeds max_lines")
     if dtype not in (torch.float32, torch.float64):
         raise TypeError("strict PDB parser supports float32 or float64 coordinates")
+    if crystallographic_cell_policy not in {
+        "require_orthorhombic",
+        "record_only",
+    }:
+        raise PDBParseError("unsupported crystallographic_cell_policy")
 
     atoms: list[Atom] = []
     coordinates: list[tuple[float, float, float]] = []
@@ -159,6 +190,7 @@ def parse_pdb(
     atom_records_started = False
     atom_records_ended = False
     cell: UnitCell | None = None
+    crystallographic_cell_observation: dict[str, object] | None = None
 
     for line_number, raw_line in enumerate(lines, start=1):
         line = raw_line.rstrip("\r\n").ljust(80)
@@ -248,14 +280,8 @@ def parse_pdb(
             continue
 
         if record == "CONECT":
-            fields = raw_line[6:].split()
-            if not fields:
-                raise PDBParseError("empty CONECT record")
-            try:
-                center = int(fields[0])
-                targets = [int(value) for value in fields[1:]]
-            except ValueError as exc:
-                raise PDBParseError("CONECT records must contain integer serials") from exc
+            serials = _conect_serials(raw_line)
+            center, targets = serials[0], serials[1:]
             for target in targets:
                 if center == target:
                     raise PDBParseError("self CONECT records are not supported")
@@ -265,7 +291,7 @@ def parse_pdb(
             continue
 
         if record == "CRYST1":
-            if cell is not None:
+            if crystallographic_cell_observation is not None:
                 raise PDBParseError("multiple CRYST1 records are not supported")
             a = _float_field(line, 6, 15, name="cell a")
             b = _float_field(line, 15, 24, name="cell b")
@@ -274,13 +300,30 @@ def parse_pdb(
             beta = _float_field(line, 40, 47, name="cell beta")
             gamma = _float_field(line, 47, 54, name="cell gamma")
             assert None not in (a, b, c, alpha, beta, gamma)
-            if not all(abs(float(angle) - 90.0) <= 1e-3 for angle in (alpha, beta, gamma)):
-                raise PDBParseError("strict PDB parser supports orthorhombic CRYST1 cells only")
-            cell = UnitCell.orthorhombic(
-                (float(a), float(b), float(c)),
-                dtype=dtype,
-                device=device,
-            )
+            lengths = (float(a), float(b), float(c))
+            angles = (float(alpha), float(beta), float(gamma))
+            if any(value <= 0.0 for value in lengths) or any(
+                value <= 0.0 or value >= 180.0 for value in angles
+            ):
+                raise PDBParseError("CRYST1 lengths and angles are outside physical bounds")
+            orthorhombic = all(abs(angle - 90.0) <= 1e-3 for angle in angles)
+            crystallographic_cell_observation = {
+                "lengths_angstrom": list(lengths),
+                "angles_degree": list(angles),
+                "space_group": line[55:66].strip(),
+                "orthorhombic": orthorhombic,
+                "source_line": line_number,
+            }
+            if crystallographic_cell_policy == "require_orthorhombic":
+                if not orthorhombic:
+                    raise PDBParseError(
+                        "strict PDB parser supports orthorhombic CRYST1 cells only"
+                    )
+                cell = UnitCell.orthorhombic(
+                    lengths,
+                    dtype=dtype,
+                    device=device,
+                )
             continue
 
         if record in _ALLOWED_IGNORED_RECORDS:
@@ -329,6 +372,31 @@ def parse_pdb(
         for chain_id in chain_order
     )
     source_sha256 = hashlib.sha256(raw).hexdigest()
+    provenance_metadata: dict[str, object] = {
+        "atom_count": len(atoms),
+        "bond_count": len(bonds),
+        "ignored_record_counts": dict(sorted(ignored.items())),
+        "crystallographic_cell_policy": crystallographic_cell_policy,
+        "crystallographic_cell_observation": crystallographic_cell_observation,
+        "crystallographic_cell_materialized": cell is not None,
+        "limitations": [
+            "single_model_only",
+            "alternate_locations_rejected",
+            "elements_must_be_explicit",
+            "no_bond_inference",
+            "no_hydrogen_or_protonation_inference",
+        ],
+    }
+    system_metadata: dict[str, object] = {
+        "parser_claim_grade": "bounded_strict_ingest_only"
+    }
+    if (
+        crystallographic_cell_observation is not None
+        and crystallographic_cell_policy == "record_only"
+    ):
+        system_metadata["crystallographic_cell_claim_blocker"] = (
+            "pdb_crystallographic_cell_recorded_not_materialized"
+        )
     system = AllAtomSystem(
         system_id=str(source_id or f"pdb-{source_sha256[:12]}"),
         atoms=tuple(atoms),
@@ -346,21 +414,10 @@ def parse_pdb(
             source_digest_verified=True,
             transformation_chain_verified=True,
             chemistry_validated=False,
-            metadata={
-                "atom_count": len(atoms),
-                "bond_count": len(bonds),
-                "ignored_record_counts": dict(sorted(ignored.items())),
-                "limitations": [
-                    "single_model_only",
-                    "alternate_locations_rejected",
-                    "elements_must_be_explicit",
-                    "no_bond_inference",
-                    "no_hydrogen_or_protonation_inference",
-                ],
-            },
+            metadata=provenance_metadata,
         ),
         cell=cell,
-        metadata={"parser_claim_grade": "bounded_strict_ingest_only"},
+        metadata=system_metadata,
     )
     require_valid_all_atom_system(system)
     return system
@@ -369,6 +426,7 @@ def parse_pdb(
 __all__ = [
     "PDB_PARSER_NAME",
     "PDB_PARSER_VERSION",
+    "PDBCrystallographicCellPolicy",
     "PDBParseError",
     "PDBParserLimits",
     "parse_pdb",

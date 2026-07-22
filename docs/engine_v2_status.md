@@ -174,6 +174,46 @@ The current `main` branch contains:
   `e76c31517be668eb2073cd78a83dd0e2327a041fefe98e9dfed9bab3635b66c6`;
   exact reexecution matched. This is input identity only, not bundled public
   benchmark evidence or a docking claim;
+- an installable, failure-inclusive PoseBusters 308 corpus audit layered on the
+  exact intake receipt. It parses all receptor/native/start members without
+  extraction and records element/formal-charge, metal, non-water cofactor,
+  ligand-capacity, heavy labeled-graph, raw aromatic-bond, and raw directional-
+  bond inventories with all-308 Wilson intervals. The 2026-07-23 ignored-state
+  receipt audited 308/308 and reexecuted exactly: heavy connectivity was
+  308/308; provisional scorer chemistry scope was 34/308; actual scorer
+  admission was 0/308 because parameters and partial charges were not assigned.
+  It performs no chemical aromaticity or atom-stereo perception, preparation,
+  pose validity, docking, family analysis, external baseline, or benchmark;
+- an installable, failure-inclusive PoseBusters 308 native-geometry preflight
+  layered on exact intake and corpus receipts. A 2026-07-23 ignored-state exact
+  rerun processed 308/308 with zero failures: element geometry was evaluable for
+  159/308, the fixed-radius bounded conjunction was 89/308, six receptors
+  retained a residue name equal to the case CCD, and the intersection with the
+  reference-scorer chemistry boundary was 15/308. Complete pose validity remains
+  0/308. This native-crystal-pose positive control performs no chemistry
+  perception, force-field strain, generated-pose evaluation, PoseBusters oracle,
+  docking, scoring/ranking, family analysis, external baseline, or benchmark;
+- an installable, failure-inclusive PoseBusters 308 strict external-input
+  preparation gate. It binds pinned Meeko/RDKit and transitive payloads, frozen
+  AD4/Gasteiger defaults, source roles, native-defined box centers, and private
+  no-overwrite PDBQT bytes. A 2026-07-23 ignored-state exact rerun attempted
+  34/308 cases, materialized 18 receptor/ligand pairs, retained 16 strict
+  receptor failures and 274 chemistry abstentions, and executed zero external
+  engines or docking cases;
+- an installable, failure-inclusive PoseBusters Vina 1.2.7 execution layer. It
+  consumes only that exact preparation receipt and private artifact tree, binds
+  the engine/dependency/source/configuration payloads, retains every generated
+  PDBQT and five canonical binary64 energy components, and preserves all 308
+  dispositions. A 2026-07-23 local production receipt attempted and succeeded
+  on all 18 prepared pairs with zero engine failures, retained 16 preparation
+  blocks plus 274 chemistry abstentions, and stored 355 poses. Exact source-tree
+  and installed-wheel reexecution matched payload SHA-256
+  `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`.
+  Two pinned-tool wheel builds were byte-identical at SHA-256
+  `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`.
+  Generated-pose validity, symmetry-aware RMSD, GNINA/Smina same-input results,
+  family/leakage evidence, independent external rerun, and reviewer acceptance
+  remain missing, so `benchmark_executed=false` and `claim_safe=false`;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen v1.1 four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit

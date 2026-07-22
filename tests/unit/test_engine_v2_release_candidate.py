@@ -42,6 +42,18 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "betelgeuze-engine-v2-posebusters-intake": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"
         ),
+        "betelgeuze-engine-v2-posebusters-corpus-audit": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_corpus_audit:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-external-prepare": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-vina-execute": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-native-geometry": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry:main"
+        ),
         "betelgeuze-engine-v2-public-materialize": (
             "betelgeuze_engine_v2.benchmark.public_suite_materialization:main"
         ),
@@ -122,6 +134,10 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert workflow.count("betelgeuze-engine-v2-s0-review") >= 2
     assert "betelgeuze-engine-v2-openmm-materialize" in workflow
     assert "betelgeuze-engine-v2-posebusters-intake" in workflow
+    assert "betelgeuze-engine-v2-posebusters-corpus-audit" in workflow
+    assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
+    assert "betelgeuze-engine-v2-posebusters-vina-execute" in workflow
+    assert "betelgeuze-engine-v2-posebusters-native-geometry" in workflow
     assert "FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256" in workflow
     action_refs = re.findall(r"uses: [^@\s]+@([^\s]+)", workflow)
     assert action_refs
