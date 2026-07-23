@@ -107,6 +107,133 @@ scientific claim from a package version.
   failures, and one receptor-construction failure. It never enables
   `allow_bad_res`, executes no Vina/GNINA/Smina binary, evaluates no generated
   pose, and is preparation evidence rather than docking or benchmark evidence.
+- An installable
+  `betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic` command now
+  consumes that exact preparation receipt, preserves all 308 dispositions, and
+  binds the Python/RDKit distribution payload before directly recomputing the
+  same Gasteiger algorithm from strict `SMILES IDX`/`H PARENT` mappings. RDKit
+  2022.09.5 and 2025.09.6 observations each evaluated 18 prepared cases, 481
+  real atoms, and two zero-charge `G0` macrocycle pseudoatoms with zero
+  diagnostic failures. The maximum PDBQT three-decimal charge delta was
+  0.0004979832249129013 e and all element/type plus aromatic-carbon checks
+  passed. Cross-version expected charges were bitwise equal for 481/481 atoms.
+  Observation payloads are
+  `df57b0d48ba905e0f132b66a3b4d4fc344fffc4a40f1d78de181c0264bedba8f`
+  and `6d3389ed55e7d47c8e0b0076c485b3f4ee7590cb3f9ddcd12db89030e92b6b50`;
+  comparison payload is
+  `ab9cf4b72d3af848dd48484fcbb203268fe8d7336ec552ffe52c360dca972b5f`.
+  Two wheels were byte-identical at
+  `9d1c96336c1fa55051ab3e0fc2192d990860c644dc5f39a0685f07c39613124e`,
+  and isolated installed-wheel verification reproduced all three receipts.
+  This is same-algorithm persistence and serialization evidence, not an
+  independent charge/type oracle, benchmark, or product claim.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-openbabel-compare` command performs a
+  separately distributed Open Babel 3.2.1 implementation comparison against
+  that exact 308-row preparation receipt. It binds the official CPython 3.10
+  wheel (`ca6345ca6cc66522208c45355a90472d657be78dec7706757d477bfb0c105413`),
+  Open Babel distribution payload, Python/platform identity, source commit,
+  configuration, implementation sources, and every prepared/failure/abstention
+  row. All 18 prepared cases completed with zero comparison failures, covering
+  481 real atoms and retaining two excluded `G0` pseudoatoms. Charge
+  MAE/RMSE/max absolute delta was 0.0038510594375734796 /
+  0.012204476318346003 / 0.18097866788513423 e; exact AD4 types agreed for
+  476/481 atoms. The five retained mismatches are three `SA`/`S` and two
+  `CG0`/`C` assignments. Exact source-tree and isolated installed-wheel
+  verification matched receipt payload SHA-256
+  `7754c4b56e10d4543b064c23daaf69ab99e098fda81bfd9fbaecc8694439d943`;
+  two package builds were byte-identical at
+  `d0fc6a2acce76f2e3d23915b533528263d10e8277c0cf6feafd09e318c6d9529`.
+  This is descriptive independent-implementation evidence, not an independent
+  scientific charge oracle or validated threshold. Exact-tag source follow-up
+  explains `CG0`/`C` as Meeko macrocycle-extension vocabulary and `SA`/`S` as
+  a neutral-thioether acceptor-semantics disagreement; a controlled RDKit
+  iteration study points to sulfur parameter selection, not iteration count
+  alone, for the methylsulfone charge outlier. Chemical correctness,
+  source-SDF equivalence, receptor auditing, second-host reproduction, and
+  reviewer acceptance remain open and `claim_safe=false`.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-sulfur-qm-esp` command separates
+  preregistration from observation for a bounded PySCF 2.14.0 fixed-geometry
+  molecular-ESP diagnostic. The protocol binds the exact four sulfur cases,
+  all 308 dispositions, source SDF coordinates and explicit hydrogens,
+  RHF/6-31G* spherical-basis SCF settings, official PySCF wheel and installed
+  dependency payloads, single-thread native runtime, equal-weight Lebedev-110
+  molecular-surface shells, same-site Meeko/Open Babel charge projections,
+  metrics, and claim gates before QM execution. The local production
+  observation evaluated 4/4 scoped cases with zero QM failures and retained
+  304 explicit scope abstentions. Meeko had lower global weighted ESP RMSE in
+  all four cases, but only by small descriptive margins. Exact source-tree and
+  isolated installed-wheel reexecution reproduced observation payload SHA-256
+  `402d1795f18b7eb0c87d8537f3b427fe116c0845bf1337b21e24752cef7e52e6`;
+  the prior protocol payload is
+  `0927260a16f1e09211fb601fade1725e21d35d221d04e69cfd2c624da7c06137`,
+  and two builds were byte-identical at wheel SHA-256
+  `b4564648dbf3fcb681e0b73d1dcbcc2fd96ed10a0fe4a321149fe38545d0d73d`.
+  No accuracy threshold was preregistered. This does not validate atom charges,
+  decide neutral-thioether `SA`/`S` hydrogen-bond semantics, establish a
+  representative chemistry benchmark, or permit product promotion. The
+  bounded interaction-energy result below still leaves directionality,
+  second-host reproduction, and independent review open, and
+  `claim_safe=false`.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-vina-sulfur-invariance` command
+  preregisters and executes the product-path consequence of the three
+  neutral-thioether `SA`/`S` differences. It binds exact AutoDock Vina 1.2.7
+  tag source files, the preparation/Open Babel/Vina receipt chain, all 308
+  dispositions, every retained pose, the Vina distribution/runtime, and a
+  target-only PDBQT `SA` to `S` mutation before rescoring. The source projection
+  fixes both AD types to element sulfur and then `XS_TYPE_S_P`, confirms default
+  Vina scoring uses XS types, and confirms sulfur is absent from the XS
+  acceptor set. The production observation rescored 60 poses across three
+  cases; all eight public score components were exactly equal for 60/60 pairs,
+  with zero failures and 305 scope abstentions. Source-tree and installed-wheel
+  exact verification reproduced observation payload SHA-256
+  `a08ced8bbe0dbecc503f8e5eedf96d239130d0dbced897427694afe61742d406`;
+  protocol payload SHA-256 is
+  `81f52bbf68518e1d09e0462f8124ac1a810c7cc502ff8923175703e62b28b57f`,
+  and two wheels were byte-identical at SHA-256
+  `fcbdc2df96c3b7df53f90e50e90688898147bf4665f2a816eb7d82382f547535`.
+  The narrow fixed-pose default-Vina invariance claim passes. Search was not
+  rerun, complete AD4 scoring and chemical acceptor semantics remain
+  unevaluated, and no benchmark or product promotion follows;
+  `claim_safe=false` remains.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-sulfur-interaction` command preregisters
+  and executes the bounded AD4/chemical-semantics follow-up. It freezes the
+  prior QM/Vina receipt chain, exact Vina 1.2.7 AD4 source, PySCF 2.14.0 and
+  PySCF-dispersion 1.5.0 wheels, three fixed thioether models, one methanol O-H
+  donor, six S-H distances plus one orientation control, all complex/ghost
+  geometries, B3LYP-D3(BJ)/def2-SVP counterpoise settings, exact `S-HD` and
+  `SA-HD` pair terms, failures, metrics, and gates before execution. The local
+  production run completed 21 geometries and 63 SCFs with zero failures,
+  retained 305 abstentions, and passed both preregistered local gates for 3/3
+  models. QM minima were at 2.5 A and -4.758 to -5.258 kcal/mol. The
+  plane-normal controls were nevertheless 0.551 to 0.784 kcal/mol more
+  favorable, so directionality and general chemical semantics remain open.
+  Protocol/observation payload SHA-256 values are
+  `f0b0d84551e63272509acaf967996496cc7100cd2a58b71392fe38bce7d8194c` /
+  `30d9ceb83aed88fa45b7bc8c8282e6a50ce0299c9f54b21ce0c8885775c35fce`;
+  exact source-tree and fresh installed-wheel observation reexecution matched,
+  and two deterministic wheels matched at
+  `bb47ad0c5dcb0a5b9d298d2ba7f423910c11bf03c13f1691c0ecbec9c6db6f56`.
+  This is one O-H probe over three fixed gas-phase models and an isolated AD4
+  pair comparison, not representative chemistry, a complete AD4 score, or
+  product validation. Second-host reproduction and independent review remain
+  missing; `scientifically_validated=false` and `claim_safe=false`.
+- Added the installable
+  `betelgeuze-engine-v2-posebusters-sulfur-reproduce` external evidence
+  contract. It freezes two host/operator identities, an execution nonce, the
+  baseline receipts, Engine v2 wheel, source members, and shared runtime
+  projection before the second-host run; compares all 308 dispositions, 21
+  points, and 63 counterpoise SCFs with failure retention; and supports a
+  detached, role-separated Ed25519 reviewer receipt with expiry, revocation,
+  and supersession checks. Two pinned-tool builds were byte-identical at
+  `5a6d82b8437b5d461e794f51a13bf127a51e429b3b4c5475b80fa8e417045acd`,
+  and outside-checkout installed-wheel CLI smoke passed. This release contains
+  the workflow and verifier,
+  not an external-host result or independent approval, so all existing
+  scientific and product blockers remain.
 - An installable `betelgeuze-engine-v2-posebusters-vina-execute` command now
   consumes that exact preparation receipt and private artifact tree, requires a
   payload-bound Vina 1.2.7 runtime, and freezes the single-CPU search seed, box,
@@ -120,9 +247,124 @@ scientific claim from a package version.
   `37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`.
   Two pinned-build-tool wheel builds were byte-identical at SHA-256
   `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`.
-  These ignored-state outputs are a Vina execution receipt, not generated-pose
-  validity, symmetry-aware RMSD, same-input GNINA/Smina comparison, leakage or
-  target-family evidence, an independent external rerun, or a docking benchmark.
+  These ignored-state outputs remain the pose-generation layer rather than the
+  generated-pose evaluation layer below.
+- An installable `betelgeuze-engine-v2-posebusters-evaluate-generated` command
+  now consumes the exact archive/intake/corpus/preparation/Vina chain and the
+  pinned PoseBusters 0.6.5 wheel. It evaluates every retained PDBQT model under
+  the official `redock` configuration, preserves all 133 typed report values,
+  separates the 27-test non-RMSD physical-validity endpoint from direct
+  symmetry-aware receptor-frame RMSD, and retains all 308 case dispositions.
+  The 2026-07-23 local receipt evaluated 355/355 generated poses, with 325
+  physically valid poses, Top-1 RMSD <= 2 A for 10/18 Vina-success cases, and
+  Top-5 for 16/18. Installed-wheel exact reexecution matched payload SHA-256
+  `9c680e1edd08bfa07c1c71164b696ae050f180c3a2bb04bc91fd5d163a965b86`;
+  two builds were byte-identical at wheel SHA-256
+  `b0248a218aaea0ef3f00e65d6f77e077cdd81a4c7ac37a128edd7833e3ce49a8`.
+  This is supported-subset validity/redocking evidence, not a representative
+  public benchmark: family/leakage, independent-host, independent scientific
+  charge/type validation, and reviewer gates remain open and
+  `claim_safe=false`.
+- Installable `betelgeuze-engine-v2-posebusters-external-execute` GNINA 1.3.3
+  and Smina 2019-10-15 lanes now freeze official executable identity and the
+  same CPU-only preparation/search contract. Each retained all 308 rows,
+  attempted 18 prepared pairs, succeeded on 17, and explicitly retained the
+  `7UAW_MF6` unsupported prepared AutoDock `CG0` engine failure. GNINA stored
+  340 poses and all affinity/CNN components at receipt SHA-256
+  `60d0e6a67c86075905cd54497ab12a678f0f54a15a11d7e9345122369d390847`;
+  Smina stored 336 poses and minimized affinity at
+  `912b7081ba35d11e0accdf1af9c5ebb55c09641390f17242fb8b210d67d27733`.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-external-evaluate-generated` command
+  evaluates those exact outputs with the pinned PoseBusters 0.6.5 contract and
+  retains engine scores, all 133 typed report values, separate physical-validity
+  and RMSD endpoints, and every failure/abstention row. GNINA evaluated 340/340
+  poses, recorded 304 physical-validity passes, and reached Top-1/Top-5 RMSD <=
+  2 A on 15/17 and 16/17 execution-success cases. Smina evaluated 336/336,
+  recorded 312 passes, and reached 10/17 and 15/17. Installed-wheel exact
+  reexecution matched receipt SHA-256
+  `0959201d6165d82041447be820977de7ac8ba64b13d1f237ad5b8c914a290259`
+  and `0590067f9c1731f6ebcbff36f54ba08d9265f32454b54fa03b7df0dbc328b930`.
+  Two staged builds were byte-identical at wheel SHA-256
+  `02356f803a448fdb3f77f5594ef4927eacc1221d319069fa4b81ace25dc4a8f0`.
+  These remain conditional 17-case results; complete target-family coverage,
+  external-fit leakage control, independent-host, independent scientific
+  charge/type validation, calibration, and reviewer gates remain open.
+- A new installable `betelgeuze-engine-v2-posebusters-target-clusters` command
+  binds the exact Vina/GNINA/Smina evaluation receipts to conservative observed
+  receptor clusters. It uses first-model `ATOM` residue-label sequences,
+  minimum 20-residue chains, a 90% global edit-similarity link threshold, and
+  connected components. The exact 308-case receipt recorded 296 clusters, 11
+  multi-case clusters, maximum size 3, and 13 links. Vina cluster coverage and
+  complete coverage were 18/296 and 17/296; GNINA and Smina were 17/296 and
+  16/296. Covered-cluster any-member Top-1/Top-5 RMSD hits were 10/18 and 16/18,
+  15/17 and 16/17, and 10/17 and 15/17, respectively. Exact reexecution matched
+  payload SHA-256
+  `34d782567e816206dcaf2be5207e424b8611a081c9ca6d51bc9500e42ec81e5e`
+  and file SHA-256
+  `fc69398c600c032f7f5c18ca1fc8baedd51c93db0f933c2320d1f597265750aa`.
+  Two pinned-tool builds were byte-identical at wheel SHA-256
+  `050d06e9fc49ef3c79bcaefbd8854de85fce0ce7fe4a56cc83418a460280a597`,
+  and isolated installed-wheel verification reproduced the receipt.
+  The receipt explicitly rejects a biological-family interpretation and marks
+  all external fit/training manifests missing, so neither target nor
+  ligand/scaffold leakage is evaluated and `leakage_control_passed=false`.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-rcsb-target-families` command consumes a
+  normalized, mode-0600 official RCSB Data API observation and the exact
+  target-cluster receipt without runtime networking. Pocket-associated protein
+  chains use an inclusive 6 A heavy-atom cutoff and exact `asym_id` first,
+  exact `auth_asym_id` fallback second; no chain truncation, alias inference,
+  or removed-entry remapping is allowed. The 308-case receipt records 306
+  complete mappings, 299 UniProt cases, 225 Pfam cases, the explicit
+  `6Z14_Q4Z` mapping failure, and removed `7D6O_MTE`. It projects all engine
+  dispositions onto 199 Pfam multi-label families and 149 non-overlapping
+  exact Pfam sets. Snapshot payload/file SHA-256 values are
+  `4d05e0127bb4c4dfedb5fa0a5f2e11d7de22aae481d34d3840676d04d367b51a`
+  and `2287ffc895b28828ff39568f3ee0b98707b8160f04fa10196b469fe9ba722358`;
+  target-family receipt payload/file SHA-256 values are
+  `ce7d0f32054f05a328554fa04e38964768d2e734157aa9eca4ceb431c2a87076`
+  and `164ef81d7e49dbf32aab6eef56325dfd2ee57e889304e7f3ac0dff7f11a36761`.
+  Two pinned-tool builds were byte-identical at wheel SHA-256
+  `02d837ed5f624505a5a02bf1a5489f8aec1dcf0bacd15ef39b0fa6abf8526deb`;
+  isolated installed-wheel verification reproduced both receipts.
+  The normalized HTTPS observation is not independently source-signed, Pfam
+  coverage is incomplete, and fit/training manifests remain missing, so
+  `leakage_control_passed=false`, `scientifically_validated=false`, and
+  `claim_safe=false` remain mandatory.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-ranking-intake` command binds the exact
+  Vina/GNINA/Smina execution and evaluation receipts to archive, preparation,
+  and RCSB/Pfam identities as test-only calibration intake. It retains all 924
+  engine/case rows, 1,031 successful pose rows, 872 explicit failure rows,
+  engine-specific score-term decomposition, RMSD/validity labels, and
+  all-case Wilson intervals. Payload/file SHA-256 values are
+  `b6526c7407602721f2ec74f09c8b99d4ecdc7336e69417ed6321840663de9ea0`
+  and `88b756cd3e7d460edefe8330dbae6141e72492953a1af4e71bb60b1146574813`;
+  two deterministic wheels matched at
+  `c8019fa070e8ca2fc598e26cbdf3c78394fcf9e0963ec656d736b3864681ac51`.
+  It refuses to invent missing per-pose coordinate
+  or scaffold hashes, never calls a fit API, and keeps partition, leakage,
+  scientific, and product claims closed.
+- A new installable
+  `betelgeuze-engine-v2-posebusters-pose-scaffold-identity` command closes the
+  ranking intake's coordinate/scaffold identity omissions without consuming
+  its test labels. The exact RDKit 2025.09.6 runtime matches the preparation
+  payload and host identity; all 1,031 generated poses receive distinct,
+  topology-aware three-decimal PDBQT coordinate hashes, all 872 upstream
+  failures remain explicit, and all 308 cases receive matched start/reference
+  scaffold identities. The corpus contains 229 scaffold identities, including
+  33 explicitly named acyclic full-heavy-graph fallbacks. Start/reference full
+  chemistry agrees for 305/308 cases while scaffold identity agrees for
+  308/308; the three full-chemistry differences remain pending independent
+  disposition. Receipt payload/file SHA-256 values are
+  `e7b92d0fc74b44f652c5196429812fe61165771906d9d487a13ec8719ac52995`
+  and `fbf3fa34f974dc8bd35b6564a1c004931a9ea0177f25fd551769b91f4db089d8`.
+  Two deterministic wheels matched at
+  `d3c51e79dc4783f859b7b2ff4a8f8499d42da0d6a4378035c3cf2114b751285e`,
+  and installed-wheel reconstruction was byte-identical. Complete target
+  families, a disjoint fit manifest, leakage audits, external rerun, and
+  independent review remain blockers; no calibration partition or claim opens.
 - A claim-closed four-case rigid redocking diagnostic now generates bounded
   poses after a fixed seed-conformer rotation, uses the lowest-index matched
   native record only to define the pocket center, retains every score/failure,

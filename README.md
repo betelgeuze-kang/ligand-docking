@@ -345,6 +345,148 @@ Implemented and GitHub-hosted CPU tested:
   chemistry abstentions. Native coordinates define only the box center; no
   external engine, generated pose, validity oracle, scoring, or benchmark is
   executed;
+- an installable, failure-inclusive prepared-ligand charge/type diagnostic over
+  that exact 308-row preparation receipt. It parses Meeko `SMILES IDX` and
+  `H PARENT` mappings, recomputes the same 12-iteration RDKit Gasteiger
+  algorithm, merges omitted-H charge into its source parent, and retains `G0`
+  macrocycle closure pseudoatoms separately. Both frozen RDKit core runtimes
+  (2022.09.5 and 2025.09.6; distribution versions 2022.9.5 and 2025.9.6)
+  evaluated all 18 prepared cases with zero diagnostic failures: 481 real
+  PDBQT atoms and two zero-charge `G0` pseudoatoms were accounted for, every
+  real atom was within the 0.0005 e three-decimal serialization tolerance, and
+  the maximum delta was 0.0004979832249129013 e. Element/type compatibility and
+  aromatic-carbon `A` consistency passed for all 18 cases. The two expected-
+  charge vectors were bitwise identical for 481/481 atoms. RDKit 2022 and 2025
+  observation payload/file SHA-256 values are
+  `df57b0d48ba905e0f132b66a3b4d4fc344fffc4a40f1d78de181c0264bedba8f` /
+  `b7e8b3ee7a235f63c79454af8b008230a4ed34e195dc2b85133eae21526962dd`
+  and `6d3389ed55e7d47c8e0b0076c485b3f4ee7590cb3f9ddcd12db89030e92b6b50` /
+  `f1a78abba41e9783a57616a71930e7bf11f6377a28592d18f2bd66128d26b5f5`;
+  comparison payload/file values are
+  `ab9cf4b72d3af848dd48484fcbb203268fe8d7336ec552ffe52c360dca972b5f` /
+  `121bc96482cf2f73622c650dbce5da1fddc8c32f4421c185c2d4c926fadc978f`.
+  Source-tree and isolated installed-wheel verification reproduced all three;
+  two builds were byte-identical at wheel SHA-256
+  `9d1c96336c1fa55051ab3e0fc2192d990860c644dc5f39a0685f07c39613124e`.
+  This is same-algorithm serialization/version diagnostics, not an independent
+  charge or AD4 typing oracle; source-SDF equivalence, receptor assignments,
+  unsupported chemistry, a second CPU host, and reviewer acceptance remain
+  open, so `claim_safe=false`;
+- an installable, failure-inclusive independent Open Babel 3.2.1 charge and
+  AD4-type implementation comparison over the same exact preparation receipt.
+  It uses `OBChargeModel("gasteiger")` full-precision charges and the Open Babel
+  PDBQT writer, while preserving all 308 rows and excluding only the two
+  retained `G0` pseudoatoms from real-atom statistics. All 18 prepared cases
+  completed without comparison failure: charge MAE/RMSE/max absolute delta
+  versus the three-decimal Meeko fields was 0.0038510594375734796 /
+  0.012204476318346003 / 0.18097866788513423 e, and exact AD4-type agreement
+  was 476/481 atoms. The five explicit mismatches were three `SA` versus `S`
+  assignments and two Meeko macrocycle `CG0` versus Open Babel `C`
+  assignments. Exact-tag source inspection attributes the former to a real
+  neutral-thioether acceptor-semantics disagreement (`[SX2]` override versus
+  sulfur formal charge -1) and the latter to Meeko's deliberate ring-closure
+  vocabulary extension. A two-version RDKit 6/12/24-iteration control also
+  shows that the methylsulfone maximum charge delta is dominated by differing
+  sulfur parameter-selection semantics, not iteration count alone. Receipt
+  payload/file SHA-256 values are
+  `7754c4b56e10d4543b064c23daaf69ab99e098fda81bfd9fbaecc8694439d943` /
+  `98a5b1c654bbf388f1782519ec9e0a8de54113bcdbb16c08f541d02607342cb5`.
+  Exact source-tree and isolated installed-wheel verification passed; two
+  builds were byte-identical at wheel SHA-256
+  `d0fc6a2acce76f2e3d23915b533528263d10e8277c0cf6feafd09e318c6d9529`.
+  This closes the missing independent-implementation execution only. No charge
+  accuracy threshold was preregistered, Open Babel is not a quantum charge
+  oracle, the three thioether type differences and sulfone charge accuracy
+  remain scientifically unadjudicated, and source-SDF equivalence, receptor
+  assignments, unsupported chemistry, a second CPU host, and independent
+  review remain open, so `claim_safe=false`;
+- an installable, preregistration-first PySCF 2.14.0 fixed-geometry sulfur
+  QM-ESP diagnostic. The frozen protocol binds the exact source SDF
+  coordinates and explicit hydrogens, RHF/6-31G* spherical-basis settings,
+  single-thread runtime and official wheel, four equal-weight Lebedev-110
+  molecular-surface shells, same-site Meeko/Open Babel charge projections,
+  failure-inclusive 308-case denominator, and every implementation and
+  dependency identity before QM execution. The production observation
+  evaluated the four preregistered sulfur cases with zero QM failures and 304
+  explicit scope abstentions. Meeko had the lower global weighted ESP RMSE in
+  4/4 cases and Open Babel in 0/4; the model differences were small and are
+  descriptive only. Protocol and observation payload SHA-256 values are
+  `0927260a16f1e09211fb601fade1725e21d35d221d04e69cfd2c624da7c06137`
+  and `402d1795f18b7eb0c87d8537f3b427fe116c0845bf1337b21e24752cef7e52e6`.
+  Exact source-tree and isolated installed-wheel observation reexecution
+  reproduced the latter, and two builds were byte-identical at wheel SHA-256
+  `b4564648dbf3fcb681e0b73d1dcbcc2fd96ed10a0fe4a321149fe38545d0d73d`.
+  No charge-accuracy threshold was preregistered, HF/6-31G* is a defined
+  reference rather than an absolute oracle, atom charges are not observables,
+  and this fixed-geometry field comparison cannot adjudicate neutral-thioether
+  `SA` versus `S` hydrogen-bond semantics. The bounded interaction-energy
+  result below still leaves directionality, a second CPU host, and independent
+  review open, so
+  `charge_accuracy_pass=null`, `scientifically_validated=false`, and
+  `claim_safe=false`;
+- an installable, preregistration-first default-Vina sulfur-type invariance
+  audit. Exact AutoDock Vina 1.2.7 tag source shows that both PDBQT `S` and
+  `SA` first map to element sulfur and then to the same `XS_TYPE_S_P`; default
+  Vina scoring uses XS types, whose acceptor set contains nitrogen and oxygen
+  types but not sulfur. The production observation changed only the target
+  PDBQT type from `SA` to `S` for all 60 retained poses across the three
+  neutral-thioether cases. All eight public `Vina.score()` components were
+  exact binary64-equal for 60/60 pose pairs, with zero score failures and 305
+  explicit scope abstentions. Protocol and observation payload SHA-256 values
+  are
+  `81f52bbf68518e1d09e0462f8124ac1a810c7cc502ff8923175703e62b28b57f`
+  and `a08ced8bbe0dbecc503f8e5eedf96d239130d0dbced897427694afe61742d406`.
+  Source-tree and isolated installed-wheel exact reexecution reproduced the
+  observation, and two wheels were byte-identical at SHA-256
+  `fcbdc2df96c3b7df53f90e50e90688898147bf4665f2a816eb7d82382f547535`.
+  This safely supports only the bounded claim that the observed `SA`/`S`
+  distinction does not change fixed-pose scores in the active default-Vina
+  1.2.7 lane. It does not rerun search, apply to complete AD4 scoring, adjudicate
+  chemical hydrogen-bond acceptance, or promote a docking/product claim, so
+  `bounded_default_vina_invariance_claim_safe=true` while
+  `scientifically_validated=false` and `claim_safe=false`;
+- an installable, preregistration-first neutral-thioether interaction-energy
+  diagnostic. It binds the prior QM-ESP and default-Vina receipts, exact Vina
+  1.2.7 AD4 source, official PySCF 2.14.0 and PySCF-dispersion 1.5.0 wheels,
+  three environment-matched thioether models, one methanol O-H donor, six
+  S-H distances, one plane-normal control, fixed complex/ghost geometries,
+  B3LYP-D3(BJ)/def2-SVP settings, Boys-Bernardi counterpoise, exact AD4
+  `S-HD`/`SA-HD` pair formulas, and every decision threshold before QM
+  execution. The production observation completed all 21 geometries and 63
+  SCFs with zero failures while retaining 305 scope abstentions. All three QM
+  profiles had a 2.5 A minimum at -4.758 to -5.258 kcal/mol and a
+  far-referenced well depth of -4.274 to -4.700 kcal/mol. Both the local
+  three-model O-H acceptor gate and the AD4 `SA` profile-preference gate passed
+  3/3. However, the plane-normal control was 0.551 to 0.784 kcal/mol more
+  favorable than the selected idealized lone-pair direction in all three
+  models, so directionality and general chemical acceptor semantics remain
+  unresolved. Protocol and observation payload SHA-256 values are
+  `f0b0d84551e63272509acaf967996496cc7100cd2a58b71392fe38bce7d8194c`
+  and `30d9ceb83aed88fa45b7bc8c8282e6a50ce0299c9f54b21ce0c8885775c35fce`.
+  Exact source-tree and fresh installed-wheel observation reexecution
+  reproduced the latter. Two pinned-tool builds were byte-identical at wheel
+  SHA-256
+  `bb47ad0c5dcb0a5b9d298d2ba7f423910c11bf03c13f1691c0ecbec9c6db6f56`.
+  One donor, three fixed gas-phase models, and an isolated pair term do not
+  establish representative ligand/receptor chemistry or a complete AD4 score.
+  A second CPU-host reproduction and independent reviewer receipt are still
+  missing, so `chemical_acceptor_semantics_adjudicated=false`,
+  `scientifically_validated=false`, and `claim_safe=false`;
+- an installable
+  `betelgeuze-engine-v2-posebusters-sulfur-reproduce` custody contract for that
+  frozen observation. It preregisters distinct baseline/external host and
+  operator identities, a single-use execution nonce, the exact Engine v2 and
+  QM/Vina source-binary chain, then retains all 308 dispositions, 21 geometry
+  points, 63 counterpoise SCFs, cross-host numeric differences, and failures.
+  Result verification rederives the runtime projection and every comparison;
+  reviewer approval uses a secret-free detached Ed25519 request, out-of-band
+  trust anchor, role separation, expiry, revocation, and supersession inputs.
+  Two pinned-tool builds were byte-identical at wheel SHA-256
+  `5a6d82b8437b5d461e794f51a13bf127a51e429b3b4c5475b80fa8e417045acd`,
+  and a fresh outside-checkout installed-wheel CLI smoke passed.
+  No legitimate external-host work order, result, or reviewer approval has
+  been produced in this repository, so both evidence gates remain false and
+  no chemistry, docking, benchmark, or product claim changes;
 - an installable, failure-inclusive PoseBusters Vina 1.2.7 execution receipt.
   The command accepts only the exact strict-preparation receipt and private
   artifact tree, freezes the single-CPU search configuration, binds the engine
@@ -358,9 +500,136 @@ Implemented and GitHub-hosted CPU tested:
   Source-tree and installed-wheel exact verification both reproduced that
   receipt; two deterministic wheel builds matched byte-for-byte at SHA-256
   `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`.
-  Generated-pose validity, symmetry-aware RMSD, GNINA/Smina same-input results,
-  target-family and leakage analysis, and independent external review remain
-  unevaluated, so this is not a docking benchmark or product claim;
+  This receipt establishes pose generation only; its generated-pose evidence is
+  supplied by the separate evaluator below;
+- an installable, failure-inclusive PoseBusters 0.6.5 generated-pose evaluator.
+  It consumes the exact archive, intake, corpus, strict-preparation, and Vina
+  receipt chain, reconstructs every retained PDBQT model through pinned Meeko,
+  normalizes each RDKit conformer to ID zero, and retains all 133 typed values
+  from the official `redock` report plus direct symmetry-aware receptor-frame
+  RMSD. The local 308-row receipt evaluated all 355 poses from the 18 Vina
+  successes: 325/355 passed all non-RMSD binary tests, Top-1 RMSD <= 2 A was
+  10/18, and Top-5 was 16/18. Its payload SHA-256 is
+  `9c680e1edd08bfa07c1c71164b696ae050f180c3a2bb04bc91fd5d163a965b86`;
+  the receipt file SHA-256 is
+  `4903b3c5a34dc18fd38f9ba031099f0f2db688e4de66d2d42159163926a8975f`.
+  The installed-wheel exact reexecution matched, and two deterministic wheel
+  builds were byte-identical at SHA-256
+  `b0248a218aaea0ef3f00e65d6f77e077cdd81a4c7ac37a128edd7833e3ce49a8`.
+  The evaluated set is only the strictly prepared chemistry subset; AD4 types
+  and Gasteiger charges remain independently unvalidated beyond the bounded
+  same-algorithm diagnostic above. Target-family/leakage evidence, an
+  independent host rerun, and reviewer acceptance remain absent. Therefore
+  this is not a public docking benchmark or product claim and
+  `claim_safe=false`;
+- installable, failure-inclusive same-input GNINA 1.3.3 and Smina 2019-10-15
+  execution receipts. The common CPU-only configuration fixes the 22.5 A box,
+  seed 20260723, exhaustiveness 32, 20 modes, 1 A mode separation, Vina scoring,
+  and no added ligand hydrogens. Both attempted 18/308 prepared pairs, succeeded
+  on 17, retained all 16 preparation failures and 274 chemistry abstentions,
+  and failed `7UAW_MF6` explicitly because prepared AutoDock type `CG0` is not
+  supported. GNINA retained 340 poses and affinity/CNNscore/CNNaffinity; Smina
+  retained 336 poses and minimized affinity. Their execution receipt payload
+  SHA-256 values are `60d0e6a67c86075905cd54497ab12a678f0f54a15a11d7e9345122369d390847`
+  and `912b7081ba35d11e0accdf1af9c5ebb55c09641390f17242fb8b210d67d27733`;
+- an installable GNINA/Smina generated-pose evaluator using the same pinned
+  PoseBusters 0.6.5 `redock` contract. GNINA evaluated 340/340 poses, with
+  304 physically valid, Top-1 RMSD <= 2 A for 15/17 execution-success cases,
+  and Top-5 for 16/17. Smina evaluated 336/336, with 312 physically valid,
+  Top-1 10/17, and Top-5 15/17. Production and installed-wheel exact
+  reexecution matched receipt payload SHA-256
+  `0959201d6165d82041447be820977de7ac8ba64b13d1f237ad5b8c914a290259`
+  for GNINA and
+  `0590067f9c1731f6ebcbff36f54ba08d9265f32454b54fa03b7df0dbc328b930`
+  for Smina. Two correctly staged wheel builds were byte-identical at SHA-256
+  `02356f803a448fdb3f77f5594ef4927eacc1221d319069fa4b81ace25dc4a8f0`.
+  These are conditional 17-case supported-subset results; complete target-
+  family coverage and external-fit leakage control, independent-host,
+  independent scientific charge/type validation, calibration, and reviewer
+  gates remain open, so
+  `benchmark_executed=false` and `claim_safe=false`;
+- an installable conservative observed-target-cluster binding for the exact
+  Vina/GNINA/Smina evaluation receipts. It reconstructs residue-label sequences
+  only from first-model receptor `ATOM` rows, admits chains with at least 20
+  residues, links a case pair only when one chain pair has at least 90% global
+  edit similarity, and forms connected components. The exact 308-case run
+  produced 296 clusters, 11 multi-case clusters, maximum size 3, and 13 links.
+  Vina covered 18/296 clusters completely covering 17; GNINA and Smina each
+  covered 17/296 and completely covered 16. On covered clusters, the explicit
+  any-member Top-1/Top-5 RMSD-hit counts were 10/18 and 16/18 for Vina, 15/17
+  and 16/17 for GNINA, and 10/17 and 15/17 for Smina. Exact reexecution matched
+  receipt payload SHA-256
+  `34d782567e816206dcaf2be5207e424b8611a081c9ca6d51bc9500e42ec81e5e`
+  and file SHA-256
+  `fc69398c600c032f7f5c18ca1fc8baedd51c93db0f933c2320d1f597265750aa`.
+  Two pinned-tool builds were byte-identical at wheel SHA-256
+  `050d06e9fc49ef3c79bcaefbd8854de85fce0ce7fe4a56cc83418a460280a597`,
+  and the isolated installed-wheel command reproduced the same receipt.
+  These clusters are a near-identity proxy, not biological target-family
+  annotations. Every engine's fit/training manifest remains missing, so target
+  and ligand/scaffold training leakage are unevaluated, `leakage_control_passed`
+  is false, and no benchmark or product claim opens;
+- an installable offline RCSB/Pfam target-family binding over the same exact
+  308 cases and Vina/GNINA/Smina outcomes. A normalized official RCSB Data API
+  observation is pinned without retaining raw responses; runtime verification
+  performs no network access. Exact `asym_id` matches take precedence over
+  exact `auth_asym_id` fallback, with no truncation or alias inference, and
+  protein chains are associated with the native ligand at an inclusive 6 A
+  heavy-atom cutoff. The production receipt records 306/308 complete chain
+  mappings, 299 UniProt-annotated cases, 225 Pfam-annotated cases, one explicit
+  unmapped archive chain (`6Z14_Q4Z`), and one removed RCSB entry (`7D6O_MTE`)
+  without replacement remapping. It retains 199 Pfam multi-label families and
+  149 non-overlapping exact Pfam-set partitions, including every source-engine
+  failure and abstention. Snapshot payload/file SHA-256 values are
+  `4d05e0127bb4c4dfedb5fa0a5f2e11d7de22aae481d34d3840676d04d367b51a`
+  and `2287ffc895b28828ff39568f3ee0b98707b8160f04fa10196b469fe9ba722358`;
+  family-receipt payload/file SHA-256 values are
+  `ce7d0f32054f05a328554fa04e38964768d2e734157aa9eca4ceb431c2a87076`
+  and `164ef81d7e49dbf32aab6eef56325dfd2ee57e889304e7f3ac0dff7f11a36761`.
+  Two pinned-tool builds were byte-identical at wheel SHA-256
+  `02d837ed5f624505a5a02bf1a5489f8aec1dcf0bacd15ef39b0fa6abf8526deb`,
+  and the isolated installed-wheel command reproduced both snapshot and result
+  receipts.
+  The HTTPS observation is not RCSB-signed, annotation coverage is incomplete,
+  and all external fit/training manifests remain missing; leakage control,
+  benchmark authorization, scientific validation, and product claims remain
+  false;
+- an installable, test-only PoseBusters pose-ranking calibration intake. It
+  caller-pins the three exact evaluation receipts plus the RCSB/Pfam receipt,
+  then verifies the linked archive, preparation, and execution receipt/file
+  identities before joining per-pose Vina, GNINA, and Smina score components
+  to RMSD and physical-validity labels. The exact reconstruction retains 924
+  engine/case rows, 1,031 successful pose rows, and 872 explicit failure rows;
+  its all-308 Top-1/Top-5 counts remain Vina 10/16, GNINA 15/16, and Smina
+  10/15. Receipt payload/file SHA-256 values are
+  `b6526c7407602721f2ec74f09c8b99d4ecdc7336e69417ed6321840663de9ea0`
+  and `88b756cd3e7d460edefe8330dbae6141e72492953a1af4e71bb60b1146574813`;
+  two pinned-tool wheels matched at
+  `c8019fa070e8ca2fc598e26cbdf3c78394fcf9e0963ec656d736b3864681ac51`,
+  and source-tree/installed-wheel receipts were byte-identical. PoseBusters is
+  fixed to `split_role=test`: no fit API is called.
+  The base intake leaves coordinate and scaffold fields null rather than
+  synthesizing them; complete Pfam coverage, fit manifests, and
+  target/ligand/scaffold leakage evidence also remain absent, so no generic
+  calibration partition or claim is opened;
+- an installable PoseBusters pose/scaffold identity overlay over that exact
+  test-only intake. It binds all 1,903 intake rows to the caller-pinned archive,
+  preparation, execution artifacts, and RDKit 2025.09.6 runtime. All 1,031
+  generated poses receive topology-aware coordinate hashes and all 872 failure
+  rows remain explicit. Start/reference scaffold identity passes for 308/308
+  cases, yielding 229 groups (15 repeated, maximum size 21); 275 cases use a
+  Bemis-Murcko graph and 33 use the explicitly named acyclic full-heavy-graph
+  fallback. Generated/start chemistry and cross-engine topology mismatches are
+  both zero. Start/reference full chemistry agrees for 305/308; the remaining
+  three differences are retained for independent disposition. Receipt
+  payload/file SHA-256 values are
+  `e7b92d0fc74b44f652c5196429812fe61165771906d9d487a13ec8719ac52995`
+  and `fbf3fa34f974dc8bd35b6564a1c004931a9ea0177f25fd551769b91f4db089d8`;
+  deterministic wheel SHA-256 is
+  `d3c51e79dc4783f859b7b2ff4a8f8499d42da0d6a4378035c3cf2114b751285e`,
+  with byte-exact installed-wheel verification. Complete target-family
+  assignment, fit/training provenance, leakage audits, independent rerun, and
+  review remain open; no fit or claim is authorized;
 - benchmark manifests with exactly one ordered success/failure row per case.
 - a bounded offline materializer for the frozen four-case PoseBusters contract
   cohort. It verifies caller-supplied seed/reference SDF bytes, retains every

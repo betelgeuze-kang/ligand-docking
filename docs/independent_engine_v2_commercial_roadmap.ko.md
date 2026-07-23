@@ -707,6 +707,131 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    `allow_bad_res`로 residue를 삭제하지 않았으며 이 결과는 preparation coverage일
    뿐 charge/type 과학 검증·generated pose·Vina/GNINA/Smina result·PoseBusters
    oracle·family/leakage metric·독립 재실행·docking benchmark evidence가 아니다.
+   그 preparation receipt를 입력으로 하는 installable ligand charge/type diagnostic도
+   추가했다. Meeko `SMILES IDX`·`H PARENT`를 엄격히 해석하고 생략된 H 전하는 부모
+   원자에 합산하며 macrocycle closure `G0` pseudoatom은 실제 화학 원자와 분리한다.
+   RDKit core 2022.09.5와 2025.09.6 관측은 각각 prepared 18건·실제 PDBQT 원자
+   481개·zero-charge `G0` 2개를 failure 없이 보존했다. 실제 원자 전부가 PDBQT
+   3자리 직렬화 허용치 0.0005 e 안에 있었고 최대 오차는
+   0.0004979832249129013 e였다. element/type 호환성과 aromatic-carbon `A` 일관성도
+   18/18 통과했으며 두 버전의 expected charge 481/481개는 binary64 bit 단위로
+   같았다. 2022·2025 observation payload SHA-256은 각각
+   `df57b0d48ba905e0f132b66a3b4d4fc344fffc4a40f1d78de181c0264bedba8f`·
+   `6d3389ed55e7d47c8e0b0076c485b3f4ee7590cb3f9ddcd12db89030e92b6b50`,
+   cross-version comparison payload SHA-256은
+   `ab9cf4b72d3af848dd48484fcbb203268fe8d7336ec552ffe52c360dca972b5f`이다.
+   source-tree와 isolated installed-wheel exact 검증이 모두 일치했고 wheel 2회는
+   `9d1c96336c1fa55051ab3e0fc2192d990860c644dc5f39a0685f07c39613124e`로 byte
+   단위 일치했다. 하지만 두 관측은 같은 Gasteiger 알고리즘의 버전 비교이므로 독립
+   charge oracle이 아니다. AD4 type semantics·source SDF chemistry·receptor charge/type·
+   unsupported chemistry도 독립 검증되지 않았다.
+   별도의 installable Open Babel 3.2.1 독립 구현 비교도 추가했다. 동일한 exact
+   preparation identity를 입력으로 `OBChargeModel("gasteiger")`의 full-precision
+   charge와 Open Babel PDBQT writer의 AD4 type을 비교하고, 308개 행 전체를
+   보존했다. prepared 18건 모두 comparison failure 없이 완료됐고 실제 원자 481개와
+   별도 보존·통계 제외된 `G0` pseudoatom 2개를 다뤘다. Meeko 3자리 PDBQT charge
+   대비 MAE/RMSE/최대 절대 delta는 0.0038510594375734796 /
+   0.012204476318346003 / 0.18097866788513423 e였고, AD4 type exact 일치는
+   476/481이었다. 불일치 5개는 `SA`/`S` 3개와 macrocycle `CG0`/`C` 2개로
+   모두 보존했다. source-tree와 isolated installed-wheel exact 검증은 receipt
+   payload SHA-256
+   `7754c4b56e10d4543b064c23daaf69ab99e098fda81bfd9fbaecc8694439d943`을
+   재현했고 wheel 2회는
+   `d0fc6a2acce76f2e3d23915b533528263d10e8277c0cf6feafd09e318c6d9529`로 byte
+   단위 일치했다. 이 결과는 독립 구현 실행 공백만 닫는다. charge 정확도 임계값은
+   사전등록되지 않았고 Open Babel은 quantum charge oracle이 아니다.
+   exact-tag source 검사로 `CG0`/`C` 2개는 Meeko macrocycle ring-closure 확장
+   vocabulary이고, `SA`/`S` 3개는 neutral thioether를 `[SX2]`로 acceptor 처리하는
+   Meeko와 형식전하 -1인 sulfur만 acceptor로 보는 Open Babel의 실제 semantics
+   차이임을 확인했다. RDKit 2022/2025에서 6·12·24 iteration control도 동일했고,
+   `7F5D_EUO` sulfur는 각각 0.21119588924581498·0.21034893344174249·
+   0.21033550574606594 e였다. Open Babel 값 0.029021332114865777 e와 비교하면
+   iteration 수보다 sulfone sulfur parameter-selection branch 차이가 지배적이다.
+   이는 구현 원인 disposition일 뿐 과학적 정확도 판정이 아니다. neutral-thioether
+   acceptor 선택과 methylsulfone charge 정확도·source SDF equivalence·receptor
+   charge/type·unsupported chemistry·두 번째 CPU host·reviewer receipt가 남아 있다.
+   다음 단계는 atom charge 자체를 oracle로 삼지 않고 molecular electrostatic field
+   오차를 측정하는 quantum reference protocol과 임계값을 사전등록한 뒤, 두 번째 CPU
+   host와 reviewer receipt를 수행하는 것이다.
+   `claim_safe=false`는 유지한다.
+   이 후속 단계의 첫 실행도 완료했다. installable
+   `betelgeuze-engine-v2-posebusters-sulfur-qm-esp` 명령은 계산 전에 protocol을
+   별도 등록하며, sulfur 4건과 308-case 전체 disposition, source SDF 고정 좌표와
+   explicit hydrogen, neutral singlet RHF/6-31G* spherical basis, 공식 PySCF 2.14.0
+   wheel·설치 dependency payload·single native thread, 1.4/1.6/1.8/2.0 배
+   Lebedev-110 molecular-surface shell의 동일 가중치, 동일 charge site의 Meeko와
+   Open Babel projection, 모든 metric·failure·claim gate를 QM 실행 전에 고정한다.
+   protocol payload SHA-256은
+   `0927260a16f1e09211fb601fade1725e21d35d221d04e69cfd2c624da7c06137`이다.
+   production observation은 사전등록한 4/4건을 QM failure 없이 평가하고 나머지
+   304건을 scope abstention으로 보존했다. global weighted ESP RMSE는 4건 모두
+   Meeko가 Open Babel보다 낮았지만 차이는 작으며 descriptive label일 뿐이다.
+   source-tree와 isolated installed-wheel exact 재실행은 observation payload
+   SHA-256
+   `402d1795f18b7eb0c87d8537f3b427fe116c0845bf1337b21e24752cef7e52e6`을
+   재현했고, wheel 2회는
+   `b4564648dbf3fcb681e0b73d1dcbcc2fd96ed10a0fe4a321149fe38545d0d73d`로
+   byte 단위 일치했다. 정확도 통과 임계값은 사전등록하지 않았고 HF/6-31G*는
+   정의된 reference이지 절대 oracle이 아니며 atom-centered charge는 observable이
+   아니다. 따라서 이 4-case fixed-geometry ESP 결과로 neutral-thioether의
+   `SA`/`S` hydrogen-bond semantics를 판정할 수 없다.
+   `charge_accuracy_pass=null`, `scientifically_validated=false`,
+   `benchmark_executed=false`, `claim_safe=false`를 유지한다.
+   그 다음 과학 slice인 neutral-thioether donor-acceptor interaction-energy
+   protocol도 사전등록 후 실행했다. prior QM/Vina receipt, Vina 1.2.7 exact AD4
+   source, 공식 PySCF 2.14.0·PySCF-dispersion 1.5.0 wheel, 환경별 thioether model
+   3개, methanol O-H donor 1개, S-H 거리 6개와 plane-normal control 1개, 모든
+   complex/ghost geometry, B3LYP-D3(BJ)/def2-SVP Boys-Bernardi counterpoise,
+   exact AD4 `S-HD`/`SA-HD` pair formula·weight, failure row와 판정 임계값을
+   계산 전에 고정했다. production observation은 geometry 21개와 SCF 63개를
+   failure 없이 완료하고 scope abstention 305건을 보존했다. 세 QM profile 모두
+   minimum은 2.5 A, -4.758~-5.258 kcal/mol이었고 local O-H acceptor gate와
+   AD4 `SA` profile-preference gate는 각각 3/3 통과했다. protocol·observation
+   payload SHA-256은
+   `f0b0d84551e63272509acaf967996496cc7100cd2a58b71392fe38bce7d8194c`,
+   `30d9ceb83aed88fa45b7bc8c8282e6a50ce0299c9f54b21ce0c8885775c35fce`이다.
+   source-tree와 fresh installed-wheel observation exact 재실행이 일치했고,
+   wheel 2회는
+   `bb47ad0c5dcb0a5b9d298d2ba7f423910c11bf03c13f1691c0ecbec9c6db6f56`로
+   byte 단위 일치했다. 그러나 plane-normal control이 선택한 idealized
+   lone-pair 방향보다 세 model 모두 0.551~0.784 kcal/mol 더 유리했다. 따라서
+   방향성·일반 chemical acceptor semantics는 아직 판정하지 않는다. O-H donor
+   1종·고정 gas-phase model 3개·isolated pair term은 representative chemistry나
+   complete AD4 score가 아니다. 두 번째 CPU host exact 재현과 independent
+   reviewer receipt가 있어야 세 `SA`/`S` case의 과학적 disposition을 열 수 있고,
+   `scientifically_validated=false`, `claim_safe=false`를 유지한다.
+   이 외부 evidence 단계를 위한
+   `betelgeuze-engine-v2-posebusters-sulfur-reproduce` 계약은 구현했다.
+   실행 전에 baseline/external host와 operator 신원, single-use nonce, exact
+   Engine v2 wheel/source, QM/Vina binary와 shared runtime projection을
+   사전등록한다. 결과 verifier는 308개 disposition, geometry 21개,
+   counterpoise SCF 63개, 허용 오차와 모든 failure row를 다시 계산한다.
+   reviewer 단계는 private key를 받지 않는 detached Ed25519 request와
+   out-of-band trust anchor, 역할 분리, 만료·revocation·supersession을
+   요구한다. 다만 실제 두 번째 물리 host 신원·실행 result·독립 reviewer
+   receipt는 아직 없으므로 두 gate는 모두 닫히지 않았고 기존 chemistry,
+   docking, benchmark, product claim도 바뀌지 않는다.
+   다만 이 chemical gate를 현재 product Vina 경로의 blocker로 오해하지 않도록
+   별도 default-Vina invariance protocol을 먼저 등록·실행했다. AutoDock Vina
+   1.2.7 exact tag source는 PDBQT `S`와 `SA`를 모두 element sulfur로 변환한 뒤
+   동일한 `XS_TYPE_S_P`로 매핑한다. default Vina scoring은 XS type을 사용하며 XS
+   acceptor set에는 nitrogen·oxygen만 있고 sulfur가 없다. 세 neutral-thioether의
+   exact Vina pose 60개에서 target type 두 글자만 `SA`에서 `S`로 바꾸고 공개
+   `Vina.score()` component 8개를 비교했다. 60/60 pose의 모든 component가 exact
+   binary64 일치했고 score failure는 0건, scope abstention은 305건이었다.
+   protocol과 observation payload SHA-256은 각각
+   `81f52bbf68518e1d09e0462f8124ac1a810c7cc502ff8923175703e62b28b57f`,
+   `a08ced8bbe0dbecc503f8e5eedf96d239130d0dbced897427694afe61742d406`이다.
+   source-tree와 isolated installed-wheel exact 재실행이 일치했고 wheel 2회는
+   `fcbdc2df96c3b7df53f90e50e90688898147bf4665f2a816eb7d82382f547535`로
+   byte 단위 일치했다.
+   따라서 현재 default-Vina fixed-pose score에 한해서
+   `bounded_default_vina_invariance_claim_safe=true`다. 그러나 docking search를
+   재실행하지 않았고 complete AD4 scoring·chemical hydrogen-bond acceptor
+   semantics를 판정하지 않았으므로 `scientifically_validated=false`,
+   `benchmark_executed=false`, `claim_safe=false`는 유지한다. 완료한
+   donor-acceptor interaction-energy receipt는 AD4/chemical-semantics의 별도
+   bounded gate이며 default-Vina fixed-pose 결과의 의미를 바꾸지 않는다.
    그 exact preparation 위의 Vina 1.2.7 production receipt는 single-CPU seed·box·
    spacing·exhaustiveness·mode/energy 범위와 engine/dependency/source payload를
    고정하고 308개 disposition, generated PDBQT, canonical binary64 energy component
@@ -717,11 +842,96 @@ V2-1 완료를 주장하려면 최소한 다음 증거가 모두 필요하다.
    pinned build-tool wheel 2회도 SHA-256
    `68380b90af9ac286a70e264cb2603288ae5a2d639f32f27b1ae376bdaebc6228`로 byte
    단위 일치했다.
-   이는 bounded Vina execution evidence일 뿐 generated-pose validity·symmetry-aware
-   RMSD·GNINA/Smina same-input result·target-family/leakage metric·독립 외부 재실행·
-   reviewer 승인·docking benchmark evidence가 아니다. 다음 좁은 slice는 pinned
-   PoseBusters redock oracle와 direct receptor-frame RMSD를 모든 generated pose에
-   적용하는 failure-inclusive receipt다.
+   별도 PoseBusters 0.6.5 generated-pose receipt는 그 exact chain을 입력으로 삼아
+   308개 disposition과 pose별 `redock` typed report 133개를 보존했다. 355/355
+   pose를 평가했고 non-RMSD binary test 전체 통과는 325/355, Vina-success 18건의
+   direct symmetry-aware receptor-frame RMSD <= 2 A는 Top-1 10/18, Top-5
+   16/18이었다. installed-wheel exact 재실행은 receipt payload SHA-256
+   `9c680e1edd08bfa07c1c71164b696ae050f180c3a2bb04bc91fd5d163a965b86`을
+   재현했고 pinned build-tool wheel 2회는 SHA-256
+   `b0248a218aaea0ef3f00e65d6f77e077cdd81a4c7ac37a128edd7833e3ce49a8`로
+   byte 단위 일치했다.
+   이는 strict preparation을 통과한 18-case Vina subset의 validity·RMSD evidence일
+   뿐 대표성 있는 docking benchmark가 아니다. 같은 입력의 GNINA 1.3.3과 Smina
+   2019-10-15 실행 receipt도 308개 disposition을 모두 보존했다. 두 엔진 모두 준비된
+   18건을 시도해 17건 성공했고, `7UAW_MF6`의 prepared AutoDock type `CG0` 미지원
+   실패를 숨기지 않았다. GNINA는 340 pose, Smina는 336 pose를 보존했다. 이어지는
+   PoseBusters 0.6.5 receipt에서 GNINA는 340/340 평가·physical-validity 304/340·
+   execution-success 17건의 Top-1/Top-5 RMSD <= 2 A 15/17·16/17, Smina는
+   336/336·312/336·10/17·15/17을 기록했다. installed-wheel exact 재실행은 각각
+   receipt payload SHA-256
+   `0959201d6165d82041447be820977de7ac8ba64b13d1f237ad5b8c914a290259`와
+   `0590067f9c1731f6ebcbff36f54ba08d9265f32454b54fa03b7df0dbc328b930`을
+   재현했다. 이는 17-case 조건부 결과다. 이어서 세 exact evaluation receipt를
+   conservative observed-target cluster에 결합했다. receptor 첫 coordinate model의
+   `ATOM` residue-label sequence, 최소 20-residue chain, 90% global edit-similarity
+   link, connected component 규칙으로 308 case가 296 cluster가 됐고 multi-case
+   cluster 11개·최대 크기 3·link 13개를 보존했다. Vina의 cluster coverage/complete
+   coverage는 18/296·17/296, GNINA와 Smina는 각각 17/296·16/296이다. covered
+   cluster의 명시적 any-member Top-1/Top-5 RMSD hit는 Vina 10/18·16/18, GNINA
+   15/17·16/17, Smina 10/17·15/17이다. exact 재실행은 receipt payload SHA-256
+   `34d782567e816206dcaf2be5207e424b8611a081c9ca6d51bc9500e42ec81e5e`와 file
+   SHA-256
+   `fc69398c600c032f7f5c18ca1fc8baedd51c93db0f933c2320d1f597265750aa`를
+   재현했다. pinned-tool wheel 2회는 SHA-256
+   `050d06e9fc49ef3c79bcaefbd8854de85fce0ce7fe4a56cc83418a460280a597`로
+   byte 단위 일치했고 installed-wheel exact 검증도 같은 receipt를 재현했다. 이
+   cluster는 biological target-family annotation이 아닌 near-identity
+   proxy다. 세 엔진 모두 fit/training manifest가 없으므로 target-sequence와
+   ligand/scaffold training leakage는 평가하지 못했고 `leakage_control_passed=false`다.
+   이어서 official RCSB Data API 관측을 raw 응답 없이 정규화·고정하고, native ligand
+   heavy atom과 6 A 이내인 protein chain을 exact `asym_id` 우선·exact
+   `auth_asym_id` fallback으로 매핑했다. truncation·alias·removed-entry remap은 하지
+   않는다. 308 case 중 mapping complete 306, UniProt annotation 299, Pfam annotation
+   225를 보존했고 `6Z14_Q4Z` chain `J`는 unmapped, `7D6O_MTE`는 removed disposition으로
+   남겼다. Pfam multi-label family 199개와 중복 없는 exact Pfam-set partition 149개에
+   세 엔진의 모든 failure·abstention을 포함한 분모를 결합했다. snapshot payload/file
+   SHA-256은
+   `4d05e0127bb4c4dfedb5fa0a5f2e11d7de22aae481d34d3840676d04d367b51a`·
+   `2287ffc895b28828ff39568f3ee0b98707b8160f04fa10196b469fe9ba722358`,
+   target-family receipt payload/file SHA-256은
+   `ce7d0f32054f05a328554fa04e38964768d2e734157aa9eca4ceb431c2a87076`·
+   `164ef81d7e49dbf32aab6eef56325dfd2ee57e889304e7f3ac0dff7f11a36761`이며
+   byte-exact 재실행이 일치했다. pinned-tool wheel 2회도
+   `02d837ed5f624505a5a02bf1a5489f8aec1dcf0bacd15ef39b0fa6abf8526deb`로
+   byte 단위 일치했고 isolated installed-wheel 검증이 두 receipt를 재현했다. 다만
+   HTTPS 관측은 RCSB가 독립 서명하지 않았고
+   Pfam coverage도 불완전하다. 다음 증거 slice는 외부 fit/training manifest를 확보해
+   target-sequence·ligand/scaffold overlap을 결합하는 것이다. manifest를 확보할 수
+   없으면 이 family receipt를 leakage-controlled 결과로 부르지 말고 charge/type
+   검증과 두 번째 CPU host 재실행을 진행한다. calibration·reviewer 승인은 여전히
+   없다.
+   별도 installable pose-ranking intake는 세 evaluation receipt와 RCSB/Pfam receipt의
+   caller-pinned root를 검증하고, 연결된 archive·preparation·execution payload/file
+   identity를 다시 확인한 뒤 exact score component·RMSD label·physical-validity를
+   `split_role=test`로만 결합한다. 현재 exact 재구성은 engine/case 924행, 성공 pose
+   1,031행, 명시적 failure 872행을 보존하며 all-308 Top-1/Top-5 count는 Vina
+   10/16, GNINA 15/16, Smina 10/15다. receipt payload/file SHA-256은
+   `b6526c7407602721f2ec74f09c8b99d4ecdc7336e69417ed6321840663de9ea0`·
+   `88b756cd3e7d460edefe8330dbae6141e72492953a1af4e71bb60b1146574813`,
+   deterministic wheel SHA-256은
+   `c8019fa070e8ca2fc598e26cbdf3c78394fcf9e0963ec656d736b3864681ac51`이며
+   source-tree와 installed-wheel receipt가 byte 단위 일치했다. base intake의
+   coordinate/scaffold 필드는 합성하지 않고 null로 유지한다.
+   별도 installable pose/scaffold identity overlay는 exact archive·preparation·
+   Vina/GNINA/Smina artifact와 RDKit 2025.09.6 payload/host identity를 다시
+   결속한다. 성공 pose 1,031/1,031에 topology-aware 3-decimal coordinate SHA-256을
+   부여하고 failure 872/872를 그대로 보존했다. start/reference scaffold는 308/308
+   일치하며 229개 group, 반복 group 15개, 최대 21 case다. 275 case는
+   Bemis-Murcko이고 33 case는 표준 Murcko라고 부르지 않는 명시적
+   `acyclic_full_heavy_graph` fallback이다. generated/start chemistry와 cross-engine
+   topology mismatch는 0이다. start/reference full chemistry는 305/308 일치하고
+   나머지 3건은 독립 disposition 대기 상태다. overlay receipt payload/file
+   SHA-256은
+   `e7b92d0fc74b44f652c5196429812fe61165771906d9d487a13ec8719ac52995`·
+   `fbf3fa34f974dc8bd35b6564a1c004931a9ea0177f25fd551769b91f4db089d8`,
+   deterministic wheel SHA-256은
+   `d3c51e79dc4783f859b7b2ff4a8f8499d42da0d6a4378035c3cf2114b751285e`이며
+   installed-wheel exact 검증이 통과했다. 따라서 coordinate/scaffold identity
+   blocker는 닫혔지만 complete Pfam assignment, fit manifest,
+   target/ligand/scaffold leakage audit, 외부 재실행과 독립 review는 남아 있다.
+   PoseBusters test label은 fit API에 전달하지 않으며 generic calibration
+   partition·과학·제품 claim은 열지 않는다.
    별도 rigid diagnostic은 lowest-index graph-matched native record로 pocket center를
    정의하고 seed orientation을 고정 회전한 뒤 모든 candidate의 geometry score·validity·
    receptor-frame symmetry-aware RMSD와 oracle-best generation gap을 보존한다. 초기

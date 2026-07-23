@@ -395,6 +395,384 @@ Smina engine, generated pose, PoseBusters oracle, RMSD, score, family metric,
 leakage audit, or independent rerun is present. `external_engine_executed=false`,
 `benchmark_executed=false`, and `claim_safe=false` remain mandatory.
 
+`betelgeuze_engine_v2.benchmark.public_posebusters_prepared_ligand_diagnostic`
+adds failure-inclusive observation and cross-version comparison contracts over
+that exact preparation receipt. The installed
+`betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic` command exposes
+`observe`, `verify-observation`, `compare`, and `verify-comparison`. Observation
+requires the expected preparation payload SHA-256 and exact mode-0600 receipt
+plus private artifact tree. It fingerprints the resolved Python executable,
+platform/ABI fields, RDKit core/build/Boost identity, and the owning RDKit
+distribution's path-independent regular-file payload.
+
+The PDBQT parser requires one embedded SMILES, complete unique `SMILES IDX`
+coverage, bounded `H PARENT` mappings, contiguous atom serials, and only
+unmapped zero-charge `G0` macrocycle pseudoatoms. It recomputes RDKit
+`ComputeGasteigerCharges` with 12 iterations and `throwOnParamFailure=false`,
+then merges charges of omitted H atoms into their source parent as Meeko does.
+The 0.0005 e threshold covers only three-decimal PDBQT serialization. Type
+checks cover element compatibility and aromatic-carbon `A` consistency; they
+do not independently reproduce the AD4 typer.
+
+The production RDKit 2022.09.5 and 2025.09.6 observations each retain all 308
+rows, with 18 evaluated cases, zero diagnostic failures, 481 real atoms, and
+two separate `G0` pseudoatoms. Every evaluated case passed the serialization,
+element/type, aromatic-carbon, and pseudoatom checks; maximum charge delta was
+0.0004979832249129013 e. The comparison requires the exact same preparation
+identity and atom-mapping projection, then compares canonical binary64 expected
+charges. All 481/481 values were bitwise equal and maximum cross-version delta
+was zero. Configuration/source aggregate SHA-256 values are
+`9e2a86f65b5168595f1c41cce9851d0e8d76bfcdcee838b8687cd06ce589518c`
+and `9c31c749782a7c7810f616690fec3378646c72b5ee78a65507bfeceb049d35a3`.
+RDKit 2022 observation payload/file values are
+`df57b0d48ba905e0f132b66a3b4d4fc344fffc4a40f1d78de181c0264bedba8f`
+and `b7e8b3ee7a235f63c79454af8b008230a4ed34e195dc2b85133eae21526962dd`;
+RDKit 2025 values are
+`6d3389ed55e7d47c8e0b0076c485b3f4ee7590cb3f9ddcd12db89030e92b6b50`
+and `f1a78abba41e9783a57616a71930e7bf11f6377a28592d18f2bd66128d26b5f5`;
+comparison values are
+`ab9cf4b72d3af848dd48484fcbb203268fe8d7336ec552ffe52c360dca972b5f`
+and `121bc96482cf2f73622c650dbce5da1fddc8c32f4421c185c2d4c926fadc978f`.
+Byte-exact source-tree and isolated installed-wheel verification passed; two
+wheels matched at
+`9d1c96336c1fa55051ab3e0fc2192d990860c644dc5f39a0685f07c39613124e`.
+Both observations use the same Gasteiger implementation family. Independent
+charge/type assignment, source-SDF chemistry equivalence, receptor auditing,
+unsupported chemistry, second-host reproduction, and reviewer acceptance are
+still absent; `independent_charge_oracle_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` are mandatory.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_openbabel_charge_type_comparison`
+adds a failure-inclusive comparison against the separately distributed Open
+Babel 3.2.1 implementation. The installed
+`betelgeuze-engine-v2-posebusters-openbabel-compare` command exposes `observe`
+and `verify`. Both require the exact preparation receipt and private artifact
+tree, its expected payload SHA-256, the official CPython 3.10 manylinux x86-64
+Open Babel wheel, and expected wheel SHA-256
+`ca6345ca6cc66522208c45355a90472d657be78dec7706757d477bfb0c105413`.
+Observation also requires an explicit UTC timestamp and private no-overwrite
+output. Verification reconstructs the complete canonical receipt and compares
+the caller-provided expected receipt payload SHA-256.
+
+The runtime identity binds Python/platform/ABI fields, Open Babel version
+3.2.1, source commit `0e94434fa75c9f61095023e3c12e0d5f2ac035ff`, the
+path-independent installed distribution payload, the official wheel bytes,
+configuration, and implementation sources. The PyPI registry's Trusted
+Publishing provenance claim is recorded but was not independently
+cryptographically reverified by the local run. Runtime comparison is
+network-free. The command reconstructs molecules only from the exact embedded
+Meeko SMILES mapping, obtains full-precision charges from
+`OBChargeModel("gasteiger")`, and obtains independently assigned AD4 types from
+the Open Babel PDBQT writer with `c`, `p`, and `r` options. It reconciles
+nonpolar-H charge merging and retained polar H atoms by parent/order; Meeko
+`G0` macrocycle closure pseudoatoms remain in each case record but are excluded
+from real-atom comparison statistics.
+
+The 2026-07-23 local receipt retained all 308 rows: 18 evaluated, zero
+comparison failures, 16 preparation blocks, and 274 chemistry abstentions. It
+compared 481 real atoms and retained two excluded `G0` pseudoatoms. Charge
+MAE/RMSE/max absolute delta (Open Babel full precision minus the three-decimal
+Meeko PDBQT field) was 0.0038510594375734796 / 0.012204476318346003 /
+0.18097866788513423 e; signed mean delta was -0.000010395010395007381 e.
+Exact AD4 types agreed for 476/481 atoms (Wilson 95% CI
+0.9758996496765601–0.9955519278053627). The five explicit mismatches were
+three `SA` to `S` assignments in `7CIJ_G0C`, `7LT0_ONJ`, and `7NLV_UJE`, plus
+two Meeko macrocycle `CG0` to Open Babel `C` assignments in `7UAW_MF6`. The
+largest charge delta was the sulfur at source index 17/PDBQT serial 20 in
+`7F5D_EUO`.
+
+Configuration, implementation-source, runtime-identity, receipt-payload, and
+receipt-file SHA-256 values are respectively
+`a8915ed1625f8522e3315ca1d89f7f2bc2f575f6176a0b737d3317f5f30ac445`,
+`f2e614c6708557443c0aced573b1c89e404fc419a2c70df4964ff072367ad62a`,
+`d06dace825ee62a9d983c21a95d13beca65f94c8fe97079bb3a400e615cd01e9`,
+`7754c4b56e10d4543b064c23daaf69ab99e098fda81bfd9fbaecc8694439d943`,
+and `98a5b1c654bbf388f1782519ec9e0a8de54113bcdbb16c08f541d02607342cb5`.
+Byte-exact source-tree and isolated installed-wheel verification passed; two
+package builds matched at wheel SHA-256
+`d0fc6a2acce76f2e3d23915b533528263d10e8277c0cf6feafd09e318c6d9529`.
+This establishes execution of an independent charge/type implementation only.
+No charge-accuracy threshold was preregistered, neither implementation is a
+quantum charge oracle, and the comparison receipt itself does not adjudicate
+the five type differences. The source-provenance follow-up below explains
+their implementation mechanics without deciding chemical correctness.
+Source-SDF chemistry equivalence, receptor
+charge/type auditing, representative unsupported chemistry, native-library
+identity, second-host reproduction, and independent review remain absent;
+`charge_accuracy_pass=null`, `independent_charge_oracle_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` are mandatory.
+
+An exact-tag source-provenance follow-up explains the implementation mechanics
+without adjudicating scientific correctness. Meeko 0.7.1 first assigns generic
+`[#16]` sulfur type `S`, then its later `[SX2]` rule overrides neutral divalent
+sulfur to acceptor type `SA`; its atom typer explicitly permits later matches
+to override earlier ones. Open Babel 3.2.1's PDBQT writer emits `SA` only when
+`IsHbondAcceptor()` is true, while that implementation returns true for sulfur
+only at formal charge -1. The three neutral thioethers therefore represent a
+real acceptor-semantics disagreement, not an atom-mapping defect. The relevant
+Meeko source files at tag commit
+`f4a8c1e7c86da3652f5a46e1d3574fed26aa58a1` are
+[`ad4_types.json`](https://github.com/forlilab/Meeko/blob/v0.7.1/meeko/data/params/ad4_types.json),
+[`atomtyper.py`](https://github.com/forlilab/Meeko/blob/v0.7.1/meeko/atomtyper.py),
+and
+[`flexibility.py`](https://github.com/forlilab/Meeko/blob/v0.7.1/meeko/flexibility.py),
+with SHA-256 values
+`d7e890ec95cf1da9b3f3c92d01ca044b9478bd8b36d6cefad068c3a540257d43`,
+`e582309e1be6bb8708d0a42e9d26fea51125e3f4cc44d0ac4cb0e1281680443a`,
+and `68b6546d8ea0d8d165bc58c35f783a5d76588555f6a97c022b874ffcf184c741`.
+The exact Open Babel source files are
+[`pdbqtformat.cpp`](https://github.com/openbabel/openbabel/blob/openbabel-3-2-1/src/formats/pdbqtformat.cpp)
+and
+[`atom.cpp`](https://github.com/openbabel/openbabel/blob/openbabel-3-2-1/src/atom.cpp),
+with SHA-256 values
+`ceb9469ca6aa5dec433f5561282237df59b08f84c9498244e29b83506947cc65`
+and `e15d64ce7ec6494e41b098224ed6b0f8772ae8e25848ffdebd19620a80e378ed`.
+
+The two `CG0`/`C` rows are an expected vocabulary extension rather than an
+unexplained chemical perception difference: after selecting a macrocycle bond,
+Meeko adds paired `G0` pseudoatoms and overwrites both closure carbons with
+`CG0`. Open Babel's general PDBQT writer has no corresponding ring-closure
+extension and emits ordinary aliphatic `C`. The Vina 1.2 methods paper also
+describes `Gx`/`CGx` as added macrocycle pseudoatom types. This disposition
+does not make `CG0` portable to GNINA or Smina and does not validate the chosen
+ring break; it only explains why raw vocabulary equality is inappropriate for
+those two rows.
+
+The `7F5D_EUO` methylsulfone outlier is likewise implementation-explained but
+not accuracy-adjudicated. Open Babel's six-iteration implementation selects a
+special branch when sulfur has more than one free oxygen; RDKit sees the same
+sulfur as `SP3` and selects its `S/sp3` parameter row. A controlled rerun in
+both frozen RDKit 2022.09.5 and 2025.09.6 produced identical sulfur charges:
+0.21119588924581498 e at six iterations, 0.21034893344174249 e at 12, and
+0.21033550574606594 e at 24. The six-to-12 iteration change is only
+0.0008469558040724856 e, whereas Open Babel reports 0.029021332114865777 e;
+iteration count alone therefore cannot explain the cross-implementation
+difference. RDKit's exact
+[`GasteigerCharges.cpp`](https://github.com/rdkit/rdkit/blob/Release_2025_09_6/Code/GraphMol/PartialCharges/GasteigerCharges.cpp)
+and
+[`GasteigerParams.cpp`](https://github.com/rdkit/rdkit/blob/Release_2025_09_6/Code/GraphMol/PartialCharges/GasteigerParams.cpp)
+are bound by release tag `0ece02e9254ef2d5eeade2bd40eb13546522dbd3`;
+Open Babel's exact
+[`molchrg.cpp`](https://github.com/openbabel/openbabel/blob/openbabel-3-2-1/src/molchrg.cpp)
+and
+[`molchrg.h`](https://github.com/openbabel/openbabel/blob/openbabel-3-2-1/include/openbabel/molchrg.h)
+have SHA-256 values
+`92a77b0ea1357185c02bead3cf5cf2d21fc9b907634ae01fcee167e9bbd87e68`
+and `24911cb8ea5e7b235b6213e811d5e255988b8d3705dea2662194e0f325cbacdd`.
+These source and control observations are not yet a canonical receipt and do
+not supply a quantum electrostatic-potential reference or preregistered error
+threshold; scientific charge accuracy remains open.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_qm_esp` adds a
+preregistration-first fixed-geometry molecular electrostatic-potential
+diagnostic. The installed
+`betelgeuze-engine-v2-posebusters-sulfur-qm-esp` command exposes `register`,
+`verify-protocol`, `observe`, and `verify-observation`. Registration consumes
+the exact archive intake, preparation, and Open Babel comparison identities,
+the official PySCF 2.14.0 wheel, and an explicit UTC timestamp, then writes a
+private no-overwrite protocol receipt without running QM. Observation requires
+that exact protocol and all bound inputs; verification reconstructs the
+canonical protocol or observation and requires the caller-provided expected
+payload SHA-256.
+
+The 1.0.0 protocol scope is exactly `7CIJ_G0C`, `7F5D_EUO`, `7LT0_ONJ`, and
+`7NLV_UJE`, while every other PoseBusters row remains an explicit scope
+abstention in the 308-case denominator. It freezes the source start-conformer
+SDF coordinates, explicit hydrogens, neutral singlet RHF/6-31G* calculation
+with spherical basis functions and no geometry optimization, `minao` initial
+guess, SCF and gradient tolerances, one native thread, and bounded memory and
+iteration counts. The ESP grid uses PySCF's Lebedev-110 angular grid on 1.4,
+1.6, 1.8, and 2.0 times fixed element radii, removes buried points, and gives
+each shell equal aggregate weight. Meeko's actual three-decimal PDBQT charges
+and Open Babel's full-precision charges are projected onto the exact same
+prepared sites after a 0.001 A coordinate-bound check. Global and per-shell
+weighted MAE, RMSE, signed error, maximum error, relative RMSE, Pearson
+correlation, and the same-site model delta are retained with exact hashes for
+coordinates, charges, angular grids, surfaces, density matrices, and ESP
+vectors.
+
+The runtime identity requires the official PySCF wheel
+`pyscf-2.14.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl`
+at SHA-256
+`37b0bccc55450311a55318cd643e851353331ddeab4fc0c0065e83c905e41502`,
+source commit `c63a953ba603a5ad8c1d65d88da72aaf05ede4d8`, PySCF 2.14.0,
+NumPy 1.26.4, SciPy 1.12.0, h5py 3.11.0, RDKit 2025.9.6, and
+threadpoolctl 3.6.0. It verifies that installed PySCF content matches the
+official wheel and that PySCF plus every discovered native thread pool uses
+exactly one thread.
+
+The preregistered protocol payload SHA-256 is
+`0927260a16f1e09211fb601fade1725e21d35d221d04e69cfd2c624da7c06137`.
+The 2026-07-23 observation retained 308 rows, evaluated all four scoped cases,
+recorded zero QM failures and 304 scope abstentions, and labeled Meeko as the
+lower global weighted ESP-RMSE model in 4/4 cases. The four Meeko/Open Babel
+RMSE pairs in Hartree/e were respectively
+0.01296866293778705/0.013041094573092262,
+0.017459540473039038/0.017512572512645257,
+0.010743378216444197/0.010776571832085028, and
+0.011221393498522648/0.011295205716778691. These differences are small and
+descriptive only. Exact source-tree and isolated installed-wheel reexecution
+reproduced observation payload SHA-256
+`402d1795f18b7eb0c87d8537f3b427fe116c0845bf1337b21e24752cef7e52e6`;
+two deterministic builds matched at wheel SHA-256
+`b4564648dbf3fcb681e0b73d1dcbcc2fd96ed10a0fe4a321149fe38545d0d73d`.
+
+No accuracy threshold was preregistered, so
+`charge_accuracy_threshold_preregistered=false` and
+`charge_accuracy_pass=null`. HF/6-31G* is a defined reference, not an absolute
+oracle; atom-centered charges are not observables; this four-case fixed-
+geometry result is not representative chemistry coverage; and ESP does not
+adjudicate neutral-thioether `SA` versus `S` hydrogen-bond semantics.
+Accordingly `sa_vs_s_hydrogen_bond_type_adjudicated=false`,
+`scientifically_validated=false`, `benchmark_executed=false`, and
+`claim_safe=false` are mandatory. The bounded interaction-energy gate is
+reported below, but a second CPU host and independent reviewer receipt remain.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_vina_sulfur_type_invariance`
+separates the active product-scoring consequence from that remaining chemical
+question. The installed
+`betelgeuze-engine-v2-posebusters-vina-sulfur-invariance` command exposes
+`register`, `verify-protocol`, `observe`, and `verify-observation`.
+Registration consumes the exact preparation, Open Babel comparison, and Vina
+execution receipts plus their complete private artifact trees and a caller-
+provided AutoDock Vina 1.2.7 source checkout. It performs no rescoring and
+writes a private no-overwrite protocol receipt.
+
+The source boundary is tag commit
+`8eb40404f4f45608acb3b01427587ac049f27c1f`. It verifies exact SHA-256 for
+`src/lib/atom_constants.h`, `model.cpp`, `potentials.h`,
+`scoring_function.h`, and `vina.h`. The semantic projection is fail-closed:
+both `AD_TYPE_S` and `AD_TYPE_SA` map to `EL_TYPE_S`; all element sulfur maps
+to `XS_TYPE_S_P`; default Vina scoring selects XS atom typing; the Vina
+hydrogen-bond potential dispatches through `xs_h_bond_possible`; and the exact
+XS acceptor set contains nitrogen and oxygen acceptor types but not
+`XS_TYPE_S_P`.
+
+The protocol scope is exactly `7CIJ_G0C`, `7LT0_ONJ`, and `7NLV_UJE`.
+Every other case remains an explicit abstention in the 308-row denominator.
+For every model in each exact Vina pose artifact, the counterfactual changes
+only PDBQT columns 78–79 for the target serial from `SA` to `S`. Length,
+coordinates, charges, topology, all other bytes, model identities, receptor,
+maps, pocket center, scoring configuration, runtime distribution, and source
+identities remain fixed. Observation separately initializes original and
+counterfactual map engines, then calls the public `Vina.score()` API for every
+model and retains all eight canonical binary64 score components, exact-equality
+flags, non-type projections, model hashes, bounded diagnostics, and all failure
+rows.
+
+The preregistered protocol payload SHA-256 is
+`81f52bbf68518e1d09e0462f8124ac1a810c7cc502ff8923175703e62b28b57f`.
+The production observation evaluated 3/3 cases and 60/60 pose pairs, recorded
+zero score failures and 305 scope abstentions, and found exact equality for all
+eight components in every pair. Source-tree and isolated installed-wheel exact
+reexecution reproduced observation payload SHA-256
+`a08ced8bbe0dbecc503f8e5eedf96d239130d0dbced897427694afe61742d406`;
+two deterministic wheels matched at SHA-256
+`fcbdc2df96c3b7df53f90e50e90688898147bf4665f2a816eb7d82382f547535`.
+
+The exact gate therefore sets
+`default_vina_fixed_pose_score_invariance_pass=true` and
+`bounded_default_vina_invariance_claim_safe=true`. This narrow result does not
+reexecute docking search, cover complete AD4 scoring, adjudicate whether neutral
+thioethers are chemical hydrogen-bond acceptors, validate representative
+chemistry, or promote docking performance. Consequently
+`chemical_acceptor_semantics_adjudicated=false`,
+`ad4_scoring_evaluated=false`, `docking_search_reexecuted=false`,
+`scientifically_validated=false`, `benchmark_executed=false`, and
+`claim_safe=false` remain mandatory. The donor-acceptor interaction-energy
+protocol is now explicitly an AD4/chemical-semantics gate, not a blocker for
+the observed default-Vina fixed-pose score path.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_interaction_energy`
+implements that bounded interaction-energy gate. The installed
+`betelgeuze-engine-v2-posebusters-sulfur-interaction` command exposes
+`register`, `verify-protocol`, `observe`, and `verify-observation`.
+Registration requires the exact prior QM-ESP and default-Vina invariance
+protocol/observation receipts, a caller-pinned Vina 1.2.7 source checkout, the
+official PySCF 2.14.0 wheel, the pinned PySCF-dispersion 1.5.0 wheel, and an
+explicit UTC time. It writes a canonical mode-0600 no-overwrite protocol and
+performs no QM calculation. Observation requires that exact protocol and
+reconstructs all bound inputs; verification reruns and compares the complete
+canonical receipt exactly. PySCF and PySCF-dispersion remain caller-supplied
+offline evidence dependencies; neither is added to the normal product runtime.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_interaction_external_reproduction`
+adds the external custody surface. The installed
+`betelgeuze-engine-v2-posebusters-sulfur-reproduce` command exposes
+`register`, `verify-work-order`, `execute`, `verify-result`,
+`build-review-request`, `review-signing-bytes`, `attach-review-signature`, and
+`verify-review`. Registration performs no QM calculation. Execution must match
+the preregistered external host and executor and retains bounded initialization,
+runtime-projection, execution, QM, and comparison failures. Result verification
+reconstructs the work order and wheel source members, verifies canonical
+runtime and embedded-observation digests, and rederives every 308-row,
+21-point, 63-SCF comparison.
+
+The review request is canonical and recursively rejects private signing
+material. A detached signature is accepted only against a caller-supplied
+public verification key; final verification additionally requires an
+out-of-band reviewer identity/key binding plus explicit revocation and
+supersession inputs. An accepted receipt can set only
+`second_cpu_host_reproduced=true` and
+`independent_reviewer_receipt_approved=true` for this bounded result.
+Directionality, representative chemistry, receptor/solvent context, complete
+AD4 scoring, docking accuracy, and product promotion remain false. No actual
+external-host or reviewer receipt is bundled with rc2.
+
+The scope is exactly the aliphatic `7CIJ_G0C`, diaryl `7LT0_ONJ`, and cyclic
+`7NLV_UJE` neutral-thioether environments. The frozen acceptor models are
+dimethyl sulfide, diphenyl sulfide, and tetrahydrothiophene with binary64
+ETKDGv3/MMFF94s coordinates. The donor is fixed methanol with its O-H vector
+aimed at sulfur. For each acceptor, registration freezes primary S-H distances
+2.0, 2.25, 2.5, 2.75, 3.0, and 5.0 A on the least-occluded of two idealized
+tetrahedral lone-pair axes, plus a 2.5 A positive C-S-C plane-normal control.
+The primary axis is selected by steric clearance without evaluating energy.
+Every complex, acceptor-with-probe-ghost, and probe-with-acceptor-ghost
+geometry is hashed before execution.
+
+QM is fixed-geometry, neutral-singlet B3LYP-D3(BJ)/def2-SVP with spherical
+functions, density fitting through `def2-universal-jkfit`, explicit PySCF level
+2 integration-grid machinery, `minao` initialization, SCF tolerance `1e-9`,
+and one native thread. Boys-Bernardi counterpoise is computed from a complex
+SCF plus both ghost-basis fragment SCFs. Each point retains total and dispersion
+energies, electron and orbital counts, SCF cycles, integration-grid size,
+geometry hashes, and either the result or a bounded failure row.
+
+The same receipt projects the exact AutoDock4 source equations and weights for
+the `S-HD` van der Waals pair and `SA-HD` hydrogen-bond pair from the pinned
+Vina source. It compares only far-referenced normalized profiles and minimum
+locations; absolute QM and isolated AD4 pair magnitudes are explicitly not
+claimed comparable. Before QM, the protocol requires each model to have a
+minimum at or below -1.0 kcal/mol, a well depth relative to 5 A at or below
+-0.5 kcal/mol, and a minimum between 2.0 and 3.0 A. The local acceptor gate
+requires 3/3 models. The `SA` profile gate requires a normalized-RMSE
+improvement margin of at least 0.02 without worse minimum-distance alignment,
+again for 3/3 models.
+
+Protocol payload SHA-256 is
+`f0b0d84551e63272509acaf967996496cc7100cd2a58b71392fe38bce7d8194c`.
+The production observation completed all 21 geometries and 63 SCFs with zero
+failures, retained 305 scope abstentions, and has payload SHA-256
+`30d9ceb83aed88fa45b7bc8c8282e6a50ce0299c9f54b21ce0c8885775c35fce`.
+Exact source-tree and fresh installed-wheel observation reexecution reproduced
+that payload. The three counterpoise minima were all at 2.5 A and were -4.904978,
+-4.757719, and -5.257573 kcal/mol. Their 5 A-referenced well depths were
+-4.399215, -4.273605, and -4.699997 kcal/mol. Both preregistered local gates
+passed 3/3. The AD4 `SA` minimum-distance error was 0 A versus 0.25 A for `S`,
+and its normalized profile RMSE was lower in all three models.
+
+That positive bounded result is not a general directionality result. At 2.5 A,
+the plane-normal controls were respectively 0.551487, 0.632256, and 0.784138
+kcal/mol more favorable than the selected idealized lone-pair direction. The
+receipt therefore keeps `chemical_acceptor_semantics_adjudicated=false`.
+It also covers only one O-H donor, three fixed gas-phase models, no receptor or
+solvent, and isolated pair terms rather than a complete AD4 score. Two
+pinned-tool wheel builds were byte-identical at SHA-256
+`bb47ad0c5dcb0a5b9d298d2ba7f423910c11bf03c13f1691c0ecbec9c6db6f56`.
+Second-host reproduction and independent review are still absent, so
+`scientifically_validated=false`, `benchmark_executed=false`,
+`product_promotion_allowed=false`, and `claim_safe=false` remain mandatory.
+
 `betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution` adds a
 failure-inclusive Vina execution layer after strict preparation. The installed
 `betelgeuze-engine-v2-posebusters-vina-execute` command has `materialize` and
@@ -436,12 +814,305 @@ byte-identical at wheel SHA-256
 the installed-wheel verification imported the package from that isolated wheel
 tree rather than the repository checkout.
 
-These generated poses have not passed the PoseBusters redock oracle or a
-symmetry-aware native RMSD evaluation. Default AD4 types and Gasteiger charges
-remain unvalidated, GNINA/Smina same-input receipts are missing, and no
-target-family, leakage, calibration, independent-host, or reviewer receipt is
-present. Therefore `benchmark_executed=false`, `scientifically_validated=false`,
-and `claim_safe=false` remain mandatory.
+`betelgeuze_engine_v2.benchmark.public_posebusters_generated_pose_evaluation`
+adds the failure-inclusive generated-pose evaluation layer. The installed
+`betelgeuze-engine-v2-posebusters-evaluate-generated` command has `materialize`
+and `verify` modes. It requires the exact archive/intake/corpus chain, strict
+preparation receipt payload SHA-256
+`3856706f5b470386e9151bc272f158192839683deaf08a2bc8f1d377b22082ba`,
+Vina receipt payload SHA-256
+`37b3df7c4c14d739d9fca3970dc73293a48909372314a8dfe1da5bcd956694ae`,
+both complete private artifact trees, and the exact PoseBusters 0.6.5 wheel
+(SHA-256
+`3e0cbca6481079d5ab7d1989a8a8f184dbba27366613c4b515658ea52fb95ea3`).
+
+Each Vina PDBQT artifact is reconstructed through pinned Meeko. Because Meeko
+returns one RDKit molecule containing multiple conformers, the evaluator copies
+each conformer into a one-conformer molecule and assigns conformer ID zero
+before one case-level PoseBusters batch call. It uses the official `redock`
+configuration (SHA-256
+`4d551d898ff29a404f16e02ad5a7a2d4235e6b7b14e9a3e27f7c66b4d16b2da9`),
+retains all 133 typed full-report values for every pose, and separately records:
+
+- the conjunction of the 27 selected non-RMSD binary tests;
+- identity, intramolecular geometry, internal-energy, and intermolecular groups;
+- PoseBusters robust direct heavy-atom RMSD in the receptor frame, plus its
+  Kabsch and centroid diagnostics;
+- every Vina rank and energy component, failure row, and bounded diagnostic.
+
+The 2026-07-23 local ignored-state receipt retained all 308 cases: 18 evaluated
+Vina-success rows, 16 preparation blocks, and 274 chemistry abstentions. It
+evaluated 355/355 poses (95% Wilson CI 0.989295–1.0); 325/355 passed every
+non-RMSD binary test (0.915493, 95% CI 0.881925–0.940165). On the conditional
+18-case Vina-success subset, Top-1 direct RMSD <= 2 A was 10/18 (0.555556, 95%
+CI 0.337164–0.754405), and Top-5 was 16/18 (0.888889, 95% CI
+0.672002–0.968980). `7LT0_ONJ` and `7XFA_D9J` were the two Top-5 misses.
+
+Receipt payload SHA-256 is
+`9c680e1edd08bfa07c1c71164b696ae050f180c3a2bb04bc91fd5d163a965b86`;
+receipt-file SHA-256 is
+`4903b3c5a34dc18fd38f9ba031099f0f2db688e4de66d2d42159163926a8975f`.
+Configuration, implementation, and runtime identity SHA-256 values are,
+respectively,
+`3c02c32628e5974f23490652467517f26bd60242b680215dcdbae5d4d852ad74`,
+`ac807c0688983a92f23b5cbed0e1e922349a07ca6f770401f817a1c4800eedd8`,
+and `7834c35fe4052355a1dcc5b67f0b75583f922689a55f12181d4c2bd73e792ca9`.
+The installed-wheel console script reproduced the canonical receipt byte for
+byte. Two builds under pinned setuptools 75.8.2 and wheel 0.45.1 were also
+byte-identical at wheel SHA-256
+`b0248a218aaea0ef3f00e65d6f77e077cdd81a4c7ac37a128edd7833e3ce49a8`.
+
+This result is conditional on the 18 strictly prepared cases, not a
+representative 308-case docking benchmark. Default AD4 types and Gasteiger
+charges remain independently unvalidated beyond the bounded same-algorithm
+diagnostic, and no target-family, leakage, calibration,
+independent-host, or reviewer receipt is present. Therefore
+`benchmark_executed=false`, `scientifically_validated=false`, and
+`claim_safe=false` remain mandatory.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_external_binary_execution`
+adds failure-inclusive GNINA 1.3.3 and Smina 2019-10-15 execution lanes. The
+installed `betelgeuze-engine-v2-posebusters-external-execute` command has
+`materialize` and `verify` modes and accepts only the exact strict-preparation
+receipt and complete private artifact tree. The official executable bytes,
+GNINA dynamic-library closure, runtime/platform identity, configuration, source
+members, diagnostics, generated PDBQT bytes, and score components are bound by
+the receipt.
+
+The common configuration uses one CPU, seed 20260723, a native-centroid 22.5 A
+cube, exhaustiveness 32, at most 20 modes, 1 A minimum separation, explicit
+Vina scoring, and no added ligand hydrogens. GNINA uses CPU-only CNN rescoring,
+sorts by CNNscore, and records minimized affinity, CNNscore, and CNNaffinity;
+its binary does not support the configured energy-range option. Smina sorts by
+minimized affinity and uses a 20 kcal/mol range. Both receipts retain all 308
+rows and every engine/preparation/chemistry failure.
+
+The production runs each attempted 18 prepared cases and succeeded on 17. Both
+classified `7UAW_MF6` as an engine-input-validation failure because prepared
+AutoDock type `CG0` is unsupported. GNINA retained 340 poses at receipt SHA-256
+`60d0e6a67c86075905cd54497ab12a678f0f54a15a11d7e9345122369d390847`,
+receipt-file SHA-256
+`ee90b782166f1126fbe6db28ddeaab977cf3aaf830e49938ee37b2cd2d521138`,
+and artifact-set SHA-256
+`efe518828d5c27b9a6820852091d25e84edf06618baf54e9654599febe295fa2`.
+Smina retained 336 poses at receipt SHA-256
+`912b7081ba35d11e0accdf1af9c5ebb55c09641390f17242fb8b210d67d27733`,
+receipt-file SHA-256
+`5855dc2e6a6ee92602eb34b86eb165236cf744bea8dea112185559396df1e4c8`,
+and artifact-set SHA-256
+`94c15eae0c330814fe0ddb25eb3ce732e6f317bf6fdc3fac523a932295ed5926`.
+Source-tree and installed-wheel exact reexecution reproduced both receipts.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_external_generated_pose_evaluation`
+adds the matching PoseBusters evaluation layer. The installed
+`betelgeuze-engine-v2-posebusters-external-evaluate-generated` command also has
+`materialize` and `verify` modes. It requires one of the exact GNINA/Smina
+execution receipts, its complete private artifact tree, the source chain, and
+the pinned PoseBusters wheel. It preserves every engine score component and all
+133 typed `redock` report values for every evaluated pose, while keeping
+physical validity and direct receptor-frame RMSD as separate endpoints. Its
+metrics include both all-308 and engine-success denominators.
+
+GNINA evaluated 340/340 poses (95% Wilson CI 0.988828–1.0); 304/340 were
+physically valid (0.894118, 95% CI 0.856896–0.922533). On the conditional
+17-case execution-success subset, Top-1 RMSD <= 2 A was 15/17 (0.882353, 95%
+CI 0.656636–0.967120), and Top-5 was 16/17 (0.941176, 95% CI
+0.730180–0.989540). `7XFA_D9J` was the Top-5 miss. Receipt payload and file
+SHA-256 values are
+`0959201d6165d82041447be820977de7ac8ba64b13d1f237ad5b8c914a290259`
+and `6f6920af91c5761c8ce4c3cbed6d7e596042b2c0a1ebb4043ccee200ce84ffd1`.
+
+Smina evaluated 336/336 poses (95% Wilson CI 0.988696–1.0); 312/336 were
+physically valid (0.928571, 95% CI 0.895920–0.951534). On its conditional
+17-case subset, Top-1 was 10/17 (0.588235, 95% CI 0.360054–0.783889), and
+Top-5 was 15/17 (0.882353, 95% CI 0.656636–0.967120). `7LT0_ONJ` and
+`7XFA_D9J` were the Top-5 misses. Receipt payload and file SHA-256 values are
+`0590067f9c1731f6ebcbff36f54ba08d9265f32454b54fa03b7df0dbc328b930`
+and `4f8231d98103d1dffa19f54f085b365886a34932e04802e26fe13573d32fb6ae`.
+
+Both evaluation receipts bind implementation SHA-256
+`6d7de40b994d71f2d320607fbbb6789235d681bf3e108f3729de807ce7cfb66f`,
+PoseBusters runtime identity
+`7834c35fe4052355a1dcc5b67f0b75583f922689a55f12181d4c2bd73e792ca9`,
+and evaluation configuration
+`3c02c32628e5974f23490652467517f26bd60242b680215dcdbae5d4d852ad74`.
+Installed-wheel exact reexecution reproduced both canonical receipts. Two
+correctly staged builds under setuptools 75.8.2 and wheel 0.45.1 were
+byte-identical at wheel SHA-256
+`02356f803a448fdb3f77f5594ef4927eacc1221d319069fa4b81ace25dc4a8f0`.
+
+These numbers are conditional on 17 execution-success cases per engine and do
+not constitute a representative 308-case docking benchmark. The all-case rows
+still contain one engine failure, 16 strict-preparation failures, and 274
+chemistry abstentions. Independent charge/type validation, complete target-family coverage,
+external-fit leakage control, calibration, independent-host execution/
+evaluation, and reviewer acceptance remain open;
+`benchmark_executed=false`, `scientifically_validated=false`, and
+`claim_safe=false` remain mandatory.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_target_cluster_binding`
+adds a conservative observed-target clustering and result-projection layer. The
+installed `betelgeuze-engine-v2-posebusters-target-clusters` command has
+`materialize` and `verify` modes. It exactly reverifies the published archive
+intake and requires caller-pinned canonical Vina, GNINA, and Smina generated-
+pose evaluation receipts. The three receipts must share the same archive,
+corpus-audit, preparation, and ordered 308-case identities.
+
+For each exact receptor PDB, the implementation reads only `ATOM` rows from the
+first coordinate model, preserves the first-observed chain and residue order,
+and hashes exact three-character residue-label sequences. Chains shorter than
+20 residues remain in case identity but cannot create links. A case pair links
+only when at least one eligible chain pair satisfies
+`1 - Levenshtein_distance / max(chain_lengths) >= 0.90`; one maximum-similarity
+chain pair is retained with deterministic ties. Connected components define
+the observed-target clusters. Engine case rows, cluster membership, coverage,
+complete coverage, any-member outcome counts, all-cluster and covered-cluster
+Wilson intervals, and every failure/abstention disposition remain explicit.
+
+The exact local run projected 308 cases onto 296 clusters: 11 clusters contained
+multiple cases, the maximum size was 3, and 13 case-pair links were retained.
+Vina covered 18/296 clusters (95% Wilson CI 0.038808–0.094067) and completely
+covered 17/296 (0.036164–0.090041). GNINA and Smina each covered 17/296 and
+completely covered 16/296 (0.033543–0.085992 for complete coverage). On the
+covered-cluster denominator, explicit any-member Top-1/Top-5 RMSD-hit counts
+were 10/18 and 16/18 for Vina, 15/17 and 16/17 for GNINA, and 10/17 and 15/17
+for Smina. The matching Wilson intervals are retained in the receipt.
+
+Configuration, implementation-source aggregate, receipt payload, and receipt-
+file SHA-256 values are, respectively,
+`5b713f0680f796457da8f48261d78dee5e5c2caf36677f5f9777276083dc3c94`,
+`a030066e19f38086e7c63c27295c0e657bb9ea93f08d1d1199ad9f3fc1d7bd23`,
+`34d782567e816206dcaf2be5207e424b8611a081c9ca6d51bc9500e42ec81e5e`,
+and `fc69398c600c032f7f5c18ca1fc8baedd51c93db0f933c2320d1f597265750aa`.
+Byte-exact reconstruction verified the mode-0600 receipt. Two pinned-tool
+builds were byte-identical at wheel SHA-256
+`050d06e9fc49ef3c79bcaefbd8854de85fce0ce7fe4a56cc83418a460280a597`;
+an isolated installed-wheel console script reproduced the same receipt.
+
+This method is deliberately an observed near-identity proxy, not a biological
+target-family annotation or homology analysis. It does not provide a model-fit
+split or compare the evaluation set with any training corpus. Vina, GNINA, and
+Smina fit/training manifests are recorded as missing; target-sequence and
+ligand/scaffold training leakage remain unevaluated. Consequently
+`external_fit_training_leakage_audit_present=false`,
+`leakage_control_passed=false`, `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` are mandatory.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_rcsb_target_family_binding`
+adds a normalized official-source annotation and result-projection contract.
+The installed
+`betelgeuze-engine-v2-posebusters-rcsb-target-families` command exposes
+`verify-snapshot`, `materialize`, and `verify` modes. It never performs a
+network request. The immutable snapshot records the official RCSB GraphQL and
+holdings endpoints, exact query SHA-256, observation UTC, retrieval-tool byte
+identity, ordered request batches, and canonical normalized response hashes;
+raw API responses are not persisted and RCSB does not independently sign the
+snapshot.
+
+For each exact archive case, strict PDB and SDF parsers recompute native-ligand
+pocket association from non-hydrogen protein and ligand atoms at an inclusive
+6 A cutoff. A one-character archive chain maps first to an exact RCSB
+`asym_id`; only if none exists may an exact `auth_asym_id` match be used. Chain
+truncation, aliases, fuzzy matching, and removed-entry replacement remapping
+are prohibited. The production observation contains 307 active entries and the
+explicit removed `7D6O` disposition. The binding has 306 complete case
+mappings, 299 UniProt-annotated cases, 225 Pfam-annotated cases, one exact
+mapping failure (`6Z14_Q4Z`), and one removed-entry case (`7D6O_MTE`).
+
+Pfam rows are deliberately multi-label: 199 distinct Pfam IDs occur, 46 span
+more than one case, and the largest spans 15. A companion exact Pfam-set
+partition prevents double counting: 149 sets occur, 31 repeat, and the largest
+also spans 15 cases. For Vina, GNINA, and Smina, every family and set row keeps
+the all-member denominator, execution-success count, Top-1/Top-5 RMSD-hit
+counts, Top-1/Top-5 valid-RMSD-hit counts, and Wilson intervals. Source engine
+failures and abstentions remain in those denominators.
+
+GraphQL query, configuration, implementation-source aggregate, snapshot
+payload/file, and target-family receipt payload/file SHA-256 values are,
+respectively,
+`ae19930d182dfd20570bea726cdcfcfee8788555cbec9f62ab6e071c8728fe83`,
+`be8966a25136e3cd74456cc0a4b228a012dec4995933489fbaeb6039aa5bbad8`,
+`060ae95a5156b74701c7d6eeef22ab0087155c35d170065b1f79fe524824b23f`,
+`4d05e0127bb4c4dfedb5fa0a5f2e11d7de22aae481d34d3840676d04d367b51a`,
+`2287ffc895b28828ff39568f3ee0b98707b8160f04fa10196b469fe9ba722358`,
+`ce7d0f32054f05a328554fa04e38964768d2e734157aa9eca4ceb431c2a87076`,
+and `164ef81d7e49dbf32aab6eef56325dfd2ee57e889304e7f3ac0dff7f11a36761`.
+Byte-exact local reexecution verifies the canonical mode-0600 receipt. Two
+pinned-tool builds were byte-identical at wheel SHA-256
+`02d837ed5f624505a5a02bf1a5489f8aec1dcf0bacd15ef39b0fa6abf8526deb`;
+the isolated installed-wheel command reproduced both snapshot and result.
+
+This surface adds pocket-associated RCSB/Pfam provenance, not complete
+biological-family coverage or a leakage audit. The external engines still have
+no fit/training manifests, so target-sequence and ligand/scaffold overlap are
+not evaluated. `external_fit_training_leakage_audit_present=false`,
+`leakage_control_passed=false`, `public_benchmark_claim_authorized=false`,
+`scientifically_validated=false`, and `claim_safe=false` remain mandatory.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_intake`
+provides the receipt-to-calibration boundary for those exact production
+artifacts. The installed
+`betelgeuze-engine-v2-posebusters-ranking-intake` command exposes
+`materialize` and `verify` modes. The caller must pin the Vina, GNINA, and
+Smina evaluation receipt SHA-256 values and the RCSB/Pfam target-family receipt
+SHA-256. The command then verifies every linked archive, preparation,
+execution, and evaluation payload/file identity and requires canonical private
+mode-0600 inputs.
+
+The result is always `split_role=test`. Every evaluated pose retains its exact
+engine-namespaced component order and canonical binary64 values, direct-RMSD
+native-like label, and separate physical-validity label. A case with no
+evaluated pose contributes one term-free failure row, preserving the all-308
+denominator per engine. The current exact receipt reconstructs 924 engine/case
+rows, 1,031 successful pose rows, and 872 failure rows, with 225/308 exact
+Pfam-set assignments. Its Top-1/Top-5 all-case counts are 10/16 for Vina,
+15/16 for GNINA, and 10/15 for Smina. Payload/file SHA-256 values are
+`b6526c7407602721f2ec74f09c8b99d4ecdc7336e69417ed6321840663de9ea0`
+and `88b756cd3e7d460edefe8330dbae6141e72492953a1af4e71bb60b1146574813`.
+Two deterministic wheels matched at
+`c8019fa070e8ca2fc598e26cbdf3c78394fcf9e0963ec656d736b3864681ac51`;
+the installed-wheel receipt was byte-identical to the source-tree receipt.
+
+This object is intentionally not a `PoseRankingCalibrationPartition`.
+Its base `pose_coordinate_sha256` and `scaffold_sha256` fields remain null,
+incomplete Pfam assignment remains explicit, and fit/training plus
+target-sequence and ligand/scaffold leakage receipts are missing. The command
+never calls `fit_pose_ranking_calibration`;
+`test_labels_used_for_fit=false`, `calibration_partition_materialized=false`,
+`leakage_control_passed=false`, and `claim_safe=false` are invariant.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_pose_scaffold_identity`
+provides an exact identity overlay for that immutable intake. The installed
+`betelgeuze-engine-v2-posebusters-pose-scaffold-identity` command exposes
+`materialize` and `verify` modes. Callers pin the archive, preparation,
+Vina/GNINA/Smina execution, and ranking-intake receipt roots plus the three
+private mode-0700 artifact roots. The command requires mode-0600 artifacts,
+strict contiguous PDBQT models and atom mappings, exact three-decimal
+coordinates, and the RDKit 2025.09.6 distribution/host identity already bound
+by the preparation receipt.
+
+Each generated pose receives a SHA-256 over the canonical source-chemistry
+topology projection and all ordered PDBQT coordinate tokens; score remarks are
+excluded. Each failed ranking row remains present with its source error and
+disposition evidence. Per-case scaffold grouping uses canonical non-isomeric
+RDKit Bemis-Murcko SMILES. When the Murcko graph is empty, the explicitly named
+`acyclic_full_heavy_graph` policy hashes the complete non-isomeric heavy graph;
+the API does not represent that fallback as a standard Bemis-Murcko scaffold.
+
+The production overlay binds all 1,903 ranking rows: 1,031 coordinate
+identities and 872 upstream failures. All coordinate identities are unique;
+generated/start chemistry and cross-engine topology mismatch counts are zero.
+All 308 start/reference scaffold pairs agree, producing 229 groups, 15 repeated
+groups, maximum size 21, 275 Bemis-Murcko cases, and 33 acyclic fallbacks.
+Start/reference full chemistry agrees for 305/308 cases; the three differences
+remain explicitly pending independent disposition. Receipt payload/file
+SHA-256 values are
+`e7b92d0fc74b44f652c5196429812fe61165771906d9d487a13ec8719ac52995`
+and `fbf3fa34f974dc8bd35b6564a1c004931a9ea0177f25fd551769b91f4db089d8`.
+The overlay closes only the coordinate and scaffold identity omissions.
+Complete target-family assignment, a disjoint fit manifest, target/ligand/
+scaffold leakage audits, external rerun, and independent review remain absent;
+all fit, partition, scientific, and product-claim flags remain false.
 
 The frozen H5 reference-parameter applicability symbols under
 `betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact

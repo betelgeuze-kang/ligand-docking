@@ -11,7 +11,9 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
     text = Path("packaging/engine-v2/pyproject.toml").read_text(encoding="utf-8")
     name = re.search(r'^name\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
     version = re.search(r'^version\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
-    python_range = re.search(r'^requires-python\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
+    python_range = re.search(
+        r'^requires-python\s*=\s*"([^"]+)"', text, flags=re.MULTILINE
+    )
     assert name and name.group(1) == DISTRIBUTION_NAME
     assert version and version.group(1) == DISTRIBUTION_VERSION
     assert python_range and python_range.group(1) == ">=3.10,<3.13"
@@ -48,7 +50,59 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-posebusters-external-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_external_binary_execution:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-external-evaluate-generated = "betelgeuze_engine_v2.benchmark.public_posebusters_external_generated_pose_evaluation:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-vina-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-evaluate-generated = "betelgeuze_engine_v2.benchmark.public_posebusters_generated_pose_evaluation:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-target-clusters = "betelgeuze_engine_v2.benchmark.public_posebusters_target_cluster_binding:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-rcsb-target-families = "betelgeuze_engine_v2.benchmark.public_posebusters_rcsb_target_family_binding:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-ranking-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_intake:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-pose-scaffold-identity = "betelgeuze_engine_v2.benchmark.public_posebusters_pose_scaffold_identity:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic = "betelgeuze_engine_v2.benchmark.public_posebusters_prepared_ligand_diagnostic:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-openbabel-compare = "betelgeuze_engine_v2.benchmark.public_posebusters_openbabel_charge_type_comparison:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-sulfur-qm-esp = "betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_qm_esp:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-sulfur-interaction = "betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_interaction_energy:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-sulfur-reproduce = "betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_interaction_external_reproduction:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-vina-sulfur-invariance = "betelgeuze_engine_v2.benchmark.public_posebusters_vina_sulfur_type_invariance:main"'
         in text
     )
 

@@ -29,8 +29,35 @@ from betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry import ( 
     verify_posebusters_native_geometry_receipt,
 )
 from betelgeuze_engine_v2.benchmark import (  # noqa: E402
+    public_posebusters_external_binary_execution as external_binary_module,
+    public_posebusters_external_generated_pose_evaluation as external_generated_pose_module,
     public_posebusters_external_preparation as external_preparation_module,
+    public_posebusters_generated_pose_evaluation as generated_pose_module,
+    public_posebusters_rcsb_target_family_binding as rcsb_target_family_module,
+    public_posebusters_target_cluster_binding as target_cluster_module,
     public_posebusters_vina_execution as vina_execution_module,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_external_binary_execution import (  # noqa: E402
+    POSEBUSTERS_EXTERNAL_BINARY_CONFIGURATION_SHA256,
+    PoseBustersExternalBinaryCaseError,
+    PoseBustersExternalBinaryExecutionError,
+    PoseBustersExternalBinaryRuntimeIdentity,
+    materialize_posebusters_external_binary_execution,
+    verify_posebusters_external_binary_execution_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_external_generated_pose_evaluation import (  # noqa: E402
+    PoseBustersExternalGeneratedPoseEvaluationError,
+    materialize_posebusters_external_generated_pose_evaluation,
+    verify_posebusters_external_generated_pose_evaluation_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_generated_pose_evaluation import (  # noqa: E402
+    POSEBUSTERS_GENERATED_POSE_CONFIGURATION_SHA256,
+    POSEBUSTERS_GENERATED_POSE_SELECTED_COLUMNS,
+    PoseBustersGeneratedPoseEvaluationError,
+    PoseBustersGeneratedPoseReportValue,
+    PoseBustersGeneratedPoseRuntimeIdentity,
+    materialize_posebusters_generated_pose_evaluation,
+    verify_posebusters_generated_pose_evaluation_receipt,
 )
 from betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation import (  # noqa: E402
     POSEBUSTERS_EXTERNAL_PREPARATION_CONFIGURATION_SHA256,
@@ -224,9 +251,7 @@ def _fixture(
     archive_source = archive_path.read_bytes()
     with zipfile.ZipFile(archive_path, "r") as archive:
         infos = archive.infolist()
-        uncompressed_size = sum(
-            info.file_size for info in infos if not info.is_dir()
-        )
+        uncompressed_size = sum(info.file_size for info in infos if not info.is_dir())
     contract = PoseBustersArchiveContract(
         dataset_id="synthetic_posebusters_corpus_audit",
         archive_sha256=_sha(archive_source),
@@ -317,8 +342,14 @@ def test_corpus_audit_retains_all_cases_and_separates_scope_metrics(
     }
     assert {name: metric.numerator for name, metric in metrics.items()} == expected
     assert all(metric.denominator == 2 for metric in metrics.values())
-    assert all(0.0 <= metric.confidence_interval_low <= metric.estimate for metric in metrics.values())
-    assert all(metric.estimate <= metric.confidence_interval_high <= 1.0 for metric in metrics.values())
+    assert all(
+        0.0 <= metric.confidence_interval_low <= metric.estimate
+        for metric in metrics.values()
+    )
+    assert all(
+        metric.estimate <= metric.confidence_interval_high <= 1.0
+        for metric in metrics.values()
+    )
     payload = receipt.to_dict()
     assert payload["archive_extracted"] is False
     assert payload["external_stereo_oracle_present"] is False
@@ -330,9 +361,7 @@ def test_corpus_audit_retains_all_cases_and_separates_scope_metrics(
 def test_corpus_audit_receipt_is_private_no_overwrite_and_exactly_reexecutable(
     tmp_path: Path,
 ) -> None:
-    archive_path, selection_path, intake_path, contract = _fixture(
-        tmp_path / "source"
-    )
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
     receipt = materialize_posebusters_corpus_audit(
         archive_path,
         selection_path,
@@ -386,9 +415,7 @@ def test_corpus_audit_fails_closed_when_intake_inputs_change(tmp_path: Path) -> 
 def test_native_geometry_preflight_is_all_case_claim_closed_and_reexecutable(
     tmp_path: Path,
 ) -> None:
-    archive_path, selection_path, intake_path, contract = _fixture(
-        tmp_path / "source"
-    )
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
     corpus = materialize_posebusters_corpus_audit(
         archive_path,
         selection_path,
@@ -409,7 +436,7 @@ def test_native_geometry_preflight_is_all_case_claim_closed_and_reexecutable(
     assert receipt.processed_case_count == 2
     first, second = receipt.case_rows
     assert first.status == "evaluated"
-    assert first.minimum_receptor_ligand_ratio_hex == 0.0.hex()
+    assert first.minimum_receptor_ligand_ratio_hex == (0.0).hex()
     assert first.deep_penetration_free is False
     assert first.overlap_free is False
     assert first.ligand_self_overlap_free is True
@@ -494,12 +521,8 @@ class _SuccessfulExternalPreparationRuntime:
         receptor_pdb: bytes,
         ligand_start_sdf: bytes,
     ) -> PoseBustersExternalPreparedBytes:
-        receptor = (
-            f"REMARK receptor source {_sha(receptor_pdb)}\nEND\n".encode("ascii")
-        )
-        ligand = (
-            f"REMARK ligand source {_sha(ligand_start_sdf)}\nEND\n".encode("ascii")
-        )
+        receptor = f"REMARK receptor source {_sha(receptor_pdb)}\nEND\n".encode("ascii")
+        ligand = f"REMARK ligand source {_sha(ligand_start_sdf)}\nEND\n".encode("ascii")
         return PoseBustersExternalPreparedBytes(
             receptor_pdbqt=receptor,
             ligand_pdbqt=ligand,
@@ -535,9 +558,7 @@ def test_external_preparation_materializes_only_candidate_and_exact_artifacts(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    archive_path, selection_path, intake_path, contract = _fixture(
-        tmp_path / "source"
-    )
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
     corpus = materialize_posebusters_corpus_audit(
         archive_path,
         selection_path,
@@ -647,9 +668,7 @@ def test_external_preparation_retains_strict_template_failure_row(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    archive_path, selection_path, intake_path, contract = _fixture(
-        tmp_path / "source"
-    )
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
     corpus = materialize_posebusters_corpus_audit(
         archive_path,
         selection_path,
@@ -763,9 +782,7 @@ def _materialize_fake_preparation(
     *,
     runtime: object,
 ) -> tuple[Path, Path, PoseBustersExternalPreparationReceipt]:
-    archive_path, selection_path, intake_path, contract = _fixture(
-        tmp_path / "source"
-    )
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
     corpus = materialize_posebusters_corpus_audit(
         archive_path,
         selection_path,
@@ -925,3 +942,1536 @@ def test_vina_execution_retains_engine_and_preparation_failures(
     assert receipt.engine_failure_case_count == int(first_status == "engine_failure")
     assert receipt.attempted_case_count == int(first_status == "engine_failure")
     assert not tuple((tmp_path / "vina-poses").iterdir())
+
+
+def _external_binary_pose_output(engine_id: str) -> bytes:
+    score_rows = (
+        b"REMARK minimizedAffinity -7.000\n"
+        if engine_id == "smina"
+        else (
+            b"REMARK minimizedAffinity -7.000\n"
+            b"REMARK CNNscore 0.900\n"
+            b"REMARK CNNaffinity 6.100\n"
+        )
+    )
+    return (
+        b"MODEL 1\n"
+        + score_rows
+        + b"ROOT\n"
+        + b"ATOM      1  C   LIG A   1       0.000   0.000   0.000  0.00  0.00      0.000 C\n"
+        + b"ENDROOT\n"
+        + b"TORSDOF 0\n"
+        + b"ENDMDL\n"
+    )
+
+
+def _fake_external_binary_identity(
+    engine_id: str = "smina",
+) -> PoseBustersExternalBinaryRuntimeIdentity:
+    spec = external_binary_module._ENGINE_SPECS[engine_id]
+    dependencies = ()
+    if engine_id == "gnina":
+        dependencies = tuple(
+            external_binary_module.PoseBustersExternalBinaryDependency(
+                requested_name=name,
+                payload_name=name,
+                sha256=_sha(f"fake {name}".encode("ascii")),
+                size_bytes=len(name),
+            )
+            for name in external_binary_module._GNINA_REQUIRED_LIBRARIES
+        )
+    return PoseBustersExternalBinaryRuntimeIdentity(
+        engine_id=engine_id,
+        engine_version=spec["version"],
+        version_output=spec["version_output"],
+        executable_sha256=spec["executable_sha256"],
+        executable_size_bytes=spec["executable_size_bytes"],
+        source_url=spec["source_url"],
+        source_release_date=spec["source_release_date"],
+        dynamic_dependencies=dependencies,
+        platform_system="Linux",
+        platform_machine="x86_64",
+        libc_name="glibc",
+        libc_version="2.35",
+    )
+
+
+class _SuccessfulExternalBinaryRuntime:
+    identity = _fake_external_binary_identity()
+
+    def execute(
+        self,
+        receptor_pdbqt: bytes,
+        ligand_pdbqt: bytes,
+        pocket_center_binary64_hex: tuple[str, ...],
+    ) -> external_binary_module._ExternalExecutionBytes:
+        assert receptor_pdbqt
+        assert ligand_pdbqt
+        assert len(pocket_center_binary64_hex) == 3
+        poses = _external_binary_pose_output("smina")
+        return external_binary_module._ExternalExecutionBytes(
+            poses_pdbqt=poses,
+            pose_scores=external_binary_module._parse_pose_output(
+                "smina",
+                poses,
+            ),
+            diagnostic_sha256=_sha(b"bounded Smina diagnostic"),
+            diagnostic_size_bytes=len(b"bounded Smina diagnostic"),
+        )
+
+
+class _FailingExternalBinaryRuntime:
+    identity = _fake_external_binary_identity()
+
+    def execute(
+        self,
+        receptor_pdbqt: bytes,
+        ligand_pdbqt: bytes,
+        pocket_center_binary64_hex: tuple[str, ...],
+    ) -> external_binary_module._ExternalExecutionBytes:
+        assert receptor_pdbqt
+        assert ligand_pdbqt
+        assert len(pocket_center_binary64_hex) == 3
+        raise PoseBustersExternalBinaryCaseError(
+            stage="engine_execution",
+            error_code="smina_execution_failed",
+            error_type="RuntimeError",
+            error_message_sha256=_sha(b"bounded Smina failure"),
+            diagnostic_sha256=_sha(b"bounded Smina diagnostic"),
+            diagnostic_size_bytes=len(b"bounded Smina diagnostic"),
+        )
+
+
+def test_external_binary_execution_materializes_all_rows_and_exact_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    preparation_path, preparation_artifact_root, preparation = (
+        _materialize_fake_preparation(
+            tmp_path,
+            monkeypatch,
+            runtime=_SuccessfulExternalPreparationRuntime(),
+        )
+    )
+    monkeypatch.setattr(
+        external_binary_module,
+        "_load_runtime",
+        lambda *_args: _SuccessfulExternalBinaryRuntime(),
+    )
+    output_artifact_root = tmp_path / "smina-poses"
+    scratch_root = tmp_path / "smina-scratch"
+    executable_path = tmp_path / "official-smina.static"
+    common = {
+        "engine_id": "smina",
+        "preparation_receipt_path": preparation_path,
+        "preparation_artifact_root": preparation_artifact_root,
+        "output_artifact_root": output_artifact_root,
+        "scratch_root": scratch_root,
+        "executable_path": executable_path,
+        "expected_preparation_receipt_sha256": (preparation.fingerprint_sha256),
+    }
+
+    receipt = materialize_posebusters_external_binary_execution(**common)
+
+    assert (
+        receipt.configuration_sha256
+        == (POSEBUSTERS_EXTERNAL_BINARY_CONFIGURATION_SHA256["smina"])
+    )
+    assert receipt.attempted_case_count == 1
+    assert receipt.success_case_count == 1
+    assert receipt.engine_failure_case_count == 0
+    assert receipt.generated_pose_count == 1
+    first, second = receipt.case_rows
+    assert first.status == "success"
+    assert first.pose_scores[0].components_binary64_hex == ((-7.0).hex(),)
+    assert second.status == "abstain_chemistry_scope"
+    metrics = {metric.metric_id: metric for metric in receipt.metrics}
+    assert metrics["smina_engine_success_rate"].numerator == 1
+    assert metrics["generated_pose_validity_evaluation_rate"].numerator == 0
+    pose_path = output_artifact_root / first.pose_artifact.relative_path
+    assert stat.S_IMODE(output_artifact_root.stat().st_mode) == 0o700
+    assert stat.S_IMODE(pose_path.stat().st_mode) == 0o600
+    assert pose_path.read_bytes() == _external_binary_pose_output("smina")
+    payload = receipt.to_dict()
+    assert payload["smina_same_input_execution_performed"] is True
+    assert payload["gnina_same_input_execution_performed"] is False
+    assert payload["benchmark_executed"] is False
+    assert payload["claim_safe"] is False
+
+    receipt_path = tmp_path / "receipts" / "smina-execution.json"
+    receipt.write_json(receipt_path)
+    assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
+    verified = verify_posebusters_external_binary_execution_receipt(
+        execution_receipt_path=receipt_path,
+        **common,
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    with pytest.raises(
+        PoseBustersExternalBinaryExecutionError,
+        match="already exists",
+    ):
+        receipt.write_json(receipt_path)
+
+    pose_path.write_bytes(pose_path.read_bytes() + b"tamper")
+    with pytest.raises(
+        PoseBustersExternalBinaryExecutionError,
+        match="artifact tree does not match exact reexecution",
+    ):
+        verify_posebusters_external_binary_execution_receipt(
+            execution_receipt_path=receipt_path,
+            **common,
+        )
+
+
+def test_external_binary_execution_retains_engine_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    preparation_path, preparation_artifact_root, preparation = (
+        _materialize_fake_preparation(
+            tmp_path,
+            monkeypatch,
+            runtime=_SuccessfulExternalPreparationRuntime(),
+        )
+    )
+    monkeypatch.setattr(
+        external_binary_module,
+        "_load_runtime",
+        lambda *_args: _FailingExternalBinaryRuntime(),
+    )
+
+    receipt = materialize_posebusters_external_binary_execution(
+        "smina",
+        preparation_path,
+        preparation_artifact_root,
+        tmp_path / "smina-failure-poses",
+        tmp_path / "smina-failure-scratch",
+        tmp_path / "official-smina.static",
+        expected_preparation_receipt_sha256=preparation.fingerprint_sha256,
+    )
+
+    first, second = receipt.case_rows
+    assert first.status == "engine_failure"
+    assert first.error_code == "smina_execution_failed"
+    assert first.pose_artifact is None
+    assert second.status == "abstain_chemistry_scope"
+    assert receipt.attempted_case_count == 1
+    assert receipt.success_case_count == 0
+    assert receipt.engine_failure_case_count == 1
+    assert not tuple((tmp_path / "smina-failure-poses").iterdir())
+
+
+def test_external_binary_pose_parser_and_smina_timing_normalization(
+    tmp_path: Path,
+) -> None:
+    smina_scores = external_binary_module._parse_pose_output(
+        "smina",
+        _external_binary_pose_output("smina"),
+    )
+    gnina_scores = external_binary_module._parse_pose_output(
+        "gnina",
+        _external_binary_pose_output("gnina"),
+    )
+
+    assert smina_scores[0].components_binary64_hex == ((-7.0).hex(),)
+    assert gnina_scores[0].components_binary64_hex == tuple(
+        value.hex() for value in (-7.0, 0.9, 6.1)
+    )
+    runtime = external_binary_module._ExternalBinaryRuntime(
+        engine_id="smina",
+        executable_path=tmp_path / "smina.static",
+        library_dirs=(),
+        identity=_fake_external_binary_identity(),
+        scratch_root=tmp_path / "diagnostic-scratch",
+    )
+    assert (
+        runtime._diagnostic(
+            b"Refine time 10.274\nLoop time 10.855\nkept\n",
+            (),
+        )
+        == b"Refine time <SECONDS>\nLoop time <SECONDS>\nkept\n"
+    )
+    diagnostic = (
+        b'Parse error on line 22 in file "<LIGAND>": ATOM syntax incorrect: '
+        b'"CG0" is not a valid AutoDock type.\n'
+    )
+    failure = external_binary_module._classified_execution_failure(
+        "gnina",
+        1,
+        diagnostic,
+    )
+    assert failure.stage == "engine_input_validation"
+    assert failure.error_code == ("gnina_unsupported_prepared_autodock_atom_type")
+    assert failure.error_type == "UnsupportedPreparedAutoDockAtomType"
+    assert failure.diagnostic_sha256 == _sha(diagnostic)
+
+    fallback = external_binary_module._classified_execution_failure(
+        "smina",
+        7,
+        b"unclassified failure\n",
+    )
+    assert fallback.stage == "engine_execution"
+    assert fallback.error_code == "smina_execution_failed"
+    assert fallback.error_type == "CalledProcessError"
+
+
+def _fake_generated_pose_runtime_identity() -> PoseBustersGeneratedPoseRuntimeIdentity:
+    dependencies = tuple(
+        PoseBustersExternalPreparationDependency(
+            distribution_name=name,
+            version=version,
+            payload_sha256=_sha(f"fake {name} payload".encode("ascii")),
+            payload_file_count=1,
+            payload_size_bytes=len(name) + 16,
+        )
+        for name, version in sorted(
+            generated_pose_module.POSEBUSTERS_GENERATED_POSE_DEPENDENCY_PINS.items()
+        )
+    )
+    return PoseBustersGeneratedPoseRuntimeIdentity(
+        preparation_runtime=_fake_external_preparation_runtime(),
+        additional_dependencies=dependencies,
+        posebusters_wheel_sha256=(
+            generated_pose_module.POSEBUSTERS_GENERATED_POSE_WHEEL_SHA256
+        ),
+        posebusters_wheel_size_bytes=(
+            generated_pose_module.POSEBUSTERS_GENERATED_POSE_WHEEL_SIZE_BYTES
+        ),
+        redock_configuration_sha256=(
+            generated_pose_module.POSEBUSTERS_GENERATED_POSE_REDOCK_CONFIGURATION_SHA256
+        ),
+        posebusters_api_source_sha256=_sha(b"fake PoseBusters API source"),
+        meeko_export_source_sha256=_sha(b"fake Meeko export source"),
+    )
+
+
+def _fake_generated_pose_report_values() -> tuple[
+    PoseBustersGeneratedPoseReportValue,
+    ...,
+]:
+    rows = [
+        PoseBustersGeneratedPoseReportValue(
+            ordinal=ordinal,
+            source_name=source_name,
+            output_id=generated_pose_module._output_id(source_name),
+            occurrence=0,
+            value_type="boolean",
+            value=True,
+        )
+        for ordinal, source_name in enumerate(
+            POSEBUSTERS_GENERATED_POSE_SELECTED_COLUMNS
+        )
+    ]
+    for source_name, value in (
+        ("rmsd", 1.5),
+        ("kabsch_rmsd", 1.25),
+        ("centroid_distance", 0.5),
+        ("energy_ratio", 1.1),
+    ):
+        rows.append(
+            PoseBustersGeneratedPoseReportValue(
+                ordinal=len(rows),
+                source_name=source_name,
+                output_id=source_name,
+                occurrence=0,
+                value_type="binary64",
+                value=value.hex(),
+            )
+        )
+    return tuple(rows)
+
+
+class _SuccessfulGeneratedPoseRuntime:
+    identity = _fake_generated_pose_runtime_identity()
+
+    def evaluate_case(
+        self,
+        poses_pdbqt: bytes,
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+        expected_pose_count: int,
+    ) -> tuple[generated_pose_module._RuntimePoseOutcome, ...]:
+        assert poses_pdbqt
+        assert receptor_pdb
+        assert reference_ligands_sdf
+        assert expected_pose_count == 1
+        return (
+            generated_pose_module._RuntimePoseOutcome(
+                status="evaluated",
+                report_values=_fake_generated_pose_report_values(),
+                all_non_rmsd_binary_tests_pass=True,
+                identity_pass=True,
+                intramolecular_geometry_pass=True,
+                internal_energy_pass=True,
+                intermolecular_distance_and_overlap_pass=True,
+                rmsd_evaluated=True,
+                rmsd_within_2_angstrom=True,
+                direct_rmsd_angstrom_binary64_hex=(1.5).hex(),
+                kabsch_rmsd_angstrom_binary64_hex=(1.25).hex(),
+                centroid_distance_angstrom_binary64_hex=(0.5).hex(),
+                energy_ratio_binary64_hex=(1.1).hex(),
+                diagnostic_sha256=_sha(b"fake PoseBusters diagnostic"),
+                diagnostic_size_bytes=len(b"fake PoseBusters diagnostic"),
+            ),
+        )
+
+
+class _FailingGeneratedPoseRuntime:
+    identity = _fake_generated_pose_runtime_identity()
+
+    def evaluate_case(
+        self,
+        poses_pdbqt: bytes,
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+        expected_pose_count: int,
+    ) -> tuple[generated_pose_module._RuntimePoseOutcome, ...]:
+        assert poses_pdbqt
+        assert receptor_pdb
+        assert reference_ligands_sdf
+        assert expected_pose_count == 1
+        return (
+            generated_pose_module._RuntimePoseOutcome(
+                status="evaluation_failure",
+                error_stage="posebusters_redock",
+                error_code="posebusters_pose_evaluation_failed",
+                error_type="RuntimeError",
+                error_message_sha256=_sha(b"bounded generated-pose failure"),
+                diagnostic_sha256=_sha(b"bounded generated-pose diagnostic"),
+                diagnostic_size_bytes=len(b"bounded generated-pose diagnostic"),
+            ),
+        )
+
+
+def _materialize_fake_generated_pose_chain(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[dict[str, object], object, object]:
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = tmp_path / "receipts" / "corpus.json"
+    corpus.write_json(corpus_path)
+    preparation_runtime = _SuccessfulExternalPreparationRuntime()
+    monkeypatch.setattr(
+        external_preparation_module,
+        "_load_meeko_runtime",
+        lambda: preparation_runtime,
+    )
+    preparation_artifact_root = tmp_path / "prepared"
+    preparation = materialize_posebusters_external_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        preparation_artifact_root,
+        contract=contract,
+    )
+    preparation_path = tmp_path / "receipts" / "preparation.json"
+    preparation.write_json(preparation_path)
+    monkeypatch.setattr(
+        vina_execution_module,
+        "_load_vina_runtime",
+        lambda _scratch_root: _SuccessfulVinaRuntime(),
+    )
+    vina_artifact_root = tmp_path / "vina-poses"
+    vina = materialize_posebusters_vina_execution(
+        preparation_path,
+        preparation_artifact_root,
+        vina_artifact_root,
+        tmp_path / "vina-scratch",
+        expected_preparation_receipt_sha256=preparation.fingerprint_sha256,
+    )
+    vina_path = tmp_path / "receipts" / "vina.json"
+    vina.write_json(vina_path)
+    wheel_path = tmp_path / "posebusters-0.6.5-py3-none-any.whl"
+    common: dict[str, object] = {
+        "archive_path": archive_path,
+        "selection_path": selection_path,
+        "intake_receipt_path": intake_path,
+        "corpus_audit_receipt_path": corpus_path,
+        "preparation_receipt_path": preparation_path,
+        "preparation_artifact_root": preparation_artifact_root,
+        "vina_receipt_path": vina_path,
+        "vina_artifact_root": vina_artifact_root,
+        "posebusters_wheel_path": wheel_path,
+        "scratch_root": tmp_path / "posebusters-scratch",
+        "expected_preparation_receipt_sha256": (preparation.fingerprint_sha256),
+        "expected_vina_receipt_sha256": vina.fingerprint_sha256,
+        "contract": contract,
+    }
+    return common, preparation, vina
+
+
+def test_generated_pose_evaluation_retains_all_rows_metrics_and_exact_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    common, _preparation, _vina = _materialize_fake_generated_pose_chain(
+        tmp_path,
+        monkeypatch,
+    )
+    monkeypatch.setattr(
+        generated_pose_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: _SuccessfulGeneratedPoseRuntime(),
+    )
+
+    receipt = materialize_posebusters_generated_pose_evaluation(**common)
+
+    assert receipt.configuration_sha256 == (
+        POSEBUSTERS_GENERATED_POSE_CONFIGURATION_SHA256
+    )
+    assert receipt.generated_pose_count == 1
+    assert receipt.evaluated_pose_count == 1
+    assert receipt.physically_valid_pose_count == 1
+    first, second = receipt.case_rows
+    assert first.status == "evaluated"
+    assert first.top_1_valid_rmsd_hit is True
+    assert first.pose_results[0].report_sha256
+    assert second.status == "abstain_chemistry_scope"
+    metrics = {
+        (metric.metric_id, metric.denominator_scope): metric
+        for metric in receipt.metrics
+    }
+    assert (
+        metrics[("posebusters_complete_case_evaluation_rate", "all_cases")].numerator
+        == 1
+    )
+    assert (
+        metrics[("top_1_rmsd_le_2_angstrom_rate", "vina_success_cases")].numerator == 1
+    )
+    assert metrics[("physically_valid_pose_rate", "generated_poses")].numerator == 1
+    payload = receipt.to_dict()
+    assert payload["posebusters_redock_oracle_executed"] is True
+    assert payload["benchmark_executed"] is False
+    assert payload["scientifically_validated"] is False
+    assert payload["claim_safe"] is False
+
+    output = tmp_path / "receipts" / "generated-pose-evaluation.json"
+    receipt.write_json(output)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    verified = verify_posebusters_generated_pose_evaluation_receipt(
+        evaluation_receipt_path=output,
+        **common,
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    with pytest.raises(
+        PoseBustersGeneratedPoseEvaluationError,
+        match="already exists",
+    ):
+        receipt.write_json(output)
+    output.write_bytes(
+        output.read_bytes().replace(
+            b'"claim_safe":false',
+            b'"claim_safe":true',
+        )
+    )
+    with pytest.raises(
+        PoseBustersGeneratedPoseEvaluationError,
+        match="exact reexecution",
+    ):
+        verify_posebusters_generated_pose_evaluation_receipt(
+            evaluation_receipt_path=output,
+            **common,
+        )
+
+
+def test_generated_pose_evaluation_retains_pose_failure_row(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    common, _preparation, _vina = _materialize_fake_generated_pose_chain(
+        tmp_path,
+        monkeypatch,
+    )
+    monkeypatch.setattr(
+        generated_pose_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: _FailingGeneratedPoseRuntime(),
+    )
+
+    receipt = materialize_posebusters_generated_pose_evaluation(**common)
+
+    first, second = receipt.case_rows
+    assert first.status == "evaluation_failure"
+    assert first.pose_results[0].status == "evaluation_failure"
+    assert first.pose_results[0].error_code == ("posebusters_pose_evaluation_failed")
+    assert second.status == "abstain_chemistry_scope"
+    metrics = {
+        (metric.metric_id, metric.denominator_scope): metric
+        for metric in receipt.metrics
+    }
+    assert (
+        metrics[("posebusters_case_evaluation_failure_rate", "all_cases")].numerator
+        == 1
+    )
+    assert metrics[("pose_evaluation_success_rate", "generated_poses")].numerator == 0
+
+
+def _materialize_fake_external_generated_pose_chain(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    execution_runtime: object,
+) -> tuple[dict[str, object], object, object]:
+    archive_path, selection_path, intake_path, contract = _fixture(tmp_path / "source")
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = tmp_path / "receipts" / "corpus.json"
+    corpus.write_json(corpus_path)
+    monkeypatch.setattr(
+        external_preparation_module,
+        "_load_meeko_runtime",
+        lambda: _SuccessfulExternalPreparationRuntime(),
+    )
+    preparation_artifact_root = tmp_path / "prepared"
+    preparation = materialize_posebusters_external_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        preparation_artifact_root,
+        contract=contract,
+    )
+    preparation_path = tmp_path / "receipts" / "preparation.json"
+    preparation.write_json(preparation_path)
+    monkeypatch.setattr(
+        external_binary_module,
+        "_load_runtime",
+        lambda *_args: execution_runtime,
+    )
+    execution_artifact_root = tmp_path / "smina-poses"
+    execution = materialize_posebusters_external_binary_execution(
+        "smina",
+        preparation_path,
+        preparation_artifact_root,
+        execution_artifact_root,
+        tmp_path / "smina-scratch",
+        tmp_path / "official-smina.static",
+        expected_preparation_receipt_sha256=preparation.fingerprint_sha256,
+    )
+    execution_path = tmp_path / "receipts" / "smina-execution.json"
+    execution.write_json(execution_path)
+    common: dict[str, object] = {
+        "engine_id": "smina",
+        "archive_path": archive_path,
+        "selection_path": selection_path,
+        "intake_receipt_path": intake_path,
+        "corpus_audit_receipt_path": corpus_path,
+        "preparation_receipt_path": preparation_path,
+        "preparation_artifact_root": preparation_artifact_root,
+        "execution_receipt_path": execution_path,
+        "execution_artifact_root": execution_artifact_root,
+        "posebusters_wheel_path": (
+            tmp_path / "posebusters-0.6.5-py3-none-any.whl"
+        ),
+        "scratch_root": tmp_path / "external-posebusters-scratch",
+        "expected_preparation_receipt_sha256": (
+            preparation.fingerprint_sha256
+        ),
+        "expected_execution_receipt_sha256": execution.fingerprint_sha256,
+        "contract": contract,
+    }
+    return common, preparation, execution
+
+
+def test_external_generated_pose_evaluation_retains_scores_and_exact_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    common, _preparation, _execution = (
+        _materialize_fake_external_generated_pose_chain(
+            tmp_path,
+            monkeypatch,
+            execution_runtime=_SuccessfulExternalBinaryRuntime(),
+        )
+    )
+    monkeypatch.setattr(
+        external_generated_pose_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: _SuccessfulGeneratedPoseRuntime(),
+    )
+
+    receipt = materialize_posebusters_external_generated_pose_evaluation(
+        **common
+    )
+
+    assert receipt.engine_id == "smina"
+    assert receipt.generated_pose_count == 1
+    assert receipt.evaluated_pose_count == 1
+    assert receipt.physically_valid_pose_count == 1
+    first, second = receipt.case_rows
+    assert first.status == "evaluated"
+    assert first.top_1_valid_rmsd_hit is True
+    assert first.pose_results[0].score_components_binary64_hex == (
+        (-7.0).hex(),
+    )
+    assert first.pose_results[0].report_sha256
+    assert second.status == "abstain_chemistry_scope"
+    metrics = {
+        (metric.metric_id, metric.denominator_scope): metric
+        for metric in receipt.metrics
+    }
+    assert metrics[("top_1_rmsd_le_2_angstrom_rate", "all_cases")].denominator == 2
+    assert (
+        metrics[("top_1_rmsd_le_2_angstrom_rate", "smina_success_cases")].numerator
+        == 1
+    )
+    assert metrics[("physically_valid_pose_rate", "generated_poses")].numerator == 1
+    payload = receipt.to_dict()
+    assert payload["score_component_order"] == [
+        "minimized_affinity_kcal_per_mol"
+    ]
+    assert payload["posebusters_redock_oracle_executed"] is True
+    assert payload["benchmark_executed"] is False
+    assert payload["claim_safe"] is False
+
+    output = tmp_path / "receipts" / "smina-posebusters.json"
+    receipt.write_json(output)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    verified = verify_posebusters_external_generated_pose_evaluation_receipt(
+        evaluation_receipt_path=output,
+        **common,
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    output.write_bytes(
+        output.read_bytes().replace(
+            b'"claim_safe":false',
+            b'"claim_safe":true',
+        )
+    )
+    with pytest.raises(
+        PoseBustersExternalGeneratedPoseEvaluationError,
+        match="exact reexecution",
+    ):
+        verify_posebusters_external_generated_pose_evaluation_receipt(
+            evaluation_receipt_path=output,
+            **common,
+        )
+
+
+@pytest.mark.parametrize(
+    ("execution_runtime", "evaluation_runtime", "expected_status"),
+    (
+        (
+            _SuccessfulExternalBinaryRuntime(),
+            _FailingGeneratedPoseRuntime(),
+            "evaluation_failure",
+        ),
+        (
+            _FailingExternalBinaryRuntime(),
+            _SuccessfulGeneratedPoseRuntime(),
+            "blocked_engine_failure",
+        ),
+    ),
+)
+def test_external_generated_pose_evaluation_retains_failure_rows(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    execution_runtime: object,
+    evaluation_runtime: object,
+    expected_status: str,
+) -> None:
+    common, _preparation, _execution = (
+        _materialize_fake_external_generated_pose_chain(
+            tmp_path,
+            monkeypatch,
+            execution_runtime=execution_runtime,
+        )
+    )
+    monkeypatch.setattr(
+        external_generated_pose_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: evaluation_runtime,
+    )
+
+    receipt = materialize_posebusters_external_generated_pose_evaluation(
+        **common
+    )
+
+    first, second = receipt.case_rows
+    assert first.status == expected_status
+    assert second.status == "abstain_chemistry_scope"
+    if expected_status == "evaluation_failure":
+        assert first.pose_results[0].error_code == (
+            "posebusters_pose_evaluation_failed"
+        )
+    else:
+        assert first.execution_error_code == "smina_execution_failed"
+        assert not first.pose_results
+
+
+def test_generated_pose_runtime_batches_all_case_conformers(
+    tmp_path: Path,
+) -> None:
+    class _Columns:
+        def __init__(self, values: tuple[str, ...]) -> None:
+            self._values = values
+
+        def tolist(self) -> list[str]:
+            return list(self._values)
+
+    class _ReportRow:
+        def __init__(self, values: tuple[object, ...]) -> None:
+            self._values = values
+
+        def tolist(self) -> list[object]:
+            return list(self._values)
+
+    class _ILoc:
+        def __init__(self, rows: tuple[tuple[object, ...], ...]) -> None:
+            self._rows = rows
+
+        def __getitem__(self, index: int) -> _ReportRow:
+            return _ReportRow(self._rows[index])
+
+    class _Report:
+        def __init__(
+            self,
+            columns: tuple[str, ...],
+            rows: tuple[tuple[object, ...], ...],
+        ) -> None:
+            self.columns = _Columns(columns)
+            self.iloc = _ILoc(rows)
+            self.shape = (len(rows), len(columns))
+
+    columns = (
+        *POSEBUSTERS_GENERATED_POSE_SELECTED_COLUMNS,
+        "rmsd",
+        "kabsch_rmsd",
+        "centroid_distance",
+        "energy_ratio",
+    )
+    report_rows = tuple(
+        (
+            *(
+                (rmsd <= 2.0 if name == "rmsd_≤_2å" else True)
+                for name in POSEBUSTERS_GENERATED_POSE_SELECTED_COLUMNS
+            ),
+            rmsd,
+            rmsd - 0.1,
+            0.25,
+            1.05,
+        )
+        for rmsd in (1.0, 3.0)
+    )
+
+    class _BatchEngine:
+        calls: list[int] = []
+
+        def __init__(self, *, config: str, max_workers: int) -> None:
+            assert config == "redock"
+            assert max_workers == 0
+
+        def bust(
+            self,
+            poses: list[object],
+            *,
+            mol_true: Path,
+            mol_cond: Path,
+            full_report: bool,
+        ) -> _Report:
+            assert mol_true.is_file()
+            assert mol_cond.is_file()
+            assert full_report is True
+            self.calls.append(len(poses))
+            return _Report(columns, report_rows)
+
+    class _PDBQTMolecule:
+        def __init__(self, source: str, *, skip_typing: bool) -> None:
+            assert source == "MODEL 1\nENDMDL\n"
+            assert skip_typing is True
+
+    class _Molecule:
+        def GetNumConformers(self) -> int:
+            return 2
+
+        def GetConformer(self, index: int) -> object:
+            assert index in (0, 1)
+            return object()
+
+    class _RDKitMolCreate:
+        @staticmethod
+        def from_pdbqt_mol(
+            _molecule: object,
+            *,
+            only_cluster_leads: bool,
+            keep_flexres: bool,
+        ) -> list[_Molecule]:
+            assert only_cluster_leads is False
+            assert keep_flexres is False
+            return [_Molecule()]
+
+    class _Pose:
+        def __init__(self) -> None:
+            self._conformer_count = 0
+
+        def RemoveAllConformers(self) -> None:
+            self._conformer_count = 0
+
+        def AddConformer(self, _conformer: object, *, assignId: bool) -> int:
+            assert assignId is True
+            self._conformer_count = 1
+            return 0
+
+        def GetNumConformers(self) -> int:
+            return self._conformer_count
+
+    class _Chem:
+        @staticmethod
+        def Mol(_molecule: object) -> _Pose:
+            return _Pose()
+
+        @staticmethod
+        def Conformer(conformer: object) -> object:
+            return conformer
+
+    class _Numpy:
+        bool_ = bool
+        integer = int
+        floating = float
+
+    class _Pandas:
+        NA = object()
+
+        @staticmethod
+        def isna(_value: object) -> bool:
+            return False
+
+    runtime = generated_pose_module._PoseBustersRuntime(
+        PoseBusters=_BatchEngine,
+        PDBQTMolecule=_PDBQTMolecule,
+        RDKitMolCreate=_RDKitMolCreate,
+        Chem=_Chem,
+        numpy_module=_Numpy,
+        pandas_module=_Pandas,
+        identity=_fake_generated_pose_runtime_identity(),
+        scratch_root=tmp_path / "batch-scratch",
+    )
+
+    outcomes = runtime.evaluate_case(
+        b"MODEL 1\nENDMDL\n",
+        b"END\n",
+        b"M  END\n$$$$\n",
+        2,
+    )
+
+    assert _BatchEngine.calls == [2]
+    assert tuple(row.status for row in outcomes) == ("evaluated", "evaluated")
+    assert tuple(row.rmsd_within_2_angstrom for row in outcomes) == (True, False)
+    assert all(row.intramolecular_geometry_pass for row in outcomes)
+    assert all(row.intermolecular_distance_and_overlap_pass for row in outcomes)
+
+
+def _target_cluster_receptor(residue_labels: tuple[str, ...]) -> bytes:
+    rows = []
+    for residue_index, residue_label in enumerate(residue_labels, start=1):
+        rows.append(
+            f"{'ATOM':<6}{residue_index:5d} {'CA':<4}{'':1}"
+            f"{residue_label:>3} {'A':1}{residue_index:4d}{'':1}   "
+            f"{float(residue_index):8.3f}{0.0:8.3f}{0.0:8.3f}"
+            f"{1.0:6.2f}{10.0:6.2f}          {'C':>2}{'':>2}"
+        )
+    rows.append("END")
+    return ("\n".join(rows) + "\n").encode("ascii")
+
+
+def _write_target_cluster_evaluation_receipt(
+    path: Path,
+    *,
+    engine: str,
+    archive_intake_receipt_sha256: str,
+) -> str:
+    if engine == "vina":
+        schema_id = generated_pose_module.POSEBUSTERS_GENERATED_POSE_EVALUATION_SCHEMA_ID
+        case_schema_id = generated_pose_module.POSEBUSTERS_GENERATED_POSE_CASE_SCHEMA_ID
+        source_role = "generated_pose_evaluation"
+        source_path = Path(generated_pose_module.__file__)
+        execution_receipt_key = "vina_receipt_sha256"
+        execution_status_key = "vina_status"
+        execution_pose_count_key = "vina_pose_count"
+    else:
+        schema_id = (
+            external_generated_pose_module.
+            POSEBUSTERS_EXTERNAL_GENERATED_POSE_EVALUATION_SCHEMA_ID
+        )
+        case_schema_id = (
+            external_generated_pose_module.
+            POSEBUSTERS_EXTERNAL_GENERATED_POSE_CASE_SCHEMA_ID
+        )
+        source_role = "external_generated_pose_evaluation"
+        source_path = Path(external_generated_pose_module.__file__)
+        execution_receipt_key = "execution_receipt_sha256"
+        execution_status_key = "execution_status"
+        execution_pose_count_key = "execution_pose_count"
+    source_members = {source_role: _sha(source_path.read_bytes())}
+    case_rows = []
+    for index, case_id in enumerate(_CASE_IDS):
+        hit = (engine, index) in {("vina", 0), ("smina", 1)}
+        row = {
+            "schema_id": case_schema_id,
+            "case_id": case_id,
+            execution_status_key: "success",
+            execution_pose_count_key: 1,
+            "status": "evaluated",
+            "evaluated_pose_count": 1,
+            "physically_valid_pose_count": int(hit),
+            "top_1_valid": hit,
+            "top_5_valid": hit,
+            "top_1_rmsd_within_2_angstrom": hit,
+            "top_5_rmsd_within_2_angstrom": hit,
+            "top_1_valid_and_rmsd_within_2_angstrom": hit,
+            "top_5_valid_and_rmsd_within_2_angstrom": hit,
+        }
+        if engine != "vina":
+            row["engine_id"] = engine
+        case_rows.append(row)
+    payload = {
+        "schema_id": schema_id,
+        "archive_intake_receipt_sha256": archive_intake_receipt_sha256,
+        "corpus_audit_receipt_sha256": "1" * 64,
+        "preparation_receipt_sha256": "2" * 64,
+        execution_receipt_key: ("3" if engine == "vina" else "4") * 64,
+        "implementation_source_members": source_members,
+        "implementation_source_sha256": _canonical_sha(source_members),
+        "all_case_denominator": len(_CASE_IDS),
+        "generated_pose_count": len(_CASE_IDS),
+        "evaluated_pose_count": len(_CASE_IDS),
+        "case_rows": case_rows,
+        "target_family_metrics_present": False,
+        "leakage_receipt_present": False,
+        "benchmark_executed": False,
+        "scientifically_validated": False,
+    }
+    if engine == "vina":
+        payload["claim_safe"] = False
+    else:
+        payload["engine_id"] = engine
+    receipt_sha256 = _canonical_sha(payload)
+    complete = {**payload, "receipt_sha256": receipt_sha256}
+    source = json.dumps(
+        complete,
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("ascii") + b"\n"
+    path.write_bytes(source)
+    path.chmod(0o600)
+    return receipt_sha256
+
+
+def _target_cluster_fixture(
+    root: Path,
+) -> tuple[dict[str, object], tuple[str, str, str]]:
+    root.mkdir(parents=True, exist_ok=True)
+    archive_path = root / "posebusters-target-clusters.zip"
+    selection_path = root / "selection.txt"
+    intake_path = root / "intake.json"
+    selection = ("\n".join(_CASE_IDS) + "\n").encode("ascii")
+    selection_path.write_bytes(selection)
+    readme = b"synthetic target-cluster fixture\n"
+    sequences = (
+        ("ALA",) * 20,
+        ("ALA",) * 19 + ("GLY",),
+    )
+    with zipfile.ZipFile(
+        archive_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        archive.writestr("README.txt", readme)
+        archive.writestr("posebusters_benchmark_set_ids.txt", selection)
+        for case_id, sequence in zip(_CASE_IDS, sequences):
+            native = _ligand(
+                explicit_hydrogen=False,
+                stereo_code=1,
+                charge=-1,
+            )
+            sources = {
+                "receptor_pdb": _target_cluster_receptor(sequence),
+                "reference_ligand_sdf": native,
+                "reference_ligands_sdf": native,
+                "ligand_start_conformer_sdf": native,
+            }
+            for role in POSEBUSTERS_ARCHIVE_MEMBER_ROLES:
+                archive.writestr(
+                    f"posebusters_benchmark_set/{case_id}/"
+                    f"{case_id}{POSEBUSTERS_ARCHIVE_ROLE_SUFFIXES[role]}",
+                    sources[role],
+                )
+    archive_source = archive_path.read_bytes()
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        infos = archive.infolist()
+        uncompressed = sum(
+            info.file_size for info in infos if not info.is_dir()
+        )
+    contract = PoseBustersArchiveContract(
+        dataset_id="synthetic_posebusters_target_clusters",
+        archive_sha256=_sha(archive_source),
+        archive_size_bytes=len(archive_source),
+        selection_sha256=_sha(selection),
+        selection_size_bytes=len(selection),
+        case_id_projection_sha256=_canonical_sha(list(_CASE_IDS)),
+        selected_case_count=len(_CASE_IDS),
+        archive_entry_count=len(infos),
+        archive_uncompressed_size_bytes=uncompressed,
+        archive_benchmark_case_count=len(_CASE_IDS),
+        benchmark_root="posebusters_benchmark_set",
+        embedded_case_list_member="posebusters_benchmark_set_ids.txt",
+        embedded_case_list_sha256=_sha(selection),
+        readme_member="README.txt",
+        readme_sha256=_sha(readme),
+    )
+    intake = materialize_posebusters_archive_intake(
+        archive_path,
+        selection_path,
+        contract=contract,
+    )
+    intake.write_json(intake_path)
+    evaluation_paths = tuple(root / f"{engine}.json" for engine in ("vina", "gnina", "smina"))
+    evaluation_hashes = tuple(
+        _write_target_cluster_evaluation_receipt(
+            path,
+            engine=engine,
+            archive_intake_receipt_sha256=intake.fingerprint_sha256,
+        )
+        for engine, path in zip(("vina", "gnina", "smina"), evaluation_paths)
+    )
+    common: dict[str, object] = {
+        "archive_path": archive_path,
+        "selection_path": selection_path,
+        "intake_receipt_path": intake_path,
+        "vina_evaluation_receipt_path": evaluation_paths[0],
+        "gnina_evaluation_receipt_path": evaluation_paths[1],
+        "smina_evaluation_receipt_path": evaluation_paths[2],
+        "expected_vina_evaluation_receipt_sha256": evaluation_hashes[0],
+        "expected_gnina_evaluation_receipt_sha256": evaluation_hashes[1],
+        "expected_smina_evaluation_receipt_sha256": evaluation_hashes[2],
+        "contract": contract,
+    }
+    return common, evaluation_hashes
+
+
+def test_target_cluster_edit_distance_and_short_chain_fail_closed() -> None:
+    assert target_cluster_module._global_edit_distance((), ("ALA",)) == 1
+    assert target_cluster_module._global_edit_distance(
+        ("ALA", "GLY", "SER"),
+        ("ALA", "ASP", "SER", "TYR"),
+    ) == 2
+    assert target_cluster_module._global_edit_distance(
+        ("ALA",) * 20,
+        ("ALA",) * 19 + ("GLY",),
+    ) == 1
+    with pytest.raises(
+        target_cluster_module.PoseBustersTargetClusterBindingError,
+        match="no comparison-eligible protein chain",
+    ):
+        target_cluster_module._parse_observed_target_chains(
+            "1ABC_ABC",
+            _target_cluster_receptor(("ALA",) * 19),
+        )
+
+
+def test_target_cluster_similarity_threshold_is_exact() -> None:
+    def observed(
+        case_id: str,
+        sequence: tuple[str, ...],
+    ) -> object:
+        receptor = _target_cluster_receptor(sequence)
+        chains, sequences = target_cluster_module._parse_observed_target_chains(
+            case_id,
+            receptor,
+        )
+        return target_cluster_module._ObservedCasePayload(
+            case_id=case_id,
+            pdb_id=case_id.split("_", 1)[0],
+            receptor_sha256=_sha(receptor),
+            chains=chains,
+            residue_label_sequences=sequences,
+        )
+
+    reference = observed("1ABC_ABC", ("ALA",) * 20)
+    exact_threshold = observed(
+        "2DEF_DEF",
+        ("ALA",) * 18 + ("GLY", "SER"),
+    )
+    _cases, links, families = target_cluster_module._cluster_observed_cases(
+        (reference, exact_threshold)
+    )
+    assert len(links) == 1
+    assert links[0].edit_distance == 2
+    assert len(families) == 1
+
+    below_threshold = observed(
+        "2DEF_DEF",
+        ("ALA",) * 17 + ("GLY", "SER", "TYR"),
+    )
+    _cases, links, families = target_cluster_module._cluster_observed_cases(
+        (reference, below_threshold)
+    )
+    assert links == ()
+    assert len(families) == 2
+
+
+def test_target_cluster_binding_groups_cases_and_reexecutes_exactly(
+    tmp_path: Path,
+) -> None:
+    common, _evaluation_hashes = _target_cluster_fixture(tmp_path / "source")
+    receipt = target_cluster_module.materialize_posebusters_target_cluster_binding(
+        **common
+    )
+
+    assert len(receipt.case_rows) == 2
+    assert len(receipt.family_rows) == 1
+    assert receipt.family_rows[0].member_case_ids == _CASE_IDS
+    assert len(receipt.cluster_links) == 1
+    assert receipt.cluster_links[0].edit_distance == 1
+    assert receipt.cluster_links[0].maximum_chain_length == 20
+    assert all(
+        row.fit_or_training_manifest_status == "missing"
+        for row in receipt.leakage_dispositions
+    )
+    metrics = {
+        (row.engine_id, row.metric_id, row.denominator_scope): row
+        for row in receipt.metrics
+    }
+    assert metrics[
+        ("vina", "target_cluster_coverage_rate", "all_target_clusters")
+    ].numerator == 1
+    assert metrics[
+        (
+            "vina",
+            "covered_target_cluster_with_any_top_1_rmsd_hit_rate",
+            "vina_covered_target_clusters",
+        )
+    ].numerator == 1
+    assert metrics[
+        (
+            "gnina",
+            "covered_target_cluster_with_any_top_1_rmsd_hit_rate",
+            "gnina_covered_target_clusters",
+        )
+    ].numerator == 0
+    payload = receipt.to_dict()
+    assert payload["biological_target_family_annotations_present"] is False
+    assert payload["external_fit_training_leakage_audit_present"] is False
+    assert payload["leakage_control_passed"] is False
+    assert payload["claim_safe"] is False
+
+    output = tmp_path / "target-clusters.json"
+    receipt.write_json(output)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    verified = (
+        target_cluster_module.verify_posebusters_target_cluster_binding_receipt(
+            target_cluster_receipt_path=output,
+            **common,
+        )
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    output.chmod(0o644)
+    with pytest.raises(
+        target_cluster_module.PoseBustersTargetClusterBindingError,
+        match="must remain mode 0600",
+    ):
+        target_cluster_module.verify_posebusters_target_cluster_binding_receipt(
+            target_cluster_receipt_path=output,
+            **common,
+        )
+
+
+def _raw_rcsb_target_entry(
+    pdb_id: str,
+    *,
+    asym_ids: tuple[str, ...] = ("A",),
+    auth_asym_ids: tuple[str, ...] = ("AAA",),
+    uniprot_id: str = "P00001",
+    pfam_rows: tuple[tuple[str, str], ...] = (("PF00001", "Family one"),),
+) -> dict[str, object]:
+    return {
+        "rcsb_id": pdb_id,
+        "polymer_entities": [
+            {
+                "rcsb_id": f"{pdb_id}_1",
+                "rcsb_polymer_entity_container_identifiers": {
+                    "asym_ids": list(asym_ids),
+                    "auth_asym_ids": list(auth_asym_ids),
+                    "entity_id": "1",
+                    "entry_id": pdb_id,
+                    "uniprot_ids": [uniprot_id] if uniprot_id else [],
+                    "reference_sequence_identifiers": (
+                        [
+                            {
+                                "database_accession": uniprot_id,
+                                "database_name": "UniProt",
+                                "provenance_source": "SIFTS",
+                                "entity_sequence_coverage": 1.0,
+                                "reference_sequence_coverage": 0.95,
+                            }
+                        ]
+                        if uniprot_id
+                        else []
+                    ),
+                },
+                "rcsb_polymer_entity_annotation": [
+                    *(
+                        {
+                            "annotation_id": pfam_id,
+                            "name": name,
+                            "provenance_source": "Pfam",
+                            "type": "Pfam",
+                            "assignment_version": "37.0",
+                        }
+                        for pfam_id, name in pfam_rows
+                    ),
+                    {
+                        "annotation_id": "GO:0000001",
+                        "name": "filtered non-Pfam annotation",
+                        "provenance_source": "GO",
+                        "type": "GO",
+                        "assignment_version": "1",
+                    },
+                ],
+            }
+        ],
+    }
+
+
+def _rcsb_target_family_fixture(
+    root: Path,
+    *,
+    first_asym_ids: tuple[str, ...] = ("A",),
+) -> tuple[dict[str, object], object, object]:
+    common, _evaluation_hashes = _target_cluster_fixture(root / "source")
+    target_cluster = target_cluster_module.materialize_posebusters_target_cluster_binding(
+        **common
+    )
+    target_cluster_path = root / "target-clusters.json"
+    target_cluster.write_json(target_cluster_path)
+    entries = (
+        rcsb_target_family_module.normalize_rcsb_graphql_target_entry(
+            _raw_rcsb_target_entry(
+                "1ABC",
+                asym_ids=first_asym_ids,
+                pfam_rows=(("PF00001", "Family one"),),
+            )
+        ),
+        rcsb_target_family_module.normalize_rcsb_graphql_target_entry(
+            _raw_rcsb_target_entry(
+                "2DEF",
+                uniprot_id="P00002",
+                pfam_rows=(
+                    ("PF00001", "Family one"),
+                    ("PF00002", "Family two"),
+                ),
+            )
+        ),
+    )
+    batch = rcsb_target_family_module.make_rcsb_request_batch(
+        0,
+        ("1ABC", "2DEF"),
+        entries,
+    )
+    snapshot = rcsb_target_family_module.PoseBustersRcsbTargetAnnotationSnapshot(
+        observation_utc="2026-07-23T00:00:00Z",
+        retrieval_tool_identity="rcsb-pdb-skill/rest_request.py:execute",
+        retrieval_tool_sha256="a" * 64,
+        request_batches=(batch,),
+        entries=entries,
+    )
+    snapshot_path = root / "rcsb-target-annotations.json"
+    snapshot.write_json(snapshot_path)
+    binding_common: dict[str, object] = {
+        "archive_path": common["archive_path"],
+        "selection_path": common["selection_path"],
+        "intake_receipt_path": common["intake_receipt_path"],
+        "target_cluster_receipt_path": target_cluster_path,
+        "annotation_snapshot_path": snapshot_path,
+        "expected_target_cluster_receipt_sha256": (
+            target_cluster.fingerprint_sha256
+        ),
+        "expected_annotation_snapshot_sha256": snapshot.fingerprint_sha256,
+        "contract": common["contract"],
+    }
+    return binding_common, snapshot, target_cluster
+
+
+def test_rcsb_target_family_binding_retains_multilabel_and_partition_metrics(
+    tmp_path: Path,
+) -> None:
+    common, snapshot, target_cluster = _rcsb_target_family_fixture(tmp_path)
+    loaded = rcsb_target_family_module.load_posebusters_rcsb_target_annotation_snapshot(
+        common["annotation_snapshot_path"],
+        expected_snapshot_sha256=snapshot.fingerprint_sha256,
+    )
+    assert loaded.fingerprint_sha256 == snapshot.fingerprint_sha256
+    receipt = (
+        rcsb_target_family_module.materialize_posebusters_rcsb_target_family_binding(
+            **common
+        )
+    )
+
+    assert tuple(row.mapping_status for row in receipt.case_rows) == (
+        "complete",
+        "complete",
+    )
+    assert tuple(row.pfam_ids for row in receipt.case_rows) == (
+        ("PF00001",),
+        ("PF00001", "PF00002"),
+    )
+    assert tuple(row.pfam_id for row in receipt.pfam_family_rows) == (
+        "PF00001",
+        "PF00002",
+    )
+    assert receipt.pfam_family_rows[0].member_case_ids == _CASE_IDS
+    assert len(receipt.pfam_set_rows) == 2
+    metrics = {
+        (row.engine_id, row.family_kind, row.family_id, row.metric_id): row
+        for row in receipt.metrics
+    }
+    assert metrics[
+        (
+            None,
+            "all_case_annotation",
+            "all_cases",
+            "pfam_annotation_case_rate",
+        )
+    ].numerator == 2
+    assert metrics[
+        (
+            "vina",
+            "pfam_multi_label",
+            "PF00001",
+            "top_1_rmsd_hit_rate_all_family_members",
+        )
+    ].numerator == 1
+    assert metrics[
+        (
+            "smina",
+            "pfam_multi_label",
+            "PF00002",
+            "top_1_valid_rmsd_hit_rate_all_family_members",
+        )
+    ].numerator == 1
+    payload = receipt.to_dict()
+    assert payload["target_cluster_receipt_sha256"] == (
+        target_cluster.fingerprint_sha256
+    )
+    assert payload["target_family_metrics_present"] is True
+    assert payload["complete_target_family_annotation_coverage"] is False
+    assert payload["external_fit_training_leakage_audit_present"] is False
+    assert payload["leakage_control_passed"] is False
+    assert payload["claim_safe"] is False
+
+    output = tmp_path / "rcsb-target-families.json"
+    receipt.write_json(output)
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    verified = (
+        rcsb_target_family_module.verify_posebusters_rcsb_target_family_binding_receipt(
+            target_family_receipt_path=output,
+            **common,
+        )
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+
+
+def test_rcsb_target_family_binding_does_not_infer_chain_aliases(
+    tmp_path: Path,
+) -> None:
+    common, _snapshot, _target_cluster = _rcsb_target_family_fixture(
+        tmp_path,
+        first_asym_ids=("B",),
+    )
+    receipt = (
+        rcsb_target_family_module.materialize_posebusters_rcsb_target_family_binding(
+            **common
+        )
+    )
+
+    first = receipt.case_rows[0]
+    assert first.pocket_chain_ids == ("A",)
+    assert first.mapping_status == "pocket_chain_unmapped"
+    assert first.unmapped_chain_ids == ("A",)
+    assert first.annotation_status == "not_applicable"
+    assert first.pfam_ids == ()
+    assert receipt.to_dict()["pocket_chain_mapping_failure_case_count"] == 1
+
+
+def test_rcsb_target_family_binding_prefers_exact_asym_id_over_auth_collision(
+) -> None:
+    first = rcsb_target_family_module.PoseBustersRcsbPolymerEntity(
+        rcsb_entity_id="7TE8_1",
+        entity_id="1",
+        asym_ids=("A", "C"),
+        auth_asym_ids=("C", "D"),
+        uniprot_ids=(),
+        reference_sequences=(),
+        pfam_annotations=(),
+    )
+    pfam = rcsb_target_family_module.PoseBustersRcsbPfamAnnotation(
+        annotation_id="PF00002",
+        name="Family two",
+        provenance_source="Pfam",
+        assignment_version="37.0",
+    )
+    second = rcsb_target_family_module.PoseBustersRcsbPolymerEntity(
+        rcsb_entity_id="7TE8_2",
+        entity_id="2",
+        asym_ids=("B", "D"),
+        auth_asym_ids=("A", "B"),
+        uniprot_ids=(),
+        reference_sequences=(),
+        pfam_annotations=(pfam,),
+    )
+    entry = rcsb_target_family_module.PoseBustersRcsbTargetEntry(
+        pdb_id="7TE8",
+        status="active",
+        polymer_entities=(first, second),
+    )
+
+    case, _annotations = rcsb_target_family_module._target_case_from_entry(
+        case_id="7TE8_P0T",
+        receptor_sha256="a" * 64,
+        reference_ligand_sha256="b" * 64,
+        pocket_chain_ids=("B", "D"),
+        entry=entry,
+    )
+
+    assert case.mapping_status == "complete"
+    assert case.mapped_entity_ids == ("7TE8_2",)
+    assert case.pfam_ids == ("PF00002",)
+
+
+def test_rcsb_target_annotation_snapshot_mode_and_hash_fail_closed(
+    tmp_path: Path,
+) -> None:
+    common, snapshot, _target_cluster = _rcsb_target_family_fixture(tmp_path)
+    snapshot_path = common["annotation_snapshot_path"]
+    snapshot_path.chmod(0o644)
+    with pytest.raises(
+        rcsb_target_family_module.PoseBustersRcsbTargetFamilyBindingError,
+        match="must remain mode 0600",
+    ):
+        rcsb_target_family_module.load_posebusters_rcsb_target_annotation_snapshot(
+            snapshot_path,
+            expected_snapshot_sha256=snapshot.fingerprint_sha256,
+        )
+    snapshot_path.chmod(0o600)
+    with pytest.raises(
+        rcsb_target_family_module.PoseBustersRcsbTargetFamilyBindingError,
+        match="contract or identity is invalid",
+    ):
+        rcsb_target_family_module.load_posebusters_rcsb_target_annotation_snapshot(
+            snapshot_path,
+            expected_snapshot_sha256="f" * 64,
+        )

@@ -48,8 +48,58 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "betelgeuze-engine-v2-posebusters-external-prepare": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
         ),
+        "betelgeuze-engine-v2-posebusters-external-execute": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_external_binary_execution:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-external-evaluate-generated": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_external_generated_pose_evaluation:main"
+        ),
         "betelgeuze-engine-v2-posebusters-vina-execute": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-evaluate-generated": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_generated_pose_evaluation:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-target-clusters": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_target_cluster_binding:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-rcsb-target-families": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_rcsb_target_family_binding:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-ranking-intake": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_intake:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-pose-scaffold-identity": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_pose_scaffold_identity:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_prepared_ligand_diagnostic:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-openbabel-compare": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_openbabel_charge_type_comparison:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-sulfur-qm-esp": (
+            "betelgeuze_engine_v2.benchmark.public_posebusters_sulfur_qm_esp:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-sulfur-interaction": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_sulfur_interaction_energy:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-sulfur-reproduce": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_sulfur_interaction_external_reproduction:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-vina-sulfur-invariance": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_vina_sulfur_type_invariance:main"
         ),
         "betelgeuze-engine-v2-posebusters-native-geometry": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry:main"
@@ -59,7 +109,7 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         ),
         "betelgeuze-engine-v2-s0-review": (
             "betelgeuze_engine_v2.offline.s0_production_evidence_bundle:main"
-        )
+        ),
     }
     assert set(metadata["project"]["dependencies"]) == {
         "cryptography==46.0.5",
@@ -71,7 +121,9 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "wheel==0.45.1",
     ]
     assert "Typing :: Typed" in metadata["project"]["classifiers"]
-    assert metadata["tool"]["setuptools"]["package-data"]["betelgeuze_engine_v2"] == ["py.typed"]
+    assert metadata["tool"]["setuptools"]["package-data"]["betelgeuze_engine_v2"] == [
+        "py.typed"
+    ]
     assert metadata["tool"]["setuptools"]["packages"]["find"]["include"] == [
         "betelgeuze_engine_v2*"
     ]
@@ -117,9 +169,9 @@ def test_sbom_contract_uses_spdx_23() -> None:
 
 
 def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
-    workflow = Path(
-        ".github/workflows/ci-engine-v2-release-candidate.yml"
-    ).read_text(encoding="utf-8")
+    workflow = Path(".github/workflows/ci-engine-v2-release-candidate.yml").read_text(
+        encoding="utf-8"
+    )
     assert "\n  static-analysis:\n" in workflow
     assert "\n  release-matrix:\n" in workflow
     assert 'python-version: "3.11"' in workflow
@@ -136,7 +188,20 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert "betelgeuze-engine-v2-posebusters-intake" in workflow
     assert "betelgeuze-engine-v2-posebusters-corpus-audit" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
+    assert "betelgeuze-engine-v2-posebusters-external-execute" in workflow
+    assert "betelgeuze-engine-v2-posebusters-external-evaluate-generated" in workflow
     assert "betelgeuze-engine-v2-posebusters-vina-execute" in workflow
+    assert "betelgeuze-engine-v2-posebusters-evaluate-generated" in workflow
+    assert "betelgeuze-engine-v2-posebusters-target-clusters" in workflow
+    assert "betelgeuze-engine-v2-posebusters-rcsb-target-families" in workflow
+    assert "betelgeuze-engine-v2-posebusters-ranking-intake" in workflow
+    assert "betelgeuze-engine-v2-posebusters-pose-scaffold-identity" in workflow
+    assert "betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic" in workflow
+    assert "betelgeuze-engine-v2-posebusters-openbabel-compare" in workflow
+    assert "betelgeuze-engine-v2-posebusters-sulfur-qm-esp" in workflow
+    assert "betelgeuze-engine-v2-posebusters-sulfur-interaction" in workflow
+    assert "betelgeuze-engine-v2-posebusters-sulfur-reproduce" in workflow
+    assert "betelgeuze-engine-v2-posebusters-vina-sulfur-invariance" in workflow
     assert "betelgeuze-engine-v2-posebusters-native-geometry" in workflow
     assert "FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256" in workflow
     action_refs = re.findall(r"uses: [^@\s]+@([^\s]+)", workflow)
