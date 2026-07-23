@@ -35,6 +35,8 @@ betelgeuze_engine_v2.docking
 betelgeuze_engine_v2.docking.flexible_geometric_scoring
 betelgeuze_engine_v2.docking.geometric_refinement
 betelgeuze_engine_v2.docking.molecular_torsion
+betelgeuze_engine_v2.docking.parameterized_validity
+betelgeuze_engine_v2.docking.reference_applicability
 betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.benchmark.public_flexible_diagnostic
 betelgeuze_engine_v2.benchmark.public_materialization
@@ -98,12 +100,14 @@ betelgeuze_engine_v2.physics.validation_source_identity
 betelgeuze_engine_v2.offline.openmm_reference_oracle
 betelgeuze_engine_v2.offline.openmm_reference_receipts
 betelgeuze_engine_v2.offline.openmm_reference_materialization
+betelgeuze_engine_v2.offline.openmm_reference_native_minimization
+betelgeuze_engine_v2.offline.openmm_reference_fixed_born_disposition
 betelgeuze_engine_v2.offline.openmm_reference_result_review
 betelgeuze_engine_v2.offline.s0_production_evidence_bundle
 betelgeuze_engine_v2.runtime
 ```
 
-The five `betelgeuze_engine_v2.offline` modules are optional external-evidence
+The `betelgeuze_engine_v2.offline` modules are optional external-evidence
 adapters, not product runtime APIs. Importing them does not import OpenMM. An
 explicit observation requires the exact pinned `OpenMM==8.4.0.post2` native
 build and selects only the `Reference` platform. The mapping contract covers
@@ -122,18 +126,62 @@ equality, and supports structural verification or exact local re-execution. It
 accepts no private key and permanently records the run as an
 offline observation with production execution, signed result, independent
 review, two-host reproduction, scientific validation, and claim safety false.
-The separate Ed25519 result-review contract freshly reverifies both Engine
-result-review chains and both complete OpenMM receipts, then crosschecks the
-exact 27/59 Engine component/total/force outputs and all fourteen retained
-operational traces before signing a host/CPU/session/custody-scoped canonical
-projection. It requires an out-of-band reviewer key, role separation, bounded
-freshness, and explicit revocation/supersession inputs. No key, attestation,
-production receipt, or populated two-host evidence bundle is included.
-The final S0 bundle module freshly invokes that verifier for exactly two raw
-host evidence sets. It rejects reused host/CPU/session/custody, artifact,
+The separate installed
+`betelgeuze-engine-v2-openmm-native-minimization` command consumes an exact
+caller-pinned materialization, runs the OpenMM L-BFGS endpoint for the eight
+supported cases, retains six N/A fail-closed rows, and recomputes Engine v2
+energy and force at every endpoint coordinate. It applies only the previously
+frozen same-coordinate mapping, per-case tangent-force, constraint-residual,
+and energy-nonincrease checks; cross-algorithm coordinate and energy deltas are
+recorded but ungated. Configuration SHA-256 is
+`6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`.
+The 2026-07-24 local receipt
+`7e5b3454afc41f9954f71dfc3b0b274906323f15fd8ea6630bfcc1e95ce95b7c`
+passed all eight same-coordinate mappings and energy-nonincrease checks but
+failed the two fixed-Born constrained endpoint-health rows after final
+constraint projection, so its status is rejected. Exact verification and
+reexecution preserve that rejection; endpoint/trajectory equivalence and every
+production or promotion flag remain false.
+The installed
+`betelgeuze-engine-v2-openmm-fixed-born-disposition` command requires that
+exact materialization and native receipt plus caller-pinned hashes. Its frozen
+v2 configuration
+`ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045`
+retains the rejected reporter-observer v1 identity
+`67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1`,
+keeps the same eight probes and original health thresholds, and adds a
+no-reporter exact control. Receipt
+`870f1ea247da4b0232f22804298e75d554af511da18924a7ba49c1c703f003f2`
+records all 16 reporter traces and exact cross-alias physics equality. It
+classifies a final constraint-projection tradeoff because the pre-projection
+endpoint passes tangent force but misses the constraint residual, while the
+post-projection endpoint passes the constraint residual but misses tangent
+force. Diagnostic acceptance means only that this failure disposition is
+complete; `frozen_native_endpoint_health_failure_resolved`, causal-root-cause,
+S0/S1, validation, and product flags remain false.
+The v4 Ed25519 result-review contract freshly reverifies both Engine
+result-review chains, the exact OpenMM materialization, both complete
+component/trace receipts, and the failure-inclusive native endpoint receipt.
+It crosschecks the exact 27/59 Engine outputs and all fourteen operational
+traces, binds a host-comparable native physics projection, and derives accepted
+or rejected outcome from the predefined endpoint-health metrics. A rejection
+also requires the exact fixed-Born disposition receipt and binds its
+configuration, physics projection, completeness, and classification; an
+accepted endpoint forbids that failure-specific input. The observed 6/8
+receipt yields a signed rejection retaining both fixed-Born case IDs despite
+its completed disposition. Contract SHA-256 is
+`6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`.
+No key, attestation, production receipt, or populated two-host evidence bundle
+is included.
+The final v4 S0 bundle module freshly invokes that verifier for exactly two raw
+host evidence sets. It first rejects a host unless the result review and native
+endpoint health are accepted with 8/8 cases and no failed IDs. It rejects reused host/CPU/session/custody, artifact,
 environment, authorization-nonce, and review-nonce identities while requiring
 exact equality of commit, source, dependency, OpenMM runtime/source, seed, and
-both physics projections. Its final Ed25519 approval is canonical, time-bounded,
+all three physics projections. Accepted hosts must report the failure-specific
+disposition path as not applicable. Contract SHA-256 is
+`549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`.
+Its final Ed25519 approval is canonical, time-bounded,
 revocable/supersedable, cannot outlive either host review, and requires a human
 reviewer distinct from every nested role. Successful runtime verification
 authorizes only frozen synthetic S0 acceptance and entry into S1; it explicitly
@@ -180,8 +228,53 @@ signed ligand internal-energy delta, and VDW-overlap contributions separately.
 Its first scope admits only H/C/N/O/F/P/S/Cl/Br/I with exact partial-charge
 agreement, rejects receptor nonpolymer cofactors and unsupported elements, and
 does not implement metal coordination, aromatic-specific interactions, stereo
-validity, fitted ranking weights, uncertainty, or a customer route. The
-fit-only ranking-calibration symbols separately require an exact term schema
+validity, fitted ranking weights, uncertainty, or a customer route.
+`admit_reference_docking_scorer` evaluates that boundary without discarding
+later failures at the first exception. Its
+`ReferenceDockingApplicabilityAssessment` exact-binds the problem, config,
+canonical system/topology, and optional parameter fingerprints; inventories
+unsupported and metal atoms, nonpolymer receptor residues, formal/partial-
+charge failures, missing/extra/mismatched parameters, model/dtype/cell/capacity
+failures, aromaticity, and declared stereo; and emits one of
+`admitted_diagnostic`, `invalid_input`, `abstain_chemistry_scope`,
+`abstain_parameter_scope`, or `abstain_execution_scope`. The admission helper
+returns the assessment plus a scorer only for the first disposition.
+`assess_reference_docking_applicability` returns the same assessment without
+exposing the scorer. Aromatic or declared-stereo inputs can remain executable
+diagnostics but set `interaction_coverage_complete=false` and
+`ood_detected=true`; they are not validated refinement inputs. Every assessment
+keeps `scientifically_validated=false`, `validated_refinement_allowed=false`,
+and `claim_safe=false`.
+`UncalibratedReferenceDockingScorer.score_with_diagnostics` returns the same
+four-term breakdown together with an exact proposal/problem/parameter-bound
+interaction receipt. It evaluates pair-specific LJ-minimum contact ratios and
+worst overlaps over every receptor--ligand pair and every ligand pair not
+listed in the bound force field's `excluded_pairs`; it separately reports
+like/opposite/neutral partial-charge pair counts and attractive versus
+repulsive screened-Coulomb sums.
+`evaluate_chemistry_aware_pose_validity` consumes that atomic result and
+requires a `ChemistryAwarePoseValidityConfig` containing explicit maximum
+signed strain delta and aggregate repulsive-Coulomb thresholds. No default
+scientific thresholds are fabricated. An admitted nonaromatic, stereo-
+unspecified pose can be valid only within that caller-declared diagnostic
+scope; aromatic or declared-stereo inputs remain incomplete, unsupported
+metals and receptor cofactors fail before evaluation, all thresholds remain
+uncalibrated, and every result keeps `scientifically_validated=false` and
+`claim_safe=false`.
+
+`UncalibratedPdbqtUffDiagnosticScorer` is a separate test-diagnostic scorer; it
+does not substitute for `UncalibratedReferenceDockingScorer`. It consumes
+explicit PDBQT-derived element, charge, coordinate, and UFF nonbonded parameter
+arrays plus a caller-bound ligand strain evaluator. Its fixed four-term
+breakdown is UFF receptor–ligand van der Waals, PDBQT-charge Coulomb, ligand
+source-atom strain delta, and UFF overlap penalty. The scorer binds coordinate,
+parameter, configuration, and strain-reference identities and exposes
+pair/contact diagnostics. Its UFF atom typing, PDBQT charges, implicit/merged
+hydrogen omission, and macrocycle-closure pseudoatom policy are unvalidated;
+metal/cofactor/covalent, directional hydrogen-bond, aromatic/stereo,
+desolvation, receptor-flexibility, and uncertainty science are outside scope.
+
+The fit-only ranking-calibration symbols separately require an exact term schema
 and a passing identity-overlap audit, fit pairwise logistic weights from the
 `fit` partition only, and retain failed evaluation poses in all-case and
 target-family Top-1/Top-5/coverage bootstrap denominators. Evaluation schema v2
@@ -269,6 +362,75 @@ result binding verifies the evaluation report's all-case and target-family
 denominators. Every artifact remains `claim_safe=false`; no full source manifest,
 similarity execution, fitted model, benchmark result, or independent rerun is
 bundled.
+
+`betelgeuze_engine_v2.benchmark.public_pose_ranking_corpus_intake` provides the
+installable three-way file boundary. The
+`betelgeuze-engine-v2-public-ranking-corpus-intake` command exposes
+`materialize` and `verify` modes and requires caller-pinned file and payload
+SHA-256 values for six canonical inputs: PDBbind-v2020 fit, CASF-2016
+validation, and PoseBusters-308 test manifests plus fit↔validation, fit↔test,
+and validation↔test all-chain sequence-identity receipts. No symlink,
+non-canonical JSON, duplicate key, unknown field, derived-field mismatch, or
+overwrite is accepted; output mode is exactly 0600.
+
+The frozen policy requires roles `fit`/`validation`/`test`, scopes
+`calibration_fit`/`full_benchmark`/`full_benchmark`, complete official CASF 285
+and PoseBusters 308 case sets, the same scoring and preparation identities,
+disjoint case/PDB/target/receptor/ligand/scaffold/target-sequence identities,
+maximum all-chain sequence identity no greater than 0.90 on every pairwise
+split comparison, and both fit→test and validation→test temporal ordering.
+Target-family overlap remains allowed so family-stratified metrics are
+possible. Configuration SHA-256 is
+`4972e41765076e09b7bbec43b7e506dede6ab48b01b173f62cd73a749f694681`.
+`ready_for_partition_materialization` means only that provenance inputs passed;
+every receipt still fixes all score/partition/label/fit/model/result/review and
+claim flags to false. No production receipt exists until genuine licensed
+manifests and executed sequence evidence are supplied.
+
+`betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_partition_intake`
+provides the next file boundary. The installed
+`betelgeuze-engine-v2-public-ranking-calibration-partition-intake` command
+exposes `materialize` and `verify` modes. It first exactly reconstructs a
+mode-0600, passing three-way corpus receipt, then accepts only canonical
+PDBbind-v2020 `split_role=fit` and CASF-2016
+`split_role=validation` `PoseRankingCalibrationPartition` files. A test
+partition is not an accepted argument.
+
+Every partition row is strictly reconstructed and bound to the corresponding
+public case manifest. The receipt recomputes the generic pose-level leakage
+audit, requires identical term schemas, records every case/row,
+success/failure, positive/negative, and pairwise-uninformative denominator, and
+distinguishes an admitted failure-inclusive intake from direct-fit readiness.
+Fit failure rows remain present and require a separately bound success-only
+training view; they are never silently dropped. Validation labels are
+evaluation-only and `validation_labels_used_for_fit=false`.
+
+Configuration SHA-256 is
+`c4b423063a36f38d7f6f098a38c7ea54b078c25f3cc04d060ae88638902ff8be`.
+Outputs are canonical mode-0600/no-overwrite receipts. This API performs no
+fit, validation-based selection, test access, benchmark, external rerun, or
+claim promotion. Because no genuine passing PDBbind/CASF corpus receipt exists,
+there is currently no production partition-intake receipt.
+
+`betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_training_view`
+provides the explicit fit bridge above that passing intake. The installed
+`betelgeuze-engine-v2-public-ranking-calibration-training-view` command exposes
+`materialize` and `verify` modes. Selection is status-only: every successful
+fit row is copied unchanged into an embedded success-only
+`PoseRankingCalibrationPartition`, while every failed row is omitted only from
+executable fitting and retained as a hash-bound disposition. The receipt
+accounts for every source row and case, requires positive/negative trainability,
+and recomputes leakage between the training view and CASF validation.
+
+The guarded Python fit bridge calls the existing deterministic calibration API
+only after verifying all scorer, preparation, schema, partition, and leakage
+bindings. Validation labels are not used for view construction or fitting, and
+no test-partition argument exists. Configuration SHA-256 is
+`e5e202d10420b5a557b1227aa0f7735433ebaeadc1656f6b981c14453aeb25b8`.
+This API performs no validation-based selection, test evaluation, external
+rerun, or claim promotion. Genuine upstream corpus inputs remain absent, so no
+production training-view receipt, fit, selected model, metric, review, or claim
+exists.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_intake` is the bounded local
 archive boundary for the published PoseBusters set. The installed
@@ -1112,7 +1274,141 @@ and `fbf3fa34f974dc8bd35b6564a1c004931a9ea0177f25fd551769b91f4db089d8`.
 The overlay closes only the coordinate and scaffold identity omissions.
 Complete target-family assignment, a disjoint fit manifest, target/ligand/
 scaffold leakage audits, external rerun, and independent review remain absent;
-all fit, partition, scientific, and product-claim flags remain false.
+the overlay's fit, partition, scientific, and product-claim flags remain false.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_test_partition`
+provides the next exact, test-only boundary. The installed
+`betelgeuze-engine-v2-posebusters-ranking-test-partitions` command exposes
+`materialize` and `verify` modes and requires caller-pinned roots for the
+ranking intake, pose/scaffold identity, observed-sequence cluster, and
+RCSB/Pfam receipts.
+
+It materializes one failure-inclusive
+`PoseRankingCalibrationPartition(split_role="test")` per engine. The Vina,
+GNINA, and Smina partitions retain 645, 631, and 627 rows respectively and all
+308 cases each. The 1,031 successful rows use exact pose-coordinate SHA-256
+values. The 872 failure rows have no coordinates or labels; because the generic
+row contract requires `pose_sha256`, they use unique hashes over the
+domain-separated failed-observation schema, exact source ranking-row identity,
+engine, case, and failure code. Those values must not be interpreted as
+coordinate hashes.
+
+The generic row's `target_family` field is populated with the complete
+observed-receptor sequence proxy ID. Receipt metadata and per-case rows state
+that the 296 strata are not biological target families. RCSB/Pfam remains a
+separate annotation surface with 225/308 annotated cases. The builder
+revalidates all 21 ranking, 36 proxy-cluster, and 5,226 Pfam-family metric rows,
+including numerator, denominator, estimate, and 95% Wilson interval, and
+retains their canonical roots.
+
+Production receipt payload/file SHA-256 values are
+`509a7f7c8fcae221be53d5d7e525e05c37a1314f6d17060c8ed6b68e8e4fc89e`
+and `581235213b161caeb41db441ca73428d669a7fa0c9a3ead3bba7632dfa63b1dc`.
+Two deterministic wheels and isolated installed-wheel verification matched at
+`5378c25f700a3f775aca232e379ea9e56b93a75310daead5d7dfdae082d9800e`.
+The module never constructs a fit partition or calls a fitting API.
+`calibration_fit_performed=false`, `test_labels_used_for_fit=false`,
+`leakage_audit_present=false`, `leakage_control_passed=false`, and
+`claim_safe=false` remain invariant.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_external_ranking_evaluation`
+provides the actual descriptive external-reference evaluation layer. The
+installed
+`betelgeuze-engine-v2-posebusters-external-ranking-evaluate` command exposes
+`materialize` and `verify` modes and accepts only the exact caller-pinned
+test-partition receipt. It never accepts a fit partition.
+
+The evaluator freezes source execution sort policies before reading labels:
+`vina.total` is minimized, `gnina.cnn_pose_score` is maximized, and
+`smina.minimized_affinity_kcal_per_mol` is minimized. Every scored case must be
+monotonic in that policy's ordering score. Top-K is tie-inclusive. Ratio
+metrics use 95% Wilson intervals; pose-level average precision treats equal
+scores as one threshold and uses 2,000 deterministic case-cluster bootstrap
+replicates. Point average precision is conditional on successful labeled poses,
+so the receipt always binds it to all-case coverage and failure counts.
+
+The production result retains all 308 cases per engine and all 872 failure
+observations. Vina/GNINA/Smina score 18/17/17 cases and 355/340/336 poses.
+Their all-case Top-1/Top-5 counts are 10/16, 15/16, and 10/15. Average
+precision is 0.287330 (95% bootstrap CI 0.174209–0.512214), 0.668157
+(0.534293–0.886705), and 0.304352 (0.183486–0.541608). Source-bound
+physical-validity counts are 325/355, 304/340, and 312/336. The receipt also
+records 296 complete observed-sequence proxy strata, 150 exact-Pfam-set or
+missing groups, and 200 overlapping Pfam or missing groups. The sequence
+projection is not a biological family, Pfam is missing for 83/308 cases, and
+multi-label Pfam memberships are not disjoint.
+
+Production receipt payload/file SHA-256 values are
+`509556b0bcd9ec35f9ff4b1860613f267b2a96d73b18de44b61288498a838137`
+and `3f4965ba07be36c6233514d2545c1db0f604bc4245552be2180bcdb780a43dc1`.
+The deterministic installed wheel identified above reconstructed the
+test-partition and evaluation receipts exactly outside the checkout.
+`score_policy_fit_performed=false`,
+`test_labels_used_to_select_score_policy=false`,
+`external_model_training_leakage_audit_present=false`,
+`independent_external_rerun_present=false`,
+`scientifically_validated=false`, `public_docking_claim_authorized=false`, and
+`claim_safe=false` are invariant. This external result is not an evaluation of
+the internal scorer and is not complete public docking evidence.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_diagnostic_ranking_evaluation`
+provides the corresponding internal test-diagnostic layer. The installed
+`betelgeuze-engine-v2-posebusters-internal-diagnostic-ranking` command exposes
+`materialize` and `verify` modes. It caller-pins the test-partition,
+pose/scaffold, preparation, and three execution receipt chains; requires the
+preparation-matched RDKit 2025.09.6 distribution and NumPy 1.26.4; and computes
+every pose score before joining any test label. The frozen unit-weight minimize
+policy retains `uff_receptor_ligand_vdw`,
+`pdbqt_receptor_ligand_coulomb`,
+`rdkit_uff_source_atom_strain_delta`, and `uff_vdw_overlap_penalty`.
+
+The production result scored every source-success pose—355 Vina, 340 GNINA,
+and 336 Smina—with zero scorer failures, while preserving the 290/291/291
+upstream failures and all 308 cases per engine. All-case Top-1/Top-5 counts are
+2/5, 3/5, and 3/3. Successful-pose average precision is 0.113931
+(95% case-cluster bootstrap CI 0.056090–0.270781), 0.169927
+(0.100789–0.262457), and 0.106265 (0.064622–0.224549). Production receipt
+payload/file SHA-256 values are
+`63a2f62cd465438f83e177b11ffd50483a2ff3f94c9399c308da2e8baee45b57`
+and `4e4acd968e2a32f4f6ff47b8412b9209b5afe6918bda2019fdc4e9e492a4f3b1`.
+The deterministic installed wheel identified above reconstructed this receipt
+exactly outside the checkout.
+`score_policy_fit_performed=false`,
+`test_labels_used_for_score_computation=false`,
+`test_labels_used_for_fit=false`, `scientifically_validated=false`, and
+`claim_safe=false` are invariant. The lower average precision than the external
+source policies is evidence against promotion, not permission to tune on this
+test set. A disjoint fit/validation corpus and target/ligand/scaffold leakage
+audit are required first.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_external_ranking_reproduction`
+provides the preregistered external-host rerun boundary. The installed
+`betelgeuze-engine-v2-posebusters-external-ranking-reproduce` command exposes
+`materialize-work-order`, `verify-work-order`, `materialize-result`, and
+`verify-result`. Every mode requires caller-pinned baseline evaluation,
+test-partition, ranking-intake, and exact Engine v2 wheel roots.
+
+The work order is non-executing. It binds the exact baseline chain, the wheel
+bytes and four source members, distinct baseline/external host identities,
+role-separated work-order/execution operator identities, a single-use nonce,
+and a canonical registration time. The result additionally requires a
+post-registration observation time and an external chain reconstructed with
+the same archive-intake, strict external-preparation, and RCSB/Pfam roots. Its
+ranking-intake, test-partition, evaluation, and all six engine
+execution/evaluation receipt and file roots must differ from baseline.
+
+The comparison retains all 924 engine/case rows and checks failed dispositions,
+pose counts, source-rank and native-like-label sequences, tie-inclusive Top-K
+outcomes, fixed-policy score tolerances, ratio-metric counts, average precision
+and confidence intervals, sequence-proxy/Pfam family scopes, and source-bound
+physical-validity counts. A copied baseline chain, changed fixed input, or
+score drift fails closed. Runtime fields are evidence projections rather than
+proof of a unique physical machine. Consequently even a numerically passing
+unreviewed result retains `physical_host_independence_reviewed=false`,
+`independent_external_rerun_present=false`,
+`independent_reviewer_receipt_approved=false`, and `claim_safe=false`. No
+production work order/result currently exists because real external
+host/operator identities and custody evidence have not been supplied.
 
 The frozen H5 reference-parameter applicability symbols under
 `betelgeuze_engine_v2.physics` record caller-supplied parameter origin, exact

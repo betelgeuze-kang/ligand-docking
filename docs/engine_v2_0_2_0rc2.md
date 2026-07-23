@@ -26,6 +26,10 @@ Execution:    CPU reference
 - installed `betelgeuze-engine-v2-s0-review` console-entrypoint smoke checks;
 - installed `betelgeuze-engine-v2-openmm-materialize` secret-free workflow
   smoke checks (OpenMM remains an optional offline runtime);
+- installed `betelgeuze-engine-v2-openmm-native-minimization` failure-inclusive
+  endpoint-comparison CLI smoke checks;
+- installed `betelgeuze-engine-v2-openmm-fixed-born-disposition`
+  preregistered failure-disposition CLI smoke checks;
 - installed `betelgeuze-engine-v2-posebusters-intake` extraction-free local
   archive-intake smoke checks (the public archive remains caller-provided);
 - installed `betelgeuze-engine-v2-posebusters-corpus-audit` failure-inclusive
@@ -66,9 +70,56 @@ set, real-molecule corpus, external solver result, or public docking benchmark
 is bundled. The same-input Vina/GNINA/Smina API emits only non-executing work
 orders after prepared-PDBQT and identity checks; it bundles neither prepared
 inputs nor external engines and does not establish comparison evidence. The
+chemistry-aware pose-validity API binds exact force-field LJ parameters,
+partial charges, ligand exclusions, proposal identity, cross/self overlap
+diagnostics, screened-Coulomb sign decomposition, and signed strain in one
+result. Its strain and repulsion limits are caller-declared rather than fitted
+or independently reviewed. Aromatic/stereo coverage remains incomplete and
+metals/receptor cofactors remain outside scope, so this API does not establish
+validated pose quality or change any promotion flag. The accompanying
+reference-docking applicability API exact-binds systems, topologies, problem,
+config, and optional parameter fingerprints and retains every detected
+identity, chemistry, parameter, and capacity blocker in one assessment. It
+constructs a scorer only for `admitted_diagnostic`; aromatic/stereo admission
+remains interaction-incomplete, and every disposition keeps scientific,
+validated-refinement, and claim promotion false. The
 PDBbind/CASF/PoseBusters split-provenance API similarly binds only caller-
 provided identities, leakage evidence, and family denominators. It accepts no
 PDBbind access terms and bundles no dataset, fit, benchmark result, or review.
+The installable public-ranking-corpus intake now exact-binds canonical
+PDBbind-v2020 fit, full CASF-2016 validation, and full PoseBusters-308 test
+manifests plus three pairwise all-chain sequence receipts. Its frozen
+configuration rejects exact case/PDB/target/receptor/ligand/scaffold/sequence
+overlap, maximum sequence identity above 0.90, fit→test and validation→test
+release-order violations, sequence-method drift, and scoring/preparation drift.
+Configuration SHA-256 is
+`4972e41765076e09b7bbec43b7e506dede6ab48b01b173f62cd73a749f694681`.
+It securely verifies input file/payload hashes and emits only a canonical
+mode-0600, no-overwrite readiness receipt. No production receipt exists because
+licensed PDBbind/CASF manifests and executed sequence evidence have not been
+provided; the intake cannot fit, select a model, read labels, or authorize a
+claim.
+Above a passing corpus receipt, the installable
+`betelgeuze-engine-v2-public-ranking-calibration-partition-intake` command
+securely loads exact PDBbind-fit and CASF-validation calibration partitions.
+It recomputes public-manifest bindings and pose-level leakage, retains all
+success/failure and positive/negative denominators, and reports fit cases that
+cannot form a positive/negative training pair. Validation labels are never
+admitted to fitting and no test partition can be supplied. Configuration
+SHA-256 is
+`c4b423063a36f38d7f6f098a38c7ea54b078c25f3cc04d060ae88638902ff8be`.
+No production receipt, fit, selection, metric, review, or claim exists because
+the genuine upstream corpus inputs remain absent.
+Above that passing intake, the installable
+`betelgeuze-engine-v2-public-ranking-calibration-training-view` command uses
+only fit-row `status`: it includes every success unchanged and retains every
+failure as a hash-bound exclusion disposition. Its receipt embeds the exact
+success-only training partition and recomputes training-view/CASF leakage. A
+guarded deterministic-fit bridge is available, but validation labels and test
+partitions are never inputs. Configuration SHA-256 is
+`e5e202d10420b5a557b1227aa0f7735433ebaeadc1656f6b981c14453aeb25b8`.
+No production receipt, fit, selected model, metric, review, or claim exists
+without genuine upstream corpus inputs.
 The PoseBusters intake command can establish the exact archive, selection, and
 308-case artifact identities without extraction, but it performs no preparation,
 pose generation, scoring, benchmark execution, or independent review and does
@@ -339,7 +390,96 @@ Two deterministic wheels matched at
 and installed-wheel verification reconstructed the exact receipt. The remaining
 partition identity blocker is complete target-family assignment; fit/training
 provenance, leakage audits, independent rerun, and review are also absent, so
-no `PoseRankingCalibrationPartition` or product claim is emitted.
+the identity command itself emits no `PoseRankingCalibrationPartition` or
+product claim.
+
+The ranking-test-partition command then binds that immutable intake and identity
+overlay to the observed-sequence and RCSB/Pfam receipts. It emits three
+failure-inclusive `PoseRankingCalibrationPartition(split_role="test")` objects:
+Vina 645 rows (355 successful, 290 failed), GNINA 631 (340, 291), and Smina
+627 (336, 291), each retaining all 308 cases. Successful pose identities are
+coordinate hashes; failed rows carry domain-separated failure-observation
+hashes explicitly marked as non-coordinate identities. The command revalidates
+the 21 ranking, 36 sequence-proxy, and 5,226 RCSB/Pfam metric rows and their
+Wilson intervals. The 296 observed-sequence strata are leakage-control proxies,
+not biological families, while Pfam coverage remains 225/308. Receipt
+payload/file SHA-256 values are
+`509a7f7c8fcae221be53d5d7e525e05c37a1314f6d17060c8ed6b68e8e4fc89e`
+and `581235213b161caeb41db441ca73428d669a7fa0c9a3ead3bba7632dfa63b1dc`;
+two deterministic wheels and installed-wheel verification matched at
+`5378c25f700a3f775aca232e379ea9e56b93a75310daead5d7dfdae082d9800e`.
+There is still no fit partition, fitting call, leakage audit, calibrated model,
+independent rerun/review, scientific validation, or product claim.
+
+The external-ranking evaluation command consumes only that caller-pinned test
+receipt. It fixes Vina total energy, GNINA CNN pose score, and Smina minimized
+affinity from the source execution policies and refuses a partition whose
+scores do not reproduce source pose order. It retains all 308 cases and all 872
+failure observations. Vina/GNINA/Smina scored-case coverage is 18/308, 17/308,
+and 17/308; all-case Top-1/Top-5 counts are 10/16, 15/16, and 10/15.
+Tie-invariant average precision over successful labeled poses is 0.287330,
+0.668157, and 0.304352, with 95% case-cluster bootstrap intervals
+0.174209–0.512214, 0.534293–0.886705, and 0.183486–0.541608. The receipt binds
+coverage, source physical-validity summaries, and all sequence-proxy/Pfam
+views so the conditional pose metric cannot stand alone. Production
+payload/file SHA-256 values are
+`509556b0bcd9ec35f9ff4b1860613f267b2a96d73b18de44b61288498a838137`
+and `3f4965ba07be36c6233514d2545c1db0f604bc4245552be2180bcdb780a43dc1`.
+The byte-identical installed wheel identified above reconstructed both the
+test-partition and evaluation receipts exactly outside the checkout.
+External-model training overlap, independent rerun/review, calibrated internal-
+scorer performance, complete public-benchmark evidence, and product
+qualification remain unproven.
+
+The internal-diagnostic ranking command applies a separate, frozen uncalibrated
+policy to the same pose coordinates before loading test labels. The minimize
+score sums unit-weight UFF receptor–ligand van der Waals, PDBQT-charge Coulomb,
+exact source-atom RDKit UFF strain delta, and UFF overlap terms. Under the
+preparation-matched RDKit 2025.09.6 and NumPy 1.26.4 runtime it scored every one
+of the 1,031 source-success poses with zero scorer failures and retained all 872
+upstream failures. Vina/GNINA/Smina coverage remains 18/17/17 of 308 cases;
+all-case Top-1/Top-5 counts are 2/5, 3/5, and 3/3. Successful-pose average
+precision is 0.113931 (95% case-cluster bootstrap CI 0.056090–0.270781),
+0.169927 (0.100789–0.262457), and 0.106265 (0.064622–0.224549). Production
+receipt payload/file SHA-256 values are
+`63a2f62cd465438f83e177b11ffd50483a2ff3f94c9399c308da2e8baee45b57`
+and `4e4acd968e2a32f4f6ff47b8412b9209b5afe6918bda2019fdc4e9e492a4f3b1`.
+The deterministic installed wheel identified above reconstructed this receipt
+exactly from outside the checkout.
+This result proves an executable term-decomposed diagnostic path, not reference-
+force-field validity or calibrated ranking. PoseBusters labels remain test-only;
+disjoint fit/validation data and target/ligand/scaffold leakage evidence are
+required before any fitting.
+
+The external-ranking reproduction command adds a preregistered second-host
+work-order and result contract around that baseline. Before observation, the
+work order binds the exact baseline intake/partition/evaluation chain, wheel
+and four implementation-source members, distinct host/operator identities, and
+a single-use nonce. A result must retain the three fixed public-input roots but
+replace the ranking intake, test partition, evaluation, and all six
+Vina/GNINA/Smina execution/evaluation receipt and file roots. It rederives and
+compares all 924 engine/case rows, including failures, fixed-policy scores,
+Top-K outcomes, aggregate and family metrics, intervals, and source-validity
+counts. No production work order or result is included because genuine
+external host/operator identities and custody evidence have not been supplied.
+Same-host exact reconstruction is not independent execution, and the unreviewed
+result schema keeps `independent_external_rerun_present=false`,
+`physical_host_independence_reviewed=false`,
+`independent_reviewer_receipt_approved=false`, and `claim_safe=false`.
+
+The v4 host-review contract requires the exact OpenMM materialization and
+native-minimization receipt in addition to both Engine result-review chains.
+For a rejected endpoint it also requires and freshly verifies the exact
+fixed-Born disposition receipt, signing its receipt/configuration/physics
+identity, completeness, and classification without promoting endpoint health.
+The observed 6/8 receipt therefore remains a signed rejected host review with
+both failed fixed-Born case IDs retained. An accepted endpoint forbids this
+failure-specific input. The v4 S0 builder rejects the current review before
+signing, requires the disposition path to be not applicable on accepted hosts,
+and requires exact native-physics equality for any future accepted two-host
+pair. Host-review and S0 contract SHA-256 values are
+`6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`
+and `549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`.
 
 The S0 review command is workflow tooling, not bundled evidence. It accepts no
 private key: after two raw host chains have been verified through the Python

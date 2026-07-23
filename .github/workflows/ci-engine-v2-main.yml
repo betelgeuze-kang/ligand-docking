@@ -179,6 +179,9 @@ jobs:
             tests/unit/test_engine_v2_post_merge_state.py
             tests/unit/test_engine_v2_input_identity.py
             tests/unit/test_engine_v2_docking_semantics.py
+            tests/unit/test_engine_v2_docking_score_breakdown.py
+            tests/unit/test_engine_v2_reference_docking_scorer.py
+            tests/unit/test_engine_v2_reference_docking_applicability.py
             tests/unit/test_engine_v2_geometric_docking_scorer.py
             tests/unit/test_engine_v2_flexible_geometric_scorer.py
             tests/unit/test_engine_v2_geometric_rigid_refinement.py
@@ -218,9 +221,17 @@ jobs:
             tests/unit/test_engine_v2_pose_ranking_calibration.py
             tests/unit/test_engine_v2_pose_ranking_confidence.py
             tests/unit/test_engine_v2_public_split_provenance.py
+            tests/unit/test_engine_v2_public_pose_ranking_corpus_intake.py
+            tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py
             tests/unit/test_engine_v2_public_posebusters_intake.py
             tests/unit/test_engine_v2_public_posebusters_corpus_audit.py
+            tests/unit/test_engine_v2_posebusters_pose_ranking_test_partition.py
+            tests/unit/test_engine_v2_posebusters_external_ranking_evaluation.py
+            tests/unit/test_engine_v2_posebusters_external_ranking_reproduction.py
+            tests/unit/test_engine_v2_pdbqt_uff_diagnostic_scorer.py
+            tests/unit/test_engine_v2_posebusters_internal_diagnostic_ranking.py
             tests/unit/test_engine_v2_openmm_reference_contract.py
+            tests/unit/test_engine_v2_openmm_reference_native_minimization_contract.py
             tests/unit/test_engine_v2_openmm_reference_result_review_contract.py
             tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py
             tests/unit/test_engine_v2_s0_production_evidence_bundle.py
@@ -346,6 +357,9 @@ jobs:
             tests/unit/test_engine_v2_post_merge_state.py \
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
+            tests/unit/test_engine_v2_docking_score_breakdown.py \
+            tests/unit/test_engine_v2_reference_docking_scorer.py \
+            tests/unit/test_engine_v2_reference_docking_applicability.py \
             tests/unit/test_engine_v2_geometric_docking_scorer.py \
             tests/unit/test_engine_v2_flexible_geometric_scorer.py \
             tests/unit/test_engine_v2_geometric_rigid_refinement.py \
@@ -385,9 +399,17 @@ jobs:
             tests/unit/test_engine_v2_pose_ranking_calibration.py \
             tests/unit/test_engine_v2_pose_ranking_confidence.py \
             tests/unit/test_engine_v2_public_split_provenance.py \
+            tests/unit/test_engine_v2_public_pose_ranking_corpus_intake.py \
+            tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py \
             tests/unit/test_engine_v2_public_posebusters_intake.py \
             tests/unit/test_engine_v2_public_posebusters_corpus_audit.py \
+            tests/unit/test_engine_v2_posebusters_pose_ranking_test_partition.py \
+            tests/unit/test_engine_v2_posebusters_external_ranking_evaluation.py \
+            tests/unit/test_engine_v2_posebusters_external_ranking_reproduction.py \
+            tests/unit/test_engine_v2_pdbqt_uff_diagnostic_scorer.py \
+            tests/unit/test_engine_v2_posebusters_internal_diagnostic_ranking.py \
             tests/unit/test_engine_v2_openmm_reference_contract.py \
+            tests/unit/test_engine_v2_openmm_reference_native_minimization_contract.py \
             tests/unit/test_engine_v2_openmm_reference_result_review_contract.py \
             tests/unit/test_engine_v2_s0_production_evidence_bundle_contract.py \
             tests/unit/test_engine_v2_s0_production_evidence_bundle.py > engine-v2-main.log 2>&1

@@ -19,6 +19,8 @@ on:
       - "tests/unit/test_engine_v2_pose_ranking_calibration.py"
       - "tests/unit/test_engine_v2_pose_ranking_confidence.py"
       - "tests/unit/test_engine_v2_public_split_provenance.py"
+      - "tests/unit/test_engine_v2_public_pose_ranking_corpus_intake.py"
+      - "tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py"
       - "tests/unit/test_engine_v2_public_posebusters_intake.py"
       - "tests/unit/test_engine_v2_public_posebusters_corpus_audit.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
@@ -42,6 +44,8 @@ on:
       - "tests/unit/test_engine_v2_pose_ranking_calibration.py"
       - "tests/unit/test_engine_v2_pose_ranking_confidence.py"
       - "tests/unit/test_engine_v2_public_split_provenance.py"
+      - "tests/unit/test_engine_v2_public_pose_ranking_corpus_intake.py"
+      - "tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py"
       - "tests/unit/test_engine_v2_public_posebusters_intake.py"
       - "tests/unit/test_engine_v2_public_posebusters_corpus_audit.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
@@ -83,6 +87,8 @@ jobs:
             tests/unit/test_engine_v2_pose_ranking_calibration.py
             tests/unit/test_engine_v2_pose_ranking_confidence.py
             tests/unit/test_engine_v2_public_split_provenance.py
+            tests/unit/test_engine_v2_public_pose_ranking_corpus_intake.py
+            tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py
             tests/unit/test_engine_v2_public_posebusters_intake.py
             tests/unit/test_engine_v2_public_posebusters_corpus_audit.py
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
@@ -114,5 +120,7 @@ jobs:
             tests/unit/test_engine_v2_pose_ranking_calibration.py \
             tests/unit/test_engine_v2_pose_ranking_confidence.py \
             tests/unit/test_engine_v2_public_split_provenance.py \
+            tests/unit/test_engine_v2_public_pose_ranking_corpus_intake.py \
+            tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py \
             tests/unit/test_engine_v2_public_posebusters_intake.py \
             tests/unit/test_engine_v2_public_posebusters_corpus_audit.py

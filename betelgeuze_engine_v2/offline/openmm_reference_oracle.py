@@ -62,7 +62,7 @@ OPENMM_REFERENCE_EVALUATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_openmm_reference_evaluation/1.0.0"
 )
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_native_minimization_endpoint/1.0.0"
+    "betelgeuze.engine_v2_openmm_reference_native_minimization_endpoint/2.0.0"
 )
 OPENMM_REFERENCE_REQUIRED_DISTRIBUTION_NAME = "OpenMM"
 OPENMM_REFERENCE_REQUIRED_DISTRIBUTION_VERSION = "8.4.0.post2"
@@ -1385,6 +1385,7 @@ class OpenMMReferenceSession:
         *,
         tolerance_kcal_per_mol_angstrom: float,
         maximum_iterations: int,
+        constraint_tolerance_relative: float,
     ) -> dict[str, Any]:
         """Run the separate OpenMM L-BFGS endpoint without trace equivalence."""
 
@@ -1405,12 +1406,22 @@ class OpenMMReferenceSession:
             raise OpenMMReferenceOfflineOracleError(
                 "native minimization iteration bound is invalid"
             )
+        constraint_tolerance = _finite(
+            constraint_tolerance_relative,
+            name="native minimization relative constraint tolerance",
+        )
+        if constraint_tolerance <= 0.0 or constraint_tolerance > 1.0:
+            raise OpenMMReferenceOfflineOracleError(
+                "native minimization relative constraint tolerance is invalid"
+            )
+        self._integrator.setConstraintTolerance(constraint_tolerance)
         initial = self.evaluate()
         self._openmm.LocalEnergyMinimizer.minimize(
             self._context,
             tolerance * _KJ_PER_NM_TO_KCAL_PER_ANGSTROM,
             maximum_iterations,
         )
+        self._context.applyConstraints(constraint_tolerance)
         state = self._context.getState(getPositions=True)
         position_values = state.getPositions().value_in_unit(self._unit.nanometer)
         final_coordinates = tuple(
@@ -1429,6 +1440,8 @@ class OpenMMReferenceSession:
             "algorithm": "OpenMM LocalEnergyMinimizer L-BFGS",
             "tolerance_kcal_per_mol_angstrom": tolerance,
             "maximum_iterations": maximum_iterations,
+            "constraint_tolerance_relative": constraint_tolerance,
+            "final_context_constraint_projection_applied": True,
             "initial_evaluation": initial.to_dict(),
             "final_coordinates_angstrom_hex": [
                 [value.hex() for value in row] for row in final_coordinates

@@ -38,25 +38,31 @@ from .openmm_reference_result_review import (
 
 
 S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_s0_production_evidence_bundle_contract/2.0.0"
+    "betelgeuze.engine_v2_s0_production_evidence_bundle_contract/4.0.0"
 )
 S0_PRODUCTION_EVIDENCE_BUNDLE_APPROVAL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_s0_production_evidence_bundle_approval/2.0.0"
+    "betelgeuze.engine_v2_s0_production_evidence_bundle_approval/4.0.0"
 )
 S0_PRODUCTION_EVIDENCE_BUNDLE_SIGNING_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_s0_production_evidence_bundle_signing_request/2.0.0"
+    "betelgeuze.engine_v2_s0_production_evidence_bundle_signing_request/4.0.0"
 )
 S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_ID = (
-    "engine_v2_s0_two_host_reference_physics_evidence_bundle/2.0.0"
+    "engine_v2_s0_two_host_reference_physics_evidence_bundle/4.0.0"
 )
-S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_VERSION = "2.0.0"
-S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_VERSION = "4.0.0"
+S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_FROZEN_AT_UTC = "2026-07-24T15:30:00Z"
 S0_PRODUCTION_EVIDENCE_BUNDLE_SIGNATURE_ALGORITHM = "ed25519"
 S0_PRODUCTION_EVIDENCE_BUNDLE_MAX_VALIDITY = timedelta(days=30)
 S0_PRODUCTION_EVIDENCE_BUNDLE_MAX_TRANSPORT_BYTES = 4 * 1024 * 1024
 S0_PRODUCTION_EVIDENCE_BUNDLE_HOST_COUNT = 2
 
 FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256 = (
+    "549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d"
+)
+FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3 = (
+    "161bf7222da7b438b64205e35e4637b8d0f5d59cdf00c25aa3a21a656a793bee"
+)
+FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V2 = (
     "f39ed6d45da770174d3a7668c28274d56c57d414e5d138df767e633cbd79ba02"
 )
 FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V1 = (
@@ -76,6 +82,9 @@ _REQUIRED_FINAL_CHECK_IDS = (
     "minimization_coordinate_energy_force_trace_projection_bitwise_equal",
     "all_twenty_seven_cases_fifty_nine_variants_and_failure_rows_reviewed",
     "all_fourteen_minimization_cases_counts_traces_failures_and_restarts_reviewed",
+    "both_host_native_endpoint_receipts_accepted_and_failure_free",
+    "accepted_host_reviews_have_no_failure_specific_disposition_input",
+    "native_minimization_physics_projection_bitwise_equal_across_hosts",
     "openmm_mapping_units_atom_order_terms_fixed_born_and_outputs_reviewed",
     "external_custody_and_production_session_evidence_independently_reviewed",
     "final_reviewer_role_freshness_revocation_and_supersession_reviewed",
@@ -86,11 +95,14 @@ _REQUIRED_FINAL_LIMITATION_IDS = (
     "s1_entry_does_not_authorize_a_validated_refinement_claim",
     "parameter_fitting_benchmark_product_and_customer_promotion_remain_closed",
     "openmm_is_an_offline_reference_and_not_a_customer_runtime_dependency",
+    "rejected_native_endpoint_health_blocks_s0_bundle_construction",
+    "completed_failure_disposition_does_not_authorize_s0_admission",
 )
 _CLOSED_GATE_BLOCKERS = (
     "two_distinct_cpu_host_result_sets_not_provisioned",
     "signed_host_external_result_reviews_not_provisioned",
     "trusted_host_external_result_reviewer_keys_not_provisioned",
+    "accepted_openmm_native_minimization_host_reviews_not_provisioned",
     "authenticated_external_production_custody_not_provisioned",
     "final_independent_human_s0_approval_not_provisioned",
     "trusted_final_s0_reviewer_key_not_provisioned",
@@ -265,6 +277,9 @@ class S0HostEvidence:
     minimization_evidence: MinimizationResultReviewEvidence
     openmm_energy_force_receipt: Mapping[str, Any]
     openmm_minimization_trace_receipt: Mapping[str, Any]
+    openmm_reference_materialization: Mapping[str, Any]
+    openmm_native_minimization_receipt: Mapping[str, Any]
+    expected_openmm_reference_materialization_sha256: str
     expected_enrolled_host_identity_sha256: str
     expected_cpu_identity_sha256: str
     expected_production_evidence_session_sha256: str
@@ -272,10 +287,18 @@ class S0HostEvidence:
     trusted_external_result_reviewer_keys: Mapping[
         str, OpenMMReferenceResultReviewerTrustAnchor
     ]
+    openmm_fixed_born_disposition_receipt: Mapping[str, Any] | None = None
+    expected_openmm_fixed_born_disposition_receipt_sha256: str | None = None
     revoked_openmm_energy_force_receipt_sha256s: Sequence[str] = ()
     superseded_openmm_energy_force_receipt_sha256s: Sequence[str] = ()
     revoked_openmm_minimization_trace_receipt_sha256s: Sequence[str] = ()
     superseded_openmm_minimization_trace_receipt_sha256s: Sequence[str] = ()
+    revoked_openmm_reference_materialization_sha256s: Sequence[str] = ()
+    superseded_openmm_reference_materialization_sha256s: Sequence[str] = ()
+    revoked_openmm_native_minimization_receipt_sha256s: Sequence[str] = ()
+    superseded_openmm_native_minimization_receipt_sha256s: Sequence[str] = ()
+    revoked_openmm_fixed_born_disposition_receipt_sha256s: Sequence[str] = ()
+    superseded_openmm_fixed_born_disposition_receipt_sha256s: Sequence[str] = ()
     revoked_result_review_attestation_sha256s: Sequence[str] = ()
     superseded_result_review_attestation_sha256s: Sequence[str] = ()
 
@@ -300,6 +323,21 @@ def _verify_host_evidence(
             openmm_energy_force_receipt=evidence.openmm_energy_force_receipt,
             openmm_minimization_trace_receipt=(
                 evidence.openmm_minimization_trace_receipt
+            ),
+            openmm_reference_materialization=(
+                evidence.openmm_reference_materialization
+            ),
+            openmm_native_minimization_receipt=(
+                evidence.openmm_native_minimization_receipt
+            ),
+            openmm_fixed_born_disposition_receipt=(
+                evidence.openmm_fixed_born_disposition_receipt
+            ),
+            expected_openmm_reference_materialization_sha256=(
+                evidence.expected_openmm_reference_materialization_sha256
+            ),
+            expected_openmm_fixed_born_disposition_receipt_sha256=(
+                evidence.expected_openmm_fixed_born_disposition_receipt_sha256
             ),
             expected_enrolled_host_identity_sha256=(
                 evidence.expected_enrolled_host_identity_sha256
@@ -326,6 +364,24 @@ def _verify_host_evidence(
             ),
             superseded_openmm_minimization_trace_receipt_sha256s=(
                 evidence.superseded_openmm_minimization_trace_receipt_sha256s
+            ),
+            revoked_openmm_reference_materialization_sha256s=(
+                evidence.revoked_openmm_reference_materialization_sha256s
+            ),
+            superseded_openmm_reference_materialization_sha256s=(
+                evidence.superseded_openmm_reference_materialization_sha256s
+            ),
+            revoked_openmm_native_minimization_receipt_sha256s=(
+                evidence.revoked_openmm_native_minimization_receipt_sha256s
+            ),
+            superseded_openmm_native_minimization_receipt_sha256s=(
+                evidence.superseded_openmm_native_minimization_receipt_sha256s
+            ),
+            revoked_openmm_fixed_born_disposition_receipt_sha256s=(
+                evidence.revoked_openmm_fixed_born_disposition_receipt_sha256s
+            ),
+            superseded_openmm_fixed_born_disposition_receipt_sha256s=(
+                evidence.superseded_openmm_fixed_born_disposition_receipt_sha256s
             ),
             revoked_result_review_attestation_sha256s=(
                 evidence.revoked_result_review_attestation_sha256s
@@ -539,9 +595,16 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_VERSION,
         "frozen_at_utc": S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V1
+            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3
         ),
-        "refreeze_reason": "binds_complete_energy_force_ed25519_signature_chain",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "binds_result_review_v4_and_requires_failure_disposition_to_be_"
+            "not_applicable_for_both_accepted_cpu_hosts"
+        ),
         "bound_contracts": {
             "openmm_reference_result_review_contract_sha256": (
                 FROZEN_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256
@@ -553,6 +616,14 @@ def _contract_projection() -> dict[str, Any]:
             "code_commit_source_dependency_runtime_and_seed_equal": True,
             "energy_force_physics_projection_exactly_equal": True,
             "minimization_physics_projection_exactly_equal": True,
+            "native_minimization_physics_projection_exactly_equal": True,
+            "both_host_result_reviews_must_be_accepted": True,
+            "both_native_endpoint_health_dispositions_must_be_accepted": True,
+            "native_endpoint_failed_case_ids_must_be_empty": True,
+            "accepted_host_failure_disposition_must_be_not_applicable": True,
+            "failure_disposition_completion_cannot_substitute_for_native_endpoint_acceptance": (
+                True
+            ),
             "host_rows_sorted_by_enrolled_host_identity": True,
             "all_failure_rows_remain_in_denominator": True,
             "energy_force_review_authorization_and_result_chain_uses_ed25519": True,
@@ -645,6 +716,28 @@ def _verified_host_rows(
     verifications = tuple(
         _verify_host_evidence(item, checked_at=checked_at) for item in host_evidence
     )
+    for verification in verifications:
+        if (
+            not verification.failure_inclusive_native_minimization_evidence_verified
+            or not verification.external_oracle_comparison_verified
+            or verification.result_review_outcome != "accepted"
+            or verification.native_minimization_status
+            != "accepted_offline_native_endpoint_comparison"
+            or verification.native_endpoint_health_passed_case_count != 8
+            or verification.native_endpoint_health_failed_case_ids
+            or verification.openmm_fixed_born_disposition_receipt_sha256 is not None
+            or verification.fixed_born_disposition_physics_projection_sha256 is not None
+            or verification.fixed_born_disposition_configuration_sha256 is not None
+            or verification.fixed_born_failure_disposition_required
+            or verification.fixed_born_failure_disposition_verified
+            or verification.fixed_born_failure_disposition_complete
+            or verification.fixed_born_failure_disposition_status
+            != "not_applicable_native_endpoint_accepted"
+            or verification.fixed_born_failure_disposition_classification is not None
+        ):
+            raise S0ProductionEvidenceBundleError(
+                "S0 host result review does not have accepted native endpoint health"
+            )
     revoked = _external_sha256_set(
         revoked_host_review_attestation_sha256s,
         name="revoked host result-review attestation",
@@ -675,6 +768,8 @@ def _verified_host_rows(
         "openmm_source_identity_sha256",
         "energy_force_physics_projection_sha256",
         "minimization_physics_projection_sha256",
+        "native_minimization_physics_projection_sha256",
+        "native_minimization_configuration_sha256",
     )
     for field_name in shared_fields:
         if getattr(ordered[0], field_name) != getattr(ordered[1], field_name):
@@ -693,6 +788,8 @@ def _verified_host_rows(
         "minimization_result_review_attestation_sha256",
         "openmm_energy_force_receipt_sha256",
         "openmm_minimization_trace_receipt_sha256",
+        "openmm_reference_materialization_sha256",
+        "openmm_native_minimization_receipt_sha256",
         "energy_force_execution_environment_receipt_sha256",
         "minimization_execution_environment_receipt_sha256",
         "energy_force_authorization_nonce_sha256",
@@ -738,6 +835,21 @@ def _verified_host_rows(
                 "openmm_minimization_trace_receipt_sha256": (
                     verification.openmm_minimization_trace_receipt_sha256
                 ),
+                "openmm_reference_materialization_sha256": (
+                    verification.openmm_reference_materialization_sha256
+                ),
+                "openmm_native_minimization_receipt_sha256": (
+                    verification.openmm_native_minimization_receipt_sha256
+                ),
+                "openmm_fixed_born_disposition_receipt_sha256": (
+                    verification.openmm_fixed_born_disposition_receipt_sha256
+                ),
+                "fixed_born_disposition_physics_projection_sha256": (
+                    verification.fixed_born_disposition_physics_projection_sha256
+                ),
+                "fixed_born_disposition_configuration_sha256": (
+                    verification.fixed_born_disposition_configuration_sha256
+                ),
                 "energy_force_execution_environment_receipt_sha256": (
                     verification.energy_force_execution_environment_receipt_sha256
                 ),
@@ -771,7 +883,31 @@ def _verified_host_rows(
                 ),
                 "reviewed_at_utc": verification.reviewed_at_utc,
                 "expires_at_utc": verification.expires_at_utc,
-                "external_oracle_comparison_verified": True,
+                "native_minimization_status": (verification.native_minimization_status),
+                "native_endpoint_health_passed_case_count": (
+                    verification.native_endpoint_health_passed_case_count
+                ),
+                "native_endpoint_health_failed_case_ids": list(
+                    verification.native_endpoint_health_failed_case_ids
+                ),
+                "fixed_born_failure_disposition_required": (
+                    verification.fixed_born_failure_disposition_required
+                ),
+                "fixed_born_failure_disposition_verified": (
+                    verification.fixed_born_failure_disposition_verified
+                ),
+                "fixed_born_failure_disposition_complete": (
+                    verification.fixed_born_failure_disposition_complete
+                ),
+                "fixed_born_failure_disposition_status": (
+                    verification.fixed_born_failure_disposition_status
+                ),
+                "fixed_born_failure_disposition_classification": (
+                    verification.fixed_born_failure_disposition_classification
+                ),
+                "external_oracle_comparison_verified": (
+                    verification.external_oracle_comparison_verified
+                ),
             }
         )
     return rows, ordered
@@ -855,12 +991,21 @@ def _approval_projection(
             "minimization_physics_projection_sha256": (
                 first.minimization_physics_projection_sha256
             ),
+            "native_minimization_physics_projection_sha256": (
+                first.native_minimization_physics_projection_sha256
+            ),
+            "native_minimization_configuration_sha256": (
+                first.native_minimization_configuration_sha256
+            ),
         },
         "host_to_host_disposition": {
             "distinct_host_cpu_session_custody_and_artifact_identities": True,
             "source_binary_environment_dependency_identity_frozen": True,
             "energy_force_physics_projection_exactly_equal": True,
             "minimization_physics_projection_exactly_equal": True,
+            "native_minimization_physics_projection_exactly_equal": True,
+            "both_native_endpoint_health_dispositions_accepted": True,
+            "accepted_host_failure_dispositions_not_applicable": True,
             "all_failure_rows_retained": True,
             "outcome": "accepted",
         },
@@ -1122,6 +1267,11 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
         "minimization_result_review_attestation_sha256",
         "openmm_energy_force_receipt_sha256",
         "openmm_minimization_trace_receipt_sha256",
+        "openmm_reference_materialization_sha256",
+        "openmm_native_minimization_receipt_sha256",
+        "openmm_fixed_born_disposition_receipt_sha256",
+        "fixed_born_disposition_physics_projection_sha256",
+        "fixed_born_disposition_configuration_sha256",
         "energy_force_execution_environment_receipt_sha256",
         "minimization_execution_environment_receipt_sha256",
         "energy_force_authorization_nonce_sha256",
@@ -1135,6 +1285,14 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
         "minimization_result_reviewer_identity_sha256",
         "reviewed_at_utc",
         "expires_at_utc",
+        "native_minimization_status",
+        "native_endpoint_health_passed_case_count",
+        "native_endpoint_health_failed_case_ids",
+        "fixed_born_failure_disposition_required",
+        "fixed_born_failure_disposition_verified",
+        "fixed_born_failure_disposition_complete",
+        "fixed_born_failure_disposition_status",
+        "fixed_born_failure_disposition_classification",
         "external_oracle_comparison_verified",
     }
     host_rows = bundle["host_rows"]
@@ -1143,6 +1301,19 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
             not isinstance(row, Mapping)
             or set(row) != host_row_fields
             or row.get("ordinal") != ordinal
+            or row.get("native_minimization_status")
+            != "accepted_offline_native_endpoint_comparison"
+            or row.get("native_endpoint_health_passed_case_count") != 8
+            or row.get("native_endpoint_health_failed_case_ids") != []
+            or row.get("openmm_fixed_born_disposition_receipt_sha256") is not None
+            or row.get("fixed_born_disposition_physics_projection_sha256") is not None
+            or row.get("fixed_born_disposition_configuration_sha256") is not None
+            or row.get("fixed_born_failure_disposition_required") is not False
+            or row.get("fixed_born_failure_disposition_verified") is not False
+            or row.get("fixed_born_failure_disposition_complete") is not False
+            or row.get("fixed_born_failure_disposition_status")
+            != "not_applicable_native_endpoint_accepted"
+            or row.get("fixed_born_failure_disposition_classification") is not None
             or row.get("external_oracle_comparison_verified") is not True
         ):
             raise S0ProductionEvidenceBundleError(
@@ -1152,6 +1323,17 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
             "ordinal",
             "reviewed_at_utc",
             "expires_at_utc",
+            "native_minimization_status",
+            "native_endpoint_health_passed_case_count",
+            "native_endpoint_health_failed_case_ids",
+            "openmm_fixed_born_disposition_receipt_sha256",
+            "fixed_born_disposition_physics_projection_sha256",
+            "fixed_born_disposition_configuration_sha256",
+            "fixed_born_failure_disposition_required",
+            "fixed_born_failure_disposition_verified",
+            "fixed_born_failure_disposition_complete",
+            "fixed_born_failure_disposition_status",
+            "fixed_born_failure_disposition_classification",
             "external_oracle_comparison_verified",
         }:
             _require_sha256(row.get(field_name), name=f"unsigned host {field_name}")
@@ -1179,6 +1361,8 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
         "minimization_result_review_attestation_sha256",
         "openmm_energy_force_receipt_sha256",
         "openmm_minimization_trace_receipt_sha256",
+        "openmm_reference_materialization_sha256",
+        "openmm_native_minimization_receipt_sha256",
         "energy_force_execution_environment_receipt_sha256",
         "minimization_execution_environment_receipt_sha256",
         "energy_force_authorization_nonce_sha256",
@@ -1200,6 +1384,8 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
         "openmm_source_identity_sha256",
         "energy_force_physics_projection_sha256",
         "minimization_physics_projection_sha256",
+        "native_minimization_physics_projection_sha256",
+        "native_minimization_configuration_sha256",
     }
     if not isinstance(shared, Mapping) or set(shared) != shared_fields:
         raise S0ProductionEvidenceBundleError(
@@ -1215,6 +1401,9 @@ def _require_unsigned_approval_payload(value: object) -> dict[str, Any]:
         "source_binary_environment_dependency_identity_frozen": True,
         "energy_force_physics_projection_exactly_equal": True,
         "minimization_physics_projection_exactly_equal": True,
+        "native_minimization_physics_projection_exactly_equal": True,
+        "both_native_endpoint_health_dispositions_accepted": True,
+        "accepted_host_failure_dispositions_not_applicable": True,
         "all_failure_rows_retained": True,
         "outcome": "accepted",
     }:
@@ -1775,6 +1964,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 __all__ = [
     "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V1",
+    "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V2",
+    "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3",
     "FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256",
     "S0_FINAL_REVIEW_OUTCOME_ACCEPTED",
     "S0_FINAL_REVIEW_OUTCOME_REJECTED",

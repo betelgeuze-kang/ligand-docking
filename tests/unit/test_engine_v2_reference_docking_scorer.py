@@ -8,12 +8,15 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from betelgeuze_engine_v2.docking import (  # noqa: E402
+    ChemistryAwarePoseValidityConfig,
+    ChemistryAwarePoseValidityError,
     DEFAULT_SUPPORTED_DOCKING_ATOMIC_NUMBERS,
     DockingBudget,
     DockingProblemIdentity,
     ReferenceDockingScoringError,
     TorsionSearchSpace,
     UncalibratedReferenceDockingScorer,
+    evaluate_chemistry_aware_pose_validity,
     generate_bounded_docking_proposals,
     run_bounded_docking_search,
 )
@@ -159,6 +162,62 @@ def _fixture(receptor_charge: float = 0.25):
     return receptor, ligand, problem, space, scorer
 
 
+def _single_atom_fixture(
+    element: str,
+    *,
+    receptor_charge: float,
+    ligand_charge: float,
+    distance_angstrom: float,
+):
+    receptor = _system(
+        f"{element}-receptor",
+        (element,),
+        (receptor_charge,),
+        ((0.0, 0.0, 0.0),),
+        entity_type="polymer",
+    )
+    ligand = _system(
+        f"{element}-ligand",
+        (element,),
+        (ligand_charge,),
+        ((distance_angstrom, 0.0, 0.0),),
+        entity_type="non-polymer",
+    )
+    problem = DockingProblemIdentity(
+        receptor_system_sha256=canonical_system_sha256(receptor),
+        ligand_system_sha256=canonical_system_sha256(ligand),
+        pocket_definition_sha256="b" * 64,
+    )
+    space = TorsionSearchSpace(
+        local_offsets=torch.tensor([[0.0, 0.0, 0.0]], dtype=torch.float64),
+        parent=torch.tensor([-1], dtype=torch.long),
+        local_axes=torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float64),
+        rotatable_mask=torch.tensor([False]),
+        root_positions=torch.tensor(
+            [[distance_angstrom, 0.0, 0.0]],
+            dtype=torch.float64,
+        ),
+    )
+    scorer = UncalibratedReferenceDockingScorer(
+        receptor,
+        ligand,
+        _parameters(receptor),
+        _parameters(ligand),
+        problem,
+    )
+    proposal = generate_bounded_docking_proposals(
+        space,
+        DockingBudget(
+            candidate_count=1,
+            top_k=1,
+            max_torsions=0,
+            translation_radius_angstrom=0.0,
+        ),
+        problem=problem,
+    )[0]
+    return scorer, proposal
+
+
 def _term_map(breakdown):
     return {term.term_id: term for term in breakdown.terms}
 
@@ -244,9 +303,13 @@ def test_explicit_charge_changes_only_charge_dependent_interaction_direction() -
     )[0]
     positive = _term_map(positive_scorer.score(positive_pose))
 
-    _negative_receptor, _negative_ligand, negative_problem, negative_space, negative_scorer = (
-        _fixture(-0.25)
-    )
+    (
+        _negative_receptor,
+        _negative_ligand,
+        negative_problem,
+        negative_space,
+        negative_scorer,
+    ) = _fixture(-0.25)
     negative_pose = generate_bounded_docking_proposals(
         negative_space,
         DockingBudget(candidate_count=1, top_k=1, max_torsions=0),
@@ -265,7 +328,9 @@ def test_explicit_charge_changes_only_charge_dependent_interaction_direction() -
     )
 
 
-def test_unsupported_metal_mismatched_charge_and_receptor_cofactor_fail_closed() -> None:
+def test_unsupported_metal_mismatched_charge_and_receptor_cofactor_fail_closed() -> (
+    None
+):
     receptor, ligand, _problem, _space, _scorer = _fixture()
     zinc_receptor = _system(
         "zinc-receptor",
@@ -279,7 +344,9 @@ def test_unsupported_metal_mismatched_charge_and_receptor_cofactor_fail_closed()
         ligand_system_sha256=canonical_system_sha256(ligand),
         pocket_definition_sha256="a" * 64,
     )
-    with pytest.raises(ReferenceDockingScoringError, match="outside the supported scope"):
+    with pytest.raises(
+        ReferenceDockingScoringError, match="outside the supported scope"
+    ):
         UncalibratedReferenceDockingScorer(
             zinc_receptor,
             ligand,
@@ -326,3 +393,335 @@ def test_unsupported_metal_mismatched_charge_and_receptor_cofactor_fail_closed()
             _parameters(ligand),
             cofactor_problem,
         )
+
+
+def test_score_with_diagnostics_binds_terms_pairs_charges_and_exact_pose() -> None:
+    _receptor, _ligand, problem, space, scorer = _fixture()
+    proposal = generate_bounded_docking_proposals(
+        space,
+        DockingBudget(
+            candidate_count=1,
+            top_k=1,
+            max_torsions=0,
+            translation_radius_angstrom=0.0,
+        ),
+        problem=problem,
+    )[0]
+
+    breakdown, diagnostics = scorer.score_with_diagnostics(proposal)
+    terms = _term_map(breakdown)
+
+    assert diagnostics.proposal_fingerprint_sha256 == proposal.fingerprint_sha256
+    assert diagnostics.pose_coordinate_sha256 == proposal.coordinate_fingerprint_sha256
+    assert diagnostics.problem_fingerprint_sha256 == problem.fingerprint_sha256
+    assert diagnostics.parameter_source_sha256 == scorer.parameter_source_sha256
+    assert diagnostics.receptor_ligand_contacts.total_pair_count == 2
+    assert diagnostics.receptor_ligand_contacts.excluded_pair_count == 0
+    assert diagnostics.ligand_internal_contacts.total_pair_count == 1
+    assert diagnostics.ligand_internal_contacts.excluded_pair_count == 1
+    assert diagnostics.ligand_internal_contacts.evaluated_pair_count == 0
+    assert diagnostics.receptor_ligand_charges.like_charge_pair_count == 1
+    assert diagnostics.receptor_ligand_charges.opposite_charge_pair_count == 1
+    assert diagnostics.receptor_ligand_charges.neutral_charge_pair_count == 0
+    assert (
+        diagnostics.receptor_ligand_charges.signed_screened_coulomb_kcal_per_mol
+        == terms["receptor_ligand_screened_coulomb"].raw_value
+    )
+    assert (
+        diagnostics.receptor_ligand_vdw_overlap_penalty_kcal_per_mol
+        == terms["vdw_overlap_penalty"].raw_value
+    )
+    assert len(diagnostics.fingerprint_sha256) == 64
+    assert diagnostics.to_dict()["candidate_id"] == proposal.candidate_id
+
+
+def test_standard_score_does_not_materialize_pair_diagnostics(monkeypatch) -> None:
+    _receptor, _ligand, problem, space, scorer = _fixture()
+    proposal = generate_bounded_docking_proposals(
+        space,
+        DockingBudget(
+            candidate_count=1,
+            top_k=1,
+            max_torsions=0,
+            translation_radius_angstrom=0.0,
+        ),
+        problem=problem,
+    )[0]
+
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("detailed pair diagnostics were materialized")
+
+    monkeypatch.setattr(scorer, "_cross_contact_diagnostics", fail_if_called)
+    monkeypatch.setattr(scorer, "_ligand_internal_contacts", fail_if_called)
+
+    assert scorer.score(proposal).complete
+
+
+def test_chemistry_aware_validity_is_complete_but_explicitly_not_claim_safe() -> None:
+    _receptor, _ligand, problem, space, scorer = _fixture()
+    proposal = generate_bounded_docking_proposals(
+        space,
+        DockingBudget(
+            candidate_count=1,
+            top_k=1,
+            max_torsions=0,
+            translation_radius_angstrom=0.0,
+        ),
+        problem=problem,
+    )[0]
+    config = ChemistryAwarePoseValidityConfig(
+        maximum_ligand_strain_delta_kcal_per_mol=1.0,
+        maximum_repulsive_screened_coulomb_kcal_per_mol=100.0,
+    )
+
+    result = evaluate_chemistry_aware_pose_validity(
+        scorer,
+        proposal,
+        config=config,
+    )
+
+    assert result.complete
+    assert result.valid
+    assert result.valid_within_evaluated_scope
+    assert all(result.evaluated_checks.values())
+    assert result.checks["partial_charge_parameter_match"]
+    assert result.checks["receptor_ligand_element_parameterized_clash_free"]
+    assert result.checks["ligand_internal_element_parameterized_clash_free"]
+    assert result.checks["ligand_strain_within_declared_limit"]
+    assert result.checks["repulsive_screened_coulomb_within_declared_limit"]
+    assert not result.claim_safe
+    assert result.to_dict()["scientifically_validated"] is False
+    assert (
+        "chemistry_aware_pose_validity_thresholds_caller_supplied_not_calibrated"
+        in result.blockers
+    )
+    with pytest.raises(ChemistryAwarePoseValidityError):
+        ChemistryAwarePoseValidityConfig(
+            maximum_ligand_strain_delta_kcal_per_mol=-1.0,
+            maximum_repulsive_screened_coulomb_kcal_per_mol=1.0,
+        )
+
+
+def test_element_parameterized_contact_changes_at_the_same_distance() -> None:
+    carbon_scorer, carbon_proposal = _single_atom_fixture(
+        "C",
+        receptor_charge=0.0,
+        ligand_charge=0.0,
+        distance_angstrom=2.7,
+    )
+    oxygen_scorer, oxygen_proposal = _single_atom_fixture(
+        "O",
+        receptor_charge=0.0,
+        ligand_charge=0.0,
+        distance_angstrom=2.7,
+    )
+    config = ChemistryAwarePoseValidityConfig(
+        maximum_ligand_strain_delta_kcal_per_mol=1.0,
+        maximum_repulsive_screened_coulomb_kcal_per_mol=1.0,
+    )
+
+    carbon = evaluate_chemistry_aware_pose_validity(
+        carbon_scorer,
+        carbon_proposal,
+        config=config,
+    )
+    oxygen = evaluate_chemistry_aware_pose_validity(
+        oxygen_scorer,
+        oxygen_proposal,
+        config=config,
+    )
+
+    assert not carbon.checks["receptor_ligand_element_parameterized_clash_free"]
+    assert (
+        carbon.interaction_diagnostics.receptor_ligand_contacts.clashing_pair_count == 1
+    )
+    assert (
+        carbon.interaction_diagnostics.receptor_ligand_contacts.minimum_contact_ratio
+        < 1.0
+    )
+    assert oxygen.checks["receptor_ligand_element_parameterized_clash_free"]
+    assert (
+        oxygen.interaction_diagnostics.receptor_ligand_contacts.clashing_pair_count == 0
+    )
+    assert (
+        oxygen.interaction_diagnostics.receptor_ligand_contacts.minimum_contact_ratio
+        > 1.0
+    )
+
+
+def test_charge_sign_gates_repulsion_without_changing_steric_contact() -> None:
+    like_scorer, like_proposal = _single_atom_fixture(
+        "C",
+        receptor_charge=0.25,
+        ligand_charge=0.30,
+        distance_angstrom=3.0,
+    )
+    opposite_scorer, opposite_proposal = _single_atom_fixture(
+        "C",
+        receptor_charge=-0.25,
+        ligand_charge=0.30,
+        distance_angstrom=3.0,
+    )
+    config = ChemistryAwarePoseValidityConfig(
+        maximum_ligand_strain_delta_kcal_per_mol=1.0,
+        maximum_repulsive_screened_coulomb_kcal_per_mol=0.0,
+    )
+
+    like = evaluate_chemistry_aware_pose_validity(
+        like_scorer,
+        like_proposal,
+        config=config,
+    )
+    opposite = evaluate_chemistry_aware_pose_validity(
+        opposite_scorer,
+        opposite_proposal,
+        config=config,
+    )
+
+    assert not like.checks["repulsive_screened_coulomb_within_declared_limit"]
+    assert (
+        like.measurements["receptor_ligand_repulsive_screened_coulomb_kcal_per_mol"]
+        > 0.0
+    )
+    assert opposite.checks["repulsive_screened_coulomb_within_declared_limit"]
+    assert (
+        opposite.measurements["receptor_ligand_repulsive_screened_coulomb_kcal_per_mol"]
+        == 0.0
+    )
+    assert (
+        opposite.measurements[
+            "receptor_ligand_attractive_screened_coulomb_kcal_per_mol"
+        ]
+        < 0.0
+    )
+    assert (
+        like.interaction_diagnostics.receptor_ligand_contacts.to_dict()
+        == opposite.interaction_diagnostics.receptor_ligand_contacts.to_dict()
+    )
+
+
+def test_signed_strain_threshold_and_topology_exclusions_are_independent_gates() -> (
+    None
+):
+    receptor, ligand, problem, space, excluded_scorer = _fixture()
+    proposal = generate_bounded_docking_proposals(
+        space,
+        DockingBudget(
+            candidate_count=1,
+            top_k=1,
+            max_torsions=0,
+            translation_radius_angstrom=0.0,
+        ),
+        problem=problem,
+    )[0]
+    config = ChemistryAwarePoseValidityConfig(
+        maximum_ligand_strain_delta_kcal_per_mol=5.0,
+        maximum_repulsive_screened_coulomb_kcal_per_mol=100.0,
+    )
+    excluded = evaluate_chemistry_aware_pose_validity(
+        excluded_scorer,
+        proposal,
+        config=config,
+    )
+    assert excluded.checks["ligand_internal_element_parameterized_clash_free"]
+    assert (
+        excluded.interaction_diagnostics.ligand_internal_contacts.excluded_pair_count
+        == 1
+    )
+
+    included_parameters = replace(
+        _parameters(ligand),
+        parameter_set_id="included-bonded-pair",
+        excluded_pairs=(),
+    )
+    included_scorer = UncalibratedReferenceDockingScorer(
+        receptor,
+        ligand,
+        _parameters(receptor),
+        included_parameters,
+        problem,
+    )
+    included = evaluate_chemistry_aware_pose_validity(
+        included_scorer,
+        proposal,
+        config=config,
+    )
+    assert not included.checks["ligand_internal_element_parameterized_clash_free"]
+    assert (
+        included.interaction_diagnostics.ligand_internal_contacts.excluded_pair_count
+        == 0
+    )
+    assert (
+        included.interaction_diagnostics.ligand_internal_contacts.clashing_pair_count
+        == 1
+    )
+
+    distorted_coordinates = proposal.coordinates.clone()
+    distorted_coordinates[1, 0] += 0.4
+    distorted_proposal = proposal.with_refined_coordinates(
+        distorted_coordinates,
+        refiner_id="unit-test-distortion",
+        refiner_version="1.0.0",
+    )
+    distorted = evaluate_chemistry_aware_pose_validity(
+        excluded_scorer,
+        distorted_proposal,
+        config=config,
+    )
+    assert distorted.measurements[
+        "ligand_internal_strain_delta_kcal_per_mol"
+    ] == pytest.approx(8.0)
+    assert not distorted.checks["ligand_strain_within_declared_limit"]
+    assert "ligand_strain_limit_exceeded" in distorted.blockers
+
+
+def test_aromatic_and_declared_stereo_are_explicitly_incomplete() -> None:
+    receptor, ligand, _problem, space, _scorer = _fixture()
+    scoped_ligand = replace(
+        ligand,
+        atoms=(
+            replace(ligand.atoms[0], aromatic=True, stereo="R"),
+            ligand.atoms[1],
+        ),
+        bonds=(replace(ligand.bonds[0], aromatic=True),),
+    )
+    problem = DockingProblemIdentity(
+        receptor_system_sha256=canonical_system_sha256(receptor),
+        ligand_system_sha256=canonical_system_sha256(scoped_ligand),
+        pocket_definition_sha256="a" * 64,
+    )
+    scorer = UncalibratedReferenceDockingScorer(
+        receptor,
+        scoped_ligand,
+        _parameters(receptor),
+        _parameters(scoped_ligand),
+        problem,
+    )
+    proposal = generate_bounded_docking_proposals(
+        space,
+        DockingBudget(
+            candidate_count=1,
+            top_k=1,
+            max_torsions=0,
+            translation_radius_angstrom=0.0,
+        ),
+        problem=problem,
+    )[0]
+    result = evaluate_chemistry_aware_pose_validity(
+        scorer,
+        proposal,
+        config=ChemistryAwarePoseValidityConfig(
+            maximum_ligand_strain_delta_kcal_per_mol=1.0,
+            maximum_repulsive_screened_coulomb_kcal_per_mol=100.0,
+        ),
+    )
+
+    assert not result.complete
+    assert not result.valid
+    assert result.valid_within_evaluated_scope
+    assert not result.evaluated_checks["aromatic_specific_interactions_covered"]
+    assert not result.evaluated_checks["declared_stereo_covered"]
+    assert result.not_evaluated_reasons["aromatic_specific_interactions_covered"]
+    assert result.not_evaluated_reasons["declared_stereo_covered"]
+    assert "aromatic_specific_interaction_term_missing" in result.blockers
+    assert "stereo_validity_is_external_to_scorer" in result.blockers

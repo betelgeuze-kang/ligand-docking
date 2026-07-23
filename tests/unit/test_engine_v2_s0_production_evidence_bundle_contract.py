@@ -23,12 +23,24 @@ def test_s0_bundle_contract_is_frozen_and_narrowly_scoped() -> None:
     assert (
         contract["contract_sha256"]
         == FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256
-        == "f39ed6d45da770174d3a7668c28274d56c57d414e5d138df767e633cbd79ba02"
+        == "549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d"
     )
     assert require_s0_production_evidence_bundle_contract_document(contract) == contract
     assert contract["host_policy"]["required_host_count"] == 2
     assert contract["host_policy"]["energy_force_physics_projection_exactly_equal"]
     assert contract["host_policy"]["minimization_physics_projection_exactly_equal"]
+    assert contract["host_policy"][
+        "native_minimization_physics_projection_exactly_equal"
+    ]
+    assert contract["host_policy"][
+        "both_native_endpoint_health_dispositions_must_be_accepted"
+    ]
+    assert contract["host_policy"][
+        "accepted_host_failure_disposition_must_be_not_applicable"
+    ]
+    assert contract["host_policy"][
+        "failure_disposition_completion_cannot_substitute_for_native_endpoint_acceptance"
+    ]
     assert contract["final_review_policy"]["algorithm"] == "ed25519"
     assert (
         contract["final_review_policy"][
@@ -109,6 +121,9 @@ def test_source_freshly_reverifies_hosts_and_enforces_cross_host_equality() -> N
     assert "len(host_evidence) != S0_PRODUCTION_EVIDENCE_BUNDLE_HOST_COUNT" in source
     assert "host-to-host {field_name} equality failed" in source
     assert "host-to-host {field_name} identities must be distinct" in source
+    assert (
+        "S0 host result review does not have accepted native endpoint health" in source
+    )
     assert "final S0 reviewer must be distinct from every nested role" in source
     assert "verify_ed25519" in source
     assert '"signing-bytes"' in source

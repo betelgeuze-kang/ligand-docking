@@ -15,9 +15,15 @@ pytest.importorskip("openmm")
 from betelgeuze_engine_v2.offline.openmm_reference_oracle import (  # noqa: E402
     observe_openmm_reference_runtime_identity,
 )
-from betelgeuze_engine_v2.offline.openmm_reference_receipts import (  # noqa: E402
-    build_openmm_reference_energy_force_receipt,
-    build_openmm_reference_minimization_trace_receipt,
+from betelgeuze_engine_v2.offline.openmm_reference_materialization import (  # noqa: E402
+    build_openmm_reference_materialization,
+)
+from betelgeuze_engine_v2.offline.openmm_reference_fixed_born_disposition import (  # noqa: E402
+    FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256,
+    build_openmm_reference_fixed_born_disposition_receipt,
+)
+from betelgeuze_engine_v2.offline.openmm_reference_native_minimization import (  # noqa: E402
+    build_openmm_reference_native_minimization_receipt,
 )
 from betelgeuze_engine_v2.offline.openmm_reference_result_review import (  # noqa: E402
     EnergyForceResultReviewEvidence,
@@ -26,6 +32,11 @@ from betelgeuze_engine_v2.offline.openmm_reference_result_review import (  # noq
     OpenMMReferenceResultReviewerTrustAnchor,
     build_signed_openmm_reference_result_review_attestation,
     verify_signed_openmm_reference_result_review_attestation,
+)
+from betelgeuze_engine_v2.offline.s0_production_evidence_bundle import (  # noqa: E402
+    S0HostEvidence,
+    S0ProductionEvidenceBundleError,
+    build_signed_s0_production_evidence_bundle_approval,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (  # noqa: E402
     ed25519_public_key_bytes,
@@ -81,6 +92,9 @@ class _ReviewBundle:
     minimization_evidence: MinimizationResultReviewEvidence
     openmm_energy_receipt: dict[str, Any]
     openmm_minimization_receipt: dict[str, Any]
+    openmm_materialization: dict[str, Any]
+    openmm_native_minimization_receipt: dict[str, Any]
+    openmm_fixed_born_disposition_receipt: dict[str, Any]
     attestation: dict[str, Any]
 
 
@@ -170,24 +184,46 @@ def review_bundle(
         )
 
         runtime_identity = observe_openmm_reference_runtime_identity()
-        openmm_energy = build_openmm_reference_energy_force_receipt(
+        openmm_materialization = build_openmm_reference_materialization(
             observed_at_utc="2026-07-22T00:00:00Z",
             runtime_identity=runtime_identity,
         )
-        operational_traces = tuple(
-            case["coordinate_traces"][0]
-            for case in minimization_receipt["case_results"]
+        openmm_energy = openmm_materialization["energy_force_receipt"]
+        openmm_minimization = openmm_materialization["minimization_trace_receipt"]
+        openmm_native_minimization = build_openmm_reference_native_minimization_receipt(
+            openmm_materialization,
+            expected_source_materialization_sha256=(
+                openmm_materialization["materialization_sha256"]
+            ),
+            observed_at_utc="2026-07-22T00:30:00Z",
         )
-        openmm_minimization = build_openmm_reference_minimization_trace_receipt(
-            operational_traces,
-            observed_at_utc="2026-07-22T00:00:00Z",
-            runtime_identity=runtime_identity,
+        openmm_fixed_born_disposition = (
+            build_openmm_reference_fixed_born_disposition_receipt(
+                openmm_materialization,
+                openmm_native_minimization,
+                expected_source_materialization_sha256=(
+                    openmm_materialization["materialization_sha256"]
+                ),
+                expected_source_native_receipt_sha256=(
+                    openmm_native_minimization["receipt_sha256"]
+                ),
+                observed_at_utc="2026-07-22T00:40:00Z",
+            )
         )
         attestation = build_signed_openmm_reference_result_review_attestation(
             energy_force_evidence=energy_evidence,
             minimization_evidence=minimization_evidence,
             openmm_energy_force_receipt=openmm_energy,
             openmm_minimization_trace_receipt=openmm_minimization,
+            openmm_reference_materialization=openmm_materialization,
+            openmm_native_minimization_receipt=openmm_native_minimization,
+            openmm_fixed_born_disposition_receipt=(openmm_fixed_born_disposition),
+            expected_openmm_reference_materialization_sha256=(
+                openmm_materialization["materialization_sha256"]
+            ),
+            expected_openmm_fixed_born_disposition_receipt_sha256=(
+                openmm_fixed_born_disposition["receipt_sha256"]
+            ),
             enrolled_host_identity_sha256=HOST_IDENTITY,
             cpu_identity_sha256=CPU_IDENTITY,
             production_evidence_session_sha256=SESSION_IDENTITY,
@@ -204,6 +240,9 @@ def review_bundle(
             minimization_evidence=minimization_evidence,
             openmm_energy_receipt=openmm_energy,
             openmm_minimization_receipt=openmm_minimization,
+            openmm_materialization=openmm_materialization,
+            openmm_native_minimization_receipt=openmm_native_minimization,
+            openmm_fixed_born_disposition_receipt=(openmm_fixed_born_disposition),
             attestation=attestation,
         )
     finally:
@@ -223,6 +262,19 @@ def _verify(
         "minimization_evidence": bundle.minimization_evidence,
         "openmm_energy_force_receipt": bundle.openmm_energy_receipt,
         "openmm_minimization_trace_receipt": bundle.openmm_minimization_receipt,
+        "openmm_reference_materialization": bundle.openmm_materialization,
+        "openmm_native_minimization_receipt": (
+            bundle.openmm_native_minimization_receipt
+        ),
+        "openmm_fixed_born_disposition_receipt": (
+            bundle.openmm_fixed_born_disposition_receipt
+        ),
+        "expected_openmm_reference_materialization_sha256": (
+            bundle.openmm_materialization["materialization_sha256"]
+        ),
+        "expected_openmm_fixed_born_disposition_receipt_sha256": (
+            bundle.openmm_fixed_born_disposition_receipt["receipt_sha256"]
+        ),
         "expected_enrolled_host_identity_sha256": HOST_IDENTITY,
         "expected_cpu_identity_sha256": CPU_IDENTITY,
         "expected_production_evidence_session_sha256": SESSION_IDENTITY,
@@ -238,6 +290,12 @@ def _verify(
         "superseded_openmm_energy_force_receipt_sha256s": (),
         "revoked_openmm_minimization_trace_receipt_sha256s": (),
         "superseded_openmm_minimization_trace_receipt_sha256s": (),
+        "revoked_openmm_reference_materialization_sha256s": (),
+        "superseded_openmm_reference_materialization_sha256s": (),
+        "revoked_openmm_native_minimization_receipt_sha256s": (),
+        "superseded_openmm_native_minimization_receipt_sha256s": (),
+        "revoked_openmm_fixed_born_disposition_receipt_sha256s": (),
+        "superseded_openmm_fixed_born_disposition_receipt_sha256s": (),
         "revoked_result_review_attestation_sha256s": (),
         "superseded_result_review_attestation_sha256s": (),
     }
@@ -251,8 +309,38 @@ def test_signed_review_reverifies_exact_engine_and_openmm_receipts(
     review_bundle: _ReviewBundle,
 ) -> None:
     verification = _verify(review_bundle)
-    assert verification.external_oracle_comparison_verified is True
-    assert verification.result_review_outcome == "accepted"
+    assert verification.external_oracle_comparison_verified is False
+    assert verification.result_review_outcome == "rejected"
+    assert verification.failure_inclusive_native_minimization_evidence_verified
+    assert (
+        verification.native_minimization_status
+        == "rejected_offline_native_endpoint_comparison"
+    )
+    assert verification.native_endpoint_health_passed_case_count == 6
+    assert set(verification.native_endpoint_health_failed_case_ids) == {
+        "v2_fixed_born_constrained_energy_decrease",
+        "v2_fixed_born_checkpoint_restart_exact",
+    }
+    assert (
+        verification.openmm_fixed_born_disposition_receipt_sha256
+        == review_bundle.openmm_fixed_born_disposition_receipt["receipt_sha256"]
+    )
+    assert (
+        verification.fixed_born_disposition_configuration_sha256
+        == FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256
+    )
+    assert verification.fixed_born_disposition_physics_projection_sha256
+    assert verification.fixed_born_failure_disposition_required is True
+    assert verification.fixed_born_failure_disposition_verified is True
+    assert verification.fixed_born_failure_disposition_complete is True
+    assert (
+        verification.fixed_born_failure_disposition_status
+        == "accepted_failure_disposition_evidence"
+    )
+    assert (
+        verification.fixed_born_failure_disposition_classification
+        == "final_constraint_projection_tradeoff_observed"
+    )
     assert verification.enrolled_host_identity_sha256 == HOST_IDENTITY
     assert verification.cpu_identity_sha256 == CPU_IDENTITY
     assert verification.code_commit_sha == energy_writer_support.CODE_COMMIT_SHA
@@ -269,9 +357,60 @@ def test_signed_review_reverifies_exact_engine_and_openmm_receipts(
     assert verification.s0_admission_authorized is False
     assert verification.s1_admission_authorized is False
     assert verification.claim_safe is False
-    assert "single_host_external_review_is_not_two_host_reproducibility" in (
+    assert "openmm_native_minimization_endpoint_health_failed" in (
         verification.blockers
     )
+
+
+def test_actual_rejected_native_review_cannot_enter_s0_bundle(
+    review_bundle: _ReviewBundle,
+) -> None:
+    host = S0HostEvidence(
+        result_review_attestation=review_bundle.attestation,
+        energy_force_evidence=review_bundle.energy_evidence,
+        minimization_evidence=review_bundle.minimization_evidence,
+        openmm_energy_force_receipt=review_bundle.openmm_energy_receipt,
+        openmm_minimization_trace_receipt=(review_bundle.openmm_minimization_receipt),
+        openmm_reference_materialization=review_bundle.openmm_materialization,
+        openmm_native_minimization_receipt=(
+            review_bundle.openmm_native_minimization_receipt
+        ),
+        openmm_fixed_born_disposition_receipt=(
+            review_bundle.openmm_fixed_born_disposition_receipt
+        ),
+        expected_openmm_reference_materialization_sha256=(
+            review_bundle.openmm_materialization["materialization_sha256"]
+        ),
+        expected_openmm_fixed_born_disposition_receipt_sha256=(
+            review_bundle.openmm_fixed_born_disposition_receipt["receipt_sha256"]
+        ),
+        expected_enrolled_host_identity_sha256=HOST_IDENTITY,
+        expected_cpu_identity_sha256=CPU_IDENTITY,
+        expected_production_evidence_session_sha256=SESSION_IDENTITY,
+        expected_custody_terminal_sha256=CUSTODY_TERMINAL,
+        trusted_external_result_reviewer_keys={
+            EXTERNAL_REVIEWER_KEY_ID: OpenMMReferenceResultReviewerTrustAnchor(
+                EXTERNAL_REVIEWER_IDENTITY,
+                EXTERNAL_REVIEWER_PUBLIC_KEY,
+            )
+        },
+    )
+
+    with pytest.raises(
+        S0ProductionEvidenceBundleError,
+        match="does not have accepted native endpoint health",
+    ):
+        build_signed_s0_production_evidence_bundle_approval(
+            host_evidence=(host, host),
+            final_reviewer_identity_sha256="6" * 64,
+            final_reviewer_key_id="test-final-s0-reviewer",
+            signing_key=bytes.fromhex("61" * 32),
+            reviewed_at=REVIEWED_AT + timedelta(hours=2),
+            expires_at=EXPIRES_AT,
+            nonce_sha256="7" * 64,
+            revoked_host_review_attestation_sha256s=(),
+            superseded_host_review_attestation_sha256s=(),
+        )
 
 
 @pytest.mark.parametrize(
@@ -306,6 +445,49 @@ def test_review_rejects_signature_tamper_and_noncanonical_transport(
         _verify(review_bundle, pretty)
 
 
+def test_review_rejects_materialization_crosswire_and_native_receipt_tamper(
+    review_bundle: _ReviewBundle,
+) -> None:
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            expected_openmm_reference_materialization_sha256="8" * 64,
+        )
+
+    tampered_native = deepcopy(review_bundle.openmm_native_minimization_receipt)
+    tampered_native["summary"]["endpoint_health_passed_case_count"] = 8
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            openmm_native_minimization_receipt=tampered_native,
+        )
+
+
+def test_review_requires_exact_fixed_born_failure_disposition(
+    review_bundle: _ReviewBundle,
+) -> None:
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            openmm_fixed_born_disposition_receipt=None,
+            expected_openmm_fixed_born_disposition_receipt_sha256=None,
+        )
+
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            expected_openmm_fixed_born_disposition_receipt_sha256="8" * 64,
+        )
+
+    tampered = deepcopy(review_bundle.openmm_fixed_born_disposition_receipt)
+    tampered["summary"]["causal_root_cause_proven"] = True
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            openmm_fixed_born_disposition_receipt=tampered,
+        )
+
+
 def test_review_rejects_revoked_or_superseded_nested_and_outer_receipts(
     review_bundle: _ReviewBundle,
 ) -> None:
@@ -314,6 +496,34 @@ def test_review_rejects_revoked_or_superseded_nested_and_outer_receipts(
             review_bundle,
             revoked_openmm_energy_force_receipt_sha256s=(
                 review_bundle.openmm_energy_receipt["receipt_sha256"],
+            ),
+        )
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            revoked_openmm_reference_materialization_sha256s=(
+                review_bundle.openmm_materialization["materialization_sha256"],
+            ),
+        )
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            superseded_openmm_native_minimization_receipt_sha256s=(
+                review_bundle.openmm_native_minimization_receipt["receipt_sha256"],
+            ),
+        )
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            revoked_openmm_fixed_born_disposition_receipt_sha256s=(
+                review_bundle.openmm_fixed_born_disposition_receipt["receipt_sha256"],
+            ),
+        )
+    with pytest.raises(OpenMMReferenceResultReviewError):
+        _verify(
+            review_bundle,
+            superseded_openmm_fixed_born_disposition_receipt_sha256s=(
+                review_bundle.openmm_fixed_born_disposition_receipt["receipt_sha256"],
             ),
         )
     with pytest.raises(OpenMMReferenceResultReviewError):
@@ -342,6 +552,19 @@ def test_builder_rejects_external_reviewer_role_reuse(
             openmm_energy_force_receipt=review_bundle.openmm_energy_receipt,
             openmm_minimization_trace_receipt=(
                 review_bundle.openmm_minimization_receipt
+            ),
+            openmm_reference_materialization=review_bundle.openmm_materialization,
+            openmm_native_minimization_receipt=(
+                review_bundle.openmm_native_minimization_receipt
+            ),
+            openmm_fixed_born_disposition_receipt=(
+                review_bundle.openmm_fixed_born_disposition_receipt
+            ),
+            expected_openmm_reference_materialization_sha256=(
+                review_bundle.openmm_materialization["materialization_sha256"]
+            ),
+            expected_openmm_fixed_born_disposition_receipt_sha256=(
+                review_bundle.openmm_fixed_born_disposition_receipt["receipt_sha256"]
             ),
             enrolled_host_identity_sha256=HOST_IDENTITY,
             cpu_identity_sha256=CPU_IDENTITY,

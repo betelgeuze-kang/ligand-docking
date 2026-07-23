@@ -524,9 +524,12 @@ def test_native_openmm_minimization_is_a_separate_endpoint_only() -> None:
         endpoint = session.native_minimize_endpoint(
             tolerance_kcal_per_mol_angstrom=1.0e-6,
             maximum_iterations=200,
+            constraint_tolerance_relative=1.0e-10,
         )
 
     assert endpoint["algorithm"] == "OpenMM LocalEnergyMinimizer L-BFGS"
+    assert endpoint["constraint_tolerance_relative"] == 1.0e-10
+    assert endpoint["final_context_constraint_projection_applied"] is True
     assert (
         endpoint["final_evaluation"]["total_energy"]["value"]
         <= endpoint["initial_evaluation"]["total_energy"]["value"]

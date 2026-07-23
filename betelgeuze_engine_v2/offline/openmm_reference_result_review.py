@@ -51,6 +51,23 @@ from .openmm_reference_oracle import (
     FROZEN_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256,
     OPENMM_REFERENCE_OFFLINE_ORACLE_ID,
 )
+from .openmm_reference_materialization import (
+    OPENMM_REFERENCE_MATERIALIZATION_SCHEMA_ID,
+    OpenMMReferenceMaterializationError,
+    require_openmm_reference_materialization,
+)
+from .openmm_reference_native_minimization import (
+    FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256,
+    OPENMM_REFERENCE_NATIVE_MINIMIZATION_RECEIPT_SCHEMA_ID,
+    OpenMMReferenceNativeMinimizationError,
+    require_openmm_reference_native_minimization_receipt,
+)
+from .openmm_reference_fixed_born_disposition import (
+    FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256,
+    OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_RECEIPT_SCHEMA_ID,
+    OpenMMReferenceFixedBornDispositionError,
+    require_openmm_reference_fixed_born_disposition_receipt,
+)
 from .openmm_reference_receipts import (
     OPENMM_REFERENCE_ENERGY_FORCE_RECEIPT_SCHEMA_ID,
     OPENMM_REFERENCE_MINIMIZATION_TRACE_RECEIPT_SCHEMA_ID,
@@ -61,16 +78,16 @@ from .openmm_reference_receipts import (
 
 
 OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_result_review_contract/2.0.0"
+    "betelgeuze.engine_v2_openmm_reference_result_review_contract/4.0.0"
 )
 OPENMM_REFERENCE_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_result_review_attestation/2.0.0"
+    "betelgeuze.engine_v2_openmm_reference_result_review_attestation/4.0.0"
 )
 OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_ID = (
-    "engine_v2_openmm_reference_independent_result_review/2.0.0"
+    "engine_v2_openmm_reference_independent_result_review/4.0.0"
 )
-OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_VERSION = "2.0.0"
-OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_VERSION = "4.0.0"
+OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-24T15:00:00Z"
 OPENMM_REFERENCE_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 OPENMM_REFERENCE_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
 OPENMM_REFERENCE_RESULT_REVIEW_MAX_TRANSPORT_BYTES = 32 * 1024 * 1024
@@ -78,6 +95,12 @@ OPENMM_REFERENCE_RESULT_REVIEW_MAX_TRANSPORT_BYTES = 32 * 1024 * 1024
 # The reviewed hash binds both nested result-review contracts, the pinned
 # OpenMM mapping, exact output/trace cross-checks, role policy, and claim gate.
 FROZEN_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256 = (
+    "6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970"
+)
+FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V3 = (
+    "ff41e9ad4daba651b0d68b2a6a69f890e7549d0bef5b8418aa09c8d821b9e656"
+)
+FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V2 = (
     "8481d89bd4d3593fd220d0fc42cd3c3a09462a50cb7f65321ef7c5a1b6aa9b47"
 )
 FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V1 = (
@@ -99,6 +122,11 @@ _REQUIRED_CHECK_IDS = (
     "all_fourteen_minimization_traces_and_failure_rows_crosschecked",
     "energy_component_total_force_units_and_atom_order_crosschecked",
     "fixed_born_self_pair_and_trace_step_outputs_reverified",
+    "openmm_materialization_and_native_minimization_receipt_reverified",
+    "all_fourteen_native_endpoint_rows_and_failure_dispositions_reverified",
+    "native_endpoint_health_outcome_and_failed_case_ids_propagated",
+    "rejected_native_fixed_born_failure_disposition_receipt_reverified",
+    "failure_disposition_completeness_separated_from_endpoint_acceptance",
     "host_cpu_session_custody_nonce_and_freshness_bound",
     "revocation_supersession_role_separation_and_nonpromotion_reviewed",
 )
@@ -107,12 +135,19 @@ _REQUIRED_LIMITATION_IDS = (
     "external_review_does_not_authenticate_external_custody_by_itself",
     "external_review_does_not_establish_two_host_reproducibility",
     "openmm_trace_re_evaluation_is_not_native_lbfgs_trajectory_equivalence",
+    "native_endpoint_rejection_blocks_external_comparison_and_s0_admission",
+    "failure_disposition_completion_does_not_resolve_native_endpoint_health",
+    "failure_disposition_sensitivity_does_not_prove_causal_root_cause",
     "openmm_review_does_not_establish_chemical_applicability",
     "external_review_does_not_authorize_s0_s1_fitting_or_product_promotion",
 )
 _CLOSED_GATE_BLOCKERS = (
     "signed_openmm_reference_result_review_attestation_missing",
     "trusted_openmm_reference_result_reviewer_key_not_provided",
+    "openmm_reference_materialization_not_provided",
+    "openmm_native_minimization_receipt_not_provided",
+    "openmm_fixed_born_failure_disposition_receipt_not_provided",
+    "openmm_native_minimization_endpoint_health_not_accepted",
     "two_distinct_cpu_host_attestations_missing",
     "host_to_host_exact_physics_projection_equality_missing",
     "externally_authenticated_production_custody_missing",
@@ -129,6 +164,14 @@ _POST_ATTESTATION_BLOCKERS = (
     "scientific_parameter_applicability_not_established",
     "s1_admission_not_authorized",
     "product_integration_not_qualified",
+)
+_REJECTED_NATIVE_ENDPOINT_BLOCKERS = (
+    "openmm_native_minimization_endpoint_health_failed",
+    "fixed_born_constraint_projection_tradeoff_does_not_resolve_endpoint_health",
+    "fixed_born_failure_causal_root_cause_not_proven",
+    "external_oracle_comparison_not_accepted",
+    "s0_admission_blocked_by_native_endpoint_failure",
+    *_POST_ATTESTATION_BLOCKERS,
 )
 
 
@@ -527,14 +570,21 @@ class OpenMMReferenceResultReviewVerification:
     minimization_result_review_attestation_sha256: str
     openmm_energy_force_receipt_sha256: str
     openmm_minimization_trace_receipt_sha256: str
+    openmm_reference_materialization_sha256: str
+    openmm_native_minimization_receipt_sha256: str
+    openmm_fixed_born_disposition_receipt_sha256: str | None
     energy_force_physics_projection_sha256: str
     minimization_physics_projection_sha256: str
+    native_minimization_physics_projection_sha256: str
+    fixed_born_disposition_physics_projection_sha256: str | None
     energy_force_source_manifest_sha256: str
     minimization_source_manifest_sha256: str
     energy_force_execution_environment_receipt_sha256: str
     minimization_execution_environment_receipt_sha256: str
     openmm_runtime_identity_sha256: str
     openmm_source_identity_sha256: str
+    native_minimization_configuration_sha256: str
+    fixed_born_disposition_configuration_sha256: str | None
     code_commit_sha: str
     dependency_rows_sha256: str
     seed: int
@@ -550,6 +600,15 @@ class OpenMMReferenceResultReviewVerification:
     external_result_reviewer_key_id: str
     reviewed_at_utc: str
     expires_at_utc: str
+    failure_inclusive_native_minimization_evidence_verified: bool
+    native_minimization_status: str
+    native_endpoint_health_passed_case_count: int
+    native_endpoint_health_failed_case_ids: tuple[str, ...]
+    fixed_born_failure_disposition_required: bool
+    fixed_born_failure_disposition_verified: bool
+    fixed_born_failure_disposition_complete: bool
+    fixed_born_failure_disposition_status: str
+    fixed_born_failure_disposition_classification: str | None
     external_oracle_comparison_verified: bool
     result_review_outcome: str
     production_validation_evidence: bool
@@ -583,12 +642,24 @@ class OpenMMReferenceResultReviewVerification:
                 self.openmm_minimization_trace_receipt_sha256,
             ),
             (
+                "OpenMM reference materialization",
+                self.openmm_reference_materialization_sha256,
+            ),
+            (
+                "OpenMM native minimization receipt",
+                self.openmm_native_minimization_receipt_sha256,
+            ),
+            (
                 "energy-force physics projection",
                 self.energy_force_physics_projection_sha256,
             ),
             (
                 "minimization physics projection",
                 self.minimization_physics_projection_sha256,
+            ),
+            (
+                "native minimization physics projection",
+                self.native_minimization_physics_projection_sha256,
             ),
             ("energy-force source manifest", self.energy_force_source_manifest_sha256),
             ("minimization source manifest", self.minimization_source_manifest_sha256),
@@ -602,6 +673,10 @@ class OpenMMReferenceResultReviewVerification:
             ),
             ("OpenMM runtime identity", self.openmm_runtime_identity_sha256),
             ("OpenMM source identity", self.openmm_source_identity_sha256),
+            (
+                "native minimization configuration",
+                self.native_minimization_configuration_sha256,
+            ),
             ("dependency rows", self.dependency_rows_sha256),
             (
                 "energy-force authorization nonce",
@@ -629,6 +704,22 @@ class OpenMMReferenceResultReviewVerification:
             ("external result reviewer", self.external_result_reviewer_identity_sha256),
         ):
             _require_sha256(value, name=name)
+        for name, value in (
+            (
+                "OpenMM fixed-Born disposition receipt",
+                self.openmm_fixed_born_disposition_receipt_sha256,
+            ),
+            (
+                "fixed-Born disposition physics projection",
+                self.fixed_born_disposition_physics_projection_sha256,
+            ),
+            (
+                "fixed-Born disposition configuration",
+                self.fixed_born_disposition_configuration_sha256,
+            ),
+        ):
+            if value is not None:
+                _require_sha256(value, name=name)
         _require_commit_sha(self.code_commit_sha, name="code commit")
         _require_key_id(self.external_result_reviewer_key_id)
         if type(self.seed) is not int or self.seed < 0:
@@ -639,13 +730,76 @@ class OpenMMReferenceResultReviewVerification:
             raise OpenMMReferenceResultReviewError(
                 "verified OpenMM review expiry must follow review time"
             )
+        if not self.failure_inclusive_native_minimization_evidence_verified:
+            raise OpenMMReferenceResultReviewError(
+                "verification must retain the failure-inclusive native comparison"
+            )
         if (
-            not self.external_oracle_comparison_verified
-            or self.result_review_outcome
-            != OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_ACCEPTED
+            type(self.native_endpoint_health_passed_case_count) is not int
+            or not 0 <= self.native_endpoint_health_passed_case_count <= 8
+            or not isinstance(self.native_endpoint_health_failed_case_ids, tuple)
+            or any(
+                not isinstance(case_id, str) or not case_id
+                for case_id in self.native_endpoint_health_failed_case_ids
+            )
+            or len(set(self.native_endpoint_health_failed_case_ids))
+            != len(self.native_endpoint_health_failed_case_ids)
+            or self.native_endpoint_health_passed_case_count
+            + len(self.native_endpoint_health_failed_case_ids)
+            != 8
         ):
             raise OpenMMReferenceResultReviewError(
-                "verification must retain an accepted external comparison"
+                "native endpoint-health disposition is invalid"
+            )
+        if self.native_minimization_status == (
+            "accepted_offline_native_endpoint_comparison"
+        ):
+            if (
+                not self.external_oracle_comparison_verified
+                or self.result_review_outcome
+                != OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_ACCEPTED
+                or self.native_endpoint_health_passed_case_count != 8
+                or self.native_endpoint_health_failed_case_ids
+                or self.openmm_fixed_born_disposition_receipt_sha256 is not None
+                or self.fixed_born_disposition_physics_projection_sha256 is not None
+                or self.fixed_born_disposition_configuration_sha256 is not None
+                or self.fixed_born_failure_disposition_required
+                or self.fixed_born_failure_disposition_verified
+                or self.fixed_born_failure_disposition_complete
+                or self.fixed_born_failure_disposition_status
+                != "not_applicable_native_endpoint_accepted"
+                or self.fixed_born_failure_disposition_classification is not None
+            ):
+                raise OpenMMReferenceResultReviewError(
+                    "accepted native endpoint disposition is inconsistent"
+                )
+        elif self.native_minimization_status == (
+            "rejected_offline_native_endpoint_comparison"
+        ):
+            if (
+                self.external_oracle_comparison_verified
+                or self.result_review_outcome
+                != OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_REJECTED
+                or self.native_endpoint_health_passed_case_count >= 8
+                or not self.native_endpoint_health_failed_case_ids
+                or self.openmm_fixed_born_disposition_receipt_sha256 is None
+                or self.fixed_born_disposition_physics_projection_sha256 is None
+                or self.fixed_born_disposition_configuration_sha256
+                != FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256
+                or not self.fixed_born_failure_disposition_required
+                or not self.fixed_born_failure_disposition_verified
+                or not self.fixed_born_failure_disposition_complete
+                or self.fixed_born_failure_disposition_status
+                != "accepted_failure_disposition_evidence"
+                or self.fixed_born_failure_disposition_classification
+                != "final_constraint_projection_tradeoff_observed"
+            ):
+                raise OpenMMReferenceResultReviewError(
+                    "rejected native endpoint disposition is inconsistent"
+                )
+        else:
+            raise OpenMMReferenceResultReviewError(
+                "native minimization status is invalid"
             )
         if any(
             (
@@ -692,11 +846,26 @@ class OpenMMReferenceResultReviewVerification:
             "openmm_minimization_trace_receipt_sha256": (
                 self.openmm_minimization_trace_receipt_sha256
             ),
+            "openmm_reference_materialization_sha256": (
+                self.openmm_reference_materialization_sha256
+            ),
+            "openmm_native_minimization_receipt_sha256": (
+                self.openmm_native_minimization_receipt_sha256
+            ),
+            "openmm_fixed_born_disposition_receipt_sha256": (
+                self.openmm_fixed_born_disposition_receipt_sha256
+            ),
             "energy_force_physics_projection_sha256": (
                 self.energy_force_physics_projection_sha256
             ),
             "minimization_physics_projection_sha256": (
                 self.minimization_physics_projection_sha256
+            ),
+            "native_minimization_physics_projection_sha256": (
+                self.native_minimization_physics_projection_sha256
+            ),
+            "fixed_born_disposition_physics_projection_sha256": (
+                self.fixed_born_disposition_physics_projection_sha256
             ),
             "energy_force_source_manifest_sha256": (
                 self.energy_force_source_manifest_sha256
@@ -712,6 +881,12 @@ class OpenMMReferenceResultReviewVerification:
             ),
             "openmm_runtime_identity_sha256": self.openmm_runtime_identity_sha256,
             "openmm_source_identity_sha256": self.openmm_source_identity_sha256,
+            "native_minimization_configuration_sha256": (
+                self.native_minimization_configuration_sha256
+            ),
+            "fixed_born_disposition_configuration_sha256": (
+                self.fixed_born_disposition_configuration_sha256
+            ),
             "code_commit_sha": self.code_commit_sha,
             "dependency_rows_sha256": self.dependency_rows_sha256,
             "seed": self.seed,
@@ -743,6 +918,31 @@ class OpenMMReferenceResultReviewVerification:
             "external_result_reviewer_key_id": self.external_result_reviewer_key_id,
             "reviewed_at_utc": self.reviewed_at_utc,
             "expires_at_utc": self.expires_at_utc,
+            "failure_inclusive_native_minimization_evidence_verified": (
+                self.failure_inclusive_native_minimization_evidence_verified
+            ),
+            "native_minimization_status": self.native_minimization_status,
+            "native_endpoint_health_passed_case_count": (
+                self.native_endpoint_health_passed_case_count
+            ),
+            "native_endpoint_health_failed_case_ids": list(
+                self.native_endpoint_health_failed_case_ids
+            ),
+            "fixed_born_failure_disposition_required": (
+                self.fixed_born_failure_disposition_required
+            ),
+            "fixed_born_failure_disposition_verified": (
+                self.fixed_born_failure_disposition_verified
+            ),
+            "fixed_born_failure_disposition_complete": (
+                self.fixed_born_failure_disposition_complete
+            ),
+            "fixed_born_failure_disposition_status": (
+                self.fixed_born_failure_disposition_status
+            ),
+            "fixed_born_failure_disposition_classification": (
+                self.fixed_born_failure_disposition_classification
+            ),
             "external_oracle_comparison_verified": (
                 self.external_oracle_comparison_verified
             ),
@@ -1131,6 +1331,118 @@ def _crosscheck_minimization_traces(
     )
 
 
+def _native_minimization_physics_projection(
+    native_receipt: Mapping[str, Any],
+) -> tuple[str, tuple[str, ...]]:
+    cases = native_receipt.get("cases")
+    summary = native_receipt.get("summary")
+    if (
+        not isinstance(cases, list)
+        or len(cases) != 14
+        or not isinstance(summary, Mapping)
+        or summary.get("evaluated_case_count") != 8
+        or summary.get("not_applicable_engine_contract_case_count") != 6
+        or summary.get("complete_failure_inclusive_comparison") is not True
+        or summary.get("all_failure_rows_retained") is not True
+    ):
+        raise OpenMMReferenceResultReviewError(
+            "native minimization coverage or failure denominator is incomplete"
+        )
+    failed_case_ids = tuple(
+        row["case_id"]
+        for row in cases
+        if isinstance(row, Mapping)
+        and row.get("native_endpoint_executed") is True
+        and row.get("case_passed_predefined_endpoint_health") is False
+    )
+    passed_count = summary.get("endpoint_health_passed_case_count")
+    if (
+        type(passed_count) is not int
+        or passed_count + len(failed_case_ids) != 8
+        or summary.get("same_coordinate_mapping_passed_case_count") != 8
+        or summary.get("energy_nonincreasing_case_count") != 8
+    ):
+        raise OpenMMReferenceResultReviewError(
+            "native minimization endpoint-health disposition is inconsistent"
+        )
+    status = native_receipt.get("status")
+    all_health_passed = summary.get("all_predefined_endpoint_health_metrics_passed")
+    if (
+        status == "accepted_offline_native_endpoint_comparison"
+        and (all_health_passed is not True or failed_case_ids)
+    ) or (
+        status == "rejected_offline_native_endpoint_comparison"
+        and (all_health_passed is not False or not failed_case_ids)
+    ):
+        raise OpenMMReferenceResultReviewError(
+            "native minimization status does not match endpoint health"
+        )
+    return (
+        _sha256(
+            {
+                "configuration_sha256": native_receipt["configuration_sha256"],
+                "mapping_contract_sha256": native_receipt["mapping_contract_sha256"],
+                "minimization_protocol_sha256": native_receipt[
+                    "minimization_protocol_sha256"
+                ],
+                "cases": cases,
+                "summary": dict(summary),
+                "status": status,
+            }
+        ),
+        failed_case_ids,
+    )
+
+
+def _fixed_born_disposition_physics_projection(
+    disposition_receipt: Mapping[str, Any],
+    *,
+    native_failed_case_ids: tuple[str, ...],
+) -> tuple[str, str]:
+    cases = disposition_receipt.get("cases")
+    summary = disposition_receipt.get("summary")
+    if (
+        not isinstance(cases, list)
+        or len(cases) != 2
+        or not isinstance(summary, Mapping)
+        or tuple(row.get("case_id") for row in cases) != native_failed_case_ids
+        or summary.get("exact_failed_case_scope_retained") is not True
+        or summary.get("failure_disposition_complete") is not True
+        or summary.get("frozen_native_endpoint_health_failure_resolved") is not False
+        or summary.get("causal_root_cause_proven") is not False
+        or summary.get("cross_alias_physics_projection_exactly_equal") is not True
+        or summary.get("cross_alias_classification_exactly_equal") is not True
+        or disposition_receipt.get("status") != "accepted_failure_disposition_evidence"
+    ):
+        raise OpenMMReferenceResultReviewError(
+            "fixed-Born failure disposition coverage or claim boundary is invalid"
+        )
+    classification = summary.get("classification")
+    if classification != "final_constraint_projection_tradeoff_observed":
+        raise OpenMMReferenceResultReviewError(
+            "fixed-Born failure disposition classification drifted"
+        )
+    return (
+        _sha256(
+            {
+                "configuration_sha256": disposition_receipt["configuration_sha256"],
+                "source_materialization_sha256": disposition_receipt[
+                    "source_materialization_sha256"
+                ],
+                "source_native_receipt_sha256": disposition_receipt[
+                    "source_native_receipt_sha256"
+                ],
+                "case_physics_projection_sha256s": [
+                    row["case_physics_projection_sha256"] for row in cases
+                ],
+                "summary": dict(summary),
+                "status": disposition_receipt["status"],
+            }
+        ),
+        classification,
+    )
+
+
 def _contract_projection() -> dict[str, Any]:
     return {
         "schema_id": OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SCHEMA_ID,
@@ -1138,9 +1450,16 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V1
+            FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V3
         ),
-        "refreeze_reason": "binds_complete_energy_force_ed25519_signature_chain",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "conditionally_binds_fixed_born_failure_disposition_without_"
+            "promoting_rejected_native_endpoint_health"
+        ),
         "oracle_id": OPENMM_REFERENCE_OFFLINE_ORACLE_ID,
         "bound_contracts": {
             "openmm_mapping_contract_sha256": (
@@ -1158,6 +1477,21 @@ def _contract_projection() -> dict[str, Any]:
             "openmm_minimization_trace_receipt_schema_id": (
                 OPENMM_REFERENCE_MINIMIZATION_TRACE_RECEIPT_SCHEMA_ID
             ),
+            "openmm_reference_materialization_schema_id": (
+                OPENMM_REFERENCE_MATERIALIZATION_SCHEMA_ID
+            ),
+            "openmm_native_minimization_receipt_schema_id": (
+                OPENMM_REFERENCE_NATIVE_MINIMIZATION_RECEIPT_SCHEMA_ID
+            ),
+            "openmm_native_minimization_configuration_sha256": (
+                FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256
+            ),
+            "openmm_fixed_born_disposition_receipt_schema_id": (
+                OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_RECEIPT_SCHEMA_ID
+            ),
+            "openmm_fixed_born_disposition_configuration_sha256": (
+                FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256
+            ),
             "energy_force_upstream_signature_algorithm": "ed25519",
             "energy_force_upstream_trust_anchors_contain_public_keys_only": True,
             "private_or_symmetric_verification_keys_allowed": False,
@@ -1169,9 +1503,23 @@ def _contract_projection() -> dict[str, Any]:
             "openmm_minimization_status": (
                 "accepted_offline_reference_trace_agreement"
             ),
+            "openmm_reference_materialization_status": (
+                "accepted_offline_reference_materialization"
+            ),
+            "native_endpoint_status_derived_from_predefined_metrics": True,
+            "accepted_review_requires_native_endpoint_status": (
+                "accepted_offline_native_endpoint_comparison"
+            ),
+            "rejected_native_endpoint_requires_disposition_status": (
+                "accepted_failure_disposition_evidence"
+            ),
+            "accepted_native_endpoint_requires_failure_disposition": False,
+            "failure_disposition_complete_does_not_imply_endpoint_accepted": True,
             "energy_force_case_count": 27,
             "energy_force_variant_count": 59,
             "minimization_case_count": 14,
+            "native_endpoint_evaluated_case_count": 8,
+            "native_endpoint_not_applicable_case_count": 6,
             "all_failure_rows_retained": True,
         },
         "cross_binding_policy": {
@@ -1181,6 +1529,13 @@ def _contract_projection() -> dict[str, Any]:
             "exact_energy_component_total_and_force_match": True,
             "analytic_openmm_comparison_retained_and_receipt_verified": True,
             "exact_minimization_operational_trace_match": True,
+            "native_receipt_source_materialization_exactly_bound": True,
+            "native_endpoint_failed_case_ids_retained": True,
+            "native_physics_projection_host_comparable": True,
+            "rejected_native_disposition_receipt_and_physics_exactly_bound": True,
+            "accepted_native_endpoint_rejects_failure_specific_disposition_input": (
+                True
+            ),
             "runtime_mapping_source_host_cpu_session_and_custody_bound": True,
         },
         "signature_policy": {
@@ -1196,7 +1551,12 @@ def _contract_projection() -> dict[str, Any]:
         "required_check_ids": list(_REQUIRED_CHECK_IDS),
         "required_limitation_ids": list(_REQUIRED_LIMITATION_IDS),
         "claim_policy": {
-            "single_host_external_oracle_comparison_may_be_verified": True,
+            "single_host_external_oracle_comparison_may_be_verified_only_when_native_endpoint_health_is_accepted": True,
+            "signed_rejected_review_retains_failed_native_case_ids": True,
+            "signed_rejected_review_may_verify_failure_disposition_separately": True,
+            "failure_disposition_completion_cannot_open_external_comparison_or_s0": (
+                True
+            ),
             "production_validation_evidence": False,
             "scientifically_validated": False,
             "s0_admission_authorized": False,
@@ -1245,6 +1605,11 @@ def _verified_nested_evidence(
     minimization_evidence: MinimizationResultReviewEvidence,
     openmm_energy_force_receipt: Mapping[str, Any],
     openmm_minimization_trace_receipt: Mapping[str, Any],
+    openmm_reference_materialization: Mapping[str, Any],
+    openmm_native_minimization_receipt: Mapping[str, Any],
+    openmm_fixed_born_disposition_receipt: Mapping[str, Any] | None,
+    expected_openmm_reference_materialization_sha256: str,
+    expected_openmm_fixed_born_disposition_receipt_sha256: str | None,
     checked_at: datetime,
 ) -> dict[str, Any]:
     energy_receipt = _validated_energy_result_receipt(
@@ -1286,6 +1651,45 @@ def _verified_nested_evidence(
     ):
         raise OpenMMReferenceResultReviewError(
             "OpenMM receipts disagree on accepted status, mapping, runtime, or source"
+        )
+    expected_materialization_sha256 = _require_sha256(
+        expected_openmm_reference_materialization_sha256,
+        name="expected OpenMM reference materialization",
+    )
+    try:
+        materialization = require_openmm_reference_materialization(
+            openmm_reference_materialization
+        )
+        native_minimization = require_openmm_reference_native_minimization_receipt(
+            openmm_native_minimization_receipt,
+            source_materialization=materialization,
+            expected_source_materialization_sha256=(expected_materialization_sha256),
+        )
+    except (
+        OpenMMReferenceMaterializationError,
+        OpenMMReferenceNativeMinimizationError,
+    ) as exc:
+        raise OpenMMReferenceResultReviewError(
+            "OpenMM materialization or native minimization verification failed"
+        ) from exc
+    if (
+        materialization["materialization_sha256"] != expected_materialization_sha256
+        or materialization["status"] != "accepted_offline_reference_materialization"
+        or materialization["energy_force_receipt"] != openmm_energy
+        or materialization["minimization_trace_receipt"] != openmm_minimization
+        or native_minimization["source_materialization_sha256"]
+        != materialization["materialization_sha256"]
+        or native_minimization["source_minimization_trace_receipt_sha256"]
+        != openmm_minimization["receipt_sha256"]
+        or native_minimization["runtime_identity_sha256"]
+        != openmm_energy["runtime_identity"]["runtime_identity_sha256"]
+        or native_minimization["mapping_contract_sha256"]
+        != openmm_energy["mapping_contract_sha256"]
+        or native_minimization["configuration_sha256"]
+        != FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256
+    ):
+        raise OpenMMReferenceResultReviewError(
+            "OpenMM materialization or native minimization ancestry is cross-wired"
         )
     energy_dependency_rows = _result_receipt_dependency_rows(energy_receipt)
     minimization_dependency_rows = _result_receipt_dependency_rows(minimization_receipt)
@@ -1361,6 +1765,67 @@ def _verified_nested_evidence(
     minimization_physics = _crosscheck_minimization_traces(
         minimization_receipt, openmm_minimization
     )
+    native_physics, native_failed_case_ids = _native_minimization_physics_projection(
+        native_minimization
+    )
+    disposition: dict[str, Any] | None = None
+    disposition_physics: str | None = None
+    disposition_classification: str | None = None
+    if native_minimization["status"] == ("rejected_offline_native_endpoint_comparison"):
+        if (
+            not isinstance(openmm_fixed_born_disposition_receipt, Mapping)
+            or expected_openmm_fixed_born_disposition_receipt_sha256 is None
+        ):
+            raise OpenMMReferenceResultReviewError(
+                "rejected native minimization requires fixed-Born disposition evidence"
+            )
+        expected_disposition_sha256 = _require_sha256(
+            expected_openmm_fixed_born_disposition_receipt_sha256,
+            name="expected fixed-Born disposition receipt",
+        )
+        try:
+            disposition = require_openmm_reference_fixed_born_disposition_receipt(
+                openmm_fixed_born_disposition_receipt,
+                source_materialization=materialization,
+                source_native_receipt=native_minimization,
+                expected_source_materialization_sha256=(
+                    expected_materialization_sha256
+                ),
+                expected_source_native_receipt_sha256=(
+                    native_minimization["receipt_sha256"]
+                ),
+            )
+        except OpenMMReferenceFixedBornDispositionError as exc:
+            raise OpenMMReferenceResultReviewError(
+                "fixed-Born disposition receipt verification failed"
+            ) from exc
+        if (
+            disposition["receipt_sha256"] != expected_disposition_sha256
+            or disposition["configuration_sha256"]
+            != FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256
+            or disposition["source_materialization_sha256"]
+            != materialization["materialization_sha256"]
+            or disposition["source_native_receipt_sha256"]
+            != native_minimization["receipt_sha256"]
+            or disposition["runtime_identity_sha256"]
+            != native_minimization["runtime_identity_sha256"]
+        ):
+            raise OpenMMReferenceResultReviewError(
+                "fixed-Born disposition receipt ancestry is cross-wired"
+            )
+        disposition_physics, disposition_classification = (
+            _fixed_born_disposition_physics_projection(
+                disposition,
+                native_failed_case_ids=native_failed_case_ids,
+            )
+        )
+    elif (
+        openmm_fixed_born_disposition_receipt is not None
+        or expected_openmm_fixed_born_disposition_receipt_sha256 is not None
+    ):
+        raise OpenMMReferenceResultReviewError(
+            "accepted native minimization forbids failure-specific disposition input"
+        )
     runtime_identity = openmm_energy["runtime_identity"]
     source_identity = openmm_energy["source_identity"]
     return {
@@ -1370,11 +1835,18 @@ def _verified_nested_evidence(
         "minimization_verification": minimization_verification,
         "openmm_energy": openmm_energy,
         "openmm_minimization": openmm_minimization,
+        "openmm_materialization": materialization,
+        "openmm_native_minimization": native_minimization,
+        "openmm_fixed_born_disposition": disposition,
         "code_commit_sha": code_commit_sha,
         "seed": seed,
         "dependency_rows": energy_dependency_rows,
         "energy_force_physics_projection_sha256": energy_physics,
         "minimization_physics_projection_sha256": minimization_physics,
+        "native_minimization_physics_projection_sha256": native_physics,
+        "fixed_born_disposition_physics_projection_sha256": (disposition_physics),
+        "fixed_born_failure_disposition_classification": (disposition_classification),
+        "native_endpoint_health_failed_case_ids": native_failed_case_ids,
         "runtime_identity_sha256": _require_sha256(
             runtime_identity.get("runtime_identity_sha256"),
             name="OpenMM runtime identity",
@@ -1405,6 +1877,16 @@ def _attestation_projection(
     minimization_verification = nested["minimization_verification"]
     openmm_energy = nested["openmm_energy"]
     openmm_minimization = nested["openmm_minimization"]
+    openmm_materialization = nested["openmm_materialization"]
+    openmm_native_minimization = nested["openmm_native_minimization"]
+    openmm_fixed_born_disposition = nested["openmm_fixed_born_disposition"]
+    native_summary = openmm_native_minimization["summary"]
+    native_status = openmm_native_minimization["status"]
+    native_accepted = (
+        native_status == "accepted_offline_native_endpoint_comparison"
+        and native_summary["all_predefined_endpoint_health_metrics_passed"] is True
+        and not nested["native_endpoint_health_failed_case_ids"]
+    )
     reviewer = _require_sha256(
         external_result_reviewer_identity_sha256,
         name="external result reviewer identity",
@@ -1421,9 +1903,17 @@ def _attestation_projection(
             "external result reviewer must be distinct from every nested role"
         )
     reviewed = _parse_utc(reviewed_at_utc, name="reviewed_at")
-    latest_nested_time = max(
+    nested_times = [
         _parse_utc(openmm_energy["observed_at_utc"], name="OpenMM observed_at"),
         _parse_utc(openmm_minimization["observed_at_utc"], name="OpenMM observed_at"),
+        _parse_utc(
+            openmm_materialization["observed_at_utc"],
+            name="OpenMM materialization observed_at",
+        ),
+        _parse_utc(
+            openmm_native_minimization["observed_at_utc"],
+            name="OpenMM native minimization observed_at",
+        ),
         _parse_utc(
             energy_verification.reviewed_at_utc,
             name="energy-force review reviewed_at",
@@ -1432,7 +1922,15 @@ def _attestation_projection(
             minimization_verification.reviewed_at_utc,
             name="minimization review reviewed_at",
         ),
-    )
+    ]
+    if openmm_fixed_born_disposition is not None:
+        nested_times.append(
+            _parse_utc(
+                openmm_fixed_born_disposition["observed_at_utc"],
+                name="fixed-Born disposition observed_at",
+            )
+        )
+    latest_nested_time = max(nested_times)
     if reviewed < latest_nested_time:
         raise OpenMMReferenceResultReviewError(
             "external result review predates nested evidence"
@@ -1521,8 +2019,63 @@ def _attestation_projection(
             "source_identity_sha256": nested["source_identity_sha256"],
             "energy_force_receipt_sha256": openmm_energy["receipt_sha256"],
             "minimization_trace_receipt_sha256": openmm_minimization["receipt_sha256"],
+            "reference_materialization_sha256": openmm_materialization[
+                "materialization_sha256"
+            ],
+            "native_minimization_receipt_sha256": openmm_native_minimization[
+                "receipt_sha256"
+            ],
+            "fixed_born_disposition_receipt_sha256": (
+                None
+                if openmm_fixed_born_disposition is None
+                else openmm_fixed_born_disposition["receipt_sha256"]
+            ),
+            "native_minimization_configuration_sha256": (
+                openmm_native_minimization["configuration_sha256"]
+            ),
+            "fixed_born_disposition_configuration_sha256": (
+                None
+                if openmm_fixed_born_disposition is None
+                else openmm_fixed_born_disposition["configuration_sha256"]
+            ),
+            "native_minimization_physics_projection_sha256": nested[
+                "native_minimization_physics_projection_sha256"
+            ],
+            "fixed_born_disposition_physics_projection_sha256": nested[
+                "fixed_born_disposition_physics_projection_sha256"
+            ],
             "energy_force_status": openmm_energy["status"],
             "minimization_status": openmm_minimization["status"],
+            "reference_materialization_status": openmm_materialization["status"],
+            "native_minimization_status": native_status,
+            "native_minimization_summary_sha256": _sha256(native_summary),
+            "native_endpoint_health_passed_case_count": native_summary[
+                "endpoint_health_passed_case_count"
+            ],
+            "native_endpoint_health_failed_case_ids": list(
+                nested["native_endpoint_health_failed_case_ids"]
+            ),
+            "fixed_born_failure_disposition_required": (
+                openmm_fixed_born_disposition is not None
+            ),
+            "fixed_born_failure_disposition_verified": (
+                openmm_fixed_born_disposition is not None
+            ),
+            "fixed_born_failure_disposition_complete": (
+                False
+                if openmm_fixed_born_disposition is None
+                else openmm_fixed_born_disposition["summary"][
+                    "failure_disposition_complete"
+                ]
+            ),
+            "fixed_born_failure_disposition_status": (
+                "not_applicable_native_endpoint_accepted"
+                if openmm_fixed_born_disposition is None
+                else openmm_fixed_born_disposition["status"]
+            ),
+            "fixed_born_failure_disposition_classification": nested[
+                "fixed_born_failure_disposition_classification"
+            ],
         },
         "role_binding": {
             "implementation_author_identity_sha256": (
@@ -1553,8 +2106,16 @@ def _attestation_projection(
         ),
         "accepted_check_ids": list(_REQUIRED_CHECK_IDS),
         "acknowledged_limitation_ids": list(_REQUIRED_LIMITATION_IDS),
-        "external_oracle_comparison_verified": True,
-        "result_review_outcome": OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_ACCEPTED,
+        "failure_inclusive_native_minimization_evidence_verified": True,
+        "failure_disposition_requirement_satisfied": (
+            native_accepted or openmm_fixed_born_disposition is not None
+        ),
+        "external_oracle_comparison_verified": native_accepted,
+        "result_review_outcome": (
+            OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_ACCEPTED
+            if native_accepted
+            else OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_REJECTED
+        ),
         "production_evidence_session_binding_attested": True,
         "external_custody_authenticity_proven_by_this_attestation": False,
         "two_host_reproducibility_verified": False,
@@ -1577,6 +2138,11 @@ def build_signed_openmm_reference_result_review_attestation(
     minimization_evidence: MinimizationResultReviewEvidence,
     openmm_energy_force_receipt: Mapping[str, Any],
     openmm_minimization_trace_receipt: Mapping[str, Any],
+    openmm_reference_materialization: Mapping[str, Any],
+    openmm_native_minimization_receipt: Mapping[str, Any],
+    openmm_fixed_born_disposition_receipt: Mapping[str, Any] | None,
+    expected_openmm_reference_materialization_sha256: str,
+    expected_openmm_fixed_born_disposition_receipt_sha256: str | None,
     enrolled_host_identity_sha256: str,
     cpu_identity_sha256: str,
     production_evidence_session_sha256: str,
@@ -1607,6 +2173,15 @@ def build_signed_openmm_reference_result_review_attestation(
         minimization_evidence=minimization_evidence,
         openmm_energy_force_receipt=openmm_energy_force_receipt,
         openmm_minimization_trace_receipt=openmm_minimization_trace_receipt,
+        openmm_reference_materialization=openmm_reference_materialization,
+        openmm_native_minimization_receipt=openmm_native_minimization_receipt,
+        openmm_fixed_born_disposition_receipt=(openmm_fixed_born_disposition_receipt),
+        expected_openmm_reference_materialization_sha256=(
+            expected_openmm_reference_materialization_sha256
+        ),
+        expected_openmm_fixed_born_disposition_receipt_sha256=(
+            expected_openmm_fixed_born_disposition_receipt_sha256
+        ),
         checked_at=reviewed,
     )
     projection = _attestation_projection(
@@ -1648,6 +2223,11 @@ def verify_signed_openmm_reference_result_review_attestation(
     minimization_evidence: MinimizationResultReviewEvidence,
     openmm_energy_force_receipt: Mapping[str, Any],
     openmm_minimization_trace_receipt: Mapping[str, Any],
+    openmm_reference_materialization: Mapping[str, Any],
+    openmm_native_minimization_receipt: Mapping[str, Any],
+    openmm_fixed_born_disposition_receipt: Mapping[str, Any] | None,
+    expected_openmm_reference_materialization_sha256: str,
+    expected_openmm_fixed_born_disposition_receipt_sha256: str | None,
     expected_enrolled_host_identity_sha256: str,
     expected_cpu_identity_sha256: str,
     expected_production_evidence_session_sha256: str,
@@ -1660,6 +2240,12 @@ def verify_signed_openmm_reference_result_review_attestation(
     superseded_openmm_energy_force_receipt_sha256s: Sequence[str],
     revoked_openmm_minimization_trace_receipt_sha256s: Sequence[str],
     superseded_openmm_minimization_trace_receipt_sha256s: Sequence[str],
+    revoked_openmm_reference_materialization_sha256s: Sequence[str],
+    superseded_openmm_reference_materialization_sha256s: Sequence[str],
+    revoked_openmm_native_minimization_receipt_sha256s: Sequence[str],
+    superseded_openmm_native_minimization_receipt_sha256s: Sequence[str],
+    revoked_openmm_fixed_born_disposition_receipt_sha256s: Sequence[str],
+    superseded_openmm_fixed_born_disposition_receipt_sha256s: Sequence[str],
     revoked_result_review_attestation_sha256s: Sequence[str],
     superseded_result_review_attestation_sha256s: Sequence[str],
 ) -> OpenMMReferenceResultReviewVerification:
@@ -1752,11 +2338,26 @@ def verify_signed_openmm_reference_result_review_attestation(
         minimization_evidence=minimization_evidence,
         openmm_energy_force_receipt=openmm_energy_force_receipt,
         openmm_minimization_trace_receipt=openmm_minimization_trace_receipt,
+        openmm_reference_materialization=openmm_reference_materialization,
+        openmm_native_minimization_receipt=openmm_native_minimization_receipt,
+        openmm_fixed_born_disposition_receipt=(openmm_fixed_born_disposition_receipt),
+        expected_openmm_reference_materialization_sha256=(
+            expected_openmm_reference_materialization_sha256
+        ),
+        expected_openmm_fixed_born_disposition_receipt_sha256=(
+            expected_openmm_fixed_born_disposition_receipt_sha256
+        ),
         checked_at=checked_at_utc,
     )
     openmm_energy_hash = nested["openmm_energy"]["receipt_sha256"]
     openmm_minimization_hash = nested["openmm_minimization"]["receipt_sha256"]
-    for digest, revoked, superseded, name in (
+    openmm_materialization_hash = nested["openmm_materialization"][
+        "materialization_sha256"
+    ]
+    openmm_native_minimization_hash = nested["openmm_native_minimization"][
+        "receipt_sha256"
+    ]
+    revocation_rows: list[tuple[str, Sequence[str], Sequence[str], str]] = [
         (
             openmm_energy_hash,
             revoked_openmm_energy_force_receipt_sha256s,
@@ -1769,7 +2370,42 @@ def verify_signed_openmm_reference_result_review_attestation(
             superseded_openmm_minimization_trace_receipt_sha256s,
             "OpenMM minimization trace receipt",
         ),
+        (
+            openmm_materialization_hash,
+            revoked_openmm_reference_materialization_sha256s,
+            superseded_openmm_reference_materialization_sha256s,
+            "OpenMM reference materialization",
+        ),
+        (
+            openmm_native_minimization_hash,
+            revoked_openmm_native_minimization_receipt_sha256s,
+            superseded_openmm_native_minimization_receipt_sha256s,
+            "OpenMM native minimization receipt",
+        ),
+    ]
+    disposition = nested["openmm_fixed_born_disposition"]
+    if disposition is not None:
+        revocation_rows.append(
+            (
+                disposition["receipt_sha256"],
+                revoked_openmm_fixed_born_disposition_receipt_sha256s,
+                superseded_openmm_fixed_born_disposition_receipt_sha256s,
+                "OpenMM fixed-Born disposition receipt",
+            )
+        )
+    elif (
+        revoked_openmm_fixed_born_disposition_receipt_sha256s
+        or superseded_openmm_fixed_born_disposition_receipt_sha256s
     ):
+        _external_sha256_set(
+            revoked_openmm_fixed_born_disposition_receipt_sha256s,
+            name="revoked OpenMM fixed-Born disposition receipt",
+        )
+        _external_sha256_set(
+            superseded_openmm_fixed_born_disposition_receipt_sha256s,
+            name="superseded OpenMM fixed-Born disposition receipt",
+        )
+    for digest, revoked, superseded, name in revocation_rows:
         if digest in _external_sha256_set(revoked, name=f"revoked {name}"):
             raise OpenMMReferenceResultReviewError(f"{name} is externally revoked")
         if digest in _external_sha256_set(superseded, name=f"superseded {name}"):
@@ -1827,11 +2463,26 @@ def verify_signed_openmm_reference_result_review_attestation(
         openmm_minimization_trace_receipt_sha256=openmm[
             "minimization_trace_receipt_sha256"
         ],
+        openmm_reference_materialization_sha256=openmm[
+            "reference_materialization_sha256"
+        ],
+        openmm_native_minimization_receipt_sha256=openmm[
+            "native_minimization_receipt_sha256"
+        ],
+        openmm_fixed_born_disposition_receipt_sha256=openmm[
+            "fixed_born_disposition_receipt_sha256"
+        ],
         energy_force_physics_projection_sha256=engine["energy_force"][
             "physics_projection_sha256"
         ],
         minimization_physics_projection_sha256=engine["minimization"][
             "physics_projection_sha256"
+        ],
+        native_minimization_physics_projection_sha256=openmm[
+            "native_minimization_physics_projection_sha256"
+        ],
+        fixed_born_disposition_physics_projection_sha256=openmm[
+            "fixed_born_disposition_physics_projection_sha256"
         ],
         energy_force_source_manifest_sha256=engine["energy_force"][
             "source_manifest_sha256"
@@ -1847,6 +2498,12 @@ def verify_signed_openmm_reference_result_review_attestation(
         ],
         openmm_runtime_identity_sha256=openmm["runtime_identity_sha256"],
         openmm_source_identity_sha256=openmm["source_identity_sha256"],
+        native_minimization_configuration_sha256=openmm[
+            "native_minimization_configuration_sha256"
+        ],
+        fixed_born_disposition_configuration_sha256=openmm[
+            "fixed_born_disposition_configuration_sha256"
+        ],
         code_commit_sha=engine["code_commit_sha"],
         dependency_rows_sha256=engine["dependency_rows_sha256"],
         seed=engine["seed"],
@@ -1876,14 +2533,48 @@ def verify_signed_openmm_reference_result_review_attestation(
         external_result_reviewer_key_id=key_id,
         reviewed_at_utc=expected_projection["reviewed_at_utc"],
         expires_at_utc=expected_projection["expires_at_utc"],
-        external_oracle_comparison_verified=True,
-        result_review_outcome=OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_ACCEPTED,
+        failure_inclusive_native_minimization_evidence_verified=(
+            expected_projection[
+                "failure_inclusive_native_minimization_evidence_verified"
+            ]
+        ),
+        native_minimization_status=openmm["native_minimization_status"],
+        native_endpoint_health_passed_case_count=openmm[
+            "native_endpoint_health_passed_case_count"
+        ],
+        native_endpoint_health_failed_case_ids=tuple(
+            openmm["native_endpoint_health_failed_case_ids"]
+        ),
+        fixed_born_failure_disposition_required=openmm[
+            "fixed_born_failure_disposition_required"
+        ],
+        fixed_born_failure_disposition_verified=openmm[
+            "fixed_born_failure_disposition_verified"
+        ],
+        fixed_born_failure_disposition_complete=openmm[
+            "fixed_born_failure_disposition_complete"
+        ],
+        fixed_born_failure_disposition_status=openmm[
+            "fixed_born_failure_disposition_status"
+        ],
+        fixed_born_failure_disposition_classification=openmm[
+            "fixed_born_failure_disposition_classification"
+        ],
+        external_oracle_comparison_verified=expected_projection[
+            "external_oracle_comparison_verified"
+        ],
+        result_review_outcome=expected_projection["result_review_outcome"],
         production_validation_evidence=False,
         scientifically_validated=False,
         s0_admission_authorized=False,
         s1_admission_authorized=False,
         claim_safe=False,
-        blockers=_POST_ATTESTATION_BLOCKERS,
+        blockers=(
+            _POST_ATTESTATION_BLOCKERS
+            if expected_projection["result_review_outcome"]
+            == OPENMM_REFERENCE_RESULT_REVIEW_OUTCOME_ACCEPTED
+            else _REJECTED_NATIVE_ENDPOINT_BLOCKERS
+        ),
     )
 
 
@@ -1908,6 +2599,8 @@ def openmm_reference_result_review_contract_decision() -> dict[str, Any]:
 
 __all__ = [
     "FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V1",
+    "FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V2",
+    "FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V3",
     "FROZEN_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256",
     "OPENMM_REFERENCE_RESULT_REVIEW_ATTESTATION_SCHEMA_ID",
     "OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_ID",

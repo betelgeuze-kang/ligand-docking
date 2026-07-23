@@ -176,14 +176,53 @@ v2_at_s0_production_evidence_bundle_contract
   canonical mode-0600 no-overwrite artifact로 보존하며, 구조 검증 또는 exact
   re-execution을 제공함.
   private key를 받지 않고 `production_protocol_execution=false`·독립 검토 미완료·
-  2-host 재현 미완료·`claim_safe=false`를 고정함. 별도 Ed25519 verifier는
-  두 Engine result-review chain과 두 OpenMM receipt를
-  새로 검증하고 exact Engine output/14개 operational trace·역할 분리·freshness·
-  revocation/supersession을 확인한 뒤 단일 host-scoped comparison을 서명함. 최종
-  S0 bundle 계약은 정확히 두 host 입력을 새로 재검증하고 host·CPU·session·custody·
-  artifact·nonce의 상이성과 commit·source·dependency·runtime·seed·physics projection의
-  exact equality를 요구하며, 모든 하위 역할과 분리된 최종 human Ed25519 승인을
-  검증함. 검증된 bundle도 frozen synthetic S0 protocol과 S1 진입만 열고 chemistry·
+  2-host 재현 미완료·`claim_safe=false`를 고정함.
+  설치형 `betelgeuze-engine-v2-openmm-native-minimization` workflow는 지원되는
+  8개 case에서 OpenMM L-BFGS endpoint를 실행하고 6개 expected fail-closed 행을
+  보존한 뒤 모든 endpoint를 동일 좌표의 Engine v2로 다시 평가함. frozen
+  configuration SHA-256은
+  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`임.
+  2026-07-24 local receipt는 동일 좌표 energy/force mapping 8/8과 energy
+  nonincrease 8/8을 통과했지만 최종 constraint projection 뒤 fixed-Born constrained
+  2건의 tangent-force 기준 실패로 endpoint health는 6/8이고 status는 rejected임.
+  receipt SHA-256은
+  `7e5b3454afc41f9954f71dfc3b0b274906323f15fd8ea6630bfcc1e95ce95b7c`임.
+  endpoint·trajectory 동등성이나 S0 승격은 주장하지 않음. 설치형
+  `betelgeuze-engine-v2-openmm-fixed-born-disposition` workflow는 이 exact rejected
+  입력을 결속하고 2-case/16-probe의 frozen solver·projection 진단을 실행한다.
+  v1 reporter 관측은 endpoint 마지막 비트를 바꿔 자체 exact-baseline gate에서
+  거부됐고, v2는 probe·threshold를 바꾸지 않은 채 no-reporter bitwise control만
+  분리했다. v1/v2 configuration SHA-256은 각각
+  `67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1`과
+  `ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045`다.
+  실제 receipt
+  `870f1ea247da4b0232f22804298e75d554af511da18924a7ba49c1c703f003f2`는 두
+  no-reporter control을 bitwise 재현하고 두 alias 모두
+  `final_constraint_projection_tradeoff_observed`로 분류했다. projection 전에는
+  tangent force `4.561743820542636e-09 kcal/mol/Å`가 통과하고 constraint residual
+  `1.1016157942744798e-05 Å`가 실패하지만, projection 뒤에는 residual
+  `1.9898749314961606e-11 Å`가 통과하고 tangent force
+  `3.692322529338441e-04 kcal/mol/Å`가 실패한다. 64–1024 iteration과
+  `1e-8`–`1e-12` optimizer tolerance에서도 해소되지 않았다. 이는 failure
+  disposition evidence만 완결하며 causal root cause·endpoint acceptance·S0 승격은
+  열지 않고 6/8 rejection을 유지한다. 별도 v4 Ed25519 verifier는
+  두 Engine result-review chain, exact OpenMM materialization, component/trace
+  receipt와 native endpoint receipt를 모두 새로 검증함. rejected endpoint에서는
+  exact disposition receipt·configuration·physics projection·완결성·분류도 별도로
+  결속하고, accepted endpoint에서는 이 failure-specific 입력을 금지함. 현재 6/8
+  결과는 fixed-Born 실패 case ID 두 개를 보존한 서명된 `rejected` host review가
+  되며 full external comparison을 accepted로 표시할 수 없음. host-review 계약
+  SHA-256은
+  `6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`임.
+  최종 v4 S0 bundle 계약은 정확히 두 host 입력을 새로 재검증하고 host·CPU·session·custody·
+  artifact·nonce의 상이성과 commit·source·dependency·runtime·seed 및 energy-force·
+  trace·native-endpoint physics projection의 exact equality를 요구함. 두 host 모두
+  native endpoint health 8/8이고 실패 case ID가 없으며 failure-specific disposition
+  path가 not applicable일 때만 모든 하위 역할과 분리된
+  최종 human Ed25519 승인을
+  검증함. S0 계약 SHA-256은
+  `549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`임.
+  검증된 bundle도 frozen synthetic S0 protocol과 S1 진입만 열고 chemistry·
   fitting·benchmark·product·customer·broad scientific claim은 닫아 둠. 설치형
   `betelgeuze-engine-v2-s0-review` 명령은 secret-free detached signing request를
   검증하고 외부/HSM signer가 서명할 exact canonical byte를 내보낸 뒤, 반환된 서명을

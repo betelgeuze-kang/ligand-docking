@@ -39,6 +39,14 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "betelgeuze-engine-v2-openmm-materialize": (
             "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"
         ),
+        "betelgeuze-engine-v2-openmm-native-minimization": (
+            "betelgeuze_engine_v2.offline."
+            "openmm_reference_native_minimization:main"
+        ),
+        "betelgeuze-engine-v2-openmm-fixed-born-disposition": (
+            "betelgeuze_engine_v2.offline."
+            "openmm_reference_fixed_born_disposition:main"
+        ),
         "betelgeuze-engine-v2-posebusters-intake": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"
         ),
@@ -73,6 +81,34 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         ),
         "betelgeuze-engine-v2-posebusters-ranking-intake": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_intake:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-ranking-test-partitions": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_pose_ranking_test_partition:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-external-ranking-evaluate": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_external_ranking_evaluation:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-external-ranking-reproduce": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_external_ranking_reproduction:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-internal-diagnostic-ranking": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_internal_diagnostic_ranking_evaluation:main"
+        ),
+        "betelgeuze-engine-v2-public-ranking-corpus-intake": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_pose_ranking_corpus_intake:main"
+        ),
+        "betelgeuze-engine-v2-public-ranking-calibration-partition-intake": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_pose_ranking_calibration_partition_intake:main"
+        ),
+        "betelgeuze-engine-v2-public-ranking-calibration-training-view": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_pose_ranking_calibration_training_view:main"
         ),
         "betelgeuze-engine-v2-posebusters-pose-scaffold-identity": (
             "betelgeuze_engine_v2.benchmark."
@@ -185,6 +221,8 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert ".github/workflows/ci-engine-v2-release-candidate.yml" in workflow
     assert workflow.count("betelgeuze-engine-v2-s0-review") >= 2
     assert "betelgeuze-engine-v2-openmm-materialize" in workflow
+    assert "betelgeuze-engine-v2-openmm-native-minimization" in workflow
+    assert "betelgeuze-engine-v2-openmm-fixed-born-disposition" in workflow
     assert "betelgeuze-engine-v2-posebusters-intake" in workflow
     assert "betelgeuze-engine-v2-posebusters-corpus-audit" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
@@ -195,6 +233,19 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert "betelgeuze-engine-v2-posebusters-target-clusters" in workflow
     assert "betelgeuze-engine-v2-posebusters-rcsb-target-families" in workflow
     assert "betelgeuze-engine-v2-posebusters-ranking-intake" in workflow
+    assert "betelgeuze-engine-v2-posebusters-ranking-test-partitions" in workflow
+    assert "betelgeuze-engine-v2-posebusters-external-ranking-evaluate" in workflow
+    assert "betelgeuze-engine-v2-posebusters-external-ranking-reproduce" in workflow
+    assert "betelgeuze-engine-v2-posebusters-internal-diagnostic-ranking" in workflow
+    assert "betelgeuze-engine-v2-public-ranking-corpus-intake" in workflow
+    assert (
+        "betelgeuze-engine-v2-public-ranking-calibration-partition-intake"
+        in workflow
+    )
+    assert (
+        "betelgeuze-engine-v2-public-ranking-calibration-training-view"
+        in workflow
+    )
     assert "betelgeuze-engine-v2-posebusters-pose-scaffold-identity" in workflow
     assert "betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic" in workflow
     assert "betelgeuze-engine-v2-posebusters-openbabel-compare" in workflow

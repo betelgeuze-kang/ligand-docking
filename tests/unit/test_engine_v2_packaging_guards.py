@@ -34,6 +34,14 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-openmm-native-minimization = "betelgeuze_engine_v2.offline.openmm_reference_native_minimization:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-openmm-fixed-born-disposition = "betelgeuze_engine_v2.offline.openmm_reference_fixed_born_disposition:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"'
         in text
     )
@@ -75,6 +83,34 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
     )
     assert (
         'betelgeuze-engine-v2-posebusters-ranking-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_intake:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-ranking-test-partitions = "betelgeuze_engine_v2.benchmark.public_posebusters_pose_ranking_test_partition:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-external-ranking-evaluate = "betelgeuze_engine_v2.benchmark.public_posebusters_external_ranking_evaluation:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-external-ranking-reproduce = "betelgeuze_engine_v2.benchmark.public_posebusters_external_ranking_reproduction:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-internal-diagnostic-ranking = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_diagnostic_ranking_evaluation:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-public-ranking-corpus-intake = "betelgeuze_engine_v2.benchmark.public_pose_ranking_corpus_intake:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-public-ranking-calibration-partition-intake = "betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_partition_intake:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-public-ranking-calibration-training-view = "betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_training_view:main"'
         in text
     )
     assert (

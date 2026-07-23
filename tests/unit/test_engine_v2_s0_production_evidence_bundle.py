@@ -11,6 +11,9 @@ from typing import Any
 import pytest
 
 import betelgeuze_engine_v2.offline.s0_production_evidence_bundle as s0_bundle_module
+from betelgeuze_engine_v2.offline.openmm_reference_fixed_born_disposition import (
+    FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256,
+)
 from betelgeuze_engine_v2.offline.openmm_reference_result_review import (
     EnergyForceResultReviewEvidence,
     MinimizationResultReviewEvidence,
@@ -80,14 +83,21 @@ def _host_verification(index: int) -> OpenMMReferenceResultReviewVerification:
         minimization_result_review_attestation_sha256=unique("min-review"),
         openmm_energy_force_receipt_sha256=unique("openmm-energy"),
         openmm_minimization_trace_receipt_sha256=unique("openmm-min"),
+        openmm_reference_materialization_sha256=unique("openmm-materialization"),
+        openmm_native_minimization_receipt_sha256=unique("openmm-native"),
+        openmm_fixed_born_disposition_receipt_sha256=None,
         energy_force_physics_projection_sha256=_digest("energy-physics"),
         minimization_physics_projection_sha256=_digest("min-physics"),
+        native_minimization_physics_projection_sha256=_digest("native-physics"),
+        fixed_born_disposition_physics_projection_sha256=None,
         energy_force_source_manifest_sha256=_digest("energy-source"),
         minimization_source_manifest_sha256=_digest("min-source"),
         energy_force_execution_environment_receipt_sha256=unique("energy-env"),
         minimization_execution_environment_receipt_sha256=unique("min-env"),
         openmm_runtime_identity_sha256=_digest("openmm-runtime"),
         openmm_source_identity_sha256=_digest("openmm-source"),
+        native_minimization_configuration_sha256=_digest("native-config"),
+        fixed_born_disposition_configuration_sha256=None,
         code_commit_sha="a" * 40,
         dependency_rows_sha256=_digest("dependencies"),
         seed=20260722,
@@ -103,6 +113,17 @@ def _host_verification(index: int) -> OpenMMReferenceResultReviewVerification:
         external_result_reviewer_key_id=f"test-host-reviewer-{index}",
         reviewed_at_utc=HOST_REVIEWED_AT.strftime("%Y-%m-%dT%H:%M:%SZ"),
         expires_at_utc=HOST_EXPIRES_AT.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        failure_inclusive_native_minimization_evidence_verified=True,
+        native_minimization_status="accepted_offline_native_endpoint_comparison",
+        native_endpoint_health_passed_case_count=8,
+        native_endpoint_health_failed_case_ids=(),
+        fixed_born_failure_disposition_required=False,
+        fixed_born_failure_disposition_verified=False,
+        fixed_born_failure_disposition_complete=False,
+        fixed_born_failure_disposition_status=(
+            "not_applicable_native_endpoint_accepted"
+        ),
+        fixed_born_failure_disposition_classification=None,
         external_oracle_comparison_verified=True,
         result_review_outcome="accepted",
         production_validation_evidence=False,
@@ -151,11 +172,18 @@ def _host_input(index: int) -> S0HostEvidence:
         minimization_evidence=_empty_minimization_evidence(),
         openmm_energy_force_receipt={},
         openmm_minimization_trace_receipt={},
+        openmm_reference_materialization={},
+        openmm_native_minimization_receipt={},
+        expected_openmm_reference_materialization_sha256=_digest(
+            f"input-materialization-{index}"
+        ),
         expected_enrolled_host_identity_sha256=_digest(f"input-host-{index}"),
         expected_cpu_identity_sha256=_digest(f"input-cpu-{index}"),
         expected_production_evidence_session_sha256=_digest(f"input-session-{index}"),
         expected_custody_terminal_sha256=_digest(f"input-custody-{index}"),
         trusted_external_result_reviewer_keys={},
+        openmm_fixed_born_disposition_receipt=None,
+        expected_openmm_fixed_born_disposition_receipt_sha256=None,
     )
 
 
@@ -478,6 +506,8 @@ def test_secret_free_cli_rejects_symlinked_request(
         "minimization_result_receipt_sha256",
         "openmm_energy_force_receipt_sha256",
         "openmm_minimization_trace_receipt_sha256",
+        "openmm_reference_materialization_sha256",
+        "openmm_native_minimization_receipt_sha256",
         "energy_force_execution_environment_receipt_sha256",
         "minimization_execution_environment_receipt_sha256",
         "energy_force_authorization_nonce_sha256",
@@ -519,6 +549,8 @@ def test_bundle_rejects_reused_host_execution_identity(
         "openmm_source_identity_sha256",
         "energy_force_physics_projection_sha256",
         "minimization_physics_projection_sha256",
+        "native_minimization_physics_projection_sha256",
+        "native_minimization_configuration_sha256",
     ),
 )
 def test_bundle_rejects_cross_host_identity_or_physics_mismatch(
@@ -539,6 +571,61 @@ def test_bundle_rejects_cross_host_identity_or_physics_mismatch(
     _install_host_verifier(monkeypatch, host_inputs, (first, second))
 
     with pytest.raises(S0ProductionEvidenceBundleError, match="equality failed"):
+        build_signed_s0_production_evidence_bundle_approval(
+            host_evidence=host_inputs,
+            final_reviewer_identity_sha256=FINAL_REVIEWER_IDENTITY,
+            final_reviewer_key_id=FINAL_REVIEWER_KEY_ID,
+            signing_key=FINAL_REVIEWER_KEY,
+            reviewed_at=FINAL_REVIEWED_AT,
+            expires_at=FINAL_EXPIRES_AT,
+            nonce_sha256=FINAL_NONCE,
+            revoked_host_review_attestation_sha256s=(),
+            superseded_host_review_attestation_sha256s=(),
+        )
+
+
+def test_bundle_rejects_signed_host_review_with_native_endpoint_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host_inputs = (_host_input(1), _host_input(2))
+    rejected = replace(
+        _host_verification(1),
+        native_minimization_status=("rejected_offline_native_endpoint_comparison"),
+        native_endpoint_health_passed_case_count=6,
+        native_endpoint_health_failed_case_ids=(
+            "v2_fixed_born_constrained_energy_decrease",
+            "v2_fixed_born_checkpoint_restart_exact",
+        ),
+        openmm_fixed_born_disposition_receipt_sha256=_digest(
+            "rejected-fixed-born-disposition"
+        ),
+        fixed_born_disposition_physics_projection_sha256=_digest(
+            "rejected-fixed-born-physics"
+        ),
+        fixed_born_disposition_configuration_sha256=(
+            FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256
+        ),
+        fixed_born_failure_disposition_required=True,
+        fixed_born_failure_disposition_verified=True,
+        fixed_born_failure_disposition_complete=True,
+        fixed_born_failure_disposition_status=("accepted_failure_disposition_evidence"),
+        fixed_born_failure_disposition_classification=(
+            "final_constraint_projection_tradeoff_observed"
+        ),
+        external_oracle_comparison_verified=False,
+        result_review_outcome="rejected",
+        blockers=("openmm_native_minimization_endpoint_health_failed",),
+    )
+    _install_host_verifier(
+        monkeypatch,
+        host_inputs,
+        (rejected, _host_verification(2)),
+    )
+
+    with pytest.raises(
+        S0ProductionEvidenceBundleError,
+        match="does not have accepted native endpoint health",
+    ):
         build_signed_s0_production_evidence_bundle_approval(
             host_evidence=host_inputs,
             final_reviewer_identity_sha256=FINAL_REVIEWER_IDENTITY,

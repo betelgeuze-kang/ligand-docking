@@ -22,7 +22,7 @@ def test_result_review_contract_is_frozen_and_claim_closed() -> None:
     assert (
         contract["contract_sha256"]
         == FROZEN_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256
-        == "8481d89bd4d3593fd220d0fc42cd3c3a09462a50cb7f65321ef7c5a1b6aa9b47"
+        == "6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970"
     )
     assert (
         require_openmm_reference_result_review_contract_document(contract) == contract
@@ -32,15 +32,41 @@ def test_result_review_contract_is_frozen_and_claim_closed() -> None:
         "minimization_result_review_accepted": True,
         "openmm_energy_force_status": "accepted_offline_reference_agreement",
         "openmm_minimization_status": "accepted_offline_reference_trace_agreement",
+        "openmm_reference_materialization_status": (
+            "accepted_offline_reference_materialization"
+        ),
+        "native_endpoint_status_derived_from_predefined_metrics": True,
+        "accepted_review_requires_native_endpoint_status": (
+            "accepted_offline_native_endpoint_comparison"
+        ),
+        "rejected_native_endpoint_requires_disposition_status": (
+            "accepted_failure_disposition_evidence"
+        ),
+        "accepted_native_endpoint_requires_failure_disposition": False,
+        "failure_disposition_complete_does_not_imply_endpoint_accepted": True,
         "energy_force_case_count": 27,
         "energy_force_variant_count": 59,
         "minimization_case_count": 14,
+        "native_endpoint_evaluated_case_count": 8,
+        "native_endpoint_not_applicable_case_count": 6,
         "all_failure_rows_retained": True,
     }
     assert contract["signature_policy"]["algorithm"] == "ed25519"
     assert (
         contract["claim_policy"][
-            "single_host_external_oracle_comparison_may_be_verified"
+            "single_host_external_oracle_comparison_may_be_verified_only_when_native_endpoint_health_is_accepted"
+        ]
+        is True
+    )
+    assert (
+        contract["bound_contracts"][
+            "openmm_fixed_born_disposition_configuration_sha256"
+        ]
+        == "ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045"
+    )
+    assert (
+        contract["claim_policy"][
+            "failure_disposition_completion_cannot_open_external_comparison_or_s0"
         ]
         is True
     )
@@ -110,6 +136,11 @@ def test_source_contains_fresh_nested_verification_and_exact_crosschecks() -> No
     )
     assert "require_openmm_reference_energy_force_receipt" in source
     assert "require_openmm_reference_minimization_trace_receipt" in source
+    assert "require_openmm_reference_materialization" in source
+    assert "require_openmm_reference_native_minimization_receipt" in source
+    assert "require_openmm_reference_fixed_born_disposition_receipt" in source
     assert "_crosscheck_energy_force_outputs" in source
     assert "_crosscheck_minimization_traces" in source
+    assert "_native_minimization_physics_projection" in source
+    assert "_fixed_born_disposition_physics_projection" in source
     assert "external result reviewer must be distinct from every nested role" in source
