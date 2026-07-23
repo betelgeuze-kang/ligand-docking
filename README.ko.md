@@ -50,11 +50,59 @@ v2_at_s0_production_evidence_bundle_contract
   screened-Coulomb term에 더해지지 않고 이를 정확히 교체함. 명시적 alpha·
   reciprocal-index bound, conducting/tin-foil 경계, shifted real-space·reciprocal·
   self·exclusion·1-4 correction을 NVE config와 restart identity에 결속함.
-  일반 solute constraint/mass 자동 할당, 검증된 parameter, 독립
-  SHAKE/RATTLE/Ewald 비교,
-  Ewald convergence·NVE drift acceptance evidence, PME, net-charge background,
-  독립 승인된 thermostat/barostat·NVT/NPT 통계, triclinic cell·GPU parity·
-  제품 route는 없음
+  설치형 `betelgeuze-engine-v2-openmm-nve-trajectory` offline workflow는
+  unconstrained ion-pair와 coupled-constraint water-like 16-step case를 고정하고,
+  finite direct-Ewald 합을 OpenMM Reference에 독립 매핑해 매 step energy·force·
+  coordinate·velocity, constraint, drift, native-checkpoint restart와 exact
+  fail-closed 3행을 보존함. configuration SHA-256
+  `2beca32683c0393666cc1c3b5a136bed3416f774b0db631133a04bb43928871e`의
+  single-host 후보 관측
+  `d60b15992c4179a93e2276d4da380554e3c69a7819f181347aacab11899140cd`는
+  물리 2/2와 failure 3/3을 통과함. 이는 bounded implementation comparison일
+  뿐이며, 일반 solute constraint/mass 자동 할당, 검증된 parameter, 승인된
+  Ewald convergence·장시간 NVE drift, 일반 chemistry/solvent 독립 검증, PME,
+  net-charge background, 독립 승인된 thermostat/barostat·NVT/NPT 통계,
+  두-host review, triclinic cell·GPU parity·제품 route는 없음
+- 설치형
+  `betelgeuze-engine-v2-openmm-explicit-solvent-trajectory` offline
+  successor는 deterministic materializer를 세 개의 exact 12 Å TIP3P/ion
+  case, 4-step constrained NVE/OpenMM trace와 양쪽 restart, salted 3단
+  timestep ladder, direct-Ewald reciprocal bound 2/3/4, exact fail-closed
+  4행에 결속함. configuration SHA-256은
+  `e40902895938a4d7848e5207d0fe29de1ecaa43ae600c9c9ed8f7b7d0ac6c1b5`임.
+  single-host 후보 관측
+  `d510c9c65625c00f7bd14c134c72e1ed5dab004764efc60c7fd96a9dae223157`은
+  전체 물리-case metric에서 의도적으로 0/3을 유지함. OpenMM Reference
+  SETTLE의 rigid-water 잔차 최대값 `4.67e-8 Å`이 frozen `1e-9 Å`
+  threshold를 넘고, 두 입력은 charged pair가 cutoff equality에 놓여 force
+  divergence도 드러냄. Ewald convergence와 negative row 4/4는 통과하지만,
+  Engine timestep coordinate monotonic 검사는 `1.44e-11 Å` roundoff 규모에서
+  실패로 남음. threshold 완화나 입력 변경 없이 모든 실패를 보존한 rejected
+  diagnostic receipt이며, 승인된 explicit-solvent·Ewald·장시간 NVE·과학·
+  제품·P2 evidence가 아님. 두 build는 wheel SHA-256
+  `3c08913e23dceb49614f97cad03fe872c1a7d072cb15c7437760c566da452b70`으로
+  byte-identical했고 설치형 command가 receipt를 재현함
+- 설치형
+  `betelgeuze-engine-v2-openmm-force-double-rattle-trajectory` development
+  successor는 OpenMM Reference를 static force provider로만 쓰고, 별도
+  stdlib-only binary64 구현에서 이전 constrained pair vector SHAKE와 projected
+  current pair vector RATTLE로 적분함. fresh 13.5 Å·4-water/ion 입력 3개,
+  force-active cutoff margin 최소 `0.25 Å`, 16 step과 양쪽 restart, 모든
+  energy·force·coordinate·velocity·constraint·projection 관측 및 exact failure
+  6행을 결속함. configuration SHA-256
+  `ba2c1e99183cc124bb664745dfd1b4cbabbd2d4328cc35754e9e4da044606007`과
+  single-host observation
+  `cd0b849e206124e11996581c81dcc13da9d11ee3caa1c8176b5525dfead271a6`은
+  물리 3/3과 failure 6/6을 통과함. receipt file SHA-256은
+  `733af591c5366670a1aba79581648f064b8dccbd50d87b2080d139eb018329f0`임.
+  두 build는 wheel SHA-256
+  `32e5784ed210f9a62de015a71c18c3fe302f897761b4d740563afb04e9352cab`으로
+  byte-identical했고 설치형 CLI가 receipt를 재현함. 그러나 threshold는
+  exploratory 작업 뒤
+  선택됐고 lattice는 미평형이며 integrator는 외부 독립 유지 구현이 아님.
+  따라서 fresh holdout·두-host 재현·독립 review가 필요한 development
+  evidence일 뿐이며, rejected SETTLE receipt를 대체하거나 liquid property·
+  승인된 장시간 drift·PME·과학/제품 validity·P2 완료를 확립하지 않음
 - OpenMM Force Fields Amber TIP3P/Joung--Cheatham Na+/Cl- source snapshot을
   고정하고 water/ion atom·residue·bond·angle·nonbonded value, intrawater
   exclusion, rigid-water SHAKE/RATTLE constraint, full 3D orthorhombic PBC,
@@ -205,7 +253,32 @@ v2_at_s0_production_evidence_bundle_contract
   `3.692322529338441e-04 kcal/mol/Å`가 실패한다. 64–1024 iteration과
   `1e-8`–`1e-12` optimizer tolerance에서도 해소되지 않았다. 이는 failure
   disposition evidence만 완결하며 causal root cause·endpoint acceptance·S0 승격은
-  열지 않고 6/8 rejection을 유지한다. 별도 v4 Ed25519 verifier는
+  열지 않고 6/8 rejection을 유지한다. 별도 claim-closed
+  `betelgeuze-engine-v2-openmm-constraint-stationarity` 후보는 내부 constraint
+  projection을 `1e-14 Å`로 고정하고 tangent force가 엄격히 감소하면서 energy가
+  best accepted energy보다 `1e-10 kcal/mol` 이내일 때만 numerical polish를
+  허용한다. 후보/동일좌표 OpenMM configuration SHA-256은
+  `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`과
+  `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`이다.
+  single-host 후보 receipt
+  `16a4db9ca59ad969c63bb896a8bc3cb3310e7b5cc5f5e94e9a3b2dbf59d79f70`는 적용
+  가능한 constrained alias 4/4만 통과했고, OpenMM Reference 대비 최대
+  total-energy/force 오차는 각각 `1.07e-14 kcal/mol`,
+  `2.40e-14 kcal/mol/Å`였다. Engine/OpenMM 모두 동일 좌표에서 기존
+  `1e-8` tangent-force 기준을 통과했고 constraint residual은
+  `8.66e-15 Å` 이하였다. 나머지 frozen 10행은 명시적으로 제외하며
+  validation·S0·2-host·independent-review claim은 false다. 이어지는 별도
+  `betelgeuze-engine-v2-minimization-stationarity-successor` 관측 경로는 frozen
+  입력 14개를 모두 재사용한다. v1 4행은 기존 경로, constrained 4행은 새
+  stationarity 알고리즘과 Torch/NumPy-free tuple oracle, fail-closed 6행은 기존
+  exact disposition으로 실행한다. configuration SHA-256
+  `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`의
+  single-host 후보 관측
+  `18c6d617781e93c903332352d6f66e8eb2897e2c965035cd6f437d0324d3d1b9`는
+  14/14와 operational/oracle checkpoint 3/3을 통과하고 전체 energy·coordinate·
+  failure trace 및 4/4 OpenMM 동일좌표 후보를 결속한다. 단, production receipt,
+  2-host 재현, 독립 review, native OpenMM L-BFGS repair, S0 claim은 계속 false다.
+  별도 v4 Ed25519 verifier는
   두 Engine result-review chain, exact OpenMM materialization, component/trace
   receipt와 native endpoint receipt를 모두 새로 검증함. rejected endpoint에서는
   exact disposition receipt·configuration·physics projection·완결성·분류도 별도로
@@ -282,6 +355,24 @@ v2_at_s0_production_evidence_bundle_contract
   report의 all-case·target-family 분모를 다시 검증한다. PDBbind 약관을 대신 승인하지
   않고 dataset을 bundle하지 않으며 sequence 비교·benchmark 실행·결과·독립 검토는
   포함하지 않음
+- 설치 가능한 public-ranking file chain. 세-way corpus intake는 canonical
+  PDBbind-fit·CASF-validation·PoseBusters-test manifest와 세 sequence receipt를
+  검증하고, calibration-partition intake는 PDBbind/CASF score partition의 모든
+  성공·실패와 leakage 분모를 보존하며, training-view는 PDBbind 성공행만 그대로
+  fit 입력으로 쓰되 제외된 실패행을 disposition으로 남긴다. 그 위의
+  `betelgeuze-engine-v2-public-ranking-fit-validation`은 이 실행의 validation 관측
+  전에 모든 후보와 bootstrap 설정을 workflow-local canonical manifest로 동결한다.
+  각 후보는 PDBbind에만
+  fit되고 CASF는 failure-inclusive all-case/all-pose·target-family·confidence
+  interval 평가와 PR-AUC→Top-1→Top-5→candidate-ID 선택에만 쓰인다. 후보나 primary
+  metric 하나라도 미완료면 선택하지 않는다. selection-policy SHA-256은
+  `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`이며
+  PoseBusters test score partition은 API에 존재하지 않는다. 두 build는 wheel SHA-256
+  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`로
+  byte-identical했고 설치형 CLI/import를 checkout 밖에서 검증했다. genuine
+  licensed PDBbind/CASF 입력이 없어 production receipt·test 결과·calibrated
+  confidence·독립 재현/review·과학/도킹 claim은 모두 열리지 않는다. 외부 timestamp/
+  signature custody가 없으므로 독립적으로 사전 등록됐다는 claim도 열리지 않음
 - 설치 가능한 extraction-free PoseBusters 308 archive intake. caller가 제공한 공식
   Zenodo ZIP과 논문판 308-ID 파일의 exact hash·size를 요구하고, 2,570개 ZIP entry와
   428개 case directory를 hard bound 안에서 검사한다. path traversal·중복·암호화·

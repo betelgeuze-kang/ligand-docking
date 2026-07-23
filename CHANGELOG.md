@@ -71,6 +71,106 @@ scientific claim from a package version.
   This accepts failure-disposition evidence only: the frozen native endpoint
   remains 6/8 and rejected, exact optimizer rejection count and causal root
   cause remain unavailable, and S0/S1/product claims stay closed.
+- A separate claim-closed constraint-stationarity candidate now uses a strict
+  `1e-14 Å` internal distance projection and permits numerical polish only when
+  tangent force strictly decreases and energy remains within
+  `1e-10 kcal/mol` of the best accepted energy. Candidate and same-coordinate
+  OpenMM configuration SHA-256 values are
+  `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`
+  and `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`.
+  The installable
+  `betelgeuze-engine-v2-openmm-constraint-stationarity` workflow retains exact
+  restart, energy/coordinate traces, rejection rows, source/package/runtime
+  identity, and fixed-Born self/pair terms. Its single-host candidate receipt
+  (`16a4db9ca59ad969c63bb896a8bc3cb3310e7b5cc5f5e94e9a3b2dbf59d79f70`)
+  passed only the four applicable constrained aliases: maximum total-energy
+  and force errors versus OpenMM Reference were `1.07e-14 kcal/mol` and
+  `2.40e-14 kcal/mol/Å`, while both evaluators met the unchanged `1e-8`
+  absolute tangent-force bound at constraint residual below `8.66e-15 Å`.
+  The other ten frozen cases are explicitly excluded, the native L-BFGS result
+  remains rejected at 6/8, and validation, S0, two-host, independent-review,
+  chemistry, and product claims remain false.
+- A separate 14-case minimization-stationarity successor now reuses every
+  frozen input without rewriting the frozen protocol or receipt. The four v1
+  rows retain their original operational/independent paths, the four
+  constrained aliases use the new stationarity candidate plus a Torch/NumPy-
+  free tuple-arithmetic oracle, and all six expected fail-closed dispositions
+  are re-executed. Configuration SHA-256 is
+  `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`.
+  The single-host claim-closed observation
+  `18c6d617781e93c903332352d6f66e8eb2897e2c965035cd6f437d0324d3d1b9`
+  passed 14/14 rows and all three operational/oracle restart comparisons,
+  retains complete energy/coordinate/failure traces, and binds the 4/4
+  same-coordinate OpenMM candidate receipt. Two fixed-Born accepted steps
+  per alias fall on opposite Armijo/polish floating-point boundaries between
+  implementations; their accepted-state trajectories, counts, final
+  coordinates, and final physics remain within the preregistered bounds.
+  This is not a production validation receipt: two-host reproduction,
+  independent review, native OpenMM L-BFGS repair, and S0 remain open.
+- An installable `betelgeuze-engine-v2-openmm-nve-trajectory` offline workflow
+  now freezes one unconstrained ion-pair and one coupled O-H-constraint
+  water-like 16-step trajectory plus nonperiodic, net-charged, and triclinic
+  fail-closed rows. It independently maps the bounded direct-Ewald lattice into
+  OpenMM Reference forces, uses OpenMM's documented velocity-Verlet/RATTLE
+  sequence, retains every energy/force/coordinate/velocity and constraint/drift
+  value, verifies Engine exact and OpenMM native-checkpoint restart, and binds
+  complete source, dependency, binary, and environment identity. Configuration
+  SHA-256 is
+  `2beca32683c0393666cc1c3b5a136bed3416f774b0db631133a04bb43928871e`.
+  The deterministic single-host candidate observation
+  `d60b15992c4179a93e2276d4da380554e3c69a7819f181347aacab11899140cd`
+  (file SHA-256
+  `9a7161cd118adf467d3d4caf8f6378285aea6991bc8d763fcc9f20cbf0a2f586`)
+  passes 2/2 physical and 3/3 failure rows. Two builds were byte-identical at
+  wheel SHA-256
+  `e784158af0ef5a5c85a2e7c0900280bdb0629c8950fd0344696ac00044281c48`,
+  and installed-wheel verification reproduced the receipt. It is not accepted
+  long-time drift/Ewald convergence, PME, broad chemistry/solvent,
+  two-host/GPU, independent-review, scientific, product, or P2 evidence.
+- An installable
+  `betelgeuze-engine-v2-openmm-explicit-solvent-trajectory` successor now
+  binds three exact 12 Å materialized TIP3P/ion inputs, four-step constrained
+  NVE/OpenMM traces, both restart paths, a salted equal-horizon timestep
+  ladder, direct-Ewald reciprocal bounds 2/3/4, and four exact fail-closed
+  rows. Configuration SHA-256 is
+  `e40902895938a4d7848e5207d0fe29de1ecaa43ae600c9c9ed8f7b7d0ac6c1b5`.
+  Candidate observation and file SHA-256 values are
+  `d510c9c65625c00f7bd14c134c72e1ed5dab004764efc60c7fd96a9dae223157`
+  and
+  `d1425d77a1457e05b596597139e4c7c76bfb6357f066e0f7c37cf5f919c96810`.
+  The receipt preserves a 0/3 physical-case result: OpenMM Reference SETTLE
+  leaves up to `4.67e-8 Å` rigid-water residual against the frozen `1e-9 Å`
+  threshold, and two exact charged-pair cutoff-boundary inputs also fail the
+  force-max, force-RMS, and trajectory-velocity rows. Both implementations pass
+  Ewald bound convergence and all four negative cases pass; the Engine
+  timestep coordinate monotonic row remains failed at `1.44e-11 Å`. No
+  threshold or physical input was changed, and complete failure disposition
+  does not open explicit-solvent, Ewald, long-time NVE, scientific, product,
+  or P2 claims. Two builds were byte-identical at wheel SHA-256
+  `3c08913e23dceb49614f97cad03fe872c1a7d072cb15c7437760c566da452b70`;
+  installed-wheel verification reproduced the candidate receipt.
+- An installable
+  `betelgeuze-engine-v2-openmm-force-double-rattle-trajectory` development
+  successor now separates static OpenMM Reference force evaluation from a
+  stdlib-only binary64 constrained integrator. Three fresh 13.5 Å systems each
+  contain four deterministic TIP3P waters, optional ions, nonzero velocities,
+  and at least `0.25 Å` retained-frame cutoff margin. Previous-vector SHAKE and
+  current-vector RATTLE run for 16 steps with exact restart, complete traces,
+  and six fail-closed rows. Configuration SHA-256 is
+  `ba2c1e99183cc124bb664745dfd1b4cbabbd2d4328cc35754e9e4da044606007`;
+  candidate observation and file SHA-256 values are
+  `cd0b849e206124e11996581c81dcc13da9d11ee3caa1c8176b5525dfead271a6`
+  and
+  `733af591c5366670a1aba79581648f064b8dccbd50d87b2080d139eb018329f0`.
+  All 3/3 physical and 6/6 failure rows pass, including the unchanged
+  `1e-6 kcal/mol` drift gate. Two builds were byte-identical at wheel SHA-256
+  `32e5784ed210f9a62de015a71c18c3fe302f897761b4d740563afb04e9352cab`,
+  and installed-wheel verification reproduced the receipt. This is
+  post-exploration development evidence:
+  the first current-vector result remains preserved, the rejected SETTLE
+  receipt is not superseded, and fresh holdout, two-host reproduction,
+  independent review, liquid/ion observables, PME, and scientific/product/P2
+  acceptance remain open.
 - The OpenMM host result-review and two-host S0 contracts are refrozen as v4.
   A rejected native endpoint now requires the exact fixed-Born disposition
   receipt to be freshly verified and signs its receipt, configuration, physics
@@ -158,6 +258,28 @@ scientific claim from a package version.
   `e5e202d10420b5a557b1227aa0f7735433ebaeadc1656f6b981c14453aeb25b8`.
   No production receipt, fit, selected model, metric, review, or claim exists
   without genuine upstream corpus inputs.
+- A new installable
+  `betelgeuze-engine-v2-public-ranking-fit-validation` command preregisters
+  every deterministic fit candidate and the CASF bootstrap configuration in a
+  workflow-local canonical manifest, fits only the verified PDBbind training
+  view, and
+  evaluates CASF with failure-inclusive all-case/all-pose, target-family, and
+  confidence-interval evidence. The deterministic selection rule is
+  average-precision PR-AUC, Top-1, Top-5, then candidate ID; its policy
+  SHA-256 is
+  `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
+  Any incomplete candidate or unavailable primary metric retains its result
+  row and blocks selection. The mode-0600 no-overwrite receipt exact-binds
+  ancestry, source, Python/Torch runtime, configs, models, reports, and
+  selection, while verification reexecutes the full workflow. PoseBusters test
+  score partitions are forbidden. Two builds were byte-identical at wheel
+  SHA-256
+  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`
+  (1,708,814 bytes), and the installed CLI/import boundary was verified outside
+  the checkout. No genuine licensed inputs or production receipt are present,
+  no independent timestamp/signature custody proves external preregistration,
+  and no test, confidence-calibration, independent-review, scientific-
+  validation, chemistry, or product claim is opened.
 - An installable `betelgeuze-engine-v2-posebusters-intake` command now verifies
   the exact published PoseBusters Zenodo archive and journal 308-ID selection
   from caller-provided local files. It uses bounded no-follow regular-file

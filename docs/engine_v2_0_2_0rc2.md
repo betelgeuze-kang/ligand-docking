@@ -30,6 +30,18 @@ Execution:    CPU reference
   endpoint-comparison CLI smoke checks;
 - installed `betelgeuze-engine-v2-openmm-fixed-born-disposition`
   preregistered failure-disposition CLI smoke checks;
+- installed `betelgeuze-engine-v2-openmm-constraint-stationarity` claim-closed
+  same-coordinate candidate CLI smoke checks;
+- installed `betelgeuze-engine-v2-minimization-stationarity-successor`
+  claim-closed 14-case successor build/verify CLI smoke checks;
+- installed `betelgeuze-engine-v2-openmm-nve-trajectory` claim-closed
+  same-input NVE/SHAKE/RATTLE/direct-Ewald trajectory CLI smoke checks;
+- installed
+  `betelgeuze-engine-v2-openmm-explicit-solvent-trajectory` failure-inclusive
+  TIP3P/ion trajectory, timestep, and reciprocal-bound CLI smoke checks;
+- installed
+  `betelgeuze-engine-v2-openmm-force-double-rattle-trajectory` claim-closed
+  OpenMM-force/stdlib-double-RATTLE development CLI smoke checks;
 - installed `betelgeuze-engine-v2-posebusters-intake` extraction-free local
   archive-intake smoke checks (the public archive remains caller-provided);
 - installed `betelgeuze-engine-v2-posebusters-corpus-audit` failure-inclusive
@@ -86,6 +98,28 @@ validated-refinement, and claim promotion false. The
 PDBbind/CASF/PoseBusters split-provenance API similarly binds only caller-
 provided identities, leakage evidence, and family denominators. It accepts no
 PDBbind access terms and bundles no dataset, fit, benchmark result, or review.
+The OpenMM Reference NVE trajectory command adds a frozen two-case, 16-step
+single-host implementation comparison with all three fail-closed rows and
+configuration SHA-256
+`2beca32683c0393666cc1c3b5a136bed3416f774b0db631133a04bb43928871e`.
+It does not establish accepted long-time drift/Ewald convergence, PME,
+two-host/GPU parity, independent review, or scientific/P2 promotion.
+The separate installed explicit-solvent trajectory successor freezes three
+exact 12 Å TIP3P/ion inputs, a four-step Engine/OpenMM comparison, both restart
+paths, salted timestep and reciprocal-bound ladders, and four fail-closed rows.
+Configuration SHA-256 is
+`e40902895938a4d7848e5207d0fe29de1ecaa43ae600c9c9ed8f7b7d0ac6c1b5`.
+The local observation
+`d510c9c65625c00f7bd14c134c72e1ed5dab004764efc60c7fd96a9dae223157`
+is intentionally rejected: 0/3 physical rows pass the full metric set because
+OpenMM Reference SETTLE exceeds the rigid-water position threshold, two rows
+also expose exact cutoff-equality force divergence, and the Engine timestep
+coordinate monotonic row fails at its numerical floor. Ewald convergence and
+4/4 negative rows pass. Complete disposition does not promote this result to
+accepted solvent, Ewald, NVE, scientific, product, or P2 evidence. Two builds
+were byte-identical at wheel SHA-256
+`3c08913e23dceb49614f97cad03fe872c1a7d072cb15c7437760c566da452b70`,
+and installed-wheel verification reproduced the receipt.
 The installable public-ranking-corpus intake now exact-binds canonical
 PDBbind-v2020 fit, full CASF-2016 validation, and full PoseBusters-308 test
 manifests plus three pairwise all-chain sequence receipts. Its frozen
@@ -120,6 +154,24 @@ partitions are never inputs. Configuration SHA-256 is
 `e5e202d10420b5a557b1227aa0f7735433ebaeadc1656f6b981c14453aeb25b8`.
 No production receipt, fit, selected model, metric, review, or claim exists
 without genuine upstream corpus inputs.
+The installable
+`betelgeuze-engine-v2-public-ranking-fit-validation` command adds the next
+claim-closed boundary. A canonical manifest workflow-locally preregisters every
+deterministic fit candidate and CASF bootstrap configuration. Candidates fit
+only the embedded PDBbind rows; CASF contributes only failure-inclusive all-case/
+all-pose, target-family, bootstrap-interval validation and selection by
+PR-AUC, Top-1, Top-5, then candidate ID. Every candidate and primary metric
+must complete or no model is selected. Selection-policy SHA-256 is
+`1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
+The mode-0600 receipt and verifier exact-bind/reexecute ancestry, source,
+Python/Torch runtime, configs, models, and reports; a PoseBusters test score
+partition is forbidden. Genuine licensed inputs remain absent, so no
+production receipt, test result, confidence calibration, independent review,
+scientific validation, or docking claim exists. Two builds were byte-identical
+at wheel SHA-256
+`d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`;
+the installed CLI/import boundary passed outside-checkout verification.
+The receipt has no independent timestamp/signature custody for the manifest.
 The PoseBusters intake command can establish the exact archive, selection, and
 308-case artifact identities without extraction, but it performs no preparation,
 pose generation, scoring, benchmark execution, or independent review and does

@@ -42,6 +42,26 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-openmm-constraint-stationarity = "betelgeuze_engine_v2.offline.openmm_reference_constraint_stationarity:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-minimization-stationarity-successor = "betelgeuze_engine_v2.offline.reference_minimization_stationarity_successor:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-openmm-nve-trajectory = "betelgeuze_engine_v2.offline.openmm_reference_nve_trajectory:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-openmm-explicit-solvent-trajectory = "betelgeuze_engine_v2.offline.openmm_reference_explicit_solvent_trajectory:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-openmm-force-double-rattle-trajectory = "betelgeuze_engine_v2.offline.openmm_force_double_rattle_trajectory:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-intake = "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"'
         in text
     )
@@ -111,6 +131,10 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
     )
     assert (
         'betelgeuze-engine-v2-public-ranking-calibration-training-view = "betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_training_view:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-public-ranking-fit-validation = "betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_selection:main"'
         in text
     )
     assert (

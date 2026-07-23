@@ -8,6 +8,9 @@ from pathlib import Path
 
 import pytest
 
+from betelgeuze_engine_v2.benchmark import (
+    public_pose_ranking_fit_validation_selection as fit_validation_selection,
+)
 from betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_partition_intake import (
     PUBLIC_POSE_RANKING_CALIBRATION_PARTITION_INTAKE_CONFIGURATION_SHA256,
     PublicPoseRankingCalibrationPartitionIntakeError,
@@ -19,6 +22,19 @@ from betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_training_vie
     PublicPoseRankingCalibrationTrainingViewError,
     fit_public_pose_ranking_calibration_training_view,
     materialize_public_pose_ranking_calibration_training_view,
+)
+from betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_selection import (
+    PUBLIC_POSE_RANKING_FIT_VALIDATION_ANCESTRY_ARGUMENTS_SCHEMA_ID,
+    PUBLIC_POSE_RANKING_FIT_VALIDATION_SCIENTIFIC_BLOCKERS,
+    PUBLIC_POSE_RANKING_FIT_VALIDATION_SELECTION_POLICY_SHA256,
+    PublicPoseRankingFitValidationCandidate,
+    PublicPoseRankingFitValidationManifest,
+    PublicPoseRankingFitValidationSelectionError,
+    load_public_pose_ranking_fit_validation_manifest,
+    materialize_public_pose_ranking_fit_validation_selection,
+    read_public_pose_ranking_fit_validation_selection,
+    require_public_pose_ranking_fit_validation_selection,
+    write_public_pose_ranking_fit_validation_selection,
 )
 from betelgeuze_engine_v2.benchmark.public_pose_ranking_corpus_intake import (
     FROZEN_PUBLIC_POSE_RANKING_CORPUS_POLICY,
@@ -45,6 +61,7 @@ from betelgeuze_engine_v2.docking.calibration import (
     PoseRankingCalibrationConfig,
     PoseRankingCalibrationPartition,
     PoseRankingCalibrationRow,
+    PoseRankingEvaluationConfig,
 )
 
 
@@ -978,4 +995,417 @@ def test_training_view_fit_bridge_rejects_term_schema_mismatch() -> None:
                 iterations=10,
                 trace_interval=5,
             ),
+        )
+
+
+def _fit_validation_manifest(
+    *,
+    include_failing_candidate: bool = False,
+) -> PublicPoseRankingFitValidationManifest:
+    return PublicPoseRankingFitValidationManifest(
+        candidates=(
+            PublicPoseRankingFitValidationCandidate(
+                candidate_id="candidate-a",
+                config=PoseRankingCalibrationConfig(
+                    term_ids=("clash", "physics"),
+                    learning_rate=0.05,
+                    l2_penalty=1.0e-3,
+                    iterations=20,
+                    trace_interval=5,
+                    max_training_pairs=100,
+                ),
+            ),
+            PublicPoseRankingFitValidationCandidate(
+                candidate_id="candidate-b",
+                config=PoseRankingCalibrationConfig(
+                    term_ids=("clash", "physics"),
+                    learning_rate=0.02,
+                    l2_penalty=5.0e-3,
+                    iterations=30,
+                    trace_interval=5,
+                    max_training_pairs=(
+                        1 if include_failing_candidate else 100
+                    ),
+                ),
+            ),
+        ),
+        evaluation_config=PoseRankingEvaluationConfig(
+            confidence_level=0.95,
+            bootstrap_samples=40,
+            seed=1701,
+        ),
+    )
+
+
+def _fit_validation_fixture(
+    *,
+    include_failing_candidate: bool = False,
+):
+    fit, validation, test = _manifests()
+    fit_partition, validation_partition = _partitions(
+        fit,
+        validation,
+        fit_failure=True,
+    )
+    training_view = _training_view(
+        fit,
+        validation,
+        test,
+        fit_partition,
+        validation_partition,
+    )
+    manifest = _fit_validation_manifest(
+        include_failing_candidate=include_failing_candidate,
+    )
+    receipt = materialize_public_pose_ranking_fit_validation_selection(
+        training_view_receipt=training_view,
+        training_view_receipt_source_file_sha256=_sha(
+            "training-view-receipt:file"
+        ),
+        training_view_receipt_source_file_size_bytes=32768,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        manifest_source_file_sha256=_sha("candidate-manifest:file"),
+        manifest_source_file_size_bytes=4096,
+    )
+    return training_view, validation_partition, manifest, receipt
+
+
+def _canonical_object_sha256(payload: object) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            payload,
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    ).hexdigest()
+
+
+def test_fit_validation_selects_only_after_all_preregistered_candidates_complete() -> None:
+    (
+        training_view,
+        validation_partition,
+        manifest,
+        receipt,
+    ) = _fit_validation_fixture()
+
+    assert receipt["candidate_count"] == 2
+    assert receipt["completed_candidate_count"] == 2
+    assert receipt["failed_or_unavailable_candidate_count"] == 0
+    assert receipt["selection_complete"] is True
+    assert receipt["selected_candidate_id"] == "candidate-a"
+    assert receipt["fit_rows_used"] == 4
+    assert receipt["validation_rows_evaluated"] == 3
+    assert receipt["validation_labels_used_for_fit"] is False
+    assert receipt["validation_labels_used_for_selection"] is True
+    assert receipt["posebusters_test_score_partition_loaded"] is False
+    assert receipt["posebusters_test_labels_used"] is False
+    assert receipt["posebusters_test_benchmark_executed"] is False
+    assert receipt["scientifically_validated"] is False
+    assert receipt["production_eligible"] is False
+    assert receipt["claim_safe"] is False
+    assert receipt["scientific_blockers"] == list(
+        PUBLIC_POSE_RANKING_FIT_VALIDATION_SCIENTIFIC_BLOCKERS
+    )
+    assert (
+        receipt["selection_policy_sha256"]
+        == PUBLIC_POSE_RANKING_FIT_VALIDATION_SELECTION_POLICY_SHA256
+        == "1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9"
+    )
+
+    for row in receipt["candidate_results"]:
+        assert row["status"] == "completed"
+        assert row["validation_labels_used_for_fit"] is False
+        assert row["validation_labels_evaluated"] is True
+        assert row["test_partition_loaded"] is False
+        assert row["model"]["holdout_validated"] is False
+        report = row["validation_report"]
+        assert report["all_case_denominator"] == 2
+        assert report["all_pose_denominator"] == 3
+        assert len(report["family_metrics"]) == 2
+        assert sum(case["failed_pose_count"] for case in report["cases"]) == 1
+        metrics = row["selection_metrics"]
+        assert metrics["average_precision_pr_auc"] == 1.0
+        assert metrics["top1_native_like_rate"] == 0.5
+        assert metrics["top5_native_like_rate"] == 0.5
+        assert metrics["all_case_denominator"] == 2
+        assert metrics["all_pose_denominator"] == 3
+        assert metrics["failed_pose_count"] == 1
+
+    assert require_public_pose_ranking_fit_validation_selection(
+        receipt,
+        training_view_receipt=training_view,
+        training_view_receipt_source_file_sha256=_sha(
+            "training-view-receipt:file"
+        ),
+        training_view_receipt_source_file_size_bytes=32768,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        manifest_source_file_sha256=_sha("candidate-manifest:file"),
+        manifest_source_file_size_bytes=4096,
+    ) == receipt
+
+
+def test_fit_validation_candidate_failure_retains_row_and_blocks_selection() -> None:
+    _, _, _, receipt = _fit_validation_fixture(
+        include_failing_candidate=True
+    )
+
+    rows = {
+        row["candidate_id"]: row
+        for row in receipt["candidate_results"]
+    }
+    assert rows["candidate-a"]["status"] == "completed"
+    assert rows["candidate-b"]["status"] == "fit_failed"
+    assert rows["candidate-b"]["failure_code"] == (
+        "receipt_bound_fit_failed"
+    )
+    assert rows["candidate-b"]["model"] is None
+    assert rows["candidate-b"]["validation_report"] is None
+    assert rows["candidate-b"]["selection_metrics"] is None
+    assert receipt["completed_candidate_count"] == 1
+    assert receipt["failed_or_unavailable_candidate_count"] == 1
+    assert receipt["selection_complete"] is False
+    assert receipt["selection_blockers"] == [
+        "preregistered_candidate_or_primary_metric_incomplete"
+    ]
+    assert receipt["selected_candidate_id"] is None
+    assert receipt["selected_model_sha256"] is None
+    assert receipt["selected_validation_report_sha256"] is None
+    assert receipt["validation_labels_used_for_selection"] is False
+    assert receipt["posebusters_test_score_partition_loaded"] is False
+
+
+def test_fit_validation_unavailable_primary_metric_blocks_every_candidate() -> None:
+    fit, validation, test = _manifests()
+    fit_partition, validation_partition = _partitions(fit, validation)
+    one_class_validation = replace(
+        validation_partition,
+        rows=tuple(
+            (
+                replace(row, native_like=True)
+                if row.status == "success"
+                else row
+            )
+            for row in validation_partition.rows
+        ),
+    )
+    training_view = _training_view(
+        fit,
+        validation,
+        test,
+        fit_partition,
+        one_class_validation,
+    )
+    manifest = _fit_validation_manifest()
+    receipt = materialize_public_pose_ranking_fit_validation_selection(
+        training_view_receipt=training_view,
+        training_view_receipt_source_file_sha256=_sha(
+            "one-class-training-view:file"
+        ),
+        training_view_receipt_source_file_size_bytes=32768,
+        validation_partition=one_class_validation,
+        manifest=manifest,
+        manifest_source_file_sha256=_sha(
+            "one-class-candidate-manifest:file"
+        ),
+        manifest_source_file_size_bytes=4096,
+    )
+
+    assert receipt["completed_candidate_count"] == 0
+    assert receipt["failed_or_unavailable_candidate_count"] == 2
+    assert receipt["selection_complete"] is False
+    assert receipt["validation_rows_evaluated"] == 3
+    for row in receipt["candidate_results"]:
+        assert row["status"] == "primary_metric_unavailable"
+        assert row["failure_code"] == (
+            "validation_average_precision_pr_auc_unavailable"
+        )
+        assert row["selection_metrics"][
+            "average_precision_pr_auc"
+        ] is None
+        assert row["selection_metrics"][
+            "primary_metric_available"
+        ] is False
+        assert "negative_successful_pose_class_missing" in (
+            row["selection_metrics"]["primary_metric_blockers"]
+        )
+
+
+def test_fit_validation_manifest_is_canonical_frozen_and_tamper_evident(
+    tmp_path: Path,
+) -> None:
+    manifest = _fit_validation_manifest()
+    path = tmp_path / "candidate-manifest.json"
+    file_sha256 = _write_canonical(path, manifest.to_dict())
+    loaded, observed_file_sha256, size_bytes = (
+        load_public_pose_ranking_fit_validation_manifest(
+            path,
+            expected_file_sha256=file_sha256,
+            expected_manifest_sha256=manifest.manifest_sha256,
+        )
+    )
+    assert loaded == manifest
+    assert observed_file_sha256 == file_sha256
+    assert size_bytes == path.stat().st_size
+
+    reversed_candidates = manifest.to_dict()
+    reversed_candidates["candidates"].reverse()
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="canonically ordered",
+    ):
+        PublicPoseRankingFitValidationManifest.from_dict(
+            reversed_candidates
+        )
+
+    changed_policy = manifest.to_dict()
+    changed_policy["selection_policy"]["primary_direction"] = "minimize"
+    policy_projection = {
+        key: value
+        for key, value in changed_policy.items()
+        if key != "manifest_sha256"
+    }
+    changed_policy["manifest_sha256"] = _canonical_object_sha256(
+        policy_projection
+    )
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="frozen policy",
+    ):
+        PublicPoseRankingFitValidationManifest.from_dict(changed_policy)
+
+    pretty_path = tmp_path / "pretty-manifest.json"
+    pretty_data = (
+        json.dumps(manifest.to_dict(), indent=2).encode("ascii") + b"\n"
+    )
+    pretty_path.write_bytes(pretty_data)
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="canonical JSON",
+    ):
+        load_public_pose_ranking_fit_validation_manifest(
+            pretty_path,
+            expected_file_sha256=hashlib.sha256(pretty_data).hexdigest(),
+            expected_manifest_sha256=manifest.manifest_sha256,
+        )
+
+
+def test_fit_validation_ancestry_arguments_reject_test_score_partition(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "ancestry-arguments.json"
+    _write_canonical(
+        path,
+        {
+            "schema_id": (
+                PUBLIC_POSE_RANKING_FIT_VALIDATION_ANCESTRY_ARGUMENTS_SCHEMA_ID
+            ),
+            "training_view_materialization_arguments": {
+                "partition_intake_materialization_arguments": {
+                    "posebusters_test_score_partition_path": (
+                        "/forbidden/test-scores.json"
+                    )
+                }
+            },
+        },
+    )
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="test score partition input is forbidden",
+    ):
+        fit_validation_selection._load_ancestry_arguments(path)
+
+
+def test_fit_validation_receipt_is_private_no_overwrite_and_exactly_replayed(
+    tmp_path: Path,
+) -> None:
+    (
+        training_view,
+        validation_partition,
+        manifest,
+        receipt,
+    ) = _fit_validation_fixture()
+    path = tmp_path / "fit-validation-receipt.json"
+    write_public_pose_ranking_fit_validation_selection(path, receipt)
+    assert os.stat(path, follow_symlinks=False).st_mode & 0o777 == 0o600
+    assert read_public_pose_ranking_fit_validation_selection(path) == receipt
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="already exists",
+    ):
+        write_public_pose_ranking_fit_validation_selection(path, receipt)
+
+    forged = json.loads(json.dumps(receipt))
+    forged["selected_candidate_id"] = "candidate-b"
+    projection = {
+        key: value
+        for key, value in forged.items()
+        if key != "receipt_sha256"
+    }
+    forged["receipt_sha256"] = _canonical_object_sha256(projection)
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="selection summary",
+    ):
+        require_public_pose_ranking_fit_validation_selection(
+            forged,
+            training_view_receipt=training_view,
+            training_view_receipt_source_file_sha256=_sha(
+                "training-view-receipt:file"
+            ),
+            training_view_receipt_source_file_size_bytes=32768,
+            validation_partition=validation_partition,
+            manifest=manifest,
+            manifest_source_file_sha256=_sha(
+                "candidate-manifest:file"
+            ),
+            manifest_source_file_size_bytes=4096,
+        )
+
+    metric_forgery = json.loads(json.dumps(receipt))
+    first_row = metric_forgery["candidate_results"][0]
+    first_row["selection_metrics"]["top1_native_like_rate"] = 0.25
+    row_projection = {
+        key: value
+        for key, value in first_row.items()
+        if key != "candidate_result_sha256"
+    }
+    first_row["candidate_result_sha256"] = _canonical_object_sha256(
+        row_projection
+    )
+    projection = {
+        key: value
+        for key, value in metric_forgery.items()
+        if key != "receipt_sha256"
+    }
+    metric_forgery["receipt_sha256"] = _canonical_object_sha256(
+        projection
+    )
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="selection metrics do not match",
+    ):
+        write_public_pose_ranking_fit_validation_selection(
+            tmp_path / "metric-forgery.json",
+            metric_forgery,
+        )
+
+    overstated = json.loads(json.dumps(receipt))
+    overstated["claim_safe"] = True
+    projection = {
+        key: value
+        for key, value in overstated.items()
+        if key != "receipt_sha256"
+    }
+    overstated["receipt_sha256"] = _canonical_object_sha256(projection)
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="overstates",
+    ):
+        write_public_pose_ranking_fit_validation_selection(
+            tmp_path / "overstated.json",
+            overstated,
         )

@@ -159,6 +159,33 @@ post-projection endpoint passes the constraint residual but misses tangent
 force. Diagnostic acceptance means only that this failure disposition is
 complete; `frozen_native_endpoint_health_failure_resolved`, causal-root-cause,
 S0/S1, validation, and product flags remain false.
+The separate `reference_constraint_stationarity` API exposes
+`ReferenceConstraintStationarityConfig`,
+`minimize_reference_constraint_stationarity`, canonical checkpoint parsing,
+and a result with complete energy/coordinate/acceptance/failure traces. Its
+default contract uses strict `1e-14 Å` projection, retains the public
+`1e-10 Å` constraint and `1e-8 kcal/mol/Å` tangent-force bounds, and permits
+stationarity polish only under strict tangent decrease plus a
+`1e-10 kcal/mol` best-energy band. Default configuration SHA-256 is
+`5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`.
+The offline `openmm_reference_constraint_stationarity` API and installed
+`betelgeuze-engine-v2-openmm-constraint-stationarity` command build or verify a
+mode-0600 no-overwrite same-coordinate receipt. Comparison configuration
+SHA-256 is
+`722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`.
+These APIs cover only four constrained aliases, invoke no OpenMM minimizer,
+leave ten frozen rows outside their denominator, and cannot report validation
+or S0 completion.
+The offline `reference_minimization_stationarity_successor` API and installed
+`betelgeuze-engine-v2-minimization-stationarity-successor` command execute or
+verify a separate all-14-case candidate observation. It preserves the frozen
+v1 and fail-closed paths, uses the constraint-stationarity candidate plus a
+standard-library tuple oracle for the four constrained aliases, records full
+energy/coordinate/failure traces and exact operational/oracle restart evidence,
+and binds the same-coordinate OpenMM candidate receipt. Configuration SHA-256
+is `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`.
+Its mode-0600 no-overwrite output remains a single-host candidate observation,
+not a production validation receipt or S0 admission.
 The v4 Ed25519 result-review contract freshly reverifies both Engine
 result-review chains, the exact OpenMM materialization, both complete
 component/trace receipts, and the failure-inclusive native endpoint receipt.
@@ -431,6 +458,43 @@ This API performs no validation-based selection, test evaluation, external
 rerun, or claim promotion. Genuine upstream corpus inputs remain absent, so no
 production training-view receipt, fit, selected model, metric, review, or claim
 exists.
+
+`betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_selection`
+provides the next claim-closed file boundary. The installed
+`betelgeuze-engine-v2-public-ranking-fit-validation` command exposes
+`materialize` and `verify` modes. A canonical
+`PublicPoseRankingFitValidationManifest` workflow-locally preregisters one to
+32 unique, canonically ordered candidate IDs and exact
+`PoseRankingCalibrationConfig` objects, one `PoseRankingEvaluationConfig`, and
+the frozen selection policy.
+Its policy SHA-256 is
+`1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
+
+Materialization first reexecutes the corpus, partition-intake, and training-view
+ancestry. Every candidate then fits only the embedded PDBbind success rows.
+The bound CASF partition is evaluated only after fitting; every report retains
+all-case/all-pose denominators, failure rows, target-family metrics, and
+case-bootstrap confidence intervals. Selection maximizes pose-level
+average-precision PR-AUC, then Top-1 and Top-5 native-like rates, with canonical
+candidate ID as the final tie break. If any preregistered fit/evaluation fails
+or any primary PR-AUC is unavailable, every candidate row and disposition is
+retained and `selection_complete=false`.
+
+The receipt binds the training-view file/payload, validation partition and
+leakage audit, candidate manifest, source files, Python/Torch binary runtime,
+each model/report, selection summary, and its own digest. Writes are canonical,
+mode 0600, and no-overwrite; verification reexecutes every fit and validation
+and exact-compares the full receipt. An ancestry-argument tree containing a
+PoseBusters test score partition is rejected, and the CLI has no such argument.
+Two builds were byte-identical at wheel SHA-256
+`d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`
+(1,708,814 bytes), and the installed entry point/import was verified outside
+the checkout. This boundary is fit/validation model selection only. Genuine
+licensed PDBbind/CASF inputs are not present, so no production receipt exists;
+the receipt does not establish independent timestamp/signature custody for the
+candidate manifest. It does not execute the PoseBusters test, fit confidence
+calibration, establish independent reproduction/review, validate supported
+chemistry, or authorize a scientific or product docking claim.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_intake` is the bounded local
 archive boundary for the published PoseBusters set. The installed
@@ -1503,12 +1567,73 @@ constraint configurations, residual maxima, cumulative SHAKE/RATTLE iterations,
 runtime, state, energy drift, and chain identities for bit-exact continuation.
 Its integration config can optionally bind the neutral direct-Ewald reference;
 that selection and the entire Ewald config survive canonical checkpoint parsing
-and bit-exact restart. This is an implementation contract only:
-general solute constraint/mass assignment, accepted drift or Ewald-convergence evidence,
-independent SHAKE/RATTLE/Ewald or cross-host reproduction, PME, net-charge
-background, independently accepted thermostat/barostat and NVT/NPT statistics,
-triclinic cells, GPU parity, and all scientific/product/customer promotion
-remain unavailable.
+and bit-exact restart. The offline
+`openmm_reference_nve_trajectory` API and installed
+`betelgeuze-engine-v2-openmm-nve-trajectory` command freeze and execute a
+two-case, 16-step same-input OpenMM Reference comparison. It independently maps
+the shifted real, pair-correction, half-lattice reciprocal, self, bonded, and LJ
+terms; uses OpenMM's documented velocity-Verlet/RATTLE `CustomIntegrator`;
+retains every state, same-coordinate energy/force error, constraint residual,
+drift, Engine exact restart, OpenMM native-checkpoint restart, and all three
+failure dispositions; and re-executes the complete observation during
+verification. Configuration SHA-256 is
+`2beca32683c0393666cc1c3b5a136bed3416f774b0db631133a04bb43928871e`.
+This is a single-host claim-closed implementation comparison only. General
+solute constraint/mass assignment, accepted long-time drift or
+Ewald-convergence evidence, broad chemistry/explicit-solvent comparison,
+cross-host reproduction, PME, net-charge background, independently accepted
+thermostat/barostat and NVT/NPT statistics, triclinic cells, GPU parity, and all
+scientific/product/customer promotion remain unavailable.
+
+The separate
+`openmm_reference_explicit_solvent_trajectory` API and installed
+`betelgeuze-engine-v2-openmm-explicit-solvent-trajectory` command bind the
+deterministic TIP3P/Na+/Cl- materializer to three exact 12 Å systems: a neutral
+solute with two waters, the same system with NaCl, and a +1 solute with a Cl
+counterion. It retains all four nominal constrained-NVE steps, both restart
+paths, complete same-coordinate energy/force and constraint metrics, an
+equal-horizon three-timestep ladder on the salted case, direct-Ewald reciprocal
+bounds 2/3/4 at identical coordinates, and four materialization/oracle failure
+rows. Configuration SHA-256 is
+`e40902895938a4d7848e5207d0fe29de1ecaa43ae600c9c9ed8f7b7d0ac6c1b5`.
+The single-host candidate observation
+`d510c9c65625c00f7bd14c134c72e1ed5dab004764efc60c7fd96a9dae223157`
+(file SHA-256
+`d1425d77a1457e05b596597139e4c7c76bfb6357f066e0f7c37cf5f919c96810`)
+does not pass the physical protocol: all three rows retain an OpenMM Reference
+SETTLE position residual near `4.67e-8 Å` against the frozen `1e-9 Å`
+threshold; two rows also retain exact charged-pair cutoff-equality force and
+velocity failures. Both implementations pass the bound-3 versus bound-4 Ewald
+absolute and monotonic checks, while the Engine timestep coordinate monotonic
+row remains failed at a `1.44e-11 Å` roundoff-scale error. The receipt records
+all dispositions but never reclassifies them as passes. It is rejected
+diagnostic evidence, not accepted explicit-solvent, liquid-property,
+long-time-drift, Ewald/PME, scientific, product, customer, or P2 evidence.
+
+The separate `openmm_force_double_rattle_oracle` module deliberately imports
+only the standard library. The installed
+`betelgeuze-engine-v2-openmm-force-double-rattle-trajectory` adapter supplies
+static forces from the pinned OpenMM Reference mapping while the oracle applies
+sequential binary64 previous-constrained-vector SHAKE and projected-current-
+vector RATTLE. The frozen development configuration
+`ba2c1e99183cc124bb664745dfd1b4cbabbd2d4328cc35754e9e4da044606007`
+binds three fresh 13.5 Å four-water/ion systems, nonzero deterministic
+velocities, a `0.25 Å` minimum cutoff margin at every retained frame, 16 steps,
+both restart paths, and six failure rows. Candidate observation
+`cd0b849e206124e11996581c81dcc13da9d11ee3caa1c8176b5525dfead271a6`
+(file SHA-256
+`733af591c5366670a1aba79581648f064b8dccbd50d87b2080d139eb018329f0`)
+passes 3/3 physical and 6/6 failure rows. Its metrics were selected after
+exploratory implementation work. Two builds were byte-identical at wheel
+SHA-256
+`32e5784ed210f9a62de015a71c18c3fe302f897761b4d740563afb04e9352cab`,
+and installed-wheel verification reproduced the receipt. Its lattice is
+unequilibrated, and its oracle is internally maintained rather than an
+independent external integrator. It is therefore claim-closed development
+evidence. A fresh holdout, two-host
+reproduction, independent review, long-time drift, liquid/ion observables,
+PME, CPU/GPU parity, and scientific/product/P2 gates remain open; the rejected
+SETTLE receipt is preserved and not superseded.
 
 The bounded reference-NVE-drift symbols require a fresh all-step NVE result and
 a separately executed pause/resume result. They reconstruct every step's

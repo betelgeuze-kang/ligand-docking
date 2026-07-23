@@ -47,6 +47,26 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
             "betelgeuze_engine_v2.offline."
             "openmm_reference_fixed_born_disposition:main"
         ),
+        "betelgeuze-engine-v2-openmm-constraint-stationarity": (
+            "betelgeuze_engine_v2.offline."
+            "openmm_reference_constraint_stationarity:main"
+        ),
+        "betelgeuze-engine-v2-minimization-stationarity-successor": (
+            "betelgeuze_engine_v2.offline."
+            "reference_minimization_stationarity_successor:main"
+        ),
+        "betelgeuze-engine-v2-openmm-nve-trajectory": (
+            "betelgeuze_engine_v2.offline."
+            "openmm_reference_nve_trajectory:main"
+        ),
+        "betelgeuze-engine-v2-openmm-explicit-solvent-trajectory": (
+            "betelgeuze_engine_v2.offline."
+            "openmm_reference_explicit_solvent_trajectory:main"
+        ),
+        "betelgeuze-engine-v2-openmm-force-double-rattle-trajectory": (
+            "betelgeuze_engine_v2.offline."
+            "openmm_force_double_rattle_trajectory:main"
+        ),
         "betelgeuze-engine-v2-posebusters-intake": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_intake:main"
         ),
@@ -109,6 +129,10 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "betelgeuze-engine-v2-public-ranking-calibration-training-view": (
             "betelgeuze_engine_v2.benchmark."
             "public_pose_ranking_calibration_training_view:main"
+        ),
+        "betelgeuze-engine-v2-public-ranking-fit-validation": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_pose_ranking_fit_validation_selection:main"
         ),
         "betelgeuze-engine-v2-posebusters-pose-scaffold-identity": (
             "betelgeuze_engine_v2.benchmark."
@@ -219,10 +243,21 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert '"$venv/bin/python" -m pip install pip==25.0.1' in workflow
     assert "docs/engine_v2_pr_overlap_matrix.md" in workflow
     assert ".github/workflows/ci-engine-v2-release-candidate.yml" in workflow
+    assert (
+        "tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py"
+        in workflow
+    )
     assert workflow.count("betelgeuze-engine-v2-s0-review") >= 2
     assert "betelgeuze-engine-v2-openmm-materialize" in workflow
     assert "betelgeuze-engine-v2-openmm-native-minimization" in workflow
     assert "betelgeuze-engine-v2-openmm-fixed-born-disposition" in workflow
+    assert "betelgeuze-engine-v2-openmm-constraint-stationarity" in workflow
+    assert "betelgeuze-engine-v2-minimization-stationarity-successor" in workflow
+    assert "betelgeuze-engine-v2-openmm-nve-trajectory" in workflow
+    assert (
+        "betelgeuze-engine-v2-openmm-force-double-rattle-trajectory"
+        in workflow
+    )
     assert "betelgeuze-engine-v2-posebusters-intake" in workflow
     assert "betelgeuze-engine-v2-posebusters-corpus-audit" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
@@ -244,6 +279,10 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     )
     assert (
         "betelgeuze-engine-v2-public-ranking-calibration-training-view"
+        in workflow
+    )
+    assert (
+        "betelgeuze-engine-v2-public-ranking-fit-validation"
         in workflow
     )
     assert "betelgeuze-engine-v2-posebusters-pose-scaffold-identity" in workflow

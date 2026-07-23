@@ -72,6 +72,8 @@ jobs:
             betelgeuze_engine_v2/molecular \
             betelgeuze_engine_v2/physics/reference_parameters.py \
             betelgeuze_engine_v2/physics/reference_forcefield.py \
+            betelgeuze_engine_v2/offline/openmm_force_double_rattle_oracle.py \
+            betelgeuze_engine_v2/offline/openmm_force_double_rattle_trajectory.py \
             tools/build_engine_v2_wheel.py \
             tools/build_engine_v2_sbom.py \
             --config packaging/engine-v2/pyproject.toml > static-analysis.log 2>&1
@@ -121,6 +123,8 @@ jobs:
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_release_candidate.py
             tests/unit/test_engine_v2_packaging_guards.py
+            tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py
+            tests/unit/test_engine_v2_openmm_force_double_rattle_oracle.py
             CHANGELOG.md
             docs/engine_v2_0_2_0rc2.md
             docs/engine_v2_pr_overlap_matrix.md
@@ -152,7 +156,9 @@ jobs:
           python tools/check_engine_v2_architecture.py
           python -m pytest -q \
             tests/unit/test_engine_v2_packaging_guards.py \
-            tests/unit/test_engine_v2_release_candidate.py
+            tests/unit/test_engine_v2_release_candidate.py \
+            tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py \
+            tests/unit/test_engine_v2_openmm_force_double_rattle_oracle.py
 
       - name: Build wheel twice and require byte identity
         shell: bash
@@ -233,6 +239,11 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-openmm-materialize" --help | grep -q "never accepts a private key"
           "$venv/bin/betelgeuze-engine-v2-openmm-native-minimization" --help | grep -q "failure-inclusive OpenMM Reference native"
           "$venv/bin/betelgeuze-engine-v2-openmm-fixed-born-disposition" --help | grep -q "never replaces the rejected endpoint"
+          "$venv/bin/betelgeuze-engine-v2-openmm-constraint-stationarity" --help | grep -q "claim-closed stationarity candidate"
+          "$venv/bin/betelgeuze-engine-v2-minimization-stationarity-successor" --help | grep -q "claim-closed 14-case minimization"
+          "$venv/bin/betelgeuze-engine-v2-openmm-nve-trajectory" --help | grep -q "claim-closed OpenMM"
+          "$venv/bin/betelgeuze-engine-v2-openmm-explicit-solvent-trajectory" --help | grep -q "claim-closed OpenMM Reference explicit-solvent"
+          "$venv/bin/betelgeuze-engine-v2-openmm-force-double-rattle-trajectory" --help | grep -q "claim-closed OpenMM-force double-RATTLE"
           "$venv/bin/betelgeuze-engine-v2-posebusters-intake" --help | grep -q "without extraction"
           "$venv/bin/betelgeuze-engine-v2-posebusters-corpus-audit" --help | grep -q "without extraction or docking"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-prepare" --help | grep -q "without extraction or docking"
@@ -250,6 +261,7 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-public-ranking-corpus-intake" --help | grep -q "PDBbind fit, CASF validation, and PoseBusters test manifests"
           "$venv/bin/betelgeuze-engine-v2-public-ranking-calibration-partition-intake" --help | grep -q "PDBbind fit and CASF validation score partitions"
           "$venv/bin/betelgeuze-engine-v2-public-ranking-calibration-training-view" --help | grep -q "success-only PDBbind training view"
+          "$venv/bin/betelgeuze-engine-v2-public-ranking-fit-validation" --help | grep -q "PoseBusters test score partition"
           "$venv/bin/betelgeuze-engine-v2-posebusters-pose-scaffold-identity" --help | grep -q "generated-coordinate identity"
           "$venv/bin/betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic" --help | grep -q "prepared ligand Gasteiger charge and atom-type diagnostics"
           "$venv/bin/betelgeuze-engine-v2-posebusters-openbabel-compare" --help | grep -q "independent Open Babel charge"

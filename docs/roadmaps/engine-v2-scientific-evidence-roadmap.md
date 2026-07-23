@@ -257,6 +257,24 @@ claim status without revalidating the dependency and freshness chain.
   Validation labels and test partitions are not inputs. This is still fit-input
   readiness—not a production fit, selected model, metric, review, external
   rerun, or claim. No production receipt currently exists.
+- Preserve the installable fit/validation selection boundary gated by that
+  verified training view. Workflow-locally preregister every candidate fit
+  configuration and the CASF bootstrap configuration before label evaluation;
+  fit only embedded PDBbind rows; retain CASF all-case/all-pose, target-family,
+  confidence-interval, and failure evidence; and select only by the frozen
+  PR-AUC→Top-1→Top-5→candidate-ID rule. Selection-policy SHA-256 is
+  `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
+  Require all preregistered candidates and primary metrics to complete or
+  retain every row and select nothing. Keep the exact ancestry/source/runtime/
+  model/report replay verifier and forbid a PoseBusters test score partition.
+  Two builds are byte-identical at wheel SHA-256
+  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`,
+  with installed CLI/import verification outside the checkout.
+  Without external timestamp/signature custody it does not prove independent
+  preregistration. This opens no test, confidence-calibration, independent-
+  rerun/review, scientific-validation, chemistry-applicability, or product
+  claim. No production receipt exists until genuine licensed PDBbind/CASF
+  inputs pass the upstream gates.
 - Preserve the PoseBusters pose-ranking intake boundary that binds the exact
   Vina/GNINA/Smina execution/evaluation receipts and RCSB/Pfam annotations as
   test-only data. It must retain all 924 engine/case rows, all 1,031 evaluated
@@ -667,11 +685,50 @@ claim status without revalidating the dependency and freshness chain.
   trajectory, and exact checkpoint/restart identities. A neutral CPU `float64`
   orthorhombic direct-Ewald option now replaces screened Coulomb with explicit
   real/reciprocal/self/exclusion-scaling components and is restart-bound. It
-  does not assign general solute constraints or masses and does not satisfy an NVE-drift or
-  Ewald-convergence acceptance protocol, independent SHAKE/RATTLE/Ewald or
-  two-host reproduction, PME, net-charge-background, independently accepted
-  thermostat/barostat or NVT/NPT-statistics, triclinic-PBC, CPU/GPU-parity,
-  scientific, or product gates.
+  does not assign general solute constraints or masses. A separate frozen
+  two-case/16-step OpenMM Reference protocol now compares every-step energy,
+  force, coordinates, velocities, SHAKE/RATTLE residuals, drift, and restart
+  behavior for one ion-pair and one coupled-constraint water-like input, with
+  three exact fail-closed rows. Its single-host candidate passes all
+  preregistered implementation metrics. This closes only the first bounded
+  independent trajectory comparison: it does not satisfy an accepted
+  long-time NVE-drift or Ewald-convergence protocol, broad chemistry or
+  explicit-solvent coverage, two-host reproduction/review, PME,
+  net-charge-background, independently accepted thermostat/barostat or
+  NVT/NPT-statistics, triclinic-PBC, CPU/GPU-parity, scientific, or product
+  gates.
+  A separate explicit-solvent/OpenMM successor now binds three exact 12 Å
+  TIP3P/ion materializations, four-step constrained trajectories and restarts,
+  an equal-horizon salted timestep ladder, reciprocal bounds 2/3/4, and four
+  negative rows. Frozen configuration SHA-256 is
+  `e40902895938a4d7848e5207d0fe29de1ecaa43ae600c9c9ed8f7b7d0ac6c1b5`;
+  the local candidate observation
+  `d510c9c65625c00f7bd14c134c72e1ed5dab004764efc60c7fd96a9dae223157`
+  retains 0/3 physical-case passes. All water triangles exceed the fixed
+  position threshold under OpenMM Reference SETTLE, two inputs expose an exact
+  charged-pair cutoff-equality force boundary, and the Engine timestep
+  coordinate monotonic row fails at a roundoff-scale error. Ewald convergence
+  and 4/4 negative rows pass. The result is disposition-complete but rejected;
+  thresholds and physical inputs were not changed. The next P2 science slice
+  must redesign and preregister fresh non-boundary liquid-like inputs and an
+  oracle constraint policy before execution, then add independently reviewed
+  long-time drift and water/ion observable protocols. It must preserve this
+  rejected receipt rather than overwrite or reinterpret it.
+  A separate post-exploration development successor now uses fresh 13.5 Å,
+  four-water/ion inputs with at least `0.25 Å` force-active cutoff margin,
+  OpenMM Reference static forces, and a stdlib-only binary64 previous-vector
+  SHAKE/current-vector RATTLE integrator. Frozen configuration
+  `ba2c1e99183cc124bb664745dfd1b4cbabbd2d4328cc35754e9e4da044606007`
+  and candidate observation
+  `cd0b849e206124e11996581c81dcc13da9d11ee3caa1c8176b5525dfead271a6`
+  pass 3/3 physical and 6/6 failure rows over 16 steps and exact restarts. The
+  prior current-vector observation remains preserved, and the rejected SETTLE
+  receipt is not superseded. Because thresholds were selected after
+  exploration and the oracle is internally maintained, this is not a
+  confirmatory protocol. The next P2 science slice remains a genuinely fresh
+  preregistered holdout and independently maintained external-integrator
+  comparison on two CPU hosts, followed by accepted long-time drift and
+  water/ion-observable protocols.
   A separate bounded preparation now freezes one exact Amber TIP3P/
   Joung--Cheatham Na+/Cl- source snapshot and deterministically materializes
   water/ion topology, parameters, exclusions, rigid-water constraints, full
@@ -844,6 +901,28 @@ claim status without revalidating the dependency and freshness chain.
   the frozen 6/8 endpoint disposition. Treat `failure_disposition_complete` as
   bounded diagnostic evidence only, not a causal-root-cause, accepted external
   comparison, S0 admission, or threshold-relaxation signal.
+- Preserve the separate constraint-consistent stationarity candidate as a
+  non-superseding repair lane. Its default optimizer and same-coordinate
+  OpenMM configuration SHA-256 values are
+  `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`
+  and `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`.
+  The local single-host receipt
+  `16a4db9ca59ad969c63bb896a8bc3cb3310e7b5cc5f5e94e9a3b2dbf59d79f70`
+  passes the four constrained aliases at the unchanged constraint and absolute
+  tangent-force thresholds, with exact restart and separate fixed-Born
+  self/pair terms. It explicitly excludes the other ten frozen cases and does
+  not invoke or repair native OpenMM L-BFGS. A separate successor configuration
+  `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`
+  now retains all fourteen frozen inputs and applies the new algorithm only to
+  the four constrained aliases. Single-host candidate observation
+  `18c6d617781e93c903332352d6f66e8eb2897e2c965035cd6f437d0324d3d1b9`
+  passes 14/14, all six exact fail-closed dispositions, all three
+  operational/oracle restarts, and the bound 4/4 OpenMM candidate, with
+  complete energy/coordinate/count/failure traces. This closes an
+  implementation slice, not S0. Remaining work is a production-authorized
+  successor run on two distinct CPU hosts, an accepted independent external
+  receipt and reviewer disposition, and an S0 contract revision that preserves
+  rather than rewrites the rejected 6/8 evidence.
 - Preserve the v4 host-review and S0 propagation gate. Host review must freshly
   verify the exact materialization and native receipt, retain failed case IDs,
   and derive a signed rejection whenever endpoint health is below 8/8. That
