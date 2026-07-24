@@ -23,6 +23,10 @@ from betelgeuze_engine_v2.physics import (
     verify_reference_parameter_applicability_sources,
     write_reference_parameter_applicability_json,
 )
+from betelgeuze_engine_v2.physics.reference_parameter_applicability import (
+    FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1,
+    FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1_1,
+)
 
 
 def test_frozen_h5_record_binds_parameter_origin_runtime_envelope_and_digest() -> None:
@@ -35,7 +39,20 @@ def test_frozen_h5_record_binds_parameter_origin_runtime_envelope_and_digest() -
         FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256
     )
     assert FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256 == (
-        "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
+        "cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6"
+    )
+    assert document["record_version"] == "1.2.0"
+    assert (
+        document["superseded_record_sha256"]
+        == FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1_1
+        == "0c41a2a2e4471f2d632eca92964bb8f8c5d09abd249dd3cc5f414525c4daebeb"
+    )
+    assert document["legacy_record_chain_sha256s"] == [
+        FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1
+    ]
+    assert (
+        FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1
+        == "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
     )
     assert record.record_sha256 == document["record_sha256"]
 

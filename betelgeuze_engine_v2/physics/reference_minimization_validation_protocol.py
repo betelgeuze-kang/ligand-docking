@@ -33,22 +33,22 @@ from . import (
 
 
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_cpu_minimization_validation_protocol/2.1.0"
+    "betelgeuze.engine_v2_cpu_minimization_validation_protocol/2.2.0"
 )
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_ID = (
-    "cpu_reference_minimization_contract_validation/2.1.0"
+    "cpu_reference_minimization_contract_validation/2.2.0"
 )
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION = "2.1.0"
-CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_VERSION = "2.2.0"
+CPU_MINIMIZATION_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 = (
-    "46c775ea0c815b4414f02d6613984ad7117aa488787fb7f9b23889c591f0812c"
+    "41be727dca217152ec57c7194f128196f4cd7e88c7297ffe68bccaf64274d7cb"
 )
 CPU_MINIMIZATION_VALIDATION_PROTOCOL_REFREEZE_REASON = (
-    "constraint_projection_internal_half_tolerance_headroom_without_"
+    "default_neighbor_capacity_matches_compact_runtime_limits_without_"
     "acceptance_threshold_change"
 )
 FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 = (
-    "41be727dca217152ec57c7194f128196f4cd7e88c7297ffe68bccaf64274d7cb"
+    "380de5fcdc22ccc6cdbc86977652ca0695919f714859d1c4935b1ea3e0a5da5b"
 )
 
 CPU_MINIMIZATION_VALIDATION_SCIENTIFIC_BLOCKERS = (

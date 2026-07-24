@@ -4,6 +4,48 @@ This changelog tracks the independent `betelgeuze-engine-v2` distribution. The
 legacy/product monorepo has separate operational evidence and does not inherit a
 scientific claim from a package version.
 
+## 0.3.0a1 — Authenticated P0 release line
+
+### Added
+
+- Integrated the #151–#167 evidence, materialization, runtime-integrity, and
+  truthfulness stack into one release line.
+- Added deep-immutable canonical molecular state, strict canonical JSON
+  reading/writing, typed pocket definitions, authenticated generic docking
+  inputs, search-space derivation receipts, and numeric/RNG-bound proposal
+  identity.
+- Added symmetry-aware direct diversity and a public evaluator v2 that applies
+  one selected symmetry mapping to both RMSD and pose validity, authenticates
+  report inputs/source/policy, and treats unexpected evaluator defects as fatal
+  rather than case failures.
+- Added an aggregate `main` CI gate with byte-identical wheel builds and an
+  isolated outside-checkout clean-install check.
+
+### Changed
+
+- The implementation stage is `v2_0_3_0a1_p0_release_line`.
+- The legacy HIP/ROCm customer route is explicitly disabled in Engine v2
+  capability policy pending CPU reference freeze, GPU parity, and product
+  qualification.
+- Canonical molecular-state hardening refreezes the source/dependency lineage:
+  applicability record `1.2.0`
+  (`cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6`),
+  energy/force protocol `1.2.0`
+  (`0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2`),
+  and artifact binding `1.2.0`
+  (`b3341f3b98e29594cfcd727353553efa466116f275f5250c4ae944d624ef62b0`).
+- The dependent OpenMM mapping, native-minimization, fixed-Born disposition,
+  stationarity comparison/successor, host-review, and S0 contracts are
+  explicitly superseded and refrozen. Current host-review v7 and S0 v6 hashes
+  are `f7b57f08afd44e0ab7848c8ce75b08560d00cf381895aaeaf251e23cd3b81c7a`
+  and `5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4`.
+  Existing local observations remain bound to their historical configurations;
+  no production evidence or scientific claim is inherited by the refreeze.
+
+`0.3.0a1` is an internal scientific-engine alpha. It does not establish
+chemical applicability, docking accuracy, GPU parity, customer execution, or
+commercial scientific validity.
+
 ## 0.2.0rc2 — Runtime identity release candidate
 
 ### Added

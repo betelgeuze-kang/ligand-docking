@@ -58,26 +58,36 @@ from .openmm_reference_receipts import (
 
 
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_native_minimization_configuration/1.0.0"
+    "betelgeuze.engine_v2_openmm_reference_native_minimization_configuration/1.3.0"
 )
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_native_minimization_receipt/1.0.0"
+    "betelgeuze.engine_v2_openmm_reference_native_minimization_receipt/1.3.0"
 )
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_ID = (
-    "engine_v2_openmm_reference_native_minimization_configuration/1.0.0"
+    "engine_v2_openmm_reference_native_minimization_configuration/1.3.0"
 )
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_RECEIPT_ID = (
-    "engine_v2_openmm_reference_native_minimization_receipt/1.0.0"
+    "engine_v2_openmm_reference_native_minimization_receipt/1.3.0"
 )
 MAX_OPENMM_REFERENCE_NATIVE_MINIMIZATION_RECEIPT_BYTES = 32 * 1024 * 1024
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_ENERGY_NONINCREASE_TOLERANCE_KCAL_PER_MOL = (
     1.0e-10
 )
 
-# Filled after the configuration projection is reviewed.  This binds only
-# protocol/configuration values and is frozen before native endpoint execution.
-FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256 = (
+FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1 = (
     "6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e"
+)
+FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_1 = (
+    "0b48b892dcbf9fdb5937a487a2ff5d222e31e98050e2c05afa473c1eddaf3368"
+)
+
+# Filled after the 1.1 configuration projection is reviewed.  This binds only
+# protocol/configuration values and is frozen before native endpoint execution.
+FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_2 = (
+    "75aaf26a338699df1e9a398b74e9f065e60717d310a3b23c00875a3a5e3e7e34"
+)
+FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256 = (
+    "9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51"
 )
 
 OPENMM_REFERENCE_NATIVE_MINIMIZATION_BLOCKERS = (
@@ -268,6 +278,16 @@ def _configuration_projection() -> dict[str, Any]:
         "schema_id": OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SCHEMA_ID,
         "configuration_id": OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_ID,
         "oracle_id": OPENMM_REFERENCE_OFFLINE_ORACLE_ID,
+        "superseded_configuration_sha256": (
+            FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_2
+        ),
+        "legacy_configuration_chain_sha256s": [
+            FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_1,
+            FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1
+        ],
+        "refreeze_reason": (
+            "bind_openmm_mapping_contract_1_3_0_without_endpoint_policy_change"
+        ),
         "mapping_contract_sha256": mapping["contract_sha256"],
         "minimization_protocol_sha256": protocol["protocol_sha256"],
         "minimization_case_manifest_sha256": protocol["case_manifest"][
@@ -1436,6 +1456,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 __all__ = [
+    "FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1",
+    "FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_1",
     "FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256",
     "MAX_OPENMM_REFERENCE_NATIVE_MINIMIZATION_RECEIPT_BYTES",
     "OPENMM_REFERENCE_NATIVE_MINIMIZATION_BLOCKERS",

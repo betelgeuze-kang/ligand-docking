@@ -44,10 +44,10 @@ def test_protocol_freezes_exact_source_case_and_metric_identities() -> None:
         FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
     )
     assert FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 == (
-        "41be727dca217152ec57c7194f128196f4cd7e88c7297ffe68bccaf64274d7cb"
+        "380de5fcdc22ccc6cdbc86977652ca0695919f714859d1c4935b1ea3e0a5da5b"
     )
     assert SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256 == (
-        "46c775ea0c815b4414f02d6613984ad7117aa488787fb7f9b23889c591f0812c"
+        "41be727dca217152ec57c7194f128196f4cd7e88c7297ffe68bccaf64274d7cb"
     )
     assert document["superseded_protocol_sha256"] == (
         SUPERSEDED_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256

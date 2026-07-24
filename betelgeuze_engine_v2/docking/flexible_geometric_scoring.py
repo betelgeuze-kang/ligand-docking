@@ -300,6 +300,10 @@ class ElementFlexibleGeometryDiagnosticScorer:
         return self.base_scorer.receptor_shell_atom_count
 
     @property
+    def problem_fingerprint_sha256(self) -> str:
+        return self.problem.fingerprint_sha256
+
+    @property
     def chemistry_scope(self) -> dict[str, object]:
         scope = self.base_scorer.chemistry_scope
         scope.update(

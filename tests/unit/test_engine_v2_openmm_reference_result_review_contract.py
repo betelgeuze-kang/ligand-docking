@@ -8,6 +8,9 @@ import sys
 import pytest
 
 from betelgeuze_engine_v2.offline.openmm_reference_result_review import (
+    FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V4,
+    FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V5,
+    FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V6,
     FROZEN_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256,
     OpenMMReferenceResultReviewError,
     OpenMMReferenceResultReviewerTrustAnchor,
@@ -22,6 +25,22 @@ def test_result_review_contract_is_frozen_and_claim_closed() -> None:
     assert (
         contract["contract_sha256"]
         == FROZEN_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256
+        == "f7b57f08afd44e0ab7848c8ce75b08560d00cf381895aaeaf251e23cd3b81c7a"
+    )
+    assert contract["contract_version"] == "7.0.0"
+    assert (
+        contract["superseded_contract_sha256"]
+        == FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V6
+        == "e1f6961c936e076dbd7510e2096af9de271fd4a0f1e63cf200ad04ea6ded9273"
+    )
+    assert (
+        contract["legacy_contract_chain_sha256s"][0]
+        == FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V5
+        == "6a8fa54fb9f8b69f2bd3ff2f368af32dd7879a84c279e13f962f3f401b80f512"
+    )
+    assert (
+        contract["legacy_contract_chain_sha256s"][1]
+        == FROZEN_LEGACY_OPENMM_REFERENCE_RESULT_REVIEW_CONTRACT_SHA256_V4
         == "6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970"
     )
     assert (
@@ -62,7 +81,7 @@ def test_result_review_contract_is_frozen_and_claim_closed() -> None:
         contract["bound_contracts"][
             "openmm_fixed_born_disposition_configuration_sha256"
         ]
-        == "ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045"
+        == "6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281"
     )
     assert (
         contract["claim_policy"][

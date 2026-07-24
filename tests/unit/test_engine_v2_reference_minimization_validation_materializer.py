@@ -99,7 +99,7 @@ def test_manifest_materializes_every_frozen_case_without_results() -> None:
         projection
     )
     assert manifest["materialization_manifest_sha256"] == (
-        "da22372e8cae014b667a9894c5c0520e74b49412e044479a180458b96a64afaa"
+        "d14ec7e8eb359d8ea36220f507bce49efc9fb211b9bb06cceea7a2fd4a8d6cf2"
     )
 
 

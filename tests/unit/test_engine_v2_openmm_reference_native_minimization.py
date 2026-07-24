@@ -72,7 +72,7 @@ def test_configuration_is_frozen_before_endpoint_observation() -> None:
     assert (
         configuration["configuration_sha256"]
         == FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256
-        == "6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e"
+        == "9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51"
     )
     assert configuration["coverage"] == {
         "case_count": 14,

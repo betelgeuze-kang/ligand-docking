@@ -16,7 +16,12 @@ from typing import Mapping
 
 import torch
 
-from betelgeuze_engine_v2.geometry import RadiusGraphConfig, build_compact_radius_graph
+from betelgeuze_engine_v2.geometry import (
+    MAX_COMPACT_ATOMS_PER_CELL,
+    MAX_COMPACT_NEIGHBORS,
+    RadiusGraphConfig,
+    build_compact_radius_graph,
+)
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem,
     canonical_system_sha256,
@@ -214,8 +219,8 @@ class ReferenceMinimizationConfig:
     armijo_constant: float = 1.0e-4
     maximum_atom_displacement_angstrom: float = 0.05
     force_tolerance_kcal_per_mol_angstrom: float = 1.0e-3
-    max_neighbors: int = 256
-    max_atoms_per_cell: int = 512
+    max_neighbors: int = MAX_COMPACT_NEIGHBORS
+    max_atoms_per_cell: int = MAX_COMPACT_ATOMS_PER_CELL
     schema_id: str = REFERENCE_MINIMIZATION_CONFIG_SCHEMA_ID
 
     def __post_init__(self) -> None:
@@ -248,7 +253,7 @@ class ReferenceMinimizationConfig:
                 self.max_neighbors,
                 name="max_neighbors",
                 minimum=1,
-                maximum=65_536,
+                maximum=MAX_COMPACT_NEIGHBORS,
             ),
         )
         object.__setattr__(
@@ -258,7 +263,7 @@ class ReferenceMinimizationConfig:
                 self.max_atoms_per_cell,
                 name="max_atoms_per_cell",
                 minimum=1,
-                maximum=1_000_000,
+                maximum=MAX_COMPACT_ATOMS_PER_CELL,
             ),
         )
         for name in (

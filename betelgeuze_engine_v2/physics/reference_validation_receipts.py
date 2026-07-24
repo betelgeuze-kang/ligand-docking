@@ -35,30 +35,42 @@ from .reference_validation_protocol import (
 
 
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_execution_environment_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_execution_environment_contract/5.0.0"
 )
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_execution_environment_receipt/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_execution_environment_receipt/5.0.0"
 )
 REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID = (
-    "cpu_reference_validation_execution_environment_contract/3.0.0"
+    "cpu_reference_validation_execution_environment_contract/5.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_receipt_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_receipt_contract/5.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_receipt/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_receipt/5.0.0"
 )
 REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_ID = (
-    "cpu_reference_validation_result_receipt_contract/3.0.0"
+    "cpu_reference_validation_result_receipt_contract/5.0.0"
 )
-REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-24T18:25:00Z"
 
 FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "1b2722273c2c2424de6dcb1be8b2b9011f906cebab06bc25f6e8c2b9c688f863"
+    "a8c8dbd8f89d541a6197af16ffff09377c10063fcad8b47cec60594b33ba94f9"
 )
 FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
+    "e524123de990e7349e631166d3b5eea43afc37f49c2b0f8364e1b292516e165a"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V4 = (
+    "c532483b47bc3e1c2497f6bb0f4f74452385e2d5a2082fde467f841f7a783bbb"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V4 = (
+    "bc99aede8c016001121468f40b5e506dd2b8f3af02f3955d0cd41c92165beba9"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V3 = (
+    "1b2722273c2c2424de6dcb1be8b2b9011f906cebab06bc25f6e8c2b9c688f863"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V3 = (
     "55a36bfcf085147d11ba5c213fd4381b8c7ed6bf7c57d23f8432be9ed82f6511"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2 = (
@@ -121,9 +133,16 @@ def _environment_contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "binds_public_key_ed25519_execution_authorization_contract",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_1_2_0_and_authorization_5_0_0"
+        ),
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "contract_definition_only": True,
@@ -311,9 +330,16 @@ def _result_contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_RECEIPT_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "binds_public_key_ed25519_execution_authorization_contract",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_1_2_0_and_environment_contract_5_0_0"
+        ),
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "contract_definition_only": True,

@@ -38,19 +38,22 @@ from .reference_minimization_validation_review import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation_contract/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation_contract/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_nonce_reservation/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_atomic_nonce_reservation/5.0.0"
+    "cpu_reference_minimization_validation_atomic_nonce_reservation/6.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "6.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
+    "642a987d7f89c7092428839d50897107c6ed80e29d41430ab19aa01ddb8b7d02"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V5 = (
     "db6c1a499986be1bd720319c6ffd51bdf6059dbe47e5c430548334c88830fed5"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4 = (
@@ -204,9 +207,11 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V5
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_authorization_and_receipt_chain",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_authorization_and_receipt_chain"
+        ),
         "purpose": {
             "scope": "local_atomic_one_time_minimization_validation_authorization_nonce_reservation",
             "primitive_definition_only": True,

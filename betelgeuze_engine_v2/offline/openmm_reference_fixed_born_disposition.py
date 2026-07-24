@@ -65,22 +65,22 @@ from .openmm_reference_receipts import (
 
 OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_"
-    "configuration/2.0.0"
+    "configuration/5.0.0"
 )
 OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_receipt/2.0.0"
+    "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_receipt/5.0.0"
 )
 OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_PROBE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_probe/2.0.0"
+    "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_probe/5.0.0"
 )
 OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_TRACE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_trace/2.0.0"
+    "betelgeuze.engine_v2_openmm_reference_fixed_born_disposition_trace/5.0.0"
 )
 OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_ID = (
-    "engine_v2_openmm_reference_fixed_born_disposition_configuration/2.0.0"
+    "engine_v2_openmm_reference_fixed_born_disposition_configuration/5.0.0"
 )
 OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_RECEIPT_ID = (
-    "engine_v2_openmm_reference_fixed_born_disposition_receipt/2.0.0"
+    "engine_v2_openmm_reference_fixed_born_disposition_receipt/5.0.0"
 )
 MAX_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_RECEIPT_BYTES = 32 * 1024 * 1024
 
@@ -160,12 +160,18 @@ OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_BLOCKERS = (
 FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1 = (
     "67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1"
 )
-
-# Filled from the revised canonical projection before any v2 target execution.
-# V2 separates a no-reporter bitwise control from reporter-instrumented probes
-# after the v1 observer path failed its own exact-reproduction gate.
-FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256 = (
+FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V2 = (
     "ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045"
+)
+FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V3 = (
+    "8cbcf0f7872fdd83bdf5339e230094309000af49ca39d79fcaaaa0bf49bd6a48"
+)
+
+FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V4 = (
+    "2ca9ca3db259eecd94df5a553f934740764bdca3f7d50e2d9d31d4b2695d209e"
+)
+FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256 = (
+    "6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281"
 )
 
 
@@ -349,17 +355,22 @@ def _configuration_projection() -> dict[str, Any]:
         ),
         "expected_failed_case_ids": list(FIXED_BORN_FAILURE_CASE_IDS),
         "protocol_revision": {
-            "revision": 2,
+            "revision": 5,
             "predecessor_configuration_sha256": (
-                FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1
+                FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V4
             ),
+            "legacy_configuration_chain_sha256s": [
+                FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V3,
+                FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V2,
+                FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1
+            ],
             "change_scope": (
-                "separate_no_reporter_bitwise_control_from_"
-                "reporter_instrumented_probes"
+                "bind_openmm_mapping_1_3_0_and_native_endpoint_1_3_0_"
+                "without_probe_or_threshold_change"
             ),
             "reason": (
-                "v1 reporter instrumentation changed endpoint last bits and "
-                "therefore failed the preregistered exact-baseline gate"
+                "energy-force protocol 1.2.0 refroze source identity while "
+                "preserving fixed-Born diagnostic thresholds"
             ),
             "probe_matrix_changed": False,
             "endpoint_health_thresholds_changed": False,
@@ -2016,6 +2027,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 __all__ = [
     "FIXED_BORN_FAILURE_CASE_IDS",
     "FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1",
+    "FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V2",
+    "FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V3",
     "FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256",
     "MAX_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_RECEIPT_BYTES",
     "OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_BLOCKERS",

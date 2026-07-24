@@ -43,14 +43,14 @@ from .reference_validation_oracle import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_artifact_binding/2.1.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_artifact_binding/2.2.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_ID = (
-    "cpu_reference_minimization_materializer_independent_oracle_binding/2.1.0"
+    "cpu_reference_minimization_materializer_independent_oracle_binding/2.2.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_VERSION = "2.1.0"
+REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_VERSION = "2.2.0"
 REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_FROZEN_AT_UTC = (
-    "2026-07-22T01:17:31Z"
+    "2026-07-24T00:00:00Z"
 )
 REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_REVIEWER_ROLE = (
     "repository_maintainer"
@@ -69,13 +69,13 @@ FROZEN_INDEPENDENT_MINIMIZATION_ORACLE_SOURCE_SHA256 = (
     "d6dca033c80fb77d6d49b1e28a941356c8b5e05316798fe43be268f7dab6ab46"
 )
 FROZEN_CPU_MINIMIZATION_VALIDATION_MATERIALIZATION_MANIFEST_SHA256 = (
-    "da22372e8cae014b667a9894c5c0520e74b49412e044479a180458b96a64afaa"
+    "d14ec7e8eb359d8ea36220f507bce49efc9fb211b9bb06cceea7a2fd4a8d6cf2"
 )
 SUPERSEDED_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256 = (
-    "a408a2445e461f3df213eda573442c341ea8d9e5a981a7cc61f98a75cb72a98e"
+    "68451322ccb8414bcf09db6833b3c708c36860c923c6798d1d4d84ad9183423b"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256 = (
-    "68451322ccb8414bcf09db6833b3c708c36860c923c6798d1d4d84ad9183423b"
+    "f237c2785e316e5fd5c2053dddc77c8b021ef97fd8e6bfebbc62331011fb3d78"
 )
 
 _ALLOWED_MINIMIZATION_ORACLE_IMPORTS = frozenset(
@@ -316,7 +316,10 @@ def reference_minimization_validation_artifact_binding_document() -> dict[str, A
         "superseded_artifact_binding_sha256": (
             SUPERSEDED_REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_SHA256
         ),
-        "refreeze_reason": "binds_independent_oracle_half_tolerance_projection_headroom",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_minimization_protocol_and_"
+            "materialization_manifest"
+        ),
         "reviewer": {
             "role": (REFERENCE_MINIMIZATION_VALIDATION_ARTIFACT_BINDING_REVIEWER_ROLE),
             "identity_sha256": (

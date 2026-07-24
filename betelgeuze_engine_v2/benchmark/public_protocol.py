@@ -41,9 +41,9 @@ PUBLIC_BENCHMARK_PROTOCOL_ID = (
     "posebusters_packaged_public_redocking_contract_cohort/1.1.0"
 )
 PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.0"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-22T07:57:34Z"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "1dc41af780d5e362f0d623267802d3dc25fda9f89f5735ca47c43e86a026ccfa"
+    "7888db6264aec25b8bf1f3c30b4c601062b0831cf610a84c9700d0c89a64ed90"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -474,6 +474,9 @@ class FrozenPublicBenchmarkProtocol:
                 "denominator": "all_manifest_cases",
                 "missing_or_failed_case_counts_as_primary_failure": True,
                 "symmetry_mapping_generation_implemented": True,
+                "symmetry_permutation_direction": (
+                    "reference_position_to_candidate_position"
+                ),
                 "reference_ligand_match_materializer_implemented": True,
                 "posebusters_parity_claimed": False,
             },
@@ -680,7 +683,7 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 module="betelgeuze_engine_v2.docking.validity",
                 relative_path="betelgeuze_engine_v2/docking/validity.py",
                 source_sha256=(
-                    "8511e3dbb7ad6c009af7bfb32b6ae21a68de6b1c0fb76443f7406ff680623dd7"
+                    "996cfd1ea8ea230a5cb3a8449142babc1e17cf4103f07e70054fe977aef0318e"
                 ),
             ),
             PublicBenchmarkScorerIdentity(
@@ -698,7 +701,7 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 module="betelgeuze_engine_v2.molecular.models",
                 relative_path="betelgeuze_engine_v2/molecular/models.py",
                 source_sha256=(
-                    "6e048062e5e8988855785841c8b044e805ddccd3b541b6f1ac109902a9e14448"
+                    "d02d7476d6786a1ad55f75fe7edbb5a4caee9122c6c891422dddb9da65caaf32"
                 ),
             ),
             PublicBenchmarkScorerIdentity(

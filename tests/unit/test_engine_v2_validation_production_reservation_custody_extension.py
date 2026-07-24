@@ -21,7 +21,7 @@ from betelgeuze_engine_v2.physics.validation_production_evidence_custody import 
     build_signed_production_evidence_status_snapshot,
 )
 from betelgeuze_engine_v2.physics.validation_production_reservation_custody_extension import (
-    FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3,
+    FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V6,
     FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256,
     PRODUCTION_RESERVATION_MAX_REGISTRY_SEQUENCE,
     ProductionAtomicReservationCommitVerification,
@@ -368,7 +368,7 @@ def test_contract_is_frozen_additive_and_claim_closed() -> None:
         FROZEN_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256
     )
     assert contract["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V3
+        FROZEN_LEGACY_VALIDATION_PRODUCTION_RESERVATION_CUSTODY_EXTENSION_CONTRACT_SHA256_V6
     )
     assert contract["purpose"]["additive_sequence_five_companion_only"] is True
     assert (

@@ -38,7 +38,7 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     assert protocol.schema_id == PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID
     assert protocol.protocol_sha256 == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
     assert protocol.protocol_sha256 == (
-        "1dc41af780d5e362f0d623267802d3dc25fda9f89f5735ca47c43e86a026ccfa"
+        "7888db6264aec25b8bf1f3c30b4c601062b0831cf610a84c9700d0c89a64ed90"
     )
     assert POSEBUSTERS_SOURCE_COMMIT_SHA == ("1a5f26aa7270fafba21b7fec8b3633f4c4e45ead")
     assert [case.pdb_id for case in protocol.cases] == [
@@ -144,6 +144,9 @@ def test_raw_inputs_are_external_commit_bound_and_not_bundled() -> None:
     assert endpoint["ligand_identity_seed_coordinates_used"] is False
     assert "direct_receptor_frame_rmsd" in endpoint["rmsd_method"]
     assert endpoint["symmetry_mapping_generation_implemented"] is True
+    assert endpoint["symmetry_permutation_direction"] == (
+        "reference_position_to_candidate_position"
+    )
     assert endpoint["reference_ligand_match_materializer_implemented"] is True
     assert endpoint["reference_selection_rule"] == (
         "all_reference_records_matching_seed_labeled_graph_identity"

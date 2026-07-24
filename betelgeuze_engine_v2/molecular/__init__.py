@@ -597,6 +597,8 @@ from .models import (
 )
 from .serialization import (
     CANONICAL_SYSTEM_JSON_SCHEMA_ID,
+    MAX_CANONICAL_SYSTEM_JSON_BYTES,
+    MAX_CANONICAL_TENSOR_ELEMENTS,
     CanonicalSerializationError,
     all_atom_system_from_canonical_json,
     canonical_coordinates_payload,
@@ -628,6 +630,8 @@ __all__ = [
     "ATOM_CATEGORY",
     "ATOM_SITE_CATEGORY",
     "CANONICAL_SYSTEM_JSON_SCHEMA_ID",
+    "MAX_CANONICAL_SYSTEM_JSON_BYTES",
+    "MAX_CANONICAL_TENSOR_ELEMENTS",
     "CHEM_COMP_ATOM_CATEGORY",
     "CHEM_COMP_BOND_CATEGORY",
     "FROZEN_MMCIF_NONPOLY_PREPARATION_CORPUS_INPUT_SHA256",

@@ -31,20 +31,23 @@ from .reference_minimization_validation_artifact_binding import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_review_contract/4.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_review_contract/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/4.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_review_contract/4.0.0"
+    "cpu_reference_minimization_validation_independent_review_contract/5.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "4.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION = "5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256 = (
+    "1ee6e03aa0918e77b8afd105103f480b6342f16a40850422e3d2d4b83eb0a35e"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V4 = (
     "2d5d04c46a10e29ba4918a1cea584891da84060a5b86d3b526c5cf6bde790dcd"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V3 = (
@@ -201,9 +204,11 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V3
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_artifact_binding",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_protocol_and_refrozen_artifact_binding"
+        ),
         "purpose": {
             "scope": "future_independent_review_of_cpu_minimization_validation_implementation_artifacts",
             "contract_definition_only": True,

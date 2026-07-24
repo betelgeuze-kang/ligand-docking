@@ -47,6 +47,13 @@ REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_TOTAL_MAX_FILES = 60_000
 REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_TOTAL_MAX_BYTES = 16 * 1024**3
 REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_TOTAL_MAX_ENTRIES = 120_000
 REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_PREFLIGHT_MAX_WALL_SECONDS = 120.0
+_SECURE_PATH_PRIMITIVES_AVAILABLE = (
+    os.name == "posix"
+    and all(hasattr(os, name) for name in ("O_CLOEXEC", "O_DIRECTORY", "O_NOFOLLOW"))
+    and os.open in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+)
 
 
 class ReferenceMinimizationValidationDependencyIdentityError(RuntimeError):
@@ -117,41 +124,14 @@ class _ScanBudget:
 
 
 def _require_root_owned_read_only_directory_chain(path: Path) -> Path:
-    if not path.is_absolute():
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency directory is not absolute"
-        )
-    try:
-        resolved = path.resolve(strict=True)
-    except OSError as exc:
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency directory is unavailable"
-        ) from exc
-    if resolved != path:
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency directory path is not canonical"
-        )
-    current = resolved
-    while True:
-        try:
-            file_stat = current.lstat()
-        except OSError as exc:
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency directory chain is unavailable"
-            ) from exc
-        if (
-            current.is_symlink()
-            or not stat.S_ISDIR(file_stat.st_mode)
-            or file_stat.st_uid != 0
-            or stat.S_IMODE(file_stat.st_mode) & 0o022
-        ):
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency directory chain is not root-owned read-only storage"
-            )
-        parent = current.parent
-        if parent == current:
-            return resolved
-        current = parent
+    lexical = _canonical_absolute_path(
+        path,
+        name="dependency directory",
+        require_normalized=True,
+    )
+    descriptor = _open_absolute_trusted_directory(lexical)
+    os.close(descriptor)
+    return lexical
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -169,33 +149,254 @@ def _canonical_bytes(value: object) -> bytes:
         ) from exc
 
 
+def _stat_signature(file_stat: os.stat_result) -> tuple[int, ...]:
+    """Return all metadata that must remain stable while trusted bytes are read."""
+
+    return (
+        int(file_stat.st_dev),
+        int(file_stat.st_ino),
+        int(file_stat.st_uid),
+        int(file_stat.st_gid),
+        int(file_stat.st_mode),
+        int(file_stat.st_nlink),
+        int(file_stat.st_size),
+        int(file_stat.st_mtime_ns),
+        int(file_stat.st_ctime_ns),
+    )
+
+
+def _require_trusted_directory_stat(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISDIR(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) & 0o022
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency directory is not root-owned read-only storage"
+        )
+
+
+def _require_trusted_regular_file_stat(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISREG(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) & 0o022
+        or file_stat.st_nlink != 1
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file is not a root-owned read-only single-link regular file"
+        )
+
+
+def _require_secure_path_primitives() -> tuple[int, int]:
+    required_flags = ("O_CLOEXEC", "O_DIRECTORY", "O_NOFOLLOW")
+    if (
+        not _SECURE_PATH_PRIMITIVES_AVAILABLE
+        or any(not hasattr(os, name) for name in required_flags)
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "secure dependency path traversal is unavailable"
+        )
+    directory_flags = os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW
+    file_flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
+    return directory_flags, file_flags
+
+
+def _canonical_absolute_path(
+    raw_path: str | os.PathLike[str],
+    *,
+    name: str,
+    require_normalized: bool = True,
+) -> Path:
+    try:
+        raw = os.fspath(raw_path)
+    except TypeError as exc:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            f"{name} is invalid"
+        ) from exc
+    if (
+        not isinstance(raw, str)
+        or not raw
+        or "\x00" in raw
+        or not os.path.isabs(raw)
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            f"{name} must be an absolute lexical path"
+        )
+    normalized = os.path.normpath(raw)
+    if require_normalized and normalized != raw:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            f"{name} is not lexically canonical"
+        )
+    candidate = Path(normalized)
+    if any(part in {"", ".", ".."} for part in candidate.parts[1:]):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            f"{name} is not lexically canonical"
+        )
+    return candidate
+
+
+def _lstat_at(directory_fd: int, component: str) -> os.stat_result:
+    return os.stat(component, dir_fd=directory_fd, follow_symlinks=False)
+
+
+def _open_trusted_child_directory(parent_fd: int, component: str) -> int:
+    directory_flags, _ = _require_secure_path_primitives()
+    path_before = _lstat_at(parent_fd, component)
+    _require_trusted_directory_stat(path_before)
+    next_fd = -1
+    try:
+        next_fd = os.open(component, directory_flags, dir_fd=parent_fd)
+        opened = os.fstat(next_fd)
+        path_after = _lstat_at(parent_fd, component)
+        _require_trusted_directory_stat(opened)
+        _require_trusted_directory_stat(path_after)
+        if not (
+            _stat_signature(path_before)
+            == _stat_signature(opened)
+            == _stat_signature(path_after)
+        ):
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                "dependency directory changed while it was opened"
+            )
+        result = next_fd
+        next_fd = -1
+        return result
+    finally:
+        if next_fd >= 0:
+            os.close(next_fd)
+
+
+def _open_absolute_trusted_directory(path: Path) -> int:
+    directory_flags, _ = _require_secure_path_primitives()
+    lexical = _canonical_absolute_path(
+        path,
+        name="dependency directory",
+        require_normalized=True,
+    )
+    current_fd = -1
+    try:
+        current_fd = os.open(os.sep, directory_flags)
+        _require_trusted_directory_stat(os.fstat(current_fd))
+        for component in lexical.parts[1:]:
+            next_fd = _open_trusted_child_directory(current_fd, component)
+            os.close(current_fd)
+            current_fd = next_fd
+        result = current_fd
+        current_fd = -1
+        return result
+    except ReferenceMinimizationValidationDependencyIdentityError:
+        raise
+    except OSError as exc:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency directory cannot be opened securely"
+        ) from exc
+    finally:
+        if current_fd >= 0:
+            os.close(current_fd)
+
+
+def _open_absolute_trusted_regular_file(
+    path: Path,
+) -> tuple[int, os.stat_result]:
+    _, file_flags = _require_secure_path_primitives()
+    lexical = _canonical_absolute_path(
+        path,
+        name="dependency file",
+        require_normalized=True,
+    )
+    if lexical.parent == lexical:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file path is invalid"
+        )
+    parent_fd = _open_absolute_trusted_directory(lexical.parent)
+    file_fd = -1
+    try:
+        path_before = _lstat_at(parent_fd, lexical.name)
+        _require_trusted_regular_file_stat(path_before)
+        file_fd = os.open(lexical.name, file_flags, dir_fd=parent_fd)
+        opened = os.fstat(file_fd)
+        path_after = _lstat_at(parent_fd, lexical.name)
+        _require_trusted_regular_file_stat(opened)
+        _require_trusted_regular_file_stat(path_after)
+        if not (
+            _stat_signature(path_before)
+            == _stat_signature(opened)
+            == _stat_signature(path_after)
+        ):
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                "dependency path changed while it was opened"
+            )
+        result = file_fd
+        file_fd = -1
+        return result, opened
+    except ReferenceMinimizationValidationDependencyIdentityError:
+        raise
+    except OSError as exc:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file cannot be opened securely"
+        ) from exc
+    finally:
+        if file_fd >= 0:
+            os.close(file_fd)
+        os.close(parent_fd)
+
+
+def _require_trusted_directory_ancestry(
+    path: Path,
+    *,
+    minimum_root: Path | None = None,
+) -> None:
+    lexical = _canonical_absolute_path(
+        path,
+        name="dependency directory",
+        require_normalized=True,
+    )
+    if minimum_root is not None:
+        root = _canonical_absolute_path(
+            minimum_root,
+            name="dependency root",
+            require_normalized=True,
+        )
+        if not lexical.is_relative_to(root):
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                "dependency path escaped its trusted directory ancestry"
+            )
+    descriptor = _open_absolute_trusted_directory(lexical)
+    os.close(descriptor)
+
+
+def _matching_trusted_root(
+    path: Path,
+    allowed_roots: tuple[Path, ...],
+) -> Path:
+    lexical = _canonical_absolute_path(
+        path,
+        name="dependency path",
+        require_normalized=True,
+    )
+    matches = tuple(root for root in allowed_roots if lexical.is_relative_to(root))
+    if not matches:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file escaped its trusted root"
+        )
+    return max(matches, key=lambda root: len(root.parts))
+
+
 def _require_trusted_roots(
     raw_roots: Iterable[str | os.PathLike[str]],
 ) -> tuple[Path, ...]:
     roots: list[Path] = []
     for raw_root in raw_roots:
-        candidate = Path(raw_root)
-        try:
-            file_stat = candidate.lstat()
-            resolved = candidate.resolve(strict=True)
-        except OSError as exc:
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency root is unavailable"
-            ) from exc
-        if (
-            not candidate.is_absolute()
-            or candidate.is_symlink()
-            or candidate != resolved
-            or not stat.S_ISDIR(file_stat.st_mode)
-            or file_stat.st_uid != 0
-            or stat.S_IMODE(file_stat.st_mode) & 0o022
-        ):
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency root is not root-owned read-only storage"
-            )
-        _require_root_owned_read_only_directory_chain(resolved)
-        if resolved not in roots:
-            roots.append(resolved)
+        candidate = _canonical_absolute_path(
+            raw_root,
+            name="dependency root",
+            require_normalized=True,
+        )
+        descriptor = _open_absolute_trusted_directory(candidate)
+        os.close(descriptor)
+        if candidate not in roots:
+            roots.append(candidate)
     if not roots:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency roots are unavailable"
@@ -210,14 +411,18 @@ def _trusted_install_scheme_roots() -> tuple[tuple[str, Path], ...]:
         raw_path = configured.get(scheme)
         if not isinstance(raw_path, str):
             continue
-        candidate = Path(raw_path)
         try:
-            resolved = candidate.resolve(strict=True)
-        except OSError:
+            candidate = _canonical_absolute_path(
+                raw_path,
+                name=f"Python {scheme} install root",
+                require_normalized=True,
+            )
+            descriptor = _open_absolute_trusted_directory(candidate)
+        except ReferenceMinimizationValidationDependencyIdentityError:
             continue
-        _require_root_owned_read_only_directory_chain(resolved)
-        if not any(existing == resolved for _, existing in roots):
-            roots.append((scheme, resolved))
+        os.close(descriptor)
+        if not any(existing == candidate for _, existing in roots):
+            roots.append((scheme, candidate))
     available = {scheme for scheme, _ in roots}
     if not {"purelib", "scripts", "data"}.issubset(available) and not {
         "platlib",
@@ -228,6 +433,38 @@ def _trusted_install_scheme_roots() -> tuple[tuple[str, Path], ...]:
             "Python install scheme roots are incomplete"
         )
     return tuple(roots)
+
+
+def _normalized_distribution_relative_path(package_path: object) -> str:
+    """Accept canonical wheel paths, including a leading script parent prefix."""
+
+    raw = str(package_path)
+    if not raw or "\\" in raw:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD path is not canonical POSIX text"
+        )
+    relative = PurePosixPath(raw)
+    parts = relative.parts
+    parent_prefix_finished = False
+    for part in parts:
+        if part == "..":
+            if parent_prefix_finished:
+                raise ReferenceMinimizationValidationDependencyIdentityError(
+                    "distribution RECORD parent traversal is not a leading prefix"
+                )
+        else:
+            parent_prefix_finished = True
+    if (
+        relative.is_absolute()
+        or not parts
+        or any(part in {"", "."} for part in parts)
+        or all(part == ".." for part in parts)
+        or relative.as_posix() != raw
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD path is not canonical"
+        )
+    return raw
 
 
 def _normalized_record_payload_path(
@@ -270,64 +507,40 @@ def _hash_regular_file(
     path: Path,
     *,
     allowed_roots: tuple[Path, ...],
-    budget: _ScanBudget,
+    budget: _ScanBudget | None = None,
     maximum_bytes: int = REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MAX_BYTES,
+    seen_file_identities: set[tuple[int, int]] | None = None,
 ) -> tuple[str, int]:
     if type(maximum_bytes) is not int or maximum_bytes < 0:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file byte bound is invalid"
         )
-    try:
-        resolved = path.resolve(strict=True)
-    except OSError as exc:
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency file is unavailable"
-        ) from exc
-    matching_roots = tuple(
-        root for root in allowed_roots if resolved.is_relative_to(root)
+    lexical = _canonical_absolute_path(
+        path,
+        name="dependency file",
+        require_normalized=True,
     )
-    if not matching_roots:
+    _matching_trusted_root(lexical, allowed_roots)
+    descriptor, before = _open_absolute_trusted_regular_file(lexical)
+    file_identity = (int(before.st_dev), int(before.st_ino))
+    if seen_file_identities is not None and file_identity in seen_file_identities:
+        os.close(descriptor)
         raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency file escaped its trusted root"
+            "dependency manifest aliases one inode through multiple paths"
         )
-    if not path.is_absolute() or path.is_symlink() or path.absolute() != resolved:
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency file path is not canonical"
-        )
-    _require_root_owned_read_only_directory_chain(resolved.parent)
-    flags = os.O_RDONLY
-    for flag_name in ("O_CLOEXEC", "O_NOFOLLOW"):
-        if not hasattr(os, flag_name):
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "secure dependency file access is unavailable"
-            )
-        flags |= getattr(os, flag_name)
     try:
-        descriptor = os.open(path, flags)
-    except OSError as exc:
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency file cannot be opened securely"
-        ) from exc
-    try:
-        before = os.fstat(descriptor)
-        if (
-            not stat.S_ISREG(before.st_mode)
-            or before.st_uid != 0
-            or stat.S_IMODE(before.st_mode) & 0o022
-            or before.st_nlink != 1
-        ):
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency file is not a root-owned read-only single-link regular file"
-            )
+        _require_trusted_regular_file_stat(before)
         if before.st_size > maximum_bytes:
             raise ReferenceMinimizationValidationDependencyIdentityError(
                 "dependency file exceeds its pre-read artifact byte bound"
             )
-        budget.start_file(before.st_size)
+        if budget is not None:
+            budget.start_file(before.st_size)
         digest = hashlib.sha256()
         observed_size = 0
         while True:
-            budget.checkpoint()
+            if budget is not None:
+                budget.checkpoint()
             chunk = os.read(
                 descriptor,
                 min(1024 * 1024, before.st_size + 1 - observed_size),
@@ -340,23 +553,29 @@ def _hash_regular_file(
                     "dependency file grew while being measured"
                 )
             digest.update(chunk)
-            budget.add_bytes(len(chunk))
+            if budget is not None:
+                budget.add_bytes(len(chunk))
         after = os.fstat(descriptor)
+        _require_trusted_regular_file_stat(after)
     except OSError as exc:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file cannot be measured"
         ) from exc
     finally:
         os.close(descriptor)
-    if observed_size != before.st_size or (
-        before.st_dev,
-        before.st_ino,
-        before.st_size,
-        before.st_mtime_ns,
-    ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+
+    verification_fd, path_after = _open_absolute_trusted_regular_file(lexical)
+    os.close(verification_fd)
+    if (
+        observed_size != before.st_size
+        or _stat_signature(before) != _stat_signature(after)
+        or _stat_signature(after) != _stat_signature(path_after)
+    ):
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file changed while being measured"
         )
+    if seen_file_identities is not None:
+        seen_file_identities.add(file_identity)
     return digest.hexdigest(), observed_size
 
 

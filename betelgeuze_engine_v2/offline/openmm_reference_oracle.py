@@ -53,8 +53,9 @@ from betelgeuze_engine_v2.physics.reference_validation_protocol import (
 
 OPENMM_REFERENCE_OFFLINE_ORACLE_ID = "engine_v2_openmm_reference_offline_oracle/1.0.0"
 OPENMM_REFERENCE_MAPPING_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_openmm_reference_mapping_contract/1.0.0"
+    "betelgeuze.engine_v2_openmm_reference_mapping_contract/1.3.0"
 )
+OPENMM_REFERENCE_MAPPING_CONTRACT_VERSION = "1.3.0"
 OPENMM_REFERENCE_RUNTIME_IDENTITY_SCHEMA_ID = (
     "betelgeuze.engine_v2_openmm_reference_runtime_identity/1.0.0"
 )
@@ -120,11 +121,23 @@ OPENMM_REFERENCE_FIXED_BORN_PAIR_EXPRESSION = (
     "coefficient*2*qprod/sqrt(r^2+alpha_product*exp(-r^2/(4*alpha_product)))"
 )
 
-# Filled after the projection was reviewed.  The hash binds protocol and
+# The legacy hash remains a verifiable lineage anchor for the mapping bound to
+# CPU minimization protocol 2.1.0.
+FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1 = (
+    "0bfc077eded6637ac4cec41fa863ead9bec16ad6665758e1642d12abfb958b43"
+)
+FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_1 = (
+    "6b55bdcf50d398ee0d62f5093f2cdf903ea384da6fd4d257633200923840c3c0"
+)
+
+# Filled after the 1.1 projection was reviewed.  The hash binds protocol and
 # materializer identities, every 27/59 disposition, expressions, groups, and
 # predefined thresholds.  It does not contain any observed result.
+FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_2 = (
+    "342b8b8538b92875ede9399833561a3987c55bf7ea7384c87ea2f10ddfddbc97"
+)
 FROZEN_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256 = (
-    "0bfc077eded6637ac4cec41fa863ead9bec16ad6665758e1642d12abfb958b43"
+    "4f0163ff1ef9630d2fcac730cacae8ce6237ae0bf0ad53e031b93e17acc5eeda"
 )
 
 
@@ -778,7 +791,17 @@ def _mapping_contract_projection() -> dict[str, Any]:
     return {
         "schema_id": OPENMM_REFERENCE_MAPPING_CONTRACT_SCHEMA_ID,
         "oracle_id": OPENMM_REFERENCE_OFFLINE_ORACLE_ID,
-        "contract_version": "1.0.0",
+        "contract_version": OPENMM_REFERENCE_MAPPING_CONTRACT_VERSION,
+        "superseded_contract_sha256": (
+            FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_2
+        ),
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_1,
+            FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_1_2_0_and_minimization_protocol_2_2_0"
+        ),
         "required_runtime": {
             "distribution_name": OPENMM_REFERENCE_REQUIRED_DISTRIBUTION_NAME,
             "distribution_version": OPENMM_REFERENCE_REQUIRED_DISTRIBUTION_VERSION,
@@ -1485,6 +1508,8 @@ def evaluate_openmm_reference(
 
 
 __all__ = [
+    "FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1",
+    "FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_1",
     "FROZEN_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256",
     "OPENMM_REFERENCE_ENERGY_MAX_RMS_THRESHOLD_KCAL_PER_MOL",
     "OPENMM_REFERENCE_EVALUATION_SCHEMA_ID",
@@ -1495,6 +1520,7 @@ __all__ = [
     "OPENMM_REFERENCE_IMPROPER_EXPRESSION",
     "OPENMM_REFERENCE_LJ_EXPRESSION",
     "OPENMM_REFERENCE_MAPPING_CONTRACT_SCHEMA_ID",
+    "OPENMM_REFERENCE_MAPPING_CONTRACT_VERSION",
     "OPENMM_REFERENCE_NATIVE_MINIMIZATION_SCHEMA_ID",
     "OPENMM_REFERENCE_OFFLINE_ORACLE_ID",
     "OPENMM_REFERENCE_REQUIRED_DISTRIBUTION_VERSION",

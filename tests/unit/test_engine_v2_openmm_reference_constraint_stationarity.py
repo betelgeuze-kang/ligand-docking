@@ -11,6 +11,9 @@ import sys
 import pytest
 
 from betelgeuze_engine_v2.offline.openmm_reference_constraint_stationarity import (
+    FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1_1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1_2,
     FROZEN_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256,
     OpenMMReferenceConstraintStationarityError,
     build_openmm_reference_constraint_stationarity_receipt,
@@ -43,6 +46,23 @@ def test_openmm_candidate_configuration_is_frozen_and_result_free() -> None:
     assert (
         document["configuration_sha256"]
         == FROZEN_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256
+        == "69f5168dbf7bcaa9f4ff85f9e2e9f7800b8b21685110000a90c909d552eab6db"
+    )
+    assert (
+        document["superseded_configuration_sha256"]
+        == FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1_2
+        == "927e11cfccbb8110f8bacceffe5bd0e17ae54cb9bb2f9f4f001377faec0995e1"
+    )
+    assert document["legacy_configuration_chain_sha256s"] == [
+        FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1_1,
+        FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1,
+    ]
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1_1
+        == "fca4701f842209076e939a3ae044ec317edf4705f0f979b62620e64fbb42405f"
+    )
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_CONSTRAINT_STATIONARITY_CONFIG_SHA256_V1
         == "722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1"
     )
     assert document["candidate_case_denominator"] == 4

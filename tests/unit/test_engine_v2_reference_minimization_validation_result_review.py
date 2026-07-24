@@ -18,7 +18,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 impo
     sign_ed25519,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_result_review import (
-    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V7,
     COORDINATE_TRACE_ACCEPTED,
     COORDINATE_TRACE_STEP_ACCEPTED,
     EXPECTED_FAIL_CLOSED_OUTCOME_ACCEPTED,
@@ -546,7 +546,7 @@ def test_result_review_contract_is_frozen_complete_and_closed() -> None:
     assert first["schema_id"] == (REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID)
     assert first["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256)
     assert first["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V7
     )
     assert first["dependencies"]["full_result_writer_receipt_validation_required"] is True
     assert first["dependencies"]["worker_execution_evidence_extracted_from_validated_run_observation"] is True

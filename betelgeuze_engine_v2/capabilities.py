@@ -23,9 +23,9 @@ from .physics.reference_ensemble_statistics import (
     REFERENCE_ENSEMBLE_STATISTICS_SCIENTIFIC_BLOCKERS,
 )
 
-CAPABILITY_SCHEMA_VERSION = 4
+CAPABILITY_SCHEMA_VERSION = 5
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_at_s0_production_evidence_bundle_contract"
+IMPLEMENTATION_STAGE = "v2_0_3_0a1_p0_release_line"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -710,6 +710,21 @@ def capability_snapshot() -> dict[str, Any]:
             "gpu_acceleration_claim_allowed": False,
             "docking_accuracy_claim_allowed": False,
             "free_energy_claim_allowed": False,
+        },
+        "legacy_customer_paths": {
+            "hip_rocm_product_runtime": {
+                "enabled": False,
+                "customer_execution_enabled": False,
+                "replacement_route": (
+                    "none_until_engine_v2_gpu_parity_and_product_qualification"
+                ),
+                "blockers": [
+                    "legacy_product_runtime_not_engine_v2_authenticated",
+                    "cpu_reference_freeze_incomplete",
+                    "gpu_parity_evidence_missing",
+                    "product_integration_not_qualified",
+                ],
+            }
         },
         "capabilities": {
             CPU_REFERENCE_CAPABILITY_ID: _row(

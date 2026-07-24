@@ -25,7 +25,7 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_runner impor
     run_bounded_cpu_reference_minimization_validation,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_result_writer import (
-    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6,
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V7,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3,
@@ -363,7 +363,7 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
     assert first["schema_id"] == REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID
     assert first["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256)
     assert first["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V7
     )
     assert first["coverage"]["case_count"] == REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES
     assert first["coverage"]["failed_cases_and_metrics_retained"] is True

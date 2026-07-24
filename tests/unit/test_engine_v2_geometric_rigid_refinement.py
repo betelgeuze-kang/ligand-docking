@@ -20,6 +20,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
 )
+from betelgeuze_engine_v2.docking.proposals import DockingProposalError  # noqa: E402
 
 
 def _problem() -> DockingProblemIdentity:
@@ -118,9 +119,11 @@ def test_refiner_rejects_budget_problem_and_receipt_tampering() -> None:
         receptor_system_sha256="d" * 64,
         ligand_system_sha256="e" * 64,
     )
-    mismatched = replace(proposal, problem_fingerprint_sha256=other_problem.fingerprint_sha256)
-    with pytest.raises(GeometricRigidRefinementError, match="does not match"):
-        refiner.refine(mismatched, max_steps=1)
+    with pytest.raises(DockingProposalError, match="candidate_id"):
+        replace(
+            proposal,
+            problem_fingerprint_sha256=other_problem.fingerprint_sha256,
+        )
 
     _refined, receipt = refiner.refine_with_receipt(proposal, max_steps=4)
     with pytest.raises(GeometricRigidRefinementError, match="must not increase"):

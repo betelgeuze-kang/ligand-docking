@@ -37,18 +37,24 @@ from betelgeuze_engine_v2.physics.reference_parameters import (
 
 
 REFERENCE_PARAMETER_APPLICABILITY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_parameter_applicability_record/1.0.0"
+    "betelgeuze.engine_v2_reference_parameter_applicability_record/1.2.0"
 )
 REFERENCE_PARAMETER_APPLICABILITY_PROFILE_ID = (
-    "h5_reference_physics_parameter_origin_and_runtime_envelope/1.0.0"
+    "h5_reference_physics_parameter_origin_and_runtime_envelope/1.2.0"
 )
-REFERENCE_PARAMETER_APPLICABILITY_RECORD_VERSION = "1.0.0"
-REFERENCE_PARAMETER_APPLICABILITY_REVIEWED_AT_UTC = "2026-07-17T01:59:30Z"
+REFERENCE_PARAMETER_APPLICABILITY_RECORD_VERSION = "1.2.0"
+REFERENCE_PARAMETER_APPLICABILITY_REVIEWED_AT_UTC = "2026-07-24T18:00:00Z"
 REFERENCE_PARAMETER_APPLICABILITY_REVIEWER_ROLE = "repository_maintainer"
 REFERENCE_PARAMETER_APPLICABILITY_REVIEWER_IDENTITY_SHA256 = (
     "ffaaea9cebb5975ed140fa0633ea4cb44e1f241f6bc73c916164c0ea5123b584"
 )
 FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256 = (
+    "cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6"
+)
+FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1_1 = (
+    "0c41a2a2e4471f2d632eca92964bb8f8c5d09abd249dd3cc5f414525c4daebeb"
+)
+FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1 = (
     "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
 )
 
@@ -148,12 +154,12 @@ _RUNTIME_SOURCE_IDENTITIES = (
     ReferencePhysicsSourceIdentity(
         role="all_atom_system_and_orthorhombic_cell_contract",
         relative_path="betelgeuze_engine_v2/molecular/models.py",
-        sha256="6e048062e5e8988855785841c8b044e805ddccd3b541b6f1ac109902a9e14448",
+        sha256="b1aad45f4131c133a64049a31b809fcc481e92c29242a1ab9f0e2f2190dca638",
     ),
     ReferencePhysicsSourceIdentity(
         role="canonical_system_and_topology_identity",
         relative_path="betelgeuze_engine_v2/molecular/serialization.py",
-        sha256="971d15d5630410ad6d262e256195baad2380f6826bec516484b8ed7f551c8441",
+        sha256="f02addc3532daa67512c89ece7fae9cd3bd960c02ec46af491501ce77fb2854c",
     ),
     ReferencePhysicsSourceIdentity(
         role="reviewed_candidate_source_provenance_contract",
@@ -338,6 +344,16 @@ class ReferenceParameterApplicabilityRecord:
             "schema_id": self.schema_id,
             "profile_id": self.profile_id,
             "record_version": self.record_version,
+            "superseded_record_sha256": (
+                FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1_1
+            ),
+            "legacy_record_chain_sha256s": [
+                FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1
+            ],
+            "refreeze_reason": (
+                "bind_type_correct_alias_safe_tensor_storage_without_"
+                "immutability_or_scientific_claim_change"
+            ),
             "purpose": {
                 "scope": "h5_reference_physics_parameter_origin_and_runtime_envelope",
                 "record_only": True,
@@ -611,6 +627,8 @@ def write_reference_parameter_applicability_json(
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1",
+    "FROZEN_LEGACY_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256_V1_1",
     "FROZEN_REFERENCE_PARAMETER_APPLICABILITY_RECORD_SHA256",
     "REFERENCE_PARAMETER_APPLICABILITY_PROFILE_ID",
     "REFERENCE_PARAMETER_APPLICABILITY_RECORD_VERSION",

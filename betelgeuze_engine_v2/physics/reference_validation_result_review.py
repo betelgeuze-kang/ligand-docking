@@ -65,16 +65,16 @@ from .reference_validation_runner import (
 
 
 REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_review_contract/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_review_contract/4.0.0"
 )
 REFERENCE_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_review_attestation/2.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_review_attestation/4.0.0"
 )
 REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_ID = (
-    "cpu_reference_energy_force_independent_result_review_contract/2.0.0"
+    "cpu_reference_energy_force_independent_result_review_contract/4.0.0"
 )
-REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "2.0.0"
-REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "4.0.0"
+REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:50:00Z"
 REFERENCE_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_VALIDATION_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
@@ -118,6 +118,12 @@ _AXIS_INDEX = {"x": 0, "y": 1, "z": 2}
 # Filled after the frozen projection is finalized.  Contract access fails
 # closed if source or any bound dependency drifts.
 FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256 = (
+    "f9a195ad39fd0738ddfe11ff98524f587c00136d4bdf1793b797a5a22d13e70b"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3 = (
+    "2922c0d06d4c29e1b1eaa3a9f5f14b8c00df778983d54649b2e6112c6a3bd9ad"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V2 = (
     "f3fa49486901e7f52046d821a8b026001276fb2e9925067e720b8fba84588d95"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V1 = (
@@ -1725,9 +1731,16 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V1
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V3
         ),
-        "refreeze_reason": "binds_complete_public_key_ed25519_upstream_chain",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V1
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_and_execution_contract_supersession_"
+            "chain_without_review_policy_change"
+        ),
         "purpose": {
             "scope": "independent_post_result_review_of_one_exact_energy_force_receipt",
             "contract_definition_only": True,

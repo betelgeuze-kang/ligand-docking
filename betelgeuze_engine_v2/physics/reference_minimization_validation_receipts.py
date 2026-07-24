@@ -40,33 +40,39 @@ from .reference_minimization_validation_trajectory_comparison import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/4.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_contract/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_receipt/4.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_execution_environment_receipt/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_execution_environment_contract/4.0.0"
+    "cpu_reference_minimization_validation_execution_environment_contract/5.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt_contract/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_receipt/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_contract/5.0.0"
+    "cpu_reference_minimization_validation_result_receipt_contract/6.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION = "4.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_VERSION = "5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION = "5.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_VERSION = "6.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 
 # Filled only after the complete canonical projections have been reviewed.
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256 = (
-    "502e4d72417dde6823d16394128fa7880866b7155c9826efbb63abf367311475"
+    "b7c50c865224ea2ad7d73860bf839995a84573bb01e195f8336792bb245e90d2"
 )
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256 = (
+    "5b09fadc2b350ac3e4753a76a537758598912e0c9765d3789385ef65011183b9"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V4 = (
+    "502e4d72417dde6823d16394128fa7880866b7155c9826efbb63abf367311475"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V5 = (
     "7584020080e91bad13f66f13d8a894da67ce4c41523060fe6cf5900efe1feb2f"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V3 = (
@@ -151,9 +157,11 @@ def _environment_contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RECEIPT_CONTRACTS_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V3
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_protocol_artifacts_and_review",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_protocol_artifacts_and_review"
+        ),
         "purpose": {
             "lane": "synthetic_minimization_implementation_mathematics_only",
             "contract_definition_only": True,
@@ -321,9 +329,11 @@ def _result_contract_projection() -> dict[str, Any]:
         "contract_version": (REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_VERSION),
         "frozen_at_utc": (REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_FROZEN_AT_UTC),
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V4
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256_V5
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_trajectory_and_environment_contracts",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_protocol_and_environment_contract"
+        ),
         "purpose": {
             "lane": "synthetic_minimization_implementation_mathematics_only",
             "contract_definition_only": True,

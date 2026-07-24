@@ -28,6 +28,7 @@ from .scoring import (
     DockingScoreTerm,
     ScoreDirection,
     component_contract_fingerprint,
+    component_problem_fingerprint,
     scorer_descriptor,
 )
 
@@ -828,6 +829,10 @@ class TrainingFitPoseRankingScorer:
             )
         self.base_scorer = base_scorer
         self.model = model
+        self.problem_fingerprint_sha256 = component_problem_fingerprint(
+            base_scorer,
+            kind="scorer",
+        )
         self.scorer_id = (
             "training-fit-pose-ranking:" + _token(
                 getattr(base_scorer, "scorer_id", ""),
@@ -846,11 +851,15 @@ class TrainingFitPoseRankingScorer:
             calibrated=False,
             applicability_domain_id=base_descriptor.applicability_domain_id,
         )
+        base_scorer_fingerprint_sha256 = component_contract_fingerprint(
+            base_scorer,
+            kind="scorer",
+            expected_problem_fingerprint_sha256=self.problem_fingerprint_sha256,
+        )
         self.config_fingerprint_sha256 = _canonical_sha256(
             {
-                "base_scorer_fingerprint_sha256": component_contract_fingerprint(
-                    base_scorer,
-                    kind="scorer",
+                "base_scorer_fingerprint_sha256": (
+                    base_scorer_fingerprint_sha256
                 ),
                 "calibration_model_sha256": model.fingerprint_sha256,
             }

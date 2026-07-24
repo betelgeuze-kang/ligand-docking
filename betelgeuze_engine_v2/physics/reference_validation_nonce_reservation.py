@@ -37,19 +37,25 @@ from .reference_validation_review import ScientificReviewerTrustAnchor
 
 
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_nonce_reservation_contract/5.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_nonce_reservation/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_nonce_reservation/5.0.0"
 )
 REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_ID = (
-    "cpu_reference_validation_atomic_nonce_reservation/3.0.0"
+    "cpu_reference_validation_atomic_nonce_reservation/5.0.0"
 )
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:30:00Z"
 REFERENCE_VALIDATION_NONCE_RESERVATION_MAX_RECORD_BYTES = 65_536
 
 FROZEN_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256 = (
+    "a0d080e26092bfad909fe1c74b69d1182bcbf6d58b09a7f3cbe65f49be6b1d0e"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4 = (
+    "353de1c49c6b2a4c0423b3d84c5ef5ae7114b3166295391f0e3a5bd166441bf8"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V3 = (
     "d496c1593e072b30269a742d5f94ae920a6d205dd6613dbc39f1b259cda481c6"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2 = (
@@ -241,9 +247,17 @@ def _contract_projection() -> dict[str, Any]:
             REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_FROZEN_AT_UTC
         ),
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "binds_public_key_ed25519_authorization_and_receipt_contracts",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_NONCE_RESERVATION_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_authorization_and_receipt_contracts_5_0_0_without_"
+            "reservation_policy_change"
+        ),
         "purpose": {
             "scope": "local_single_run_authorization_nonce_consumption",
             "raw_review_and_authorization_reverification_required": True,

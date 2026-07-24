@@ -13,6 +13,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     ElementGeometryDiagnosticScoreConfig,
     ElementGeometryDiagnosticScorer,
     ElementGeometryDiagnosticScoringError,
+    PoseValidityConfig,
+    PoseValidityContext,
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
     run_bounded_docking_search,
@@ -56,6 +58,24 @@ def _scorer() -> ElementGeometryDiagnosticScorer:
             receptor_shell_radius_angstrom=10.1,
             pocket_radius_angstrom=10.0,
         ),
+    )
+
+
+def _validity_context() -> PoseValidityContext:
+    problem = _problem()
+    reference = _space().root_positions
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=((0, 1),),
+        excluded_nonbonded_pairs=((0, 1),),
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]],
+            dtype=torch.float64,
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(pocket_radius_angstrom=20.0),
     )
 
 
@@ -115,6 +135,7 @@ def test_search_retains_uncalibrated_geometry_term_breakdowns() -> None:
             seed=19,
         ),
         _scorer(),
+        validity_context=_validity_context(),
         problem=_problem(),
         diversity_rmsd_angstrom=0.0,
     )

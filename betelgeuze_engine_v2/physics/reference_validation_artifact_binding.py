@@ -33,10 +33,10 @@ from .reference_validation_oracle import (
 from .reference_validation_protocol import frozen_cpu_reference_validation_protocol
 
 
-REFERENCE_VALIDATION_ARTIFACT_BINDING_SCHEMA_ID = "betelgeuze.engine_v2_reference_validation_artifact_binding/1.0.0"
-REFERENCE_VALIDATION_ARTIFACT_BINDING_ID = "cpu_reference_validation_materializer_oracle_binding/1.0.0"
-REFERENCE_VALIDATION_ARTIFACT_BINDING_VERSION = "1.0.0"
-REFERENCE_VALIDATION_ARTIFACT_BINDING_FROZEN_AT_UTC = "2026-07-17T03:54:00Z"
+REFERENCE_VALIDATION_ARTIFACT_BINDING_SCHEMA_ID = "betelgeuze.engine_v2_reference_validation_artifact_binding/1.2.0"
+REFERENCE_VALIDATION_ARTIFACT_BINDING_ID = "cpu_reference_validation_materializer_oracle_binding/1.2.0"
+REFERENCE_VALIDATION_ARTIFACT_BINDING_VERSION = "1.2.0"
+REFERENCE_VALIDATION_ARTIFACT_BINDING_FROZEN_AT_UTC = "2026-07-24T18:10:00Z"
 REFERENCE_VALIDATION_ARTIFACT_BINDING_REVIEWER_ROLE = "repository_maintainer"
 REFERENCE_VALIDATION_ARTIFACT_BINDING_REVIEWER_IDENTITY_SHA256 = (
     "ffaaea9cebb5975ed140fa0633ea4cb44e1f241f6bc73c916164c0ea5123b584"
@@ -49,7 +49,11 @@ FROZEN_INDEPENDENT_ANALYTIC_ORACLE_SOURCE_SHA256 = "71627d266a6b1c64b2e6db0f8126
 FROZEN_REFERENCE_FORCEFIELD_SOURCE_SHA256 = (
     "af8422789c5c9a473bce05d93b7e502d00cd0a955601ff39dbb3fd3b831648db"
 )
-FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256 = "76241cbc9441f8fbed86cb5858069e3c64b21b37838d2ae94d1b2c768db5b57e"
+FROZEN_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256 = (
+    "b3341f3b98e29594cfcd727353553efa466116f275f5250c4ae944d624ef62b0"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256_V1_1 = "8518e10598ef0b17203720e2494b0e4ff67c2d24058b2677016daa180c1674ae"
+FROZEN_LEGACY_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256_V1 = "76241cbc9441f8fbed86cb5858069e3c64b21b37838d2ae94d1b2c768db5b57e"
 
 _REFERENCE_EVALUATOR_SOURCE_RELATIVE_PATH = (
     "betelgeuze_engine_v2/physics/reference_forcefield.py"
@@ -268,6 +272,16 @@ class ReferenceValidationArtifactBinding:
             "binding_id": self.binding_id,
             "binding_version": self.binding_version,
             "frozen_at_utc": self.frozen_at_utc,
+            "superseded_binding_sha256": (
+                FROZEN_LEGACY_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256_V1_1
+            ),
+            "legacy_binding_chain_sha256s": [
+                FROZEN_LEGACY_REFERENCE_VALIDATION_ARTIFACT_BINDING_SHA256_V1
+            ],
+            "refreeze_reason": (
+                "bind_cpu_reference_validation_protocol_1_2_0_without_"
+                "evaluator_or_oracle_source_change"
+            ),
             "purpose": {
                 "scope": "bind_exact_reference_evaluator_fixture_materializer_and_independent_analytic_oracle",
                 "implementation_artifact_only": True,

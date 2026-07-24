@@ -12,6 +12,7 @@ import betelgeuze_engine_v2.molecular.mmcif_nonpoly_all_atom_systems as module
 from betelgeuze_engine_v2.molecular import (
     all_atom_system_from_canonical_json,
     canonical_coordinates_sha256,
+    canonical_json_bytes,
     canonical_system_sha256,
     canonical_topology_sha256,
     validate_all_atom_system,
@@ -219,7 +220,7 @@ def test_document_embeds_self_verifying_canonical_systems_and_claim_boundary() -
     assert json.loads(mmcif_nonpoly_all_atom_system_json_bytes(snapshot)) == document
 
     for row in document["system_projection"]["instance_reports"]:
-        encoded = json.dumps(row["canonical_system_document"])
+        encoded = canonical_json_bytes(row["canonical_system_document"])
         restored = all_atom_system_from_canonical_json(encoded)
         assert canonical_system_sha256(restored) == row["system_sha256"]
     for flag in (

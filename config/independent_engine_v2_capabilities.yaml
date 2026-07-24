@@ -1,6 +1,6 @@
-schema_version: 4
+schema_version: 5
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_at_s0_production_evidence_bundle_contract
+implementation_stage: v2_0_3_0a1_p0_release_line
 
 claim_policy:
   customer_execution_enabled: false
@@ -9,6 +9,17 @@ claim_policy:
   gpu_acceleration_claim_allowed: false
   docking_accuracy_claim_allowed: false
   free_energy_claim_allowed: false
+
+legacy_customer_paths:
+  hip_rocm_product_runtime:
+    enabled: false
+    customer_execution_enabled: false
+    replacement_route: none_until_engine_v2_gpu_parity_and_product_qualification
+    blockers:
+      - legacy_product_runtime_not_engine_v2_authenticated
+      - cpu_reference_freeze_incomplete
+      - gpu_parity_evidence_missing
+      - product_integration_not_qualified
 
 capabilities:
   v2_cpu_reference_orchestrator:

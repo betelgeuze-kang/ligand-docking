@@ -38,10 +38,10 @@ from betelgeuze_engine_v2.docking import (
     GeometricRigidRefinementReceipt,
     MolecularTorsionSearchConfig,
     PoseValidityConfig,
+    PoseValidityContext,
     TorsionSearchSpace,
     direct_rmsd,
     build_molecular_torsion_search_space,
-    evaluate_pose_validity,
     run_bounded_docking_search,
 )
 from betelgeuze_engine_v2.io import parse_pdb, parse_sdf_v2000
@@ -913,6 +913,32 @@ def _run_case(
             ligand_prepared,
             config=torsion_search_config,
         )
+    validity_radius = (
+        config.geometry_score.pocket_radius_angstrom
+        + PoseValidityConfig().receptor_ligand_clash_angstrom
+    )
+    validity_mask = (
+        torch.linalg.vector_norm(receptor_coordinates, dim=1) <= validity_radius
+    )
+    validity_receptor = receptor_coordinates[validity_mask]
+    validity_config = PoseValidityConfig(
+        pocket_radius_angstrom=config.geometry_score.pocket_radius_angstrom,
+        max_cross_checks=max(
+            1_000_000,
+            int(validity_receptor.shape[0]) * ligand.atom_count,
+        ),
+    )
+    bond_pairs = tuple((bond.atom_i, bond.atom_j) for bond in ligand.bonds)
+    validity_context = PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=prepared_coordinates,
+        bond_pairs=bond_pairs,
+        excluded_nonbonded_pairs=bond_pairs,
+        receptor_coordinates=validity_receptor,
+        pocket_center=torch.zeros(3, dtype=torch.float64),
+        chirality_centers=(),
+        config=validity_config,
+    )
     budget = DockingBudget(
         candidate_count=config.candidate_count,
         top_k=config.top_k,
@@ -927,6 +953,7 @@ def _run_case(
         scorer,
         diversity_rmsd_angstrom=config.diversity_rmsd_angstrom,
         diversity_metric="direct_rmsd",
+        validity_context=validity_context,
         problem=problem,
     )
     final_proposals: dict[str, DockingProposal] = {}
@@ -1023,20 +1050,6 @@ def _run_case(
             "selected_candidate_ids": selected_candidate_ids,
         }
     )
-    validity_radius = (
-        config.geometry_score.pocket_radius_angstrom
-        + PoseValidityConfig().receptor_ligand_clash_angstrom
-    )
-    validity_mask = torch.linalg.vector_norm(receptor_coordinates, dim=1) <= validity_radius
-    validity_receptor = receptor_coordinates[validity_mask]
-    validity_config = PoseValidityConfig(
-        pocket_radius_angstrom=config.geometry_score.pocket_radius_angstrom,
-        max_cross_checks=max(
-            1_000_000,
-            int(validity_receptor.shape[0]) * ligand.atom_count,
-        ),
-    )
-    bond_pairs = tuple((bond.atom_i, bond.atom_j) for bond in ligand.bonds)
     candidate_rows: list[PublicRigidDockingCandidateRow] = []
     for search_row in search.rows:
         selected_rank = selected_ranks.get(search_row.candidate_id, 0)
@@ -1110,15 +1123,7 @@ def _run_case(
             else refinement_receipt.fingerprint_sha256
         )
         try:
-            validity = evaluate_pose_validity(
-                final_proposal,
-                prepared_coordinates,
-                bond_pairs=bond_pairs,
-                receptor_coordinates=validity_receptor,
-                pocket_center=torch.zeros(3, dtype=torch.float64),
-                chirality_centers=(),
-                config=validity_config,
-            )
+            validity = validity_context.evaluate(final_proposal)
             candidate_receptor_frame = (
                 final_proposal.coordinates.index_select(0, heavy) + center
             )

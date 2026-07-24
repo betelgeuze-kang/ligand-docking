@@ -133,9 +133,10 @@ supported cases, retains six N/A fail-closed rows, and recomputes Engine v2
 energy and force at every endpoint coordinate. It applies only the previously
 frozen same-coordinate mapping, per-case tangent-force, constraint-residual,
 and energy-nonincrease checks; cross-algorithm coordinate and energy deltas are
-recorded but ungated. Configuration SHA-256 is
-`6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`.
-The 2026-07-24 local receipt
+recorded but ungated. Current `1.3.0` configuration SHA-256 is
+`9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51`.
+The 2026-07-24 local receipt under superseded `1.0.0` configuration
+`6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`,
 `7e5b3454afc41f9954f71dfc3b0b274906323f15fd8ea6630bfcc1e95ce95b7c`
 passed all eight same-coordinate mappings and energy-nonincrease checks but
 failed the two fixed-Born constrained endpoint-health rows after final
@@ -144,8 +145,10 @@ reexecution preserve that rejection; endpoint/trajectory equivalence and every
 production or promotion flag remain false.
 The installed
 `betelgeuze-engine-v2-openmm-fixed-born-disposition` command requires that
-exact materialization and native receipt plus caller-pinned hashes. Its frozen
-v2 configuration
+exact materialization and native receipt plus caller-pinned hashes. Its current
+v5 configuration is
+`6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281`;
+the historical receipt binds v2 configuration
 `ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045`
 retains the rejected reporter-observer v1 identity
 `67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1`,
@@ -170,8 +173,10 @@ stationarity polish only under strict tangent decrease plus a
 `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`.
 The offline `openmm_reference_constraint_stationarity` API and installed
 `betelgeuze-engine-v2-openmm-constraint-stationarity` command build or verify a
-mode-0600 no-overwrite same-coordinate receipt. Comparison configuration
-SHA-256 is
+mode-0600 no-overwrite same-coordinate receipt. Current comparison
+configuration SHA-256 is
+`69f5168dbf7bcaa9f4ff85f9e2e9f7800b8b21685110000a90c909d552eab6db`;
+the retained local receipt binds superseded configuration
 `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`.
 These APIs cover only four constrained aliases, invoke no OpenMM minimizer,
 leave ten frozen rows outside their denominator, and cannot report validation
@@ -182,11 +187,14 @@ verify a separate all-14-case candidate observation. It preserves the frozen
 v1 and fail-closed paths, uses the constraint-stationarity candidate plus a
 standard-library tuple oracle for the four constrained aliases, records full
 energy/coordinate/failure traces and exact operational/oracle restart evidence,
-and binds the same-coordinate OpenMM candidate receipt. Configuration SHA-256
-is `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`.
+and binds the same-coordinate OpenMM candidate receipt. Current `1.3.0`
+configuration SHA-256 is
+`edae2c0ff83761426185e5eb269b1e30ea5dd5446c93121eef94163af284c237`;
+the retained local observation binds superseded configuration
+`5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`.
 Its mode-0600 no-overwrite output remains a single-host candidate observation,
 not a production validation receipt or S0 admission.
-The v4 Ed25519 result-review contract freshly reverifies both Engine
+The v7 Ed25519 result-review contract freshly reverifies both Engine
 result-review chains, the exact OpenMM materialization, both complete
 component/trace receipts, and the failure-inclusive native endpoint receipt.
 It crosschecks the exact 27/59 Engine outputs and all fourteen operational
@@ -197,17 +205,17 @@ configuration, physics projection, completeness, and classification; an
 accepted endpoint forbids that failure-specific input. The observed 6/8
 receipt yields a signed rejection retaining both fixed-Born case IDs despite
 its completed disposition. Contract SHA-256 is
-`6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`.
+`f7b57f08afd44e0ab7848c8ce75b08560d00cf381895aaeaf251e23cd3b81c7a`.
 No key, attestation, production receipt, or populated two-host evidence bundle
 is included.
-The final v4 S0 bundle module freshly invokes that verifier for exactly two raw
+The final v6 S0 bundle module freshly invokes that verifier for exactly two raw
 host evidence sets. It first rejects a host unless the result review and native
 endpoint health are accepted with 8/8 cases and no failed IDs. It rejects reused host/CPU/session/custody, artifact,
 environment, authorization-nonce, and review-nonce identities while requiring
 exact equality of commit, source, dependency, OpenMM runtime/source, seed, and
 all three physics projections. Accepted hosts must report the failure-specific
 disposition path as not applicable. Contract SHA-256 is
-`549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`.
+`5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4`.
 Its final Ed25519 approval is canonical, time-bounded,
 revocable/supersedable, cannot outlive either host review, and requires a human
 reviewer distinct from every nested role. Successful runtime verification
@@ -1735,6 +1743,13 @@ create result or metric receipts, independently review parameter values or the
 oracle, establish chemical applicability, authorize fitting, or open customer
 execution. `require_reference_validation_execution_authorized()` always fails
 closed for the current binding.
+The current source/dependency lineage is applicability record `1.2.0`
+`cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6`,
+energy/force protocol `1.2.0`
+`0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2`,
+and artifact binding `1.2.0`
+`b3341f3b98e29594cfcd727353553efa466116f275f5250c4ae944d624ef62b0`.
+Those identities are not production evidence.
 
 The separate review-contract symbols define and verify a future signed
 independent-review attestation. Verification requires an out-of-band trusted

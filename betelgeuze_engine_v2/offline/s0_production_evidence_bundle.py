@@ -38,25 +38,31 @@ from .openmm_reference_result_review import (
 
 
 S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_s0_production_evidence_bundle_contract/4.0.0"
+    "betelgeuze.engine_v2_s0_production_evidence_bundle_contract/6.0.0"
 )
 S0_PRODUCTION_EVIDENCE_BUNDLE_APPROVAL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_s0_production_evidence_bundle_approval/4.0.0"
+    "betelgeuze.engine_v2_s0_production_evidence_bundle_approval/6.0.0"
 )
 S0_PRODUCTION_EVIDENCE_BUNDLE_SIGNING_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_s0_production_evidence_bundle_signing_request/4.0.0"
+    "betelgeuze.engine_v2_s0_production_evidence_bundle_signing_request/6.0.0"
 )
 S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_ID = (
-    "engine_v2_s0_two_host_reference_physics_evidence_bundle/4.0.0"
+    "engine_v2_s0_two_host_reference_physics_evidence_bundle/6.0.0"
 )
-S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_VERSION = "4.0.0"
-S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_FROZEN_AT_UTC = "2026-07-24T15:30:00Z"
+S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_VERSION = "6.0.0"
+S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_FROZEN_AT_UTC = "2026-07-24T19:00:00Z"
 S0_PRODUCTION_EVIDENCE_BUNDLE_SIGNATURE_ALGORITHM = "ed25519"
 S0_PRODUCTION_EVIDENCE_BUNDLE_MAX_VALIDITY = timedelta(days=30)
 S0_PRODUCTION_EVIDENCE_BUNDLE_MAX_TRANSPORT_BYTES = 4 * 1024 * 1024
 S0_PRODUCTION_EVIDENCE_BUNDLE_HOST_COUNT = 2
 
 FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256 = (
+    "5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4"
+)
+FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V5 = (
+    "871c54c98d6ca939bd6264121d60498a80d9dca287a7c6dfec80a48d612d0db1"
+)
+FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V4 = (
     "549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d"
 )
 FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3 = (
@@ -595,15 +601,16 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_VERSION,
         "frozen_at_utc": S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3
+            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V5
         ),
         "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V4,
+            FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3,
             FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V2,
             FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V1,
         ],
         "refreeze_reason": (
-            "binds_result_review_v4_and_requires_failure_disposition_to_be_"
-            "not_applicable_for_both_accepted_cpu_hosts"
+            "bind_openmm_reference_result_review_v7_without_bundle_policy_change"
         ),
         "bound_contracts": {
             "openmm_reference_result_review_contract_sha256": (
@@ -1966,6 +1973,8 @@ __all__ = [
     "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V1",
     "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V2",
     "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V3",
+    "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V4",
+    "FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V5",
     "FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256",
     "S0_FINAL_REVIEW_OUTCOME_ACCEPTED",
     "S0_FINAL_REVIEW_OUTCOME_REJECTED",

@@ -33,18 +33,24 @@ from .reference_parameter_applicability import (
 
 
 CPU_REFERENCE_VALIDATION_PROTOCOL_SCHEMA_ID = (
-    "betelgeuze.engine_v2_cpu_reference_validation_protocol/1.0.0"
+    "betelgeuze.engine_v2_cpu_reference_validation_protocol/1.2.0"
 )
 CPU_REFERENCE_VALIDATION_PROTOCOL_ID = (
-    "cpu_reference_energy_force_contract_validation/1.0.0"
+    "cpu_reference_energy_force_contract_validation/1.2.0"
 )
-CPU_REFERENCE_VALIDATION_PROTOCOL_VERSION = "1.0.0"
-CPU_REFERENCE_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-17T02:51:00Z"
+CPU_REFERENCE_VALIDATION_PROTOCOL_VERSION = "1.2.0"
+CPU_REFERENCE_VALIDATION_PROTOCOL_FROZEN_AT_UTC = "2026-07-24T18:05:00Z"
 CPU_REFERENCE_VALIDATION_PROTOCOL_REVIEWER_ROLE = "repository_maintainer"
 CPU_REFERENCE_VALIDATION_PROTOCOL_REVIEWER_IDENTITY_SHA256 = (
     "ffaaea9cebb5975ed140fa0633ea4cb44e1f241f6bc73c916164c0ea5123b584"
 )
 FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256 = (
+    "0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2"
+)
+FROZEN_LEGACY_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256_V1_1 = (
+    "595a823e0a49d5c2f54808572ad5dec176be7889d0ae2414778ccd05093ecb32"
+)
+FROZEN_LEGACY_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256_V1 = (
     "1ee318ca1550953022783afa8b88eb66e3698489708c0a96969b855ca2995298"
 )
 
@@ -1230,6 +1236,16 @@ class CPUReferenceValidationProtocol:
             "protocol_id": self.protocol_id,
             "protocol_version": self.protocol_version,
             "frozen_at_utc": self.frozen_at_utc,
+            "superseded_protocol_sha256": (
+                FROZEN_LEGACY_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256_V1_1
+            ),
+            "legacy_protocol_chain_sha256s": [
+                FROZEN_LEGACY_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256_V1
+            ],
+            "refreeze_reason": (
+                "bind_reference_parameter_applicability_1_2_0_type_correct_"
+                "alias_safe_tensor_storage"
+            ),
             "purpose": {
                 "scope": "cpu_reference_energy_force_contract_validation",
                 "protocol_definition_only": True,

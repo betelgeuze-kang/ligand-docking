@@ -19,8 +19,12 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_at_s0_production_evidence_bundle_contract
+v2_0_3_0a1_p0_release_line
 ```
+
+`0.3.0a1` 정책은 레거시 HIP/ROCm 고객 경로를 명시적으로 비활성화합니다.
+GPU parity와 제품 qualification 증거가 확보되기 전까지 Engine v2의 claim
+범위는 CPU reference에 한정됩니다.
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:
 
@@ -213,6 +217,13 @@ v2_at_s0_production_evidence_bundle_contract
   canonical JSON byte transport·필수 최신 revocation/supersession 입력·네 governance 역할의
   분리·caller-provided public key를 요구함. 실제 key, attestation, production receipt,
   reviewer approval 또는 과학 evidence는 bundle하지 않음
+  `0.3.0a1` identity refreeze는 applicability record `1.2.0`
+  (`cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6`),
+  energy/force protocol `1.2.0`
+  (`0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2`),
+  artifact binding `1.2.0`
+  (`b3341f3b98e29594cfcd727353553efa466116f275f5250c4ae944d624ef62b0`)을
+  결속함. 이는 source/dependency 계보이며 production 결과나 과학 acceptance가 아님
 - `OpenMM==8.4.0.post2`와 `Reference` platform으로 고정된 lazy offline 전용
   adapter. 지원되는 energy/force variant 47개를 모두 mapping하고 Engine-contract
   failure 12개를 N/A로 보존하며, 지원 minimization trace 8개의 모든 좌표를
@@ -227,10 +238,12 @@ v2_at_s0_production_evidence_bundle_contract
   2-host 재현 미완료·`claim_safe=false`를 고정함.
   설치형 `betelgeuze-engine-v2-openmm-native-minimization` workflow는 지원되는
   8개 case에서 OpenMM L-BFGS endpoint를 실행하고 6개 expected fail-closed 행을
-  보존한 뒤 모든 endpoint를 동일 좌표의 Engine v2로 다시 평가함. frozen
+  보존한 뒤 모든 endpoint를 동일 좌표의 Engine v2로 다시 평가함. 현재 `1.3.0`
   configuration SHA-256은
-  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`임.
-  2026-07-24 local receipt는 동일 좌표 energy/force mapping 8/8과 energy
+  `9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51`임.
+  2026-07-24 local receipt는 superseded `1.0.0` configuration
+  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`에
+  결속되며, 동일 좌표 energy/force mapping 8/8과 energy
   nonincrease 8/8을 통과했지만 최종 constraint projection 뒤 fixed-Born constrained
   2건의 tangent-force 기준 실패로 endpoint health는 6/8이고 status는 rejected임.
   receipt SHA-256은
@@ -240,7 +253,9 @@ v2_at_s0_production_evidence_bundle_contract
   입력을 결속하고 2-case/16-probe의 frozen solver·projection 진단을 실행한다.
   v1 reporter 관측은 endpoint 마지막 비트를 바꿔 자체 exact-baseline gate에서
   거부됐고, v2는 probe·threshold를 바꾸지 않은 채 no-reporter bitwise control만
-  분리했다. v1/v2 configuration SHA-256은 각각
+  분리했다. 현재 v5 configuration SHA-256은
+  `6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281`다.
+  아래 historical receipt가 결속하는 v1/v2 configuration SHA-256은 각각
   `67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1`과
   `ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045`다.
   실제 receipt
@@ -257,12 +272,14 @@ v2_at_s0_production_evidence_bundle_contract
   `betelgeuze-engine-v2-openmm-constraint-stationarity` 후보는 내부 constraint
   projection을 `1e-14 Å`로 고정하고 tangent force가 엄격히 감소하면서 energy가
   best accepted energy보다 `1e-10 kcal/mol` 이내일 때만 numerical polish를
-  허용한다. 후보/동일좌표 OpenMM configuration SHA-256은
+  허용한다. 후보/현재 동일좌표 OpenMM configuration SHA-256은
   `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`과
-  `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`이다.
-  single-host 후보 receipt
+  `69f5168dbf7bcaa9f4ff85f9e2e9f7800b8b21685110000a90c909d552eab6db`이다.
+  historical single-host 후보 receipt
   `16a4db9ca59ad969c63bb896a8bc3cb3310e7b5cc5f5e94e9a3b2dbf59d79f70`는 적용
-  가능한 constrained alias 4/4만 통과했고, OpenMM Reference 대비 최대
+  가능한 constrained alias 4/4만 통과했고 superseded configuration
+  `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`에
+  결속된다. OpenMM Reference 대비 최대
   total-energy/force 오차는 각각 `1.07e-14 kcal/mol`,
   `2.40e-14 kcal/mol/Å`였다. Engine/OpenMM 모두 동일 좌표에서 기존
   `1e-8` tangent-force 기준을 통과했고 constraint residual은
@@ -271,14 +288,16 @@ v2_at_s0_production_evidence_bundle_contract
   `betelgeuze-engine-v2-minimization-stationarity-successor` 관측 경로는 frozen
   입력 14개를 모두 재사용한다. v1 4행은 기존 경로, constrained 4행은 새
   stationarity 알고리즘과 Torch/NumPy-free tuple oracle, fail-closed 6행은 기존
-  exact disposition으로 실행한다. configuration SHA-256
+  exact disposition으로 실행한다. 현재 `1.3.0` configuration SHA-256은
+  `edae2c0ff83761426185e5eb269b1e30ea5dd5446c93121eef94163af284c237`이다.
+  superseded configuration
   `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`의
   single-host 후보 관측
   `18c6d617781e93c903332352d6f66e8eb2897e2c965035cd6f437d0324d3d1b9`는
   14/14와 operational/oracle checkpoint 3/3을 통과하고 전체 energy·coordinate·
   failure trace 및 4/4 OpenMM 동일좌표 후보를 결속한다. 단, production receipt,
   2-host 재현, 독립 review, native OpenMM L-BFGS repair, S0 claim은 계속 false다.
-  별도 v4 Ed25519 verifier는
+  별도 v7 Ed25519 verifier는
   두 Engine result-review chain, exact OpenMM materialization, component/trace
   receipt와 native endpoint receipt를 모두 새로 검증함. rejected endpoint에서는
   exact disposition receipt·configuration·physics projection·완결성·분류도 별도로
@@ -286,15 +305,15 @@ v2_at_s0_production_evidence_bundle_contract
   결과는 fixed-Born 실패 case ID 두 개를 보존한 서명된 `rejected` host review가
   되며 full external comparison을 accepted로 표시할 수 없음. host-review 계약
   SHA-256은
-  `6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`임.
-  최종 v4 S0 bundle 계약은 정확히 두 host 입력을 새로 재검증하고 host·CPU·session·custody·
+  `f7b57f08afd44e0ab7848c8ce75b08560d00cf381895aaeaf251e23cd3b81c7a`임.
+  최종 v6 S0 bundle 계약은 정확히 두 host 입력을 새로 재검증하고 host·CPU·session·custody·
   artifact·nonce의 상이성과 commit·source·dependency·runtime·seed 및 energy-force·
   trace·native-endpoint physics projection의 exact equality를 요구함. 두 host 모두
   native endpoint health 8/8이고 실패 case ID가 없으며 failure-specific disposition
   path가 not applicable일 때만 모든 하위 역할과 분리된
   최종 human Ed25519 승인을
   검증함. S0 계약 SHA-256은
-  `549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`임.
+  `5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4`임.
   검증된 bundle도 frozen synthetic S0 protocol과 S1 진입만 열고 chemistry·
   fitting·benchmark·product·customer·broad scientific claim은 닫아 둠. 설치형
   `betelgeuze-engine-v2-s0-review` 명령은 secret-free detached signing request를

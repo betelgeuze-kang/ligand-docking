@@ -69,16 +69,16 @@ from .reference_minimization_validation_trajectory_comparison import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/7.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_review_contract/8.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/7.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_review_attestation/8.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_independent_result_review_contract/7.0.0"
+    "cpu_reference_minimization_validation_independent_result_review_contract/8.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "7.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION = "8.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_MAX_VALIDITY = timedelta(days=30)
 RESULT_REVIEW_OUTCOME_ACCEPTED = "accepted"
@@ -103,6 +103,9 @@ EXPECTED_FAIL_CLOSED_TRAJECTORY_COMPARISON_ACCEPTED = "expected_fail_closed_traj
 TRAJECTORY_COMPARISON_EVIDENCE_REJECTED = "trajectory_comparison_evidence_rejected"
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256 = (
+    "8793f138185f19d5e7c1465cc8850c7f466d1df99274d831ac5d91f324cdaea0"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V7 = (
     "85be6ec706b0220b5a10e80c10d158601ce438016903e0695a8ea22f3ed1bca5"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6 = (
@@ -1415,9 +1418,9 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V7
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_complete_result_evidence_chain",
+        "refreeze_reason": "binds_refrozen_minimization_protocol_and_authenticated_execution_chain",
         "purpose": {
             "scope": "future_independent_review_of_one_exact_minimization_validation_result_receipt",
             "contract_definition_only": True,
@@ -2308,6 +2311,7 @@ __all__ = [
     "COORDINATE_TRACE_REJECTED",
     "COORDINATE_TRACE_STEP_ACCEPTED",
     "EXPECTED_EMPTY_COORDINATE_TRACE_ACCEPTED",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V7",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V6",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V5",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256_V4",

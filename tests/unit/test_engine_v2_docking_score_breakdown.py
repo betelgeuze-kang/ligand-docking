@@ -32,17 +32,18 @@ def _space() -> TorsionSearchSpace:
 
 
 def _problem() -> DockingProblemIdentity:
-    return DockingProblemIdentity(
-        receptor_system_sha256="a" * 64,
-        ligand_system_sha256="b" * 64,
-        pocket_definition_sha256="c" * 64,
-    )
+    return DockingProblemIdentity.unbound()
+
+
+_PROBLEM_FINGERPRINT = _problem().fingerprint_sha256
 
 
 class _DecomposedScorer:
     scorer_id = "decomposed-test-scorer"
     scorer_version = "1.0.0"
     validated_for_docking_ranking = False
+    problem_fingerprint_sha256 = _PROBLEM_FINGERPRINT
+    implementation_source_sha256 = "f" * 64
     config_fingerprint_sha256 = "d" * 64
     score_descriptor = DockingScoreDescriptor(
         score_id="decomposed_test_score",

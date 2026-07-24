@@ -398,6 +398,10 @@ class GeometricRigidBodyRefiner:
             }
         )
 
+    @property
+    def problem_fingerprint_sha256(self) -> str:
+        return self.scorer.problem.fingerprint_sha256
+
     @staticmethod
     def _moves(
         coordinates: torch.Tensor,

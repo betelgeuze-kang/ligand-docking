@@ -5,6 +5,9 @@ import subprocess
 import sys
 
 from betelgeuze_engine_v2.offline.openmm_reference_native_minimization import (
+    FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_2,
     FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256,
     openmm_reference_native_minimization_configuration_document,
 )
@@ -16,6 +19,23 @@ def test_native_minimization_configuration_is_frozen_and_claim_closed() -> None:
     assert (
         configuration["configuration_sha256"]
         == FROZEN_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256
+        == "9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51"
+    )
+    assert (
+        configuration["superseded_configuration_sha256"]
+        == FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_2
+        == "75aaf26a338699df1e9a398b74e9f065e60717d310a3b23c00875a3a5e3e7e34"
+    )
+    assert configuration["legacy_configuration_chain_sha256s"] == [
+        FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_1,
+        FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1,
+    ]
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1_1
+        == "0b48b892dcbf9fdb5937a487a2ff5d222e31e98050e2c05afa473c1eddaf3368"
+    )
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_NATIVE_MINIMIZATION_CONFIGURATION_SHA256_V1
         == "6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e"
     )
     assert configuration["coverage"] == {

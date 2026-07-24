@@ -958,6 +958,10 @@ class UncalibratedReferenceDockingScorer:
         self._blockers = tuple(blockers)
 
     @property
+    def problem_fingerprint_sha256(self) -> str:
+        return self.problem.fingerprint_sha256
+
+    @property
     def chemistry_scope(self) -> dict[str, object]:
         return self.config.chemistry_scope.to_dict()
 

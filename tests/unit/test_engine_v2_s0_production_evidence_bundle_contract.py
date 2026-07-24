@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from betelgeuze_engine_v2.offline.s0_production_evidence_bundle import (
+    FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V5,
     FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256,
     S0FinalReviewerTrustAnchor,
     S0ProductionEvidenceBundleError,
@@ -23,9 +24,15 @@ def test_s0_bundle_contract_is_frozen_and_narrowly_scoped() -> None:
     assert (
         contract["contract_sha256"]
         == FROZEN_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256
-        == "549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d"
+        == "5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4"
     )
     assert require_s0_production_evidence_bundle_contract_document(contract) == contract
+    assert contract["contract_version"] == "6.0.0"
+    assert (
+        contract["superseded_contract_sha256"]
+        == FROZEN_LEGACY_S0_PRODUCTION_EVIDENCE_BUNDLE_CONTRACT_SHA256_V5
+        == "871c54c98d6ca939bd6264121d60498a80d9dca287a7c6dfec80a48d612d0db1"
+    )
     assert contract["host_policy"]["required_host_count"] == 2
     assert contract["host_policy"]["energy_force_physics_projection_exactly_equal"]
     assert contract["host_policy"]["minimization_physics_projection_exactly_equal"]

@@ -28,6 +28,7 @@ import sys
 from typing import Any
 import zipfile
 
+from betelgeuze_engine_v2.contracts import DISTRIBUTION_VERSION
 from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
     ReferenceMinimizationValidationEd25519Error,
     ed25519_public_key_bytes,
@@ -441,7 +442,9 @@ def _engine_wheel_binding(
     )
     if (
         digest != expected
-        or not path.name.startswith("betelgeuze_engine_v2-0.2.0rc2-")
+        or not path.name.startswith(
+            f"betelgeuze_engine_v2-{DISTRIBUTION_VERSION}-"
+        )
         or path.suffix != ".whl"
     ):
         raise PoseBustersSulfurReproductionError(

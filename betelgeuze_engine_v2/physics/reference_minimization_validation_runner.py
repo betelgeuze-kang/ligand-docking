@@ -42,6 +42,8 @@ from .reference_minimization_validation_bootstrap import (
     REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STAGE_ENV,
     REFERENCE_MINIMIZATION_VALIDATION_CONTROLLED_INNER_STATE,
     REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV,
+    REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE,
+    REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE,
     REFERENCE_MINIMIZATION_VALIDATION_TRUSTED_OUTER_LAUNCHER_ARGV,
     reference_minimization_validation_bootstrap_path,
     reference_minimization_validation_controlled_inner_environment,
@@ -102,7 +104,7 @@ from .validation_native_runtime_identity import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/8.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_runner_contract/9.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_runner_start/3.0.0"
@@ -110,9 +112,9 @@ REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_SCHEMA_ID = (
 REFERENCE_MINIMIZATION_VALIDATION_RUN_OBSERVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_run_observation/6.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_ID = "cpu_reference_minimization_validation_bounded_runner/8.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_VERSION = "8.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_ID = "cpu_reference_minimization_validation_bounded_runner/9.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_VERSION = "9.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_PREFLIGHT_MAX_WALL_SECONDS = 180.0
@@ -168,8 +170,24 @@ _REFERENCE_MINIMIZATION_VALIDATION_WORKER_ENVIRONMENT_NAMES = frozenset(
 REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID = (
     REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID
 )
+_REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS = {
+    "schema_id",
+    "reviewer_keys",
+    "operator_keys",
+    "revoked_authorization_receipt_sha256s",
+    "revoked_review_attestation_sha256s",
+    "externally_conflicting_nonce_sha256s",
+    "revoked_network_attestation_sha256s",
+    "superseded_operator_key_ids",
+    "superseded_reviewer_key_ids",
+    "minimum_authorization_receipt_schema_id",
+    "minimum_review_attestation_schema_id",
+}
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX = "reference-minimization-validation-runner-start-"
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256 = (
+    "a9ef77fca1518cb867f025e72257d52c4cac8b2c38e6a19e7584a07cdaa7ec82"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V8 = (
     "4adfcff369a581725784ef2552e2db5ed3c803f717babcf3a43ff63dbc414f09"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7 = (
@@ -380,7 +398,7 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         or sys.dont_write_bytecode is not True
         or sys.pycache_prefix != "/dev/null"
         or not isinstance(state, tuple)
-        or len(state) != 6
+        or len(state) != 8
     ):
         raise ReferenceMinimizationValidationRunnerError(
             "minimization runner requires the seeded controlled trust bootstrap"
@@ -392,6 +410,8 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         raw_dependency_roots,
         frozen_sys_path,
         source_manifest_bytes,
+        source_snapshot_sha256,
+        source_finder_identity_sha256,
     ) = state
     try:
         source_manifest = json.loads(source_manifest_bytes.decode("ascii"))
@@ -424,7 +444,23 @@ def _require_isolated_python_bootstrap_runtime() -> tuple[Path, ...]:
         or not isinstance(frozen_sys_path, tuple)
         or tuple(sys.path) != frozen_sys_path
         or not sys.path
-        or sys.path[0] != os.fspath(expected_repository)
+        or os.fspath(expected_repository) in sys.path
+        or getattr(
+            sys,
+            REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE,
+            None,
+        )
+        != source_snapshot_sha256
+        or getattr(
+            getattr(
+                sys,
+                REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE,
+                None,
+            ),
+            "finder_identity_sha256",
+            None,
+        )
+        != source_finder_identity_sha256
         or tuple(getattr(sys, "orig_argv", ())) != expected_orig_argv
         or sys.argv != [os.fspath(expected_bootstrap)]
         or os.getcwd() != "/"
@@ -971,9 +1007,12 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V8
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_protocol_and_trajectory_contract",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_sealed_source_snapshot_and_"
+            "trust_store_revocation_authority"
+        ),
         "protocol_sha256": FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256,
         "trajectory_comparison_contract_sha256": (
             FROZEN_REFERENCE_MINIMIZATION_VALIDATION_TRAJECTORY_COMPARISON_CONTRACT_SHA256
@@ -1076,6 +1115,9 @@ def _contract_projection() -> dict[str, Any]:
             "environment_import_path_overrides_honored": False,
             "automatic_site_initialization_allowed": False,
             "clean_source_checkout_with_git_metadata_required": True,
+            "sealed_package_source_snapshot_required": True,
+            "live_checkout_on_import_path": False,
+            "trust_store_revocation_state_authoritative": True,
             "reservation_and_artifact_roots_outside_checkout_required": True,
             "canonical_standard_input_request_schema_id": (REFERENCE_MINIMIZATION_VALIDATION_RUNNER_REQUEST_SCHEMA_ID),
             "maximum_request_bytes": (REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_REQUEST_BYTES),
@@ -4025,7 +4067,7 @@ def _load_preconfigured_trust_anchors() -> tuple[dict[str, Any], dict[str, Any]]
         ) from exc
     if (
         not isinstance(payload, dict)
-        or set(payload) != {"schema_id", "reviewer_keys", "operator_keys"}
+        or set(payload) != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS
         or payload.get("schema_id") != REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID
         or _canonical_bytes(payload) + b"\n" != raw
     ):
@@ -4257,6 +4299,7 @@ if __name__ == "__main__":
 
 __all__ = [
     "FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V8",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V6",
     "FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V5",

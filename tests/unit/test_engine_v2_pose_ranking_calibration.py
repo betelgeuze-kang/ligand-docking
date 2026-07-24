@@ -194,6 +194,8 @@ def test_training_fit_scorer_reweights_complete_terms_without_promotion() -> Non
         scorer_version = "1.0.0"
         validated_for_docking_ranking = False
         config_fingerprint_sha256 = "a" * 64
+        problem_fingerprint_sha256 = "d" * 64
+        implementation_source_sha256 = "e" * 64
         score_descriptor = DockingScoreDescriptor(
             score_id="unit_base_score",
             direction=ScoreDirection.MINIMIZE,

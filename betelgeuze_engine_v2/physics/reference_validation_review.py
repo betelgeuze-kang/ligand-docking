@@ -30,20 +30,26 @@ from .reference_validation_artifact_binding import (
 
 
 REFERENCE_VALIDATION_REVIEW_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_review_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_review_contract/5.0.0"
 )
 REFERENCE_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_review_attestation/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_review_attestation/5.0.0"
 )
 REFERENCE_VALIDATION_REVIEW_CONTRACT_ID = (
-    "cpu_reference_validation_independent_review_contract/3.0.0"
+    "cpu_reference_validation_independent_review_contract/5.0.0"
 )
-REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:15:00Z"
 REFERENCE_VALIDATION_REVIEW_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_VALIDATION_REVIEW_MAX_VALIDITY = timedelta(days=30)
 
 FROZEN_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256 = (
+    "f2a2f57ada8c2146c74097410ec5796fa1dba1d77791ede265c3b5775bc22baf"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V4 = (
+    "1bfc0fa1f7dbc67560ed0fa0143c045133e6f0e0f6ef596070390cd51b0e6b1d"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V3 = (
     "1a50da432e28629f0d4d8e04a3939281990a2640b0c91599a8a91dabdf40770a"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V2 = (
@@ -183,9 +189,17 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_REVIEW_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_REVIEW_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "replace_symmetric_hmac_with_public_key_ed25519_verification",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_REVIEW_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_reference_validation_artifact_binding_1_2_0_without_"
+            "review_policy_change"
+        ),
         "purpose": {
             "scope": "future_independent_review_of_cpu_validation_implementation_artifacts",
             "contract_definition_only": True,

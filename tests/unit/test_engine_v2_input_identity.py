@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import json
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,8 @@ torch = pytest.importorskip("torch")
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingBudget,
     DockingProblemIdentity,
+    PoseValidityConfig,
+    PoseValidityContext,
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
     run_bounded_docking_search,
@@ -26,9 +29,12 @@ from betelgeuze_engine_v2.molecular import (  # noqa: E402
     CanonicalSerializationError,
     all_atom_system_from_canonical_json,
     canonical_coordinates_sha256,
+    canonical_json_bytes,
     canonical_system_json_bytes,
     canonical_system_sha256,
     canonical_topology_sha256,
+    sha256_canonical,
+    UnitCell,
     write_canonical_system_json,
 )
 
@@ -82,12 +88,97 @@ def test_canonical_json_round_trip_is_self_verifying_and_atomic(tmp_path: Path) 
 
     path = write_canonical_system_json(system, tmp_path / "system.json")
     assert path.exists()
+    assert path.read_bytes() == encoded
     assert not list(tmp_path.glob(".system.json.tmp-*"))
-    assert canonical_system_sha256(all_atom_system_from_canonical_json(path.read_bytes())) == canonical_system_sha256(system)
+    assert canonical_system_sha256(
+        all_atom_system_from_canonical_json(path.read_bytes())
+    ) == canonical_system_sha256(system)
 
     tampered = encoded.replace(b"identity-ligand", b"identity-ligand-tampered")
     with pytest.raises(CanonicalSerializationError, match="SHA-256 mismatch"):
         all_atom_system_from_canonical_json(tampered)
+
+
+def test_all_atom_state_is_deeply_immutable_and_alias_safe() -> None:
+    base = parse_sdf_v2000(_sdf_fixture(), source_id="immutable-fixture")
+    coordinate_input = base.coordinates
+    cell_input = torch.eye(3, dtype=coordinate_input.dtype) * 30.0
+    system_metadata = {"nested": {"values": [1, 2]}}
+    atom_metadata = {"nested": {"labels": ["a", "b"]}}
+    system = replace(
+        base,
+        coordinates=coordinate_input,
+        cell=UnitCell(vectors=cell_input),
+        metadata=system_metadata,
+        atoms=(
+            replace(base.atoms[0], metadata=atom_metadata),
+            *base.atoms[1:],
+        ),
+    )
+    expected_digest = canonical_system_sha256(system)
+
+    coordinate_input.add_(100.0)
+    cell_input.zero_()
+    system_metadata["nested"]["values"].append(3)
+    atom_metadata["nested"]["labels"].append("c")
+
+    assert canonical_system_sha256(system) == expected_digest
+    assert not torch.equal(system.coordinates, coordinate_input)
+    assert system.cell is not None
+    assert not torch.equal(system.cell.vectors, cell_input)
+    assert system.metadata["nested"]["values"] == [1, 2]
+    assert system.atoms[0].metadata["nested"]["labels"] == ["a", "b"]
+
+    exposed_coordinates = system.coordinates
+    exposed_coordinates.zero_()
+    exposed_cell = system.cell.vectors
+    exposed_cell.zero_()
+    assert canonical_system_sha256(system) == expected_digest
+    assert bool(torch.any(system.coordinates != 0.0))
+    assert bool(torch.any(system.cell.vectors != 0.0))
+
+    with pytest.raises(TypeError, match="immutable"):
+        system.metadata["nested"]["new"] = "forbidden"
+    with pytest.raises(TypeError, match="immutable"):
+        system.atoms[0].metadata["nested"]["new"] = "forbidden"
+    with pytest.raises(AttributeError):
+        system.metadata["nested"]["values"].append(3)
+
+
+def test_canonical_reader_rejects_noncanonical_or_ambiguous_documents() -> None:
+    system = parse_sdf_v2000(_sdf_fixture(), source_id="strict-canonical")
+    encoded = canonical_system_json_bytes(system)
+
+    for noncanonical in (
+        encoded + b"\n",
+        b" " + encoded,
+        json.dumps(json.loads(encoded)).encode("utf-8"),
+    ):
+        with pytest.raises(CanonicalSerializationError, match="exact canonical"):
+            all_atom_system_from_canonical_json(noncanonical)
+
+    duplicate = encoded.replace(
+        b'{"schema_id":',
+        b'{"schema_id":"duplicate","schema_id":',
+        1,
+    )
+    with pytest.raises(CanonicalSerializationError, match="duplicate JSON"):
+        all_atom_system_from_canonical_json(duplicate)
+
+    extra_field = json.loads(encoded)
+    extra_field["system"]["topology"]["unexpected"] = 0
+    extra_field["system_sha256"] = sha256_canonical(extra_field["system"])
+    with pytest.raises(CanonicalSerializationError, match="non-canonical fields"):
+        all_atom_system_from_canonical_json(canonical_json_bytes(extra_field))
+
+    unsupported_dtype = json.loads(encoded)
+    unsupported_dtype["system"]["coordinates"]["coordinates"]["$tensor"][
+        "dtype"
+    ] = "complex64"
+    with pytest.raises(CanonicalSerializationError, match="unsupported tensor dtype"):
+        all_atom_system_from_canonical_json(
+            canonical_json_bytes(unsupported_dtype)
+        )
 
 
 def test_strict_pdb_and_sdf_writers_round_trip_supported_fields() -> None:
@@ -97,7 +188,12 @@ def test_strict_pdb_and_sdf_writers_round_trip_supported_fields() -> None:
     assert pdb_receipt.format == "pdb_strict_v1"
     assert [atom.element for atom in pdb_round_trip.atoms] == ["C", "O"]
     assert [(bond.atom_i, bond.atom_j) for bond in pdb_round_trip.bonds] == [(0, 1)]
-    assert torch.allclose(pdb_round_trip.coordinates, pdb_system.coordinates, atol=5.0e-4, rtol=0.0)
+    assert torch.allclose(
+        pdb_round_trip.coordinates,
+        pdb_system.coordinates,
+        atol=5.0e-4,
+        rtol=0.0,
+    )
 
     sdf_system = parse_sdf_v2000(_sdf_fixture(), source_id="sdf-source")
     sdf_text, sdf_receipt = sdf_v2000_string(sdf_system)
@@ -105,8 +201,15 @@ def test_strict_pdb_and_sdf_writers_round_trip_supported_fields() -> None:
     assert sdf_receipt.format == "sdf_v2000_strict_v1"
     assert sdf_round_trip.atoms[0].isotope_mass_number == 13
     assert sdf_round_trip.atoms[1].formal_charge == -1
-    assert [(bond.atom_i, bond.atom_j, bond.order) for bond in sdf_round_trip.bonds] == [(0, 1, 1.0)]
-    assert torch.allclose(sdf_round_trip.coordinates, sdf_system.coordinates, atol=5.0e-5, rtol=0.0)
+    assert [
+        (bond.atom_i, bond.atom_j, bond.order) for bond in sdf_round_trip.bonds
+    ] == [(0, 1, 1.0)]
+    assert torch.allclose(
+        sdf_round_trip.coordinates,
+        sdf_system.coordinates,
+        atol=5.0e-5,
+        rtol=0.0,
+    )
 
 
 def test_pdb_connectivity_records_are_rejected_or_explicitly_recorded() -> None:
@@ -116,9 +219,14 @@ def test_pdb_connectivity_records_are_rejected_or_explicitly_recorded() -> None:
         parse_pdb(source)
 
     recorded = parse_pdb(source, connectivity_policy="record_unrepresented")
-    counts = recorded.provenance.metadata["unrepresented_connectivity_record_counts"]
+    counts = recorded.provenance.metadata[
+        "unrepresented_connectivity_record_counts"
+    ]
     assert counts == {"LINK": 1}
-    assert recorded.metadata["connectivity_claim_blocker"] == "pdb_link_or_ssbond_not_materialized"
+    assert (
+        recorded.metadata["connectivity_claim_blocker"]
+        == "pdb_link_or_ssbond_not_materialized"
+    )
     assert recorded.provenance.chemistry_validated is False
 
 
@@ -159,23 +267,58 @@ def _problem(marker: str) -> DockingProblemIdentity:
     )
 
 
+def _validity_context(problem: DockingProblemIdentity) -> PoseValidityContext:
+    reference = generate_bounded_docking_proposals(
+        _search_space(),
+        DockingBudget(candidate_count=1, top_k=1, max_torsions=1),
+        problem=problem,
+    )[0].coordinates
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=((0, 1), (1, 2)),
+        excluded_nonbonded_pairs=((0, 1), (1, 2)),
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]], dtype=torch.float64
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(pocket_radius_angstrom=20.0),
+    )
+
+
 def test_problem_and_search_space_identity_are_bound_into_every_proposal() -> None:
     budget = DockingBudget(candidate_count=3, top_k=1, max_torsions=1, seed=7)
-    first = generate_bounded_docking_proposals(_search_space(), budget, problem=_problem("a"))
-    changed_problem = generate_bounded_docking_proposals(_search_space(), budget, problem=_problem("b"))
-    changed_space = generate_bounded_docking_proposals(_search_space(1.1), budget, problem=_problem("a"))
+    first = generate_bounded_docking_proposals(
+        _search_space(), budget, problem=_problem("a")
+    )
+    changed_problem = generate_bounded_docking_proposals(
+        _search_space(), budget, problem=_problem("b")
+    )
+    changed_space = generate_bounded_docking_proposals(
+        _search_space(1.1), budget, problem=_problem("a")
+    )
 
     assert first[0].problem_fingerprint_sha256 == _problem("a").fingerprint_sha256
-    assert first[0].search_space_fingerprint_sha256 == _search_space().fingerprint_sha256
+    assert (
+        first[0].search_space_fingerprint_sha256
+        == _search_space().fingerprint_sha256
+    )
     assert first[0].fingerprint_sha256 != changed_problem[0].fingerprint_sha256
     assert first[0].fingerprint_sha256 != changed_space[0].fingerprint_sha256
     assert first[0].coordinate_fingerprint_sha256
+
+
+_PROBLEM_A_FINGERPRINT = _problem("a").fingerprint_sha256
 
 
 class _Scorer:
     scorer_id = "identity-test-scorer"
     scorer_version = "1.0.0"
     validated_for_docking_ranking = False
+    problem_fingerprint_sha256 = _PROBLEM_A_FINGERPRINT
+    implementation_source_sha256 = "1" * 64
+    config_fingerprint_sha256 = "2" * 64
 
     def score(self, proposal):
         return proposal.coordinates.square().sum()
@@ -184,6 +327,9 @@ class _Scorer:
 class _LineageRefiner:
     refiner_id = "identity-test-refiner"
     refiner_version = "1.0.0"
+    problem_fingerprint_sha256 = _PROBLEM_A_FINGERPRINT
+    implementation_source_sha256 = "3" * 64
+    config_fingerprint_sha256 = "4" * 64
 
     def refine(self, proposal, *, max_steps):
         assert max_steps == 2
@@ -198,6 +344,9 @@ class _LineageRefiner:
 class _BadRefiner:
     refiner_id = "bad-refiner"
     refiner_version = "1.0.0"
+    problem_fingerprint_sha256 = _PROBLEM_A_FINGERPRINT
+    implementation_source_sha256 = "5" * 64
+    config_fingerprint_sha256 = "6" * 64
 
     def refine(self, proposal, *, max_steps):
         del max_steps
@@ -205,6 +354,8 @@ class _BadRefiner:
 
 
 def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -> None:
+    problem = _problem("a")
+    context = _validity_context(problem)
     budget = DockingBudget(
         candidate_count=2,
         top_k=1,
@@ -217,22 +368,34 @@ def test_refined_pose_requires_parent_lineage_and_preserves_problem_identity() -
         budget,
         _Scorer(),
         refiner=_LineageRefiner(),
-        problem=_problem("a"),
+        validity_context=context,
+        problem=problem,
     )
     assert result.failure_count == 0
-    assert result.problem_fingerprint_sha256 == _problem("a").fingerprint_sha256
+    assert result.problem_fingerprint_sha256 == problem.fingerprint_sha256
+    assert all(row.selection_eligible for row in result.rows)
     for row in result.rows:
         assert row.refined is True
-        assert row.proposal_fingerprint_sha256 != row.result_proposal_fingerprint_sha256
+        assert (
+            row.proposal_fingerprint_sha256
+            != row.result_proposal_fingerprint_sha256
+        )
         assert row.proposal is not None
-        assert row.proposal.parent_proposal_fingerprint_sha256 == row.proposal_fingerprint_sha256
+        assert (
+            row.proposal.parent_proposal_fingerprint_sha256
+            == row.proposal_fingerprint_sha256
+        )
 
     rejected = run_bounded_docking_search(
         _search_space(),
         budget,
         _Scorer(),
         refiner=_BadRefiner(),
-        problem=_problem("a"),
+        validity_context=context,
+        problem=problem,
     )
     assert rejected.failure_count == 2
-    assert all(row.error_code == "DockingSearchError" for row in rejected.rows)
+    assert all(
+        row.error_code in {"DockingProposalError", "DockingSearchError"}
+        for row in rejected.rows
+    )

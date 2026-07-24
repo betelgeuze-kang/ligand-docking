@@ -38,20 +38,26 @@ from .reference_validation_review import (
 
 
 REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_authorization_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_authorization_contract/5.0.0"
 )
 REFERENCE_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_authorization_receipt/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_authorization_receipt/5.0.0"
 )
 REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
-    "cpu_reference_validation_execution_authorization_contract/3.0.0"
+    "cpu_reference_validation_execution_authorization_contract/5.0.0"
 )
-REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:20:00Z"
 REFERENCE_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
+    "3ac19092cd5c7a5f8c6318f4b0a675fd1af21e6af0e46f18e5dd3c282f35c113"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V4 = (
+    "37acbb5e64c7c31e7e00cff89da71640dd1f0c09e49b93809ba13b98db28b221"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V3 = (
     "5a89ce5c7e7e9b0f1e298e0633f17f3cf5cbad37e10ece6e3fb9fe8e268be202"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V2 = (
@@ -237,9 +243,17 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "replace_symmetric_hmac_with_public_key_ed25519_verification",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_reference_validation_review_contract_5_0_0_without_"
+            "authorization_policy_change"
+        ),
         "purpose": {
             "scope": "future_single_run_synthetic_cpu_validation_authorization",
             "contract_definition_only": True,

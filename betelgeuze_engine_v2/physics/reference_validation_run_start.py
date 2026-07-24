@@ -82,22 +82,28 @@ from .validation_source_identity import (
 
 
 REFERENCE_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_run_start_contract/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_run_start_contract/5.0.0"
 )
 REFERENCE_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_network_isolation_attestation/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_network_isolation_attestation/5.0.0"
 )
 REFERENCE_VALIDATION_RUN_START_CONTRACT_ID = (
-    "cpu_reference_validation_run_start_environment/3.0.0"
+    "cpu_reference_validation_run_start_environment/5.0.0"
 )
-REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "3.0.0"
-REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION = "5.0.0"
+REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:35:00Z"
 REFERENCE_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS = 180.0
 REFERENCE_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES = 64 * 1024 * 1024
 REFERENCE_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES = 16 * 1024 * 1024
 REFERENCE_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256 = (
+    "9b325e0aeff7ad5669a5901dea42aeb433573f361d3eb1c51c8e1b155636bfbf"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V4 = (
+    "4d064af8452761d7a8b22062a1d0ed35848dde3ab35050d85ae631088b236337"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V3 = (
     "eb14e8e7b4dd1bd1cf3ce2258ddfb5c7894eb9552b0f088729835855b6ccc39e"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V2 = (
@@ -1021,9 +1027,17 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_RUN_START_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V2
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V4
         ),
-        "refreeze_reason": "binds_public_key_ed25519_authorization_and_network_attestation",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_1_2_0_and_preflight_contracts_5_0_0_"
+            "without_runtime_policy_change"
+        ),
         "purpose": {
             "scope": "pre_evaluation_dependency_and_environment_reverification",
             "contract_and_primitive_only": True,

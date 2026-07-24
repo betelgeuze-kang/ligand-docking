@@ -22,8 +22,12 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_at_s0_production_evidence_bundle_contract
+v2_0_3_0a1_p0_release_line
 ```
+
+The `0.3.0a1` policy explicitly disables the legacy HIP/ROCm customer route.
+Engine v2 remains CPU-reference-only for claim purposes until GPU parity and
+product qualification evidence exist.
 
 Implemented and GitHub-hosted CPU tested:
 
@@ -274,6 +278,14 @@ Implemented and GitHub-hosted CPU tested:
   dispositions. Its
   verifier accepts only canonical JSON byte transport and requires explicit
   current revocation and receipt/result-review supersession inputs.
+  The `0.3.0a1` identity refreeze binds applicability record `1.2.0`
+  (`cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6`),
+  energy/force protocol `1.2.0`
+  (`0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2`),
+  and artifact binding `1.2.0`
+  (`b3341f3b98e29594cfcd727353553efa466116f275f5250c4ae944d624ef62b0`).
+  This is source/dependency lineage, not a production result or scientific
+  acceptance.
   No trusted key, production receipt,
   reservation or artifact root, production nonce reservation, production
   environment receipt, runner start/result receipt, authorized production
@@ -296,9 +308,11 @@ Implemented and GitHub-hosted CPU tested:
   `betelgeuze-engine-v2-openmm-native-minimization` workflow executes the
   OpenMM L-BFGS endpoint for all eight supported cases, retains all six
   expected fail-closed rows, and re-evaluates every endpoint with Engine v2 at
-  identical coordinates. Configuration SHA-256 is
-  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`.
-  A 2026-07-24 local receipt retained all 14 rows and passed 8/8 same-coordinate
+  identical coordinates. Current `1.3.0` configuration SHA-256 is
+  `9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51`.
+  A 2026-07-24 local receipt under superseded `1.0.0` configuration
+  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`
+  retained all 14 rows and passed 8/8 same-coordinate
   energy/force mappings and 8/8 energy-nonincrease checks, but only 6/8 frozen
   endpoint-health checks: the two fixed-Born constrained cases exceeded the
   tangent-force bound after final constraint projection. Receipt SHA-256 is
@@ -309,9 +323,11 @@ Implemented and GitHub-hosted CPU tested:
   `betelgeuze-engine-v2-openmm-fixed-born-disposition` workflow binds those
   exact rejected inputs and executes a frozen 2-case/16-probe diagnostic with
   OpenMM minimizer callback, restraint-stage, energy, constraint-error, and
-  pre/post projection traces. V2 configuration SHA-256 is
+  pre/post projection traces. Current v5 configuration SHA-256 is
+  `6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281`.
+  The historical receipt below binds v2 configuration
   `ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045`;
-  it retains the rejected v1 observer configuration
+  that lineage retains the rejected v1 observer configuration
   `67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1`
   and adds only a separate no-reporter bitwise control. Actual receipt
   `870f1ea247da4b0232f22804298e75d554af511da18924a7ba49c1c703f003f2`
@@ -328,10 +344,12 @@ Implemented and GitHub-hosted CPU tested:
   `1e-10 kcal/mol` of the best accepted energy. Candidate and same-coordinate
   OpenMM configuration SHA-256 values are
   `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`
-  and `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`.
-  Single-host candidate receipt
+  and `69f5168dbf7bcaa9f4ff85f9e2e9f7800b8b21685110000a90c909d552eab6db`.
+  The historical single-host candidate receipt
   `16a4db9ca59ad969c63bb896a8bc3cb3310e7b5cc5f5e94e9a3b2dbf59d79f70`
-  passes only the four applicable constrained aliases. Maximum total-energy
+  binds superseded comparison configuration
+  `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`
+  and passes only the four applicable constrained aliases. Maximum total-energy
   and force errors against OpenMM Reference are `1.07e-14 kcal/mol` and
   `2.40e-14 kcal/mol/Å`; both evaluators meet the unchanged `1e-8` absolute
   tangent-force bound at a constraint residual below `8.66e-15 Å`. The other
@@ -340,16 +358,19 @@ Implemented and GitHub-hosted CPU tested:
   `betelgeuze-engine-v2-minimization-stationarity-successor` observation path
   then reuses all fourteen frozen inputs: four v1 rows keep their prior paths,
   four constrained rows use the candidate and a Torch/NumPy-free tuple oracle,
-  and six fail-closed rows preserve exact dispositions. Configuration SHA-256
-  is `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`.
-  Single-host candidate observation
+  and six fail-closed rows preserve exact dispositions. Current `1.3.0`
+  configuration SHA-256 is
+  `edae2c0ff83761426185e5eb269b1e30ea5dd5446c93121eef94163af284c237`.
+  The single-host candidate observation
   `18c6d617781e93c903332352d6f66e8eb2897e2c965035cd6f437d0324d3d1b9`
-  passes 14/14 rows and 3/3 operational/oracle restart comparisons while
+  binds superseded configuration
+  `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`
+  and passes 14/14 rows and 3/3 operational/oracle restart comparisons while
   retaining complete energy, coordinate, and failure traces and binding the
   4/4 OpenMM same-coordinate candidate. It is not a production receipt;
   two-host reproduction, independent review, native OpenMM L-BFGS repair, and
   S0 remain false;
-  a separate v4
+  a separate v7
   Ed25519 verifier freshly checks both Engine result-review chains, the exact
   OpenMM materialization, both component/trace receipts, and the native
   endpoint receipt before signing one host-scoped comparison. On a rejected
@@ -359,15 +380,15 @@ Implemented and GitHub-hosted CPU tested:
   observation therefore produces a signed `rejected` review that retains both
   failed fixed-Born case IDs and cannot report the full external comparison as
   accepted. Host-review contract SHA-256 is
-  `6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`.
-  A frozen v4 final S0 bundle contract now freshly reverifies exactly two such
+  `f7b57f08afd44e0ab7848c8ce75b08560d00cf381895aaeaf251e23cd3b81c7a`.
+  A frozen v6 final S0 bundle contract now freshly reverifies exactly two such
   host inputs, requires distinct host/CPU/session/custody/artifact/nonces and
   exact commit/source/dependency/runtime/seed plus energy-force, trace, and
   native-endpoint physics equality. It rejects either host unless native
   endpoint health is accepted with 8/8 cases, no failed case IDs, and the
   failure-specific disposition path marked not applicable, then verifies a
   role-separated final Ed25519 human approval. S0 contract SHA-256 is
-  `549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`.
+  `5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4`.
   A verified bundle can establish
   only the frozen synthetic S0 protocols and admission to S1; chemistry,
   fitting, benchmark, product, customer, and broad scientific claims stay

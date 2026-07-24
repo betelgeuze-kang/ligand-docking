@@ -595,7 +595,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_at_s0_production_evidence_bundle_contract"
+          assert capability_snapshot()["implementation_stage"] == "v2_0_3_0a1_p0_release_line"
           assert len(capability_snapshot()["capabilities"]) == 50
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (

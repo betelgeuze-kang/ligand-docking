@@ -13,12 +13,13 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScoreDescriptor,
     PoseMetricError,
     PoseValidityConfig,
+    PoseValidityContext,
     ScoreDirection,
     TorsionSearchSpace,
     evaluate_pose_validity,
     generate_bounded_docking_proposals,
     kabsch_aligned_rmsd,
-    run_bounded_docking_search,
+    run_bounded_docking_search as _run_bounded_docking_search,
     symmetry_aware_rmsd,
 )
 
@@ -26,7 +27,12 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
 def _space() -> TorsionSearchSpace:
     return TorsionSearchSpace(
         local_offsets=torch.tensor(
-            [[0.0, 0.0, 0.0], [1.2, 0.0, 0.0], [1.0, 0.5, 0.0], [0.8, 0.5, 0.4]],
+            [
+                [0.0, 0.0, 0.0],
+                [1.2, 0.0, 0.0],
+                [1.0, 0.5, 0.0],
+                [0.8, 0.5, 0.4],
+            ],
             dtype=torch.float64,
         ),
         parent=torch.tensor([-1, 0, 1, 2], dtype=torch.long),
@@ -43,10 +49,46 @@ def _problem() -> DockingProblemIdentity:
     )
 
 
+def _validity_context(problem: DockingProblemIdentity) -> PoseValidityContext:
+    reference = generate_bounded_docking_proposals(
+        _space(),
+        DockingBudget(candidate_count=1, top_k=1, max_torsions=2),
+        problem=problem,
+    )[0].coordinates
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=((0, 1), (1, 2), (2, 3)),
+        excluded_nonbonded_pairs=((0, 1), (1, 2), (2, 3)),
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]], dtype=torch.float64
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(
+            pocket_radius_angstrom=100.0,
+            ligand_self_clash_angstrom=0.0,
+            receptor_ligand_clash_angstrom=0.0,
+        ),
+    )
+
+
+def run_bounded_docking_search(*args, **kwargs):
+    problem = kwargs.get("problem")
+    if problem is not None and "validity_context" not in kwargs:
+        kwargs["validity_context"] = _validity_context(problem)
+    return _run_bounded_docking_search(*args, **kwargs)
+
+
+_PROBLEM_FINGERPRINT = _problem().fingerprint_sha256
+
+
 class _MaximizeScorer:
     scorer_id = "maximize-coordinate-sum"
     scorer_version = "1.0.0"
     validated_for_docking_ranking = False
+    problem_fingerprint_sha256 = _PROBLEM_FINGERPRINT
+    implementation_source_sha256 = "e" * 64
     config_fingerprint_sha256 = "d" * 64
     score_descriptor = DockingScoreDescriptor(
         score_id="coordinate_sum_proxy",
@@ -65,7 +107,9 @@ class _SecretFailingScorer(_MaximizeScorer):
 
     def score(self, proposal):
         del proposal
-        raise RuntimeError("/home/customer/private/ligand.sdf API_TOKEN=secret-value")
+        raise RuntimeError(
+            "/home/customer/private/ligand.sdf API_TOKEN=secret-value"
+        )
 
 
 class _CountingScorer(_MaximizeScorer):
@@ -82,6 +126,9 @@ class _CountingScorer(_MaximizeScorer):
 class _CountingRefiner:
     refiner_id = "counting-refiner"
     refiner_version = "1.0.0"
+    problem_fingerprint_sha256 = _PROBLEM_FINGERPRINT
+    implementation_source_sha256 = "f" * 64
+    config_fingerprint_sha256 = "1" * 64
 
     def __init__(self) -> None:
         self.call_count = 0
@@ -106,12 +153,19 @@ def test_score_direction_controls_ranking_and_component_fingerprints_are_emitted
         diversity_rmsd_angstrom=0.0,
     )
     successful = [row for row in result.rows if row.succeeded]
-    expected = sorted(successful, key=lambda row: (-float(row.score), row.proposal_index))[:2]
-    assert [row.candidate_id for row in result.top_rows] == [row.candidate_id for row in expected]
+    expected = sorted(
+        successful,
+        key=lambda row: (-float(row.score), row.proposal_index),
+    )[:2]
+    assert [row.candidate_id for row in result.top_rows] == [
+        row.candidate_id for row in expected
+    ]
     assert result.score_descriptor.direction is ScoreDirection.MAXIMIZE
     assert len(result.scorer_contract_fingerprint_sha256) == 64
     assert result.refiner_contract_fingerprint_sha256 == ""
     assert "docking_score_uncalibrated" in result.blockers
+    assert result.validity_context_fingerprint_sha256
+    assert all(row.selection_eligible for row in successful)
 
 
 def test_failure_rows_redact_private_exception_text() -> None:
@@ -140,8 +194,12 @@ def test_kabsch_and_symmetry_aware_rmsd_are_explicit_and_bounded() -> None:
         [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
         dtype=torch.float64,
     )
-    transformed = reference @ rotation.T + torch.tensor([4.0, -2.0, 1.0], dtype=torch.float64)
-    assert kabsch_aligned_rmsd(reference, transformed) == pytest.approx(0.0, abs=1.0e-10)
+    transformed = reference @ rotation.T + torch.tensor(
+        [4.0, -2.0, 1.0], dtype=torch.float64
+    )
+    assert kabsch_aligned_rmsd(reference, transformed) == pytest.approx(
+        0.0, abs=1.0e-10
+    )
 
     swapped = transformed[[0, 2, 1]]
     result = symmetry_aware_rmsd(
@@ -165,7 +223,9 @@ def test_pose_validity_checks_rotation_bonds_clashes_pocket_and_chirality() -> N
         proposal,
         reference,
         bond_pairs=((0, 1), (1, 2), (2, 3)),
-        receptor_coordinates=torch.tensor([[20.0, 20.0, 20.0]], dtype=torch.float64),
+        receptor_coordinates=torch.tensor(
+            [[20.0, 20.0, 20.0]], dtype=torch.float64
+        ),
         pocket_center=reference.mean(dim=0),
         chirality_centers=((1, 0, 2, 3),),
         config=PoseValidityConfig(pocket_radius_angstrom=10.0),
@@ -233,7 +293,9 @@ def test_missing_pocket_is_not_evaluated_and_prevents_complete_validity() -> Non
         proposal,
         reference,
         bond_pairs=((0, 1), (1, 2), (2, 3)),
-        receptor_coordinates=torch.tensor([[20.0, 20.0, 20.0]], dtype=torch.float64),
+        receptor_coordinates=torch.tensor(
+            [[20.0, 20.0, 20.0]], dtype=torch.float64
+        ),
         chirality_centers=((1, 0, 2, 3),),
     )
 
@@ -283,7 +345,9 @@ def test_missing_topology_is_not_evaluated_but_explicit_empty_declarations_are()
     )[0]
     reference = proposal.coordinates.clone()
     common = {
-        "receptor_coordinates": torch.tensor([[20.0, 20.0, 20.0]], dtype=torch.float64),
+        "receptor_coordinates": torch.tensor(
+            [[20.0, 20.0, 20.0]], dtype=torch.float64
+        ),
         "pocket_center": reference.mean(dim=0),
         "config": PoseValidityConfig(pocket_radius_angstrom=10.0),
     }
@@ -367,7 +431,10 @@ def test_search_fingerprint_canonicalizes_list_and_tensor_symmetry_mappings() ->
         ),
     )
 
-    assert from_lists.search_fingerprint_sha256 == from_tensors.search_fingerprint_sha256
+    assert (
+        from_lists.search_fingerprint_sha256
+        == from_tensors.search_fingerprint_sha256
+    )
 
 
 def test_search_fingerprint_preserves_symmetry_mapping_order() -> None:

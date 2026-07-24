@@ -767,7 +767,14 @@ claim status without revalidating the dependency and freshness chain.
   into fifty-nine deterministic CPU float64 variants and binds both that source
   and a standard-library-only analytic oracle. The oracle uses scalar equations
   with forward-mode exact derivatives and an AST-enforced boundary forbidding
-  reference-evaluator, protocol, Torch, NumPy, and external-solver imports. No
+  reference-evaluator, protocol, Torch, NumPy, and external-solver imports.
+  Current identities are applicability record `1.2.0`
+  `cfc9d2a5f9ff4ee2539c3e15a8c0519788e26c447a71de4e994c53d4f78760a6`,
+  protocol `1.2.0`
+  `0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2`,
+  and artifact binding `1.2.0`
+  `b3341f3b98e29594cfcd727353553efa466116f275f5250c4ae944d624ef62b0`.
+  No
   production result receipt or independently accepted metric evidence exists;
   test-only observations and receipts are implementation checks, synthetic
   values are not fit data, and neither production validation execution nor a
@@ -875,10 +882,11 @@ claim status without revalidating the dependency and freshness chain.
 - Preserve the separate installable OpenMM native-minimization endpoint
   comparison. It must bind an exact prior 27/59 plus 14-case materialization,
   execute eight L-BFGS endpoints, retain six expected fail-closed rows, and
-  re-evaluate Engine v2 at every identical endpoint coordinate. Frozen
-  configuration SHA-256 is
-  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`.
-  The 2026-07-24 local receipt
+  re-evaluate Engine v2 at every identical endpoint coordinate. Current
+  `1.3.0` configuration SHA-256 is
+  `9189afe3a01a7eb8ee2c26e8b233db6c2250a14317f8498e34303c1c2b4fdf51`.
+  The 2026-07-24 local receipt binds superseded `1.0.0` configuration
+  `6465f726c408e6df2dd15d318a4cdfc57a8b2edd271ddaa578edcc336110017e`:
   `7e5b3454afc41f9954f71dfc3b0b274906323f15fd8ea6630bfcc1e95ce95b7c`
   passed all eight same-coordinate mapping and energy-nonincrease checks but
   retained a 6/8 endpoint-health result because the two fixed-Born constrained
@@ -886,8 +894,10 @@ claim status without revalidating the dependency and freshness chain.
   projection. Keep this result rejected and failure-inclusive; do not tune the
   frozen thresholds, infer endpoint/trajectory equivalence, or use it as
   production, S0/S1, applicability, fitting, benchmark, or product evidence.
-- Preserve the separate fixed-Born failure-disposition receipt. Its v2
+- Preserve the separate fixed-Born failure-disposition receipt. Its current v5
   configuration SHA-256 is
+  `6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281`;
+  the historical receipt binds v2 configuration
   `ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045`;
   the predecessor reporter-observer configuration
   `67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1`
@@ -905,14 +915,17 @@ claim status without revalidating the dependency and freshness chain.
   non-superseding repair lane. Its default optimizer and same-coordinate
   OpenMM configuration SHA-256 values are
   `5642654a25a2d024f7cb8c1de024815f6bf6032b06f6c57509d7b784b708f708`
-  and `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`.
-  The local single-host receipt
+  and `69f5168dbf7bcaa9f4ff85f9e2e9f7800b8b21685110000a90c909d552eab6db`.
+  The local single-host receipt binds superseded OpenMM configuration
+  `722d319c865eb15dd12296dee998b26332e2c1ad8edf3e5e6611914b960529d1`:
   `16a4db9ca59ad969c63bb896a8bc3cb3310e7b5cc5f5e94e9a3b2dbf59d79f70`
   passes the four constrained aliases at the unchanged constraint and absolute
   tangent-force thresholds, with exact restart and separate fixed-Born
   self/pair terms. It explicitly excludes the other ten frozen cases and does
-  not invoke or repair native OpenMM L-BFGS. A separate successor configuration
-  `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5`
+  not invoke or repair native OpenMM L-BFGS. The current successor configuration
+  is `edae2c0ff83761426185e5eb269b1e30ea5dd5446c93121eef94163af284c237`;
+  the historical observation binds superseded configuration
+  `5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5` and
   now retains all fourteen frozen inputs and applies the new algorithm only to
   the four constrained aliases. Single-host candidate observation
   `18c6d617781e93c903332352d6f66e8eb2897e2c965035cd6f437d0324d3d1b9`
@@ -923,7 +936,7 @@ claim status without revalidating the dependency and freshness chain.
   successor run on two distinct CPU hosts, an accepted independent external
   receipt and reviewer disposition, and an S0 contract revision that preserves
   rather than rewrites the rejected 6/8 evidence.
-- Preserve the v4 host-review and S0 propagation gate. Host review must freshly
+- Preserve the v7 host-review and v6 S0 propagation gate. Host review must freshly
   verify the exact materialization and native receipt, retain failed case IDs,
   and derive a signed rejection whenever endpoint health is below 8/8. That
   rejected path must also freshly verify the exact fixed-Born disposition
@@ -935,8 +948,8 @@ claim status without revalidating the dependency and freshness chain.
   the failure-specific path to be not applicable on accepted hosts, and compare
   the complete native-minimization physics projection across future accepted
   hosts. Current host-review and S0 contract SHA-256 values are
-  `6e543d32b320b562fa0b3ad31c1ac26cc7b274fcbb4f79025f53ce1035ea5970`
-  and `549fbdb865704a84df4ecb525f4ea27a7c5ab8526f7f1be0b0f666cd9c6fd08d`.
+  `f7b57f08afd44e0ab7848c8ce75b08560d00cf381895aaeaf251e23cd3b81c7a`
+  and `5eb28543fa9b11ac3559c20c72955c6c9c9adec757869975c71ef0207beee3a4`.
   S0 admission continues to require 8/8, so completed disposition evidence
   cannot promote the current host review or weaken the two-host gate.
 - Preserve the verifier-only adjacent registry-epoch transition contract as an

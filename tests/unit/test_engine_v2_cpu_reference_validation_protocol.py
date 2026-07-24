@@ -47,7 +47,7 @@ def test_frozen_protocol_binds_h5_dependency_cases_thresholds_and_digest() -> No
         FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256
     )
     assert FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256 == (
-        "1ee318ca1550953022783afa8b88eb66e3698489708c0a96969b855ca2995298"
+        "0e34905c635b33b47a26cb459a93840166fc222c663d73af43d40d36814d7ee2"
     )
     assert protocol.protocol_sha256 == document["protocol_sha256"]
     dependencies = document["dependencies"]

@@ -320,8 +320,21 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     path = Path("config/independent_engine_v2_capabilities.yaml")
     loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     assert loaded == capability_snapshot()
-    assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
+    assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 5
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
+    assert loaded["legacy_customer_paths"]["hip_rocm_product_runtime"] == {
+        "enabled": False,
+        "customer_execution_enabled": False,
+        "replacement_route": (
+            "none_until_engine_v2_gpu_parity_and_product_qualification"
+        ),
+        "blockers": [
+            "legacy_product_runtime_not_engine_v2_authenticated",
+            "cpu_reference_freeze_incomplete",
+            "gpu_parity_evidence_missing",
+            "product_integration_not_qualified",
+        ],
+    }
     assert len(loaded["capabilities"]) == 50
 
     rows = loaded["capabilities"]

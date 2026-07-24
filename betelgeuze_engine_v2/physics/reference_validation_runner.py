@@ -83,13 +83,13 @@ from .validation_native_runtime_identity import (
 
 
 REFERENCE_VALIDATION_RUNNER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_contract/5.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_contract/7.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_START_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_start/5.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_start/7.0.0"
 )
 REFERENCE_VALIDATION_RUN_OBSERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_run_observation/5.0.0"
+    "betelgeuze.engine_v2_reference_validation_run_observation/7.0.0"
 )
 _CASE_WORKER_INCOMPLETE_FAILURE_CODES = frozenset(
     {
@@ -100,10 +100,10 @@ _CASE_WORKER_INCOMPLETE_FAILURE_CODES = frozenset(
     }
 )
 REFERENCE_VALIDATION_RUNNER_CONTRACT_ID = (
-    "cpu_reference_validation_bounded_runner/5.0.0"
+    "cpu_reference_validation_bounded_runner/7.0.0"
 )
-REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "5.0.0"
-REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION = "7.0.0"
+REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:40:00Z"
 REFERENCE_VALIDATION_RUNNER_MAX_RECEIPT_AGE = timedelta(minutes=5)
 REFERENCE_VALIDATION_RUNNER_MAX_WALL_SECONDS = 120.0
 REFERENCE_VALIDATION_RUNNER_PREFLIGHT_MAX_WALL_SECONDS = 180.0
@@ -116,13 +116,13 @@ REFERENCE_VALIDATION_CASE_WORKER_MAX_OUTPUT_BYTES = 8 * 1_048_576
 REFERENCE_VALIDATION_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_VALIDATION_CENTRAL_DIFFERENCE_STEP_ANGSTROM = 1.0e-5
 REFERENCE_VALIDATION_RUNNER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_request/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_request/4.0.0"
 )
 REFERENCE_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_runner_response/3.0.0"
+    "betelgeuze.engine_v2_reference_validation_runner_response/4.0.0"
 )
 REFERENCE_VALIDATION_CASE_WORKER_REQUEST_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_case_worker_request/5.0.0"
+    "betelgeuze.engine_v2_reference_validation_case_worker_request/6.0.0"
 )
 REFERENCE_VALIDATION_WORKER_FRAME_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_validation_worker_frame/1.0.0"
@@ -138,6 +138,12 @@ REFERENCE_VALIDATION_TRUST_STORE_PATH = (
 )
 
 FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256 = (
+    "dda3ba6733c35c5609892e5666a79bf2e9a2d82f13e674af025470e56c0a5e18"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V6 = (
+    "2322a391f8ce2457c830a834ebff642b2130355bd4fe85b324a01e0694583a93"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V5 = (
     "4c2cc8f162f2e71686c99245deca977df725306ab58afc1fa96d84019be00cdb"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V4 = (
@@ -2286,15 +2292,34 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_RUNNER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RUNNER_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V4
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V6
         ),
-        "refreeze_reason": "binds_public_key_ed25519_review_authorization_and_trust_store",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V5,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V4,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V2,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_result_and_run_start_contracts_"
+            "without_execution_bound_change"
+        ),
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "bounded_runner_primitive_only": True,
             "production_execution_performed": False,
             "production_results_collected": False,
             "result_receipt_written": False,
+        },
+        "dependencies": {
+            "protocol_sha256": FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
+            "result_receipt_contract_sha256": (
+                FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+            ),
+            "run_start_contract_sha256": (
+                FROZEN_REFERENCE_VALIDATION_RUN_START_CONTRACT_SHA256
+            ),
         },
         "preflight": {
             "persisted_environment_receipt_reread_required": True,

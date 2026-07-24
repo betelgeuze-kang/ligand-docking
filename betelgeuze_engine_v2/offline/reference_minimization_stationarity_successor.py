@@ -54,13 +54,22 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol imp
 
 
 REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SCHEMA_ID = (
-    "betelgeuze.engine_v2_minimization_stationarity_successor_config/1.0.0"
+    "betelgeuze.engine_v2_minimization_stationarity_successor_config/1.3.0"
 )
 REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_OBSERVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_minimization_stationarity_successor_observation/1.0.0"
+    "betelgeuze.engine_v2_minimization_stationarity_successor_observation/1.3.0"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1 = (
+    "5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1_1 = (
+    "fa9ea4e4c04f99d80d8fecb78fdf7326c7303b98a29ec7e783afba57ed0a8165"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1_2 = (
+    "d3e1b7500dce799c96713a7d782bb4a17a7866e3c36358f27490b03f036ab6d6"
 )
 FROZEN_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256 = (
-    "5c39aa346531d8f3cff378361367f7ff236f2c94c0c4bb3db66a28ec8e27d4f5"
+    "edae2c0ff83761426185e5eb269b1e30ea5dd5446c93121eef94163af284c237"
 )
 
 REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_ENERGY_ERROR_THRESHOLD = 1.0e-10
@@ -172,7 +181,17 @@ def _configuration_projection() -> dict[str, object]:
             REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SCHEMA_ID
         ),
         "successor_id": (
-            "cpu_reference_minimization_stationarity_successor/1.0.0"
+            "cpu_reference_minimization_stationarity_successor/1.3.0"
+        ),
+        "superseded_configuration_sha256": (
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1_2
+        ),
+        "legacy_configuration_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1_1,
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1
+        ],
+        "refreeze_reason": (
+            "bind_openmm_same_coordinate_contract_1_3_0_without_threshold_change"
         ),
         "parent_frozen_protocol_sha256": (
             FROZEN_CPU_MINIMIZATION_VALIDATION_PROTOCOL_SHA256
@@ -2026,6 +2045,8 @@ if __name__ == "__main__":
 
 
 __all__ = [
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1",
+    "FROZEN_LEGACY_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256_V1_1",
     "FROZEN_REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SHA256",
     "REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_CONFIG_SCHEMA_ID",
     "REFERENCE_MINIMIZATION_STATIONARITY_SUCCESSOR_OBSERVATION_SCHEMA_ID",

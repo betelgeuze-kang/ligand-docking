@@ -8,6 +8,9 @@ import sys
 import pytest
 
 from betelgeuze_engine_v2.offline.openmm_reference_oracle import (
+    FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_2,
     FROZEN_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256,
     OPENMM_REFERENCE_ENERGY_MAX_RMS_THRESHOLD_KCAL_PER_MOL,
     OPENMM_REFERENCE_FORCE_MAX_RMS_THRESHOLD_KCAL_PER_MOL_ANGSTROM,
@@ -45,7 +48,25 @@ def test_mapping_contract_freezes_all_energy_force_and_minimization_rows() -> No
         document["contract_sha256"] == FROZEN_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256
     )
     assert FROZEN_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256 == (
-        "0bfc077eded6637ac4cec41fa863ead9bec16ad6665758e1642d12abfb958b43"
+        "4f0163ff1ef9630d2fcac730cacae8ce6237ae0bf0ad53e031b93e17acc5eeda"
+    )
+    assert document["contract_version"] == "1.3.0"
+    assert (
+        document["superseded_contract_sha256"]
+        == FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_2
+        == "342b8b8538b92875ede9399833561a3987c55bf7ea7384c87ea2f10ddfddbc97"
+    )
+    assert document["legacy_contract_chain_sha256s"] == [
+        FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_1,
+        FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1,
+    ]
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1_1
+        == "6b55bdcf50d398ee0d62f5093f2cdf903ea384da6fd4d257633200923840c3c0"
+    )
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_MAPPING_CONTRACT_SHA256_V1
+        == "0bfc077eded6637ac4cec41fa863ead9bec16ad6665758e1642d12abfb958b43"
     )
     assert document["required_runtime"] == {
         "distribution_name": "OpenMM",

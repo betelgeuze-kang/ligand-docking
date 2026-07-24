@@ -471,7 +471,7 @@ def test_contract_is_frozen_with_exact_energy_force_coverage() -> None:
     assert (
         contract["schema_id"] == REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SCHEMA_ID
     )
-    assert contract["frozen_at_utc"] == "2026-07-22T12:00:00Z"
+    assert contract["frozen_at_utc"] == "2026-07-24T18:50:00Z"
     assert contract["contract_sha256"] == (
         FROZEN_REFERENCE_VALIDATION_RESULT_REVIEW_CONTRACT_SHA256
     )

@@ -370,7 +370,7 @@ def _materialized_inputs(tmp_path: Path) -> dict[str, object]:
     _private_receipt(observation_path, observation)
 
     wheel_path = (
-        tmp_path / "betelgeuze_engine_v2-0.2.0rc2-py3-none-any.whl"
+        tmp_path / "betelgeuze_engine_v2-0.3.0a1-py3-none-any.whl"
     )
     wheel_sha = _engine_wheel(wheel_path)
     work_order = reproduction.materialize_posebusters_sulfur_reproduction_work_order(

@@ -132,7 +132,7 @@ def test_observation_reexecutes_complete_receipt(observation) -> None:
 
     assert verified == observation
     assert verified["observation_sha256"] == (
-        "cd0b849e206124e11996581c81dcc13da9d11ee3caa1c8176b5525dfead271a6"
+        "1a0ff9f83dc11e40d631adbdf476c4a004d2b709b50f3f480092082ef93bc106"
     )
     assert verified["summary"] == {
         "physical_case_count": 3,

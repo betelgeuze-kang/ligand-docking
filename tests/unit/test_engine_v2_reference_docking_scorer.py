@@ -13,6 +13,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DEFAULT_SUPPORTED_DOCKING_ATOMIC_NUMBERS,
     DockingBudget,
     DockingProblemIdentity,
+    PoseValidityConfig,
+    PoseValidityContext,
     ReferenceDockingScoringError,
     TorsionSearchSpace,
     UncalibratedReferenceDockingScorer,
@@ -162,6 +164,27 @@ def _fixture(receptor_charge: float = 0.25):
     return receptor, ligand, problem, space, scorer
 
 
+def _validity_context(
+    ligand: AllAtomSystem,
+    problem: DockingProblemIdentity,
+) -> PoseValidityContext:
+    reference = ligand.coordinates[0]
+    bonds = tuple((bond.atom_i, bond.atom_j) for bond in ligand.bonds)
+    return PoseValidityContext(
+        problem_fingerprint_sha256=problem.fingerprint_sha256,
+        reference_coordinates=reference,
+        bond_pairs=bonds,
+        excluded_nonbonded_pairs=bonds,
+        receptor_coordinates=torch.tensor(
+            [[100.0, 100.0, 100.0]],
+            dtype=torch.float64,
+        ),
+        pocket_center=reference.mean(dim=0),
+        chirality_centers=(),
+        config=PoseValidityConfig(pocket_radius_angstrom=20.0),
+    )
+
+
 def _single_atom_fixture(
     element: str,
     *,
@@ -223,7 +246,7 @@ def _term_map(breakdown):
 
 
 def test_reference_scorer_emits_four_parameter_bound_terms_in_search_rows() -> None:
-    _receptor, _ligand, problem, space, scorer = _fixture()
+    _receptor, ligand, problem, space, scorer = _fixture()
     result = run_bounded_docking_search(
         space,
         DockingBudget(
@@ -234,6 +257,7 @@ def test_reference_scorer_emits_four_parameter_bound_terms_in_search_rows() -> N
             seed=41,
         ),
         scorer,
+        validity_context=_validity_context(ligand, problem),
         problem=problem,
         diversity_rmsd_angstrom=0.0,
     )

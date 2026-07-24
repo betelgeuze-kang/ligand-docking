@@ -85,22 +85,25 @@ from .validation_source_identity import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_run_start_contract/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ISOLATION_ATTESTATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_run_start_environment/5.0.0"
+    "cpu_reference_minimization_validation_run_start_environment/6.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION = "5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION = "6.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_MAX_RECORD_BYTES = 131_072
 REFERENCE_MINIMIZATION_VALIDATION_RUN_START_PREFLIGHT_MAX_WALL_SECONDS = 180.0
 REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_MANIFEST_MAX_RECORD_BYTES = 64 * 1024 * 1024
 REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_MAX_RECORD_BYTES = 16 * 1024 * 1024
 REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_MAX_VALIDITY = timedelta(minutes=5)
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256 = (
+    "26ea9ede7e17c3999538fe0c98963bbe84b18266169485f10f5bcb23cedbbe21"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V5 = (
     "24f89b8d1479d3d46d374fb8ab52cedc146c5ccea745358e66d3913f10c58e41"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4 = (
@@ -897,9 +900,11 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V4
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUN_START_CONTRACT_SHA256_V5
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_authorization_reservation_and_receipts",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_authorization_reservation_and_receipts"
+        ),
         "purpose": {
             "scope": "pre_evaluation_dependency_and_environment_reverification",
             "contract_and_primitive_only": True,

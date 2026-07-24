@@ -42,20 +42,23 @@ from .reference_minimization_validation_review import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_authorization_contract/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/5.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/6.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_execution_authorization_contract/5.0.0"
+    "cpu_reference_minimization_validation_execution_authorization_contract/6.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "5.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION = "6.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_MAX_VALIDITY = timedelta(hours=24)
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256 = (
+    "dea1c143e01c232fb935046b3edceafaef4a39d0ec4cda18aefa86175465ea93"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V5 = (
     "ed8b8af819a5d8c7f9b20393062470e4c038de88775199e307101733fd9c8020"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V4 = (
@@ -215,9 +218,11 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V4
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256_V5
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_review_and_receipt_contracts",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_review_and_receipt_contracts"
+        ),
         "purpose": {
             "scope": "future_single_run_synthetic_cpu_minimization_validation_authorization",
             "contract_definition_only": True,

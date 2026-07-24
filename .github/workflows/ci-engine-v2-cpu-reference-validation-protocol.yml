@@ -486,7 +486,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 50
-          assert loaded["implementation_stage"] == "v2_at_s0_production_evidence_bundle_contract"
+          assert loaded["implementation_stage"] == "v2_0_3_0a1_p0_release_line"
           process_identity = process_launch_identity_contract_document()
           assert process_identity["contract_sha256"] == (
               FROZEN_PROCESS_LAUNCH_IDENTITY_CONTRACT_SHA256

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import re
 
 DISTRIBUTION_NAME = "betelgeuze-engine-v2"
-DISTRIBUTION_VERSION = "0.2.0rc2"
+DISTRIBUTION_VERSION = "0.3.0a1"
 ENGINE_API_VERSION = "2.0.0"
 ENGINE_RESULT_SCHEMA_VERSION = "2.0.0"
 CHECKPOINT_SCHEMA_VERSION = "2.0.0"

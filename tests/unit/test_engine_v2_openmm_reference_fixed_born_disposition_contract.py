@@ -7,6 +7,9 @@ import sys
 from betelgeuze_engine_v2.offline.openmm_reference_fixed_born_disposition import (
     FIXED_BORN_FAILURE_CASE_IDS,
     FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1,
+    FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V2,
+    FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V3,
+    FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V4,
     FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256,
     openmm_reference_fixed_born_disposition_configuration_document,
 )
@@ -20,11 +23,31 @@ def test_fixed_born_disposition_configuration_is_frozen_and_claim_closed() -> No
     assert (
         configuration["configuration_sha256"]
         == FROZEN_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256
-        == "ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045"
+        == "6182cecaa21d5d191baacda1bc9cf7ae7d3cb9eb8b2ca0217757cb23af37c281"
     )
     assert (
         configuration["protocol_revision"]["predecessor_configuration_sha256"]
-        == FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1
+        == FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V4
+        == "2ca9ca3db259eecd94df5a553f934740764bdca3f7d50e2d9d31d4b2695d209e"
+    )
+    assert (
+        configuration["protocol_revision"]["legacy_configuration_chain_sha256s"]
+        == [
+            FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V3,
+            FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V2,
+            FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1,
+        ]
+    )
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V3
+        == "8cbcf0f7872fdd83bdf5339e230094309000af49ca39d79fcaaaa0bf49bd6a48"
+    )
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V2
+        == "ac601f3cfedd68e24b6507778ea36c1676fb24cacf89c7c2fa73848bf3c68045"
+    )
+    assert (
+        FROZEN_LEGACY_OPENMM_REFERENCE_FIXED_BORN_DISPOSITION_CONFIGURATION_SHA256_V1
         == "67f1a6025155d8f62cd3d1aa7da2803e229a4dce7871050db6c323f531f0b8c1"
     )
     assert configuration["expected_failed_case_ids"] == list(

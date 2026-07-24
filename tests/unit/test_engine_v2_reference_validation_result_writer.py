@@ -531,7 +531,7 @@ def test_result_writer_contract_is_frozen_and_current_decision_is_closed() -> No
 
     assert first == second
     assert first["schema_id"] == REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID
-    assert first["frozen_at_utc"] == "2026-07-22T12:00:00Z"
+    assert first["frozen_at_utc"] == "2026-07-24T18:45:00Z"
     assert first["contract_sha256"] == (
         FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256
     )

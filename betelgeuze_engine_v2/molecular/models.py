@@ -8,8 +8,9 @@ same topology can carry an ensemble without duplicating atom metadata.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 import re
-from typing import Any, Mapping
+from typing import Any, Mapping, NoReturn
 
 import torch
 
@@ -37,6 +38,44 @@ _ATOMIC_NUMBER_BY_SYMBOL = {
 }
 
 
+class _FrozenSequence(tuple[Any, ...]):
+    """Tuple storage with value equality compatible with JSON arrays."""
+
+    __slots__ = ()
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, (list, tuple)):
+            return tuple(self) == tuple(other)
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        equal = self.__eq__(other)
+        if equal is NotImplemented:
+            return NotImplemented
+        return not equal
+
+    __hash__ = tuple.__hash__
+
+
+class _FrozenMetadataMapping(dict[str, Any]):
+    """JSON-compatible mapping that rejects normal mutation surfaces."""
+
+    __slots__ = ()
+
+    @staticmethod
+    def _immutable(*_args: Any, **_kwargs: Any) -> NoReturn:
+        raise TypeError("canonical metadata is immutable")
+
+    __setitem__ = _immutable
+    __delitem__ = _immutable
+    clear = _immutable
+    pop = _immutable
+    popitem = _immutable
+    setdefault = _immutable
+    update = _immutable
+    __ior__ = _immutable
+
+
 def canonical_element_symbol(value: str) -> str:
     text = str(value or "").strip()
     if not text:
@@ -60,6 +99,57 @@ def _digest_or_empty(value: str, *, field_name: str) -> str:
     if digest and _SHA256_RE.fullmatch(digest) is None:
         raise ValueError(f"{field_name} must be 64 lowercase hexadecimal characters")
     return digest
+
+
+def _deep_freeze_metadata(
+    value: Any,
+    *,
+    path: str = "metadata",
+    active_container_ids: frozenset[int] = frozenset(),
+) -> Any:
+    """Copy canonical metadata into recursively immutable containers."""
+
+    if value is None or isinstance(value, (bool, int, float, str, bytes, Path)):
+        return value
+    if isinstance(value, torch.Tensor):
+        raise TypeError(f"{path} cannot contain mutable torch.Tensor values")
+    if isinstance(value, Mapping):
+        identity = id(value)
+        if identity in active_container_ids:
+            raise ValueError(f"{path} contains a recursive mapping")
+        nested_ids = active_container_ids | {identity}
+        frozen: dict[str, Any] = {}
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f"{path} keys must be strings")
+            frozen[key] = _deep_freeze_metadata(
+                item,
+                path=f"{path}.{key}",
+                active_container_ids=nested_ids,
+            )
+        return _FrozenMetadataMapping(frozen)
+    if isinstance(value, (list, tuple)):
+        identity = id(value)
+        if identity in active_container_ids:
+            raise ValueError(f"{path} contains a recursive sequence")
+        nested_ids = active_container_ids | {identity}
+        return _FrozenSequence(
+            _deep_freeze_metadata(
+                item,
+                path=f"{path}[{index}]",
+                active_container_ids=nested_ids,
+            )
+            for index, item in enumerate(value)
+        )
+    raise TypeError(
+        f"{path} contains unsupported mutable value {type(value).__name__}"
+    )
+
+
+def _detached_tensor_copy(value: torch.Tensor, *, field_name: str) -> torch.Tensor:
+    if value.layout is not torch.strided:
+        raise TypeError(f"{field_name} must use the strided tensor layout")
+    return value.detach().clone(memory_format=torch.preserve_format)
 
 
 @dataclass(frozen=True)
@@ -106,7 +196,11 @@ class Atom:
         object.__setattr__(self, "element", canonical_element_symbol(self.element))
         object.__setattr__(self, "altloc", str(self.altloc or "").strip())
         object.__setattr__(self, "stereo", str(self.stereo or "unspecified"))
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            _deep_freeze_metadata(self.metadata, path="atom.metadata"),
+        )
 
 
 @dataclass(frozen=True)
@@ -129,7 +223,11 @@ class Bond:
         object.__setattr__(self, "order", float(self.order))
         object.__setattr__(self, "stereo", str(self.stereo or "none"))
         object.__setattr__(self, "source", str(self.source or "unknown"))
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            _deep_freeze_metadata(self.metadata, path="bond.metadata"),
+        )
 
 
 @dataclass(frozen=True)
@@ -152,7 +250,11 @@ class Residue:
         object.__setattr__(self, "atom_indices", tuple(int(value) for value in self.atom_indices))
         object.__setattr__(self, "insertion_code", str(self.insertion_code or "").strip())
         object.__setattr__(self, "entity_type", str(self.entity_type or "unknown"))
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            _deep_freeze_metadata(self.metadata, path="residue.metadata"),
+        )
 
 
 @dataclass(frozen=True)
@@ -168,26 +270,42 @@ class Chain:
         object.__setattr__(self, "chain_id", str(self.chain_id))
         object.__setattr__(self, "residue_indices", tuple(int(value) for value in self.residue_indices))
         object.__setattr__(self, "entity_id", str(self.entity_id or ""))
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            _deep_freeze_metadata(self.metadata, path="chain.metadata"),
+        )
 
 
 @dataclass(frozen=True)
 class UnitCell:
     """Lattice vectors in Angstrom, stored as three row vectors."""
 
-    vectors: torch.Tensor
+    vectors: torch.Tensor = field(repr=False, compare=False)
     periodic: tuple[bool, bool, bool] = (True, True, True)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.vectors, torch.Tensor):
+        source = object.__getattribute__(self, "vectors")
+        if not isinstance(source, torch.Tensor):
             raise TypeError("unit-cell vectors must be a torch.Tensor")
-        if self.vectors.shape != (3, 3):
+        if source.shape != (3, 3):
             raise ValueError("unit-cell vectors must have shape [3, 3]")
-        if not self.vectors.is_floating_point():
+        if not source.is_floating_point():
             raise TypeError("unit-cell vectors must use a floating dtype")
         if len(self.periodic) != 3:
             raise ValueError("unit-cell periodic flags must have length 3")
+        object.__setattr__(
+            self,
+            "vectors",
+            _detached_tensor_copy(source, field_name="unit-cell vectors"),
+        )
         object.__setattr__(self, "periodic", tuple(bool(value) for value in self.periodic))
+
+    def __getattribute__(self, name: str) -> Any:
+        if name == "vectors":
+            vectors = object.__getattribute__(self, "vectors")
+            return vectors.clone(memory_format=torch.preserve_format)
+        return object.__getattribute__(self, name)
 
     @classmethod
     def orthorhombic(
@@ -248,7 +366,14 @@ class StructureProvenance:
             "parent_sha256",
             tuple(_digest_or_empty(value, field_name="parent_sha256") for value in self.parent_sha256),
         )
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            _deep_freeze_metadata(
+                self.metadata,
+                path="structure_provenance.metadata",
+            ),
+        )
         if self.source_digest_verified and not self.source_sha256:
             raise ValueError("source_digest_verified requires source_sha256")
         if self.chemistry_validated and not self.provenance_verified:
@@ -290,27 +415,43 @@ class AllAtomSystem:
     bonds: tuple[Bond, ...]
     residues: tuple[Residue, ...]
     chains: tuple[Chain, ...]
-    coordinates: torch.Tensor
     provenance: StructureProvenance
+    coordinates: torch.Tensor = field(repr=False, compare=False)
     cell: UnitCell | None = None
     coordinate_unit: str = "angstrom"
     metadata: Mapping[str, Any] = field(default_factory=dict, compare=False)
     schema_id: str = ALL_ATOM_SCHEMA_ID
 
     def __post_init__(self) -> None:
-        if not isinstance(self.coordinates, torch.Tensor):
+        source = object.__getattribute__(self, "coordinates")
+        if not isinstance(source, torch.Tensor):
             raise TypeError("coordinates must be a torch.Tensor")
-        if self.coordinates.ndim != 3 or self.coordinates.shape[-1] != 3:
+        if source.ndim != 3 or source.shape[-1] != 3:
             raise ValueError("coordinates must have shape [M, N, 3]")
-        if not self.coordinates.is_floating_point():
+        if not source.is_floating_point():
             raise TypeError("coordinates must use a floating dtype")
+        object.__setattr__(
+            self,
+            "coordinates",
+            _detached_tensor_copy(source, field_name="coordinates"),
+        )
         object.__setattr__(self, "system_id", str(self.system_id))
         object.__setattr__(self, "atoms", tuple(self.atoms))
         object.__setattr__(self, "bonds", tuple(self.bonds))
         object.__setattr__(self, "residues", tuple(self.residues))
         object.__setattr__(self, "chains", tuple(self.chains))
         object.__setattr__(self, "coordinate_unit", str(self.coordinate_unit).lower())
-        object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "metadata",
+            _deep_freeze_metadata(self.metadata, path="system.metadata"),
+        )
+
+    def __getattribute__(self, name: str) -> Any:
+        if name == "coordinates":
+            coordinates = object.__getattribute__(self, "coordinates")
+            return coordinates.clone(memory_format=torch.preserve_format)
+        return object.__getattribute__(self, name)
 
     @property
     def atom_count(self) -> int:

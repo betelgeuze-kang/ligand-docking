@@ -174,7 +174,7 @@ def _write_chain(
 
 
 def _wheel(root: Path) -> tuple[Path, str]:
-    path = root / "betelgeuze_engine_v2-0.2.0rc2-py3-none-any.whl"
+    path = root / "betelgeuze_engine_v2-0.3.0a1-py3-none-any.whl"
     with zipfile.ZipFile(path, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
         for _role, _digest, member_path in reproduction_module._source_members():
             archive.writestr(member_path, Path(member_path).read_bytes())

@@ -35,6 +35,7 @@ def _sha256(value: object) -> str:
 def _legacy_energy_review_document() -> dict[str, Any]:
     document = deepcopy(reference_validation_review_contract_document())
     document.pop("superseded_contract_sha256")
+    document.pop("legacy_contract_chain_sha256s")
     document.pop("refreeze_reason")
     document.update(
         {
@@ -57,6 +58,22 @@ def _legacy_energy_review_document() -> dict[str, Any]:
     document["attestation_schema"]["signature_algorithm"] = "hmac-sha256"
     document["identity_policy"].pop("verifier_trust_anchor_contains_public_key_only")
     document["identity_policy"].pop("private_signing_key_remains_external_to_verifier")
+    document["dependencies"].update(
+        {
+            "artifact_binding_sha256": (
+                "76241cbc9441f8fbed86cb5858069e3c64b21b37838d2ae94d1b2c768db5b57e"
+            ),
+            "protocol_sha256": (
+                "1ee318ca1550953022783afa8b88eb66e3698489708c0a96969b855ca2995298"
+            ),
+            "h5_applicability_record_sha256": (
+                "63c3ae48ed755a360afd4c9ed77a8553f75da4ab793e287d89a8a68b76ea7ac8"
+            ),
+            "materialization_manifest_sha256": (
+                "3692d6353992dde8d17b0d1737fbe0420e9c34d0c3ebec2072af2e286e8c2358"
+            ),
+        }
+    )
     legacy_blocker = "signed_execution_authorization_receipt_schema_not_frozen"
     document["authorization_gate"]["current_blockers"].insert(3, legacy_blocker)
     document["blockers"].insert(3, legacy_blocker)

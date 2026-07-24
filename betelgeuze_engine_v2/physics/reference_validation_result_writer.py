@@ -66,16 +66,22 @@ from .reference_validation_runner import (
 )
 
 REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_validation_result_writer_contract/5.0.0"
+    "betelgeuze.engine_v2_reference_validation_result_writer_contract/7.0.0"
 )
 REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_validation_result_receipt_writer/5.0.0"
+    "cpu_reference_validation_result_receipt_writer/7.0.0"
 )
-REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "5.0.0"
-REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T12:00:00Z"
+REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "7.0.0"
+REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-24T18:45:00Z"
 REFERENCE_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "b119eeabc552a62c6680eddc839a95ae274f228aea03c41521c58f3222ab760a"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6 = (
+    "1f5ac7c0c53c1f0a8eb7dfbabb9ec385926f96c3c86d574165b9d1e00a1479d0"
+)
+FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5 = (
     "dfd660b14d13a95c63b6d30a22b9e81e3b18cc43c39e919504b1fc8724dd84ba"
 )
 FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4 = (
@@ -209,14 +215,38 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6
         ),
-        "refreeze_reason": "binds_public_key_ed25519_upstream_chain_and_refrozen_runner",
+        "legacy_contract_chain_sha256s": [
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V5,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V4,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V3,
+            FROZEN_LEGACY_REFERENCE_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V1,
+        ],
+        "refreeze_reason": (
+            "bind_energy_force_protocol_receipt_and_runner_contracts_without_"
+            "persistence_policy_change"
+        ),
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "failure_inclusive_result_receipt_writer_primitive": True,
             "production_result_receipt_bundled": False,
             "independent_result_review_performed": False,
+        },
+        "dependencies": {
+            "protocol_sha256": FROZEN_CPU_REFERENCE_VALIDATION_PROTOCOL_SHA256,
+            "authorization_contract_sha256": (
+                FROZEN_REFERENCE_VALIDATION_AUTHORIZATION_CONTRACT_SHA256
+            ),
+            "execution_environment_contract_sha256": (
+                FROZEN_REFERENCE_VALIDATION_EXECUTION_ENVIRONMENT_CONTRACT_SHA256
+            ),
+            "result_receipt_contract_sha256": (
+                FROZEN_REFERENCE_VALIDATION_RESULT_RECEIPT_CONTRACT_SHA256
+            ),
+            "runner_contract_sha256": (
+                FROZEN_REFERENCE_VALIDATION_RUNNER_CONTRACT_SHA256
+            ),
         },
         "pre_finalize_reverification": {
             "raw_signed_review_required": True,

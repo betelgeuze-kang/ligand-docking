@@ -707,7 +707,7 @@ def test_runner_contract_is_frozen_and_current_decision_remains_closed() -> None
     assert first["bounds"]["variant_count"] == (
         REFERENCE_VALIDATION_RUNNER_MAX_VARIANTS
     )
-    assert first["frozen_at_utc"] == "2026-07-22T12:00:00Z"
+    assert first["frozen_at_utc"] == "2026-07-24T18:40:00Z"
     assert first["bounds"]["worker_canonical_jsonl_frame_protocol_required"] is True
     assert (
         first["bounds"]["retained_worker_environment_internal_coherence_reverified"]

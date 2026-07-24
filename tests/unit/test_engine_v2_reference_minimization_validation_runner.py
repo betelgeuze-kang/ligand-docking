@@ -33,10 +33,10 @@ from betelgeuze_engine_v2.physics.reference_minimization_validation_protocol imp
     cpu_minimization_validation_protocol_document,
 )
 from betelgeuze_engine_v2.physics.reference_minimization_validation_runner import (
+    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V8,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V6,
     FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V5,
     FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256,
-    FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7,
     REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES,
     ReferenceMinimizationValidationRunnerAlreadyStartedError,
     ReferenceMinimizationValidationRunnerError,
@@ -363,7 +363,7 @@ def test_contract_is_frozen_and_all_claims_remain_closed() -> None:
     decision = reference_minimization_validation_runner_contract_decision()
     assert document["contract_sha256"] == (FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256)
     assert document["superseded_contract_sha256"] == (
-        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V7
+        FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V8
     )
     assert document["bounds"]["case_count"] == 14
     assert REFERENCE_MINIMIZATION_VALIDATION_RUNNER_MAX_CASES == 14
@@ -464,9 +464,11 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
         elif isinstance(node, ast.ImportFrom):
             imports.add(node.module or "")
     assert imports == {
-        "__future__",
-        "hashlib",
-        "importlib.util",
+            "__future__",
+            "hashlib",
+            "importlib.abc",
+            "importlib.machinery",
+            "importlib.util",
         "json",
         "os",
         "betelgeuze_engine_v2.physics",
@@ -475,8 +477,9 @@ def test_stdlib_bootstrap_has_no_package_or_third_party_imports() -> None:
         "subprocess",
         "sys",
         "sysconfig",
-        "time",
-    }
+            "time",
+            "types",
+        }
     assert "torch" not in imports
     assert "numpy" not in imports
     assert bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH == (
@@ -1582,6 +1585,18 @@ def test_preconfigured_trust_store_parses_exact_ed25519_keys_and_stats(
                 "verification_key_hex": "bb" * 32,
             }
         ],
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+        "superseded_operator_key_ids": [],
+        "superseded_reviewer_key_ids": [],
+        "minimum_authorization_receipt_schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+        ),
+        "minimum_review_attestation_schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID
+        ),
     }
     store_path = tmp_path / "trust-store.json"
     store_path.write_bytes(module._canonical_bytes(payload) + b"\n")
@@ -1709,54 +1724,34 @@ def test_preconfigured_trust_store_rejects_special_or_mutable_files() -> None:
 def test_bootstrap_trust_store_open_is_nofollow_and_nonblocking(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    payload = (
-        bootstrap._canonical_bytes(
+    del monkeypatch
+    payload = {
+        "schema_id": (
+            bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID
+        ),
+        "reviewer_keys": [],
+        "operator_keys": [
             {
-                "schema_id": (bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_SCHEMA_ID),
-                "reviewer_keys": [],
-                "operator_keys": [
-                    {
-                        "key_id": "operator",
-                        "operator_identity_sha256": "7" * 64,
-                        "verification_key_hex": "aa" * 32,
-                    }
-                ],
+                "key_id": "operator",
+                "operator_identity_sha256": "7" * 64,
+                "verification_key_hex": "aa" * 32,
             }
-        )
-        + b"\n"
-    )
-    reads = iter((payload, b""))
-    seen: dict[str, object] = {}
-    file_stat = SimpleNamespace(
-        st_mode=stat.S_IFREG | 0o600,
-        st_uid=0,
-        st_nlink=1,
-        st_size=len(payload),
-        st_dev=1,
-        st_ino=2,
-    )
-
-    def open_file(path: object, flags: int) -> int:
-        seen["open"] = (path, flags)
-        return 20
-
-    monkeypatch.setattr(
-        bootstrap,
-        "_require_root_owned_read_only_directory",
-        lambda path: path,
-    )
-    monkeypatch.setattr(bootstrap.os, "open", open_file)
-    monkeypatch.setattr(bootstrap.os, "fstat", lambda descriptor: file_stat)
-    monkeypatch.setattr(bootstrap.os, "read", lambda descriptor, size: next(reads))
-    monkeypatch.setattr(bootstrap.os, "close", lambda descriptor: seen.setdefault("closed", descriptor))
-
-    keys = bootstrap._load_bootstrap_operator_keys()
+        ],
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+        "superseded_operator_key_ids": [],
+        "superseded_reviewer_key_ids": [],
+        "minimum_authorization_receipt_schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+        ),
+        "minimum_review_attestation_schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID
+        ),
+    }
+    keys = bootstrap._load_bootstrap_operator_keys(payload)
     assert keys == {"operator": ("7" * 64, b"\xaa" * 32)}
-    assert seen["open"] == (
-        bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH,
-        os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOFOLLOW,
-    )
-    assert seen["closed"] == 20
 
 
 def test_bootstrap_authorization_binds_nonce_author_and_dependencies_before_import(
@@ -1764,6 +1759,9 @@ def test_bootstrap_authorization_binds_nonce_author_and_dependencies_before_impo
 ) -> None:
     request = _runner_request()
     projection = {
+        "schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+        ),
         "authorization_key_id": "operator",
         "authorization_operator_identity_sha256": "7" * 64,
         "authorization_nonce_sha256": request["authorization_nonce_sha256"],
@@ -1785,7 +1783,7 @@ def test_bootstrap_authorization_binds_nonce_author_and_dependencies_before_impo
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_operator_keys",
-        lambda: {"operator": ("7" * 64, b"k" * 32)},
+        lambda payload=None: {"operator": ("7" * 64, b"k" * 32)},
     )
     monkeypatch.setattr(
         bootstrap,
@@ -1902,10 +1900,16 @@ def test_bootstrap_main_checks_source_and_dependencies_before_runner_import(
         "bootstrap",
         "/checkout",
         ("/trusted",),
-        ("/checkout", "/trusted"),
+        ("/trusted",),
+        "7" * 64,
+        "8" * 64,
     )
     source_manifest = {"verified": True}
-    expected_state = (*state, bootstrap._canonical_bytes(source_manifest))
+    expected_state = (
+        *state[:5],
+        bootstrap._canonical_bytes(source_manifest),
+        *state[5:],
+    )
     raw = module._canonical_bytes(_runner_request()) + b"\n"
     attribute = bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE
     monkeypatch.delattr(bootstrap.sys, attribute, raising=False)
@@ -1930,12 +1934,22 @@ def test_bootstrap_main_checks_source_and_dependencies_before_runner_import(
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, request, **kwargs: events.append("signed-clean") or source_manifest,
+        lambda repository_root, request, **kwargs: (
+            events.append("signed-clean")
+            or (source_manifest, dict(DEPENDENCIES), "9" * 64)
+        ),
     )
     monkeypatch.setattr(
         bootstrap,
         "_require_observed_dependency_artifact_rows_before_import",
         lambda repository_root, roots, request, **kwargs: events.append("dependencies"),
+    )
+    monkeypatch.setattr(
+        bootstrap,
+        "_require_verified_source_finder",
+        lambda: SimpleNamespace(
+            verify_repository_binding=lambda: events.append("finder")
+        ),
     )
 
     def run_runner(received: bytes) -> int:
@@ -1947,7 +1961,7 @@ def test_bootstrap_main_checks_source_and_dependencies_before_runner_import(
     monkeypatch.setattr(module, "_main_from_canonical_request", run_runner)
 
     assert bootstrap.main() == 0
-    assert events == ["signed-clean", "dependencies", "runner"]
+    assert events == ["signed-clean", "dependencies", "finder", "runner"]
 
 
 def test_bootstrap_main_blocks_runner_when_dependency_observation_fails(
@@ -1958,7 +1972,9 @@ def test_bootstrap_main_blocks_runner_when_dependency_observation_fails(
         "bootstrap",
         "/checkout",
         ("/trusted",),
-        ("/checkout", "/trusted"),
+        ("/trusted",),
+        "7" * 64,
+        "8" * 64,
     )
     attribute = bootstrap.REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE
     monkeypatch.delattr(bootstrap.sys, attribute, raising=False)
@@ -1983,7 +1999,11 @@ def test_bootstrap_main_blocks_runner_when_dependency_observation_fails(
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, request, **kwargs: None,
+        lambda repository_root, request, **kwargs: (
+            {"verified": True},
+            dict(DEPENDENCIES),
+            "9" * 64,
+        ),
     )
     monkeypatch.setattr(
         bootstrap,

@@ -10,6 +10,10 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
+from betelgeuze_engine_v2.geometry import (  # noqa: E402
+    MAX_COMPACT_ATOMS_PER_CELL,
+    MAX_COMPACT_NEIGHBORS,
+)
 from betelgeuze_engine_v2.molecular import (  # noqa: E402
     AllAtomSystem,
     Atom,
@@ -158,6 +162,23 @@ def test_minimization_is_deterministic_decreases_energy_and_preserves_claim_bloc
         == first.checkpoint.checkpoint_sha256
     )
     assert canonical_system_sha256(system) == first.checkpoint.source_system_sha256
+
+
+def test_default_capacity_is_executable_and_matches_radius_graph_hard_caps() -> None:
+    config = ReferenceMinimizationConfig()
+
+    assert config.max_neighbors == MAX_COMPACT_NEIGHBORS
+    assert config.max_atoms_per_cell == MAX_COMPACT_ATOMS_PER_CELL
+
+    system = _system()
+    result = minimize_reference_force_field(system, _parameters(system))
+
+    assert result.status == "converged"
+    assert result.checkpoint.config["max_neighbors"] == MAX_COMPACT_NEIGHBORS
+    assert (
+        result.checkpoint.config["max_atoms_per_cell"]
+        == MAX_COMPACT_ATOMS_PER_CELL
+    )
 
 
 def test_checkpoint_restart_is_bit_exact_with_uninterrupted_execution() -> None:
@@ -374,6 +395,11 @@ def test_checkpoint_tampering_identity_drift_and_recomputed_value_drift_fail_clo
         ({"armijo_constant": 1.0}, "armijo_constant"),
         ({"maximum_atom_displacement_angstrom": 0.0}, "maximum_atom_displacement"),
         ({"max_neighbors": 0}, "max_neighbors"),
+        ({"max_neighbors": MAX_COMPACT_NEIGHBORS + 1}, "max_neighbors"),
+        (
+            {"max_atoms_per_cell": MAX_COMPACT_ATOMS_PER_CELL + 1},
+            "max_atoms_per_cell",
+        ),
     ),
 )
 def test_config_rejects_unbounded_or_degenerate_values(

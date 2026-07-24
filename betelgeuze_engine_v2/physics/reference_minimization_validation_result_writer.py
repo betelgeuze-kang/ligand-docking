@@ -63,16 +63,19 @@ from .reference_minimization_validation_trajectory_comparison import (
 
 
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/7.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_result_writer_contract/8.0.0"
 )
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_ID = (
-    "cpu_reference_minimization_validation_result_receipt_writer/7.0.0"
+    "cpu_reference_minimization_validation_result_receipt_writer/8.0.0"
 )
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "7.0.0"
-REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-22T01:17:31Z"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION = "8.0.0"
+REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
 REFERENCE_MINIMIZATION_VALIDATION_RESULT_RECEIPT_MAX_BYTES = 8 * 1024 * 1024
 
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256 = (
+    "a23ea7d717c723dd140651c288e59f21a45982f865289f339213fc984ba93d5b"
+)
+FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V7 = (
     "6633d9cdb2d96eb18758919629eab495ed8ba5d2eea102bbd814fa7bfe86b194"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6 = (
@@ -203,9 +206,11 @@ def _contract_projection() -> dict[str, Any]:
         "contract_version": REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_VERSION,
         "frozen_at_utc": REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_FROZEN_AT_UTC,
         "superseded_contract_sha256": (
-            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V6
+            FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RESULT_WRITER_CONTRACT_SHA256_V7
         ),
-        "refreeze_reason": "binds_refrozen_projection_headroom_runner_and_receipt_chain",
+        "refreeze_reason": (
+            "binds_compact_default_capacity_runner_and_receipt_chain"
+        ),
         "purpose": {
             "lane": "synthetic_implementation_mathematics_only",
             "failure_inclusive_result_receipt_writer_primitive": True,

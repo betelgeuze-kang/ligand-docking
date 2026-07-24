@@ -357,6 +357,10 @@ class ElementGeometryDiagnosticScorer:
         return int(self.receptor_coordinates.shape[0])
 
     @property
+    def problem_fingerprint_sha256(self) -> str:
+        return self.problem.fingerprint_sha256
+
+    @property
     def blockers(self) -> tuple[str, ...]:
         return GEOMETRY_DIAGNOSTIC_BLOCKERS
 
