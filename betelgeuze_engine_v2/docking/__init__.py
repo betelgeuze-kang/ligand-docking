@@ -1,4 +1,4 @@
-"""Bounded, non-claim docking proposal, authority, placement, and search contracts."""
+"""Bounded, non-claim docking proposal, authority, placement, contact, and search contracts."""
 
 from .identity import (
     DockingIdentityError,
@@ -104,6 +104,24 @@ from .placement import (
 
 POCKET_PROPOSAL_OVERRIDE_SHA256 = _install_pocket_proposal_override()
 
+from .contact_validity import (
+    ELEMENT_AWARE_AUTHORITY_SCHEMA_ID,
+    ELEMENT_AWARE_VALIDITY_CONTEXT_SCHEMA_ID,
+    MAX_ELEMENT_AWARE_LIGAND_ATOMS,
+    MAX_ELEMENT_AWARE_LIGAND_PAIR_CHECKS,
+    MAX_ELEMENT_AWARE_RECEPTOR_ATOMS,
+    MAX_ELEMENT_AWARE_RECEPTOR_CANDIDATE_PAIRS,
+    SPARSE_CONTACT_ALGORITHM_ID,
+    VDW_CONTACT_POLICY_ID,
+    VDW_CONTACT_POLICY_SCHEMA_ID,
+    VDW_RADII_TABLE_ID,
+    ElementAwarePoseValidityContext,
+    ElementAwareValidityError,
+    VdwContactPolicy,
+    build_element_aware_authenticated_known_pocket_docking_problem,
+    element_aware_authority_document,
+)
+
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
     "AUTHENTICATED_DOCKING_DERIVATION_POLICY_SCHEMA_ID",
@@ -117,11 +135,17 @@ __all__ = [
     "AUTHORITY_ROTOR_STEREO_COMPAT_SHA256",
     "CENTROID_POLICY_ID",
     "COUNTER_PRNG_ID",
+    "ELEMENT_AWARE_AUTHORITY_SCHEMA_ID",
+    "ELEMENT_AWARE_VALIDITY_CONTEXT_SCHEMA_ID",
     "HAAR_ROTATION_SAMPLER_ID",
     "MAX_DOCKING_CANDIDATES",
     "MAX_DOCKING_REFINEMENT_STEPS",
     "MAX_DOCKING_TOP_K",
     "MAX_DOCKING_TORSIONS",
+    "MAX_ELEMENT_AWARE_LIGAND_ATOMS",
+    "MAX_ELEMENT_AWARE_LIGAND_PAIR_CHECKS",
+    "MAX_ELEMENT_AWARE_RECEPTOR_ATOMS",
+    "MAX_ELEMENT_AWARE_RECEPTOR_CANDIDATE_PAIRS",
     "MAX_POCKET_PLACEMENT_PROPOSALS",
     "MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM",
     "MAX_SYMMETRY_PERMUTATIONS",
@@ -130,7 +154,11 @@ __all__ = [
     "POCKET_PLACEMENT_RECEIPT_SCHEMA_ID",
     "POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID",
     "POCKET_PROPOSAL_OVERRIDE_SHA256",
+    "SPARSE_CONTACT_ALGORITHM_ID",
     "SPHERICAL_TRANSLATION_SAMPLER_ID",
+    "VDW_CONTACT_POLICY_ID",
+    "VDW_CONTACT_POLICY_SCHEMA_ID",
+    "VDW_RADII_TABLE_ID",
     "AuthenticatedDockingProblem",
     "AuthenticatedDockingSearchResult",
     "DockingAuthorityError",
@@ -146,6 +174,8 @@ __all__ = [
     "DockingSearchError",
     "DockingSearchResult",
     "DockingSearchRow",
+    "ElementAwarePoseValidityContext",
+    "ElementAwareValidityError",
     "PocketDefinition",
     "PocketPlacementPolicy",
     "PocketPlacementReceipt",
@@ -160,13 +190,16 @@ __all__ = [
     "TorsionSearchSpace",
     "TorsionSearchSpaceDerivationReceipt",
     "UNCALIBRATED_INTERNAL_DOCKING_SCORE",
+    "VdwContactPolicy",
     "authenticated_docking_derivation_policy_document",
     "build_authenticated_known_pocket_docking_problem",
+    "build_element_aware_authenticated_known_pocket_docking_problem",
     "component_contract_fingerprint",
     "component_problem_fingerprint",
     "coordinate_fingerprint",
     "derive_authoritative_torsion_search_space",
     "direct_rmsd",
+    "element_aware_authority_document",
     "evaluate_pose_validity",
     "generate_bounded_docking_proposals",
     "generate_pocket_centered_docking_proposals",
