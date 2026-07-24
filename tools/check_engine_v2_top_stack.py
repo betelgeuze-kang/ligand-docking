@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Fail closed when the Engine v2 stacked CI boundary becomes self-modifying."""
+"""Fail closed when the Engine v2 stacked CI boundary becomes incomplete.
+
+The checker enforces a read-only workflow set, rejects temporary/self-modifying
+CI, and requires the aggregate top-stack workflow to run both on pull requests
+and on the exact post-merge ``main`` head without path filters.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +14,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
+TOP_STACK_WORKFLOW = "ci-engine-v2-top-stack.yml"
 TARGET_WORKFLOWS = (
     "ci-engine-v2-truthfulness.yml",
     "ci-engine-v2-public-benchmark-protocol.yml",
@@ -19,7 +25,13 @@ TARGET_WORKFLOWS = (
     "ci-engine-v2-source-snapshot.yml",
     "ci-engine-v2-authenticated-public-evaluator.yml",
     "ci-engine-v2-evidence-contracts-v3.yml",
-    "ci-engine-v2-top-stack.yml",
+    "ci-engine-v2-correctness-round1.yml",
+    "ci-engine-v2-evaluator-round2.yml",
+    "ci-engine-v2-molecular-round3.yml",
+    "ci-engine-v2-docking-authority-round4.yml",
+    "ci-engine-v2-package.yml",
+    "ci-engine-v2-release-integration-round5.yml",
+    TOP_STACK_WORKFLOW,
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
     "contents: write",
@@ -37,13 +49,20 @@ FORBIDDEN_NAME_FRAGMENTS = (
     "debug-",
     "codex-",
 )
+_REQUIRED_TOP_STACK_TRIGGER = (
+    'on:\n'
+    '  pull_request:\n'
+    '  push:\n'
+    '    branches: ["main"]\n'
+    '  workflow_dispatch:\n'
+)
 
 
 class TopStackCheckError(RuntimeError):
     """The top-stack CI boundary is incomplete or self-modifying."""
 
 
-def _check_workflow(path: Path) -> None:
+def _check_workflow(path: Path) -> str:
     source = path.read_text(encoding="utf-8")
     if "permissions:\n  contents: read" not in source:
         raise TopStackCheckError(f"{path.name} is not explicitly read-only")
@@ -56,20 +75,38 @@ def _check_workflow(path: Path) -> None:
         raise TopStackCheckError(
             f"{path.name} checkout does not disable credential persistence"
         )
+    return source
+
+
+def _check_top_stack_trigger(source: str) -> None:
+    if _REQUIRED_TOP_STACK_TRIGGER not in source:
+        raise TopStackCheckError(
+            "top-stack workflow must run on pull requests, exact main pushes, "
+            "and manual dispatch"
+        )
+    trigger_section = source.split("permissions:", 1)[0]
+    if "paths:" in trigger_section or "paths-ignore:" in trigger_section:
+        raise TopStackCheckError(
+            "top-stack workflow trigger must not have path-filter gaps"
+        )
 
 
 def main() -> int:
     missing = []
+    top_stack_source = ""
     for name in TARGET_WORKFLOWS:
         path = WORKFLOW_ROOT / name
         if not path.is_file():
             missing.append(name)
             continue
-        _check_workflow(path)
+        source = _check_workflow(path)
+        if name == TOP_STACK_WORKFLOW:
+            top_stack_source = source
     if missing:
         raise TopStackCheckError(
             "required top-stack workflows are missing: " + ", ".join(missing)
         )
+    _check_top_stack_trigger(top_stack_source)
     temporary = sorted(
         path.name
         for path in WORKFLOW_ROOT.glob("*.yml")

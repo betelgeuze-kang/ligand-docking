@@ -11,8 +11,14 @@ on:
       - "docs/engine_v2_pr_overlap_matrix.md"
       - ".github/workflows/ci-engine-v2-package.yml"
   push:
-    branches:
-      - "agent/v2-f-package-ci-guards"
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/**"
+      - "packaging/engine-v2/**"
+      - "tools/build_engine_v2_wheel.py"
+      - "tools/check_engine_v2_architecture.py"
+      - "tests/unit/test_engine_v2_packaging_guards.py"
+      - ".github/workflows/ci-engine-v2-package.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,7 +31,7 @@ concurrency:
 jobs:
   independent-wheel:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -34,6 +40,7 @@ jobs:
       CUDA_VISIBLE_DEVICES: ""
       HIP_VISIBLE_DEVICES: ""
       ROCR_VISIBLE_DEVICES: ""
+      SOURCE_DATE_EPOCH: "1735689600"
     steps:
       - name: Check out independent package surface
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -74,11 +81,23 @@ jobs:
           python tools/check_engine_v2_architecture.py
           python -m pytest -q tests/unit/test_engine_v2_packaging_guards.py
 
-      - name: Build independent Engine v2 wheel
+      - name: Build two byte-identical Engine v2 wheels
+        shell: bash
         run: |
-          rm -rf dist-engine-v2
-          python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2
-          test "$(find dist-engine-v2 -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+          set -euo pipefail
+          rm -rf dist-engine-v2-a dist-engine-v2-b dist-engine-v2
+          python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2-a
+          python tools/build_engine_v2_wheel.py --output-dir dist-engine-v2-b
+          wheel_a="$(find dist-engine-v2-a -maxdepth 1 -name '*.whl' -print -quit)"
+          wheel_b="$(find dist-engine-v2-b -maxdepth 1 -name '*.whl' -print -quit)"
+          test -n "$wheel_a"
+          test -n "$wheel_b"
+          test "$(find dist-engine-v2-a -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+          test "$(find dist-engine-v2-b -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+          cmp "$wheel_a" "$wheel_b"
+          mkdir -p dist-engine-v2
+          cp "$wheel_a" dist-engine-v2/
+          sha256sum dist-engine-v2/*.whl | tee dist-engine-v2/SHA256SUMS
 
       - name: Install in a clean dependency-complete venv
         shell: bash
@@ -100,23 +119,41 @@ jobs:
         run: |
           set -euo pipefail
           venv="/tmp/betelgeuze-engine-v2-${{ matrix.python-version }}"
-          mkdir -p /tmp/engine-v2-outside
-          cd /tmp/engine-v2-outside
+          outside="/tmp/engine-v2-outside-${{ matrix.python-version }}"
+          rm -rf "$outside"
+          mkdir -p "$outside"
+          cd "$outside"
           "$venv/bin/python" - <<'PY'
           import importlib.metadata as metadata
           import importlib.util
           import sys
           import betelgeuze_engine_v2 as engine
+          from betelgeuze_engine_v2.docking import (
+              AuthenticatedDockingProblem,
+              PocketDefinition,
+              TorsionSearchSpaceDerivationReceipt,
+          )
 
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
           assert engine.DISTRIBUTION_NAME == "betelgeuze-engine-v2"
           assert engine.__version__ == engine.ENGINE_API_VERSION
+          assert AuthenticatedDockingProblem.__module__.startswith("betelgeuze_engine_v2.")
+          assert PocketDefinition.__module__.startswith("betelgeuze_engine_v2.")
+          assert TorsionSearchSpaceDerivationReceipt.__module__.startswith("betelgeuze_engine_v2.")
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
           assert not any(name == "api" or name.startswith("api.") for name in sys.modules)
           assert not any(name == "core" or name.startswith("core.") for name in sys.modules)
           PY
+
+      - name: Upload reproducible wheel and digest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: engine-v2-wheel-py${{ matrix.python-version }}-${{ github.sha }}
+          path: dist-engine-v2
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Record support boundary
         run: |
