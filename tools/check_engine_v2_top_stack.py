@@ -36,6 +36,7 @@ TARGET_WORKFLOWS = (
     "ci-engine-v2-interpretable-scorer-round10.yml",
     "ci-engine-v2-interpretable-result-round12.yml",
     "ci-engine-v2-canonical-cli-round14.yml",
+    "ci-engine-v2-sparse-base-validity-round16.yml",
     TOP_STACK_WORKFLOW,
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (

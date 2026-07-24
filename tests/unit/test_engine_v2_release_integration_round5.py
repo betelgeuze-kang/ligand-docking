@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def _load_checker():
     path = ROOT / "tools" / "check_engine_v2_top_stack.py"
     spec = importlib.util.spec_from_file_location(
-        "engine_v2_top_stack_checker_round15",
+        "engine_v2_top_stack_checker_round17",
         path,
     )
     assert spec is not None and spec.loader is not None
@@ -35,6 +35,7 @@ def test_release_checker_accepts_the_exact_repository_stack() -> None:
         "ci-engine-v2-interpretable-scorer-round10.yml",
         "ci-engine-v2-interpretable-result-round12.yml",
         "ci-engine-v2-canonical-cli-round14.yml",
+        "ci-engine-v2-sparse-base-validity-round16.yml",
         "ci-engine-v2-top-stack.yml",
     }.issubset(required)
 
@@ -51,7 +52,7 @@ def test_top_stack_runs_on_pull_requests_and_exact_main_without_path_filters() -
     assert "paths-ignore:" not in trigger
 
 
-def test_top_stack_explicitly_runs_round_one_through_round_fourteen_contracts() -> None:
+def test_top_stack_explicitly_runs_round_one_through_round_sixteen_contracts() -> None:
     source = (
         ROOT / ".github" / "workflows" / "ci-engine-v2-top-stack.yml"
     ).read_text(encoding="utf-8")
@@ -67,6 +68,7 @@ def test_top_stack_explicitly_runs_round_one_through_round_fourteen_contracts() 
         "test_engine_v2_interpretable_scorer_round10.py",
         "test_engine_v2_interpretable_result_round12.py",
         "test_engine_v2_canonical_cli_round14.py",
+        "test_engine_v2_sparse_base_validity_round16.py",
         "test_engine_v2_release_integration_round5.py",
     ):
         assert filename in source
@@ -119,6 +121,7 @@ def test_release_workflows_remain_read_only_and_disable_checkout_credentials() -
         "ci-engine-v2-interpretable-scorer-round10.yml",
         "ci-engine-v2-interpretable-result-round12.yml",
         "ci-engine-v2-canonical-cli-round14.yml",
+        "ci-engine-v2-sparse-base-validity-round16.yml",
         "ci-engine-v2-top-stack.yml",
     ):
         source = (ROOT / ".github" / "workflows" / filename).read_text(
