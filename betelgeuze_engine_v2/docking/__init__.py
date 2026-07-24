@@ -121,6 +121,14 @@ from .contact_validity import (
     build_element_aware_authenticated_known_pocket_docking_problem,
     element_aware_authority_document,
 )
+from .sparse_base_validity import (
+    SPARSE_BASE_RECEPTOR_CLASH_ALGORITHM_ID,
+    SPARSE_BASE_VALIDITY_INSTALLER_SCHEMA_ID,
+    install_sparse_element_aware_base_validity as _install_sparse_element_aware_base_validity,
+)
+
+SPARSE_BASE_VALIDITY_SHA256 = _install_sparse_element_aware_base_validity()
+
 from .interpretable_scorer import (
     INTERPRETABLE_POSE_APPLICABILITY_DOMAIN_ID,
     INTERPRETABLE_POSE_SCORE_ALGORITHM_ID,
@@ -188,6 +196,9 @@ __all__ = [
     "POCKET_PLACEMENT_RECEIPT_SCHEMA_ID",
     "POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID",
     "POCKET_PROPOSAL_OVERRIDE_SHA256",
+    "SPARSE_BASE_RECEPTOR_CLASH_ALGORITHM_ID",
+    "SPARSE_BASE_VALIDITY_INSTALLER_SCHEMA_ID",
+    "SPARSE_BASE_VALIDITY_SHA256",
     "SPARSE_CONTACT_ALGORITHM_ID",
     "SPHERICAL_TRANSLATION_SAMPLER_ID",
     "VDW_CONTACT_POLICY_ID",
