@@ -35,7 +35,7 @@ jobs:
 
   focused-security-and-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     strategy:
       fail-fast: false
       matrix:
@@ -99,6 +99,8 @@ jobs:
             tests/unit/test_engine_v2_interpretable_result_round12.py \
             tests/unit/test_engine_v2_canonical_cli_round14.py \
             tests/unit/test_engine_v2_sparse_base_validity_round16.py \
+            tests/unit/test_engine_v2_cli_result_verifier_round18.py \
+            tests/unit/test_engine_v2_cli_result_verifier_release_round19.py \
             tests/unit/test_engine_v2_release_integration_round5.py \
             tests/unit/test_engine_v2_reference_minimization_validation_dependency_identity.py \
             tests/unit/test_engine_v2_reference_minimization_validation_preimport_binding.py \
