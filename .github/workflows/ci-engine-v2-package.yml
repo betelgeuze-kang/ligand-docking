@@ -130,11 +130,15 @@ jobs:
           import betelgeuze_engine_v2 as engine
           from betelgeuze_engine_v2.docking import (
               AuthenticatedDockingProblem,
+              ElementAwarePoseValidityContext,
+              ElementAwareValidityError,
               PocketDefinition,
               PocketPlacementPolicy,
               PocketPlacementReceipt,
               PocketPlacementSearchResult,
               TorsionSearchSpaceDerivationReceipt,
+              VdwContactPolicy,
+              build_element_aware_authenticated_known_pocket_docking_problem,
           )
 
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
@@ -142,11 +146,15 @@ jobs:
           assert engine.__version__ == engine.ENGINE_API_VERSION
           for value in (
               AuthenticatedDockingProblem,
+              ElementAwarePoseValidityContext,
+              ElementAwareValidityError,
               PocketDefinition,
               PocketPlacementPolicy,
               PocketPlacementReceipt,
               PocketPlacementSearchResult,
               TorsionSearchSpaceDerivationReceipt,
+              VdwContactPolicy,
+              build_element_aware_authenticated_known_pocket_docking_problem,
           ):
               assert value.__module__.startswith("betelgeuze_engine_v2.")
           assert importlib.util.find_spec("api") is None
