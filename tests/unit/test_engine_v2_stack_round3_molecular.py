@@ -109,6 +109,22 @@ def test_round3_receipt_and_caller_tensor_cloning() -> None:
     assert len(system.integrity_sha256) == 64
 
 
+def test_integrity_metadata_stays_outside_public_dataclass_state() -> None:
+    system = _system()
+    assert "_integrity_sha256" not in system.__dict__
+    reconstructed = AllAtomSystem(
+        **{
+            **system.__dict__,
+            "coordinates": torch.cat(
+                (system.coordinates, system.coordinates),
+                dim=0,
+            ),
+        }
+    )
+    assert reconstructed.model_count == 2
+    assert len(reconstructed.integrity_sha256) == 64
+
+
 def test_molecular_metadata_is_recursively_immutable() -> None:
     system = _system()
     with pytest.raises(TypeError):
