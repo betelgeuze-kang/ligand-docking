@@ -6,6 +6,10 @@ round-3 integrity digest used canonical serialization during construction and
 therefore rejected non-finite metadata too early. This installer replaces that
 step with an exact structural mutation digest that can represent invalid values,
 while public canonical SHA functions still enforce canonical validity.
+
+Integrity metadata is retained in a weak external registry rather than adding a
+private key to ``AllAtomSystem.__dict__``. Existing code that reconstructs a
+system from its public dataclass state therefore remains compatible.
 """
 
 from __future__ import annotations
@@ -15,7 +19,9 @@ import hashlib
 import json
 import math
 import sys
+import threading
 from typing import Any, Mapping
+import weakref
 
 import torch
 
@@ -28,6 +34,9 @@ from betelgeuze_engine_v2.stack_round3_molecular import (
 STACK_ROUND3_INTEGRITY_COMPAT_SCHEMA_ID = (
     "betelgeuze.engine_v2_stack_round3_integrity_compat/1.0.0"
 )
+
+_INTEGRITY_LOCK = threading.RLock()
+_INTEGRITY_REGISTRY: dict[int, tuple[weakref.ReferenceType[object], str]] = {}
 
 
 def _identity_value(value: Any) -> Any:
@@ -98,6 +107,30 @@ def _raw_system_integrity_sha256(system: object) -> str:
     ).hexdigest()
 
 
+def _register_integrity(system: object, digest: str) -> None:
+    identity = id(system)
+
+    def remove(reference: weakref.ReferenceType[object]) -> None:
+        with _INTEGRITY_LOCK:
+            current = _INTEGRITY_REGISTRY.get(identity)
+            if current is not None and current[0] is reference:
+                _INTEGRITY_REGISTRY.pop(identity, None)
+
+    reference = weakref.ref(system, remove)
+    with _INTEGRITY_LOCK:
+        _INTEGRITY_REGISTRY[identity] = (reference, digest)
+
+
+def _registered_integrity(system: object) -> str:
+    with _INTEGRITY_LOCK:
+        current = _INTEGRITY_REGISTRY.get(id(system))
+        if current is None or current[0]() is not system:
+            raise MolecularIntegrityError(
+                "molecular system predates the integrity contract"
+            )
+        return current[1]
+
+
 def install_stack_round3_integrity_compat() -> str:
     marker = "_betelgeuze_stack_round3_integrity_compat_sha256"
     existing = getattr(sys, marker, None)
@@ -134,18 +167,10 @@ def install_stack_round3_integrity_compat() -> str:
             "metadata",
             _deep_freeze(dict(self.metadata)),
         )
-        object.__setattr__(
-            self,
-            "_integrity_sha256",
-            _raw_system_integrity_sha256(self),
-        )
+        _register_integrity(self, _raw_system_integrity_sha256(self))
 
     def assert_integrity(self) -> None:
-        expected = getattr(self, "_integrity_sha256", "")
-        if not expected:
-            raise MolecularIntegrityError(
-                "molecular system predates the integrity contract"
-            )
+        expected = _registered_integrity(self)
         observed = _raw_system_integrity_sha256(self)
         if observed != expected:
             raise MolecularIntegrityError(
@@ -154,7 +179,7 @@ def install_stack_round3_integrity_compat() -> str:
 
     def integrity_sha256(self) -> str:
         assert_integrity(self)
-        return str(self._integrity_sha256)
+        return _registered_integrity(self)
 
     current_system_sha256 = serialization.canonical_system_sha256
 
@@ -184,6 +209,7 @@ def install_stack_round3_integrity_compat() -> str:
                 "invalid_systems_reach_structured_validation": True,
                 "post_construction_mutation_rejected": True,
                 "recursive_metadata_immutability_preserved": True,
+                "integrity_metadata_external_to_dataclass_state": True,
                 "chemistry_validated": False,
                 "scientifically_validated": False,
                 "claim_safe": False,
