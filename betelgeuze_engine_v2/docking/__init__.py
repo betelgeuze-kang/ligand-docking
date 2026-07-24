@@ -1,4 +1,4 @@
-"""Bounded, non-claim docking proposal, authority, placement, contact, scoring, and search contracts."""
+"""Bounded, non-claim docking proposal, authority, placement, contact, scoring, evidence, and search contracts."""
 
 from .identity import (
     DockingIdentityError,
@@ -136,6 +136,14 @@ from .interpretable_scorer import (
     InterpretablePoseScorerError,
     InterpretablePoseScorerV0,
 )
+from .interpretable_result import (
+    INTERPRETABLE_SCORED_SEARCH_RESULT_SCHEMA_ID,
+    INTERPRETABLE_SEARCH_TERM_ROW_SCHEMA_ID,
+    InterpretableScoredSearchResult,
+    InterpretableSearchResultError,
+    InterpretableSearchTermRow,
+    run_authenticated_interpretable_pocket_search,
+)
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
@@ -160,6 +168,8 @@ __all__ = [
     "INTERPRETABLE_POSE_SCORE_TERMS_SCHEMA_ID",
     "INTERPRETABLE_POSE_SCORER_ID",
     "INTERPRETABLE_POSE_SCORER_VERSION",
+    "INTERPRETABLE_SCORED_SEARCH_RESULT_SCHEMA_ID",
+    "INTERPRETABLE_SEARCH_TERM_ROW_SCHEMA_ID",
     "MAX_DOCKING_CANDIDATES",
     "MAX_DOCKING_REFINEMENT_STEPS",
     "MAX_DOCKING_TOP_K",
@@ -204,6 +214,9 @@ __all__ = [
     "InterpretablePoseScoreTerms",
     "InterpretablePoseScorerError",
     "InterpretablePoseScorerV0",
+    "InterpretableScoredSearchResult",
+    "InterpretableSearchResultError",
+    "InterpretableSearchTermRow",
     "PocketDefinition",
     "PocketPlacementPolicy",
     "PocketPlacementReceipt",
@@ -234,6 +247,7 @@ __all__ = [
     "kabsch_aligned_coordinates",
     "kabsch_aligned_rmsd",
     "run_authenticated_bounded_docking_search",
+    "run_authenticated_interpretable_pocket_search",
     "run_authenticated_pocket_placement_search",
     "run_bounded_docking_search",
     "scorer_descriptor",
