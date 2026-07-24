@@ -124,6 +124,12 @@ STACK_ROUND1_MINIMIZATION_COMPAT_SHA256 = (
     _install_stack_round1_minimization_compat()
 )
 
+from .stack_round2_evaluator import (
+    install_stack_round2_evaluator as _install_stack_round2_evaluator,
+)
+
+STACK_ROUND2_EVALUATOR_SHA256 = _install_stack_round2_evaluator()
+
 __version__ = ENGINE_API_VERSION
 
 __all__ = [
@@ -145,6 +151,7 @@ __all__ = [
     "RUNTIME_INPUT_SCHEMA_VERSION",
     "STACK_ROUND1_HARDENING_SHA256",
     "STACK_ROUND1_MINIMIZATION_COMPAT_SHA256",
+    "STACK_ROUND2_EVALUATOR_SHA256",
     "VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256",
     "VERSION_TAXONOMY",
     "AllAtomSystem",
