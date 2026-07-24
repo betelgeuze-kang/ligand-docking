@@ -22,6 +22,9 @@ classifiers = [
   "Typing :: Typed",
 ]
 
+[project.scripts]
+betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli:main"
+
 [tool.setuptools.packages.find]
 include = ["betelgeuze_engine_v2*"]
 exclude = [

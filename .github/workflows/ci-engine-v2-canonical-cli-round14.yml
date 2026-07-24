@@ -1,0 +1,97 @@
+name: ci-engine-v2-canonical-cli-round14
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/cli.py"
+      - "betelgeuze_engine_v2/docking/**"
+      - "betelgeuze_engine_v2/molecular/**"
+      - "packaging/engine-v2/pyproject.toml"
+      - "tests/unit/test_engine_v2_canonical_cli_round14.py"
+      - "tests/unit/test_engine_v2_interpretable_result_round12.py"
+      - "tests/unit/test_engine_v2_interpretable_scorer_round10.py"
+      - "tests/unit/test_engine_v2_element_contact_round8.py"
+      - "tests/unit/test_engine_v2_pocket_placement_round6.py"
+      - ".github/workflows/ci-engine-v2-canonical-cli-round14.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/cli.py"
+      - "betelgeuze_engine_v2/docking/**"
+      - "packaging/engine-v2/pyproject.toml"
+      - "tests/unit/test_engine_v2_canonical_cli_round14.py"
+      - ".github/workflows/ci-engine-v2-canonical-cli-round14.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-canonical-cli-round14-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canonical-cli-round14:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      PYTEST_ADDOPTS: "--confcutdir=tests/unit"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 2
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install focused CPU dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 PyYAML==6.0.3 cryptography==46.0.5 numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Compile and enforce architecture boundary
+        run: |
+          python -m compileall -q \
+            betelgeuze_engine_v2/cli.py \
+            betelgeuze_engine_v2/docking/interpretable_result.py \
+            betelgeuze_engine_v2/docking/interpretable_scorer.py \
+            betelgeuze_engine_v2/docking/contact_validity.py
+          python tools/check_engine_v2_architecture.py
+
+      - name: Verify canonical-input CLI vertical slice
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m pytest -vv --tb=long \
+            tests/unit/test_engine_v2_canonical_cli_round14.py \
+            tests/unit/test_engine_v2_interpretable_result_round12.py \
+            tests/unit/test_engine_v2_interpretable_scorer_round10.py \
+            tests/unit/test_engine_v2_element_contact_round8.py \
+            tests/unit/test_engine_v2_pocket_placement_round6.py \
+            2>&1 | tee "${RUNNER_TEMP}/canonical-cli-round14-${{ matrix.python-version }}.log"
+
+      - name: Verify module entry point help
+        run: |
+          python -m betelgeuze_engine_v2.cli --help
+          python -m betelgeuze_engine_v2.cli dock-canonical --help
+
+      - name: Upload CLI diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-cli-round14-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/canonical-cli-round14-${{ matrix.python-version }}.log
+          if-no-files-found: warn
+          retention-days: 1
