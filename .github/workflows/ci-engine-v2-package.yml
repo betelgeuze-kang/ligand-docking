@@ -136,6 +136,9 @@ jobs:
               InterpretablePoseScoreTerms,
               InterpretablePoseScorerError,
               InterpretablePoseScorerV0,
+              InterpretableScoredSearchResult,
+              InterpretableSearchResultError,
+              InterpretableSearchTermRow,
               PocketDefinition,
               PocketPlacementPolicy,
               PocketPlacementReceipt,
@@ -143,6 +146,7 @@ jobs:
               TorsionSearchSpaceDerivationReceipt,
               VdwContactPolicy,
               build_element_aware_authenticated_known_pocket_docking_problem,
+              run_authenticated_interpretable_pocket_search,
           )
 
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
@@ -156,6 +160,9 @@ jobs:
               InterpretablePoseScoreTerms,
               InterpretablePoseScorerError,
               InterpretablePoseScorerV0,
+              InterpretableScoredSearchResult,
+              InterpretableSearchResultError,
+              InterpretableSearchTermRow,
               PocketDefinition,
               PocketPlacementPolicy,
               PocketPlacementReceipt,
@@ -163,6 +170,7 @@ jobs:
               TorsionSearchSpaceDerivationReceipt,
               VdwContactPolicy,
               build_element_aware_authenticated_known_pocket_docking_problem,
+              run_authenticated_interpretable_pocket_search,
           ):
               assert value.__module__.startswith("betelgeuze_engine_v2.")
           assert importlib.util.find_spec("api") is None
