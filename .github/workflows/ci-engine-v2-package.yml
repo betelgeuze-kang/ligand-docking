@@ -131,15 +131,24 @@ jobs:
           from betelgeuze_engine_v2.docking import (
               AuthenticatedDockingProblem,
               PocketDefinition,
+              PocketPlacementPolicy,
+              PocketPlacementReceipt,
+              PocketPlacementSearchResult,
               TorsionSearchSpaceDerivationReceipt,
           )
 
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
           assert engine.DISTRIBUTION_NAME == "betelgeuze-engine-v2"
           assert engine.__version__ == engine.ENGINE_API_VERSION
-          assert AuthenticatedDockingProblem.__module__.startswith("betelgeuze_engine_v2.")
-          assert PocketDefinition.__module__.startswith("betelgeuze_engine_v2.")
-          assert TorsionSearchSpaceDerivationReceipt.__module__.startswith("betelgeuze_engine_v2.")
+          for value in (
+              AuthenticatedDockingProblem,
+              PocketDefinition,
+              PocketPlacementPolicy,
+              PocketPlacementReceipt,
+              PocketPlacementSearchResult,
+              TorsionSearchSpaceDerivationReceipt,
+          ):
+              assert value.__module__.startswith("betelgeuze_engine_v2.")
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None

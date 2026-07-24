@@ -31,6 +31,7 @@ TARGET_WORKFLOWS = (
     "ci-engine-v2-docking-authority-round4.yml",
     "ci-engine-v2-package.yml",
     "ci-engine-v2-release-integration-round5.yml",
+    "ci-engine-v2-pocket-placement-round6.yml",
     TOP_STACK_WORKFLOW,
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
