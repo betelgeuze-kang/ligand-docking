@@ -205,7 +205,7 @@ def test_strict_verifier_accepts_a_canonical_cli_result(tmp_path: Path) -> None:
     assert verification["canonical_bytes_verified"] is True
     assert verification["nested_receipts_verified"] is True
     assert verification["failure_denominator_verified"] is True
-    assert verification["generic_search_fingerprint_fully_recomputed"] is False
+    assert verification["generic_search_fingerprint_fully_recomputed"] is True
     assert verification["generic_search_fingerprint_crosslinked"] is True
     assert verification["claim_safe"] is False
 
@@ -282,6 +282,7 @@ def test_verify_result_console_command_writes_private_receipt(
         "betelgeuze-engine-v2/verify-result/1.0.0"
     )
     assert verification["canonical_bytes_verified"] is True
+    assert verification["generic_search_fingerprint_fully_recomputed"] is True
     assert verification["claim_safe"] is False
     projection = dict(verification)
     document_sha = projection.pop("document_sha256")

@@ -151,6 +151,16 @@ from .stack_round3_list_compat import (
 
 STACK_ROUND3_LIST_COMPAT_SHA256 = _install_stack_round3_list_compat()
 
+from .docking.search_fingerprint_material import (
+    DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID,
+    DOCKING_SEARCH_RESULT_SCHEMA_ID,
+    SearchFingerprintMaterialError,
+    install_search_fingerprint_material as _install_search_fingerprint_material,
+    recompute_search_fingerprint_sha256,
+)
+
+SEARCH_FINGERPRINT_MATERIAL_SHA256 = _install_search_fingerprint_material()
+
 from .molecular import (
     chemical_graph_sha256,
     indexed_topology_sha256,
@@ -166,6 +176,8 @@ __all__ = [
     "CHECKPOINT_SCHEMA_VERSION",
     "DISTRIBUTION_NAME",
     "DISTRIBUTION_VERSION",
+    "DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID",
+    "DOCKING_SEARCH_RESULT_SCHEMA_ID",
     "ENGINE_API_VERSION",
     "ENGINE_RESULT_SCHEMA_VERSION",
     "MAX_COMPACT_ATOMS_PER_CELL",
@@ -176,6 +188,7 @@ __all__ = [
     "REFERENCE_EXECUTION_MODE",
     "RIGID_PROJECTION_NOTE",
     "RUNTIME_INPUT_SCHEMA_VERSION",
+    "SEARCH_FINGERPRINT_MATERIAL_SHA256",
     "STACK_ROUND1_HARDENING_SHA256",
     "STACK_ROUND1_MINIMIZATION_COMPAT_SHA256",
     "STACK_ROUND2_EVALUATOR_SHA256",
@@ -217,6 +230,7 @@ __all__ = [
     "QuantityDescriptor",
     "RadiusGraphConfig",
     "Residue",
+    "SearchFingerprintMaterialError",
     "SparseNeighborGraph",
     "StructureProvenance",
     "TemporalRollout",
@@ -240,6 +254,7 @@ __all__ = [
     "indexed_topology_sha256",
     "physics_informed_objective",
     "project_rigid_body_forces",
+    "recompute_search_fingerprint_sha256",
     "require_valid_all_atom_system",
     "run_internal_cpu_reference",
     "source_bound_topology_sha256",

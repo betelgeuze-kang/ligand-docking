@@ -1,31 +1,28 @@
-"""Strict public wrapper for canonical CLI result verification.
+"""Strict public verification with complete search-fingerprint recomputation.
 
-The base verifier reconstructs every currently expandable receipt. This wrapper
-adds the cross-link whose source projection is not fully reconstructible: the
-interpretable result's retained generic-search fingerprint must equal both the
-placement-search fingerprint and the expanded generic search-result fingerprint.
+Legacy Engine v2 result documents omitted a generic-search schema identifier,
+called the selected-row count ``top_count``, and called the row pose flag
+``pose_valid``. Those historical presentation details are normalized only in an
+isolated copy for structural verification.
 
-The historical ``DockingSearchResult.to_dict`` surface predates an explicit
-schema identifier, calls the selected-row count ``top_count``, and calls the
-per-row pose flag ``pose_valid``. Verification normalizes only those legacy
-presentation details in an isolated copy. The stored document, its top-level
-SHA, nested receipts, rows, scores, identities, and claim flags are never
-rewritten or trusted from the normalized copy.
-
-The generic search fingerprint remains cross-linked rather than recomputed,
-because the public search-result document does not expand symmetry mappings.
+Schema-v2 generic search documents additionally expose the complete schema-v6
+fingerprint material. The strict verifier hashes that material, validates every
+cross-link to the expanded generic result, and returns a verification receipt
+that records full search-fingerprint recomputation.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import json
+import math
 from typing import Mapping
 
 from . import result_verifier as _base
 
 
 STRICT_CLI_RESULT_VERIFICATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_strict_cli_result_verification/1.0.0"
+    "betelgeuze.engine_v2_strict_cli_result_verification/2.0.0"
 )
 LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_docking_search_result/1.0.0"
@@ -33,7 +30,6 @@ LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID = (
 
 
 CliResultVerificationError = _base.CliResultVerificationError
-CliResultVerificationReceipt = _base.CliResultVerificationReceipt
 
 
 _ORIGINAL_VERIFY_GENERIC_SEARCH = _base._verify_generic_search
@@ -45,18 +41,246 @@ def _require_mapping(value: object, *, name: str) -> Mapping[str, object]:
     return value
 
 
+def _require_sequence(value: object, *, name: str) -> list[object]:
+    if not isinstance(value, list):
+        raise CliResultVerificationError(f"{name} must be a JSON array")
+    return value
+
+
+def _generic_search_document(
+    document: Mapping[str, object],
+) -> Mapping[str, object]:
+    cli_result = _require_mapping(document, name="CLI docking result")
+    interpreted = _require_mapping(
+        cli_result.get("result"),
+        name="interpretable scored search result",
+    )
+    placement = _require_mapping(
+        interpreted.get("placement_search_result"),
+        name="placement search result",
+    )
+    authenticated = _require_mapping(
+        placement.get("search"),
+        name="authenticated search result",
+    )
+    return _require_mapping(
+        authenticated.get("search_result"),
+        name="generic search result",
+    )
+
+
+def _verify_search_material(generic: Mapping[str, object]) -> bool:
+    from .docking.search_fingerprint_material import (
+        DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID,
+        DOCKING_SEARCH_RESULT_SCHEMA_ID,
+    )
+
+    material_value = generic.get("search_fingerprint_material")
+    if material_value is None:
+        if generic.get("search_fingerprint_fully_recomputable") not in {
+            None,
+            False,
+        }:
+            raise CliResultVerificationError(
+                "legacy generic search overstates fingerprint recomputability"
+            )
+        return False
+
+    if generic.get("schema_id") != DOCKING_SEARCH_RESULT_SCHEMA_ID:
+        raise CliResultVerificationError(
+            "recomputable generic search uses an unsupported result schema"
+        )
+    if generic.get("search_fingerprint_fully_recomputable") is not True:
+        raise CliResultVerificationError(
+            "generic search material is present but not marked recomputable"
+        )
+    if (
+        generic.get("search_fingerprint_schema_id")
+        != DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID
+    ):
+        raise CliResultVerificationError(
+            "generic search fingerprint schema is unsupported"
+        )
+
+    material = _require_mapping(
+        material_value,
+        name="generic search fingerprint material",
+    )
+    expected_keys = {
+        "schema_id",
+        "budget",
+        "scorer_contract_fingerprint_sha256",
+        "refiner_contract_fingerprint_sha256",
+        "score_descriptor",
+        "validity_context_fingerprint_sha256",
+        "unbound_validity_compatibility",
+        "diversity_metric",
+        "diversity_rmsd_angstrom_binary64_hex",
+        "symmetry_permutation_count",
+        "symmetry_permutations",
+        "problem_fingerprint_sha256",
+        "search_space_fingerprint_sha256",
+        "proposal_fingerprints",
+    }
+    if set(material) != expected_keys:
+        raise CliResultVerificationError(
+            "generic search fingerprint material has unexpected fields"
+        )
+    if material.get("schema_id") != DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID:
+        raise CliResultVerificationError(
+            "search fingerprint material schema is unsupported"
+        )
+
+    retained_fingerprint = _base._require_sha256(
+        generic.get("search_fingerprint_sha256"),
+        name="generic search fingerprint",
+    )
+    if _base._sha256(material) != retained_fingerprint:
+        raise CliResultVerificationError(
+            "generic search fingerprint material does not reproduce the fingerprint"
+        )
+
+    exact_crosslinks = {
+        "budget": generic.get("budget"),
+        "scorer_contract_fingerprint_sha256": generic.get(
+            "scorer_contract_fingerprint_sha256"
+        ),
+        "refiner_contract_fingerprint_sha256": generic.get(
+            "refiner_contract_fingerprint_sha256"
+        ),
+        "score_descriptor": generic.get("score_descriptor"),
+        "validity_context_fingerprint_sha256": generic.get(
+            "validity_context_fingerprint_sha256"
+        ),
+        "diversity_metric": generic.get("diversity_metric"),
+        "problem_fingerprint_sha256": generic.get(
+            "problem_fingerprint_sha256"
+        ),
+        "search_space_fingerprint_sha256": generic.get(
+            "search_space_fingerprint_sha256"
+        ),
+    }
+    for key, expected in exact_crosslinks.items():
+        if material.get(key) != expected:
+            raise CliResultVerificationError(
+                f"search fingerprint material is cross-wired on {key}"
+            )
+
+    if type(material.get("unbound_validity_compatibility")) is not bool:
+        raise CliResultVerificationError(
+            "search fingerprint unbound-validity flag must be boolean"
+        )
+
+    threshold_hex = material.get(
+        "diversity_rmsd_angstrom_binary64_hex"
+    )
+    if not isinstance(threshold_hex, str):
+        raise CliResultVerificationError(
+            "search fingerprint diversity threshold must be hexadecimal"
+        )
+    try:
+        threshold = float.fromhex(threshold_hex)
+    except ValueError as exc:
+        raise CliResultVerificationError(
+            "search fingerprint diversity threshold is invalid"
+        ) from exc
+    if (
+        not math.isfinite(threshold)
+        or threshold < 0.0
+        or threshold.hex() != threshold_hex
+    ):
+        raise CliResultVerificationError(
+            "search fingerprint diversity threshold is non-canonical"
+        )
+
+    rows = _require_sequence(generic.get("rows"), name="generic search rows")
+    proposal_fingerprints = [
+        _base._require_sha256(
+            _require_mapping(row, name="generic search row").get(
+                "proposal_fingerprint_sha256"
+            ),
+            name="generic proposal fingerprint",
+        )
+        for row in rows
+    ]
+    material_proposals = _require_sequence(
+        material.get("proposal_fingerprints"),
+        name="search fingerprint proposal list",
+    )
+    if proposal_fingerprints != material_proposals:
+        raise CliResultVerificationError(
+            "search fingerprint proposal list disagrees with generic rows"
+        )
+
+    symmetry = _require_mapping(
+        material.get("symmetry_permutations"),
+        name="search fingerprint symmetry mappings",
+    )
+    if set(symmetry) != {"atom_count", "mappings"}:
+        raise CliResultVerificationError(
+            "search fingerprint symmetry material has unexpected fields"
+        )
+    atom_count = _base._exact_int(
+        symmetry.get("atom_count"),
+        name="search fingerprint atom_count",
+        minimum=1,
+    )
+    mappings = _require_sequence(
+        symmetry.get("mappings"),
+        name="search fingerprint symmetry mapping list",
+    )
+    permutation_count = _base._exact_int(
+        material.get("symmetry_permutation_count"),
+        name="search fingerprint symmetry permutation count",
+    )
+    if permutation_count != len(mappings):
+        raise CliResultVerificationError(
+            "search fingerprint symmetry count does not match mappings"
+        )
+    expected_atoms = list(range(atom_count))
+    normalized_mappings: list[list[int]] = []
+    for raw_mapping in mappings:
+        mapping = _require_sequence(
+            raw_mapping,
+            name="search fingerprint symmetry mapping",
+        )
+        if any(type(value) is not int for value in mapping):
+            raise CliResultVerificationError(
+                "search fingerprint symmetry mapping must contain integers"
+            )
+        if sorted(mapping) != expected_atoms:
+            raise CliResultVerificationError(
+                "search fingerprint symmetry mapping is not a permutation"
+            )
+        normalized_mappings.append(list(mapping))
+    if normalized_mappings != mappings:
+        raise CliResultVerificationError(
+            "search fingerprint symmetry mappings are not canonical lists"
+        )
+    return True
+
+
 def _verify_legacy_generic_search(document: object) -> dict[str, object]:
-    """Verify the historical public result without mutating signed evidence."""
+    """Verify legacy and schema-v2 public results without changing evidence."""
+
+    from .docking.search_fingerprint_material import (
+        DOCKING_SEARCH_RESULT_SCHEMA_ID,
+    )
 
     original = _require_mapping(document, name="generic search result")
     generic = dict(original)
     schema_id = generic.get("schema_id")
-    if schema_id not in {None, LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID}:
+    if schema_id not in {
+        None,
+        LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID,
+        DOCKING_SEARCH_RESULT_SCHEMA_ID,
+    }:
         raise CliResultVerificationError(
             "generic search-result schema is unsupported"
         )
-    if schema_id is None:
-        generic["schema_id"] = LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID
+    # The base structural verifier predates schema-v2 and validates a temporary
+    # compatibility projection only. The original result remains untouched.
+    generic["schema_id"] = LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID
 
     top_count = generic.get("top_count")
     selected_count = generic.get("selected_count")
@@ -94,30 +318,31 @@ def _verify_legacy_generic_search(document: object) -> dict[str, object]:
         raise CliResultVerificationError(
             "generic search result must retain claim_safe=false"
         )
-    # These promotion flags were historically carried by the authenticated
-    # wrapper rather than the expanded generic result. Supply their required
-    # false values only to the base structural verifier's temporary copy.
     generic.setdefault("scientifically_validated", False)
     generic.setdefault("product_qualified", False)
     generic.setdefault("customer_execution_enabled", False)
 
     verified = _ORIGINAL_VERIFY_GENERIC_SEARCH(generic)
-    # Downstream receipt checks hash the exact historical row documents. Restore
-    # the original rows after structural count validation on the normalized copy.
     verified["rows"] = original_rows
     verified["document"] = original
+    verified["search_fingerprint_fully_recomputed"] = (
+        _verify_search_material(original)
+    )
     return verified
 
 
-# The base verification call resolves this module global dynamically. Installing
-# one idempotent compatibility boundary keeps direct strict calls and byte calls
-# on the same validation path without altering the evidence document.
 if getattr(_base, "_strict_generic_search_compat_installed", False) is False:
     _base._verify_generic_search = _verify_legacy_generic_search
     _base._strict_generic_search_compat_installed = True
+else:
+    # A legacy strict module may already have installed an older compatibility
+    # wrapper in this interpreter. Replace it with the schema-v2-aware version.
+    _base._verify_generic_search = _verify_legacy_generic_search
 
 
-def _verify_generic_search_crosslink(document: Mapping[str, object]) -> None:
+def _verify_generic_search_crosslink(
+    document: Mapping[str, object],
+) -> Mapping[str, object]:
     cli_result = _require_mapping(document, name="CLI docking result")
     interpreted = _require_mapping(
         cli_result.get("result"),
@@ -157,28 +382,137 @@ def _verify_generic_search_crosslink(document: Mapping[str, object]) -> None:
         raise CliResultVerificationError(
             "generic search fingerprint cross-link is inconsistent"
         )
+    return generic
+
+
+@dataclass(frozen=True, slots=True)
+class CliResultVerificationReceipt:
+    input_document_sha256: str
+    nested_result_receipt_sha256: str
+    authenticated_input_receipt_sha256: str
+    generic_search_fingerprint_sha256: str
+    candidate_count: int
+    success_count: int
+    failure_count: int
+    generic_search_fingerprint_fully_recomputed: bool
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        for name in (
+            "input_document_sha256",
+            "nested_result_receipt_sha256",
+            "authenticated_input_receipt_sha256",
+            "generic_search_fingerprint_sha256",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                _base._require_sha256(getattr(self, name), name=name),
+            )
+        for name in ("candidate_count", "success_count", "failure_count"):
+            object.__setattr__(
+                self,
+                name,
+                _base._exact_int(getattr(self, name), name=name),
+            )
+        if type(self.generic_search_fingerprint_fully_recomputed) is not bool:
+            raise CliResultVerificationError(
+                "search fingerprint recomputation flag must be boolean"
+            )
+        if self.success_count + self.failure_count != self.candidate_count:
+            raise CliResultVerificationError(
+                "verification receipt counts do not preserve the denominator"
+            )
+        object.__setattr__(
+            self,
+            "_receipt_sha256",
+            _base._sha256(self._projection()),
+        )
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": _base.CLI_RESULT_VERIFICATION_SCHEMA_ID,
+            "input_document_sha256": self.input_document_sha256,
+            "nested_result_receipt_sha256": self.nested_result_receipt_sha256,
+            "authenticated_input_receipt_sha256": (
+                self.authenticated_input_receipt_sha256
+            ),
+            "generic_search_fingerprint_sha256": (
+                self.generic_search_fingerprint_sha256
+            ),
+            "candidate_count": self.candidate_count,
+            "success_count": self.success_count,
+            "failure_count": self.failure_count,
+            "canonical_bytes_verified": True,
+            "nested_receipts_verified": True,
+            "failure_denominator_verified": True,
+            "generic_search_fingerprint_fully_recomputed": (
+                self.generic_search_fingerprint_fully_recomputed
+            ),
+            "generic_search_fingerprint_crosslinked": True,
+            "network_fetch_performed": False,
+            "calibrated": False,
+            "scientifically_validated": False,
+            "benchmark_validated": False,
+            "product_qualified": False,
+            "customer_execution_enabled": False,
+            "claim_safe": False,
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _base._sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise CliResultVerificationError(
+                "strict verification receipt changed after construction"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            **self._projection(),
+            "receipt_sha256": self.receipt_sha256,
+        }
 
 
 def verify_canonical_cli_result_document(
     document: Mapping[str, object],
 ) -> CliResultVerificationReceipt:
-    _verify_generic_search_crosslink(document)
-    return _base.verify_canonical_cli_result_document(document)
+    generic = _verify_generic_search_crosslink(document)
+    fully_recomputed = _verify_search_material(generic)
+    base_receipt = _base.verify_canonical_cli_result_document(document)
+    return CliResultVerificationReceipt(
+        input_document_sha256=base_receipt.input_document_sha256,
+        nested_result_receipt_sha256=(
+            base_receipt.nested_result_receipt_sha256
+        ),
+        authenticated_input_receipt_sha256=(
+            base_receipt.authenticated_input_receipt_sha256
+        ),
+        generic_search_fingerprint_sha256=(
+            base_receipt.generic_search_fingerprint_sha256
+        ),
+        candidate_count=base_receipt.candidate_count,
+        success_count=base_receipt.success_count,
+        failure_count=base_receipt.failure_count,
+        generic_search_fingerprint_fully_recomputed=fully_recomputed,
+    )
 
 
 def verify_canonical_cli_result_bytes(
     raw: bytes,
 ) -> CliResultVerificationReceipt:
-    receipt = _base.verify_canonical_cli_result_bytes(raw)
+    # Reuse the base reader for canonical bytes, duplicate keys, and resource
+    # bounds, then return the stricter receipt from the parsed document.
+    _base.verify_canonical_cli_result_bytes(raw)
     canonical = raw[:-1] if raw.endswith(b"\n") else raw
     document = json.loads(
         canonical.decode("ascii"),
         object_pairs_hook=_base._reject_duplicate_pairs,
     )
-    _verify_generic_search_crosslink(
+    return verify_canonical_cli_result_document(
         _base._require_dict(document, name="CLI docking result")
     )
-    return receipt
 
 
 __all__ = [
