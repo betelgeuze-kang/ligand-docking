@@ -12,6 +12,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from betelgeuze_engine_v2 import (
+    ATTESTED_INPUT_BOUND_VERIFICATION_SCHEMA_ID,
     AllAtomSystem,
     Atom,
     Bond,
@@ -25,7 +26,6 @@ from betelgeuze_engine_v2.cli import (
 )
 from betelgeuze_engine_v2.cli_dispatch import main as dispatch_main
 from betelgeuze_engine_v2.input_bound_verifier import (
-    INPUT_BOUND_VERIFICATION_SCHEMA_ID,
     InputBoundVerificationError,
     verify_input_bound_cli_bundle_bytes,
 )
@@ -215,7 +215,9 @@ def test_reference_bundle_recomputes_derivation_authority_and_scorer(
 ) -> None:
     receipt = _verify(_bundle(tmp_path))
     document = receipt.to_dict()
-    assert document["schema_id"] == INPUT_BOUND_VERIFICATION_SCHEMA_ID
+    assert document["schema_id"] == (
+        ATTESTED_INPUT_BOUND_VERIFICATION_SCHEMA_ID
+    )
     assert document["reference_pocket_derivation_fully_recomputed"] is True
     assert len(document["reference_pocket_derivation_receipt_sha256"]) == 64
     assert document["input_artifact_sha256s_verified"] is True
@@ -224,8 +226,10 @@ def test_reference_bundle_recomputes_derivation_authority_and_scorer(
     assert document["scorer_contract_recomputed_from_declared_source_sha"] is True
     assert document["scorer_source_bytes_locally_attested"] is False
     assert document["search_fingerprint_fully_recomputed"] is True
-    assert document["receptor_margin_uniquely_attested"] is False
-    assert document["model_indices_uniquely_attested"] is False
+    assert document["execution_parameters_fully_verified"] is True
+    assert document["receptor_margin_uniquely_attested"] is True
+    assert document["model_indices_uniquely_attested"] is True
+    assert len(document["execution_parameters_receipt_sha256"]) == 64
     assert document["candidate_count"] == 4
     assert document["success_count"] + document["failure_count"] == 4
     assert document["chemistry_inference_performed"] is False
@@ -279,6 +283,9 @@ def test_manual_pocket_can_replay_authority_without_claiming_derivation(
     assert document["reference_pocket_derivation_fully_recomputed"] is False
     assert document["reference_pocket_derivation_receipt_sha256"] == ""
     assert document["authority_state_fully_recomputed"] is True
+    assert document["execution_parameters_fully_verified"] is True
+    assert document["receptor_margin_uniquely_attested"] is True
+    assert document["model_indices_uniquely_attested"] is True
     with pytest.raises(
         InputBoundVerificationError,
         match="required reference derivation",
@@ -320,6 +327,9 @@ def test_verify_bundle_command_writes_private_canonical_receipt(
     assert document["reference_pocket_derivation_fully_recomputed"] is True
     assert document["authority_state_fully_recomputed"] is True
     assert document["search_fingerprint_fully_recomputed"] is True
+    assert document["execution_parameters_fully_verified"] is True
+    assert document["receptor_margin_uniquely_attested"] is True
+    assert document["model_indices_uniquely_attested"] is True
     assert document["claim_safe"] is False
     projection = dict(document)
     document_sha = projection.pop("document_sha256")
