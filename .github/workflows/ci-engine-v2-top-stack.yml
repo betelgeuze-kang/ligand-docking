@@ -35,7 +35,7 @@ jobs:
 
   focused-security-and-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 70
     strategy:
       fail-fast: false
       matrix:
@@ -107,6 +107,8 @@ jobs:
             tests/unit/test_engine_v2_reference_pocket_release_round23.py \
             tests/unit/test_engine_v2_input_bound_verifier_round24.py \
             tests/unit/test_engine_v2_input_bound_verifier_release_round25.py \
+            tests/unit/test_engine_v2_execution_parameter_attestation_round26.py \
+            tests/unit/test_engine_v2_execution_parameter_release_round27.py \
             tests/unit/test_engine_v2_release_integration_round5.py \
             tests/unit/test_engine_v2_reference_minimization_validation_dependency_identity.py \
             tests/unit/test_engine_v2_reference_minimization_validation_preimport_binding.py \
@@ -122,7 +124,7 @@ jobs:
 
   complete-engine-v2-suite:
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 70
     env:
       CUDA_VISIBLE_DEVICES: ""
       HIP_VISIBLE_DEVICES: ""
