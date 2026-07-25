@@ -186,7 +186,7 @@ jobs:
             --require-reference-pocket-derivation \
             --output bundle-verification.json
 
-      - name: Verify installed source observation and closed claim boundary
+      - name: Verify installed source observation, execution attestation, and closed claim boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -212,6 +212,18 @@ jobs:
           for path in (pocket_path, result_path, result_verification_path, bundle_path):
               assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
+          execution = result["execution_parameters"]
+          assert execution["receptor_model_index"] == 0
+          assert execution["ligand_model_index"] == 0
+          assert execution["receptor_margin_angstrom_binary64_hex"] == (4.0).hex()
+          assert execution["parameters_uniquely_attested"] is True
+          assert execution["model_selection_fixed_by_cli"] is True
+          assert execution["receipt_sha256"] == result["execution_parameters_receipt_sha256"]
+          assert execution["receptor_artifact_sha256"] == hashlib.sha256(receptor_path.read_bytes()).hexdigest()
+          assert execution["ligand_artifact_sha256"] == hashlib.sha256(ligand_path.read_bytes()).hexdigest()
+          assert execution["pocket_artifact_sha256"] == hashlib.sha256(pocket_path.read_bytes()).hexdigest()
+          assert execution["authenticated_input_receipt_sha256"] == result["authenticated_input_receipt_sha256"]
+
           assert result["receptor_artifact_sha256"] == hashlib.sha256(receptor_path.read_bytes()).hexdigest()
           assert result["ligand_artifact_sha256"] == hashlib.sha256(ligand_path.read_bytes()).hexdigest()
           assert result["pocket_artifact_sha256"] == hashlib.sha256(pocket_path.read_bytes()).hexdigest()
@@ -233,6 +245,7 @@ jobs:
           assert bundle["execution_parameters_fully_verified"] is True
           assert bundle["receptor_margin_uniquely_attested"] is True
           assert bundle["model_indices_uniquely_attested"] is True
+          assert bundle["execution_parameters_receipt_sha256"] == result["execution_parameters_receipt_sha256"]
           assert bundle["candidate_count"] == 4
           assert bundle["success_count"] + bundle["failure_count"] == 4
           assert result_verification["generic_search_fingerprint_fully_recomputed"] is True
