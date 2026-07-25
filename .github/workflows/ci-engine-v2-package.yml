@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/**"
+      - "betelgeuze_engine_v2_preflight.py"
       - "packaging/engine-v2/**"
       - "tools/build_engine_v2_wheel.py"
       - "tools/check_engine_v2_architecture.py"
@@ -14,6 +15,7 @@ on:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/**"
+      - "betelgeuze_engine_v2_preflight.py"
       - "packaging/engine-v2/**"
       - "tools/build_engine_v2_wheel.py"
       - "tools/check_engine_v2_architecture.py"
@@ -50,6 +52,7 @@ jobs:
           fetch-depth: 1
           sparse-checkout: |
             betelgeuze_engine_v2
+            betelgeuze_engine_v2_preflight.py
             packaging/engine-v2
             tools/build_engine_v2_wheel.py
             tools/check_engine_v2_architecture.py
@@ -77,7 +80,11 @@ jobs:
 
       - name: Compile and enforce Engine v2 AST boundaries
         run: |
-          python -m compileall -q betelgeuze_engine_v2 tools/build_engine_v2_wheel.py tools/check_engine_v2_architecture.py
+          python -m compileall -q \
+            betelgeuze_engine_v2 \
+            betelgeuze_engine_v2_preflight.py \
+            tools/build_engine_v2_wheel.py \
+            tools/check_engine_v2_architecture.py
           python tools/check_engine_v2_architecture.py
           python -m pytest -q tests/unit/test_engine_v2_packaging_guards.py
 
@@ -114,6 +121,27 @@ jobs:
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
           "$venv/bin/python" -m pip check
           test -x "$venv/bin/betelgeuze-engine-v2"
+
+      - name: Verify preflight before package import
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/betelgeuze-engine-v2-${{ matrix.python-version }}"
+          "$venv/bin/python" - <<'PY'
+          import sys
+          import betelgeuze_engine_v2_preflight as preflight
+
+          assert "betelgeuze_engine_v2" not in sys.modules
+          receipt = preflight.verify_installed_distribution_record()
+          assert "betelgeuze_engine_v2" not in sys.modules
+          assert receipt["record_hashes_verified"] is True
+          assert receipt["engine_package_imported_before_verification"] is False
+          assert receipt["engine_package_imported_during_verification"] is False
+          assert receipt["record_signature_verified"] is False
+          assert receipt["wheel_signature_verified"] is False
+          assert receipt["claim_safe"] is False
+          assert len(receipt["receipt_sha256"]) == 64
+          PY
 
       - name: Import wheel outside checkout and verify package isolation
         shell: bash
@@ -289,6 +317,13 @@ jobs:
           assert document["candidate_count"] == 2
           assert document["success_count"] + document["failure_count"] == 2
           assert document["scorer_source_preimport_attested"] is False
+          assert document["preimport_record_result_extension_schema_id"].endswith("/1.0.0")
+          assert len(document["preimport_record_attestation_receipt_sha256"]) == 64
+          preflight = document["preimport_record_attestation"]
+          assert preflight["record_hashes_verified"] is True
+          assert preflight["engine_package_imported_before_verification"] is False
+          assert preflight["record_signature_verified"] is False
+          assert preflight["wheel_signature_verified"] is False
           assert document["chemistry_inference_performed"] is False
           assert document["calibrated"] is False
           assert document["claim_safe"] is False
