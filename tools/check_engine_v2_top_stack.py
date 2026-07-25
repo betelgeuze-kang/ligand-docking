@@ -46,6 +46,8 @@ TARGET_WORKFLOWS = (
     "ci-engine-v2-input-bound-verifier-release-round25.yml",
     "ci-engine-v2-execution-parameter-attestation-round26.yml",
     "ci-engine-v2-execution-parameter-release-round27.yml",
+    "ci-engine-v2-scorer-source-observation-round28.yml",
+    "ci-engine-v2-scorer-source-observation-release-round29.yml",
     TOP_STACK_WORKFLOW,
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (

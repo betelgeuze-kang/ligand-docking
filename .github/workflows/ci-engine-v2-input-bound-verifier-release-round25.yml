@@ -109,15 +109,15 @@ jobs:
 
           def provenance(name: str, digest: str) -> StructureProvenance:
               return StructureProvenance(
-                  source_format="round25-installed",
+                  source_format="round29-installed",
                   source_id=name,
                   source_sha256=digest,
-                  parser_name="round25-installed",
+                  parser_name="round29-installed",
                   parser_version="1.0.0",
               )
 
           ligand = AllAtomSystem(
-              system_id="round25-ligand",
+              system_id="round29-ligand",
               atoms=(
                   Atom(index=0, name="C1", element="C", atomic_number=6, residue_index=0),
                   Atom(index=1, name="N1", element="N", atomic_number=7, residue_index=0),
@@ -132,10 +132,10 @@ jobs:
               residues=(Residue(index=0, name="LIG", chain_index=0, sequence_number=1, atom_indices=(0, 1, 2, 3)),),
               chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
               coordinates=torch.tensor([[[0.0, 0.0, 0.0], [1.4, 0.0, 0.0], [2.8, 0.3, 0.0], [4.1, 1.0, 0.2]]], dtype=torch.float64),
-              provenance=provenance("round25-ligand", "a" * 64),
+              provenance=provenance("round29-ligand", "a" * 64),
           )
           receptor = AllAtomSystem(
-              system_id="round25-receptor",
+              system_id="round29-receptor",
               atoms=tuple(
                   Atom(index=i, name=f"R{i}", element="C", atomic_number=6, residue_index=0)
                   for i in range(5)
@@ -144,7 +144,7 @@ jobs:
               residues=(Residue(index=0, name="REC", chain_index=0, sequence_number=1, atom_indices=(0, 1, 2, 3, 4)),),
               chains=(Chain(index=0, chain_id="A", residue_indices=(0,)),),
               coordinates=torch.tensor([[[0.0, 4.0, 0.0], [4.0, 4.0, 0.0], [7.0, 0.0, 0.0], [9.0, 0.0, 0.0], [60.0, 60.0, 60.0]]], dtype=torch.float64),
-              provenance=provenance("round25-receptor", "b" * 64),
+              provenance=provenance("round29-receptor", "b" * 64),
           )
           write_canonical_system_json(receptor, Path("receptor.json"))
           write_canonical_system_json(ligand, Path("ligand.json"))
@@ -173,7 +173,7 @@ jobs:
             --max-torsions 1 \
             --translation-radius-angstrom 1.0 \
             --receptor-margin-angstrom 4.0 \
-            --seed 211
+            --seed 229
           "$venv/bin/betelgeuze-engine-v2" verify-result --input result.json --output result-verification.json
           "$venv/bin/betelgeuze-engine-v2" verify-bundle \
             --result result.json \
@@ -186,7 +186,7 @@ jobs:
             --require-reference-pocket-derivation \
             --output bundle-verification.json
 
-      - name: Verify installed unique execution attestation
+      - name: Verify installed source observation and closed claim boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -212,29 +212,27 @@ jobs:
           for path in (pocket_path, result_path, result_verification_path, bundle_path):
               assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
-          execution = result["execution_parameters"]
-          assert execution["receptor_model_index"] == 0
-          assert execution["ligand_model_index"] == 0
-          assert execution["receptor_margin_angstrom_binary64_hex"] == (4.0).hex()
-          assert execution["parameters_uniquely_attested"] is True
-          assert execution["model_selection_fixed_by_cli"] is True
-          assert execution["receipt_sha256"] == result["execution_parameters_receipt_sha256"]
-          assert execution["receptor_artifact_sha256"] == hashlib.sha256(receptor_path.read_bytes()).hexdigest()
-          assert execution["ligand_artifact_sha256"] == hashlib.sha256(ligand_path.read_bytes()).hexdigest()
-          assert execution["pocket_artifact_sha256"] == hashlib.sha256(pocket_path.read_bytes()).hexdigest()
-          assert execution["authenticated_input_receipt_sha256"] == result["authenticated_input_receipt_sha256"]
-
+          assert result["receptor_artifact_sha256"] == hashlib.sha256(receptor_path.read_bytes()).hexdigest()
+          assert result["ligand_artifact_sha256"] == hashlib.sha256(ligand_path.read_bytes()).hexdigest()
+          assert result["pocket_artifact_sha256"] == hashlib.sha256(pocket_path.read_bytes()).hexdigest()
           assert bundle["input_artifact_sha256s_verified"] is True
           assert bundle["pocket_definition_fully_recomputed"] is True
           assert bundle["reference_pocket_derivation_fully_recomputed"] is True
           assert bundle["authority_state_fully_recomputed"] is True
           assert bundle["scorer_contract_recomputed_from_declared_source_sha"] is True
+          assert bundle["scorer_source_bytes_locally_observed"] is True
+          assert bundle["scorer_source_bytes_sha256_matched_result"] is True
+          assert bundle["scorer_source_bytes_observed_after_import"] is True
           assert bundle["scorer_source_bytes_locally_attested"] is False
+          assert bundle["scorer_source_execution_preimport_attested"] is False
+          assert bundle["scorer_source_signature_verified"] is False
+          assert bundle["scorer_source_sha256"] == result["scorer_source_sha256"]
+          assert bundle["scorer_source_byte_count"] > 0
+          assert len(bundle["scorer_source_observation_receipt_sha256"]) == 64
           assert bundle["search_fingerprint_fully_recomputed"] is True
           assert bundle["execution_parameters_fully_verified"] is True
           assert bundle["receptor_margin_uniquely_attested"] is True
           assert bundle["model_indices_uniquely_attested"] is True
-          assert bundle["execution_parameters_receipt_sha256"] == result["execution_parameters_receipt_sha256"]
           assert bundle["candidate_count"] == 4
           assert bundle["success_count"] + bundle["failure_count"] == 4
           assert result_verification["generic_search_fingerprint_fully_recomputed"] is True
@@ -247,20 +245,20 @@ jobs:
               assert document["claim_safe"] is False
           PY
           cd "$GITHUB_WORKSPACE"
-          rm -rf input-bound-release-evidence
-          mkdir -p input-bound-release-evidence
-          cp "$outside/pocket.json" input-bound-release-evidence/
-          cp "$outside/result.json" input-bound-release-evidence/
-          cp "$outside/result-verification.json" input-bound-release-evidence/
-          cp "$outside/bundle-verification.json" input-bound-release-evidence/
+          rm -rf source-observation-release-evidence
+          mkdir -p source-observation-release-evidence
+          cp "$outside/pocket.json" source-observation-release-evidence/
+          cp "$outside/result.json" source-observation-release-evidence/
+          cp "$outside/result-verification.json" source-observation-release-evidence/
+          cp "$outside/bundle-verification.json" source-observation-release-evidence/
 
-      - name: Upload reproducible wheel and input-bound evidence
+      - name: Upload reproducible wheel and source-observation evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: input-bound-verifier-release-py${{ matrix.python-version }}-${{ github.sha }}
+          name: scorer-source-observation-release-py${{ matrix.python-version }}-${{ github.sha }}
           path: |
             dist-bundle
-            input-bound-release-evidence
+            source-observation-release-evidence
           if-no-files-found: error
           retention-days: 7
