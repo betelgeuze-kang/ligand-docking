@@ -1,0 +1,333 @@
+name: ci-engine-v2-reference-pocket-release-round23
+
+on:
+  pull_request:
+    paths:
+      - "betelgeuze_engine_v2/reference_pocket.py"
+      - "betelgeuze_engine_v2/cli_dispatch.py"
+      - "betelgeuze_engine_v2/cli.py"
+      - "betelgeuze_engine_v2/result_verifier*.py"
+      - "betelgeuze_engine_v2/docking/**"
+      - "packaging/engine-v2/**"
+      - "tools/build_engine_v2_wheel.py"
+      - "tools/check_engine_v2_top_stack.py"
+      - "tests/unit/test_engine_v2_reference_pocket_release_round23.py"
+      - ".github/workflows/ci-engine-v2-reference-pocket-round22.yml"
+      - ".github/workflows/ci-engine-v2-reference-pocket-release-round23.yml"
+      - ".github/workflows/ci-engine-v2-top-stack.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "betelgeuze_engine_v2/reference_pocket.py"
+      - "betelgeuze_engine_v2/cli_dispatch.py"
+      - "betelgeuze_engine_v2/cli.py"
+      - "betelgeuze_engine_v2/result_verifier*.py"
+      - "betelgeuze_engine_v2/docking/**"
+      - "packaging/engine-v2/**"
+      - "tools/build_engine_v2_wheel.py"
+      - "tools/check_engine_v2_top_stack.py"
+      - "tests/unit/test_engine_v2_reference_pocket_release_round23.py"
+      - ".github/workflows/ci-engine-v2-reference-pocket-release-round23.yml"
+      - ".github/workflows/ci-engine-v2-top-stack.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-engine-v2-reference-pocket-release-round23-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installed-reference-pocket-round23:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      SOURCE_DATE_EPOCH: "1735689600"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          fetch-depth: 1
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install \
+            build==1.2.2.post1 \
+            setuptools==75.8.2 \
+            wheel==0.45.1 \
+            cryptography==46.0.5 \
+            numpy==1.26.4
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Build two byte-identical wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist-reference-a dist-reference-b dist-reference
+          python tools/build_engine_v2_wheel.py --output-dir dist-reference-a
+          python tools/build_engine_v2_wheel.py --output-dir dist-reference-b
+          wheel_a="$(find dist-reference-a -maxdepth 1 -name '*.whl' -print -quit)"
+          wheel_b="$(find dist-reference-b -maxdepth 1 -name '*.whl' -print -quit)"
+          test -n "$wheel_a"
+          test -n "$wheel_b"
+          test "$(find dist-reference-a -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+          test "$(find dist-reference-b -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+          cmp "$wheel_a" "$wheel_b"
+          mkdir -p dist-reference
+          cp "$wheel_a" dist-reference/
+          sha256sum dist-reference/*.whl | tee dist-reference/SHA256SUMS
+
+      - name: Clean-install the independent wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-reference-pocket-${{ matrix.python-version }}"
+          rm -rf "$venv"
+          python -m venv "$venv"
+          grep -q '^include-system-site-packages = false$' "$venv/pyvenv.cfg"
+          "$venv/bin/python" -m pip install pip==25.0.1
+          "$venv/bin/python" -m pip install cryptography==46.0.5 numpy==1.26.4
+          "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+          "$venv/bin/python" -m pip install --no-deps dist-reference/*.whl
+          "$venv/bin/python" -m pip check
+          test -x "$venv/bin/betelgeuze-engine-v2"
+
+      - name: Generate canonical receptor and reference ligand outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-reference-pocket-${{ matrix.python-version }}"
+          outside="/tmp/engine-v2-reference-pocket-outside-${{ matrix.python-version }}"
+          rm -rf "$outside"
+          mkdir -p "$outside"
+          cd "$outside"
+          "$venv/bin/python" - <<'PY'
+          from pathlib import Path
+          import torch
+          from betelgeuze_engine_v2 import (
+              AllAtomSystem,
+              Atom,
+              Bond,
+              Chain,
+              Residue,
+              StructureProvenance,
+          )
+          from betelgeuze_engine_v2.molecular import write_canonical_system_json
+
+          def provenance(name: str, digest: str) -> StructureProvenance:
+              return StructureProvenance(
+                  source_format="round23-package",
+                  source_id=name,
+                  source_sha256=digest,
+                  parser_name="round23-package",
+                  parser_version="1.0.0",
+              )
+
+          ligand = AllAtomSystem(
+              system_id="round23-reference-ligand",
+              atoms=(
+                  Atom(index=0, name="C1", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=1, name="N1", element="N", atomic_number=7, residue_index=0),
+                  Atom(index=2, name="C2", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=3, name="O1", element="O", atomic_number=8, residue_index=0),
+                  Atom(index=4, name="H1", element="H", atomic_number=1, residue_index=0),
+              ),
+              bonds=(
+                  Bond(index=0, atom_i=0, atom_j=1, order=1.0),
+                  Bond(index=1, atom_i=1, atom_j=2, order=1.0),
+                  Bond(index=2, atom_i=2, atom_j=3, order=1.0),
+                  Bond(index=3, atom_i=0, atom_j=4, order=1.0),
+              ),
+              residues=(
+                  Residue(
+                      index=0,
+                      name="LIG",
+                      chain_index=0,
+                      sequence_number=1,
+                      atom_indices=(0, 1, 2, 3, 4),
+                  ),
+              ),
+              chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+              coordinates=torch.tensor(
+                  [[[0.0, 0.0, 0.0], [1.4, 0.0, 0.0], [2.8, 0.3, 0.0], [4.1, 1.0, 0.2], [0.0, 1.0, 0.0]]],
+                  dtype=torch.float64,
+              ),
+              provenance=provenance("round23-reference-ligand", "a" * 64),
+          )
+          receptor = AllAtomSystem(
+              system_id="round23-receptor",
+              atoms=(
+                  Atom(index=0, name="R1", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=1, name="R2", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=2, name="R3", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=3, name="R4", element="C", atomic_number=6, residue_index=0),
+              ),
+              bonds=(),
+              residues=(
+                  Residue(
+                      index=0,
+                      name="REC",
+                      chain_index=0,
+                      sequence_number=1,
+                      atom_indices=(0, 1, 2, 3),
+                  ),
+              ),
+              chains=(Chain(index=0, chain_id="A", residue_indices=(0,)),),
+              coordinates=torch.tensor(
+                  [[[0.0, 4.0, 0.0], [4.0, 4.0, 0.0], [7.0, 0.0, 0.0], [60.0, 60.0, 60.0]]],
+                  dtype=torch.float64,
+              ),
+              provenance=provenance("round23-receptor", "b" * 64),
+          )
+          write_canonical_system_json(receptor, Path("receptor.json"))
+          write_canonical_system_json(ligand, Path("ligand.json"))
+          PY
+
+      - name: Execute installed reference-pocket, docking, and verifier commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-reference-pocket-${{ matrix.python-version }}"
+          outside="/tmp/engine-v2-reference-pocket-outside-${{ matrix.python-version }}"
+          cd "$outside"
+          "$venv/bin/betelgeuze-engine-v2" --help
+          "$venv/bin/betelgeuze-engine-v2" pocket-from-reference --help
+          "$venv/bin/betelgeuze-engine-v2" pocket-from-reference \
+            --ligand ligand.json \
+            --coordinate-frame-id prepared-receptor-frame-v1 \
+            --padding-angstrom 4.0 \
+            --minimum-radius-angstrom 6.0 \
+            --output pocket.json
+          "$venv/bin/betelgeuze-engine-v2" dock-canonical \
+            --receptor receptor.json \
+            --ligand ligand.json \
+            --pocket pocket.json \
+            --output result.json \
+            --candidate-count 3 \
+            --top-k 2 \
+            --max-torsions 2 \
+            --translation-radius-angstrom 1.0 \
+            --seed 191
+          "$venv/bin/betelgeuze-engine-v2" verify-result \
+            --input result.json \
+            --output verification.json
+
+      - name: Verify installed reference-pocket evidence chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/engine-v2-reference-pocket-${{ matrix.python-version }}"
+          outside="/tmp/engine-v2-reference-pocket-outside-${{ matrix.python-version }}"
+          cd "$outside"
+          "$venv/bin/python" - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+          import stat
+
+          def canonical_bytes(value: object) -> bytes:
+              return json.dumps(
+                  value,
+                  ensure_ascii=True,
+                  allow_nan=False,
+                  sort_keys=True,
+                  separators=(",", ":"),
+              ).encode("ascii")
+
+          ligand_path = Path("ligand.json")
+          pocket_path = Path("pocket.json")
+          result_path = Path("result.json")
+          verification_path = Path("verification.json")
+          pocket = json.loads(pocket_path.read_bytes())
+          result = json.loads(result_path.read_bytes())
+          verification = json.loads(verification_path.read_bytes())
+
+          for path in (pocket_path, result_path, verification_path):
+              assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+          metadata = pocket["metadata"]
+          derivation = dict(metadata)
+          derivation_receipt_sha256 = derivation.pop("derivation_receipt_sha256")
+          assert derivation_receipt_sha256 == hashlib.sha256(
+              canonical_bytes(derivation)
+          ).hexdigest()
+          assert pocket["scope"] == "known_reference_pocket_redocking"
+          assert metadata["ligand_artifact_sha256"] == hashlib.sha256(
+              ligand_path.read_bytes()
+          ).hexdigest()
+          assert metadata["heavy_atom_indices"] == [0, 1, 2, 3]
+          assert metadata["heavy_atom_count"] == 4
+          assert metadata["hydrogen_coordinates_used"] is False
+          assert metadata["receptor_coordinates_used"] is False
+          assert metadata["pocket_prediction_performed"] is False
+          assert metadata["chemistry_inference_performed"] is False
+          assert metadata["scientifically_validated"] is False
+          assert metadata["claim_safe"] is False
+
+          assert result["ligand_artifact_sha256"] == metadata[
+              "ligand_artifact_sha256"
+          ]
+          assert result["pocket_artifact_sha256"] == hashlib.sha256(
+              pocket_path.read_bytes()
+          ).hexdigest()
+          assert result["candidate_count"] == 3
+          assert result["success_count"] + result["failure_count"] == 3
+          assert result["calibrated"] is False
+          assert result["scientifically_validated"] is False
+          assert result["benchmark_validated"] is False
+          assert result["product_qualified"] is False
+          assert result["customer_execution_enabled"] is False
+          assert result["claim_safe"] is False
+
+          assert verification["candidate_count"] == 3
+          assert verification["success_count"] + verification[
+              "failure_count"
+          ] == 3
+          assert verification["canonical_bytes_verified"] is True
+          assert verification["nested_receipts_verified"] is True
+          assert verification["failure_denominator_verified"] is True
+          assert verification[
+              "generic_search_fingerprint_fully_recomputed"
+          ] is True
+          assert verification[
+              "generic_search_fingerprint_crosslinked"
+          ] is True
+          assert verification["network_fetch_performed"] is False
+          assert verification["calibrated"] is False
+          assert verification["scientifically_validated"] is False
+          assert verification["benchmark_validated"] is False
+          assert verification["product_qualified"] is False
+          assert verification["customer_execution_enabled"] is False
+          assert verification["claim_safe"] is False
+          PY
+          cd "$GITHUB_WORKSPACE"
+          rm -rf reference-pocket-release-evidence
+          mkdir -p reference-pocket-release-evidence
+          cp "$outside/pocket.json" reference-pocket-release-evidence/
+          cp "$outside/result.json" reference-pocket-release-evidence/
+          cp "$outside/verification.json" reference-pocket-release-evidence/
+
+      - name: Upload reproducible wheel and installed evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reference-pocket-release-py${{ matrix.python-version }}-${{ github.sha }}
+          path: |
+            dist-reference
+            reference-pocket-release-evidence
+          if-no-files-found: error
+          retention-days: 7

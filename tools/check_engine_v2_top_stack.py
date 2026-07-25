@@ -40,6 +40,8 @@ TARGET_WORKFLOWS = (
     "ci-engine-v2-cli-result-verifier-round18.yml",
     "ci-engine-v2-cli-result-verifier-package-round19.yml",
     "ci-engine-v2-search-fingerprint-material-round20.yml",
+    "ci-engine-v2-reference-pocket-round22.yml",
+    "ci-engine-v2-reference-pocket-release-round23.yml",
     TOP_STACK_WORKFLOW,
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
