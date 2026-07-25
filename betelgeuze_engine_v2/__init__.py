@@ -173,6 +173,18 @@ EXECUTION_PARAMETER_ATTESTATION_SHA256 = (
     _install_execution_parameter_attestation()
 )
 
+from .scorer_source_observation import (
+    SCORER_SOURCE_OBSERVATION_MODE,
+    SCORER_SOURCE_OBSERVATION_SCHEMA_ID,
+    SOURCE_OBSERVED_INPUT_BOUND_VERIFICATION_SCHEMA_ID,
+    ScorerSourceObservationError,
+    ScorerSourceObservationReceipt,
+    SourceObservedInputBoundVerificationReceipt,
+    install_scorer_source_observation as _install_scorer_source_observation,
+)
+
+SCORER_SOURCE_OBSERVATION_SHA256 = _install_scorer_source_observation()
+
 from .molecular import (
     chemical_graph_sha256,
     indexed_topology_sha256,
@@ -203,7 +215,11 @@ __all__ = [
     "REFERENCE_EXECUTION_MODE",
     "RIGID_PROJECTION_NOTE",
     "RUNTIME_INPUT_SCHEMA_VERSION",
+    "SCORER_SOURCE_OBSERVATION_MODE",
+    "SCORER_SOURCE_OBSERVATION_SCHEMA_ID",
+    "SCORER_SOURCE_OBSERVATION_SHA256",
     "SEARCH_FINGERPRINT_MATERIAL_SHA256",
+    "SOURCE_OBSERVED_INPUT_BOUND_VERIFICATION_SCHEMA_ID",
     "STACK_ROUND1_HARDENING_SHA256",
     "STACK_ROUND1_MINIMIZATION_COMPAT_SHA256",
     "STACK_ROUND2_EVALUATOR_SHA256",
@@ -247,7 +263,10 @@ __all__ = [
     "QuantityDescriptor",
     "RadiusGraphConfig",
     "Residue",
+    "ScorerSourceObservationError",
+    "ScorerSourceObservationReceipt",
     "SearchFingerprintMaterialError",
+    "SourceObservedInputBoundVerificationReceipt",
     "SparseNeighborGraph",
     "StructureProvenance",
     "TemporalRollout",
