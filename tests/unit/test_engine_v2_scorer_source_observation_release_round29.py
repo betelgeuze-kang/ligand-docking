@@ -68,7 +68,7 @@ def test_top_stack_runs_source_observation_and_release_contracts() -> None:
     assert "test_engine_v2_scorer_source_observation_release_round29.py" in source
 
 
-def test_installed_bundle_lane_requires_observation_without_attestation_claim() -> None:
+def test_installed_bundle_lane_preserves_execution_attestation_and_adds_observation() -> None:
     source = (
         ROOT
         / ".github"
@@ -78,6 +78,20 @@ def test_installed_bundle_lane_requires_observation_without_attestation_claim() 
     assert "Build two byte-identical wheels" in source
     assert 'cmp "$wheel_a" "$wheel_b"' in source
     assert "pip check" in source
+
+    # Round 29 is additive: it must retain every verified round-27 execution
+    # parameter cross-link while adding post-import scorer-source observation.
+    assert 'execution = result["execution_parameters"]' in source
+    assert "execution_parameters_receipt_sha256" in source
+    assert (
+        'bundle["execution_parameters_receipt_sha256"] '
+        '== result["execution_parameters_receipt_sha256"]'
+        in source
+    )
+    assert 'bundle["execution_parameters_fully_verified"] is True' in source
+    assert 'bundle["receptor_margin_uniquely_attested"] is True' in source
+    assert 'bundle["model_indices_uniquely_attested"] is True' in source
+
     assert 'bundle["scorer_source_bytes_locally_observed"] is True' in source
     assert (
         'bundle["scorer_source_bytes_sha256_matched_result"] is True'
