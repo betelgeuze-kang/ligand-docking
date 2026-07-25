@@ -274,12 +274,17 @@ def test_noncanonical_pocket_and_symlink_input_fail_closed(
         )
 
 
-def test_package_declares_the_console_dispatch_entry_point() -> None:
+def test_package_declares_the_preflight_console_entry_point() -> None:
     pyproject = (
         ROOT / "packaging" / "engine-v2" / "pyproject.toml"
     ).read_text(encoding="utf-8")
     assert "[project.scripts]" in pyproject
     assert (
-        'betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli_dispatch:main"'
+        'betelgeuze-engine-v2 = "betelgeuze_engine_v2_preflight:main"'
         in pyproject
+    )
+    assert 'py-modules = ["betelgeuze_engine_v2_preflight"]' in pyproject
+    assert (
+        'betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli_dispatch:main"'
+        not in pyproject
     )
