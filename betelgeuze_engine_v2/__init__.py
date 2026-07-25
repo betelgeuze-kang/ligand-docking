@@ -174,6 +174,7 @@ EXECUTION_PARAMETER_ATTESTATION_SHA256 = (
 )
 
 from .scorer_source_observation import (
+    SCORER_SOURCE_OBSERVATION_EXTENSION_SCHEMA_ID,
     SCORER_SOURCE_OBSERVATION_MODE,
     SCORER_SOURCE_OBSERVATION_SCHEMA_ID,
     SOURCE_OBSERVED_INPUT_BOUND_VERIFICATION_SCHEMA_ID,
@@ -184,6 +185,16 @@ from .scorer_source_observation import (
 )
 
 SCORER_SOURCE_OBSERVATION_SHA256 = _install_scorer_source_observation()
+
+from .preimport_record_attestation import (
+    PREFLIGHT_RECORD_RESULT_EXTENSION_SCHEMA_ID,
+    PREFLIGHT_RECORD_VERIFICATION_EXTENSION_SCHEMA_ID,
+    PreimportRecordAttestationError,
+    PreimportRecordObservedInputBoundVerificationReceipt,
+    install_preimport_record_attestation as _install_preimport_record_attestation,
+)
+
+PREFLIGHT_RECORD_ATTESTATION_SHA256 = _install_preimport_record_attestation()
 
 from .molecular import (
     chemical_graph_sha256,
@@ -211,10 +222,14 @@ __all__ = [
     "MAX_COMPACT_NEIGHBORS",
     "MAX_FIXED_PROJECTION_RANK",
     "NEIGHBOR_SCHEMA_VERSION",
+    "PREFLIGHT_RECORD_ATTESTATION_SHA256",
+    "PREFLIGHT_RECORD_RESULT_EXTENSION_SCHEMA_ID",
+    "PREFLIGHT_RECORD_VERIFICATION_EXTENSION_SCHEMA_ID",
     "REFERENCE_CLAIM_BLOCKERS",
     "REFERENCE_EXECUTION_MODE",
     "RIGID_PROJECTION_NOTE",
     "RUNTIME_INPUT_SCHEMA_VERSION",
+    "SCORER_SOURCE_OBSERVATION_EXTENSION_SCHEMA_ID",
     "SCORER_SOURCE_OBSERVATION_MODE",
     "SCORER_SOURCE_OBSERVATION_SCHEMA_ID",
     "SCORER_SOURCE_OBSERVATION_SHA256",
@@ -258,6 +273,8 @@ __all__ = [
     "PhysicsGateThresholds",
     "PhysicsLossWeights",
     "PhysicsObjectiveResult",
+    "PreimportRecordAttestationError",
+    "PreimportRecordObservedInputBoundVerificationReceipt",
     "ProjectionDiagnostics",
     "ProjectionRankError",
     "QuantityDescriptor",
