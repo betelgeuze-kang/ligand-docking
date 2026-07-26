@@ -12,6 +12,7 @@
     "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_reproduction.py",
     "../../betelgeuze_engine_v2/benchmark/public_posebusters_same_input_engine_comparison.py",
     "../../betelgeuze_engine_v2/benchmark/public_posebusters_result_bundle_validator.py",
+    "../../betelgeuze_engine_v2/benchmark/public_posebusters_chemistry_applicability_domain.py",
     "../../betelgeuze_engine_v2/docking/proposals.py",
     "../../betelgeuze_engine_v2/docking/search.py",
     "../../betelgeuze_engine_v2/docking/steric_field.py",

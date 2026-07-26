@@ -168,6 +168,18 @@ scientific claim from a package version.
   metric is recomputed, the manifest stays unsigned, and independent
   second-host validation and scientific review remain blockers, so a valid
   bundle is still claim-closed.
+- Added a real-molecule chemistry applicability domain over the audited cohort.
+  It binds the corpus audit and the internal-oracle stratification by exact
+  digest, requires mutual coverage, and projects every case onto eight declared
+  chemistry axes with Wilson 95% cohort-share and evaluated-rate intervals over
+  one failure-inclusive denominator. Eight required real-chemistry families are
+  checked for presence and reported when absent. Out-of-scope rejection recall
+  is computed from the corpus audit's reference-scorer scope status, and an
+  out-of-scope case that was evaluated is recorded as an admission leak that
+  fails the domain. Coverage remains a cohort observation: no molecule is
+  reparameterized, no energy is recomputed, protonation/tautomer axes and
+  per-atom parameter provenance are unresolved, and independent review is
+  absent, so no validated refinement claim is opened.
 
 ### Changed
 

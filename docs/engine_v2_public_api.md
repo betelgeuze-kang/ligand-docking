@@ -934,6 +934,38 @@ itself is an unsigned operator-local document. A valid bundle therefore keeps
 `benchmark_executed=false`, `scientifically_validated=false`, and
 `claim_safe=false`.
 
+`betelgeuze_engine_v2.benchmark.public_posebusters_chemistry_applicability_domain`
+states which real chemistry the audited cohort actually covers. The installed
+`betelgeuze-engine-v2-posebusters-chemistry-domain` command provides
+`materialize` and `verify` modes over two caller-pinned claim-closed receipts:
+the frozen corpus audit and the internal-oracle stratification. The
+stratification must name the bound corpus audit, and the corpus audit must
+cover every stratified case, so a mismatched pair fails closed.
+
+Each case is projected onto eight declared axes: charge sign, element family,
+heavy-atom bucket, aromaticity, ring, stereo, receptor metal/cofactor context,
+and chemistry OOD status. Per axis value the receipt reports cohort share and
+the evaluated rate within that value, both with Wilson 95% intervals over one
+all-case denominator that retains failure, blocked, and abstention rows. Eight
+required real-chemistry families (neutral, anionic, cationic, halogen, sulfur,
+phosphorus, metal-site control, cofactor-site control) are checked for presence
+and reported explicitly when absent rather than passing silently.
+
+The module also computes an out-of-scope rejection recall. Every case the
+corpus audit placed outside the reference scorer chemistry scope must be a case
+the pipeline did not evaluate. An out-of-scope case that was evaluated is
+recorded as an admission leak, and any leak sets
+`status=domain_failed_admission_leak` and
+`out_of_scope_admission_leak_free=false`.
+
+Coverage is an observation about one public cohort, not a validated chemical
+applicability domain. No molecule is reparameterized and no energy is
+recomputed. Protonation-state and tautomer axes are not independently resolved,
+per-atom parameter provenance is not established, and independent energy/force
+comparison, conformer-ranking evidence, and scientific review are absent, so
+every result keeps `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false`.
+
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The
 `betelgeuze-engine-v2-posebusters-native-geometry` command exactly reexecutes

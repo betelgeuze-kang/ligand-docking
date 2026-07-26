@@ -50,6 +50,7 @@ betelgeuze-engine-v2-posebusters-internal-oracle-strata = "betelgeuze_engine_v2.
 betelgeuze-engine-v2-posebusters-internal-oracle-reproduce = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_reproduction:main"
 betelgeuze-engine-v2-posebusters-same-input-compare = "betelgeuze_engine_v2.benchmark.public_posebusters_same_input_engine_comparison:main"
 betelgeuze-engine-v2-posebusters-validate-bundle = "betelgeuze_engine_v2.benchmark.public_posebusters_result_bundle_validator:main"
+betelgeuze-engine-v2-posebusters-chemistry-domain = "betelgeuze_engine_v2.benchmark.public_posebusters_chemistry_applicability_domain:main"
 betelgeuze-engine-v2-posebusters-external-prepare = "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
 betelgeuze-engine-v2-posebusters-external-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_external_binary_execution:main"
 betelgeuze-engine-v2-posebusters-external-evaluate-generated = "betelgeuze_engine_v2.benchmark.public_posebusters_external_generated_pose_evaluation:main"

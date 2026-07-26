@@ -750,6 +750,20 @@ Implemented and GitHub-hosted CPU tested:
   is structural completeness and linkage only: no physics is re-executed, no
   metric is recomputed, the manifest is unsigned, and
   `benchmark_executed=false` and `claim_safe=false` stay fixed;
+- an installable real-molecule chemistry applicability domain,
+  `betelgeuze-engine-v2-posebusters-chemistry-domain`. It binds the frozen
+  corpus audit and the internal-oracle stratification by exact digest, requires
+  the stratification to name that corpus audit and the audit to cover every
+  stratified case, then projects each case onto charge, element family,
+  heavy-atom size, aromaticity, ring, stereo, receptor metal/cofactor context,
+  and chemistry OOD axes. Per axis value it reports cohort share and evaluated
+  rate with Wilson 95% intervals over one failure-inclusive denominator, checks
+  eight required real-chemistry families for presence, and computes an
+  out-of-scope rejection recall: an out-of-scope case that was evaluated is an
+  admission leak that fails the domain. Coverage is a cohort observation, not a
+  validated chemical domain; protonation/tautomer axes, per-atom parameter
+  provenance, independent energy/force comparison, and scientific review remain
+  absent and `claim_safe=false` stays fixed;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,

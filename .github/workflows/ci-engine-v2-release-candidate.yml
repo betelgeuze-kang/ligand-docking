@@ -96,6 +96,7 @@ jobs:
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_reproduction.py \
             betelgeuze_engine_v2/benchmark/public_posebusters_same_input_engine_comparison.py \
             betelgeuze_engine_v2/benchmark/public_posebusters_result_bundle_validator.py \
+            betelgeuze_engine_v2/benchmark/public_posebusters_chemistry_applicability_domain.py \
             betelgeuze_engine_v2/docking/chemistry_validity_v2.py \
             betelgeuze_engine_v2/docking/interpretable_refinement.py \
             betelgeuze_engine_v2/docking/interpretable_scoring.py \
@@ -166,6 +167,7 @@ jobs:
             tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py
             tests/unit/test_engine_v2_posebusters_same_input_engine_comparison.py
             tests/unit/test_engine_v2_posebusters_result_bundle_validator.py
+            tests/unit/test_engine_v2_posebusters_chemistry_applicability_domain.py
             tests/unit/test_engine_v2_rdkit_openff_preparation.py
             tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py
             tests/unit/test_engine_v2_openmm_force_double_rattle_oracle.py
@@ -212,6 +214,7 @@ jobs:
             tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py \
             tests/unit/test_engine_v2_posebusters_same_input_engine_comparison.py \
             tests/unit/test_engine_v2_posebusters_result_bundle_validator.py \
+            tests/unit/test_engine_v2_posebusters_chemistry_applicability_domain.py \
             tests/unit/test_engine_v2_release_candidate.py \
             tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py \
             tests/unit/test_engine_v2_openmm_force_double_rattle_oracle.py
@@ -326,6 +329,7 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-oracle-reproduce" --help | grep -q "second-host internal PoseBusters-oracle"
           "$venv/bin/betelgeuze-engine-v2-posebusters-same-input-compare" --help | grep -q "same-input"
           "$venv/bin/betelgeuze-engine-v2-posebusters-validate-bundle" --help | grep -q "result bundle"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-chemistry-domain" --help | grep -q "chemistry coverage"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-prepare" --help | grep -q "without extraction or docking"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-execute" --help | grep -q "all-case rows"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-evaluate-generated" --help | grep -q "GNINA or Smina poses"
