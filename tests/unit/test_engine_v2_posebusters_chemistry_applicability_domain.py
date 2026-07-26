@@ -19,6 +19,9 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
 from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     public_posebusters_internal_oracle_stratification as strata_module,
 )
+from betelgeuze_engine_v2.benchmark import (  # noqa: E402
+    public_protonation_tautomer_axis_evidence as axis_module,
+)
 from betelgeuze_engine_v2.benchmark.public_posebusters_chemistry_applicability_domain import (  # noqa: E402
     POSEBUSTERS_CHEMISTRY_APPLICABILITY_AXES,
     POSEBUSTERS_CHEMISTRY_APPLICABILITY_BLOCKERS,
@@ -350,6 +353,119 @@ def test_claim_open_bound_receipt_is_rejected(tmp_path: Path) -> None:
     ):
         materialize_posebusters_chemistry_applicability_domain(
             **fixture  # type: ignore[arg-type]
+        )
+
+
+def _axis_evidence(tmp_path: Path) -> tuple[Path, str]:
+    receipt = axis_module.materialize_protonation_tautomer_axis_evidence()
+    path = tmp_path / "axis-evidence.json"
+    receipt.write_json(path)
+    return path, receipt.fingerprint_sha256
+
+
+def test_bound_axis_evidence_resolves_the_protonation_and_tautomer_axes(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    unbound = materialize_posebusters_chemistry_applicability_domain(
+        **fixture  # type: ignore[arg-type]
+    ).to_dict()
+    assert unbound["protonation_and_tautomer_axes_resolved"] is False
+    assert unbound["protonation_tautomer_axis_evidence"] is None
+    assert (
+        "protonation_state_and_tautomer_axes_not_independently_resolved"
+        in unbound["scientific_blockers"]
+    )
+
+    axis_path, axis_digest = _axis_evidence(tmp_path)
+    bound = materialize_posebusters_chemistry_applicability_domain(
+        **fixture,  # type: ignore[arg-type]
+        axis_evidence_receipt_path=axis_path,
+        expected_axis_evidence_receipt_sha256=axis_digest,
+    ).to_dict()
+
+    assert bound["protonation_and_tautomer_axes_resolved"] is True
+    assert (
+        "protonation_state_and_tautomer_axes_not_independently_resolved"
+        not in bound["scientific_blockers"]
+    )
+    assert "parameter_provenance_per_atom_not_established" in (
+        bound["scientific_blockers"]
+    )
+    binding = bound["protonation_tautomer_axis_evidence"]
+    assert isinstance(binding, dict)
+    assert binding["receipt_sha256"] == axis_digest
+    assert binding["axis_ids"] == list(axis_module.PROTONATION_TAUTOMER_AXIS_IDS)
+    assert binding["axis_row_count"] == 2
+    assert binding["all_case_denominator"] >= 2
+    assert binding["pka_model_calibrated"] is False
+    assert binding["tautomer_enumeration_exhaustive"] is False
+    assert bound["claim_safe"] is False
+    assert bound["scientifically_validated"] is False
+
+
+def test_bound_axis_evidence_receipt_reconstructs_exactly(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    axis_path, axis_digest = _axis_evidence(tmp_path)
+    receipt = materialize_posebusters_chemistry_applicability_domain(
+        **fixture,  # type: ignore[arg-type]
+        axis_evidence_receipt_path=axis_path,
+        expected_axis_evidence_receipt_sha256=axis_digest,
+    )
+    output = tmp_path / "receipts" / "bound-domain.json"
+    receipt.write_json(output)
+    verified = verify_posebusters_chemistry_applicability_receipt(
+        applicability_receipt_path=output,
+        expected_applicability_receipt_sha256=receipt.fingerprint_sha256,
+        **fixture,  # type: ignore[arg-type]
+        axis_evidence_receipt_path=axis_path,
+        expected_axis_evidence_receipt_sha256=axis_digest,
+    )
+    assert verified.canonical_bytes() == receipt.canonical_bytes()
+
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="failed exact reconstruction",
+    ):
+        verify_posebusters_chemistry_applicability_receipt(
+            applicability_receipt_path=output,
+            expected_applicability_receipt_sha256=receipt.fingerprint_sha256,
+            **fixture,  # type: ignore[arg-type]
+        )
+
+
+def test_partial_axis_evidence_arguments_fail_closed(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    axis_path, axis_digest = _axis_evidence(tmp_path)
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="requires both a receipt path and its expected digest",
+    ):
+        materialize_posebusters_chemistry_applicability_domain(
+            **fixture,  # type: ignore[arg-type]
+            axis_evidence_receipt_path=axis_path,
+        )
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="requires both a receipt path and its expected digest",
+    ):
+        materialize_posebusters_chemistry_applicability_domain(
+            **fixture,  # type: ignore[arg-type]
+            expected_axis_evidence_receipt_sha256=axis_digest,
+        )
+
+
+def test_wrong_axis_evidence_digest_fails_closed(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    axis_path, _digest = _axis_evidence(tmp_path)
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="axis evidence is invalid",
+    ):
+        materialize_posebusters_chemistry_applicability_domain(
+            **fixture,  # type: ignore[arg-type]
+            axis_evidence_receipt_path=axis_path,
+            expected_axis_evidence_receipt_sha256="0" * 64,
         )
 
 

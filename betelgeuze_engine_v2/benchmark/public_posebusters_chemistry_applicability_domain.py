@@ -36,6 +36,7 @@ from typing import Any
 
 from . import public_posebusters_corpus_audit as corpus_module
 from . import public_posebusters_internal_oracle_stratification as strata_module
+from . import public_protonation_tautomer_axis_evidence as axis_module
 from .public_posebusters_corpus_audit import (
     _canonical_bytes,
     _canonical_sha256,
@@ -439,6 +440,71 @@ def _family_rows(case_rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
     return rows
 
 
+def _axis_evidence_binding(
+    axis_evidence_receipt_path: str | os.PathLike[str] | None,
+    *,
+    expected_axis_evidence_receipt_sha256: str | None,
+) -> dict[str, Any] | None:
+    """Bind an optional protonation/tautomer axis-evidence receipt."""
+
+    if axis_evidence_receipt_path is None and (
+        expected_axis_evidence_receipt_sha256 is None
+    ):
+        return None
+    if axis_evidence_receipt_path is None or (
+        expected_axis_evidence_receipt_sha256 is None
+    ):
+        raise PoseBustersChemistryApplicabilityError(
+            "axis evidence requires both a receipt path and its expected digest"
+        )
+    expected = _digest(
+        expected_axis_evidence_receipt_sha256,
+        name="expected axis evidence receipt",
+    )
+    try:
+        verified = axis_module.verify_protonation_tautomer_axis_evidence_receipt(
+            axis_evidence_receipt_path,
+            expected_axis_evidence_receipt_sha256=expected,
+        )
+    except axis_module.ProtonationTautomerAxisEvidenceError as exc:
+        raise PoseBustersChemistryApplicabilityError(
+            "protonation and tautomer axis evidence is invalid"
+        ) from exc
+    payload = verified.to_dict()
+    if (
+        payload.get("status") != "axes_resolved"
+        or payload.get("protonation_axis_resolved") is not True
+        or payload.get("tautomer_axis_resolved") is not True
+    ):
+        raise PoseBustersChemistryApplicabilityError(
+            "axis evidence does not resolve both protonation and tautomer axes"
+        )
+    axis_rows = _list(payload.get("axis_rows"), name="axis evidence rows")
+    return {
+        "schema_id": (
+            axis_module.PROTONATION_TAUTOMER_AXIS_EVIDENCE_SCHEMA_ID
+        ),
+        "receipt_sha256": expected,
+        "axis_ids": list(axis_module.PROTONATION_TAUTOMER_AXIS_IDS),
+        "all_case_denominator": _integer(
+            payload.get("all_case_denominator"),
+            name="axis evidence denominator",
+            minimum=1,
+        ),
+        "axis_row_count": len(axis_rows),
+        "protonation_axis_snapshot_sha256": _digest(
+            payload.get("protonation_axis_snapshot_sha256"),
+            name="protonation axis snapshot",
+        ),
+        "tautomer_axis_snapshot_sha256": _digest(
+            payload.get("tautomer_axis_snapshot_sha256"),
+            name="tautomer axis snapshot",
+        ),
+        "pka_model_calibrated": False,
+        "tautomer_enumeration_exhaustive": False,
+    }
+
+
 def _source_members() -> tuple[tuple[str, str], ...]:
     paths = (
         (
@@ -527,6 +593,8 @@ def _build_domain(
     *,
     expected_corpus_audit_receipt_sha256: str,
     expected_stratification_receipt_sha256: str,
+    axis_evidence_receipt_path: str | os.PathLike[str] | None = None,
+    expected_axis_evidence_receipt_sha256: str | None = None,
 ) -> PoseBustersChemistryApplicabilityReceipt:
     corpus = _load_receipt(
         corpus_audit_receipt_path,
@@ -544,6 +612,12 @@ def _build_domain(
         raise PoseBustersChemistryApplicabilityError(
             "stratification receipt does not name the bound corpus audit"
         )
+    axis_binding = _axis_evidence_binding(
+        axis_evidence_receipt_path,
+        expected_axis_evidence_receipt_sha256=(
+            expected_axis_evidence_receipt_sha256
+        ),
+    )
     scope = _scope_projection(corpus.payload)
     chemistry = _chemistry_projection(strata.payload)
     missing = sorted(set(chemistry) - set(scope))
@@ -621,16 +695,24 @@ def _build_domain(
             recall_high.hex() if out_of_scope else None
         ),
         "out_of_scope_admission_leak_free": not leaks,
+        "protonation_tautomer_axis_evidence": axis_binding,
         "implementation_source_members": dict(source_members),
         "implementation_source_sha256": _canonical_sha256(dict(source_members)),
         "configuration": POSEBUSTERS_CHEMISTRY_APPLICABILITY_CONFIGURATION,
         "configuration_sha256": (
             POSEBUSTERS_CHEMISTRY_APPLICABILITY_CONFIGURATION_SHA256
         ),
-        "scientific_blockers": list(
-            POSEBUSTERS_CHEMISTRY_APPLICABILITY_BLOCKERS
-        ),
+        "scientific_blockers": [
+            blocker
+            for blocker in POSEBUSTERS_CHEMISTRY_APPLICABILITY_BLOCKERS
+            if not (
+                axis_binding is not None
+                and blocker
+                == "protonation_state_and_tautomer_axes_not_independently_resolved"
+            )
+        ],
         **_RESULT_FLAGS,
+        "protonation_and_tautomer_axes_resolved": axis_binding is not None,
     }
     return PoseBustersChemistryApplicabilityReceipt(payload)
 
@@ -641,6 +723,8 @@ def materialize_posebusters_chemistry_applicability_domain(
     *,
     expected_corpus_audit_receipt_sha256: str,
     expected_stratification_receipt_sha256: str,
+    axis_evidence_receipt_path: str | os.PathLike[str] | None = None,
+    expected_axis_evidence_receipt_sha256: str | None = None,
 ) -> PoseBustersChemistryApplicabilityReceipt:
     """Observe the cohort's real-chemistry coverage and out-of-scope rejection."""
 
@@ -653,6 +737,10 @@ def materialize_posebusters_chemistry_applicability_domain(
         expected_stratification_receipt_sha256=(
             expected_stratification_receipt_sha256
         ),
+        axis_evidence_receipt_path=axis_evidence_receipt_path,
+        expected_axis_evidence_receipt_sha256=(
+            expected_axis_evidence_receipt_sha256
+        ),
     )
 
 
@@ -664,6 +752,8 @@ def verify_posebusters_chemistry_applicability_receipt(
     expected_applicability_receipt_sha256: str,
     expected_corpus_audit_receipt_sha256: str,
     expected_stratification_receipt_sha256: str,
+    axis_evidence_receipt_path: str | os.PathLike[str] | None = None,
+    expected_axis_evidence_receipt_sha256: str | None = None,
 ) -> PoseBustersChemistryApplicabilityReceipt:
     """Recompute the domain observation and require exact reconstruction."""
 
@@ -680,6 +770,10 @@ def verify_posebusters_chemistry_applicability_receipt(
         ),
         expected_stratification_receipt_sha256=(
             expected_stratification_receipt_sha256
+        ),
+        axis_evidence_receipt_path=axis_evidence_receipt_path,
+        expected_axis_evidence_receipt_sha256=(
+            expected_axis_evidence_receipt_sha256
         ),
     )
     if loaded.receipt_sha256 != expected.fingerprint_sha256:
@@ -712,6 +806,8 @@ def _parser() -> argparse.ArgumentParser:
             "--expected-stratification-receipt-sha256",
             required=True,
         )
+        command.add_argument("--axis-evidence-receipt")
+        command.add_argument("--expected-axis-evidence-receipt-sha256")
     materialize.add_argument("--output", required=True)
     verify.add_argument("--receipt", required=True)
     verify.add_argument("--expected-applicability-receipt-sha256", required=True)
@@ -728,6 +824,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
         "expected_stratification_receipt_sha256": (
             args.expected_stratification_receipt_sha256
+        ),
+        "axis_evidence_receipt_path": args.axis_evidence_receipt,
+        "expected_axis_evidence_receipt_sha256": (
+            args.expected_axis_evidence_receipt_sha256
         ),
     }
     if args.command == "materialize":
@@ -753,6 +853,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ],
                 "every_required_family_present": payload[
                     "every_required_family_present"
+                ],
+                "protonation_and_tautomer_axes_resolved": payload[
+                    "protonation_and_tautomer_axes_resolved"
                 ],
                 "scientifically_validated": False,
                 "claim_safe": False,

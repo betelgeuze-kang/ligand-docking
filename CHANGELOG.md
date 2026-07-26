@@ -191,6 +191,14 @@ scientific claim from a package version.
   asserting the axes. Protonation uses no calibrated pKa model, tautomer
   enumeration is not exhaustive, and independent review is absent, so no
   validated refinement claim is opened.
+- The chemistry applicability domain now optionally binds that axis evidence by
+  receipt digest. Supplying half of the path/digest pair fails closed, and a
+  bound receipt is re-verified by re-executing its corpora and must report both
+  axes resolved. A bound domain receipt records the axis digest and per-axis
+  snapshot identities, sets `protonation_and_tautomer_axes_resolved=true`, and
+  drops only that blocker; per-atom parameter provenance, independent
+  energy/force comparison, conformer-ranking evidence, and scientific review
+  remain open and `claim_safe=false` stays fixed.
 
 ### Changed
 

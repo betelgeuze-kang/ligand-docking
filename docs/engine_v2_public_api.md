@@ -966,6 +966,17 @@ comparison, conformer-ranking evidence, and scientific review are absent, so
 every result keeps `benchmark_executed=false`,
 `scientifically_validated=false`, and `claim_safe=false`.
 
+The domain optionally binds the protonation/tautomer axis evidence described
+below through `--axis-evidence-receipt` and
+`--expected-axis-evidence-receipt-sha256`. Supplying only one of that pair fails
+closed. When both are supplied, the axis receipt is re-verified by re-executing
+its corpora, must report `status=axes_resolved` with both axes resolved, and is
+then bound into the domain receipt by digest and per-axis snapshot identity.
+That binding sets `protonation_and_tautomer_axes_resolved=true` and drops the
+corresponding blocker; without it both stay unresolved. Every other blocker,
+including per-atom parameter provenance, is unaffected and `claim_safe=false`
+stays fixed either way.
+
 `betelgeuze_engine_v2.benchmark.public_protonation_tautomer_axis_evidence`
 resolves the two applicability axes the domain receipt could previously only
 declare unresolved. The installed

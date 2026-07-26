@@ -764,6 +764,9 @@ Implemented and GitHub-hosted CPU tested:
   validated chemical domain; protonation/tautomer axes, per-atom parameter
   provenance, independent energy/force comparison, and scientific review remain
   absent and `claim_safe=false` stays fixed;
+  the domain optionally binds the axis-evidence receipt below by digest, which
+  re-verifies it and sets `protonation_and_tautomer_axes_resolved=true` while
+  every other blocker stays open;
 - an installable protonation-state and tautomer axis resolver,
   `betelgeuze-engine-v2-protonation-tautomer-axes`. It executes the frozen mmCIF
   pH-protonation and tautomer-selection corpora, requires every supported,
