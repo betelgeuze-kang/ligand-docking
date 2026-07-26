@@ -199,6 +199,19 @@ scientific claim from a package version.
   drops only that blocker; per-atom parameter provenance, independent
   energy/force comparison, conformer-ranking evidence, and scientific review
   remain open and `claim_safe=false` stays fixed.
+- Added a per-atom parameter-source provenance trace over bound canonical
+  systems. The source binding previously recorded its reviewed OFFXML release
+  only at system granularity, so an unparameterized system was
+  indistinguishable from a partially parameterized one. Each atom now carries a
+  row with element, atomic number, formal charge, aromatic and stereo flags, the
+  declared release identity, and the exact presence state of partial charge,
+  mass, and isotope; bond rows carry order, aromaticity, and derivation source.
+  Atom rows must be a contiguous projection of the bound system, the bound
+  system digest is rechecked during tracing, a bound system missing its binding
+  digest fails closed, and unbound instances are retained with explicit
+  blockers. The trace is an absence ledger: SMIRNOFF semantics are not parsed
+  and no parameter is assigned, so declared provenance is complete while
+  assigned-value coverage is zero and `claim_safe=false` stays fixed.
 
 ### Changed
 
