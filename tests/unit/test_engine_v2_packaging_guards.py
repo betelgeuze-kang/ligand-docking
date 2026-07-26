@@ -147,6 +147,10 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-posebusters-internal-oracle-reproduce = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_reproduction:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-internal-diagnostic-ranking = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_diagnostic_ranking_evaluation:main"'
         in text
     )

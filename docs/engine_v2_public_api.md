@@ -813,6 +813,41 @@ result, second-host reproduction, public bundle validation, or independent
 scientific review. Consequently `benchmark_executed=false`,
 `scientifically_validated=false`, and `claim_safe=false` remain fixed.
 
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_reproduction`
+adds a claim-closed second-host work-order and comparison boundary above the
+oracle, runtime-observation, and stratification receipts. The installed
+`betelgeuze-engine-v2-posebusters-internal-oracle-reproduce` command provides
+`materialize-work-order`, `verify-work-order`, `materialize-result`, and
+`verify-result` modes. The work order binds caller-pinned baseline receipt
+roots and files, the exact active source-bearing Engine v2 wheel, distinct
+baseline/external host identity digests, role-separated work-order/execution
+operator digests, a single-use nonce digest, and canonical registration time.
+It writes a canonical mode-0600 no-overwrite receipt.
+
+The result accepts a separately pinned external chain only when its runtime
+and stratification receipt roots differ from the baseline, its runtime names
+the preregistered wheel, its asserted host and executor identities match the
+work order, and its asserted observation time follows registration. It then
+requires exact oracle receipt identity and compares every runtime-free
+target/chemistry case, stratum, fixed binding, and Wilson-metric field,
+including failure, blocked, no-pose, and abstention rows. Wall duration and
+sampled RSS remain distinct observations; batch ratios are reported, but exact
+measurement equality is not required and no performance-equivalence threshold
+is defined.
+
+This comparison is not itself proof of an independent physical-host run.
+Upstream runtime and stratification receipts are unsigned canonical
+self-hashes; the runtime payload does not bind the preregistered nonce or the
+asserted observation time, and it cannot cryptographically prove physical-host
+identity or nonce single use. Consequently a deterministic comparison may say
+`comparison_passed` while still fixing
+`physical_host_independence_reviewed=false`,
+`independent_external_rerun_present=false`,
+`independent_reviewer_receipt_approved=false`, `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false`. Independent custody,
+host/nonce registry review, upstream receipt authorization, and scientific
+result review remain mandatory promotion gates.
+
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The
 `betelgeuze-engine-v2-posebusters-native-geometry` command exactly reexecutes

@@ -698,6 +698,23 @@ Implemented and GitHub-hosted CPU tested:
   production result, training-manifest OOD audit, second-host observation,
   independent review, or public bundle validation is claimed; therefore
   `benchmark_executed=false` and `claim_safe=false`;
+- an installable second-host internal-oracle reproduction work-order and
+  comparison companion,
+  `betelgeuze-engine-v2-posebusters-internal-oracle-reproduce`. It
+  preregisters exact baseline oracle/runtime/stratification receipt roots, the
+  Engine v2 wheel, distinct baseline/external host identities, role-separated
+  operator/executor identities, a single-use nonce, and registration time. A
+  result requires distinct external runtime and stratification receipt roots,
+  the same wheel, exact oracle receipt identity, and exact equality of every
+  runtime-free case/stratum/metric field, including failure and abstention
+  rows. Runtime and sampled-RSS values are reported as separate observations
+  and ratios without an invented performance-equivalence threshold. Current
+  upstream receipts are unsigned self-hashes and do not payload-bind the nonce
+  or asserted observation time, prove a physical host, or prove nonce single
+  use. Therefore even a passing comparison retains
+  `physical_host_independence_reviewed=false`,
+  `independent_external_rerun_present=false`, `benchmark_executed=false`, and
+  `claim_safe=false` pending independent custody and scientific review;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,

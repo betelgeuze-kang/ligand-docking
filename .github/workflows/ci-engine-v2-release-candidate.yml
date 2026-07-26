@@ -15,6 +15,7 @@ on:
       - "tests/unit/test_engine_v2_steric_field_proposals.py"
       - "tests/unit/test_engine_v2_redocking_cli.py"
       - "tests/unit/test_engine_v2_rdkit_openff_preparation.py"
+      - "tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py"
       - "CHANGELOG.md"
       - "docs/engine_v2_0_3_0a1.md"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
@@ -33,6 +34,7 @@ on:
       - "tests/unit/test_engine_v2_steric_field_proposals.py"
       - "tests/unit/test_engine_v2_redocking_cli.py"
       - "tests/unit/test_engine_v2_rdkit_openff_preparation.py"
+      - "tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py"
       - "CHANGELOG.md"
       - "docs/engine_v2_0_3_0a1.md"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
@@ -91,6 +93,7 @@ jobs:
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_evaluation.py \
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_runtime_observation.py \
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_stratification.py \
+            betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_reproduction.py \
             betelgeuze_engine_v2/docking/chemistry_validity_v2.py \
             betelgeuze_engine_v2/docking/interpretable_refinement.py \
             betelgeuze_engine_v2/docking/interpretable_scoring.py \
@@ -158,6 +161,7 @@ jobs:
             tests/unit/test_engine_v2_steric_field_proposals.py
             tests/unit/test_engine_v2_redocking_cli.py
             tests/unit/test_engine_v2_public_posebusters_corpus_audit.py
+            tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py
             tests/unit/test_engine_v2_rdkit_openff_preparation.py
             tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py
             tests/unit/test_engine_v2_openmm_force_double_rattle_oracle.py
@@ -201,6 +205,7 @@ jobs:
             tests/unit/test_engine_v2_redocking_cli.py \
             tests/unit/test_engine_v2_rdkit_openff_preparation.py \
             tests/unit/test_engine_v2_public_posebusters_corpus_audit.py \
+            tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py \
             tests/unit/test_engine_v2_release_candidate.py \
             tests/unit/test_engine_v2_public_pose_ranking_calibration_partition_intake.py \
             tests/unit/test_engine_v2_openmm_force_double_rattle_oracle.py
@@ -312,6 +317,7 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-oracle" --help | grep -q "pinned PoseBusters oracle"
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-oracle-runtime" --help | grep -q "Measure all-case wall time and sampled RSS"
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-oracle-strata" --help | grep -q "target-family, chemistry, Wilson-CI, runtime"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-internal-oracle-reproduce" --help | grep -q "second-host internal PoseBusters-oracle"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-prepare" --help | grep -q "without extraction or docking"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-execute" --help | grep -q "all-case rows"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-evaluate-generated" --help | grep -q "GNINA or Smina poses"

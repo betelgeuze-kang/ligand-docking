@@ -126,6 +126,17 @@ scientific claim from a package version.
   aggregates. Training-manifest OOD, official production execution,
   full-pipeline per-case timing, second-host reproduction, bundle validation,
   and independent review remain blockers, so no benchmark claim is opened.
+- Added a second-host internal-oracle reproduction work-order and exact
+  comparison companion. It preregisters the baseline oracle/runtime/strata
+  roots, source-bearing wheel, distinct host identities, role-separated
+  operator/executor identities, nonce, and registration time. Results require
+  distinct external runtime/strata roots and exact equality of the oracle plus
+  every runtime-free case/stratum/metric field while retaining all failures.
+  Runtime and sampled-RSS ratios are reported without an invented equivalence
+  threshold. Because upstream receipts are unsigned self-hashes and do not
+  payload-bind the nonce or asserted observation time or prove a physical
+  host, a passing comparison remains explicitly unreviewed, non-independent,
+  non-benchmark, and claim-closed.
 
 ### Changed
 

@@ -87,11 +87,17 @@ provide calibrated pKa selection, partial charges, OFFXML parameter assignment,
 or real-molecule applicability evidence. The cohort chain measures bounded
 connectivity-symmetry RMSD and can apply the pinned PoseBusters validity/RMSD
 oracle to reconstructed internal poses, but no official full-cohort production
-receipt is bundled. It does not report target-family or chemistry strata,
-same-input external-engine comparisons, or a second-host/independent rerun and
-review. The runtime companion supplies local wall-duration and sampled-RSS
-observations, but not a kernel-enforced isolated peak, overhead-free timing,
-full-pipeline per-case breakdown, operator signature, or physical-host proof.
+receipt is bundled. A separate companion reports failure-inclusive primary
+target/chemistry strata and Wilson intervals, but no training-manifest OOD
+audit. Another companion preregisters and exactly compares a putative
+second-host oracle/runtime/strata chain, while deliberately withholding an
+independent-rerun claim: its upstream receipts are unsigned self-hashes, the
+runtime payload binds neither the nonce nor asserted observation time, and no
+physical-host proof or nonce registry review exists. Same-input external-engine
+comparisons and independent scientific review remain absent. The runtime
+companion supplies local wall-duration and sampled-RSS observations, but not a
+kernel-enforced isolated peak, overhead-free timing, full-pipeline per-case
+breakdown, operator signature, or physical-host proof.
 The steric field uses fixed
 uncalibrated radii and omits electrostatics, hydrogen bonding, desolvation,
 solvent/cofactor response, and receptor flexibility. Accordingly, the release does not
