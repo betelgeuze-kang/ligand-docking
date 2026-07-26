@@ -138,10 +138,14 @@ scientific claim from a package version.
   execution operator identity, single-use nonce, and observed UTC, and the
   comparison requires the external runtime payload to bind exactly the
   preregistered values. Unattested or replayed-nonce external observations fail
-  closed. Because upstream receipts remain unsigned self-hashes that cannot
-  prove physical-host identity or nonce single use, a passing comparison still
-  remains explicitly unreviewed, non-independent, non-benchmark, and
-  claim-closed.
+  closed. Each receipt chain may also carry a detached Ed25519 custody
+  signature over the exact oracle, runtime, and stratification digests plus
+  signer identity and signing time; a provisioned out-of-band trust anchor
+  verifies it, partial signature material fails closed, two chains signing the
+  same payload are rejected, and the verifier never accepts signing keys.
+  Because attested host identity and nonce single use remain self-declared, a
+  passing comparison still remains explicitly unreviewed, non-independent,
+  non-benchmark, and claim-closed.
 
 ### Changed
 

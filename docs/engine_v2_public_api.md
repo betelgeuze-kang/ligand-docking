@@ -844,11 +844,24 @@ to equal the preregistered work-order value exactly, so an unattested
 observation or a replayed nonce fails closed instead of passing as a second
 host. Attestation remains optional for ordinary unattested local measurements.
 
+Each receipt chain may additionally carry a detached Ed25519 custody signature.
+`posebusters_internal_oracle_chain_signing_payload` fixes the exact canonical
+bytes an external custodian signs: the oracle, runtime-observation, and
+stratification receipt digests plus the signer identity and signing time.
+`verify_posebusters_internal_oracle_chain_signature` re-derives those bytes,
+requires the stored payload to match, and verifies the signature against a
+`PoseBustersInternalOracleChainTrustAnchor` provisioned out of band. No signing
+material is ever accepted by the verifier. Supplying both chain signatures and
+the anchor sets `upstream_receipt_signatures_verified=true` and drops the
+unsigned-upstream blocker; supplying only part of that triple fails closed, and
+two chains signing the same payload are rejected. Signer custody itself remains
+unreviewed.
+
 This comparison is not itself proof of an independent physical-host run.
-Upstream runtime and stratification receipts are unsigned canonical
-self-hashes, and the attested host identity and nonce are self-declared: the
-receipt cannot cryptographically prove physical-host identity or prove that the
-nonce was used only once. Consequently a deterministic comparison may say
+The attested host identity and nonce remain self-declared, and an unsigned
+chain stays a bare canonical self-hash: neither form proves physical-host
+identity nor proves that the nonce was used only once. Consequently a
+deterministic comparison may say
 `comparison_passed` while still fixing
 `physical_host_independence_reviewed=false`,
 `independent_external_rerun_present=false`,

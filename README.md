@@ -712,9 +712,12 @@ Implemented and GitHub-hosted CPU tested:
   external runtime observation must payload-bind a canonical execution
   attestation whose host identity, execution operator identity, single-use
   nonce, and observed UTC match the work order exactly; unattested or
-  replayed-nonce observations fail closed. Upstream receipts remain unsigned
-  self-hashes that cannot prove a physical host or nonce single use. Therefore
-  even a passing comparison retains
+  replayed-nonce observations fail closed. Each receipt chain may also carry a
+  detached Ed25519 custody signature over the exact oracle, runtime, and
+  stratification digests, verified against an out-of-band trust anchor; partial
+  signature material fails closed and the verifier never accepts signing keys.
+  Attested host identity and nonce single use remain self-declared, so neither
+  form proves a physical host. Therefore even a passing comparison retains
   `physical_host_independence_reviewed=false`,
   `independent_external_rerun_present=false`, `benchmark_executed=false`, and
   `claim_safe=false` pending independent custody and scientific review;

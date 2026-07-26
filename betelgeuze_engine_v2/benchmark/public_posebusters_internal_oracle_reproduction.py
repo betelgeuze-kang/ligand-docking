@@ -29,6 +29,11 @@ import tempfile
 from typing import Any
 import zipfile
 
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ReferenceMinimizationValidationEd25519Error,
+    verify_ed25519,
+)
+
 from . import public_posebusters_internal_oracle_evaluation as oracle_module
 from . import public_posebusters_internal_oracle_runtime_observation as runtime_module
 from . import public_posebusters_internal_oracle_stratification as strata_module
@@ -56,6 +61,10 @@ POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_RUNTIME_COMPARISON_SCHEMA_ID = (
 POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_posebusters_internal_oracle_reproduction_result/1.0.0"
 )
+POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CHAIN_SIGNING_SCHEMA_ID = (
+    "betelgeuze.engine_v2_posebusters_internal_oracle_chain_signing_payload/1.0.0"
+)
+POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SIGNATURE_ALGORITHM = "ed25519"
 
 POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_MAX_INPUT_BYTES = 64 * 1024 * 1024
 POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_MAX_WORK_ORDER_BYTES = 8 * 1024 * 1024
@@ -222,6 +231,225 @@ def _mapping(value: object, *, name: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise PoseBustersInternalOracleReproductionError(f"{name} must be a mapping")
     return dict(value)
+
+
+class PoseBustersInternalOracleChainTrustAnchor:
+    """Out-of-band custodian identity and raw Ed25519 verification key."""
+
+    __slots__ = ("signer_identity_sha256", "verification_key")
+
+    def __init__(
+        self,
+        *,
+        signer_identity_sha256: str,
+        verification_key: bytes | str,
+    ) -> None:
+        self.signer_identity_sha256 = _digest(
+            signer_identity_sha256,
+            name="chain signer identity",
+        )
+        self.verification_key = _verification_key(
+            verification_key,
+            name="chain verification key",
+        )
+
+
+def _verification_key(value: object, *, name: str) -> bytes:
+    if isinstance(value, bytes):
+        raw = value
+    elif isinstance(value, str):
+        try:
+            raw = bytes.fromhex(value)
+        except ValueError as exc:
+            raise PoseBustersInternalOracleReproductionError(
+                f"{name} is not hexadecimal"
+            ) from exc
+    else:
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} must be raw bytes or hexadecimal"
+        )
+    if len(raw) != 32:
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} must contain exactly 32 bytes"
+        )
+    return raw
+
+
+def posebusters_internal_oracle_chain_signing_payload(
+    *,
+    oracle_receipt_sha256: object,
+    runtime_observation_receipt_sha256: object,
+    stratification_receipt_sha256: object,
+    signer_identity_sha256: object,
+    signed_at_utc: object,
+) -> dict[str, Any]:
+    """Return the canonical bytes an external custodian signs for one chain."""
+
+    return {
+        "schema_id": (
+            POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CHAIN_SIGNING_SCHEMA_ID
+        ),
+        "oracle_receipt_sha256": _digest(
+            oracle_receipt_sha256,
+            name="signed oracle receipt",
+        ),
+        "runtime_observation_receipt_sha256": _digest(
+            runtime_observation_receipt_sha256,
+            name="signed runtime observation receipt",
+        ),
+        "stratification_receipt_sha256": _digest(
+            stratification_receipt_sha256,
+            name="signed stratification receipt",
+        ),
+        "signer_identity_sha256": _digest(
+            signer_identity_sha256,
+            name="signed chain signer identity",
+        ),
+        "signed_at_utc": _utc(signed_at_utc, name="chain signature UTC"),
+    }
+
+
+def posebusters_internal_oracle_chain_signing_bytes(
+    payload: Mapping[str, Any],
+) -> bytes:
+    """Return the exact canonical bytes covered by a detached chain signature."""
+
+    document = _mapping(payload, name="chain signing payload")
+    if document.get("schema_id") != (
+        POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CHAIN_SIGNING_SCHEMA_ID
+    ):
+        raise PoseBustersInternalOracleReproductionError(
+            "unsupported chain signing payload schema"
+        )
+    return _canonical_bytes(
+        posebusters_internal_oracle_chain_signing_payload(
+            oracle_receipt_sha256=document.get("oracle_receipt_sha256"),
+            runtime_observation_receipt_sha256=document.get(
+                "runtime_observation_receipt_sha256"
+            ),
+            stratification_receipt_sha256=document.get(
+                "stratification_receipt_sha256"
+            ),
+            signer_identity_sha256=document.get("signer_identity_sha256"),
+            signed_at_utc=document.get("signed_at_utc"),
+        )
+    )
+
+
+def verify_posebusters_internal_oracle_chain_signature(
+    chain_signature: Mapping[str, Any],
+    *,
+    oracle_receipt_sha256: str,
+    runtime_observation_receipt_sha256: str,
+    stratification_receipt_sha256: str,
+    trust_anchor: PoseBustersInternalOracleChainTrustAnchor,
+) -> dict[str, Any]:
+    """Verify one detached chain signature; signing material is never accepted."""
+
+    document = _mapping(chain_signature, name="chain signature")
+    payload = posebusters_internal_oracle_chain_signing_payload(
+        oracle_receipt_sha256=oracle_receipt_sha256,
+        runtime_observation_receipt_sha256=(runtime_observation_receipt_sha256),
+        stratification_receipt_sha256=stratification_receipt_sha256,
+        signer_identity_sha256=trust_anchor.signer_identity_sha256,
+        signed_at_utc=document.get("signed_at_utc"),
+    )
+    signature = _mapping(document.get("signature"), name="chain signature value")
+    if signature.get("algorithm") != (
+        POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SIGNATURE_ALGORITHM
+    ):
+        raise PoseBustersInternalOracleReproductionError(
+            "chain signature algorithm is not Ed25519"
+        )
+    if _mapping(
+        document.get("signed_payload"),
+        name="chain signed payload",
+    ) != payload:
+        raise PoseBustersInternalOracleReproductionError(
+            "chain signature does not cover the pinned receipt chain"
+        )
+    try:
+        verified = verify_ed25519(
+            _canonical_bytes(payload),
+            signature.get("value"),
+            trust_anchor.verification_key,
+        )
+    except ReferenceMinimizationValidationEd25519Error as exc:
+        raise PoseBustersInternalOracleReproductionError(
+            "chain signature verifier is unavailable"
+        ) from exc
+    if not verified:
+        raise PoseBustersInternalOracleReproductionError(
+            "chain signature verification failed"
+        )
+    return {
+        "schema_id": (
+            POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CHAIN_SIGNING_SCHEMA_ID
+        ),
+        "algorithm": POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SIGNATURE_ALGORITHM,
+        "signer_identity_sha256": trust_anchor.signer_identity_sha256,
+        "signed_payload_sha256": _canonical_sha256(payload),
+        "signed_at_utc": payload["signed_at_utc"],
+        "signature_value": _signature_hex(
+            signature.get("value"),
+            name="chain signature value",
+        ),
+        "signature_verified": True,
+        "trust_anchor_provisioned_out_of_band": True,
+        "signer_custody_independently_reviewed": False,
+    }
+
+
+def _signature_hex(value: object, *, name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 128
+        or any(character not in _LOWERCASE_SHA256 for character in value)
+    ):
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} must be a lowercase 64-byte hexadecimal signature"
+        )
+    return value
+
+
+def _reconstructed_chain_signature(
+    value: object,
+    *,
+    chain: Mapping[str, Any],
+    name: str,
+) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    summary = _mapping(value, name=name)
+    payload = posebusters_internal_oracle_chain_signing_payload(
+        oracle_receipt_sha256=_mapping(
+            chain.get("oracle_receipt"),
+            name=f"{name} oracle binding",
+        ).get("receipt_sha256"),
+        runtime_observation_receipt_sha256=_mapping(
+            chain.get("runtime_observation_receipt"),
+            name=f"{name} runtime binding",
+        ).get("receipt_sha256"),
+        stratification_receipt_sha256=_mapping(
+            chain.get("stratification_receipt"),
+            name=f"{name} stratification binding",
+        ).get("receipt_sha256"),
+        signer_identity_sha256=summary.get("signer_identity_sha256"),
+        signed_at_utc=summary.get("signed_at_utc"),
+    )
+    return {
+        "signed_at_utc": payload["signed_at_utc"],
+        "signed_payload": payload,
+        "signature": {
+            "algorithm": (
+                POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SIGNATURE_ALGORITHM
+            ),
+            "value": _signature_hex(
+                summary.get("signature_value"),
+                name=f"{name} value",
+            ),
+        },
+    }
 
 
 def _list(value: object, *, name: str) -> list[Any]:
@@ -610,6 +838,59 @@ def _chain_binding(chain: _InternalOracleChain) -> dict[str, Any]:
         "runtime_engine_wheel_binding_sha256": chain.runtime.payload[
             "engine_wheel_binding_sha256"
         ],
+    }
+
+
+def _verified_chain_signatures(
+    baseline: _InternalOracleChain,
+    external: _InternalOracleChain,
+    *,
+    baseline_chain_signature: Mapping[str, Any] | None,
+    external_chain_signature: Mapping[str, Any] | None,
+    chain_trust_anchor: PoseBustersInternalOracleChainTrustAnchor | None,
+) -> dict[str, Any]:
+    provided = (
+        baseline_chain_signature,
+        external_chain_signature,
+        chain_trust_anchor,
+    )
+    if all(item is None for item in provided):
+        return {
+            "baseline": None,
+            "external": None,
+            "upstream_receipt_signatures_verified": False,
+        }
+    if any(item is None for item in provided):
+        raise PoseBustersInternalOracleReproductionError(
+            "chain signature verification requires both signatures and a "
+            "trust anchor"
+        )
+    assert chain_trust_anchor is not None
+    verified_baseline = verify_posebusters_internal_oracle_chain_signature(
+        baseline_chain_signature,  # type: ignore[arg-type]
+        oracle_receipt_sha256=baseline.oracle.receipt_sha256,
+        runtime_observation_receipt_sha256=baseline.runtime.receipt_sha256,
+        stratification_receipt_sha256=baseline.strata.receipt_sha256,
+        trust_anchor=chain_trust_anchor,
+    )
+    verified_external = verify_posebusters_internal_oracle_chain_signature(
+        external_chain_signature,  # type: ignore[arg-type]
+        oracle_receipt_sha256=external.oracle.receipt_sha256,
+        runtime_observation_receipt_sha256=external.runtime.receipt_sha256,
+        stratification_receipt_sha256=external.strata.receipt_sha256,
+        trust_anchor=chain_trust_anchor,
+    )
+    if (
+        verified_baseline["signed_payload_sha256"]
+        == verified_external["signed_payload_sha256"]
+    ):
+        raise PoseBustersInternalOracleReproductionError(
+            "baseline and external chain signatures cover the same payload"
+        )
+    return {
+        "baseline": verified_baseline,
+        "external": verified_external,
+        "upstream_receipt_signatures_verified": True,
     }
 
 
@@ -1399,6 +1680,9 @@ def _build_reproduction_result(
     observed_external_host_identity_sha256: str,
     observed_external_execution_operator_identity_sha256: str,
     external_observed_utc: str,
+    baseline_chain_signature: Mapping[str, Any] | None = None,
+    external_chain_signature: Mapping[str, Any] | None = None,
+    chain_trust_anchor: PoseBustersInternalOracleChainTrustAnchor | None = None,
 ) -> PoseBustersInternalOracleReproductionResult:
     work_order, baseline = _load_work_order_and_baseline(
         work_order_path,
@@ -1503,6 +1787,13 @@ def _build_reproduction_result(
         and runtime_comparison["runtime_observation_receipts_distinct"] is True
         and runtime_comparison["case_identity_projection_exact_match"] is True
     )
+    chain_signatures = _verified_chain_signatures(
+        baseline,
+        external,
+        baseline_chain_signature=baseline_chain_signature,
+        external_chain_signature=external_chain_signature,
+        chain_trust_anchor=chain_trust_anchor,
+    )
     source_members = _source_members()
     payload = {
         "schema_id": POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_RESULT_SCHEMA_ID,
@@ -1528,6 +1819,8 @@ def _build_reproduction_result(
         "cross_host_deterministic_reproduction_pass": reproduced,
         "all_failure_rows_compared": deterministic["all_failure_rows_compared"],
         "runtime_measurements_compared_without_equality_threshold": True,
+        "baseline_chain_signature": chain_signatures["baseline"],
+        "external_chain_signature": chain_signatures["external"],
         "engine_wheel_binding": expected_wheel,
         "implementation_source_members": [
             {
@@ -1542,10 +1835,22 @@ def _build_reproduction_result(
         "configuration_sha256": (
             POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CONFIGURATION_SHA256
         ),
-        "scientific_blockers": list(
-            POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SCIENTIFIC_BLOCKERS
-        ),
+        "scientific_blockers": [
+            blocker
+            for blocker in POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SCIENTIFIC_BLOCKERS
+            if not (
+                chain_signatures["upstream_receipt_signatures_verified"] is True
+                and blocker
+                == (
+                    "upstream_runtime_and_stratification_receipts_are_unsigned"
+                    "_self_hash_only"
+                )
+            )
+        ],
         **_RESULT_FLAGS,
+        "upstream_receipt_signatures_verified": chain_signatures[
+            "upstream_receipt_signatures_verified"
+        ],
     }
     return PoseBustersInternalOracleReproductionResult(payload)
 
@@ -1571,6 +1876,9 @@ def materialize_posebusters_internal_oracle_reproduction_result(
     observed_external_host_identity_sha256: str,
     observed_external_execution_operator_identity_sha256: str,
     external_observed_utc: str,
+    baseline_chain_signature: Mapping[str, Any] | None = None,
+    external_chain_signature: Mapping[str, Any] | None = None,
+    chain_trust_anchor: PoseBustersInternalOracleChainTrustAnchor | None = None,
 ) -> PoseBustersInternalOracleReproductionResult:
     """Compare one preregistered external observation with the baseline."""
 
@@ -1608,6 +1916,9 @@ def materialize_posebusters_internal_oracle_reproduction_result(
             observed_external_execution_operator_identity_sha256
         ),
         external_observed_utc=external_observed_utc,
+        baseline_chain_signature=baseline_chain_signature,
+        external_chain_signature=external_chain_signature,
+        chain_trust_anchor=chain_trust_anchor,
     )
 
 
@@ -1631,6 +1942,7 @@ def verify_posebusters_internal_oracle_reproduction_result(
     expected_external_oracle_receipt_sha256: str,
     expected_external_runtime_observation_receipt_sha256: str,
     expected_external_stratification_receipt_sha256: str,
+    chain_trust_anchor: PoseBustersInternalOracleChainTrustAnchor | None = None,
 ) -> PoseBustersInternalOracleReproductionResult:
     """Reconstruct a result from both receipt chains and require equality."""
 
@@ -1682,6 +1994,17 @@ def verify_posebusters_internal_oracle_reproduction_result(
             raw.get("external_observed_utc"),
             name="external observation UTC",
         ),
+        baseline_chain_signature=_reconstructed_chain_signature(
+            raw.get("baseline_chain_signature"),
+            chain=_mapping(raw.get("baseline_chain"), name="baseline chain"),
+            name="baseline chain signature",
+        ),
+        external_chain_signature=_reconstructed_chain_signature(
+            raw.get("external_chain_signature"),
+            chain=_mapping(raw.get("external_chain"), name="external chain"),
+            name="external chain signature",
+        ),
+        chain_trust_anchor=chain_trust_anchor,
     )
     if loaded.source != expected.canonical_bytes():
         raise PoseBustersInternalOracleReproductionError(
@@ -1920,6 +2243,7 @@ if __name__ == "__main__":  # pragma: no cover
 __all__ = [
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CONFIGURATION",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CONFIGURATION_SHA256",
+    "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CHAIN_SIGNING_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_DETERMINISTIC_COMPARISON_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_MAX_INPUT_BYTES",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_MAX_RESULT_BYTES",
@@ -1928,7 +2252,9 @@ __all__ = [
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_RESULT_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_RUNTIME_COMPARISON_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SCIENTIFIC_BLOCKERS",
+    "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SIGNATURE_ALGORITHM",
     "POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_WORK_ORDER_SCHEMA_ID",
+    "PoseBustersInternalOracleChainTrustAnchor",
     "PoseBustersInternalOracleReproductionError",
     "PoseBustersInternalOracleReproductionResult",
     "PoseBustersInternalOracleReproductionWorkOrder",
@@ -1937,6 +2263,9 @@ __all__ = [
     "main",
     "materialize_posebusters_internal_oracle_reproduction_result",
     "materialize_posebusters_internal_oracle_reproduction_work_order",
+    "posebusters_internal_oracle_chain_signing_bytes",
+    "posebusters_internal_oracle_chain_signing_payload",
+    "verify_posebusters_internal_oracle_chain_signature",
     "verify_posebusters_internal_oracle_reproduction_result",
     "verify_posebusters_internal_oracle_reproduction_work_order",
 ]
