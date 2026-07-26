@@ -33,6 +33,7 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     public_posebusters_external_generated_pose_evaluation as external_generated_pose_module,
     public_posebusters_external_preparation as external_preparation_module,
     public_posebusters_generated_pose_evaluation as generated_pose_module,
+    public_posebusters_internal_oracle_evaluation as internal_oracle_module,
     public_posebusters_rcsb_target_family_binding as rcsb_target_family_module,
     public_posebusters_target_cluster_binding as target_cluster_module,
     public_posebusters_vina_execution as vina_execution_module,
@@ -95,6 +96,11 @@ from betelgeuze_engine_v2.benchmark.public_posebusters_internal_rmsd_evaluation 
     PoseBustersInternalRMSDConfig,
     materialize_posebusters_internal_rmsd_evaluation,
     verify_posebusters_internal_rmsd_evaluation_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_evaluation import (  # noqa: E402
+    PoseBustersInternalOracleEvaluationError,
+    materialize_posebusters_internal_oracle_evaluation,
+    verify_posebusters_internal_oracle_evaluation_receipt,
 )
 from betelgeuze_engine_v2.benchmark.redocking_cli import (  # noqa: E402
     verify_redocking_diagnostic_report,
@@ -660,6 +666,7 @@ def test_internal_preparation_retains_failure_and_scope_abstention_rows(
 
 def test_internal_execution_runs_prepared_case_and_is_exactly_reexecutable(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     pytest.importorskip("rdkit")
     archive_path, selection_path, intake_path, contract = (
@@ -804,6 +811,127 @@ def test_internal_execution_runs_prepared_case_and_is_exactly_reexecutable(
     assert verified_rmsd.fingerprint_sha256 == rmsd_receipt.fingerprint_sha256
     assert stat.S_IMODE(rmsd_receipt_path.stat().st_mode) == 0o600
 
+    successful_runtime = _InternalOracleRuntime(
+        tuple(
+            _successful_internal_oracle_outcome()
+            for _pose in rmsd_row.pose_results
+        )
+    )
+    monkeypatch.setattr(
+        internal_oracle_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: successful_runtime,
+    )
+    oracle_common = {
+        "internal_rmsd_receipt_path": rmsd_receipt_path,
+        "execution_receipt_path": receipt_path,
+        "execution_artifact_root": output_artifact_root,
+        "preparation_receipt_path": preparation_path,
+        "preparation_artifact_root": preparation_artifact_root,
+        "archive_path": archive_path,
+        "selection_path": selection_path,
+        "intake_receipt_path": intake_path,
+        "corpus_audit_receipt_path": corpus_path,
+        "posebusters_wheel_path": tmp_path / "posebusters.whl",
+        "scratch_root": tmp_path / "posebusters-scratch",
+        "expected_internal_rmsd_receipt_sha256": (
+            rmsd_receipt.fingerprint_sha256
+        ),
+        "contract": contract,
+        "execution_configuration": configuration,
+        "rmsd_configuration": rmsd_configuration,
+    }
+    oracle = materialize_posebusters_internal_oracle_evaluation(
+        **oracle_common
+    )
+    oracle_row = oracle.case_rows[0]
+    assert oracle_row.status == "evaluated"
+    assert oracle_row.oracle_attempted is True
+    assert len(oracle_row.pose_results) == 2
+    assert all(
+        pose.status == "evaluated" for pose in oracle_row.pose_results
+    )
+    assert all(
+        pose.internal_oracle_direct_rmsd_delta_angstrom_binary64_hex
+        for pose in oracle_row.pose_results
+    )
+    assert successful_runtime.calls == 1
+    oracle_metrics = {metric.metric_id: metric for metric in oracle.metrics}
+    assert (
+        oracle_metrics["posebusters_complete_case_evaluation_rate"].numerator
+        == 1
+    )
+    assert oracle_metrics["pose_evaluation_success_rate"].denominator == 2
+    oracle_payload = oracle.to_dict()
+    assert oracle_payload["all_case_denominator"] == 1
+    assert oracle_payload["posebusters_redock_oracle_executed"] is True
+    assert oracle_payload["benchmark_executed"] is False
+    assert oracle_payload["claim_safe"] is False
+
+    oracle_path = tmp_path / "receipts" / "internal-oracle.json"
+    oracle.write_json(oracle_path)
+    verified_oracle = verify_posebusters_internal_oracle_evaluation_receipt(
+        oracle_path,
+        **oracle_common,
+    )
+    assert verified_oracle.fingerprint_sha256 == oracle.fingerprint_sha256
+    assert successful_runtime.calls == 2
+    assert stat.S_IMODE(oracle_path.stat().st_mode) == 0o600
+    oracle_path.write_bytes(oracle_path.read_bytes() + b" ")
+    with pytest.raises(
+        PoseBustersInternalOracleEvaluationError,
+        match="does not match exact reexecution",
+    ):
+        verify_posebusters_internal_oracle_evaluation_receipt(
+            oracle_path,
+            **oracle_common,
+        )
+
+    partial_runtime = _InternalOracleRuntime(
+        (
+            _successful_internal_oracle_outcome(),
+            _failed_internal_oracle_outcome(),
+        )
+    )
+    monkeypatch.setattr(
+        internal_oracle_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: partial_runtime,
+    )
+    partial = materialize_posebusters_internal_oracle_evaluation(
+        **oracle_common
+    )
+    partial_row = partial.case_rows[0]
+    assert partial_row.status == "partial_evaluation"
+    assert tuple(pose.status for pose in partial_row.pose_results) == (
+        "evaluated",
+        "evaluation_failure",
+    )
+    assert partial_row.pose_results[1].error_code == (
+        "posebusters_pose_evaluation_failed"
+    )
+
+    adapter_runtime = _FailingInternalOracleAdapterRuntime()
+    monkeypatch.setattr(
+        internal_oracle_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: adapter_runtime,
+    )
+    adapter_failure = materialize_posebusters_internal_oracle_evaluation(
+        **oracle_common
+    )
+    adapter_row = adapter_failure.case_rows[0]
+    assert adapter_row.status == "adapter_failure"
+    assert adapter_row.selected_pose_count == 2
+    assert adapter_row.oracle_attempted is False
+    assert adapter_row.error_code == "internal_pose_reconstruction_failed"
+    assert not adapter_row.pose_results
+    adapter_metrics = {
+        metric.metric_id: metric for metric in adapter_failure.metrics
+    }
+    assert adapter_metrics["pose_evaluation_success_rate"].numerator == 0
+    assert adapter_metrics["pose_evaluation_success_rate"].denominator == 2
+
     report_path.write_bytes(report_path.read_bytes() + b" ")
     with pytest.raises(
         PoseBustersInternalExecutionError,
@@ -825,6 +953,7 @@ def test_internal_execution_runs_prepared_case_and_is_exactly_reexecutable(
 
 def test_internal_execution_retains_preparation_failure_and_abstention(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     pytest.importorskip("rdkit")
     archive_path, selection_path, intake_path, contract = _fixture(
@@ -897,6 +1026,45 @@ def test_internal_execution_retains_preparation_failure_and_abstention(
     assert rmsd_receipt.evaluated_case_count == 0
     assert rmsd_receipt.evaluated_pose_count == 0
     assert all(metric.denominator == 2 for metric in rmsd_receipt.metrics)
+
+    rmsd_path = tmp_path / "receipts" / "internal-rmsd.json"
+    rmsd_receipt.write_json(rmsd_path)
+    blocked_runtime = _InternalOracleRuntime(())
+    monkeypatch.setattr(
+        internal_oracle_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: blocked_runtime,
+    )
+    oracle = materialize_posebusters_internal_oracle_evaluation(
+        rmsd_path,
+        execution_path,
+        tmp_path / "internal-redocking",
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        tmp_path / "posebusters.whl",
+        tmp_path / "posebusters-scratch",
+        expected_internal_rmsd_receipt_sha256=(
+            rmsd_receipt.fingerprint_sha256
+        ),
+        contract=contract,
+        execution_configuration=execution_configuration,
+    )
+    assert tuple(row.status for row in oracle.case_rows) == (
+        "blocked_upstream",
+        "blocked_upstream",
+    )
+    assert oracle.selected_pose_count == 0
+    assert oracle.evaluated_pose_count == 0
+    assert blocked_runtime.calls == 0
+    assert all(
+        metric.denominator == 2
+        for metric in oracle.metrics
+        if metric.denominator_scope == "all_cases"
+    )
 
 
 def test_native_geometry_preflight_is_all_case_claim_closed_and_reexecutable(
@@ -1768,6 +1936,102 @@ def _fake_generated_pose_report_values() -> tuple[
     return tuple(rows)
 
 
+def _successful_internal_oracle_outcome(
+) -> generated_pose_module._RuntimePoseOutcome:
+    return generated_pose_module._RuntimePoseOutcome(
+        status="evaluated",
+        report_values=_fake_generated_pose_report_values(),
+        all_non_rmsd_binary_tests_pass=True,
+        identity_pass=True,
+        intramolecular_geometry_pass=True,
+        internal_energy_pass=True,
+        intermolecular_distance_and_overlap_pass=True,
+        rmsd_evaluated=True,
+        rmsd_within_2_angstrom=True,
+        direct_rmsd_angstrom_binary64_hex=(1.5).hex(),
+        kabsch_rmsd_angstrom_binary64_hex=(1.25).hex(),
+        centroid_distance_angstrom_binary64_hex=(0.5).hex(),
+        energy_ratio_binary64_hex=(1.1).hex(),
+        diagnostic_sha256=_sha(b"fake internal oracle diagnostic"),
+        diagnostic_size_bytes=len(b"fake internal oracle diagnostic"),
+    )
+
+
+def _failed_internal_oracle_outcome(
+) -> generated_pose_module._RuntimePoseOutcome:
+    return generated_pose_module._RuntimePoseOutcome(
+        status="evaluation_failure",
+        error_stage="posebusters_redock",
+        error_code="posebusters_pose_evaluation_failed",
+        error_type="RuntimeError",
+        error_message_sha256=_sha(b"bounded internal-oracle failure"),
+        diagnostic_sha256=_sha(b"bounded internal-oracle diagnostic"),
+        diagnostic_size_bytes=len(b"bounded internal-oracle diagnostic"),
+    )
+
+
+class _InternalOracleRuntime:
+    identity = _fake_generated_pose_runtime_identity()
+
+    def __init__(
+        self,
+        outcomes: tuple[generated_pose_module._RuntimePoseOutcome, ...],
+    ) -> None:
+        self._outcomes = outcomes
+        self.calls = 0
+
+    def evaluate_prepared_coordinate_case(
+        self,
+        ligand_start_sdf: bytes,
+        source_atom_to_prepared_atom: tuple[int, ...],
+        pose_coordinates_angstrom: list[list[list[float]]],
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+    ) -> tuple[generated_pose_module._RuntimePoseOutcome, ...]:
+        self.calls += 1
+        assert ligand_start_sdf
+        assert receptor_pdb
+        assert reference_ligands_sdf
+        assert source_atom_to_prepared_atom
+        assert len(set(source_atom_to_prepared_atom)) == len(
+            source_atom_to_prepared_atom
+        )
+        assert len(pose_coordinates_angstrom) == len(self._outcomes)
+        assert all(
+            len(source_atom_to_prepared_atom) == len(coordinates)
+            and max(source_atom_to_prepared_atom) < len(coordinates)
+            for coordinates in pose_coordinates_angstrom
+        )
+        return self._outcomes
+
+
+class _FailingInternalOracleAdapterRuntime:
+    identity = _fake_generated_pose_runtime_identity()
+
+    def evaluate_prepared_coordinate_case(
+        self,
+        ligand_start_sdf: bytes,
+        source_atom_to_prepared_atom: tuple[int, ...],
+        pose_coordinates_angstrom: list[list[list[float]]],
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+    ) -> tuple[generated_pose_module._RuntimePoseOutcome, ...]:
+        assert ligand_start_sdf
+        assert source_atom_to_prepared_atom
+        assert pose_coordinates_angstrom
+        assert receptor_pdb
+        assert reference_ligands_sdf
+        diagnostic = b"bounded internal coordinate reconstruction failure"
+        raise generated_pose_module.PoseBustersGeneratedPoseCaseError(
+            stage="internal_coordinate_reconstruction",
+            error_code="internal_pose_reconstruction_failed",
+            error_type="ValueError",
+            error_message_sha256=_sha(diagnostic),
+            diagnostic_sha256=_sha(diagnostic),
+            diagnostic_size_bytes=len(diagnostic),
+        )
+
+
 class _SuccessfulGeneratedPoseRuntime:
     identity = _fake_generated_pose_runtime_identity()
 
@@ -2254,6 +2518,7 @@ def test_generated_pose_runtime_batches_all_case_conformers(
 
     class _BatchEngine:
         calls: list[int] = []
+        coordinate_rows: list[tuple[tuple[float, float, float], ...]] = []
 
         def __init__(self, *, config: str, max_workers: int) -> None:
             assert config == "redock"
@@ -2271,6 +2536,10 @@ def test_generated_pose_runtime_batches_all_case_conformers(
             assert mol_cond.is_file()
             assert full_report is True
             self.calls.append(len(poses))
+            for pose in poses:
+                conformer = getattr(pose, "coordinate_conformer", None)
+                if conformer is not None:
+                    self.coordinate_rows.append(tuple(conformer.positions))
             return _Report(columns, report_rows)
 
     class _PDBQTMolecule:
@@ -2298,16 +2567,34 @@ def test_generated_pose_runtime_batches_all_case_conformers(
             assert keep_flexres is False
             return [_Molecule()]
 
+    class _CoordinateConformer:
+        def __init__(self, atom_count: int) -> None:
+            self.positions = [(0.0, 0.0, 0.0)] * atom_count
+
+        def SetAtomPosition(
+            self,
+            index: int,
+            value: tuple[float, float, float],
+        ) -> None:
+            self.positions[index] = value
+
+    class _SourceMolecule:
+        def GetNumAtoms(self) -> int:
+            return 2
+
     class _Pose:
         def __init__(self) -> None:
             self._conformer_count = 0
+            self.coordinate_conformer: _CoordinateConformer | None = None
 
         def RemoveAllConformers(self) -> None:
             self._conformer_count = 0
 
-        def AddConformer(self, _conformer: object, *, assignId: bool) -> int:
+        def AddConformer(self, conformer: object, *, assignId: bool) -> int:
             assert assignId is True
             self._conformer_count = 1
+            if isinstance(conformer, _CoordinateConformer):
+                self.coordinate_conformer = conformer
             return 0
 
         def GetNumConformers(self) -> int:
@@ -2315,12 +2602,29 @@ def test_generated_pose_runtime_batches_all_case_conformers(
 
     class _Chem:
         @staticmethod
+        def MolFromMolBlock(
+            _source: str,
+            *,
+            sanitize: bool,
+            removeHs: bool,
+            strictParsing: bool,
+        ) -> _SourceMolecule:
+            assert sanitize is True
+            assert removeHs is False
+            assert strictParsing is True
+            return _SourceMolecule()
+
+        @staticmethod
         def Mol(_molecule: object) -> _Pose:
             return _Pose()
 
         @staticmethod
         def Conformer(conformer: object) -> object:
-            return conformer
+            return (
+                _CoordinateConformer(conformer)
+                if isinstance(conformer, int)
+                else conformer
+            )
 
     class _Numpy:
         bool_ = bool
@@ -2357,6 +2661,40 @@ def test_generated_pose_runtime_batches_all_case_conformers(
     assert tuple(row.rmsd_within_2_angstrom for row in outcomes) == (True, False)
     assert all(row.intramolecular_geometry_pass for row in outcomes)
     assert all(row.intermolecular_distance_and_overlap_pass for row in outcomes)
+
+    coordinate_outcomes = runtime.evaluate_prepared_coordinate_case(
+        b"synthetic\n$$$$\n",
+        (1, 0),
+        (
+            ((10.0, 0.0, 0.0), (20.0, 0.0, 0.0)),
+            ((30.0, 1.0, 0.0), (40.0, 1.0, 0.0)),
+        ),
+        b"END\n",
+        b"M  END\n$$$$\n",
+    )
+
+    assert _BatchEngine.calls == [2, 2]
+    assert _BatchEngine.coordinate_rows == [
+        ((20.0, 0.0, 0.0), (10.0, 0.0, 0.0)),
+        ((40.0, 1.0, 0.0), (30.0, 1.0, 0.0)),
+    ]
+    assert tuple(row.status for row in coordinate_outcomes) == (
+        "evaluated",
+        "evaluated",
+    )
+
+    with pytest.raises(
+        generated_pose_module.PoseBustersGeneratedPoseCaseError,
+        match="internal_pose_reconstruction_failed",
+    ):
+        runtime.evaluate_prepared_coordinate_case(
+            b"synthetic\n$$$$\n",
+            (1, 0),
+            (((10.0, 0.0, 0.0), (20.0, 0.0, 0.0), (30.0, 0.0, 0.0)),),
+            b"END\n",
+            b"M  END\n$$$$\n",
+        )
+    assert _BatchEngine.calls == [2, 2]
 
 
 def _target_cluster_receptor(residue_labels: tuple[str, ...]) -> bytes:

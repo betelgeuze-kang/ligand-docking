@@ -647,6 +647,22 @@ Implemented and GitHub-hosted CPU tested:
   runtime/memory metrics, second-host reproduction, and independent review are
   still missing, so
   `benchmark_executed=false` and `claim_safe=false`;
+- an installable all-case internal-pose PoseBusters oracle,
+  `betelgeuze-engine-v2-posebusters-internal-oracle`. It exactly reexecutes the
+  internal preparation, redocking, and direct-RMSD chain; reconstructs RDKit
+  conformers from the exact raw start-SDF topology and source-bound prepared
+  coordinates without SDF coordinate truncation; and applies the pinned
+  PoseBusters 0.6.5 `redock` full report with batch evaluation and per-pose
+  fallback. The adapter requires a complete raw/prepared atom bijection, so
+  added or missing atoms fail closed instead of disappearing from validity.
+  Complete oracle report rows, physical-validity flags, oracle RMSD,
+  internal/oracle RMSD deltas, adapter failures, pose failures, and blocked
+  upstream rows remain authenticated in the original all-case denominator.
+  This is an executable evidence carrier, not a completed public result: no
+  official 308-case production receipt is bundled, and target/chemistry strata,
+  runtime/memory measurements, same-input external-engine comparisons,
+  second-host rerun, bundle validation, and independent scientific review are
+  still missing. Therefore `benchmark_executed=false` and `claim_safe=false`;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,

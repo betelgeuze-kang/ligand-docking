@@ -87,6 +87,8 @@ jobs:
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_preparation.py \
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_execution.py \
             betelgeuze_engine_v2/benchmark/public_posebusters_internal_rmsd_evaluation.py \
+            betelgeuze_engine_v2/benchmark/public_posebusters_generated_pose_evaluation.py \
+            betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_evaluation.py \
             betelgeuze_engine_v2/docking/chemistry_validity_v2.py \
             betelgeuze_engine_v2/docking/interpretable_refinement.py \
             betelgeuze_engine_v2/docking/interpretable_scoring.py \
@@ -305,6 +307,7 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-prepare" --help | grep -q "canonical internal redocking inputs"
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-execute" --help | grep -q "failure-inclusive internal redocking"
           "$venv/bin/betelgeuze-engine-v2-posebusters-internal-rmsd" --help | grep -q "connectivity-symmetry direct RMSD"
+          "$venv/bin/betelgeuze-engine-v2-posebusters-internal-oracle" --help | grep -q "pinned PoseBusters oracle"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-prepare" --help | grep -q "without extraction or docking"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-execute" --help | grep -q "all-case rows"
           "$venv/bin/betelgeuze-engine-v2-posebusters-external-evaluate-generated" --help | grep -q "GNINA or Smina poses"

@@ -5,6 +5,8 @@
     "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_preparation.py",
     "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_execution.py",
     "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_rmsd_evaluation.py",
+    "../../betelgeuze_engine_v2/benchmark/public_posebusters_generated_pose_evaluation.py",
+    "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_oracle_evaluation.py",
     "../../betelgeuze_engine_v2/docking/proposals.py",
     "../../betelgeuze_engine_v2/docking/search.py",
     "../../betelgeuze_engine_v2/docking/steric_field.py",

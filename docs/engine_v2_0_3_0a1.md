@@ -35,6 +35,10 @@ Execution:    CPU reference
   execution, with exact source/artifact/config/runtime bindings, per-case
   deterministic seeds, connectivity-symmetry direct receptor-frame Top-1/Top-K
   RMSD, all-case Wilson intervals, and exact local reexecution;
+- source-bound RDKit reconstruction of internal selected poses followed by the
+  pinned PoseBusters 0.6.5 `redock` full-report oracle, retaining every report
+  value, physical-validity/RMSD flag, failure row, internal/oracle RMSD delta,
+  and exact reexecution identity;
 - public evaluator report schema v2 with one mapping for RMSD and validity;
 - fatal separation of internal evaluator defects from retained case failures.
 
@@ -76,11 +80,12 @@ GPU parity evidence, and product qualification exist.
 
 The preparation adapter is a diagnostic molecular-ingest boundary. It does not
 provide calibrated pKa selection, partial charges, OFFXML parameter assignment,
-or real-molecule applicability evidence. The new cohort evaluator measures
-bounded connectivity-symmetry RMSD, but it does not interpret complete atom
-stereochemistry, invoke the external PoseBusters validity/RMSD oracle, report
-target-family strata or wall-clock/peak-memory metrics, or prove a
-second-host/independent rerun. The steric field uses fixed
+or real-molecule applicability evidence. The cohort chain measures bounded
+connectivity-symmetry RMSD and can apply the pinned PoseBusters validity/RMSD
+oracle to reconstructed internal poses, but no official full-cohort production
+receipt is bundled. It does not report target-family or chemistry strata,
+wall-clock/peak-memory metrics, same-input external-engine comparisons, or a
+second-host/independent rerun and review. The steric field uses fixed
 uncalibrated radii and omits electrostatics, hydrogen bonding, desolvation,
 solvent/cofactor response, and receptor flexibility. Accordingly, the release does not
 establish chemical applicability, calibrated pose generation or scoring,

@@ -93,8 +93,13 @@ scientific claim from a package version.
   prepared heavy atoms back to the raw start graph, enumerates all bounded
   native-to-start connectivity isomorphisms, and records direct receptor-frame
   Top-1/Top-K RMSD and Wilson intervals while retaining the full denominator.
-  Complete atom-stereo symmetry, the external PoseBusters oracle, target-family
-  strata, runtime measurements, second-host reproduction, and independent
+  A follow-on all-case carrier now reconstructs selected RDKit poses from the
+  exact raw start-SDF topology and source-bound prepared coordinates, applies
+  the pinned PoseBusters 0.6.5 `redock` full report, and records complete
+  physical-validity/RMSD report rows plus internal/oracle RMSD deltas and every
+  adapter, pose, or upstream failure. Production execution of the official
+  cohort, target/chemistry strata, runtime measurements, same-input external
+  baselines, second-host reproduction, bundle validation, and independent
   review remain explicit blockers; no public benchmark result or docking claim
   is opened.
 

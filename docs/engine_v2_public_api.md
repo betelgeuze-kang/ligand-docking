@@ -722,9 +722,35 @@ intervals.
 
 This diagnostic deliberately uses connectivity symmetry only. It does not
 fully interpret atom stereochemistry and is not equivalent to PoseBusters
-robust RMSD or its external physical-validity tests. The pinned external oracle,
-target/chemistry strata, runtime evidence, second-host rerun, and independent
-review remain required before any public benchmark claim.
+robust RMSD or its external physical-validity tests. The separate carrier below
+supplies the pinned external-oracle execution boundary; production cohort
+results, target/chemistry strata, runtime evidence, second-host rerun, and
+independent review remain required before any public benchmark claim.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_evaluation`
+provides the pinned external-oracle carrier for those selected internal poses.
+The installed `betelgeuze-engine-v2-posebusters-internal-oracle` command first
+exactly reexecutes the internal direct-RMSD chain and archive intake. For every
+evaluated row it reopens the exact raw start ligand, receptor, native ligands,
+prepared canonical ligand, and authenticated redocking report; requires a
+complete bijective source-start-to-prepared atom mapping; reconstructs each
+RDKit conformer at binary64 input precision; and applies the pinned
+PoseBusters 0.6.5 `redock` full-report runtime. Batch failure falls back to
+bounded per-pose evaluation. Added or missing prepared atoms fail closed rather
+than being silently omitted from the oracle topology. Every report value,
+grouped physical-validity
+flag, oracle RMSD, internal/oracle direct-RMSD delta, per-pose failure, adapter
+failure, and blocked upstream row is retained. All-case, selected-case, and
+selected-pose rates include Wilson 95% intervals, and verification requires
+byte-exact upstream and oracle reexecution.
+
+This boundary does not regenerate poses and does not make the internal scorer
+or refiner scientifically valid. No official 308-case production result is
+bundled. Target-family and chemistry strata, wall-clock and peak-memory
+measurements, same-input Vina/GNINA/Smina comparison, second-host independent
+rerun, public result-bundle validation, and scientific review remain explicit
+blockers. Accordingly `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` are fixed.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The

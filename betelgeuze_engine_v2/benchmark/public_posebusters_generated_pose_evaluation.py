@@ -15,13 +15,15 @@ from dataclasses import dataclass
 import argparse
 import contextlib
 import hashlib
+import importlib
 import json
 import math
+from numbers import Real
 import os
 from pathlib import Path, PurePosixPath
 import stat
 import tempfile
-from typing import Any, Protocol, Sequence
+from typing import Any, Protocol, Sequence, TextIO, cast
 import zipfile
 
 from .public_posebusters_corpus_audit import (
@@ -933,6 +935,15 @@ class _PoseBustersRuntimeProtocol(Protocol):
         expected_pose_count: int,
     ) -> tuple[_RuntimePoseOutcome, ...]: ...
 
+    def evaluate_prepared_coordinate_case(
+        self,
+        ligand_start_sdf: bytes,
+        source_atom_to_prepared_atom: Sequence[int],
+        pose_coordinates_angstrom: Sequence[Sequence[Sequence[float]]],
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+    ) -> tuple[_RuntimePoseOutcome, ...]: ...
+
 
 def _private_scratch_root(path: Path) -> Path:
     try:
@@ -1084,7 +1095,9 @@ class _PoseBustersRuntime:
     ) -> _RuntimePoseOutcome:
         sink = _DigestingTextSink()
         try:
-            with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+            with contextlib.redirect_stdout(
+                cast(TextIO, sink)
+            ), contextlib.redirect_stderr(cast(TextIO, sink)):
                 report = self._engine.bust(
                     [pose],
                     mol_true=native_path,
@@ -1105,6 +1118,62 @@ class _PoseBustersRuntime:
                 diagnostic_size_bytes=sink.size_bytes,
             )
 
+    def _evaluate_rdkit_poses(
+        self,
+        poses: Sequence[Any],
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+    ) -> tuple[_RuntimePoseOutcome, ...]:
+        expected_pose_count = len(poses)
+        if expected_pose_count < 1 or expected_pose_count > 128:
+            raise ValueError("PoseBusters pose count is outside its bound")
+        with tempfile.TemporaryDirectory(
+            prefix="posebusters-case-",
+            dir=self._scratch_root,
+        ) as temporary:
+            root = Path(temporary)
+            receptor_path = root / "receptor.pdb"
+            native_path = root / "reference_ligands.sdf"
+            _write_private_file(receptor_path, receptor_pdb)
+            _write_private_file(native_path, reference_ligands_sdf)
+            batch_sink = _DigestingTextSink()
+            try:
+                with (
+                    contextlib.redirect_stdout(cast(TextIO, batch_sink)),
+                    contextlib.redirect_stderr(cast(TextIO, batch_sink)),
+                ):
+                    report = self._engine.bust(
+                        list(poses),
+                        mol_true=native_path,
+                        mol_cond=receptor_path,
+                        full_report=True,
+                    )
+                if tuple(report.shape)[0] != expected_pose_count:
+                    raise ValueError(
+                        "PoseBusters report row count differs from pose input"
+                    )
+            except Exception:
+                return tuple(
+                    self._one_report(pose, native_path, receptor_path)
+                    for pose in poses
+                )
+            outcomes: list[_RuntimePoseOutcome] = []
+            for index, pose in enumerate(poses):
+                try:
+                    outcome = self._outcome_from_report(
+                        report,
+                        index,
+                        batch_sink,
+                    )
+                except Exception:
+                    outcome = self._one_report(
+                        pose,
+                        native_path,
+                        receptor_path,
+                    )
+                outcomes.append(outcome)
+            return tuple(outcomes)
+
     def evaluate_case(
         self,
         poses_pdbqt: bytes,
@@ -1115,7 +1184,9 @@ class _PoseBustersRuntime:
         sink = _DigestingTextSink()
         try:
             pdbqt_text = poses_pdbqt.decode("ascii")
-            with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+            with contextlib.redirect_stdout(
+                cast(TextIO, sink)
+            ), contextlib.redirect_stderr(cast(TextIO, sink)):
                 pdbqt_molecule = self._PDBQTMolecule(
                     pdbqt_text,
                     skip_typing=True,
@@ -1139,56 +1210,117 @@ class _PoseBustersRuntime:
                 if identifier != 0 or pose.GetNumConformers() != 1:
                     raise ValueError("generated conformer ID was not normalized to zero")
                 poses.append(pose)
-            with tempfile.TemporaryDirectory(
-                prefix="posebusters-case-",
-                dir=self._scratch_root,
-            ) as temporary:
-                root = Path(temporary)
-                receptor_path = root / "receptor.pdb"
-                native_path = root / "reference_ligands.sdf"
-                _write_private_file(receptor_path, receptor_pdb)
-                _write_private_file(native_path, reference_ligands_sdf)
-                batch_sink = _DigestingTextSink()
-                try:
-                    with (
-                        contextlib.redirect_stdout(batch_sink),
-                        contextlib.redirect_stderr(batch_sink),
-                    ):
-                        report = self._engine.bust(
-                            poses,
-                            mol_true=native_path,
-                            mol_cond=receptor_path,
-                            full_report=True,
-                        )
-                    if tuple(report.shape)[0] != expected_pose_count:
-                        raise ValueError(
-                            "PoseBusters report row count differs from Vina receipt"
-                        )
-                except Exception:
-                    return tuple(
-                        self._one_report(pose, native_path, receptor_path)
-                        for pose in poses
-                    )
-                outcomes: list[_RuntimePoseOutcome] = []
-                for index, pose in enumerate(poses):
-                    try:
-                        outcome = self._outcome_from_report(
-                            report,
-                            index,
-                            batch_sink,
-                        )
-                    except Exception:
-                        outcome = self._one_report(
-                            pose,
-                            native_path,
-                            receptor_path,
-                        )
-                    outcomes.append(outcome)
-                return tuple(outcomes)
+            return self._evaluate_rdkit_poses(
+                poses,
+                receptor_pdb,
+                reference_ligands_sdf,
+            )
         except Exception as exc:
             raise PoseBustersGeneratedPoseCaseError(
                 stage="pdbqt_reconstruction",
                 error_code="generated_pose_reconstruction_failed",
+                error_type=type(exc).__name__,
+                error_message_sha256=_hash_bytes(_normalize_error(exc)),
+                diagnostic_sha256=sink.sha256,
+                diagnostic_size_bytes=sink.size_bytes,
+            ) from exc
+
+    def evaluate_prepared_coordinate_case(
+        self,
+        ligand_start_sdf: bytes,
+        source_atom_to_prepared_atom: Sequence[int],
+        pose_coordinates_angstrom: Sequence[Sequence[Sequence[float]]],
+        receptor_pdb: bytes,
+        reference_ligands_sdf: bytes,
+    ) -> tuple[_RuntimePoseOutcome, ...]:
+        sink = _DigestingTextSink()
+        try:
+            try:
+                source_text = ligand_start_sdf.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ValueError("start ligand SDF must be UTF-8") from exc
+            parts = source_text.split("$$$$")
+            if len(parts) != 2 or parts[1].strip():
+                raise ValueError("start ligand SDF must contain one record")
+            with contextlib.redirect_stdout(
+                cast(TextIO, sink)
+            ), contextlib.redirect_stderr(cast(TextIO, sink)):
+                molecule = self._Chem.MolFromMolBlock(
+                    parts[0],
+                    sanitize=True,
+                    removeHs=False,
+                    strictParsing=True,
+                )
+            if molecule is None:
+                raise ValueError("RDKit could not parse the start ligand SDF")
+            source_atom_count = int(molecule.GetNumAtoms())
+            mapping = tuple(source_atom_to_prepared_atom)
+            if (
+                len(mapping) != source_atom_count
+                or any(
+                    isinstance(value, bool)
+                    or not isinstance(value, int)
+                    or value < 0
+                    for value in mapping
+                )
+                or len(set(mapping)) != len(mapping)
+            ):
+                raise ValueError(
+                    "source-to-prepared atom mapping is not a complete bijection"
+                )
+            pose_rows = tuple(pose_coordinates_angstrom)
+            if not 1 <= len(pose_rows) <= 128:
+                raise ValueError("prepared coordinate pose count is outside its bound")
+            poses: list[Any] = []
+            prepared_atom_count: int | None = None
+            for pose_index, raw_coordinates in enumerate(pose_rows):
+                coordinates = tuple(tuple(row) for row in raw_coordinates)
+                if prepared_atom_count is None:
+                    prepared_atom_count = len(coordinates)
+                if (
+                    len(coordinates) != prepared_atom_count
+                    or prepared_atom_count != source_atom_count
+                    or max(mapping) >= prepared_atom_count
+                    or any(
+                        len(row) != 3
+                        or any(
+                            isinstance(value, bool)
+                            or not isinstance(value, Real)
+                            or not math.isfinite(float(value))
+                            for value in row
+                        )
+                        for row in coordinates
+                    )
+                ):
+                    raise ValueError(
+                        f"prepared pose {pose_index} coordinates are invalid"
+                    )
+                pose = self._Chem.Mol(molecule)
+                pose.RemoveAllConformers()
+                conformer = self._Chem.Conformer(source_atom_count)
+                for source_index, prepared_index in enumerate(mapping):
+                    x, y, z = coordinates[prepared_index]
+                    conformer.SetAtomPosition(
+                        source_index,
+                        (float(x), float(y), float(z)),
+                    )
+                identifier = pose.AddConformer(conformer, assignId=True)
+                if identifier != 0 or pose.GetNumConformers() != 1:
+                    raise ValueError(
+                        "prepared coordinate conformer ID was not normalized"
+                    )
+                poses.append(pose)
+            return self._evaluate_rdkit_poses(
+                poses,
+                receptor_pdb,
+                reference_ligands_sdf,
+            )
+        except PoseBustersGeneratedPoseCaseError:
+            raise
+        except Exception as exc:
+            raise PoseBustersGeneratedPoseCaseError(
+                stage="internal_coordinate_reconstruction",
+                error_code="internal_pose_reconstruction_failed",
                 error_type=type(exc).__name__,
                 error_message_sha256=_hash_bytes(_normalize_error(exc)),
                 diagnostic_sha256=sink.sha256,
@@ -1248,16 +1380,17 @@ def _load_posebusters_runtime(
 ) -> _PoseBustersRuntimeProtocol:
     wheel_sha, wheel_size = _verify_posebusters_wheel(posebusters_wheel_path)
     try:
-        import meeko
-        from meeko import PDBQTMolecule, RDKitMolCreate
+        meeko = importlib.import_module("meeko")
+        PDBQTMolecule = getattr(meeko, "PDBQTMolecule")
+        RDKitMolCreate = getattr(meeko, "RDKitMolCreate")
         import numpy
         import pandas
-        import posebusters
-        from posebusters import PoseBusters
+        posebusters = importlib.import_module("posebusters")
+        PoseBusters = getattr(posebusters, "PoseBusters")
         from rdkit import Chem
         import torch
         import yaml
-    except ImportError as exc:
+    except (AttributeError, ImportError) as exc:
         raise PoseBustersGeneratedPoseEvaluationError(
             "generated-pose evaluation requires the pinned optional runtime"
         ) from exc
@@ -1275,7 +1408,12 @@ def _load_posebusters_runtime(
         raise PoseBustersGeneratedPoseEvaluationError(
             "PoseBusters module version is not pinned"
         )
-    config_path = Path(posebusters.__file__).parent / "config" / "redock.yml"
+    posebusters_file = getattr(posebusters, "__file__", None)
+    if not isinstance(posebusters_file, str) or not posebusters_file:
+        raise PoseBustersGeneratedPoseEvaluationError(
+            "PoseBusters module source path is unavailable"
+        )
+    config_path = Path(posebusters_file).parent / "config" / "redock.yml"
     config_sha = _source_file_sha256(config_path)
     if config_sha != POSEBUSTERS_GENERATED_POSE_REDOCK_CONFIGURATION_SHA256:
         raise PoseBustersGeneratedPoseEvaluationError(
@@ -1902,11 +2040,11 @@ class PoseBustersGeneratedPoseMetric:
                 for value in values
             )
             if valid:
-                assert all(isinstance(value, float) for value in values)
+                estimate, low, high = cast(tuple[float, float, float], values)
                 valid = (
-                    values[1] <= values[0] <= values[2]
+                    low <= estimate <= high
                     and math.isclose(
-                        values[0],
+                        estimate,
                         numerator / denominator,
                         abs_tol=1.0e-15,
                     )
