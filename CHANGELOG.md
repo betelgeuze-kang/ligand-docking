@@ -292,6 +292,23 @@ scientific claim from a package version.
   energy or force is evaluated, exclusions and 1-4 scaling are not applied,
   partial charges and masses remain unassigned, and calibration is unreviewed, so
   `claim_safe=false` stays fixed.
+- Added fail-closed 1-2/1-3/1-4/1-5 exclusion and scaling derivation. The vdW
+  and Electrostatics `scale12`/`scale13`/`scale14`/`scale15` attributes were
+  parsed but never applied, so every nonbonded pair stayed unscaled. Each
+  intramolecular pair's topological separation is now derived from the shortest
+  bonded path in the canonical bond graph, and the declared factor for that
+  separation is attached once per handler: a factor of exactly zero is recorded
+  as an exclusion and a nonzero factor below one as scaling. Every required
+  scale attribute must be present and parse as a finite factor in [0, 1]; a
+  missing, unparseable, or out-of-range attribute fails closed rather than
+  defaulting, because a silently assumed 1.0 would turn an intended exclusion
+  into a full interaction. Documents, handler policies, and pair rows are each
+  self-authenticating, and the validator rejects digest tamper, an unreviewed
+  separation, a claim-open document, and a document whose pair list is shorter
+  than its own intramolecular pair count. Derivation attaches declared factors
+  only: no energy is evaluated, partial charges stay unassigned, periodic and
+  intermolecular exclusion policy is not derived, and calibration is unreviewed,
+  so `claim_safe=false` stays fixed.
 
 ### Changed
 
