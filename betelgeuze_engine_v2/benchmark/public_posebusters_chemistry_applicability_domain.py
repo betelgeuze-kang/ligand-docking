@@ -34,6 +34,10 @@ import stat
 import tempfile
 from typing import Any
 
+from betelgeuze_engine_v2.molecular import (
+    mmcif_nonpoly_atom_parameter_provenance as provenance_module,
+)
+
 from . import public_posebusters_corpus_audit as corpus_module
 from . import public_posebusters_internal_oracle_stratification as strata_module
 from . import public_protonation_tautomer_axis_evidence as axis_module
@@ -116,6 +120,7 @@ POSEBUSTERS_CHEMISTRY_APPLICABILITY_BLOCKERS = (
     "coverage_reflects_one_public_cohort_not_a_validated_chemical_domain",
     "protonation_state_and_tautomer_axes_not_independently_resolved",
     "parameter_provenance_per_atom_not_established",
+    "per_atom_parameter_values_not_assigned",
     "independent_energy_and_force_comparison_missing",
     "conformer_ranking_and_strain_evidence_missing",
     "independent_scientific_review_missing",
@@ -129,6 +134,7 @@ _RESULT_FLAGS = {
     "energies_recomputed": False,
     "protonation_and_tautomer_axes_resolved": False,
     "parameter_provenance_established": False,
+    "per_atom_parameter_provenance_traced": False,
     "independent_external_review_present": False,
     "benchmark_executed": False,
     "scientifically_validated": False,
@@ -505,6 +511,72 @@ def _axis_evidence_binding(
     }
 
 
+def _parameter_provenance_binding(
+    value: object,
+) -> dict[str, Any] | None:
+    """Bind an optional per-atom parameter-provenance trace document."""
+
+    if value is None:
+        return None
+    document = _mapping(value, name="parameter provenance trace")
+    try:
+        validated = (
+            provenance_module.require_mmcif_nonpoly_atom_parameter_provenance_document(
+                document
+            )
+        )
+    except provenance_module.MmcifNonpolyAtomParameterProvenanceError as exc:
+        raise PoseBustersChemistryApplicabilityError(
+            "per-atom parameter provenance trace is invalid"
+        ) from exc
+    atom_count = _integer(
+        validated.get("atom_count"),
+        name="provenance atom count",
+        minimum=1,
+    )
+    declared = _integer(
+        validated.get("declared_provenance_atom_count"),
+        name="provenance declared atom count",
+    )
+    assigned = _integer(
+        validated.get("assigned_value_atom_count"),
+        name="provenance assigned atom count",
+    )
+    if declared != atom_count:
+        raise PoseBustersChemistryApplicabilityError(
+            "provenance trace does not declare a source for every atom"
+        )
+    if assigned > atom_count:
+        raise PoseBustersChemistryApplicabilityError(
+            "provenance trace assigned count exceeds its atom count"
+        )
+    return {
+        "schema_id": (
+            provenance_module.MMCIF_NONPOLY_ATOM_PARAMETER_PROVENANCE_DOCUMENT_SCHEMA_ID
+        ),
+        "snapshot_sha256": _digest(
+            validated.get("snapshot_sha256"),
+            name="provenance snapshot",
+        ),
+        "parameter_source_snapshot_sha256": _digest(
+            validated.get("parameter_source_snapshot_sha256"),
+            name="provenance parameter source snapshot",
+        ),
+        "atom_count": atom_count,
+        "declared_provenance_atom_count": declared,
+        "assigned_value_atom_count": assigned,
+        "fully_absent_value_atom_count": _integer(
+            validated.get("fully_absent_value_atom_count"),
+            name="provenance absent atom count",
+        ),
+        "declared_provenance_complete": True,
+        "assigned_value_coverage_binary64_hex": (assigned / atom_count).hex(),
+        "every_atom_parameter_value_assigned": assigned == atom_count,
+        "smirnoff_semantics_parsed": False,
+        "parameter_values_assigned": False,
+    }
+
+
 def _source_members() -> tuple[tuple[str, str], ...]:
     paths = (
         (
@@ -595,6 +667,7 @@ def _build_domain(
     expected_stratification_receipt_sha256: str,
     axis_evidence_receipt_path: str | os.PathLike[str] | None = None,
     expected_axis_evidence_receipt_sha256: str | None = None,
+    parameter_provenance_trace: Mapping[str, Any] | None = None,
 ) -> PoseBustersChemistryApplicabilityReceipt:
     corpus = _load_receipt(
         corpus_audit_receipt_path,
@@ -618,6 +691,7 @@ def _build_domain(
             expected_axis_evidence_receipt_sha256
         ),
     )
+    provenance_binding = _parameter_provenance_binding(parameter_provenance_trace)
     scope = _scope_projection(corpus.payload)
     chemistry = _chemistry_projection(strata.payload)
     missing = sorted(set(chemistry) - set(scope))
@@ -696,6 +770,7 @@ def _build_domain(
         ),
         "out_of_scope_admission_leak_free": not leaks,
         "protonation_tautomer_axis_evidence": axis_binding,
+        "per_atom_parameter_provenance": provenance_binding,
         "implementation_source_members": dict(source_members),
         "implementation_source_sha256": _canonical_sha256(dict(source_members)),
         "configuration": POSEBUSTERS_CHEMISTRY_APPLICABILITY_CONFIGURATION,
@@ -713,6 +788,7 @@ def _build_domain(
         ],
         **_RESULT_FLAGS,
         "protonation_and_tautomer_axes_resolved": axis_binding is not None,
+        "per_atom_parameter_provenance_traced": provenance_binding is not None,
     }
     return PoseBustersChemistryApplicabilityReceipt(payload)
 
@@ -725,6 +801,7 @@ def materialize_posebusters_chemistry_applicability_domain(
     expected_stratification_receipt_sha256: str,
     axis_evidence_receipt_path: str | os.PathLike[str] | None = None,
     expected_axis_evidence_receipt_sha256: str | None = None,
+    parameter_provenance_trace: Mapping[str, Any] | None = None,
 ) -> PoseBustersChemistryApplicabilityReceipt:
     """Observe the cohort's real-chemistry coverage and out-of-scope rejection."""
 
@@ -741,6 +818,7 @@ def materialize_posebusters_chemistry_applicability_domain(
         expected_axis_evidence_receipt_sha256=(
             expected_axis_evidence_receipt_sha256
         ),
+        parameter_provenance_trace=parameter_provenance_trace,
     )
 
 
@@ -754,6 +832,7 @@ def verify_posebusters_chemistry_applicability_receipt(
     expected_stratification_receipt_sha256: str,
     axis_evidence_receipt_path: str | os.PathLike[str] | None = None,
     expected_axis_evidence_receipt_sha256: str | None = None,
+    parameter_provenance_trace: Mapping[str, Any] | None = None,
 ) -> PoseBustersChemistryApplicabilityReceipt:
     """Recompute the domain observation and require exact reconstruction."""
 
@@ -775,12 +854,44 @@ def verify_posebusters_chemistry_applicability_receipt(
         expected_axis_evidence_receipt_sha256=(
             expected_axis_evidence_receipt_sha256
         ),
+        parameter_provenance_trace=parameter_provenance_trace,
     )
     if loaded.receipt_sha256 != expected.fingerprint_sha256:
         raise PoseBustersChemistryApplicabilityError(
             "applicability receipt failed exact reconstruction"
         )
     return expected
+
+
+def _load_provenance_trace_document(
+    path: str | None,
+) -> dict[str, Any] | None:
+    """Read an optional canonical per-atom provenance trace document."""
+
+    if path is None:
+        return None
+    try:
+        source = _read_exact_regular_file(
+            path,
+            maximum_bytes=POSEBUSTERS_CHEMISTRY_APPLICABILITY_MAX_INPUT_BYTES,
+        )
+    except (OSError, PoseBustersArchiveIntakeError) as exc:
+        raise PoseBustersChemistryApplicabilityError(
+            "parameter provenance trace could not be read securely"
+        ) from exc
+    try:
+        document = json.loads(
+            source.decode("ascii"),
+            object_pairs_hook=_json_object_pairs,
+            parse_constant=_reject_json_constant,
+        )
+    except PoseBustersChemistryApplicabilityError:
+        raise
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PoseBustersChemistryApplicabilityError(
+            "parameter provenance trace is not canonical ASCII JSON"
+        ) from exc
+    return _mapping(document, name="parameter provenance trace")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -808,6 +919,7 @@ def _parser() -> argparse.ArgumentParser:
         )
         command.add_argument("--axis-evidence-receipt")
         command.add_argument("--expected-axis-evidence-receipt-sha256")
+        command.add_argument("--parameter-provenance-trace")
     materialize.add_argument("--output", required=True)
     verify.add_argument("--receipt", required=True)
     verify.add_argument("--expected-applicability-receipt-sha256", required=True)
@@ -828,6 +940,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "axis_evidence_receipt_path": args.axis_evidence_receipt,
         "expected_axis_evidence_receipt_sha256": (
             args.expected_axis_evidence_receipt_sha256
+        ),
+        "parameter_provenance_trace": _load_provenance_trace_document(
+            args.parameter_provenance_trace
         ),
     }
     if args.command == "materialize":
@@ -856,6 +971,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 ],
                 "protonation_and_tautomer_axes_resolved": payload[
                     "protonation_and_tautomer_axes_resolved"
+                ],
+                "per_atom_parameter_provenance_traced": payload[
+                    "per_atom_parameter_provenance_traced"
                 ],
                 "scientifically_validated": False,
                 "claim_safe": False,

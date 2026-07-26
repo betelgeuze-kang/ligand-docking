@@ -212,6 +212,17 @@ scientific claim from a package version.
   blockers. The trace is an absence ledger: SMIRNOFF semantics are not parsed
   and no parameter is assigned, so declared provenance is complete while
   assigned-value coverage is zero and `claim_safe=false` stays fixed.
+- The chemistry applicability domain now optionally binds that per-atom
+  provenance trace. A bound trace must self-authenticate, must declare a source
+  for every atom, and cannot report more assigned values than atoms. The domain
+  records the trace digest, atom count, declared/assigned/absent counts, and the
+  assigned-value coverage ratio, and sets
+  `per_atom_parameter_provenance_traced=true`. It deliberately does not set
+  `parameter_provenance_established=true`: the current trace reports zero
+  assigned-value coverage, so both
+  `parameter_provenance_per_atom_not_established` and the new
+  `per_atom_parameter_values_not_assigned` blocker stay listed and
+  `claim_safe=false` stays fixed.
 
 ### Changed
 

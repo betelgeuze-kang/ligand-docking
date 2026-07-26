@@ -469,6 +469,126 @@ def test_wrong_axis_evidence_digest_fails_closed(tmp_path: Path) -> None:
         )
 
 
+def _provenance_trace() -> dict[str, object]:
+    from betelgeuze_engine_v2.molecular import (
+        mmcif_nonpoly_atom_parameter_provenance as provenance_module,
+    )
+    from betelgeuze_engine_v2.molecular import (
+        mmcif_nonpoly_preparation_corpus as corpus_cases,
+    )
+    from betelgeuze_engine_v2.molecular.mmcif_nonpoly_parameter_source_binding import (
+        parse_mmcif_nonpoly_parameter_source_bindings,
+    )
+
+    for case in corpus_cases.mmcif_nonpoly_preparation_corpus_cases():
+        binding = parse_mmcif_nonpoly_parameter_source_bindings(case.source_text)
+        if any(row.source_bound for row in binding.instance_reports):
+            traced = provenance_module.trace_mmcif_nonpoly_atom_parameter_provenance(
+                binding
+            )
+            return traced.to_dict()
+    raise AssertionError("corpus has no source-bound case")
+
+
+def test_bound_provenance_trace_records_zero_assigned_coverage(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+    unbound = materialize_posebusters_chemistry_applicability_domain(
+        **fixture  # type: ignore[arg-type]
+    ).to_dict()
+    assert unbound["per_atom_parameter_provenance_traced"] is False
+    assert unbound["per_atom_parameter_provenance"] is None
+
+    trace = _provenance_trace()
+    bound = materialize_posebusters_chemistry_applicability_domain(
+        **fixture,  # type: ignore[arg-type]
+        parameter_provenance_trace=trace,
+    ).to_dict()
+
+    assert bound["per_atom_parameter_provenance_traced"] is True
+    binding = bound["per_atom_parameter_provenance"]
+    assert isinstance(binding, dict)
+    assert binding["snapshot_sha256"] == trace["snapshot_sha256"]
+    assert binding["declared_provenance_complete"] is True
+    assert binding["declared_provenance_atom_count"] == binding["atom_count"]
+    assert binding["assigned_value_atom_count"] == 0
+    assert float.fromhex(binding["assigned_value_coverage_binary64_hex"]) == 0.0
+    assert binding["every_atom_parameter_value_assigned"] is False
+    assert binding["parameter_values_assigned"] is False
+
+    # Tracing provenance must not claim the provenance blocker is closed.
+    assert bound["parameter_provenance_established"] is False
+    assert "parameter_provenance_per_atom_not_established" in (
+        bound["scientific_blockers"]
+    )
+    assert "per_atom_parameter_values_not_assigned" in bound["scientific_blockers"]
+    assert bound["claim_safe"] is False
+
+
+def test_bound_provenance_receipt_reconstructs_exactly(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    trace = _provenance_trace()
+    receipt = materialize_posebusters_chemistry_applicability_domain(
+        **fixture,  # type: ignore[arg-type]
+        parameter_provenance_trace=trace,
+    )
+    output = tmp_path / "receipts" / "provenance-domain.json"
+    receipt.write_json(output)
+    verified = verify_posebusters_chemistry_applicability_receipt(
+        applicability_receipt_path=output,
+        expected_applicability_receipt_sha256=receipt.fingerprint_sha256,
+        **fixture,  # type: ignore[arg-type]
+        parameter_provenance_trace=trace,
+    )
+    assert verified.canonical_bytes() == receipt.canonical_bytes()
+
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="failed exact reconstruction",
+    ):
+        verify_posebusters_chemistry_applicability_receipt(
+            applicability_receipt_path=output,
+            expected_applicability_receipt_sha256=receipt.fingerprint_sha256,
+            **fixture,  # type: ignore[arg-type]
+        )
+
+
+def test_tampered_provenance_trace_fails_closed(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    trace = _provenance_trace()
+    tampered = json.loads(json.dumps(trace))
+    tampered["atom_count"] = int(tampered["atom_count"]) + 1
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="provenance trace is invalid",
+    ):
+        materialize_posebusters_chemistry_applicability_domain(
+            **fixture,  # type: ignore[arg-type]
+            parameter_provenance_trace=tampered,
+        )
+
+
+def test_incomplete_declared_provenance_fails_closed(tmp_path: Path) -> None:
+    from betelgeuze_engine_v2.molecular import (
+        mmcif_nonpoly_atom_parameter_provenance as provenance_module,
+    )
+
+    fixture = _fixture(tmp_path)
+    trace = json.loads(json.dumps(_provenance_trace()))
+    trace.pop("snapshot_sha256")
+    trace["declared_provenance_atom_count"] = 0
+    trace["snapshot_sha256"] = provenance_module._sha256(trace)
+    with pytest.raises(
+        PoseBustersChemistryApplicabilityError,
+        match="does not declare a source for every atom",
+    ):
+        materialize_posebusters_chemistry_applicability_domain(
+            **fixture,  # type: ignore[arg-type]
+            parameter_provenance_trace=trace,
+        )
+
+
 def test_cli_materialize_and_verify_round_trip(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
