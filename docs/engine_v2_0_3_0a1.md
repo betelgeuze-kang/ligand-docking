@@ -25,9 +25,16 @@ Execution:    CPU reference
 - clean isolated install, `pip check`, and import outside the checkout;
 - strict canonical molecular JSON round trips and deep immutability;
 - authenticated docking problem and search-space derivation receipts;
+- authenticated, capacity-bounded prepared-input steric-field translation plans
+  with candidate-level placement receipts and a uniform fallback for unprepared
+  input;
 - installable RDKit ligand preparation with optional fail-closed OpenFF
   molecule admission, explicit stereo/aromatic/ring records, bounded
   protomer/tautomer diagnostics, and canonical no-overwrite output;
+- failure-inclusive PoseBusters cohort preparation and internal diagnostic
+  execution, with exact source/artifact/config/runtime bindings, per-case
+  deterministic seeds, connectivity-symmetry direct receptor-frame Top-1/Top-K
+  RMSD, all-case Wilson intervals, and exact local reexecution;
 - public evaluator report schema v2 with one mapping for RMSD and validity;
 - fatal separation of internal evaluator defects from retained case failures.
 
@@ -69,7 +76,13 @@ GPU parity evidence, and product qualification exist.
 
 The preparation adapter is a diagnostic molecular-ingest boundary. It does not
 provide calibrated pKa selection, partial charges, OFFXML parameter assignment,
-or real-molecule applicability evidence. Accordingly, the release does not
+or real-molecule applicability evidence. The new cohort evaluator measures
+bounded connectivity-symmetry RMSD, but it does not interpret complete atom
+stereochemistry, invoke the external PoseBusters validity/RMSD oracle, report
+target-family strata or wall-clock/peak-memory metrics, or prove a
+second-host/independent rerun. The steric field uses fixed
+uncalibrated radii and omits electrostatics, hydrogen bonding, desolvation,
+solvent/cofactor response, and receptor flexibility. Accordingly, the release does not
 establish chemical applicability, calibrated pose generation or scoring,
 public redocking performance, GPU parity, product qualification, or customer
 execution.

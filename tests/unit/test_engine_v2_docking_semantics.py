@@ -183,6 +183,16 @@ def test_failure_rows_redact_private_exception_text() -> None:
         assert "secret-value" not in row.error_message
         assert len(row.private_error_sha256) == 64
         assert row.private_error_byte_length > 0
+        sampling_state = row.proposal_sampling_state.to_dict()
+        assert sampling_state["candidate_id"] == row.candidate_id
+        assert sampling_state["proposal_fingerprint_sha256"] == (
+            row.proposal_fingerprint_sha256
+        )
+        assert sampling_state["torsion_variable_count"] == 2
+        assert sampling_state["receipt_sha256"] == (
+            row.proposal_sampling_state.fingerprint_sha256
+        )
+        assert row.to_dict()["proposal_sampling_state"] == sampling_state
 
 
 def test_kabsch_and_symmetry_aware_rmsd_are_explicit_and_bounded() -> None:

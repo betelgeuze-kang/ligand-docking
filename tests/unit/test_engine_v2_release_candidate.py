@@ -79,6 +79,18 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "betelgeuze-engine-v2-posebusters-corpus-audit": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_corpus_audit:main"
         ),
+        "betelgeuze-engine-v2-posebusters-internal-prepare": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_internal_preparation:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-internal-execute": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_internal_execution:main"
+        ),
+        "betelgeuze-engine-v2-posebusters-internal-rmsd": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_internal_rmsd_evaluation:main"
+        ),
         "betelgeuze-engine-v2-posebusters-external-prepare": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
         ),
@@ -271,6 +283,9 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     )
     assert "betelgeuze-engine-v2-posebusters-intake" in workflow
     assert "betelgeuze-engine-v2-posebusters-corpus-audit" in workflow
+    assert "betelgeuze-engine-v2-posebusters-internal-prepare" in workflow
+    assert "betelgeuze-engine-v2-posebusters-internal-execute" in workflow
+    assert "betelgeuze-engine-v2-posebusters-internal-rmsd" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-execute" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-evaluate-generated" in workflow

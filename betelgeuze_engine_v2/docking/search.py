@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 import math
-from typing import TYPE_CHECKING, Protocol, Sequence, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, Sequence, cast, runtime_checkable
 
 import torch
 
@@ -21,6 +21,8 @@ from .metrics import (
 from .proposals import (
     DockingBudget,
     DockingProposal,
+    DockingTranslationPlacementPlan,
+    DockingTranslationPlacementReceipt,
     TorsionSearchSpace,
     generate_bounded_docking_proposals,
 )
@@ -63,6 +65,248 @@ class DockingPoseRefiner(Protocol):
         ...
 
 
+@runtime_checkable
+class DockingRefinementReceipt(Protocol):
+    fingerprint_sha256: str
+
+    def to_dict(self) -> dict[str, object]:
+        ...
+
+
+@runtime_checkable
+class DockingPoseRefinerWithReceipt(DockingPoseRefiner, Protocol):
+    def refine_with_receipt(
+        self,
+        proposal: DockingProposal,
+        *,
+        max_steps: int,
+    ) -> tuple[DockingProposal, DockingRefinementReceipt]:
+        ...
+
+
+DOCKING_PROPOSAL_SAMPLING_STATE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_docking_proposal_sampling_state/2.0.0"
+)
+
+
+def _canonical_float_hex(value: object, *, name: str) -> str:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise DockingSearchError(f"{name} must be a finite real number")
+    number = float(value)
+    if not math.isfinite(number):
+        raise DockingSearchError(f"{name} must be finite")
+    return number.hex()
+
+
+def _require_canonical_float_hex(value: object, *, name: str) -> str:
+    if not isinstance(value, str):
+        raise DockingSearchError(f"{name} must be a hexadecimal float string")
+    try:
+        number = float.fromhex(value)
+    except ValueError as exc:
+        raise DockingSearchError(f"{name} is not a hexadecimal float") from exc
+    if not math.isfinite(number) or number.hex() != value:
+        raise DockingSearchError(f"{name} is not canonical finite float hex")
+    return value
+
+
+@dataclass(frozen=True)
+class DockingProposalSamplingState:
+    candidate_id: str
+    proposal_fingerprint_sha256: str
+    numeric_policy_sha256: str
+    rng_state_before_sha256: str
+    rng_state_after_sha256: str
+    torsion_angle_rows: tuple[tuple[int, str], ...]
+    rotation_matrix_hex: tuple[tuple[str, str, str], ...]
+    translation_angstrom_hex: tuple[str, str, str]
+    translation_placement_receipt: DockingTranslationPlacementReceipt
+    schema_id: str = DOCKING_PROPOSAL_SAMPLING_STATE_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != DOCKING_PROPOSAL_SAMPLING_STATE_SCHEMA_ID:
+            raise DockingSearchError(
+                "unsupported docking proposal sampling-state schema"
+            )
+        candidate_id = str(self.candidate_id or "").strip()
+        if not candidate_id:
+            raise DockingSearchError("sampling-state candidate_id is empty")
+        for name in (
+            "proposal_fingerprint_sha256",
+            "numeric_policy_sha256",
+            "rng_state_before_sha256",
+            "rng_state_after_sha256",
+        ):
+            value = getattr(self, name)
+            if (
+                not isinstance(value, str)
+                or len(value) != 64
+                or any(character not in "0123456789abcdef" for character in value)
+            ):
+                raise DockingSearchError(f"{name} must be a lowercase SHA-256")
+        torsion_rows = tuple(
+            (
+                int(atom_index),
+                _require_canonical_float_hex(
+                    angle_hex,
+                    name="torsion angle",
+                ),
+            )
+            for atom_index, angle_hex in self.torsion_angle_rows
+        )
+        indices = tuple(row[0] for row in torsion_rows)
+        if indices != tuple(sorted(set(indices))) or any(index < 0 for index in indices):
+            raise DockingSearchError(
+                "sampling-state torsion atom indices must be sorted and unique"
+            )
+        rotation = tuple(tuple(row) for row in self.rotation_matrix_hex)
+        if len(rotation) != 3 or any(len(row) != 3 for row in rotation):
+            raise DockingSearchError(
+                "sampling-state rotation matrix must have shape [3,3]"
+            )
+        normalized_rotation = tuple(
+            tuple(
+                _require_canonical_float_hex(value, name="rotation matrix value")
+                for value in row
+            )
+            for row in rotation
+        )
+        translation = tuple(self.translation_angstrom_hex)
+        if len(translation) != 3:
+            raise DockingSearchError(
+                "sampling-state translation must contain three values"
+            )
+        normalized_translation = tuple(
+            _require_canonical_float_hex(value, name="translation value")
+            for value in translation
+        )
+        placement_receipt = self.translation_placement_receipt
+        if not isinstance(
+            placement_receipt,
+            DockingTranslationPlacementReceipt,
+        ):
+            raise DockingSearchError(
+                "sampling-state translation placement receipt has the wrong type"
+            )
+        receipt_translation = tuple(
+            value.hex() for value in placement_receipt.translation_angstrom
+        )
+        if receipt_translation != normalized_translation:
+            raise DockingSearchError(
+                "sampling-state translation and placement receipt disagree"
+            )
+        object.__setattr__(self, "candidate_id", candidate_id)
+        object.__setattr__(self, "torsion_angle_rows", torsion_rows)
+        object.__setattr__(self, "rotation_matrix_hex", normalized_rotation)
+        object.__setattr__(self, "translation_angstrom_hex", normalized_translation)
+        object.__setattr__(
+            self,
+            "translation_placement_receipt",
+            placement_receipt,
+        )
+
+    @property
+    def nonzero_torsion_count(self) -> int:
+        return sum(float.fromhex(value) != 0.0 for _index, value in self.torsion_angle_rows)
+
+    def _payload(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "candidate_id": self.candidate_id,
+            "proposal_fingerprint_sha256": self.proposal_fingerprint_sha256,
+            "numeric_policy_sha256": self.numeric_policy_sha256,
+            "rng_state_before_sha256": self.rng_state_before_sha256,
+            "rng_state_after_sha256": self.rng_state_after_sha256,
+            "torsion_variable_count": len(self.torsion_angle_rows),
+            "nonzero_torsion_count": self.nonzero_torsion_count,
+            "torsion_angle_rows": [
+                {
+                    "atom_index": atom_index,
+                    "angle_radians_hex": angle_hex,
+                }
+                for atom_index, angle_hex in self.torsion_angle_rows
+            ],
+            "rotation_matrix_hex": [list(row) for row in self.rotation_matrix_hex],
+            "translation_angstrom_hex": list(self.translation_angstrom_hex),
+            "translation_placement_receipt": (
+                self.translation_placement_receipt.to_dict()
+            ),
+        }
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        encoded = json.dumps(
+            self._payload(),
+            allow_nan=False,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._payload(), "receipt_sha256": self.fingerprint_sha256}
+
+
+def _proposal_sampling_state(
+    proposal: DockingProposal,
+    search_space: TorsionSearchSpace,
+) -> DockingProposalSamplingState:
+    proposal.assert_integrity()
+    search_space.assert_integrity()
+    torsion_indices = torch.nonzero(
+        search_space.rotatable_mask,
+        as_tuple=False,
+    ).reshape(-1)
+    torsion_rows = tuple(
+        (
+            int(atom_index),
+            _canonical_float_hex(
+                float(proposal.torsion_angles[int(atom_index)].item()),
+                name="torsion angle",
+            ),
+        )
+        for atom_index in torsion_indices.tolist()
+    )
+    rotation_values = proposal.rotation.tolist()
+    rotation: tuple[tuple[str, str, str], ...] = tuple(
+        (
+            _canonical_float_hex(
+                float(rotation_values[row_index][0]),
+                name="rotation matrix value",
+            ),
+            _canonical_float_hex(
+                float(rotation_values[row_index][1]),
+                name="rotation matrix value",
+            ),
+            _canonical_float_hex(
+                float(rotation_values[row_index][2]),
+                name="rotation matrix value",
+            ),
+        )
+        for row_index in range(3)
+    )
+    translation_values = proposal.translation.tolist()
+    translation = (
+        _canonical_float_hex(float(translation_values[0]), name="translation value"),
+        _canonical_float_hex(float(translation_values[1]), name="translation value"),
+        _canonical_float_hex(float(translation_values[2]), name="translation value"),
+    )
+    return DockingProposalSamplingState(
+        candidate_id=proposal.candidate_id,
+        proposal_fingerprint_sha256=proposal.fingerprint_sha256,
+        numeric_policy_sha256=proposal.numeric_policy_sha256,
+        rng_state_before_sha256=proposal.rng_state_before_sha256,
+        rng_state_after_sha256=proposal.rng_state_after_sha256,
+        torsion_angle_rows=torsion_rows,
+        rotation_matrix_hex=rotation,
+        translation_angstrom_hex=translation,
+        translation_placement_receipt=(
+            proposal.translation_placement_receipt
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class DockingSearchRow:
     candidate_id: str
@@ -77,6 +321,7 @@ class DockingSearchRow:
     status: str
     score: float | None
     proposal: DockingProposal | None
+    proposal_sampling_state: DockingProposalSamplingState
     score_breakdown: DockingScoreBreakdown | None = None
     pose_validity: PoseValidityResult | None = None
     validity_context_fingerprint_sha256: str = ""
@@ -86,6 +331,7 @@ class DockingSearchRow:
     private_error_sha256: str = ""
     private_error_byte_length: int = 0
     refined: bool = False
+    refinement_receipt: DockingRefinementReceipt | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -117,10 +363,21 @@ class DockingSearchRow:
             "status": self.status,
             "succeeded": self.succeeded,
             "score": self.score,
+            "proposal_sampling_state": self.proposal_sampling_state.to_dict(),
             "score_breakdown": (
                 None if self.score_breakdown is None else self.score_breakdown.to_dict()
             ),
             "refined": bool(self.refined),
+            "refinement_receipt_sha256": (
+                ""
+                if self.refinement_receipt is None
+                else self.refinement_receipt.fingerprint_sha256
+            ),
+            "refinement_receipt": (
+                None
+                if self.refinement_receipt is None
+                else self.refinement_receipt.to_dict()
+            ),
             "validity_context_fingerprint_sha256": (
                 self.validity_context_fingerprint_sha256
             ),
@@ -154,6 +411,8 @@ class DockingSearchResult:
     numeric_policy_sha256: str
     rng_stream_initial_state_sha256: str
     rng_stream_final_state_sha256: str
+    translation_placement_policy_id: str
+    translation_placement_plan_sha256: str
     validity_context_fingerprint_sha256: str
     search_fingerprint_sha256: str
     diversity_metric: str
@@ -215,6 +474,12 @@ class DockingSearchResult:
             ),
             "rng_stream_final_state_sha256": (
                 self.rng_stream_final_state_sha256
+            ),
+            "translation_placement_policy_id": (
+                self.translation_placement_policy_id
+            ),
+            "translation_placement_plan_sha256": (
+                self.translation_placement_plan_sha256
             ),
             "validity_context_fingerprint_sha256": (
                 self.validity_context_fingerprint_sha256
@@ -292,6 +557,12 @@ def _search_fingerprint(
             proposals[0].rng_state_before_sha256
         ),
         "rng_stream_final_state_sha256": proposals[-1].rng_state_after_sha256,
+        "translation_placement_policy_id": (
+            proposals[0].translation_placement_receipt.placement_policy_id
+        ),
+        "translation_placement_plan_sha256": (
+            proposals[0].translation_placement_receipt.placement_plan_sha256
+        ),
         "proposal_fingerprints": [proposal.fingerprint_sha256 for proposal in proposals],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
@@ -321,6 +592,46 @@ def _require_refined_lineage(
         raise DockingSearchError("refined proposal does not reference the original proposal fingerprint")
     if refined.refiner_id != str(refiner.refiner_id) or refined.refiner_version != str(refiner.refiner_version):
         raise DockingSearchError("refined proposal refiner identity does not match the active refiner")
+    if (
+        refined.translation_placement_receipt.fingerprint_sha256
+        != original.translation_placement_receipt.fingerprint_sha256
+    ):
+        raise DockingSearchError(
+            "refiner changed the immutable translation placement receipt"
+        )
+
+
+def _require_refinement_receipt(
+    refined: DockingProposal,
+    receipt: DockingRefinementReceipt,
+) -> None:
+    if not isinstance(receipt, DockingRefinementReceipt):
+        raise TypeError(
+            "refine_with_receipt did not return a refinement receipt contract"
+        )
+    fingerprint = str(receipt.fingerprint_sha256)
+    if refined.refinement_receipt_sha256 != fingerprint:
+        raise DockingSearchError(
+            "refined proposal and refinement receipt identities disagree"
+        )
+    payload = receipt.to_dict()
+    if not isinstance(payload, dict):
+        raise TypeError("refinement receipt to_dict must return a dictionary")
+    if payload.get("receipt_sha256") != fingerprint:
+        raise DockingSearchError(
+            "refinement receipt payload identity is inconsistent"
+        )
+    try:
+        json.dumps(
+            payload,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except (TypeError, ValueError) as exc:
+        raise DockingSearchError(
+            "refinement receipt payload is not canonical JSON data"
+        ) from exc
 
 
 def _pose_distance(
@@ -413,6 +724,7 @@ def run_bounded_docking_search(
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     problem: DockingProblemIdentity | DockingProblemInput | None = None,
+    translation_placement_plan: DockingTranslationPlacementPlan | None = None,
 ) -> DockingSearchResult:
     """Generate, optionally refine, validate, score, and filter a fixed budget."""
 
@@ -485,11 +797,17 @@ def run_bounded_docking_search(
             if authenticated_problem_input is not None
             else problem_identity
         ),
+        translation_placement_plan=translation_placement_plan,
     )
     rows: list[DockingSearchRow] = []
     for proposal in proposals:
         current = proposal
         refined = False
+        refinement_receipt: DockingRefinementReceipt | None = None
+        proposal_sampling_state = _proposal_sampling_state(
+            proposal,
+            search_space,
+        )
         try:
             search_space.assert_integrity()
             proposal.assert_integrity()
@@ -507,7 +825,16 @@ def run_bounded_docking_search(
                 if refiner is None:
                     raise DockingSearchError("refinement requested but no refiner was provided")
                 original_fingerprint = proposal.fingerprint_sha256
-                current = refiner.refine(proposal, max_steps=int(budget.max_refinement_steps))
+                if isinstance(refiner, DockingPoseRefinerWithReceipt):
+                    current, refinement_receipt = refiner.refine_with_receipt(
+                        proposal,
+                        max_steps=int(budget.max_refinement_steps),
+                    )
+                else:
+                    current = refiner.refine(
+                        proposal,
+                        max_steps=int(budget.max_refinement_steps),
+                    )
                 proposal.assert_integrity()
                 if proposal.fingerprint_sha256 != original_fingerprint:
                     raise DockingSearchError(
@@ -516,6 +843,8 @@ def run_bounded_docking_search(
                 if not isinstance(current, DockingProposal):
                     raise TypeError("refiner did not return DockingProposal")
                 _require_refined_lineage(proposal, current, refiner)
+                if refinement_receipt is not None:
+                    _require_refinement_receipt(current, refinement_receipt)
                 refined = True
             current.assert_integrity()
             before_score_fingerprint = current.fingerprint_sha256
@@ -545,11 +874,13 @@ def run_bounded_docking_search(
                     status="success",
                     score=score,
                     proposal=current,
+                    proposal_sampling_state=proposal_sampling_state,
                     score_breakdown=score_breakdown,
                     pose_validity=validity,
                     validity_context_fingerprint_sha256=validity_fingerprint,
                     selection_eligible=selection_eligible,
                     refined=refined,
+                    refinement_receipt=refinement_receipt,
                 )
             )
         except Exception as exc:
@@ -568,6 +899,7 @@ def run_bounded_docking_search(
                     status="failure",
                     score=None,
                     proposal=None,
+                    proposal_sampling_state=proposal_sampling_state,
                     validity_context_fingerprint_sha256=validity_fingerprint,
                     selection_eligible=False,
                     error_code=receipt.public_error_code,
@@ -575,13 +907,14 @@ def run_bounded_docking_search(
                     private_error_sha256=receipt.private_error_sha256,
                     private_error_byte_length=receipt.private_error_byte_length,
                     refined=refined,
+                    refinement_receipt=refinement_receipt,
                 )
             )
 
     successful = sorted(
         (row for row in rows if row.succeeded and row.selection_eligible),
         key=lambda row: (
-            score_sort_key(float(row.score), descriptor),
+            score_sort_key(float(cast(float, row.score)), descriptor),
             row.proposal_index,
             row.candidate_id,
         ),
@@ -635,6 +968,18 @@ def run_bounded_docking_search(
         blockers.append("insufficient_valid_diverse_top_k")
     if int(budget.max_refinement_steps) > 0 and refiner is None:
         blockers.append("refinement_requested_but_refiner_missing")
+    if int(budget.max_refinement_steps) > 0 and any(
+        row.refined and row.refinement_receipt is None for row in rows
+    ):
+        blockers.append("refinement_receipt_missing_rows")
+    if translation_placement_plan is None:
+        blockers.append("receptor_steric_field_guidance_missing")
+        blockers.extend(
+            proposals[0].translation_placement_receipt.blockers
+        )
+    else:
+        translation_placement_plan.assert_integrity()
+        blockers.extend(translation_placement_plan.blockers)
 
     scored_rows = tuple(row for row in rows if row.succeeded)
     if not scored_rows:
@@ -681,6 +1026,12 @@ def run_bounded_docking_search(
         numeric_policy_sha256=proposals[0].numeric_policy_sha256,
         rng_stream_initial_state_sha256=proposals[0].rng_state_before_sha256,
         rng_stream_final_state_sha256=proposals[-1].rng_state_after_sha256,
+        translation_placement_policy_id=(
+            proposals[0].translation_placement_receipt.placement_policy_id
+        ),
+        translation_placement_plan_sha256=(
+            proposals[0].translation_placement_receipt.placement_plan_sha256
+        ),
         validity_context_fingerprint_sha256=validity_fingerprint,
         search_fingerprint_sha256=_search_fingerprint(
             proposals,
@@ -700,8 +1051,12 @@ def run_bounded_docking_search(
 
 
 __all__ = [
+    "DOCKING_PROPOSAL_SAMPLING_STATE_SCHEMA_ID",
+    "DockingPoseRefinerWithReceipt",
+    "DockingRefinementReceipt",
     "DockingPoseRefiner",
     "DockingPoseScorer",
+    "DockingProposalSamplingState",
     "DockingSearchError",
     "DockingSearchResult",
     "DockingSearchRow",

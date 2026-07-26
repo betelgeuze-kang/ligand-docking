@@ -79,6 +79,18 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-posebusters-internal-prepare = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_preparation:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-internal-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_execution:main"'
+        in text
+    )
+    assert (
+        'betelgeuze-engine-v2-posebusters-internal-rmsd = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_rmsd_evaluation:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-native-geometry = "betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry:main"'
         in text
     )

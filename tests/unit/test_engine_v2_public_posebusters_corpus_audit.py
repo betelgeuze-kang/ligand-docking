@@ -80,6 +80,29 @@ from betelgeuze_engine_v2.benchmark.public_posebusters_vina_execution import (  
     materialize_posebusters_vina_execution,
     verify_posebusters_vina_execution_receipt,
 )
+from betelgeuze_engine_v2.benchmark.public_posebusters_internal_preparation import (  # noqa: E402
+    PoseBustersInternalPreparationError,
+    materialize_posebusters_internal_preparation,
+    verify_posebusters_internal_preparation_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_internal_execution import (  # noqa: E402
+    PoseBustersInternalExecutionConfig,
+    PoseBustersInternalExecutionError,
+    materialize_posebusters_internal_execution,
+    verify_posebusters_internal_execution_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_internal_rmsd_evaluation import (  # noqa: E402
+    PoseBustersInternalRMSDConfig,
+    materialize_posebusters_internal_rmsd_evaluation,
+    verify_posebusters_internal_rmsd_evaluation_receipt,
+)
+from betelgeuze_engine_v2.benchmark.redocking_cli import (  # noqa: E402
+    verify_redocking_diagnostic_report,
+)
+from betelgeuze_engine_v2.molecular import (  # noqa: E402
+    all_atom_system_from_canonical_json,
+    verify_rdkit_openff_prepared_system,
+)
 
 
 _CASE_IDS = ("1ABC_ABC", "2DEF_DEF")
@@ -126,7 +149,7 @@ def _pdb_atom(
     )
 
 
-def _receptor(*, zinc: bool) -> bytes:
+def _receptor(*, zinc: bool, x_offset: float = 0.0) -> bytes:
     rows = [
         (
             f"CRYST1{20.0:9.3f}{21.0:9.3f}{22.0:9.3f}"
@@ -136,7 +159,7 @@ def _receptor(*, zinc: bool) -> bytes:
             10014,
             "C1",
             "C",
-            0.0,
+            x_offset,
             record="ATOM",
             residue="ALA",
         ),
@@ -144,7 +167,7 @@ def _receptor(*, zinc: bool) -> bytes:
             10015,
             "O1",
             "O",
-            1.25,
+            x_offset + 1.25,
             record="ATOM",
             residue="ALA",
         ),
@@ -156,7 +179,7 @@ def _receptor(*, zinc: bool) -> bytes:
                 10016,
                 "ZN",
                 "ZN",
-                4.0,
+                x_offset + 4.0,
                 record="HETATM",
                 residue="ZN",
             )
@@ -166,7 +189,7 @@ def _receptor(*, zinc: bool) -> bytes:
                 10017,
                 "C2",
                 "C",
-                5.0,
+                x_offset + 5.0,
                 record="HETATM",
                 residue="DEF",
             )
@@ -275,6 +298,79 @@ def _fixture(
         contract=contract,
     )
     assert intake.ready_case_count == len(_CASE_IDS)
+    intake.write_json(intake_path)
+    return archive_path, selection_path, intake_path, contract
+
+
+def _valid_internal_preparation_fixture(
+    root: Path,
+) -> tuple[Path, Path, Path, PoseBustersArchiveContract]:
+    pytest.importorskip("rdkit")
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+
+    root.mkdir(parents=True, exist_ok=True)
+    archive_path = root / "posebusters.zip"
+    selection_path = root / "selection.txt"
+    intake_path = root / "intake.json"
+    case_ids = ("1ABC_ABC",)
+    selection = ("\n".join(case_ids) + "\n").encode("ascii")
+    selection_path.write_bytes(selection)
+    readme = b"synthetic internal-preparation fixture\n"
+    molecule = Chem.AddHs(Chem.MolFromSmiles("CCO"))
+    parameters = AllChem.ETKDGv3()
+    parameters.randomSeed = 7301
+    assert AllChem.EmbedMolecule(molecule, parameters) == 0
+    ligand = (Chem.MolToMolBlock(molecule) + "$$$$\n").encode("ascii")
+    with zipfile.ZipFile(
+        archive_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        archive.writestr("README.txt", readme)
+        archive.writestr("posebusters_benchmark_set_ids.txt", selection)
+        case_id = case_ids[0]
+        sources = {
+            "receptor_pdb": _receptor(zinc=False, x_offset=8.0),
+            "reference_ligand_sdf": ligand,
+            "reference_ligands_sdf": ligand,
+            "ligand_start_conformer_sdf": ligand,
+        }
+        for role in POSEBUSTERS_ARCHIVE_MEMBER_ROLES:
+            member = (
+                f"posebusters_benchmark_set/{case_id}/"
+                f"{case_id}{POSEBUSTERS_ARCHIVE_ROLE_SUFFIXES[role]}"
+            )
+            archive.writestr(member, sources[role])
+    archive_source = archive_path.read_bytes()
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        infos = archive.infolist()
+        uncompressed_size = sum(
+            info.file_size for info in infos if not info.is_dir()
+        )
+    contract = PoseBustersArchiveContract(
+        dataset_id="synthetic_posebusters_internal_preparation",
+        archive_sha256=_sha(archive_source),
+        archive_size_bytes=len(archive_source),
+        selection_sha256=_sha(selection),
+        selection_size_bytes=len(selection),
+        case_id_projection_sha256=_canonical_sha(list(case_ids)),
+        selected_case_count=len(case_ids),
+        archive_entry_count=len(infos),
+        archive_uncompressed_size_bytes=uncompressed_size,
+        archive_benchmark_case_count=len(case_ids),
+        benchmark_root="posebusters_benchmark_set",
+        embedded_case_list_member="posebusters_benchmark_set_ids.txt",
+        embedded_case_list_sha256=_sha(selection),
+        readme_member="README.txt",
+        readme_sha256=_sha(readme),
+    )
+    intake = materialize_posebusters_archive_intake(
+        archive_path,
+        selection_path,
+        contract=contract,
+    )
     intake.write_json(intake_path)
     return archive_path, selection_path, intake_path, contract
 
@@ -410,6 +506,397 @@ def test_corpus_audit_fails_closed_when_intake_inputs_change(tmp_path: Path) -> 
             intake_path,
             contract=contract,
         )
+
+
+def test_internal_preparation_retains_denominator_and_exact_canonical_artifacts(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("rdkit")
+    archive_path, selection_path, intake_path, contract = (
+        _valid_internal_preparation_fixture(tmp_path / "source")
+    )
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = tmp_path / "corpus.json"
+    corpus.write_json(corpus_path)
+    artifact_root = tmp_path / "canonical-inputs"
+    receipt = materialize_posebusters_internal_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        artifact_root,
+        contract=contract,
+    )
+
+    assert len(receipt.case_rows) == 1
+    first = receipt.case_rows[0]
+    assert first.status == "prepared"
+    assert receipt.prepared_case_count == 1
+    assert tuple(row.role for row in first.artifacts) == (
+        "canonical_ligand_json",
+        "canonical_receptor_json",
+    )
+    payload = receipt.to_dict()
+    assert payload["all_case_denominator"] == 1
+    assert payload["redocking_executed"] is False
+    assert payload["benchmark_executed"] is False
+    assert payload["claim_safe"] is False
+    assert all(metric.denominator == 1 for metric in receipt.metrics)
+
+    artifacts = {row.role: row for row in first.artifacts}
+    receptor_source = (
+        artifact_root / artifacts["canonical_receptor_json"].relative_path
+    ).read_bytes()
+    ligand_source = (
+        artifact_root / artifacts["canonical_ligand_json"].relative_path
+    ).read_bytes()
+    receptor = all_atom_system_from_canonical_json(receptor_source)
+    ligand = all_atom_system_from_canonical_json(ligand_source)
+    assert receptor.cell is None
+    ligand_receipt = verify_rdkit_openff_prepared_system(ligand)
+    assert ligand_receipt["status"] == "prepared_diagnostic"
+    assert ligand_receipt["readiness"]["diagnostic_redocking_ready"] is True
+
+    receipt_path = tmp_path / "internal-preparation.json"
+    receipt.write_json(receipt_path)
+    verified = verify_posebusters_internal_preparation_receipt(
+        receipt_path,
+        artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        contract=contract,
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
+
+    duplicate_path = tmp_path / "internal-preparation-duplicate.json"
+    duplicate_path.write_bytes(
+        receipt_path.read_bytes().replace(
+            b'"schema_id":',
+            b'"schema_id":"duplicate","schema_id":',
+            1,
+        )
+    )
+    with pytest.raises(
+        PoseBustersInternalPreparationError,
+        match="duplicate JSON key",
+    ):
+        verify_posebusters_internal_preparation_receipt(
+            duplicate_path,
+            artifact_root,
+            archive_path,
+            selection_path,
+            intake_path,
+            corpus_path,
+            contract=contract,
+        )
+
+    ligand_path = artifact_root / artifacts["canonical_ligand_json"].relative_path
+    ligand_path.write_bytes(ligand_path.read_bytes() + b" ")
+    with pytest.raises(
+        PoseBustersInternalPreparationError,
+        match="artifact tree failed exact verification",
+    ):
+        verify_posebusters_internal_preparation_receipt(
+            receipt_path,
+            artifact_root,
+            archive_path,
+            selection_path,
+            intake_path,
+            corpus_path,
+            contract=contract,
+        )
+
+
+def test_internal_preparation_retains_failure_and_scope_abstention_rows(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("rdkit")
+    archive_path, selection_path, intake_path, contract = _fixture(
+        tmp_path / "source"
+    )
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = tmp_path / "corpus.json"
+    corpus.write_json(corpus_path)
+
+    receipt = materialize_posebusters_internal_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        tmp_path / "canonical-inputs",
+        contract=contract,
+    )
+
+    first, second = receipt.case_rows
+    assert first.status == "preparation_failure"
+    assert first.preparation_attempted is True
+    assert first.error_code == "internal_canonical_preparation_failed"
+    assert first.private_error_sha256
+    assert first.private_error_byte_length > 0
+    assert second.status == "abstain_chemistry_scope"
+    assert second.preparation_attempted is False
+    assert not second.artifacts
+    assert receipt.prepared_case_count == 0
+    metrics = {row.metric_id: row for row in receipt.metrics}
+    assert metrics["scope_admission_rate"].numerator == 1
+    assert metrics["preparation_attempt_rate"].numerator == 1
+    assert metrics["canonical_preparation_success_rate"].numerator == 0
+    assert metrics["preparation_failure_rate"].numerator == 1
+    assert all(row.denominator == 2 for row in receipt.metrics)
+
+
+def test_internal_execution_runs_prepared_case_and_is_exactly_reexecutable(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("rdkit")
+    archive_path, selection_path, intake_path, contract = (
+        _valid_internal_preparation_fixture(tmp_path / "source")
+    )
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = tmp_path / "receipts" / "corpus.json"
+    corpus.write_json(corpus_path)
+    preparation_artifact_root = tmp_path / "canonical-inputs"
+    preparation = materialize_posebusters_internal_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        preparation_artifact_root,
+        contract=contract,
+    )
+    preparation_path = tmp_path / "receipts" / "internal-preparation.json"
+    preparation.write_json(preparation_path)
+    configuration = PoseBustersInternalExecutionConfig(
+        candidate_count=3,
+        top_k=2,
+        max_torsions=2,
+        translation_radius_angstrom=1.0,
+        diversity_rmsd_angstrom=0.1,
+        max_refinement_steps=0,
+        base_seed=91,
+    )
+    output_artifact_root = tmp_path / "internal-redocking"
+
+    receipt = materialize_posebusters_internal_execution(
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        output_artifact_root,
+        contract=contract,
+        configuration=configuration,
+    )
+
+    assert len(receipt.case_rows) == 1
+    row = receipt.case_rows[0]
+    assert row.status == "success"
+    assert row.execution_attempted is True
+    assert row.case_seed == configuration.case_seed(row.case_id)
+    assert row.candidate_count == 3
+    assert row.candidate_success_count + row.candidate_failure_count == 3
+    assert row.artifact is not None
+    report_path = output_artifact_root / row.artifact.relative_path
+    report = verify_redocking_diagnostic_report(report_path.read_bytes())
+    assert report["status"] == "diagnostic_complete"
+    assert report["receipt_sha256"] == row.artifact.diagnostic_receipt_sha256
+    metrics = {metric.metric_id: metric for metric in receipt.metrics}
+    assert metrics["prepared_input_pair_rate"].numerator == 1
+    assert metrics["internal_redocking_attempt_rate"].numerator == 1
+    assert (
+        metrics["internal_redocking_diagnostic_completion_rate"].numerator
+        == 1
+    )
+    assert all(metric.denominator == 1 for metric in receipt.metrics)
+    payload = receipt.to_dict()
+    assert payload["internal_redocking_diagnostic_batch_executed"] is True
+    assert payload["symmetry_aware_native_rmsd_evaluated"] is False
+    assert payload["benchmark_executed"] is False
+    assert payload["claim_safe"] is False
+
+    receipt_path = tmp_path / "receipts" / "internal-execution.json"
+    receipt.write_json(receipt_path)
+    verified = verify_posebusters_internal_execution_receipt(
+        receipt_path,
+        output_artifact_root,
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        contract=contract,
+        configuration=configuration,
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
+
+    rmsd_configuration = PoseBustersInternalRMSDConfig(top_k=2)
+    rmsd_receipt = materialize_posebusters_internal_rmsd_evaluation(
+        receipt_path,
+        output_artifact_root,
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        contract=contract,
+        execution_configuration=configuration,
+        configuration=rmsd_configuration,
+    )
+    rmsd_row = rmsd_receipt.case_rows[0]
+    assert rmsd_row.status == "evaluated"
+    assert rmsd_row.native_to_start_symmetry_mapping_count >= 1
+    assert len(rmsd_row.pose_results) == row.top_pose_count == 2
+    assert all(pose.internal_pose_valid for pose in rmsd_row.pose_results)
+    assert all(
+        pose.direct_rmsd_angstrom >= 0.0
+        for pose in rmsd_row.pose_results
+    )
+    rmsd_metrics = {
+        metric.metric_id: metric for metric in rmsd_receipt.metrics
+    }
+    assert rmsd_metrics["direct_rmsd_evaluation_rate"].numerator == 1
+    assert all(metric.denominator == 1 for metric in rmsd_receipt.metrics)
+    rmsd_payload = rmsd_receipt.to_dict()
+    assert rmsd_payload["connectivity_symmetry_aware_rmsd_evaluated"] is True
+    assert rmsd_payload["complete_atom_stereo_symmetry_evaluated"] is False
+    assert rmsd_payload["posebusters_external_oracle_executed"] is False
+    assert rmsd_payload["benchmark_executed"] is False
+    assert rmsd_payload["claim_safe"] is False
+
+    rmsd_receipt_path = tmp_path / "receipts" / "internal-rmsd.json"
+    rmsd_receipt.write_json(rmsd_receipt_path)
+    verified_rmsd = verify_posebusters_internal_rmsd_evaluation_receipt(
+        rmsd_receipt_path,
+        receipt_path,
+        output_artifact_root,
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        contract=contract,
+        execution_configuration=configuration,
+        configuration=rmsd_configuration,
+    )
+    assert verified_rmsd.fingerprint_sha256 == rmsd_receipt.fingerprint_sha256
+    assert stat.S_IMODE(rmsd_receipt_path.stat().st_mode) == 0o600
+
+    report_path.write_bytes(report_path.read_bytes() + b" ")
+    with pytest.raises(
+        PoseBustersInternalExecutionError,
+        match="artifact tree failed exact verification",
+    ):
+        verify_posebusters_internal_execution_receipt(
+            receipt_path,
+            output_artifact_root,
+            preparation_path,
+            preparation_artifact_root,
+            archive_path,
+            selection_path,
+            intake_path,
+            corpus_path,
+            contract=contract,
+            configuration=configuration,
+        )
+
+
+def test_internal_execution_retains_preparation_failure_and_abstention(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("rdkit")
+    archive_path, selection_path, intake_path, contract = _fixture(
+        tmp_path / "source"
+    )
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = tmp_path / "receipts" / "corpus.json"
+    corpus.write_json(corpus_path)
+    preparation_artifact_root = tmp_path / "canonical-inputs"
+    preparation = materialize_posebusters_internal_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        preparation_artifact_root,
+        contract=contract,
+    )
+    preparation_path = tmp_path / "receipts" / "internal-preparation.json"
+    preparation.write_json(preparation_path)
+
+    execution_configuration = PoseBustersInternalExecutionConfig(
+        candidate_count=1,
+        top_k=1,
+        max_torsions=0,
+        max_refinement_steps=0,
+    )
+    receipt = materialize_posebusters_internal_execution(
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        tmp_path / "internal-redocking",
+        contract=contract,
+        configuration=execution_configuration,
+    )
+
+    first, second = receipt.case_rows
+    assert first.status == "blocked_preparation_failure"
+    assert first.execution_attempted is False
+    assert second.status == "abstain_chemistry_scope"
+    assert second.execution_attempted is False
+    assert receipt.attempted_case_count == 0
+    assert receipt.success_case_count == 0
+    assert all(metric.denominator == 2 for metric in receipt.metrics)
+
+    execution_path = tmp_path / "receipts" / "internal-execution.json"
+    receipt.write_json(execution_path)
+    rmsd_receipt = materialize_posebusters_internal_rmsd_evaluation(
+        execution_path,
+        tmp_path / "internal-redocking",
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        contract=contract,
+        execution_configuration=execution_configuration,
+    )
+    first_rmsd, second_rmsd = rmsd_receipt.case_rows
+    assert first_rmsd.status == "blocked_execution"
+    assert second_rmsd.status == "blocked_execution"
+    assert rmsd_receipt.evaluated_case_count == 0
+    assert rmsd_receipt.evaluated_pose_count == 0
+    assert all(metric.denominator == 2 for metric in rmsd_receipt.metrics)
 
 
 def test_native_geometry_preflight_is_all_case_claim_closed_and_reexecutable(

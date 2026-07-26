@@ -7,11 +7,11 @@ import hashlib
 import json
 import math
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import torch
 
-from betelgeuze_engine_v2.ai import axis_angle_matrix, torsion_tree_forward_kinematics
+from betelgeuze_engine_v2.ai import torsion_tree_forward_kinematics
 from .identity import (
     DockingProblemIdentity,
     coordinate_fingerprint,
@@ -26,10 +26,26 @@ MAX_DOCKING_CANDIDATES = 4096
 MAX_DOCKING_TOP_K = 128
 MAX_DOCKING_REFINEMENT_STEPS = 256
 DOCKING_NUMERIC_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_docking_numeric_policy/1.0.0"
+    "betelgeuze.engine_v2_docking_numeric_policy/3.0.0"
 )
 DOCKING_CANDIDATE_ID_SCHEMA_ID = (
-    "betelgeuze.engine_v2_docking_candidate_id/1.0.0"
+    "betelgeuze.engine_v2_docking_candidate_id/3.0.0"
+)
+DOCKING_PROPOSAL_SCHEMA_ID = "betelgeuze.engine_v2_docking_proposal/5.0.0"
+DOCKING_TRANSLATION_PLACEMENT_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_docking_translation_placement_receipt/1.0.0"
+)
+DOCKING_SAMPLING_POLICY_ID = (
+    "torch_cpu_uniform_torsion_shoemake_haar_so3_uniform_volume_ball/2.0.0"
+)
+DOCKING_STERIC_FIELD_SAMPLING_POLICY_ID = (
+    "torch_cpu_uniform_torsion_shoemake_haar_so3_steric_field_grid/1.0.0"
+)
+DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID = (
+    "uniform_volume_ball_translation/1.0.0"
+)
+DOCKING_STERIC_FIELD_TRANSLATION_PLACEMENT_POLICY_ID = (
+    "authenticated_receptor_steric_field_grid_translation/1.0.0"
 )
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -98,9 +114,11 @@ class DockingNumericPolicy:
     coordinate_dtype: str
     torch_version: str = str(torch.__version__)
     rng_engine_id: str = "torch_cpu_default_generator_state/1.0.0"
-    sampling_policy_id: str = (
-        "torch_cpu_rand_randn_axis_angle_uniform_ball/1.0.0"
+    sampling_policy_id: str = DOCKING_SAMPLING_POLICY_ID
+    translation_placement_policy_id: str = (
+        DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID
     )
+    translation_placement_plan_sha256: str = ""
     schema_id: str = DOCKING_NUMERIC_POLICY_SCHEMA_ID
 
     def __post_init__(self) -> None:
@@ -111,16 +129,51 @@ class DockingNumericPolicy:
             raise DockingProposalError(
                 "docking coordinate dtype must be float32 or float64"
             )
-        for name in ("torch_version", "rng_engine_id", "sampling_policy_id"):
+        for name in (
+            "torch_version",
+            "rng_engine_id",
+            "sampling_policy_id",
+            "translation_placement_policy_id",
+        ):
             value = str(getattr(self, name) or "").strip()
             if not value:
                 raise DockingProposalError(
                     f"{name} must be non-empty in the numeric policy"
                 )
             object.__setattr__(self, name, value)
+        placement_plan = _require_digest(
+            self.translation_placement_plan_sha256,
+            field_name="translation_placement_plan_sha256",
+            allow_empty=True,
+        )
+        guided = bool(placement_plan)
+        expected_sampling_policy = (
+            DOCKING_STERIC_FIELD_SAMPLING_POLICY_ID
+            if guided
+            else DOCKING_SAMPLING_POLICY_ID
+        )
+        expected_placement_policy = (
+            DOCKING_STERIC_FIELD_TRANSLATION_PLACEMENT_POLICY_ID
+            if guided
+            else DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID
+        )
+        if self.sampling_policy_id != expected_sampling_policy:
+            raise DockingProposalError(
+                "sampling policy and translation placement plan disagree"
+            )
+        if self.translation_placement_policy_id != expected_placement_policy:
+            raise DockingProposalError(
+                "translation placement policy and plan disagree"
+            )
         object.__setattr__(self, "coordinate_dtype", dtype)
+        object.__setattr__(
+            self,
+            "translation_placement_plan_sha256",
+            placement_plan,
+        )
 
     def to_dict(self) -> dict[str, object]:
+        guided = bool(self.translation_placement_plan_sha256)
         return {
             "schema_id": self.schema_id,
             "coordinate_dtype": self.coordinate_dtype,
@@ -130,6 +183,34 @@ class DockingNumericPolicy:
             "torch_version": self.torch_version,
             "rng_engine_id": self.rng_engine_id,
             "sampling_policy_id": self.sampling_policy_id,
+            "translation_placement_policy_id": (
+                self.translation_placement_policy_id
+            ),
+            "translation_placement_plan_sha256": (
+                self.translation_placement_plan_sha256
+            ),
+            "candidate_zero_policy": "zero_torsion_identity_rotation_zero_translation",
+            "torsion_sampling": "independent_uniform_closed_open_minus_pi_plus_pi",
+            "rotation_sampling": (
+                "shoemake_three_independent_uniforms_unit_quaternion_haar_so3"
+            ),
+            "quaternion_component_order": "x_y_z_w",
+            "translation_direction_sampling": (
+                None if guided else "normalized_three_normal_draws"
+            ),
+            "translation_radius_sampling": (
+                None if guided else "cube_root_uniform_volume_ball"
+            ),
+            "translation_site_selection": (
+                "deterministic_orientation_conditioned_steric_field_rank_cycle"
+                if guided
+                else None
+            ),
+            "per_candidate_draw_order": (
+                "torsions_then_haar_u1_u2_u3_then_steric_field_site_selection"
+                if guided
+                else "torsions_then_haar_u1_u2_u3_then_translation_direction_then_radius"
+            ),
             "deterministic_algorithms_enabled": (
                 torch.are_deterministic_algorithms_enabled()
             ),
@@ -140,6 +221,257 @@ class DockingNumericPolicy:
         return _canonical_sha256(self.to_dict())
 
 
+@dataclass(frozen=True)
+class DockingTranslationPlacementReceipt:
+    """Authenticated explanation of how one proposal translation was selected."""
+
+    proposal_index: int
+    placement_policy_id: str
+    placement_plan_sha256: str
+    problem_fingerprint_sha256: str
+    search_space_fingerprint_sha256: str
+    site_id: str
+    site_index: int
+    selected_rank: int
+    evaluated_site_count: int
+    translation_angstrom: tuple[float, float, float]
+    blockers: tuple[str, ...]
+    steric_overlap_penalty: float | None = None
+    overlap_pair_count: int | None = None
+    deep_overlap_pair_count: int | None = None
+    pocket_outside_atom_count: int | None = None
+    pocket_boundary_penalty: float | None = None
+    minimum_surface_separation_angstrom: float | None = None
+    schema_id: str = DOCKING_TRANSLATION_PLACEMENT_RECEIPT_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != DOCKING_TRANSLATION_PLACEMENT_RECEIPT_SCHEMA_ID:
+            raise DockingProposalError(
+                "unsupported translation placement receipt schema"
+            )
+        proposal_index = int(self.proposal_index)
+        if proposal_index < 0:
+            raise DockingProposalError(
+                "translation placement proposal_index must be non-negative"
+            )
+        policy_id = str(self.placement_policy_id or "").strip()
+        if not policy_id:
+            raise DockingProposalError(
+                "translation placement policy ID must be non-empty"
+            )
+        plan_sha256 = _require_digest(
+            self.placement_plan_sha256,
+            field_name="placement_plan_sha256",
+            allow_empty=True,
+        )
+        problem_sha256 = _require_digest(
+            self.problem_fingerprint_sha256,
+            field_name="problem_fingerprint_sha256",
+        )
+        search_sha256 = _require_digest(
+            self.search_space_fingerprint_sha256,
+            field_name="search_space_fingerprint_sha256",
+        )
+        site_id = str(self.site_id or "").strip()
+        if not site_id:
+            raise DockingProposalError(
+                "translation placement site ID must be non-empty"
+            )
+        site_index = int(self.site_index)
+        selected_rank = int(self.selected_rank)
+        evaluated_site_count = int(self.evaluated_site_count)
+        try:
+            translation = tuple(float(value) for value in self.translation_angstrom)
+        except (TypeError, ValueError) as exc:
+            raise DockingProposalError(
+                "translation placement must contain three finite values"
+            ) from exc
+        if len(translation) != 3 or any(
+            not math.isfinite(value) for value in translation
+        ):
+            raise DockingProposalError(
+                "translation placement must contain three finite values"
+            )
+        blockers = tuple(str(value or "").strip() for value in self.blockers)
+        if (
+            not blockers
+            or any(not value for value in blockers)
+            or len(blockers) != len(set(blockers))
+        ):
+            raise DockingProposalError(
+                "translation placement blockers must be non-empty and unique"
+            )
+        guided = bool(plan_sha256)
+        expected_policy = (
+            DOCKING_STERIC_FIELD_TRANSLATION_PLACEMENT_POLICY_ID
+            if guided
+            else DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID
+        )
+        if policy_id != expected_policy:
+            raise DockingProposalError(
+                "translation placement receipt policy and plan disagree"
+            )
+        metric_names = (
+            "steric_overlap_penalty",
+            "pocket_boundary_penalty",
+            "minimum_surface_separation_angstrom",
+        )
+        metrics: dict[str, float | None] = {}
+        for name in metric_names:
+            value = getattr(self, name)
+            if value is None:
+                metrics[name] = None
+                continue
+            number = float(value)
+            if not math.isfinite(number):
+                raise DockingProposalError(f"{name} must be finite when present")
+            if name != "minimum_surface_separation_angstrom" and number < 0.0:
+                raise DockingProposalError(
+                    f"{name} must be non-negative when present"
+                )
+            metrics[name] = number
+        count_names = (
+            "overlap_pair_count",
+            "deep_overlap_pair_count",
+            "pocket_outside_atom_count",
+        )
+        counts: dict[str, int | None] = {}
+        for name in count_names:
+            value = getattr(self, name)
+            if value is None:
+                counts[name] = None
+                continue
+            if isinstance(value, bool):
+                raise DockingProposalError(f"{name} must be an integer when present")
+            number = int(value)
+            if number < 0 or number != value:
+                raise DockingProposalError(
+                    f"{name} must be a non-negative integer when present"
+                )
+            counts[name] = number
+        if guided:
+            if (
+                site_index < 0
+                or selected_rank < 0
+                or evaluated_site_count < 1
+                or selected_rank >= evaluated_site_count
+                or any(value is None for value in metrics.values())
+                or any(value is None for value in counts.values())
+            ):
+                raise DockingProposalError(
+                    "steric-field placement receipt is incomplete"
+                )
+        elif (
+            site_index != -1
+            or selected_rank != -1
+            or evaluated_site_count != 0
+            or any(value is not None for value in metrics.values())
+            or any(value is not None for value in counts.values())
+        ):
+            raise DockingProposalError(
+                "uniform translation receipt must not claim field evaluation"
+            )
+        object.__setattr__(self, "proposal_index", proposal_index)
+        object.__setattr__(self, "placement_policy_id", policy_id)
+        object.__setattr__(self, "placement_plan_sha256", plan_sha256)
+        object.__setattr__(self, "problem_fingerprint_sha256", problem_sha256)
+        object.__setattr__(self, "search_space_fingerprint_sha256", search_sha256)
+        object.__setattr__(self, "site_id", site_id)
+        object.__setattr__(self, "site_index", site_index)
+        object.__setattr__(self, "selected_rank", selected_rank)
+        object.__setattr__(self, "evaluated_site_count", evaluated_site_count)
+        object.__setattr__(self, "translation_angstrom", translation)
+        object.__setattr__(self, "blockers", blockers)
+        for name, value in metrics.items():
+            object.__setattr__(self, name, value)
+        for name, value in counts.items():
+            object.__setattr__(self, name, value)
+
+    def _payload(self) -> dict[str, object]:
+        def optional_hex(value: float | None) -> str | None:
+            return None if value is None else value.hex()
+
+        return {
+            "schema_id": self.schema_id,
+            "proposal_index": self.proposal_index,
+            "placement_policy_id": self.placement_policy_id,
+            "placement_plan_sha256": self.placement_plan_sha256,
+            "problem_fingerprint_sha256": self.problem_fingerprint_sha256,
+            "search_space_fingerprint_sha256": (
+                self.search_space_fingerprint_sha256
+            ),
+            "site_id": self.site_id,
+            "site_index": self.site_index,
+            "selected_rank": self.selected_rank,
+            "evaluated_site_count": self.evaluated_site_count,
+            "translation_angstrom_hex": [
+                value.hex() for value in self.translation_angstrom
+            ],
+            "steric_overlap_penalty_hex": optional_hex(
+                self.steric_overlap_penalty
+            ),
+            "overlap_pair_count": self.overlap_pair_count,
+            "deep_overlap_pair_count": self.deep_overlap_pair_count,
+            "pocket_outside_atom_count": self.pocket_outside_atom_count,
+            "pocket_boundary_penalty_hex": optional_hex(
+                self.pocket_boundary_penalty
+            ),
+            "minimum_surface_separation_angstrom_hex": optional_hex(
+                self.minimum_surface_separation_angstrom
+            ),
+            "scientifically_validated": False,
+            "claim_safe": False,
+            "blockers": list(self.blockers),
+        }
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        return _canonical_sha256(self._payload())
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._payload(), "receipt_sha256": self.fingerprint_sha256}
+
+    def translation_tensor(self, *, dtype: torch.dtype) -> torch.Tensor:
+        return torch.tensor(self.translation_angstrom, dtype=dtype)
+
+
+@runtime_checkable
+class DockingTranslationPlacementPlan(Protocol):
+    """Protocol for a bounded, authenticated translation-placement plan."""
+
+    @property
+    def placement_policy_id(self) -> str:
+        ...
+
+    @property
+    def problem_fingerprint_sha256(self) -> str:
+        ...
+
+    @property
+    def search_space_fingerprint_sha256(self) -> str:
+        ...
+
+    @property
+    def blockers(self) -> tuple[str, ...]:
+        ...
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        ...
+
+    def assert_integrity(self) -> None:
+        ...
+
+    def place(
+        self,
+        oriented_coordinates: torch.Tensor,
+        *,
+        proposal_index: int,
+        translation_radius_angstrom: float,
+    ) -> DockingTranslationPlacementReceipt:
+        ...
+
+
 def _candidate_id(
     *,
     proposal_index: int,
@@ -148,6 +480,7 @@ def _candidate_id(
     search_space_fingerprint_sha256: str,
     numeric_policy_sha256: str,
     rng_state_before_sha256: str,
+    translation_placement_plan_sha256: str,
 ) -> str:
     digest = _canonical_sha256(
         {
@@ -160,6 +493,9 @@ def _candidate_id(
             ),
             "numeric_policy_sha256": numeric_policy_sha256,
             "rng_state_before_sha256": rng_state_before_sha256,
+            "translation_placement_plan_sha256": (
+                translation_placement_plan_sha256
+            ),
         }
     )
     return f"pose-{int(proposal_index):05d}-{digest[:16]}"
@@ -179,13 +515,14 @@ def _proposal_fingerprint(
     numeric_policy_sha256: str,
     rng_state_before_sha256: str,
     rng_state_after_sha256: str,
+    translation_placement_receipt_sha256: str,
     parent_proposal_fingerprint_sha256: str = "",
     refiner_id: str = "",
     refiner_version: str = "",
     refinement_receipt_sha256: str = "",
 ) -> str:
     payload = {
-        "schema_id": "betelgeuze.engine_v2_docking_proposal/3.0.0",
+        "schema_id": DOCKING_PROPOSAL_SCHEMA_ID,
         "candidate_id": candidate_id,
         "proposal_index": int(proposal_index),
         "seed": int(seed),
@@ -195,6 +532,9 @@ def _proposal_fingerprint(
         "numeric_policy_sha256": numeric_policy_sha256,
         "rng_state_before_sha256": rng_state_before_sha256,
         "rng_state_after_sha256": rng_state_after_sha256,
+        "translation_placement_receipt_sha256": (
+            translation_placement_receipt_sha256
+        ),
         "parent_proposal_fingerprint_sha256": parent_proposal_fingerprint_sha256,
         "refiner_id": refiner_id,
         "refiner_version": refiner_version,
@@ -392,6 +732,7 @@ class DockingProposal:
     numeric_policy_sha256: str
     rng_state_before_sha256: str
     rng_state_after_sha256: str
+    translation_placement_receipt: DockingTranslationPlacementReceipt
     parent_proposal_fingerprint_sha256: str = ""
     refiner_id: str = ""
     refiner_version: str = ""
@@ -465,6 +806,31 @@ class DockingProposal:
             self.rng_state_after_sha256,
             field_name="rng_state_after_sha256",
         )
+        placement_receipt = self.translation_placement_receipt
+        if not isinstance(
+            placement_receipt,
+            DockingTranslationPlacementReceipt,
+        ):
+            raise DockingProposalError(
+                "translation_placement_receipt has the wrong type"
+            )
+        if (
+            placement_receipt.proposal_index != proposal_index
+            or placement_receipt.problem_fingerprint_sha256
+            != problem_fingerprint
+            or placement_receipt.search_space_fingerprint_sha256
+            != search_fingerprint
+        ):
+            raise DockingProposalError(
+                "translation placement receipt is cross-wired"
+            )
+        receipt_translation = placement_receipt.translation_tensor(
+            dtype=translation.dtype
+        )
+        if not torch.equal(receipt_translation, translation):
+            raise DockingProposalError(
+                "translation placement receipt does not match proposal translation"
+            )
         parent_digest = _require_digest(
             self.parent_proposal_fingerprint_sha256,
             field_name="parent_proposal_fingerprint_sha256",
@@ -492,6 +858,9 @@ class DockingProposal:
             search_space_fingerprint_sha256=search_fingerprint,
             numeric_policy_sha256=numeric_policy_digest,
             rng_state_before_sha256=rng_state_before,
+            translation_placement_plan_sha256=(
+                placement_receipt.placement_plan_sha256
+            ),
         )
         if candidate_id != expected_candidate_id:
             raise DockingProposalError(
@@ -510,6 +879,9 @@ class DockingProposal:
             numeric_policy_sha256=numeric_policy_digest,
             rng_state_before_sha256=rng_state_before,
             rng_state_after_sha256=rng_state_after,
+            translation_placement_receipt_sha256=(
+                placement_receipt.fingerprint_sha256
+            ),
             parent_proposal_fingerprint_sha256=parent_digest,
             refiner_id=refiner_id,
             refiner_version=refiner_version,
@@ -555,6 +927,11 @@ class DockingProposal:
         )
         object.__setattr__(
             self,
+            "translation_placement_receipt",
+            placement_receipt,
+        )
+        object.__setattr__(
+            self,
             "parent_proposal_fingerprint_sha256",
             parent_digest,
         )
@@ -589,6 +966,9 @@ class DockingProposal:
             numeric_policy_sha256=self.numeric_policy_sha256,
             rng_state_before_sha256=self.rng_state_before_sha256,
             rng_state_after_sha256=self.rng_state_after_sha256,
+            translation_placement_receipt_sha256=(
+                self.translation_placement_receipt.fingerprint_sha256
+            ),
             parent_proposal_fingerprint_sha256=(
                 self.parent_proposal_fingerprint_sha256
             ),
@@ -648,6 +1028,9 @@ class DockingProposal:
             numeric_policy_sha256=self.numeric_policy_sha256,
             rng_state_before_sha256=self.rng_state_before_sha256,
             rng_state_after_sha256=self.rng_state_after_sha256,
+            translation_placement_receipt_sha256=(
+                self.translation_placement_receipt.fingerprint_sha256
+            ),
             parent_proposal_fingerprint_sha256=self.fingerprint_sha256,
             refiner_id=normalized_refiner_id,
             refiner_version=normalized_refiner_version,
@@ -673,11 +1056,75 @@ def _random_unit_axis(generator: torch.Generator, dtype: torch.dtype) -> torch.T
     return axis / norm
 
 
+def _haar_rotation_matrix(
+    generator: torch.Generator,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    """Sample one deterministic Shoemake unit quaternion and SO(3) matrix."""
+
+    uniforms = torch.rand(3, generator=generator, dtype=dtype)
+    u1, u2, u3 = uniforms.unbind()
+    first_radius = torch.sqrt(1.0 - u1)
+    second_radius = torch.sqrt(u1)
+    first_angle = 2.0 * torch.pi * u2
+    second_angle = 2.0 * torch.pi * u3
+    x = first_radius * torch.sin(first_angle)
+    y = first_radius * torch.cos(first_angle)
+    z = second_radius * torch.sin(second_angle)
+    w = second_radius * torch.cos(second_angle)
+    two = torch.tensor(2.0, dtype=dtype)
+    return torch.stack(
+        (
+            1.0 - two * (y * y + z * z),
+            two * (x * y - z * w),
+            two * (x * z + y * w),
+            two * (x * y + z * w),
+            1.0 - two * (x * x + z * z),
+            two * (y * z - x * w),
+            two * (x * z - y * w),
+            two * (y * z + x * w),
+            1.0 - two * (x * x + y * y),
+        )
+    ).reshape(3, 3)
+
+
+def _uniform_translation_placement_receipt(
+    *,
+    proposal_index: int,
+    problem_fingerprint_sha256: str,
+    search_space_fingerprint_sha256: str,
+    translation: torch.Tensor,
+) -> DockingTranslationPlacementReceipt:
+    translation_values = translation.tolist()
+    return DockingTranslationPlacementReceipt(
+        proposal_index=proposal_index,
+        placement_policy_id=DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID,
+        placement_plan_sha256="",
+        problem_fingerprint_sha256=problem_fingerprint_sha256,
+        search_space_fingerprint_sha256=search_space_fingerprint_sha256,
+        site_id=(
+            "baseline-zero-translation"
+            if proposal_index == 0
+            else "uniform-volume-ball-sample"
+        ),
+        site_index=-1,
+        selected_rank=-1,
+        evaluated_site_count=0,
+        translation_angstrom=(
+            float(translation_values[0]),
+            float(translation_values[1]),
+            float(translation_values[2]),
+        ),
+        blockers=("receptor_steric_field_not_used_for_translation_placement",),
+    )
+
+
 def generate_bounded_docking_proposals(
     search_space: TorsionSearchSpace,
     budget: DockingBudget,
     *,
     problem: DockingProblemIdentity | DockingProblemInput | None = None,
+    translation_placement_plan: DockingTranslationPlacementPlan | None = None,
 ) -> tuple[DockingProposal, ...]:
     """Generate a deterministic baseline plus bounded torsion/rigid proposals."""
 
@@ -709,9 +1156,43 @@ def generate_bounded_docking_proposals(
         raise TypeError("problem must be DockingProblemIdentity")
     problem_fingerprint = problem_identity.fingerprint_sha256
     search_fingerprint = search_space.fingerprint_sha256
+    placement_plan_sha256 = ""
+    if translation_placement_plan is not None:
+        if not isinstance(
+            translation_placement_plan,
+            DockingTranslationPlacementPlan,
+        ):
+            raise TypeError(
+                "translation_placement_plan must satisfy "
+                "DockingTranslationPlacementPlan"
+            )
+        translation_placement_plan.assert_integrity()
+        placement_plan_sha256 = translation_placement_plan.fingerprint_sha256
+        if (
+            translation_placement_plan.placement_policy_id
+            != DOCKING_STERIC_FIELD_TRANSLATION_PLACEMENT_POLICY_ID
+            or translation_placement_plan.problem_fingerprint_sha256
+            != problem_fingerprint
+            or translation_placement_plan.search_space_fingerprint_sha256
+            != search_fingerprint
+        ):
+            raise DockingProposalError(
+                "translation placement plan is cross-wired to another problem or space"
+            )
     dtype = search_space.local_offsets.dtype
     numeric_policy = DockingNumericPolicy(
         coordinate_dtype=str(dtype).removeprefix("torch."),
+        sampling_policy_id=(
+            DOCKING_STERIC_FIELD_SAMPLING_POLICY_ID
+            if placement_plan_sha256
+            else DOCKING_SAMPLING_POLICY_ID
+        ),
+        translation_placement_policy_id=(
+            DOCKING_STERIC_FIELD_TRANSLATION_PLACEMENT_POLICY_ID
+            if placement_plan_sha256
+            else DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID
+        ),
+        translation_placement_plan_sha256=placement_plan_sha256,
     )
     numeric_policy_sha256 = numeric_policy.fingerprint_sha256
     generator = torch.Generator(device="cpu")
@@ -740,16 +1221,35 @@ def generate_bounded_docking_proposals(
         )
         if proposal_index == 0:
             rotation = torch.eye(3, dtype=dtype)
-            translation = torch.zeros(3, dtype=dtype)
         else:
-            axis = _random_unit_axis(generator, dtype)
-            rigid_angle = (
-                torch.rand((), generator=generator, dtype=dtype) * 2.0 - 1.0
-            ) * torch.pi
-            rotation = axis_angle_matrix(
-                axis.unsqueeze(0),
-                rigid_angle.unsqueeze(0),
-            )[0]
+            rotation = _haar_rotation_matrix(generator, dtype)
+        oriented_coordinates = kinematic.coordinates @ rotation.T
+        if translation_placement_plan is not None:
+            translation_placement_plan.assert_integrity()
+            placement_receipt = translation_placement_plan.place(
+                oriented_coordinates,
+                proposal_index=proposal_index,
+                translation_radius_angstrom=(
+                    budget.translation_radius_angstrom
+                ),
+            )
+            if not isinstance(
+                placement_receipt,
+                DockingTranslationPlacementReceipt,
+            ):
+                raise DockingProposalError(
+                    "translation placement plan returned an invalid receipt"
+                )
+            translation = placement_receipt.translation_tensor(dtype=dtype)
+        elif proposal_index == 0:
+            translation = torch.zeros(3, dtype=dtype)
+            placement_receipt = _uniform_translation_placement_receipt(
+                proposal_index=proposal_index,
+                problem_fingerprint_sha256=problem_fingerprint,
+                search_space_fingerprint_sha256=search_fingerprint,
+                translation=translation,
+            )
+        else:
             direction = _random_unit_axis(generator, dtype)
             radius = torch.rand((), generator=generator, dtype=dtype) ** (
                 1.0 / 3.0
@@ -757,7 +1257,13 @@ def generate_bounded_docking_proposals(
             translation = (
                 direction * radius * budget.translation_radius_angstrom
             )
-        coordinates = kinematic.coordinates @ rotation.T + translation
+            placement_receipt = _uniform_translation_placement_receipt(
+                proposal_index=proposal_index,
+                problem_fingerprint_sha256=problem_fingerprint,
+                search_space_fingerprint_sha256=search_fingerprint,
+                translation=translation,
+            )
+        coordinates = oriented_coordinates + translation
         rng_state_after_sha256 = _generator_state_sha256(generator)
         coordinate_digest = coordinate_fingerprint(coordinates)
         candidate_id = _candidate_id(
@@ -767,6 +1273,7 @@ def generate_bounded_docking_proposals(
             search_space_fingerprint_sha256=search_fingerprint,
             numeric_policy_sha256=numeric_policy_sha256,
             rng_state_before_sha256=rng_state_before_sha256,
+            translation_placement_plan_sha256=placement_plan_sha256,
         )
         fingerprint = _proposal_fingerprint(
             candidate_id=candidate_id,
@@ -781,6 +1288,9 @@ def generate_bounded_docking_proposals(
             numeric_policy_sha256=numeric_policy_sha256,
             rng_state_before_sha256=rng_state_before_sha256,
             rng_state_after_sha256=rng_state_after_sha256,
+            translation_placement_receipt_sha256=(
+                placement_receipt.fingerprint_sha256
+            ),
         )
         proposals.append(
             DockingProposal(
@@ -798,6 +1308,7 @@ def generate_bounded_docking_proposals(
                 numeric_policy_sha256=numeric_policy_sha256,
                 rng_state_before_sha256=rng_state_before_sha256,
                 rng_state_after_sha256=rng_state_after_sha256,
+                translation_placement_receipt=placement_receipt,
             )
         )
     search_space.assert_integrity()
@@ -807,6 +1318,12 @@ def generate_bounded_docking_proposals(
 __all__ = [
     "DOCKING_CANDIDATE_ID_SCHEMA_ID",
     "DOCKING_NUMERIC_POLICY_SCHEMA_ID",
+    "DOCKING_PROPOSAL_SCHEMA_ID",
+    "DOCKING_SAMPLING_POLICY_ID",
+    "DOCKING_STERIC_FIELD_SAMPLING_POLICY_ID",
+    "DOCKING_STERIC_FIELD_TRANSLATION_PLACEMENT_POLICY_ID",
+    "DOCKING_TRANSLATION_PLACEMENT_RECEIPT_SCHEMA_ID",
+    "DOCKING_UNIFORM_TRANSLATION_PLACEMENT_POLICY_ID",
     "MAX_DOCKING_CANDIDATES",
     "MAX_DOCKING_REFINEMENT_STEPS",
     "MAX_DOCKING_TOP_K",
@@ -815,6 +1332,8 @@ __all__ = [
     "DockingNumericPolicy",
     "DockingProposal",
     "DockingProposalError",
+    "DockingTranslationPlacementPlan",
+    "DockingTranslationPlacementReceipt",
     "TorsionSearchSpace",
     "generate_bounded_docking_proposals",
 ]

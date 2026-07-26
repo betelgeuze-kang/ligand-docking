@@ -37,6 +37,7 @@ betelgeuze_engine_v2.docking.geometric_refinement
 betelgeuze_engine_v2.docking.molecular_torsion
 betelgeuze_engine_v2.docking.parameterized_validity
 betelgeuze_engine_v2.docking.reference_applicability
+betelgeuze_engine_v2.docking.steric_field
 betelgeuze_engine_v2.benchmark
 betelgeuze_engine_v2.benchmark.public_flexible_diagnostic
 betelgeuze_engine_v2.benchmark.public_materialization
@@ -366,24 +367,81 @@ absent.
 prepared-input vertical boundary. The
 `betelgeuze-engine-v2-redock-diagnostic` command takes strict canonical receptor
 and ligand system JSON plus an explicit pocket center/radius, bounded candidate
-count, Top-K, translation radius, diversity threshold, seed, and output path.
+count, Top-K, global torsion budget, translation radius, diversity threshold,
+local-refinement-step budget, seed, and output path.
 It no-follow reads and hashes both inputs, requires one nonperiodic Angstrom
-model, binds pocket and rigid-search derivation receipts into a concrete
+model, binds pocket and search-space derivation receipts into a concrete
 `DockingProblemInput`, and records numeric/RNG/search identity. Output is
 canonical mode-0600 JSON, never replaces an existing path, retains all
 candidate failure rows, and includes exact hexadecimal receptor-frame
 coordinates for selected poses. An invalid input or execution produces a
 sanitized failure receipt when the requested output is still available.
 
-This CLI starts after chemistry preparation and uses only the current
-element-radius rigid geometry diagnostic with identity-only symmetry diversity.
-It verifies and binds an embedded RDKit/OpenFF preparation receipt when one is
-present; a generic canonical ligand remains diagnostic-only and receives
-explicit missing-preparation blockers. The redocking command itself does not
-accept arbitrary PDB/SDF, perceive protonation/tautomers, construct chemistry,
-sample torsions or Haar rotations, use field-guided proposals, run force-field
-minimization, provide chemistry-aware validity v2, or establish
-benchmark/calibration/OOD evidence. Its receipts therefore freeze all
+This CLI starts after chemistry preparation. A verified RDKit/OpenFF ligand
+receipt and positive torsion budget materialize the bridge-only molecular
+torsion tree and bind it through `bind_molecular_torsion_search_space` to the
+transformed ligand. Candidate zero is the exact zero-torsion/identity/zero-
+translation baseline. Later candidates sample every admitted torsion uniformly
+on `[-pi, pi)`, use a Shoemake three-uniform unit quaternion for Haar-uniform
+SO(3), and choose translation from a deterministic receptor-steric-field grid.
+The bounded plan binds the exact authenticated problem/search space, receptor
+shell, ligand atom radii, pocket, fixed unvalidated radius profile, lattice,
+site ordering, and capacity limits. It first ranks sites by anchor overlap, then
+for each oriented/torsioned ligand orders retained sites by deep-overlap count,
+overlap count and squared penetration, pocket-boundary damage, and canonical
+site index. Candidate zero forcibly retains the zero-translation site; later
+candidates cycle over the best nonzero sites for placement diversity. Numeric
+policy v3 distinguishes this deterministic field path from the receptor-free
+uniform-volume ball and freezes the corresponding RNG draw order. Every success
+or failure row embeds torsion angles, rotation matrix, translation, RNG states,
+the selected site and steric metrics, complete placement receipt/plan digest,
+and source proposal fingerprint. Generic input keeps the uniform-volume
+translation fallback. `--max-torsions 0` uses the authenticated rigid search
+space but still uses the steric field when ligand preparation verifies.
+
+The verified preparation receipt also enables `interpretable-pose-scorer-v0`, which emits four fixed-radius
+geometry terms, reference-relative bond/angle/rotatable-dihedral displacement,
+an explicit-H directional D-H-A reward, and a neutral-element hydrophobic
+contact reward. Feature rules, weights, and radii are deterministic heuristics;
+they do not use partial charges, solvation, lone-pair direction, pi/halogen or
+metal interactions, and they are not fitted or independently validated. The
+For a verified prepared ligand, the command then runs
+`interpretable-local-pose-coordinate-descent-v0` for up to six
+steps by default. Each step enumerates signed Cartesian translation and
+rotation moves plus signed rotations about every bridge-only rotatable bond,
+uses score then canonical move order as the deterministic tie break, accepts a
+strict score decrease, and reduces all move sizes after a rejection. Search
+rows retain the complete refinement receipt even if later scoring or validity
+fails: parent/problem/scorer/refiner/torsion-plan fingerprints, all iteration
+outcomes, evaluated/rejected move counts, nine-term deltas, score trace,
+coordinate-hash trace, and maximum bond/angle residuals. A generic canonical
+ligand remains on the original five-term element-geometry diagnostic with an
+effective zero-step budget and explicit missing-preparation/scorer/refiner
+blockers. The verifier rejects cross-wired scorer, term, torsion-plan, or
+refinement receipts. The CLI also rejects a prepared run before search when
+candidate count × effective step budget × per-step move count exceeds 250,000
+objective evaluations.
+
+The same verified-preparation gate enables chemistry-aware validity v2. Its
+context cross-binds the original preparation receipt, transformed ligand
+topology, receptor shell, pocket, and docking problem. Each successful row
+records element-radius-scaled receptor penetration and ligand self-clash with
+1-2/1-3 exclusions, reference-relative bond/angle deltas, and preservation of
+declared tetrahedral and double-bond stereo geometry. Thresholds and radii are
+hand-fixed and uncalibrated. The contract does not assign partial charges,
+independently validate protonation/tautomers, recompute absolute CIP/E/Z labels,
+or validate aromatic planarity. Generic canonical ligands remain on geometric
+validity with an explicit missing-v2 blocker.
+
+The redocking command itself does not accept arbitrary PDB/SDF, perceive
+protonation/tautomers, construct chemistry, use ring/macrocycle closure or a
+calibrated interaction-energy field, run force/gradient or force-field
+minimization, provide validated chemical applicability, or establish
+benchmark/calibration/OOD evidence. Its steric field is a fixed-radius overlap
+heuristic without electrostatics, directional hydrogen bonding, desolvation,
+water/cofactor response, or receptor flexibility. Its local refiner optimizes the
+uncalibrated diagnostic score, not a physical energy; analytic forces and
+tangent-force residuals are unavailable. Receipts therefore freeze all
 scientific, benchmark, customer, and claim flags to false.
 
 The public rigid-diagnostic symbols reverify the full input suite, derive a
@@ -613,6 +671,60 @@ nonaromatic. Likewise, raw directional-bond equality is not atom-stereo
 validation. The receipt runs no aromaticity/stereo oracle, preparation, pose
 generation, validity, scoring, external engine, target-family analysis, or
 benchmark, and remains `claim_safe=false`.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_preparation`
+provides the canonical internal-input gate. The installed
+`betelgeuze-engine-v2-posebusters-internal-prepare` command exactly reexecutes
+the archive intake and corpus audit before touching a case. Rows at the
+provisional supported-element/formal-charge/cofactor boundary are attempted;
+all other chemistry rows abstain, and every intake/audit/preparation failure is
+retained. The receptor uses strict PDB parsing with `CRYST1` recorded but not
+materialized as periodicity. The start conformer is passed through the
+self-verifying RDKit/OpenFF diagnostic adapter. The native ligand contributes
+only its heavy-atom centroid for the explicit spherical pocket. Successful rows
+write canonical receptor and ligand system JSON in a mode-0700/0600,
+no-overwrite tree, cross-bound to source, system, configuration, runtime, and
+ligand-preparation receipt identities. Verification reexecutes every case and
+requires exact receipt and artifact bytes.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_execution` adds the
+failure-inclusive internal batch boundary. The installed
+`betelgeuze-engine-v2-posebusters-internal-execute` command first re-verifies
+the complete preparation receipt and tree, derives each case seed from the
+frozen base-seed/case-ID policy, and calls the prepared redocking diagnostic
+with one frozen bounded configuration. Completed cases retain candidate
+success/failure, selection-eligible, valid-pose, and selected-pose counts plus
+the full authenticated diagnostic report. Preparation failures, upstream
+failures, chemistry abstentions, and execution failures remain distinct rows;
+all summary rates use the complete case denominator and Wilson 95% intervals.
+The execution receipt binds the preparation projection, both runtime
+identities, relevant source files, configuration, and exact output tree, and
+its verifier reexecutes preparation and docking byte-for-byte.
+
+This is an execution/evidence carrier, not the final public redocking result.
+It does not yet compute native symmetry-aware Top-1/Top-5 RMSD, run the pinned
+PoseBusters validity oracle over internal poses, stratify by target family or
+chemistry, measure wall-clock/peak-memory runtime, or prove second-host and
+independent-review reproduction. Therefore `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` remain fixed.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_rmsd_evaluation`
+provides the next diagnostic gate. The installed
+`betelgeuze-engine-v2-posebusters-internal-rmsd` command exactly reexecutes the
+internal batch and intake, maps each prepared heavy atom through its retained
+source-start atom index, enumerates all bounded native-to-start heavy-
+connectivity isomorphisms, and computes minimum direct receptor-frame RMSD for
+every selected pose without alignment. Case rows retain the selected mapping,
+mapping-set identity, input/report/system hashes, internal validity, Top-1 and
+Top-K best RMSD, threshold hits, and every blocked/evaluation-failure
+disposition. Summary rates use the complete cohort denominator and Wilson 95%
+intervals.
+
+This diagnostic deliberately uses connectivity symmetry only. It does not
+fully interpret atom stereochemistry and is not equivalent to PoseBusters
+robust RMSD or its external physical-validity tests. The pinned external oracle,
+target/chemistry strata, runtime evidence, second-host rerun, and independent
+review remain required before any public benchmark claim.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The

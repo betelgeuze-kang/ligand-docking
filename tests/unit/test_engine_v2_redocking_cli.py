@@ -29,6 +29,7 @@ from betelgeuze_engine_v2.molecular import (  # noqa: E402
     StructureProvenance,
     canonical_json_bytes,
     canonical_system_json_bytes,
+    sha256_canonical,
 )
 
 
@@ -143,7 +144,72 @@ def test_redocking_diagnostic_is_authenticated_deterministic_and_claim_closed() 
         is True
     )
     assert report["search"]["candidate_count"] == 6
+    assert report["search"]["scorer_id"] == "element-geometry-diagnostic"
+    assert report["config"]["proposal_generation"]["mode"] == "rigid_haar"
+    assert report["config"]["proposal_generation"]["requested_max_torsions"] == 32
+    assert report["config"]["proposal_generation"]["effective_max_torsions"] == 0
+    assert report["config"]["proposal_generation"][
+        "global_torsion_sampling_enabled"
+    ] is False
+    assert report["config"]["proposal_generation"][
+        "haar_rotation_sampling_enabled"
+    ] is True
+    assert report["config"]["proposal_generation"][
+        "steric_field_guidance_enabled"
+    ] is False
+    assert report["config"]["proposal_generation"]["steric_field_plan"] is None
+    assert report["search"]["translation_placement_plan_sha256"] == ""
+    assert report["search"]["budget"]["max_torsions"] == 0
+    assert report["config"]["pose_score"]["preparation_gate_satisfied"] is False
+    assert report["config"]["pose_score"]["feature_binding_sha256"] is None
+    assert report["config"]["pose_refinement"]["preparation_gate_satisfied"] is False
+    assert report["config"]["pose_refinement"]["requested_max_refinement_steps"] == 6
+    assert report["config"]["pose_refinement"]["effective_max_refinement_steps"] == 0
+    assert report["config"]["pose_refinement"]["performed"] is False
+    assert report["config"]["pose_refinement"]["refiner_id"] is None
+    assert report["search"]["budget"]["max_refinement_steps"] == 0
+    assert report["search"]["refiner_id"] == ""
+    assert report["config"]["pose_validity"]["preparation_gate_satisfied"] is False
+    assert report["config"]["pose_validity"]["result_schema_id"] is None
+    assert report["config"]["pose_score"]["scorer_id"] == report["search"]["scorer_id"]
+    assert (
+        "interpretable_pose_scorer_v0_requires_verified_ligand_preparation"
+        in report["scientific_blockers"]
+    )
+    assert (
+        "chemistry_aware_pose_validity_v2_requires_verified_ligand_preparation"
+        in report["scientific_blockers"]
+    )
+    assert (
+        "interpretable_local_refiner_v0_requires_verified_ligand_preparation"
+        in report["scientific_blockers"]
+    )
+    assert (
+        "global_torsion_pose_generation_requires_verified_preparation_and_positive_budget"
+        in report["scientific_blockers"]
+    )
+    assert (
+        "steric_field_guided_proposals_require_verified_preparation"
+        in report["scientific_blockers"]
+    )
     assert len(report["search"]["rows"]) == 6
+    assert all(
+        row["proposal_sampling_state"]["torsion_variable_count"] == 0
+        for row in report["search"]["rows"]
+    )
+    assert all(
+        row["proposal_sampling_state"]["translation_placement_receipt"][
+            "placement_plan_sha256"
+        ]
+        == ""
+        for row in report["search"]["rows"]
+    )
+    assert all(
+        row["refined"] is False
+        and row["refinement_receipt_sha256"] == ""
+        and row["refinement_receipt"] is None
+        for row in report["search"]["rows"]
+    )
     assert report["search"]["diversity_metric"] == ("symmetry_aware_direct_rmsd")
     assert report["search"]["claim_safe"] is False
     assert report["summary"]["all_candidate_rows_retained"] is True
@@ -297,9 +363,60 @@ def test_redocking_receipt_verifier_rejects_claim_promotion() -> None:
         verify_redocking_diagnostic_report(canonical_json_bytes(document))
 
 
+def test_redocking_receipt_verifier_rejects_cross_wired_pose_scorer() -> None:
+    document = json.loads(canonical_json_bytes(_run()))
+    document["config"]["pose_score"]["scorer_id"] = "interpretable-pose-scorer-v0"
+    document.pop("receipt_sha256")
+    document["receipt_sha256"] = sha256_canonical(document)
+
+    with pytest.raises(
+        RedockingDiagnosticError,
+        match="pose-score binding",
+    ):
+        verify_redocking_diagnostic_report(canonical_json_bytes(document))
+
+
+def test_redocking_receipt_verifier_rejects_malformed_blocker_rows() -> None:
+    document = json.loads(canonical_json_bytes(_run()))
+    document["scientific_blockers"].append({"not": "a blocker"})
+    document.pop("receipt_sha256")
+    document["receipt_sha256"] = sha256_canonical(document)
+
+    with pytest.raises(
+        RedockingDiagnosticError,
+        match="scientific blockers",
+    ):
+        verify_redocking_diagnostic_report(canonical_json_bytes(document))
+
+
+def test_redocking_receipt_verifier_rejects_cross_wired_pose_validity() -> None:
+    document = json.loads(canonical_json_bytes(_run()))
+    document["config"]["pose_validity"]["context_fingerprint_sha256"] = "f" * 64
+    document.pop("receipt_sha256")
+    document["receipt_sha256"] = sha256_canonical(document)
+
+    with pytest.raises(
+        RedockingDiagnosticError,
+        match="pose-validity binding",
+    ):
+        verify_redocking_diagnostic_report(canonical_json_bytes(document))
+
+
 def test_redocking_config_fails_closed_on_unbounded_candidate_count() -> None:
     with pytest.raises(
         RedockingDiagnosticError,
         match="candidate_count",
     ):
         RedockingDiagnosticConfig(candidate_count=1_025)
+
+    with pytest.raises(
+        RedockingDiagnosticError,
+        match="max_refinement_steps",
+    ):
+        RedockingDiagnosticConfig(max_refinement_steps=33)
+
+    with pytest.raises(
+        RedockingDiagnosticError,
+        match="max_torsions",
+    ):
+        RedockingDiagnosticConfig(max_torsions=65)

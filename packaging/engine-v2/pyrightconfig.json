@@ -1,6 +1,13 @@
 {
   "include": [
     "../../betelgeuze_engine_v2/contracts",
+    "../../betelgeuze_engine_v2/benchmark/redocking_cli.py",
+    "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_preparation.py",
+    "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_execution.py",
+    "../../betelgeuze_engine_v2/benchmark/public_posebusters_internal_rmsd_evaluation.py",
+    "../../betelgeuze_engine_v2/docking/proposals.py",
+    "../../betelgeuze_engine_v2/docking/search.py",
+    "../../betelgeuze_engine_v2/docking/steric_field.py",
     "../../betelgeuze_engine_v2/molecular/models.py",
     "../../betelgeuze_engine_v2/molecular/serialization.py",
     "../../betelgeuze_engine_v2/physics/reference_parameters.py"

@@ -27,6 +27,76 @@ scientific claim from a package version.
   no-overwrite canonical system that the redocking CLI verifies directly.
   Calibrated pKa selection, partial charges, force-field parameters, supported
   chemistry validation, and product promotion remain absent.
+- Added `interpretable-pose-scorer-v0` as a deterministic, nine-term diagnostic
+  for canonical topology: fixed-radius contact/clash/centroid geometry,
+  reference-relative bond/angle/torsion displacement, explicit-H directional
+  hydrogen bonding, and hydrophobic contacts. Every term retains its raw value,
+  weight, semantics, and bound parameter source. The rules and weights are
+  heuristic, uncalibrated, and claim-closed.
+- The installable redocking receipt now selects that scorer only after verifying
+  the embedded ligand-preparation receipt. Generic canonical ligands remain on
+  the geometry-only scorer. The verifier cross-checks preparation gate, scorer
+  identity, contract/config fingerprints, descriptor, blockers, and exact term
+  order. The prepared-only global torsion sampler and local refiner described
+  below add no validated force-field refinement or docking evidence.
+- Added preparation-bound chemistry-aware pose validity v2 without changing the
+  force-field-parameterized v1 API. V2 cross-binds the original preparation
+  receipt to transformed topology and problem identity, and reports
+  element-scaled receptor penetration, 1-2/1-3-excluded self-clash,
+  reference-relative bond/angle damage, and declared atom/double-bond stereo
+  preservation on every successful search row. Thresholds are uncalibrated;
+  partial-charge, protonation/tautomer, absolute stereo-label, aromatic
+  planarity, public validation, and scientific-review blockers remain explicit.
+- Added `interpretable-local-pose-coordinate-descent-v0` behind the same
+  verified ligand-preparation gate. It performs bounded deterministic rigid
+  translation/rotation and bridge-only torsion moves, preserves bond lengths
+  and angles within an explicit residual tolerance, and records complete
+  score/coordinate-hash traces, term deltas, iteration/rejection counts, and
+  torsion-plan identity on every refined search row. Generic canonical input
+  remains unrefined, and a 250,000 candidate-step-move capacity fails closed
+  before oversized prepared searches execute. This optimizes the uncalibrated
+  diagnostic score; it is
+  not force-field energy minimization, exposes no analytic forces or
+  tangent-force residual, and carries no scientific or docking claim.
+- Added deterministic Shoemake Haar-uniform SO(3) proposal rotations and
+  refroze numeric, candidate, and proposal identities. Verified prepared input
+  now uses an authenticated bridge-only molecular torsion search space by
+  default; generic or zero-torsion-budget input retains the rigid fallback.
+  Every success/failure row records exact torsion, rotation, translation, RNG,
+  and proposal sampling state. This remains heuristic, lacks ring/macrocycle
+  closure and a torsion-energy model, and is not validated conformer generation.
+- Added prepared-only receptor-steric-field proposal placement. A hard-bounded
+  deterministic lattice is authenticated to receptor, ligand, pocket, search
+  space, fixed diagnostic radii, and grid configuration. Candidate zero retains
+  zero translation; later oriented/torsioned candidates cycle over nonzero sites
+  ranked by receptor penetration and pocket-boundary metrics. Every row embeds
+  the selected site, exact translation and metrics, complete plan identity, and
+  placement receipt, including failure rows. Generic input remains on the
+  uniform-volume translation fallback. The field is an uncalibrated overlap
+  heuristic without electrostatics, hydrogen bonding, desolvation, solvent,
+  cofactor response, or receptor flexibility and carries no scientific claim.
+- Bumped the prepared redocking receipt and algorithm contracts to `1.5.0`.
+  The verifier now cross-checks requested versus effective torsion/refinement
+  budgets, Haar/steric-field numeric policy and draw order, search-space and
+  field-plan derivation, per-row sampling/placement state,
+  scorer/refiner/problem/feature/torsion bindings, embedded receipt digests,
+  term order, score/coordinate traces, and constraint residuals.
+- Added failure-inclusive internal PoseBusters preparation and execution
+  boundaries. The preparation command re-verifies the exact corpus/intake,
+  emits source-bound canonical receptor and RDKit-prepared ligand artifacts,
+  and retains preparation failure and chemistry-abstention rows. The execution
+  command re-verifies that complete tree, deterministically derives a seed per
+  case, runs the prepared redocking diagnostic, retains every upstream or
+  execution failure in the all-case denominator, and writes one authenticated
+  diagnostic report per completed case. Both workflows support exact local
+  reexecution and no-overwrite private artifacts. A downstream evaluator maps
+  prepared heavy atoms back to the raw start graph, enumerates all bounded
+  native-to-start connectivity isomorphisms, and records direct receptor-frame
+  Top-1/Top-K RMSD and Wilson intervals while retaining the full denominator.
+  Complete atom-stereo symmetry, the external PoseBusters oracle, target-family
+  strata, runtime measurements, second-host reproduction, and independent
+  review remain explicit blockers; no public benchmark result or docking claim
+  is opened.
 
 ### Changed
 
