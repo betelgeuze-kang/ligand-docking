@@ -133,10 +133,15 @@ scientific claim from a package version.
   distinct external runtime/strata roots and exact equality of the oracle plus
   every runtime-free case/stratum/metric field while retaining all failures.
   Runtime and sampled-RSS ratios are reported without an invented equivalence
-  threshold. Because upstream receipts are unsigned self-hashes and do not
-  payload-bind the nonce or asserted observation time or prove a physical
-  host, a passing comparison remains explicitly unreviewed, non-independent,
-  non-benchmark, and claim-closed.
+  threshold. The measured runtime companion now carries an optional canonical
+  execution attestation that payload-binds the executing host identity,
+  execution operator identity, single-use nonce, and observed UTC, and the
+  comparison requires the external runtime payload to bind exactly the
+  preregistered values. Unattested or replayed-nonce external observations fail
+  closed. Because upstream receipts remain unsigned self-hashes that cannot
+  prove physical-host identity or nonce single use, a passing comparison still
+  remains explicitly unreviewed, non-independent, non-benchmark, and
+  claim-closed.
 
 ### Changed
 

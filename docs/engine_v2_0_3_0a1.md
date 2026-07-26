@@ -91,9 +91,11 @@ receipt is bundled. A separate companion reports failure-inclusive primary
 target/chemistry strata and Wilson intervals, but no training-manifest OOD
 audit. Another companion preregisters and exactly compares a putative
 second-host oracle/runtime/strata chain, while deliberately withholding an
-independent-rerun claim: its upstream receipts are unsigned self-hashes, the
-runtime payload binds neither the nonce nor asserted observation time, and no
-physical-host proof or nonce registry review exists. Same-input external-engine
+independent-rerun claim. The external runtime payload must bind a canonical
+execution attestation whose host, operator, single-use nonce, and observed UTC
+match the work order exactly, but those values remain self-declared: the
+upstream receipts are unsigned self-hashes with no physical-host proof and no
+nonce single-use registry review. Same-input external-engine
 comparisons and independent scientific review remain absent. The runtime
 companion supplies local wall-duration and sampled-RSS observations, but not a
 kernel-enforced isolated peak, overhead-free timing, full-pipeline per-case

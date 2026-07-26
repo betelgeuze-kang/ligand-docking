@@ -58,6 +58,26 @@ def _file_sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _attestation(
+    *,
+    host: str = _EXTERNAL_HOST,
+    executor: str = _EXTERNAL_EXECUTOR,
+    nonce: str = _EXECUTION_NONCE,
+    observed_utc: str = "2026-07-26T02:00:00Z",
+) -> dict[str, object]:
+    return {
+        "schema_id": (
+            "betelgeuze.engine_v2_posebusters_internal_oracle_runtime_attestation/1.0.0"
+        ),
+        "host_identity_sha256": host,
+        "execution_operator_identity_sha256": executor,
+        "execution_nonce_sha256": nonce,
+        "observed_utc": observed_utc,
+        "host_identity_cryptographically_proven": False,
+        "nonce_single_use_registry_reviewed": False,
+    }
+
+
 def _write_receipt(path: Path, payload: dict[str, object]) -> tuple[str, str]:
     receipt_sha = _canonical_sha(payload)
     document = {**payload, "receipt_sha256": receipt_sha}
@@ -137,6 +157,7 @@ def _runtime_payload(
     wheel_sha: str,
     tag: str,
     scale: int,
+    attestation: dict[str, object] | None = None,
 ) -> dict[str, object]:
     wheel_binding = {"sha256": wheel_sha, "fixture_role": "engine-wheel"}
     case_rows = [
@@ -179,6 +200,11 @@ def _runtime_payload(
         "batch_sampled_peak_rss_bytes": 1_300 * scale,
         "batch_rss_sample_count": 10,
         "case_rows": case_rows,
+        "execution_attestation": attestation,
+        "execution_attestation_sha256": (
+            None if attestation is None else _canonical_sha(attestation)
+        ),
+        "execution_attestation_payload_bound": attestation is not None,
         "benchmark_executed": False,
         "scientifically_validated": False,
         "claim_safe": False,
@@ -334,6 +360,7 @@ def _write_chain(
     tag: str,
     scale: int,
     mutate_strata: bool = False,
+    attestation: dict[str, object] | None = None,
 ) -> dict[str, object]:
     root.mkdir(parents=True, exist_ok=True)
     oracle_path = root / "oracle.json"
@@ -346,6 +373,7 @@ def _write_chain(
         wheel_sha=wheel_sha,
         tag=tag,
         scale=scale,
+        attestation=attestation,
     )
     runtime_path = root / "runtime.json"
     runtime_sha, runtime_file_sha = _write_receipt(runtime_path, runtime_payload)
@@ -396,6 +424,7 @@ def _fixture(tmp_path: Path) -> dict[str, object]:
         wheel_sha=wheel_sha,
         tag="external",
         scale=2,
+        attestation=_attestation(),
     )
     mismatch = _write_chain(
         tmp_path / "mismatch",
@@ -406,6 +435,26 @@ def _fixture(tmp_path: Path) -> dict[str, object]:
         tag="mismatch",
         scale=3,
         mutate_strata=True,
+        attestation=_attestation(),
+    )
+    unattested = _write_chain(
+        tmp_path / "unattested",
+        oracle_source=oracle_path,
+        oracle_sha=oracle_sha,
+        oracle_file_sha=oracle_file_sha,
+        wheel_sha=wheel_sha,
+        tag="unattested",
+        scale=4,
+    )
+    wrong_nonce = _write_chain(
+        tmp_path / "wrong-nonce",
+        oracle_source=oracle_path,
+        oracle_sha=oracle_sha,
+        oracle_file_sha=oracle_file_sha,
+        wheel_sha=wheel_sha,
+        tag="wrong-nonce",
+        scale=5,
+        attestation=_attestation(nonce=_canonical_sha("replayed-nonce")),
     )
     return {
         "wheel_path": wheel_path,
@@ -413,6 +462,8 @@ def _fixture(tmp_path: Path) -> dict[str, object]:
         "baseline": baseline,
         "external": external,
         "mismatch": mismatch,
+        "unattested": unattested,
+        "wrong_nonce": wrong_nonce,
     }
 
 
@@ -521,8 +572,8 @@ def test_work_order_and_passing_result_reconstruct_exactly_and_stay_claim_closed
         runtime["batch_wall_duration_ratio_external_over_baseline_binary64_hex"]
         == float(2.0).hex()
     )
-    assert payload["runtime_observation_nonce_payload_bound"] is False
-    assert payload["external_observation_time_payload_bound"] is False
+    assert payload["runtime_observation_nonce_payload_bound"] is True
+    assert payload["external_observation_time_payload_bound"] is True
     assert payload["upstream_receipt_signatures_verified"] is False
     assert payload["physical_host_independence_reviewed"] is False
     assert payload["independent_external_rerun_present"] is False
@@ -597,6 +648,42 @@ def test_baseline_runtime_replay_is_rejected(tmp_path: Path) -> None:
             expected_work_order_receipt_sha256=work_order.fingerprint_sha256,
             **_baseline_arguments(fixture),  # type: ignore[arg-type]
             **replay,  # type: ignore[arg-type]
+            observed_external_host_identity_sha256=_EXTERNAL_HOST,
+            observed_external_execution_operator_identity_sha256=(_EXTERNAL_EXECUTOR),
+            external_observed_utc="2026-07-26T02:00:00Z",
+        )
+
+
+def test_unattested_external_runtime_is_rejected(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    work_order, work_order_path = _work_order(fixture)
+    with pytest.raises(
+        PoseBustersInternalOracleReproductionError,
+        match="does not payload-bind an execution attestation",
+    ):
+        materialize_posebusters_internal_oracle_reproduction_result(
+            work_order_path=work_order_path,
+            expected_work_order_receipt_sha256=work_order.fingerprint_sha256,
+            **_baseline_arguments(fixture),  # type: ignore[arg-type]
+            **_external_arguments(fixture, name="unattested"),  # type: ignore[arg-type]
+            observed_external_host_identity_sha256=_EXTERNAL_HOST,
+            observed_external_execution_operator_identity_sha256=(_EXTERNAL_EXECUTOR),
+            external_observed_utc="2026-07-26T02:00:00Z",
+        )
+
+
+def test_replayed_attestation_nonce_is_rejected(tmp_path: Path) -> None:
+    fixture = _fixture(tmp_path)
+    work_order, work_order_path = _work_order(fixture)
+    with pytest.raises(
+        PoseBustersInternalOracleReproductionError,
+        match="does not bind the preregistered",
+    ):
+        materialize_posebusters_internal_oracle_reproduction_result(
+            work_order_path=work_order_path,
+            expected_work_order_receipt_sha256=work_order.fingerprint_sha256,
+            **_baseline_arguments(fixture),  # type: ignore[arg-type]
+            **_external_arguments(fixture, name="wrong_nonce"),  # type: ignore[arg-type]
             observed_external_host_identity_sha256=_EXTERNAL_HOST,
             observed_external_execution_operator_identity_sha256=(_EXTERNAL_EXECUTOR),
             external_observed_utc="2026-07-26T02:00:00Z",

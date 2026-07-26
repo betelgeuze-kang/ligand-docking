@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from email.parser import BytesParser
 from email.policy import default as email_policy
 import hashlib
@@ -81,6 +82,9 @@ POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ENVIRONMENT_SCHEMA_ID = (
 POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CASE_SCHEMA_ID = (
     "betelgeuze.engine_v2_posebusters_internal_oracle_runtime_case/1.0.0"
 )
+POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_posebusters_internal_oracle_runtime_attestation/1.0.0"
+)
 POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_OBSERVATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_posebusters_internal_oracle_runtime_observation/1.0.0"
 )
@@ -106,9 +110,15 @@ POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION = {
     ),
     "measurement_values_are_not_exactly_reexecutable": True,
     "oracle_payload_is_observer_independent": True,
+    "execution_attestation_policy": {
+        "host_operator_nonce_and_observed_utc_bound_into_payload": True,
+        "attestation_is_optional_for_unattested_local_observations": True,
+        "host_identity_cryptographically_proven": False,
+        "nonce_single_use_registry_reviewed": False,
+    },
 }
 POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION_SHA256 = (
-    "ff8d8995bd52fc8cfa67f6bd2b085a15a16c177658d946058d529951aed06192"
+    "6aa30ad64e4ea6752f1bb18b84e509cdfb5c08e6eea0ff52fac1623923590895"
 )
 
 POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_BLOCKERS = tuple(
@@ -209,6 +219,23 @@ def _list(value: object, *, name: str) -> list[object]:
 
 def _nonnegative_int(value: object, *, name: str) -> int:
     return _positive_int(value, name=name, allow_zero=True)
+
+
+def _canonical_utc(value: object, *, name: str) -> str:
+    text = _text(value, name=name, maximum=32)
+    try:
+        parsed = datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
+    except ValueError as exc:
+        raise PoseBustersInternalOracleRuntimeObservationError(
+            f"{name} must use canonical UTC seconds"
+        ) from exc
+    if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != text:
+        raise PoseBustersInternalOracleRuntimeObservationError(
+            f"{name} must use canonical UTC seconds"
+        )
+    return text
 
 
 def _current_source_members() -> tuple[tuple[str, str], ...]:
@@ -933,6 +960,85 @@ class PoseBustersInternalOracleRuntimeCase:
 
 
 @dataclass(frozen=True, slots=True)
+class PoseBustersInternalOracleRuntimeAttestation:
+    """Preregistered execution binding carried inside the measured payload."""
+
+    host_identity_sha256: str
+    execution_operator_identity_sha256: str
+    execution_nonce_sha256: str
+    observed_utc: str
+    schema_id: str = POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ATTESTATION_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != (
+            POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ATTESTATION_SCHEMA_ID
+        ):
+            raise PoseBustersInternalOracleRuntimeObservationError(
+                "unsupported runtime-attestation schema"
+            )
+        digests = tuple(
+            _digest(getattr(self, name), name=name)
+            for name in (
+                "host_identity_sha256",
+                "execution_operator_identity_sha256",
+                "execution_nonce_sha256",
+            )
+        )
+        if len(set(digests)) != len(digests):
+            raise PoseBustersInternalOracleRuntimeObservationError(
+                "runtime attestation host, operator, and nonce must be distinct"
+            )
+        object.__setattr__(self, "host_identity_sha256", digests[0])
+        object.__setattr__(self, "execution_operator_identity_sha256", digests[1])
+        object.__setattr__(self, "execution_nonce_sha256", digests[2])
+        object.__setattr__(
+            self,
+            "observed_utc",
+            _canonical_utc(self.observed_utc, name="runtime observation UTC"),
+        )
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        return _canonical_sha256(self.to_dict())
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "host_identity_sha256": self.host_identity_sha256,
+            "execution_operator_identity_sha256": (
+                self.execution_operator_identity_sha256
+            ),
+            "execution_nonce_sha256": self.execution_nonce_sha256,
+            "observed_utc": self.observed_utc,
+            "host_identity_cryptographically_proven": False,
+            "nonce_single_use_registry_reviewed": False,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        raw: Mapping[str, object],
+    ) -> "PoseBustersInternalOracleRuntimeAttestation":
+        for field in (
+            "host_identity_cryptographically_proven",
+            "nonce_single_use_registry_reviewed",
+        ):
+            if raw.get(field) is not False:
+                raise PoseBustersInternalOracleRuntimeObservationError(
+                    f"runtime attestation must keep {field}=false"
+                )
+        return cls(
+            host_identity_sha256=raw.get("host_identity_sha256"),  # type: ignore[arg-type]
+            execution_operator_identity_sha256=raw.get(  # type: ignore[arg-type]
+                "execution_operator_identity_sha256"
+            ),
+            execution_nonce_sha256=raw.get("execution_nonce_sha256"),  # type: ignore[arg-type]
+            observed_utc=raw.get("observed_utc"),  # type: ignore[arg-type]
+            schema_id=raw.get("schema_id"),  # type: ignore[arg-type]
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class PoseBustersInternalOracleRuntimeObservationReceipt:
     oracle_receipt_sha256: str
     oracle_receipt_file_sha256: str
@@ -949,6 +1055,7 @@ class PoseBustersInternalOracleRuntimeObservationReceipt:
     batch_sampled_peak_rss_bytes: int
     batch_rss_sample_count: int
     case_rows: tuple[PoseBustersInternalOracleRuntimeCase, ...]
+    attestation: PoseBustersInternalOracleRuntimeAttestation | None = None
     schema_id: str = POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_OBSERVATION_SCHEMA_ID
 
     def __post_init__(self) -> None:
@@ -986,6 +1093,13 @@ class PoseBustersInternalOracleRuntimeObservationReceipt:
         ):
             raise PoseBustersInternalOracleRuntimeObservationError(
                 "runtime observation lacks wheel or environment identity"
+            )
+        if self.attestation is not None and not isinstance(
+            self.attestation,
+            PoseBustersInternalOracleRuntimeAttestation,
+        ):
+            raise PoseBustersInternalOracleRuntimeObservationError(
+                "runtime attestation must be a canonical attestation record"
             )
         members = tuple(
             (
@@ -1077,6 +1191,15 @@ class PoseBustersInternalOracleRuntimeObservationReceipt:
             ),
             "configuration_sha256": self.configuration_sha256,
             "all_case_denominator": len(self.case_rows),
+            "execution_attestation": (
+                None if self.attestation is None else self.attestation.to_dict()
+            ),
+            "execution_attestation_sha256": (
+                None
+                if self.attestation is None
+                else self.attestation.fingerprint_sha256
+            ),
+            "execution_attestation_payload_bound": self.attestation is not None,
             "batch_wall_duration_ns": self.batch_wall_duration_ns,
             "batch_rss_start_bytes": self.batch_rss_start_bytes,
             "batch_rss_end_bytes": self.batch_rss_end_bytes,
@@ -1109,6 +1232,8 @@ class PoseBustersInternalOracleRuntimeObservationReceipt:
             "operator_signature_present": False,
             "physical_host_identity_proven": False,
             "independent_second_host_observation_present": False,
+            "execution_nonce_payload_bound": self.attestation is not None,
+            "observation_time_payload_bound": self.attestation is not None,
             "benchmark_executed": False,
             "scientific_blockers": list(
                 POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_BLOCKERS
@@ -1224,6 +1349,77 @@ def _implementation_source_sha256(
     return _canonical_sha256(dict(members))
 
 
+def _optional_attestation(
+    *,
+    host_identity_sha256: str | None,
+    execution_operator_identity_sha256: str | None,
+    execution_nonce_sha256: str | None,
+    observed_utc: str | None,
+) -> PoseBustersInternalOracleRuntimeAttestation | None:
+    provided = (
+        host_identity_sha256,
+        execution_operator_identity_sha256,
+        execution_nonce_sha256,
+        observed_utc,
+    )
+    if all(value is None for value in provided):
+        return None
+    if any(value is None for value in provided):
+        raise PoseBustersInternalOracleRuntimeObservationError(
+            "runtime attestation requires host, operator, nonce, and observed UTC"
+        )
+    return PoseBustersInternalOracleRuntimeAttestation(
+        host_identity_sha256=host_identity_sha256,  # type: ignore[arg-type]
+        execution_operator_identity_sha256=(
+            execution_operator_identity_sha256  # type: ignore[arg-type]
+        ),
+        execution_nonce_sha256=execution_nonce_sha256,  # type: ignore[arg-type]
+        observed_utc=observed_utc,  # type: ignore[arg-type]
+    )
+
+
+def _require_expected_attestation(
+    receipt: PoseBustersInternalOracleRuntimeObservationReceipt,
+    *,
+    expected_host_identity_sha256: str | None,
+    expected_execution_operator_identity_sha256: str | None,
+    expected_execution_nonce_sha256: str | None,
+) -> None:
+    expected = (
+        expected_host_identity_sha256,
+        expected_execution_operator_identity_sha256,
+        expected_execution_nonce_sha256,
+    )
+    if all(value is None for value in expected):
+        return
+    if any(value is None for value in expected):
+        raise PoseBustersInternalOracleRuntimeObservationError(
+            "expected attestation requires host, operator, and nonce digests"
+        )
+    attestation = receipt.attestation
+    if attestation is None:
+        raise PoseBustersInternalOracleRuntimeObservationError(
+            "runtime observation carries no payload-bound execution attestation"
+        )
+    if (
+        attestation.host_identity_sha256
+        != _digest(expected_host_identity_sha256, name="expected host identity")
+        or attestation.execution_operator_identity_sha256
+        != _digest(
+            expected_execution_operator_identity_sha256,
+            name="expected execution operator identity",
+        )
+        or attestation.execution_nonce_sha256
+        != _digest(
+            expected_execution_nonce_sha256,
+            name="expected execution nonce",
+        )
+    ):
+        raise PoseBustersInternalOracleRuntimeObservationError(
+            "runtime attestation does not match the expected execution binding"
+        )
+
+
 def materialize_posebusters_internal_oracle_runtime_observation(
     oracle_receipt_path: str | os.PathLike[str],
     internal_rmsd_receipt_path: str | os.PathLike[str],
@@ -1242,6 +1438,10 @@ def materialize_posebusters_internal_oracle_runtime_observation(
     expected_oracle_receipt_sha256: str,
     expected_internal_rmsd_receipt_sha256: str,
     expected_engine_wheel_sha256: str,
+    host_identity_sha256: str | None = None,
+    execution_operator_identity_sha256: str | None = None,
+    execution_nonce_sha256: str | None = None,
+    observed_utc: str | None = None,
     contract: PoseBustersArchiveContract = OFFICIAL_POSEBUSTERS_ARCHIVE_CONTRACT,
     preparation_configuration: PoseBustersInternalPreparationConfig | None = None,
     execution_configuration: PoseBustersInternalExecutionConfig | None = None,
@@ -1249,6 +1449,12 @@ def materialize_posebusters_internal_oracle_runtime_observation(
 ) -> PoseBustersInternalOracleRuntimeObservationReceipt:
     """Measure one exact internal-oracle reexecution without changing it."""
 
+    attestation = _optional_attestation(
+        host_identity_sha256=host_identity_sha256,
+        execution_operator_identity_sha256=execution_operator_identity_sha256,
+        execution_nonce_sha256=execution_nonce_sha256,
+        observed_utc=observed_utc,
+    )
     expected_oracle_sha = _digest(
         expected_oracle_receipt_sha256,
         name="expected internal-oracle receipt",
@@ -1344,6 +1550,7 @@ def materialize_posebusters_internal_oracle_runtime_observation(
         batch_sampled_peak_rss_bytes=measured.batch_sampled_peak_rss_bytes,
         batch_rss_sample_count=measured.batch_rss_sample_count,
         case_rows=case_rows,
+        attestation=attestation,
     )
     _require_oracle_binding(receipt, oracle, oracle_source)
     return receipt
@@ -1408,6 +1615,23 @@ def _load_runtime_observation_receipt(
         document.get("implementation_source_members"),
         name="runtime implementation members",
     )
+    raw_attestation = document.get("execution_attestation")
+    if raw_attestation is None:
+        attestation: PoseBustersInternalOracleRuntimeAttestation | None = None
+        if document.get("execution_attestation_sha256") is not None:
+            raise PoseBustersInternalOracleRuntimeObservationError(
+                "runtime attestation digest present without its record"
+            )
+    else:
+        attestation = PoseBustersInternalOracleRuntimeAttestation.from_dict(
+            _mapping(raw_attestation, name="runtime execution attestation")
+        )
+        if document.get("execution_attestation_sha256") != (
+            attestation.fingerprint_sha256
+        ):
+            raise PoseBustersInternalOracleRuntimeObservationError(
+                "runtime attestation digest does not match its record"
+            )
     receipt = PoseBustersInternalOracleRuntimeObservationReceipt(
         oracle_receipt_sha256=document.get("oracle_receipt_sha256"),  # type: ignore[arg-type]
         oracle_receipt_file_sha256=document.get("oracle_receipt_file_sha256"),  # type: ignore[arg-type]
@@ -1438,6 +1662,7 @@ def _load_runtime_observation_receipt(
         batch_sampled_peak_rss_bytes=document.get("batch_sampled_peak_rss_bytes"),  # type: ignore[arg-type]
         batch_rss_sample_count=document.get("batch_rss_sample_count"),  # type: ignore[arg-type]
         case_rows=rows,
+        attestation=attestation,
         schema_id=document.get("schema_id"),  # type: ignore[arg-type]
     )
     if source != _canonical_bytes(receipt.to_dict()) + b"\n":
@@ -1467,6 +1692,9 @@ def verify_posebusters_internal_oracle_runtime_observation_receipt(
     expected_oracle_receipt_sha256: str,
     expected_internal_rmsd_receipt_sha256: str,
     expected_engine_wheel_sha256: str,
+    expected_host_identity_sha256: str | None = None,
+    expected_execution_operator_identity_sha256: str | None = None,
+    expected_execution_nonce_sha256: str | None = None,
     contract: PoseBustersArchiveContract = OFFICIAL_POSEBUSTERS_ARCHIVE_CONTRACT,
     preparation_configuration: PoseBustersInternalPreparationConfig | None = None,
     execution_configuration: PoseBustersInternalExecutionConfig | None = None,
@@ -1540,6 +1768,14 @@ def verify_posebusters_internal_oracle_runtime_observation_receipt(
             "oracle receipt changed after exact verification"
         )
     _require_oracle_binding(receipt, oracle, oracle_source)
+    _require_expected_attestation(
+        receipt,
+        expected_host_identity_sha256=expected_host_identity_sha256,
+        expected_execution_operator_identity_sha256=(
+            expected_execution_operator_identity_sha256
+        ),
+        expected_execution_nonce_sha256=expected_execution_nonce_sha256,
+    )
     return receipt
 
 
@@ -1675,6 +1911,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 __all__ = [
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_BLOCKERS",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CASE_SCHEMA_ID",
+    "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ATTESTATION_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION_SHA256",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ENVIRONMENT_SCHEMA_ID",
@@ -1683,6 +1920,7 @@ __all__ = [
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_SAMPLE_INTERVAL_NS",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_WHEEL_SCHEMA_ID",
     "PoseBustersInternalOracleRuntimeCase",
+    "PoseBustersInternalOracleRuntimeAttestation",
     "PoseBustersInternalOracleRuntimeEnvironment",
     "PoseBustersInternalOracleRuntimeObservationError",
     "PoseBustersInternalOracleRuntimeObservationReceipt",

@@ -331,6 +331,7 @@ from .public_posebusters_internal_oracle_evaluation import (
     verify_posebusters_internal_oracle_evaluation_receipt,
 )
 from .public_posebusters_internal_oracle_runtime_observation import (
+    POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ATTESTATION_SCHEMA_ID,
     POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_BLOCKERS,
     POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CASE_SCHEMA_ID,
     POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION,
@@ -340,6 +341,7 @@ from .public_posebusters_internal_oracle_runtime_observation import (
     POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_OBSERVATION_SCHEMA_ID,
     POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_SAMPLE_INTERVAL_NS,
     POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_WHEEL_SCHEMA_ID,
+    PoseBustersInternalOracleRuntimeAttestation,
     PoseBustersInternalOracleRuntimeCase,
     PoseBustersInternalOracleRuntimeEnvironment,
     PoseBustersInternalOracleRuntimeObservationError,
@@ -1184,6 +1186,7 @@ __all__ = [
     "PoseBustersInternalOracleEvaluationError",
     "PoseBustersInternalOracleEvaluationReceipt",
     "PoseBustersInternalOraclePoseResult",
+    "PoseBustersInternalOracleRuntimeAttestation",
     "PoseBustersInternalOracleRuntimeCase",
     "PoseBustersInternalOracleRuntimeEnvironment",
     "PoseBustersInternalOracleRuntimeObservationError",
@@ -1497,6 +1500,7 @@ __all__ = [
     "POSEBUSTERS_INTERNAL_ORACLE_POSE_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_BLOCKERS",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CASE_SCHEMA_ID",
+    "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ATTESTATION_SCHEMA_ID",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_CONFIGURATION_SHA256",
     "POSEBUSTERS_INTERNAL_ORACLE_RUNTIME_ENVIRONMENT_SCHEMA_ID",

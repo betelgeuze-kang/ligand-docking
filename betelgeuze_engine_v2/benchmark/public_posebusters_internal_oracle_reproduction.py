@@ -119,7 +119,7 @@ POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CONFIGURATION = {
         "baseline_and_external_host_identities_distinct": True,
         "operator_and_executor_identities_role_separated": True,
         "single_use_external_execution_nonce_preregistered": True,
-        "external_observation_time_payload_bound": False,
+        "external_runtime_execution_attestation_payload_bound_required": True,
         "physical_host_independence_requires_external_review": True,
         "nonce_single_use_requires_external_registry_review": True,
     },
@@ -141,8 +141,6 @@ POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_CONFIGURATION_SHA256 = _canonical_sha25
 
 POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_SCIENTIFIC_BLOCKERS = (
     "upstream_runtime_and_stratification_receipts_are_unsigned_self_hash_only",
-    "runtime_observation_nonce_is_not_payload_bound",
-    "external_observation_time_is_not_runtime_payload_bound",
     "physical_host_identity_is_not_cryptographically_proven",
     "physical_host_independence_review_missing",
     "external_execution_nonce_single_use_registry_review_missing",
@@ -169,8 +167,8 @@ _WORK_ORDER_FLAGS = {
 _RESULT_FLAGS = {
     "external_execution_observed": True,
     "cross_host_comparison_present": True,
-    "runtime_observation_nonce_payload_bound": False,
-    "external_observation_time_payload_bound": False,
+    "runtime_observation_nonce_payload_bound": True,
+    "external_observation_time_payload_bound": True,
     "upstream_receipt_signatures_verified": False,
     "physical_host_independence_reviewed": False,
     "independent_external_rerun_present": False,
@@ -390,6 +388,51 @@ def _case_rows(payload: Mapping[str, Any], *, name: str) -> tuple[dict[str, Any]
             f"{name} case projection is invalid"
         )
     return rows
+
+
+def _payload_bound_attestation(
+    payload: Mapping[str, Any],
+    *,
+    name: str,
+) -> dict[str, Any]:
+    if payload.get("execution_attestation_payload_bound") is not True:
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} does not payload-bind an execution attestation"
+        )
+    attestation = _mapping(
+        payload.get("execution_attestation"),
+        name=f"{name} execution attestation",
+    )
+    if payload.get("execution_attestation_sha256") != _canonical_sha256(attestation):
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} execution attestation digest is invalid"
+        )
+    for field in (
+        "host_identity_cryptographically_proven",
+        "nonce_single_use_registry_reviewed",
+    ):
+        if attestation.get(field) is not False:
+            raise PoseBustersInternalOracleReproductionError(
+                f"{name} execution attestation must keep {field}=false"
+            )
+    return {
+        "host_identity_sha256": _digest(
+            attestation.get("host_identity_sha256"),
+            name=f"{name} attested host identity",
+        ),
+        "execution_operator_identity_sha256": _digest(
+            attestation.get("execution_operator_identity_sha256"),
+            name=f"{name} attested execution operator identity",
+        ),
+        "execution_nonce_sha256": _digest(
+            attestation.get("execution_nonce_sha256"),
+            name=f"{name} attested execution nonce",
+        ),
+        "observed_utc": _utc(
+            attestation.get("observed_utc"),
+            name=f"{name} attested observation UTC",
+        ),
+    }
 
 
 def _load_internal_chain(
@@ -1431,6 +1474,21 @@ def _build_reproduction_result(
     if external_runtime_wheel.get("sha256") != expected_wheel.get("sha256"):
         raise PoseBustersInternalOracleReproductionError(
             "external runtime did not execute the preregistered wheel"
+        )
+    attested = _payload_bound_attestation(
+        external.runtime.payload,
+        name="external runtime observation",
+    )
+    if (
+        attested["host_identity_sha256"] != host
+        or attested["execution_operator_identity_sha256"] != executor
+        or attested["execution_nonce_sha256"]
+        != work_order.payload.get("external_execution_nonce_sha256")
+        or attested["observed_utc"] != observed.strftime("%Y-%m-%dT%H:%M:%SZ")
+    ):
+        raise PoseBustersInternalOracleReproductionError(
+            "external runtime attestation does not bind the preregistered "
+            "host, executor, nonce, and observation time"
         )
     deterministic = compare_posebusters_internal_oracle_reproduction(
         baseline,

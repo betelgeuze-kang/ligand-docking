@@ -835,11 +835,20 @@ sampled RSS remain distinct observations; batch ratios are reported, but exact
 measurement equality is not required and no performance-equivalence threshold
 is defined.
 
+The external runtime observation must also payload-bind a canonical execution
+attestation. `PoseBustersInternalOracleRuntimeAttestation` carries the
+executing host identity, execution operator identity, single-use nonce, and
+observed UTC, and the measured receipt publishes both the record and its
+digest. The comparison recomputes that digest and requires each attested value
+to equal the preregistered work-order value exactly, so an unattested
+observation or a replayed nonce fails closed instead of passing as a second
+host. Attestation remains optional for ordinary unattested local measurements.
+
 This comparison is not itself proof of an independent physical-host run.
 Upstream runtime and stratification receipts are unsigned canonical
-self-hashes; the runtime payload does not bind the preregistered nonce or the
-asserted observation time, and it cannot cryptographically prove physical-host
-identity or nonce single use. Consequently a deterministic comparison may say
+self-hashes, and the attested host identity and nonce are self-declared: the
+receipt cannot cryptographically prove physical-host identity or prove that the
+nonce was used only once. Consequently a deterministic comparison may say
 `comparison_passed` while still fixing
 `physical_host_independence_reviewed=false`,
 `independent_external_rerun_present=false`,

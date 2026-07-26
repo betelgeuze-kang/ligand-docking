@@ -708,10 +708,13 @@ Implemented and GitHub-hosted CPU tested:
   the same wheel, exact oracle receipt identity, and exact equality of every
   runtime-free case/stratum/metric field, including failure and abstention
   rows. Runtime and sampled-RSS values are reported as separate observations
-  and ratios without an invented performance-equivalence threshold. Current
-  upstream receipts are unsigned self-hashes and do not payload-bind the nonce
-  or asserted observation time, prove a physical host, or prove nonce single
-  use. Therefore even a passing comparison retains
+  and ratios without an invented performance-equivalence threshold. The
+  external runtime observation must payload-bind a canonical execution
+  attestation whose host identity, execution operator identity, single-use
+  nonce, and observed UTC match the work order exactly; unattested or
+  replayed-nonce observations fail closed. Upstream receipts remain unsigned
+  self-hashes that cannot prove a physical host or nonce single use. Therefore
+  even a passing comparison retains
   `physical_host_independence_reviewed=false`,
   `independent_external_rerun_present=false`, `benchmark_executed=false`, and
   `claim_safe=false` pending independent custody and scientific review;
