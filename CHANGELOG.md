@@ -239,6 +239,24 @@ scientific claim from a package version.
   SMIRKS patterns are parsed as text and never matched against molecules, so
   atom typing, parameter assignment, partial charges, and masses remain
   unimplemented and `claim_safe=false` stays fixed.
+- Added a fail-closed SMIRKS pattern parser for the reviewed subset. The OFFXML
+  parser treated each pattern as opaque text, so nothing could reason about the
+  shape a parameter is able to match. Patterns now decompose into a typed query
+  graph: bracketed atom expressions with element, aromatic/aliphatic,
+  connectivity, explicit-degree, hydrogen-count, ring-membership, ring-size, and
+  formal-charge primitives; explicit bond primitives plus an implicit
+  single-or-aromatic bond between adjacent atoms; mapping indices; and
+  parenthesised branches that attach to their opening atom rather than chaining
+  linearly. Any token outside the reviewed subset fails closed, because a
+  silently dropped primitive would widen a parameter's match set: disjunction,
+  negation, recursive SMARTS, ring-closure digits, bare organic-subset atoms,
+  dangling or doubled bond primitives, unbalanced brackets and branches,
+  duplicate or out-of-range map indices, and oversized patterns are all
+  rejected. Query documents, atom expressions, and bond expressions are each
+  self-authenticating, and the validator rejects digest tamper, unsupported
+  primitive kinds, and any claim-open document. Parsing builds a query, not a
+  match: no molecule is traversed, so atom typing and parameter assignment
+  remain unimplemented and `claim_safe=false` stays fixed.
 
 ### Changed
 
