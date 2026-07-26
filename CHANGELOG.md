@@ -257,6 +257,24 @@ scientific claim from a package version.
   primitive kinds, and any claim-open document. Parsing builds a query, not a
   match: no molecule is traversed, so atom typing and parameter assignment
   remain unimplemented and `claim_safe=false` stays fixed.
+- Added fail-closed SMIRKS subgraph matching over canonical all-atom systems.
+  Parsed queries are now applied to molecules: every reviewed atom primitive is
+  evaluated against observed state, bond expressions are enforced rather than
+  ignored, atoms are never reused within one match, and each embedding is
+  returned as an atom tuple ordered by the query's mapping indices. Ring
+  primitives use ring membership and smallest-ring size perceived from the
+  canonical bond graph, and a query using a ring primitive on a system whose
+  perception is incomplete fails closed instead of guessing. Unreviewed bond
+  orders and unparseable patterns also fail closed.
+  When several parameters match the same mapped atom tuple, resolution follows
+  the SMIRNOFF rule that the last declared parameter wins, and every superseded
+  candidate is retained so the outcome is auditable rather than implicit.
+  Match-set and assignment documents are self-authenticating; their validators
+  reject digest tamper, substitution of a different conflict rule, and any
+  claim-open document. Aromaticity and implicit hydrogens are read from the
+  canonical system rather than perceived, no matched parameter value is applied
+  to any energy term, and independent review is absent, so `claim_safe=false`
+  stays fixed.
 
 ### Changed
 
