@@ -223,6 +223,22 @@ scientific claim from a package version.
   `parameter_provenance_per_atom_not_established` and the new
   `per_atom_parameter_values_not_assigned` blocker stay listed and
   `claim_safe=false` stays fixed.
+- Added a fail-closed SMIRNOFF OFFXML semantic parser. The reviewed parameter
+  source had been bound by release identity only, so every downstream receipt
+  reported that OFFXML parsing was unimplemented. The parser verifies the
+  caller-supplied artifact against the reviewed size and digest, rejects
+  symlinks, rejects any document type or entity declaration, requires a
+  supported SMIRNOFF version, requires all six handler sections with declared
+  versions, and rejects repeated or empty parameter sections. Each parameter
+  entry becomes a canonical row with its SMIRKS text, identifier, and exact
+  binary64 values; units are read from the file and never inferred, and a value
+  carrying a unit outside the reviewed allow-list fails closed. Documents,
+  handler sections, and parameter entries are individually
+  self-authenticating, and the validator rejects digest tamper, an artifact that
+  is not the reviewed release, and any attempt to publish a claim-open document.
+  SMIRKS patterns are parsed as text and never matched against molecules, so
+  atom typing, parameter assignment, partial charges, and masses remain
+  unimplemented and `claim_safe=false` stays fixed.
 
 ### Changed
 
