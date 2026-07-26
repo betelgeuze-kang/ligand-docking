@@ -98,10 +98,20 @@ scientific claim from a package version.
   the pinned PoseBusters 0.6.5 `redock` full report, and records complete
   physical-validity/RMSD report rows plus internal/oracle RMSD deltas and every
   adapter, pose, or upstream failure. Production execution of the official
-  cohort, target/chemistry strata, runtime measurements, same-input external
+  cohort, target/chemistry strata, official-cohort runtime measurements, same-input external
   baselines, second-host reproduction, bundle validation, and independent
   review remain explicit blockers; no public benchmark result or docking claim
   is opened.
+- Added a wheel/source-bound runtime observation companion for exact internal-
+  oracle reexecution. It retains downstream-oracle-loop per-case and full-chain
+  batch `perf_counter_ns` duration,
+  synchronous case-boundary RSS, 5 ms background sampled peak RSS, runtime
+  environment identity, and all blocked/failure rows without changing the
+  deterministic oracle receipt. Sampled RSS is not a kernel-enforced isolated
+  peak, observer overhead remains included, and measurements are unsigned and
+  intentionally not byte-reproducible. Official-cohort execution, second-host
+  observation, full-pipeline per-case breakdown, target/chemistry strata,
+  external-baseline bundling, validation, and review remain required.
 
 ### Changed
 

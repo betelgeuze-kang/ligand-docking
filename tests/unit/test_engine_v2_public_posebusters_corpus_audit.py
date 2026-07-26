@@ -34,6 +34,7 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     public_posebusters_external_preparation as external_preparation_module,
     public_posebusters_generated_pose_evaluation as generated_pose_module,
     public_posebusters_internal_oracle_evaluation as internal_oracle_module,
+    public_posebusters_internal_oracle_runtime_observation as internal_oracle_runtime_module,
     public_posebusters_rcsb_target_family_binding as rcsb_target_family_module,
     public_posebusters_target_cluster_binding as target_cluster_module,
     public_posebusters_vina_execution as vina_execution_module,
@@ -101,6 +102,11 @@ from betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_evaluatio
     PoseBustersInternalOracleEvaluationError,
     materialize_posebusters_internal_oracle_evaluation,
     verify_posebusters_internal_oracle_evaluation_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_runtime_observation import (  # noqa: E402
+    PoseBustersInternalOracleRuntimeObservationError,
+    materialize_posebusters_internal_oracle_runtime_observation,
+    verify_posebusters_internal_oracle_runtime_observation_receipt,
 )
 from betelgeuze_engine_v2.benchmark.redocking_cli import (  # noqa: E402
     verify_redocking_diagnostic_report,
@@ -379,6 +385,79 @@ def _valid_internal_preparation_fixture(
     )
     intake.write_json(intake_path)
     return archive_path, selection_path, intake_path, contract
+
+
+def _internal_oracle_runtime_engine_wheel(root: Path) -> tuple[Path, str]:
+    root.mkdir(parents=True, exist_ok=True)
+    wheel_path = root / "betelgeuze_engine_v2-0.3.0a1-py3-none-any.whl"
+    repository_root = Path(internal_oracle_runtime_module.__file__).resolve().parents[2]
+    with zipfile.ZipFile(
+        wheel_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        for member_path in sorted(
+            internal_oracle_runtime_module._ENGINE_SOURCE_MEMBERS.values()
+        ):
+            info = zipfile.ZipInfo(member_path)
+            info.external_attr = (stat.S_IFREG | 0o644) << 16
+            archive.writestr(
+                info,
+                (repository_root / member_path).read_bytes(),
+                compress_type=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
+            )
+        metadata = zipfile.ZipInfo(
+            "betelgeuze_engine_v2-0.3.0a1.dist-info/METADATA"
+        )
+        metadata.external_attr = (stat.S_IFREG | 0o644) << 16
+        archive.writestr(
+            metadata,
+            (
+                "Metadata-Version: 2.4\n"
+                "Name: betelgeuze-engine-v2\n"
+                "Version: 0.3.0a1\n\n"
+            ).encode("ascii"),
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
+        )
+    return wheel_path, _sha(wheel_path.read_bytes())
+
+
+def test_internal_oracle_runtime_sampler_records_case_boundaries() -> None:
+    clock_values = iter((100, 110, 160, 200))
+    rss_values = iter((1_000, 1_100, 1_300, 1_200))
+    session = internal_oracle_runtime_module._RuntimeMeasurementSession(
+        clock=lambda: next(clock_values),
+        rss_reader=lambda: next(rss_values),
+        sample_interval_ns=1_000_000_000,
+    )
+    session.start()
+    session.case_started("1ABC_ABC")
+    session.case_finished(
+        internal_oracle_module.PoseBustersInternalOracleCase(
+            case_id="1ABC_ABC",
+            status="blocked_upstream",
+            disposition_code="blocked_by_internal_rmsd_disposition",
+            internal_rmsd_status="blocked_execution",
+            selected_pose_count=0,
+            oracle_attempted=False,
+        )
+    )
+    measured = session.finish()
+
+    assert measured.batch_wall_duration_ns == 100
+    assert measured.batch_sampled_peak_rss_bytes == 1_300
+    assert measured.batch_rss_sample_count == 4
+    assert len(measured.case_rows) == 1
+    row = measured.case_rows[0]
+    assert row.case_id == "1ABC_ABC"
+    assert row.wall_duration_ns == 50
+    assert row.rss_start_bytes == 1_100
+    assert row.rss_end_bytes == 1_300
+    assert row.sampled_peak_rss_bytes == 1_300
+    assert row.rss_sample_count == 2
 
 
 def test_corpus_audit_retains_all_cases_and_separates_scope_metrics(
@@ -877,6 +956,81 @@ def test_internal_execution_runs_prepared_case_and_is_exactly_reexecutable(
     assert verified_oracle.fingerprint_sha256 == oracle.fingerprint_sha256
     assert successful_runtime.calls == 2
     assert stat.S_IMODE(oracle_path.stat().st_mode) == 0o600
+
+    engine_wheel_path, engine_wheel_sha256 = (
+        _internal_oracle_runtime_engine_wheel(tmp_path / "engine-wheel")
+    )
+    runtime_common = {
+        **oracle_common,
+        "oracle_receipt_path": oracle_path,
+        "engine_wheel_path": engine_wheel_path,
+        "expected_oracle_receipt_sha256": oracle.fingerprint_sha256,
+        "expected_engine_wheel_sha256": engine_wheel_sha256,
+    }
+    runtime_observation = (
+        materialize_posebusters_internal_oracle_runtime_observation(
+            **runtime_common
+        )
+    )
+    assert len(runtime_observation.case_rows) == 1
+    runtime_row = runtime_observation.case_rows[0]
+    assert runtime_row.case_id == oracle_row.case_id
+    assert runtime_row.oracle_status == "evaluated"
+    assert runtime_row.wall_duration_ns >= 0
+    assert runtime_row.rss_sample_count >= 2
+    assert runtime_row.sampled_peak_rss_bytes >= max(
+        runtime_row.rss_start_bytes,
+        runtime_row.rss_end_bytes,
+    )
+    runtime_payload = runtime_observation.to_dict()
+    assert runtime_payload["all_failure_rows_measured"] is True
+    assert runtime_payload["wall_clock_runtime_measurements_present"] is True
+    assert runtime_payload["sampled_peak_rss_measurements_present"] is True
+    assert runtime_payload["batch_full_chain_runtime_memory_measured"] is True
+    assert (
+        runtime_payload[
+            "per_case_posebusters_oracle_loop_runtime_memory_measured"
+        ]
+        is True
+    )
+    assert (
+        runtime_payload[
+            "per_case_full_redocking_pipeline_runtime_memory_measured"
+        ]
+        is False
+    )
+    assert runtime_payload["kernel_exact_case_peak_memory_measurements_present"] is False
+    assert runtime_payload["benchmark_executed"] is False
+    assert runtime_payload["claim_safe"] is False
+
+    runtime_path = tmp_path / "receipts" / "internal-oracle-runtime.json"
+    runtime_observation.write_json(runtime_path)
+    verified_runtime = (
+        verify_posebusters_internal_oracle_runtime_observation_receipt(
+            runtime_observation_receipt_path=runtime_path,
+            expected_runtime_observation_receipt_sha256=(
+                runtime_observation.fingerprint_sha256
+            ),
+            **runtime_common,
+        )
+    )
+    assert verified_runtime.fingerprint_sha256 == (
+        runtime_observation.fingerprint_sha256
+    )
+    assert stat.S_IMODE(runtime_path.stat().st_mode) == 0o600
+    runtime_path.write_bytes(runtime_path.read_bytes() + b" ")
+    with pytest.raises(
+        PoseBustersInternalOracleRuntimeObservationError,
+        match="not canonical or self-authenticating",
+    ):
+        verify_posebusters_internal_oracle_runtime_observation_receipt(
+            runtime_observation_receipt_path=runtime_path,
+            expected_runtime_observation_receipt_sha256=(
+                runtime_observation.fingerprint_sha256
+            ),
+            **runtime_common,
+        )
+
     oracle_path.write_bytes(oracle_path.read_bytes() + b" ")
     with pytest.raises(
         PoseBustersInternalOracleEvaluationError,
@@ -1065,6 +1219,43 @@ def test_internal_execution_retains_preparation_failure_and_abstention(
         for metric in oracle.metrics
         if metric.denominator_scope == "all_cases"
     )
+
+    oracle_path = tmp_path / "receipts" / "internal-oracle.json"
+    oracle.write_json(oracle_path)
+    engine_wheel_path, engine_wheel_sha256 = (
+        _internal_oracle_runtime_engine_wheel(tmp_path / "engine-wheel")
+    )
+    runtime_observation = (
+        materialize_posebusters_internal_oracle_runtime_observation(
+            oracle_path,
+            rmsd_path,
+            execution_path,
+            tmp_path / "internal-redocking",
+            preparation_path,
+            preparation_artifact_root,
+            archive_path,
+            selection_path,
+            intake_path,
+            corpus_path,
+            tmp_path / "posebusters.whl",
+            engine_wheel_path,
+            tmp_path / "posebusters-scratch",
+            expected_oracle_receipt_sha256=oracle.fingerprint_sha256,
+            expected_internal_rmsd_receipt_sha256=(
+                rmsd_receipt.fingerprint_sha256
+            ),
+            expected_engine_wheel_sha256=engine_wheel_sha256,
+            contract=contract,
+            execution_configuration=execution_configuration,
+        )
+    )
+    assert tuple(row.oracle_status for row in runtime_observation.case_rows) == (
+        "blocked_upstream",
+        "blocked_upstream",
+    )
+    assert len(runtime_observation.case_rows) == 2
+    assert all(row.rss_sample_count >= 2 for row in runtime_observation.case_rows)
+    assert blocked_runtime.calls == 0
 
 
 def test_native_geometry_preflight_is_all_case_claim_closed_and_reexecutable(

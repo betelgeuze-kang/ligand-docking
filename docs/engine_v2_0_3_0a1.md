@@ -39,6 +39,10 @@ Execution:    CPU reference
   pinned PoseBusters 0.6.5 `redock` full-report oracle, retaining every report
   value, physical-validity/RMSD flag, failure row, internal/oracle RMSD delta,
   and exact reexecution identity;
+- a separate Engine-wheel/source/environment-bound observer that measures one
+  exact oracle reexecution with full-chain batch and downstream-oracle-loop
+  per-case wall duration plus sampled Linux RSS while preserving all failure
+  and abstention rows;
 - public evaluator report schema v2 with one mapping for RMSD and validity;
 - fatal separation of internal evaluator defects from retained case failures.
 
@@ -84,8 +88,11 @@ or real-molecule applicability evidence. The cohort chain measures bounded
 connectivity-symmetry RMSD and can apply the pinned PoseBusters validity/RMSD
 oracle to reconstructed internal poses, but no official full-cohort production
 receipt is bundled. It does not report target-family or chemistry strata,
-wall-clock/peak-memory metrics, same-input external-engine comparisons, or a
-second-host/independent rerun and review. The steric field uses fixed
+same-input external-engine comparisons, or a second-host/independent rerun and
+review. The runtime companion supplies local wall-duration and sampled-RSS
+observations, but not a kernel-enforced isolated peak, overhead-free timing,
+full-pipeline per-case breakdown, operator signature, or physical-host proof.
+The steric field uses fixed
 uncalibrated radii and omits electrostatics, hydrogen bonding, desolvation,
 solvent/cofactor response, and receptor flexibility. Accordingly, the release does not
 establish chemical applicability, calibrated pose generation or scoring,

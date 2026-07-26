@@ -746,11 +746,38 @@ byte-exact upstream and oracle reexecution.
 
 This boundary does not regenerate poses and does not make the internal scorer
 or refiner scientifically valid. No official 308-case production result is
-bundled. Target-family and chemistry strata, wall-clock and peak-memory
+bundled. Target-family and chemistry strata, official-cohort wall-clock and peak-memory
 measurements, same-input Vina/GNINA/Smina comparison, second-host independent
 rerun, public result-bundle validation, and scientific review remain explicit
 blockers. Accordingly `benchmark_executed=false`,
 `scientifically_validated=false`, and `claim_safe=false` are fixed.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_runtime_observation`
+adds a non-deterministic measurement companion without changing the oracle
+payload. The installed
+`betelgeuze-engine-v2-posebusters-internal-oracle-runtime` command requires an
+out-of-band expected Engine v2 wheel hash and expected oracle hash, verifies
+that the wheel contains the exact executing observer/oracle/runtime source
+bytes, and performs one byte-exact oracle reexecution through a private case
+observer. It records batch and per-case `perf_counter_ns` wall duration,
+synchronous boundary RSS samples, and 5 ms background RSS samples from bounded
+Linux `/proc/self/statm`. Batch measurements cover the complete exact
+upstream+oracle chain; per-case measurements cover only the downstream
+PoseBusters oracle loop and are not a full redocking-pipeline stage breakdown.
+Every oracle status, including upstream failure and abstention, remains in the
+original case projection. The receipt also binds the
+Python executable, CPU/platform projection, distribution versions, page size,
+and a fixed safe environment-variable allowlist.
+
+The verifier reexecutes the deterministic oracle and validates the measurement
+receipt's canonical identity, wheel, source, case, result, and environment
+bindings; it does not pretend timing or memory values can be reproduced exactly.
+The sampled peak may miss a sub-sampling-interval transient and is not a
+kernel-enforced isolated-case maximum. Sampling overhead is included. The
+receipt is unsigned and does not prove physical host identity, an independent
+second-host observation, full-pipeline per-case runtime, statistical benchmark
+completion, or scientific review. Consequently `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` remain fixed.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The

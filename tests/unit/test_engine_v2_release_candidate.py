@@ -95,6 +95,10 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
             "betelgeuze_engine_v2.benchmark."
             "public_posebusters_internal_oracle_evaluation:main"
         ),
+        "betelgeuze-engine-v2-posebusters-internal-oracle-runtime": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_internal_oracle_runtime_observation:main"
+        ),
         "betelgeuze-engine-v2-posebusters-external-prepare": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
         ),
@@ -291,6 +295,7 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert "betelgeuze-engine-v2-posebusters-internal-execute" in workflow
     assert "betelgeuze-engine-v2-posebusters-internal-rmsd" in workflow
     assert "betelgeuze-engine-v2-posebusters-internal-oracle" in workflow
+    assert "betelgeuze-engine-v2-posebusters-internal-oracle-runtime" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-execute" in workflow
     assert "betelgeuze-engine-v2-posebusters-external-evaluate-generated" in workflow

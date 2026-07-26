@@ -45,6 +45,7 @@ betelgeuze-engine-v2-posebusters-internal-prepare = "betelgeuze_engine_v2.benchm
 betelgeuze-engine-v2-posebusters-internal-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_execution:main"
 betelgeuze-engine-v2-posebusters-internal-rmsd = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_rmsd_evaluation:main"
 betelgeuze-engine-v2-posebusters-internal-oracle = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_evaluation:main"
+betelgeuze-engine-v2-posebusters-internal-oracle-runtime = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_runtime_observation:main"
 betelgeuze-engine-v2-posebusters-external-prepare = "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
 betelgeuze-engine-v2-posebusters-external-execute = "betelgeuze_engine_v2.benchmark.public_posebusters_external_binary_execution:main"
 betelgeuze-engine-v2-posebusters-external-evaluate-generated = "betelgeuze_engine_v2.benchmark.public_posebusters_external_generated_pose_evaluation:main"

@@ -19,7 +19,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Protocol, Sequence
 import zipfile
 
 import torch
@@ -680,6 +680,14 @@ class PoseBustersInternalOracleCase:
         }
 
 
+class _InternalOracleCaseObserver(Protocol):
+    def case_started(self, case_id: str) -> None: ...
+
+    def case_finished(self, row: PoseBustersInternalOracleCase) -> None: ...
+
+    def case_aborted(self, case_id: str) -> None: ...
+
+
 def _summary_metrics(
     rows: Sequence[PoseBustersInternalOracleCase],
 ) -> tuple[PoseBustersGeneratedPoseMetric, ...]:
@@ -1319,6 +1327,7 @@ def _build_evaluation(
     preparation_configuration: PoseBustersInternalPreparationConfig | None,
     execution_configuration: PoseBustersInternalExecutionConfig,
     rmsd_configuration: PoseBustersInternalRMSDConfig,
+    case_observer: _InternalOracleCaseObserver | None = None,
 ) -> PoseBustersInternalOracleEvaluationReceipt:
     expected_rmsd_sha256 = _digest(
         expected_internal_rmsd_receipt_sha256,
@@ -1404,21 +1413,34 @@ def _build_evaluation(
         with os.fdopen(descriptor, "rb", closefd=False) as handle:
             try:
                 with zipfile.ZipFile(handle, "r") as archive:
-                    rows = tuple(
-                        _evaluate_case(
-                            archive,
-                            intake_row,
-                            rmsd_row,
-                            Path(preparation_artifact_root),
-                            Path(execution_artifact_root),
-                            runtime,
-                        )
-                        for intake_row, rmsd_row in zip(
-                            intake.case_rows,
-                            rmsd.case_rows,
-                            strict=True,
-                        )
-                    )
+                    observed_rows: list[PoseBustersInternalOracleCase] = []
+                    for intake_row, rmsd_row in zip(
+                        intake.case_rows,
+                        rmsd.case_rows,
+                        strict=True,
+                    ):
+                        if case_observer is not None:
+                            case_observer.case_started(rmsd_row.case_id)
+                        try:
+                            observed = _evaluate_case(
+                                archive,
+                                intake_row,
+                                rmsd_row,
+                                Path(preparation_artifact_root),
+                                Path(execution_artifact_root),
+                                runtime,
+                            )
+                        except BaseException:
+                            if case_observer is not None:
+                                try:
+                                    case_observer.case_aborted(rmsd_row.case_id)
+                                except BaseException:
+                                    pass
+                            raise
+                        if case_observer is not None:
+                            case_observer.case_finished(observed)
+                        observed_rows.append(observed)
+                    rows = tuple(observed_rows)
             except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
                 raise PoseBustersInternalOracleEvaluationError(
                     "internal-oracle evaluation failed bounded ZIP access"
@@ -1495,6 +1517,73 @@ def materialize_posebusters_internal_oracle_evaluation(
     )
 
 
+def _verify_posebusters_internal_oracle_evaluation_receipt(
+    oracle_receipt_path: str | os.PathLike[str],
+    internal_rmsd_receipt_path: str | os.PathLike[str],
+    execution_receipt_path: str | os.PathLike[str],
+    execution_artifact_root: str | os.PathLike[str],
+    preparation_receipt_path: str | os.PathLike[str],
+    preparation_artifact_root: str | os.PathLike[str],
+    archive_path: str | os.PathLike[str],
+    selection_path: str | os.PathLike[str],
+    intake_receipt_path: str | os.PathLike[str],
+    corpus_audit_receipt_path: str | os.PathLike[str],
+    posebusters_wheel_path: str | os.PathLike[str],
+    scratch_root: str | os.PathLike[str],
+    *,
+    expected_internal_rmsd_receipt_sha256: str,
+    contract: PoseBustersArchiveContract = OFFICIAL_POSEBUSTERS_ARCHIVE_CONTRACT,
+    preparation_configuration: PoseBustersInternalPreparationConfig | None = None,
+    execution_configuration: PoseBustersInternalExecutionConfig | None = None,
+    rmsd_configuration: PoseBustersInternalRMSDConfig | None = None,
+    case_observer: _InternalOracleCaseObserver | None = None,
+) -> PoseBustersInternalOracleEvaluationReceipt:
+    """Internal exact verifier with an optional non-payload observer."""
+
+    source = _read_exact_regular_file(
+        oracle_receipt_path,
+        maximum_bytes=POSEBUSTERS_INTERNAL_ORACLE_MAX_RECEIPT_BYTES,
+    )
+    execution_active = (
+        PoseBustersInternalExecutionConfig()
+        if execution_configuration is None
+        else execution_configuration
+    )
+    rmsd_active = (
+        PoseBustersInternalRMSDConfig()
+        if rmsd_configuration is None
+        else rmsd_configuration
+    )
+    if not isinstance(execution_active, PoseBustersInternalExecutionConfig):
+        raise TypeError("execution_configuration has the wrong type")
+    if not isinstance(rmsd_active, PoseBustersInternalRMSDConfig):
+        raise TypeError("rmsd_configuration has the wrong type")
+    expected = _build_evaluation(
+        internal_rmsd_receipt_path,
+        execution_receipt_path,
+        execution_artifact_root,
+        preparation_receipt_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_receipt_path,
+        corpus_audit_receipt_path,
+        posebusters_wheel_path,
+        scratch_root,
+        expected_internal_rmsd_receipt_sha256=(expected_internal_rmsd_receipt_sha256),
+        contract=contract,
+        preparation_configuration=preparation_configuration,
+        execution_configuration=execution_active,
+        rmsd_configuration=rmsd_active,
+        case_observer=case_observer,
+    )
+    if source != _canonical_bytes(expected.to_dict()) + b"\n":
+        raise PoseBustersInternalOracleEvaluationError(
+            "internal-oracle receipt does not match exact reexecution"
+        )
+    return expected
+
+
 def verify_posebusters_internal_oracle_evaluation_receipt(
     oracle_receipt_path: str | os.PathLike[str],
     internal_rmsd_receipt_path: str | os.PathLike[str],
@@ -1517,11 +1606,8 @@ def verify_posebusters_internal_oracle_evaluation_receipt(
 ) -> PoseBustersInternalOracleEvaluationReceipt:
     """Require byte-exact internal-oracle reexecution and receipt equality."""
 
-    source = _read_exact_regular_file(
+    return _verify_posebusters_internal_oracle_evaluation_receipt(
         oracle_receipt_path,
-        maximum_bytes=POSEBUSTERS_INTERNAL_ORACLE_MAX_RECEIPT_BYTES,
-    )
-    expected = materialize_posebusters_internal_oracle_evaluation(
         internal_rmsd_receipt_path,
         execution_receipt_path,
         execution_artifact_root,
@@ -1533,17 +1619,15 @@ def verify_posebusters_internal_oracle_evaluation_receipt(
         corpus_audit_receipt_path,
         posebusters_wheel_path,
         scratch_root,
-        expected_internal_rmsd_receipt_sha256=(expected_internal_rmsd_receipt_sha256),
+        expected_internal_rmsd_receipt_sha256=(
+            expected_internal_rmsd_receipt_sha256
+        ),
         contract=contract,
         preparation_configuration=preparation_configuration,
         execution_configuration=execution_configuration,
         rmsd_configuration=rmsd_configuration,
+        case_observer=None,
     )
-    if source != _canonical_bytes(expected.to_dict()) + b"\n":
-        raise PoseBustersInternalOracleEvaluationError(
-            "internal-oracle receipt does not match exact reexecution"
-        )
-    return expected
 
 
 def _parser() -> argparse.ArgumentParser:

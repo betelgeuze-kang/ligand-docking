@@ -660,9 +660,25 @@ Implemented and GitHub-hosted CPU tested:
   upstream rows remain authenticated in the original all-case denominator.
   This is an executable evidence carrier, not a completed public result: no
   official 308-case production receipt is bundled, and target/chemistry strata,
-  runtime/memory measurements, same-input external-engine comparisons,
+  official-cohort runtime/memory measurements, same-input external-engine comparisons,
   second-host rerun, bundle validation, and independent scientific review are
   still missing. Therefore `benchmark_executed=false` and `claim_safe=false`;
+- an installable runtime/RSS observation companion,
+  `betelgeuze-engine-v2-posebusters-internal-oracle-runtime`. It reexecutes the
+  exact deterministic oracle receipt with a payload-independent case observer,
+  records `perf_counter_ns` wall duration and Linux `/proc/self/statm` sampled
+  RSS at every downstream oracle-loop case boundary plus a 5 ms background
+  sampler, and retains measurements for evaluated, failed, blocked, and
+  abstained rows. Batch measurements cover the complete exact upstream+oracle
+  reexecution; per-case measurements cover only the downstream PoseBusters
+  oracle loop, not a full redocking-stage breakdown. The receipt
+  binds the unchanged oracle result, exact executing source bytes, a caller-
+  anchored Engine v2 wheel, Python/CPU/dependency projection, safe runtime
+  variables, and batch/case measurement summaries. Measurement values are
+  deliberately not claimed to be byte-reexecutable. RSS is sampled rather than
+  a kernel-enforced isolated case maximum; observer overhead is not subtracted,
+  and the local receipt is unsigned with no physical-host proof or second-host
+  observation. Therefore `benchmark_executed=false` and `claim_safe=false`;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,
