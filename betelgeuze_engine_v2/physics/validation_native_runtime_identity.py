@@ -1433,12 +1433,34 @@ def _evidence_document(
     return {**plain_projection, hash_field: _sha256(plain_projection)}
 
 
+def _optional_process_launch_identity(
+    value: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Validate an optional Linux process launch identity document."""
+
+    if value is None:
+        return None
+    from betelgeuze_engine_v2.physics.validation_process_launch_identity import (
+        ValidationProcessLaunchIdentityError,
+        require_process_launch_identity_document,
+    )
+
+    try:
+        document = require_process_launch_identity_document(value)
+    except ValidationProcessLaunchIdentityError as exc:
+        raise ValidationNativeRuntimeIdentityError(
+            "worker process launch identity document is invalid"
+        ) from exc
+    return _plain_copy(document)
+
+
 def build_worker_runtime_pre_evidence(
     *,
     lane: str,
     worker_request_sha256: str,
     snapshot: Mapping[str, Any] | None = None,
     deadline: float | None = None,
+    process_launch_identity: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the worker's pre-payload native-runtime phase evidence."""
 
@@ -1449,6 +1471,7 @@ def build_worker_runtime_pre_evidence(
         if snapshot is None
         else require_native_runtime_snapshot(snapshot)
     )
+    checked_launch = _optional_process_launch_identity(process_launch_identity)
     return _evidence_document(
         {
             "schema_id": WORKER_RUNTIME_PRE_EVIDENCE_SCHEMA_ID,
@@ -1456,6 +1479,7 @@ def build_worker_runtime_pre_evidence(
             "lane": checked_lane,
             "worker_request_sha256": checked_request,
             "snapshot": checked_snapshot,
+            "process_launch_identity": checked_launch,
         },
         hash_field="evidence_sha256",
     )
@@ -1475,6 +1499,7 @@ def require_worker_runtime_pre_evidence(
         "lane",
         "worker_request_sha256",
         "snapshot",
+        "process_launch_identity",
         "evidence_sha256",
     }
     if not isinstance(value, Mapping) or set(value) != fields:
@@ -1502,12 +1527,16 @@ def require_worker_runtime_pre_evidence(
             "worker runtime pre evidence binding is invalid"
         )
     snapshot = require_native_runtime_snapshot(observed["snapshot"])
+    launch_identity = _optional_process_launch_identity(
+        observed["process_launch_identity"]
+    )
     projection = {
         "schema_id": WORKER_RUNTIME_PRE_EVIDENCE_SCHEMA_ID,
         "phase": "pre",
         "lane": lane,
         "worker_request_sha256": request_sha256,
         "snapshot": snapshot,
+        "process_launch_identity": launch_identity,
     }
     expected = _evidence_document(projection, hash_field="evidence_sha256")
     _require_sha256(observed["evidence_sha256"], name="worker runtime pre evidence")

@@ -185,7 +185,7 @@ _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS = {
 }
 REFERENCE_MINIMIZATION_VALIDATION_RUNNER_START_PREFIX = "reference-minimization-validation-runner-start-"
 FROZEN_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256 = (
-    "a9ef77fca1518cb867f025e72257d52c4cac8b2c38e6a19e7584a07cdaa7ec82"
+    "3b82fb531376b6ea85c88581a5e6789b7a1d83f5da5373ada8c6e83cc932b7f4"
 )
 FROZEN_LEGACY_REFERENCE_MINIMIZATION_VALIDATION_RUNNER_CONTRACT_SHA256_V8 = (
     "4adfcff369a581725784ef2552e2db5ed3c803f717babcf3a43ff63dbc414f09"
@@ -285,6 +285,54 @@ def _require_process_id(value: object, *, name: str) -> int:
     if type(value) is not int or value <= 0 or value > 2**31 - 1:
         raise ReferenceMinimizationValidationRunnerError(f"{name} must be a positive process id")
     return value
+
+
+def _optional_worker_process_launch_identity() -> dict[str, Any] | None:
+    """Measure this worker's Linux launch identity, or None when unavailable."""
+
+    try:
+        from betelgeuze_engine_v2.physics.validation_process_launch_identity import (
+            ValidationProcessLaunchIdentityError,
+            measure_process_launch_identity,
+        )
+
+        return measure_process_launch_identity()
+    except (ImportError, ValidationProcessLaunchIdentityError, OSError):
+        return None
+
+
+def _require_worker_launch_identity_matches_child(
+    value: object,
+    *,
+    supervisor_child_process_id: int,
+) -> None:
+    """Require any retained worker launch identity to name the supervised child."""
+
+    if value is None:
+        return
+    if not isinstance(value, Mapping):
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker process launch identity must be an object"
+        )
+    if value.get("pid") != supervisor_child_process_id:
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker process launch identity does not name the supervised child"
+        )
+    supervisor_boot_id = _optional_supervisor_boot_id()
+    if supervisor_boot_id is not None and value.get("boot_id") != supervisor_boot_id:
+        raise ReferenceMinimizationValidationRunnerError(
+            "worker process launch identity was not measured on this boot"
+        )
+
+
+def _optional_supervisor_boot_id() -> str | None:
+    """Measure this supervisor's Linux boot id, or None when unavailable."""
+
+    identity = _optional_worker_process_launch_identity()
+    if identity is None:
+        return None
+    boot_id = identity.get("boot_id")
+    return boot_id if isinstance(boot_id, str) else None
 
 
 def _require_sha256(value: object, *, name: str) -> str:
@@ -1084,6 +1132,9 @@ def _contract_projection() -> dict[str, Any]:
             "incomplete_bounded_partial_transcript_hash_length_prefix_suffix_and_discard_audit_retained": True,
             "incomplete_raw_partial_transcript_inlined": False,
             "incomplete_raw_partial_transcript_independently_replayable": False,
+            "worker_process_launch_identity_retained_when_measurable": True,
+            "retained_worker_launch_identity_pid_must_equal_supervisor_child": True,
+            "worker_launch_identity_is_same_boot_best_effort_not_host_authentication": True,
             "process_starttime_and_boot_id_bound": False,
             "native_runtime_pre_and_post_snapshot_evidence_required": True,
             "native_runtime_pre_post_snapshot_equality_verified": True,
@@ -2716,6 +2767,7 @@ def _matrix_worker_main_from_standard_streams() -> int:
         pre_evidence = build_worker_runtime_pre_evidence(
             lane=WORKER_RUNTIME_LANE_MINIMIZATION,
             worker_request_sha256=request_sha256,
+            process_launch_identity=_optional_worker_process_launch_identity(),
         )
         pre_frame = _finalize_matrix_worker_frame(
             {
@@ -3113,6 +3165,10 @@ def _decode_complete_matrix_worker_transcript(
         )
     except ValidationNativeRuntimeIdentityError as exc:
         raise ReferenceMinimizationValidationRunnerError("matrix worker preflight runtime evidence is invalid") from exc
+    _require_worker_launch_identity_matches_child(
+        pre_evidence.get("process_launch_identity"),
+        supervisor_child_process_id=child_process_id,
+    )
 
     expected_ids = [row["case_id"] for row in cpu_minimization_validation_protocol_document()["case_manifest"]["cases"]]
     previous_frame_sha256 = pre_frame["frame_sha256"]

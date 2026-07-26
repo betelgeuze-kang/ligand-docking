@@ -25,6 +25,7 @@ import betelgeuze_engine_v2.physics.reference_minimization_validation_result_wri
 import betelgeuze_engine_v2.physics.reference_minimization_validation_run_start as run_start_module
 import betelgeuze_engine_v2.physics.reference_minimization_validation_runner as module
 import betelgeuze_engine_v2.physics.validation_native_runtime_identity as native_identity
+import betelgeuze_engine_v2.physics.validation_process_launch_identity as launch_identity_module
 from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
     ed25519_public_key_bytes,
     sign_ed25519,
@@ -210,6 +211,17 @@ def _worker_request(
 
 
 def _native_snapshot() -> dict[str, object]:
+    return _native_snapshot_document()
+
+
+def _host_boot_id() -> str:
+    identity = launch_identity_module.measure_process_launch_identity()
+    boot_id = identity["boot_id"]
+    assert isinstance(boot_id, str)
+    return boot_id
+
+
+def _native_snapshot_document() -> dict[str, object]:
     file_projection: dict[str, object] = {
         "ordinal": 0,
         "path": "/usr/bin/python3.11",
@@ -287,6 +299,11 @@ def _complete_worker_transcript(
         context.setattr(module.sys, "stdout", SimpleNamespace(buffer=output))
         context.setattr(module, "_require_matrix_worker_preflight", lambda _request: None)
         context.setattr(module, "_run_case_matrix_in_process", lambda: rows)
+        context.setattr(
+            module,
+            "_optional_worker_process_launch_identity",
+            lambda: None,
+        )
         assert module._matrix_worker_main_from_standard_streams() == 0
     return output.getvalue()
 
@@ -663,6 +680,95 @@ def test_worker_emits_exact_pre_fourteen_payload_completion_frames(
         module._sha256(row.to_dict()) for row in result.case_results
     )
     assert all(row["coordinate_traces"] for row in (frame["case_observation"] for frame in frames[1:15]))
+
+
+def test_worker_launch_identity_must_name_the_supervised_child(
+    monkeypatch: pytest.MonkeyPatch,
+    complete_case_rows: object,
+) -> None:
+    _install_fake_native_runtime(monkeypatch)
+    request = _worker_request()
+    launch_identity = launch_identity_module._build_identity_document(
+        proc_root="/proc",
+        boot_id=_host_boot_id(),
+        process_row={
+            "pid": 1,
+            "parent_pid": 41,
+            "start_time_clock_ticks": 99,
+        },
+        pid_namespace_inode=7,
+    )
+    mismatched_identity = launch_identity_module._build_identity_document(
+        proc_root="/proc",
+        boot_id=_host_boot_id(),
+        process_row={
+            "pid": 4242,
+            "parent_pid": 41,
+            "start_time_clock_ticks": 99,
+        },
+        pid_namespace_inode=7,
+    )
+    output = io.BytesIO()
+    with monkeypatch.context() as context:
+        context.setattr(
+            module.sys,
+            "stdin",
+            SimpleNamespace(
+                buffer=io.BytesIO(module._canonical_bytes(dict(request)) + b"\n")
+            ),
+        )
+        context.setattr(module.sys, "stdout", SimpleNamespace(buffer=output))
+        context.setattr(module, "_require_matrix_worker_preflight", lambda _r: None)
+        context.setattr(module, "_run_case_matrix_in_process", lambda: complete_case_rows)
+        context.setattr(
+            module,
+            "_optional_worker_process_launch_identity",
+            lambda: dict(mismatched_identity),
+        )
+        assert module._matrix_worker_main_from_standard_streams() == 0
+    mismatched_raw = output.getvalue()
+
+    pre_frame = json.loads(mismatched_raw.splitlines()[0])
+    assert (
+        pre_frame["runtime_pre_evidence"]["process_launch_identity"]
+        == mismatched_identity
+    )
+
+    with pytest.raises(
+        ReferenceMinimizationValidationRunnerError,
+        match="does not name the supervised child",
+    ):
+        module._decode_complete_matrix_worker_transcript(
+            mismatched_raw,
+            worker_preflight_request=request,
+            supervisor_child_process_id=1,
+        )
+
+    matching_output = io.BytesIO()
+    with monkeypatch.context() as context:
+        context.setattr(
+            module.sys,
+            "stdin",
+            SimpleNamespace(
+                buffer=io.BytesIO(module._canonical_bytes(dict(request)) + b"\n")
+            ),
+        )
+        context.setattr(module.sys, "stdout", SimpleNamespace(buffer=matching_output))
+        context.setattr(module, "_require_matrix_worker_preflight", lambda _r: None)
+        context.setattr(module, "_run_case_matrix_in_process", lambda: complete_case_rows)
+        context.setattr(
+            module,
+            "_optional_worker_process_launch_identity",
+            lambda: dict(launch_identity),
+        )
+        assert module._matrix_worker_main_from_standard_streams() == 0
+
+    result = module._decode_complete_matrix_worker_transcript(
+        matching_output.getvalue(),
+        worker_preflight_request=request,
+        supervisor_child_process_id=1,
+    )
+    assert result.worker_execution_evidence.supervisor_child_process_id == 1
 
 
 @pytest.mark.parametrize(
