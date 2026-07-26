@@ -948,6 +948,117 @@ def test_chain_signature_requires_a_trust_anchor(tmp_path: Path) -> None:
         )
 
 
+def test_cli_materialize_and_verify_signed_chains(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fixture = _fixture(tmp_path)
+    work_order, work_order_path = _work_order(fixture)
+    signing_key = hashlib.sha256(b"chain-custodian-signing-key").digest()
+    signer_identity = _canonical_sha("chain-custodian")
+    verification_key = ed25519_public_key_bytes(signing_key).hex()
+    baseline = fixture["baseline"]
+    external = fixture["external"]
+    assert isinstance(baseline, dict)
+    assert isinstance(external, dict)
+    signature_paths: dict[str, Path] = {}
+    for label, chain in (("baseline", baseline), ("external", external)):
+        path = tmp_path / f"{label}-chain-signature.json"
+        path.write_bytes(
+            _canonical_bytes(
+                _chain_signature(
+                    chain,
+                    signing_key=signing_key,
+                    signer_identity=signer_identity,
+                )
+            )
+            + b"\n"
+        )
+        path.chmod(0o600)
+        signature_paths[label] = path
+
+    baseline_flags = [
+        "--baseline-oracle-receipt",
+        str(baseline["oracle_receipt_path"]),
+        "--baseline-runtime-observation-receipt",
+        str(baseline["runtime_observation_receipt_path"]),
+        "--baseline-stratification-receipt",
+        str(baseline["stratification_receipt_path"]),
+        "--engine-wheel",
+        str(fixture["wheel_path"]),
+        "--expected-baseline-oracle-receipt-sha256",
+        str(baseline["expected_oracle_receipt_sha256"]),
+        "--expected-baseline-runtime-observation-receipt-sha256",
+        str(baseline["expected_runtime_observation_receipt_sha256"]),
+        "--expected-baseline-stratification-receipt-sha256",
+        str(baseline["expected_stratification_receipt_sha256"]),
+        "--expected-engine-wheel-sha256",
+        str(fixture["wheel_sha"]),
+        "--work-order",
+        str(work_order_path),
+        "--expected-work-order-receipt-sha256",
+        work_order.fingerprint_sha256,  # type: ignore[attr-defined]
+        "--external-oracle-receipt",
+        str(external["oracle_receipt_path"]),
+        "--external-runtime-observation-receipt",
+        str(external["runtime_observation_receipt_path"]),
+        "--external-stratification-receipt",
+        str(external["stratification_receipt_path"]),
+        "--expected-external-oracle-receipt-sha256",
+        str(external["expected_oracle_receipt_sha256"]),
+        "--expected-external-runtime-observation-receipt-sha256",
+        str(external["expected_runtime_observation_receipt_sha256"]),
+        "--expected-external-stratification-receipt-sha256",
+        str(external["expected_stratification_receipt_sha256"]),
+        "--chain-signer-identity-sha256",
+        signer_identity,
+        "--chain-verification-key-hex",
+        verification_key,
+    ]
+    result_path = tmp_path / "cli-result.json"
+    assert (
+        reproduction.main(
+            [
+                "materialize-result",
+                *baseline_flags,
+                "--output",
+                str(result_path),
+                "--observed-external-host-identity-sha256",
+                _EXTERNAL_HOST,
+                "--observed-external-execution-operator-identity-sha256",
+                _EXTERNAL_EXECUTOR,
+                "--external-observed-utc",
+                "2026-07-26T02:00:00Z",
+                "--baseline-chain-signature",
+                str(signature_paths["baseline"]),
+                "--external-chain-signature",
+                str(signature_paths["external"]),
+            ]
+        )
+        == 0
+    )
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["status"] == "comparison_passed"
+    assert summary["claim_safe"] is False
+
+    document = json.loads(result_path.read_text(encoding="ascii"))
+    assert document["upstream_receipt_signatures_verified"] is True
+    assert (
+        reproduction.main(
+            [
+                "verify-result",
+                *baseline_flags,
+                "--result",
+                str(result_path),
+                "--expected-result-receipt-sha256",
+                document["receipt_sha256"],
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["status"] == "comparison_passed"
+
+
 def test_cli_help_describes_second_host_claim_boundary(
     capsys: pytest.CaptureFixture[str],
 ) -> None:

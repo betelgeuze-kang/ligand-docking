@@ -2112,6 +2112,12 @@ def _parser() -> argparse.ArgumentParser:
         required=True,
     )
     materialize_result.add_argument("--external-observed-utc", required=True)
+    for command in (materialize_result, verify_result):
+        command.add_argument("--chain-signer-identity-sha256")
+        command.add_argument("--chain-verification-key-hex")
+    for command in (materialize_result,):
+        command.add_argument("--baseline-chain-signature")
+        command.add_argument("--external-chain-signature")
     verify_result.add_argument("--result", required=True)
     verify_result.add_argument("--expected-result-receipt-sha256", required=True)
     return parser
@@ -2155,6 +2161,54 @@ def _external_cli_arguments(args: argparse.Namespace) -> dict[str, Any]:
             args.expected_external_stratification_receipt_sha256
         ),
     }
+
+
+def _chain_signature_document(
+    path: str | None,
+    *,
+    name: str,
+) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        source = _read_exact_regular_file(
+            path,
+            maximum_bytes=POSEBUSTERS_INTERNAL_ORACLE_REPRODUCTION_MAX_WORK_ORDER_BYTES,
+        )
+    except (OSError, PoseBustersArchiveIntakeError) as exc:
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} could not be read securely"
+        ) from exc
+    try:
+        document = json.loads(
+            source.decode("ascii"),
+            object_pairs_hook=_json_object_pairs,
+            parse_constant=_reject_json_constant,
+        )
+    except PoseBustersInternalOracleReproductionError:
+        raise
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PoseBustersInternalOracleReproductionError(
+            f"{name} is not canonical ASCII JSON"
+        ) from exc
+    return _mapping(document, name=name)
+
+
+def _chain_trust_anchor(
+    args: argparse.Namespace,
+) -> PoseBustersInternalOracleChainTrustAnchor | None:
+    identity = getattr(args, "chain_signer_identity_sha256", None)
+    key = getattr(args, "chain_verification_key_hex", None)
+    if identity is None and key is None:
+        return None
+    if identity is None or key is None:
+        raise PoseBustersInternalOracleReproductionError(
+            "chain trust anchor requires both a signer identity and a key"
+        )
+    return PoseBustersInternalOracleChainTrustAnchor(
+        signer_identity_sha256=identity,
+        verification_key=key,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -2202,6 +2256,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 args.observed_external_execution_operator_identity_sha256
             ),
             external_observed_utc=args.external_observed_utc,
+            baseline_chain_signature=_chain_signature_document(
+                args.baseline_chain_signature,
+                name="baseline chain signature document",
+            ),
+            external_chain_signature=_chain_signature_document(
+                args.external_chain_signature,
+                name="external chain signature document",
+            ),
+            chain_trust_anchor=_chain_trust_anchor(args),
         )
         receipt.write_json(args.output)
     else:
@@ -2214,6 +2277,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ),
             **baseline,
             **_external_cli_arguments(args),
+            chain_trust_anchor=_chain_trust_anchor(args),
         )
     payload = receipt.to_dict()
     print(
