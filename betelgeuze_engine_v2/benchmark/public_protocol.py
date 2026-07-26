@@ -41,9 +41,9 @@ PUBLIC_BENCHMARK_PROTOCOL_ID = (
     "posebusters_packaged_public_redocking_contract_cohort/1.1.0"
 )
 PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.0"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-24T00:00:00Z"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-26T00:00:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "7888db6264aec25b8bf1f3c30b4c601062b0831cf610a84c9700d0c89a64ed90"
+    "065a672ca7c1aa8979ea7b27121ba0d87dbae48c1c3d722513844c59d6bf0b6d"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -437,7 +437,7 @@ class FrozenPublicBenchmarkProtocol:
                 "reviewed_at_utc": self.frozen_at_utc,
                 "superseded": False,
                 "supersedes_protocol_sha256": (
-                    "4ae0919cdbb65038cb64bd5fb014c99cd6107de9d25852c67c313cf3459e089c"
+                    "7888db6264aec25b8bf1f3c30b4c601062b0831cf610a84c9700d0c89a64ed90"
                 ),
                 "revoked": False,
                 "revocation_reason": "",
@@ -701,7 +701,7 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 module="betelgeuze_engine_v2.molecular.models",
                 relative_path="betelgeuze_engine_v2/molecular/models.py",
                 source_sha256=(
-                    "d02d7476d6786a1ad55f75fe7edbb5a4caee9122c6c891422dddb9da65caaf32"
+                    "b1aad45f4131c133a64049a31b809fcc481e92c29242a1ab9f0e2f2190dca638"
                 ),
             ),
             PublicBenchmarkScorerIdentity(
