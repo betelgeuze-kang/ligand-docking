@@ -736,6 +736,20 @@ Implemented and GitHub-hosted CPU tested:
   only the strictly prepared chemistry subset, so subset selection bias,
   stratification, independent rerun, bundle validation, and scientific review
   remain open and `benchmark_executed=false` and `claim_safe=false` stay fixed;
+- an installable public result-bundle validator,
+  `betelgeuze-engine-v2-posebusters-validate-bundle`. It validates one
+  caller-pinned bundle manifest: six required roles from archive intake through
+  the internal oracle evaluation, plus optional runtime observation,
+  target/chemistry stratification, and same-input engine comparison. Every
+  listed receipt must be bounded mode-0600 canonical ASCII JSON carrying its
+  role's schema, must self-authenticate against the manifest digest, and must
+  stay claim-closed. Every declared upstream link must resolve to the receipt
+  actually in the bundle, so a bundle cannot mix stages from two runs. Unknown
+  or duplicate roles, shared receipt digests, a stratification without its
+  runtime observation, and paths escaping the bundle root all fail closed. This
+  is structural completeness and linkage only: no physics is re-executed, no
+  metric is recomputed, the manifest is unsigned, and
+  `benchmark_executed=false` and `claim_safe=false` stay fixed;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,

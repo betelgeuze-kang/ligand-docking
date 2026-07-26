@@ -901,6 +901,39 @@ scientific review are all still absent. Every comparison therefore keeps
 `benchmark_executed=false`, `scientifically_validated=false`, and
 `claim_safe=false`.
 
+`betelgeuze_engine_v2.benchmark.public_posebusters_result_bundle_validator`
+closes the public result-bundle validator gap those receipts name. The
+installed `betelgeuze-engine-v2-posebusters-validate-bundle` command provides
+`validate` and `verify` modes over one caller-pinned bundle manifest.
+
+The manifest lists a role, bundle-relative path, and receipt digest per
+receipt. Six roles are required: archive intake, corpus audit, internal
+preparation, internal execution, internal RMSD evaluation, and internal oracle
+evaluation. Three are optional: the runtime observation, the target/chemistry
+stratification, and the same-input engine comparison. Declaring the
+stratification without its runtime observation fails closed. Unknown roles,
+duplicate roles, and two roles sharing one receipt digest are rejected, and a
+bundle-relative path that escapes the bundle root is refused.
+
+Every listed receipt is read as bounded mode-0600 canonical ASCII JSON, must
+carry the schema its role declares, must self-authenticate against the manifest
+digest, and must keep `benchmark_executed`, `scientifically_validated`, and
+`claim_safe` false. The validator then resolves every declared upstream link
+inside the bundle: corpus audit to intake, preparation to intake and corpus,
+execution to preparation, RMSD to execution and intake, oracle to RMSD,
+execution, and intake, runtime observation to oracle, stratification to oracle,
+runtime observation, intake, corpus, and preparation, and the comparison to
+intake. A link naming a receipt that is not the bundled one fails closed, so a
+bundle cannot silently mix stages from two different runs.
+
+This is a structural completeness and linkage check only. It re-executes no
+physics, recomputes no metric, and performs no scientific review; the manifest
+itself is an unsigned operator-local document. A valid bundle therefore keeps
+`bundle_manifest_signature_verified=false`,
+`independent_external_bundle_validation_present=false`,
+`benchmark_executed=false`, `scientifically_validated=false`, and
+`claim_safe=false`.
+
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The
 `betelgeuze-engine-v2-posebusters-native-geometry` command exactly reexecutes

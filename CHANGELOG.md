@@ -158,6 +158,16 @@ scientific claim from a package version.
   receipts. Prepared-subset selection bias, stratification, independent rerun,
   bundle validation, and scientific review remain blockers and no docking claim
   is opened.
+- Added a public result-bundle validator. It validates one pinned bundle
+  manifest for role completeness, per-role receipt schema and digest
+  self-authentication, claim-closed state, and resolution of every declared
+  upstream link against the receipt actually bundled. Six roles are required and
+  three are optional; unknown or duplicate roles, two roles sharing one receipt,
+  a stratification without its runtime observation, and bundle-root path escapes
+  fail closed. Validation is structural only: no physics is re-executed, no
+  metric is recomputed, the manifest stays unsigned, and independent
+  second-host validation and scientific review remain blockers, so a valid
+  bundle is still claim-closed.
 
 ### Changed
 

@@ -155,6 +155,10 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-posebusters-validate-bundle = "betelgeuze_engine_v2.benchmark.public_posebusters_result_bundle_validator:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-internal-diagnostic-ranking = "betelgeuze_engine_v2.benchmark.public_posebusters_internal_diagnostic_ranking_evaluation:main"'
         in text
     )

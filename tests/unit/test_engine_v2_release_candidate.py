@@ -111,6 +111,10 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
             "betelgeuze_engine_v2.benchmark."
             "public_posebusters_same_input_engine_comparison:main"
         ),
+        "betelgeuze-engine-v2-posebusters-validate-bundle": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_posebusters_result_bundle_validator:main"
+        ),
         "betelgeuze-engine-v2-posebusters-external-prepare": (
             "betelgeuze_engine_v2.benchmark.public_posebusters_external_preparation:main"
         ),
@@ -311,12 +315,17 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
     assert "betelgeuze-engine-v2-posebusters-internal-oracle-strata" in workflow
     assert "betelgeuze-engine-v2-posebusters-internal-oracle-reproduce" in workflow
     assert "betelgeuze-engine-v2-posebusters-same-input-compare" in workflow
+    assert "betelgeuze-engine-v2-posebusters-validate-bundle" in workflow
     assert (
         "tests/unit/test_engine_v2_posebusters_internal_oracle_reproduction.py"
         in workflow
     )
     assert (
         "tests/unit/test_engine_v2_posebusters_same_input_engine_comparison.py"
+        in workflow
+    )
+    assert (
+        "tests/unit/test_engine_v2_posebusters_result_bundle_validator.py"
         in workflow
     )
     assert "betelgeuze-engine-v2-posebusters-external-prepare" in workflow
