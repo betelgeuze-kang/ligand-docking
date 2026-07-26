@@ -764,6 +764,17 @@ Implemented and GitHub-hosted CPU tested:
   validated chemical domain; protonation/tautomer axes, per-atom parameter
   provenance, independent energy/force comparison, and scientific review remain
   absent and `claim_safe=false` stays fixed;
+- an installable protonation-state and tautomer axis resolver,
+  `betelgeuze-engine-v2-protonation-tautomer-axes`. It executes the frozen mmCIF
+  pH-protonation and tautomer-selection corpora, requires every supported,
+  abstention, and expected-failure row to land on its preregistered
+  disposition, requires both axes to retain supported and failure cohorts, and
+  binds each corpus snapshot, projection, and source-binding digest so a later
+  applicability receipt can name this evidence instead of asserting the axes.
+  Verifying re-executes both corpora and requires byte-exact reconstruction.
+  The corpora are bounded manual mmCIF fixtures: protonation uses no calibrated
+  pKa model, tautomer enumeration is not exhaustive, and independent review is
+  absent, so `claim_safe=false` stays fixed;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,

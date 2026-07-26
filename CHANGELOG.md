@@ -180,6 +180,17 @@ scientific claim from a package version.
   reparameterized, no energy is recomputed, protonation/tautomer axes and
   per-atom parameter provenance are unresolved, and independent review is
   absent, so no validated refinement claim is opened.
+- Added protonation-state and tautomer axis evidence. It executes the frozen
+  mmCIF pH-protonation and tautomer-selection corpora, fails closed on any row
+  that misses its preregistered disposition or whose error-code presence
+  contradicts its outcome, requires both axes to retain supported and failure
+  cohorts, keeps abstention rows in the denominator, and records whether each
+  row produced a canonical system. Each corpus snapshot, projection, and
+  source-binding digest is bound and the two corpora must be distinct
+  snapshots, so a later applicability receipt can name this evidence instead of
+  asserting the axes. Protonation uses no calibrated pKa model, tautomer
+  enumeration is not exhaustive, and independent review is absent, so no
+  validated refinement claim is opened.
 
 ### Changed
 

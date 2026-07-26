@@ -966,6 +966,35 @@ comparison, conformer-ranking evidence, and scientific review are absent, so
 every result keeps `benchmark_executed=false`,
 `scientifically_validated=false`, and `claim_safe=false`.
 
+`betelgeuze_engine_v2.benchmark.public_protonation_tautomer_axis_evidence`
+resolves the two applicability axes the domain receipt could previously only
+declare unresolved. The installed
+`betelgeuze-engine-v2-protonation-tautomer-axes` command provides `materialize`
+and `verify` modes and needs no caller-supplied input: it executes the frozen
+mmCIF pH-protonation and tautomer-selection corpora directly.
+
+Every corpus row must land on its preregistered disposition. A row reporting
+anything other than `expected_decision` or `expected_error` fails closed, and a
+row whose error-code presence contradicts its outcome fails closed as well. Each
+axis must retain both a supported and a failure cohort, and abstention rows stay
+in the denominator. Supported rows carry a canonical system digest; failure and
+abstention rows correctly carry none, and the receipt records that difference as
+`canonical_system_present` instead of hiding it.
+
+The receipt binds each corpus snapshot, projection, and source-binding digest
+and requires the two corpora to be distinct snapshots, so a later applicability
+receipt can name this evidence rather than asserting the axes itself. Verifying
+re-executes both corpora and requires byte-exact reconstruction.
+
+Resolving these axes is a bounded corpus statement. The corpora are small
+manually projected mmCIF fixtures over reviewed PubChem connectivity identity:
+protonation selection uses no calibrated pKa model, tautomer enumeration is not
+exhaustive, cross-axis interaction with conformer and strain evidence is not
+evaluated, and independent review is absent. Every result therefore keeps
+`pka_model_calibrated=false`, `tautomer_enumeration_exhaustive=false`,
+`benchmark_executed=false`, `scientifically_validated=false`, and
+`claim_safe=false`.
+
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The
 `betelgeuze-engine-v2-posebusters-native-geometry` command exactly reexecutes
