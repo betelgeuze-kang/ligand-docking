@@ -432,6 +432,38 @@ Implemented and GitHub-hosted CPU tested:
   selective-risk curves) overall and per family while retaining failed and
   single-success cases in all-case/all-pose denominators. It explicitly lacks a
   disjoint probability-calibration fit and cannot promote a confidence claim;
+- an installable bounded ligand-preparation boundary,
+  `betelgeuze-engine-v2-prepare-ligand`. The optional `chemistry` extra pins
+  RDKit 2025.9.6; the adapter also recognizes the frozen RDKit 2022.09.5
+  runtime already used by repository evidence. It accepts one SMILES token or
+  one SDF V2000 record, rejects multiple fragments, radicals, isotopes,
+  unsupported elements and charges, requires explicit tetrahedral/double-bond
+  stereo by default, records aromaticity and ring membership, enumerates
+  bounded diagnostic protomer/tautomer candidates, adds explicit hydrogens,
+  and preserves input coordinates or generates a deterministic ETKDGv3/UFF
+  conformer. If OpenFF Toolkit is installed, the adapter performs an exact
+  RDKit-to-OpenFF-to-RDKit graph round trip; otherwise it records
+  `openff_toolkit_unavailable`. Output is a mode-0600 no-overwrite canonical
+  Engine v2 system with a hash-bound preparation receipt, ready to pass
+  directly to the redocking CLI. No calibrated pKa selection, partial charge,
+  force-field parameter, scientific applicability, or product claim is made;
+- an installable single-command prepared-input redocking boundary,
+  `betelgeuze-engine-v2-redock-diagnostic`. It accepts only exact Engine v2
+  canonical receptor and ligand JSON, an explicit spherical pocket, and bounded
+  search arguments. The command binds raw file hashes to a typed
+  `DockingProblemInput`, recenters the receptor, removes ligand input
+  translation, applies a fixed non-identity orientation, runs the current rigid
+  element-geometry diagnostic, retains every candidate success/failure row, and
+  writes mode-0600 no-overwrite JSON containing receptor-frame Top-K
+  coordinates. When the ligand is produced by the preparation command, the
+  redocking receipt verifies and binds its embedded preparation identity and
+  blockers; generic canonical ligands remain accepted only with explicit
+  missing-preparation blockers. The command itself performs no chemistry
+  preparation, torsion search,
+  force-field scoring, local minimization, chemistry-aware validity v2,
+  calibrated ranking, or public benchmark; every receipt keeps
+  `scientifically_validated=false`, `benchmark_validated=false`, and
+  `claim_safe=false`;
 - a failure-inclusive rigid-body public diagnostic that derives one redocking
   pocket center from the lowest-index graph-matched native reference, applies a
   fixed non-identity rotation to the seed conformer before proposal generation,

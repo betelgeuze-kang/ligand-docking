@@ -20,6 +20,13 @@ scientific claim from a package version.
   rather than case failures.
 - Added an aggregate `main` CI gate with byte-identical wheel builds and an
   isolated outside-checkout clean-install check.
+- Added an installable, claim-closed RDKit/OpenFF ligand-preparation adapter.
+  It preserves or deterministically generates explicit-hydrogen coordinates,
+  records aromaticity, rings, stereo, and bounded protomer/tautomer candidates,
+  optionally requires an exact OpenFF molecule round trip, and writes a
+  no-overwrite canonical system that the redocking CLI verifies directly.
+  Calibrated pKa selection, partial charges, force-field parameters, supported
+  chemistry validation, and product promotion remain absent.
 
 ### Changed
 

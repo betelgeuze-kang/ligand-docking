@@ -332,6 +332,60 @@ reviewed, and every confidence report remains `probability_calibrated=false` and
 bundle a public partition, fitted model, holdout result, independent rerun, or
 promotion.
 
+`betelgeuze_engine_v2.molecular.rdkit_openff_preparation` provides the
+installable ligand-preparation boundary. The
+`betelgeuze-engine-v2-prepare-ligand` command accepts exactly one SMILES token
+or one SDF V2000 record. It no-follow reads bounded file input, rejects
+multiple fragments, radicals, isotopes, unsupported elements and unsupported
+formal-charge ranges, and requires defined tetrahedral and double-bond
+stereochemistry unless the caller explicitly requests a diagnostic-only
+undefined-stereo artifact. RDKit supplies sanitization, aromaticity/ring
+perception, bounded protomer and tautomer diagnostics, explicit hydrogens, and
+either preserved input coordinates or a fixed-seed, single-thread ETKDGv3
+conformer followed by bounded UFF optimization.
+
+The optional `chemistry` package extra pins RDKit 2025.9.6. The adapter also
+recognizes the frozen RDKit 2022.09.5/`rdkit-pypi` identity used by existing
+evidence. OpenFF Toolkit is not a mandatory runtime dependency: when present,
+its RDKit wrapper must round-trip the same explicit-hydrogen atom count, bond
+count, and canonical molecular graph; when absent or failed, the exact status
+is retained and `--require-openff` fails closed. This is molecule admission,
+not OFFXML parameter assignment.
+
+The output is an ordinary strict Engine v2 canonical system JSON and can be
+passed directly as `--ligand-canonical-json` to the redocking command. Its
+metadata contains a self-verifying preparation receipt that binds source
+digest, configuration, RDKit/OpenFF identities, selected state, complete
+bounded state rows, stereo/aromatic/ring counts, coordinate method, claim
+flags, and blockers. The file is mode 0600 and never replaces an existing
+path. Calibrated pKa selection, partial charges, force-field parameters,
+chemical applicability evidence, and scientific/product promotion remain
+absent.
+
+`betelgeuze_engine_v2.benchmark.redocking_cli` provides the installable
+prepared-input vertical boundary. The
+`betelgeuze-engine-v2-redock-diagnostic` command takes strict canonical receptor
+and ligand system JSON plus an explicit pocket center/radius, bounded candidate
+count, Top-K, translation radius, diversity threshold, seed, and output path.
+It no-follow reads and hashes both inputs, requires one nonperiodic Angstrom
+model, binds pocket and rigid-search derivation receipts into a concrete
+`DockingProblemInput`, and records numeric/RNG/search identity. Output is
+canonical mode-0600 JSON, never replaces an existing path, retains all
+candidate failure rows, and includes exact hexadecimal receptor-frame
+coordinates for selected poses. An invalid input or execution produces a
+sanitized failure receipt when the requested output is still available.
+
+This CLI starts after chemistry preparation and uses only the current
+element-radius rigid geometry diagnostic with identity-only symmetry diversity.
+It verifies and binds an embedded RDKit/OpenFF preparation receipt when one is
+present; a generic canonical ligand remains diagnostic-only and receives
+explicit missing-preparation blockers. The redocking command itself does not
+accept arbitrary PDB/SDF, perceive protonation/tautomers, construct chemistry,
+sample torsions or Haar rotations, use field-guided proposals, run force-field
+minimization, provide chemistry-aware validity v2, or establish
+benchmark/calibration/OOD evidence. Its receipts therefore freeze all
+scientific, benchmark, customer, and claim flags to false.
+
 The public rigid-diagnostic symbols reverify the full input suite, derive a
 single redocking pocket from the lowest-index graph-matched native record,
 rigidly de-leak the seed orientation with a fixed rotation, generate bounded

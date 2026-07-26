@@ -36,6 +36,12 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
     assert metadata["project"]["version"] == DISTRIBUTION_VERSION
     assert metadata["project"]["requires-python"] == ">=3.10,<3.13"
     assert metadata["project"]["scripts"] == {
+        "betelgeuze-engine-v2-prepare-ligand": (
+            "betelgeuze_engine_v2.molecular.rdkit_openff_preparation:main"
+        ),
+        "betelgeuze-engine-v2-redock-diagnostic": (
+            "betelgeuze_engine_v2.benchmark.redocking_cli:main"
+        ),
         "betelgeuze-engine-v2-openmm-materialize": (
             "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"
         ),
@@ -176,6 +182,9 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
         "numpy>=1.26,<3",
         "torch==2.6.0",
     }
+    assert metadata["project"]["optional-dependencies"] == {
+        "chemistry": ["rdkit==2025.9.6"]
+    }
     assert metadata["build-system"]["requires"] == [
         "setuptools==75.8.2",
         "wheel==0.45.1",
@@ -248,6 +257,8 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
         in workflow
     )
     assert workflow.count("betelgeuze-engine-v2-s0-review") >= 2
+    assert "betelgeuze-engine-v2-redock-diagnostic" in workflow
+    assert "betelgeuze-engine-v2-prepare-ligand" in workflow
     assert "betelgeuze-engine-v2-openmm-materialize" in workflow
     assert "betelgeuze-engine-v2-openmm-native-minimization" in workflow
     assert "betelgeuze-engine-v2-openmm-fixed-born-disposition" in workflow

@@ -25,6 +25,9 @@ Execution:    CPU reference
 - clean isolated install, `pip check`, and import outside the checkout;
 - strict canonical molecular JSON round trips and deep immutability;
 - authenticated docking problem and search-space derivation receipts;
+- installable RDKit ligand preparation with optional fail-closed OpenFF
+  molecule admission, explicit stereo/aromatic/ring records, bounded
+  protomer/tautomer diagnostics, and canonical no-overwrite output;
 - public evaluator report schema v2 with one mapping for RMSD and validity;
 - fatal separation of internal evaluator defects from retained case failures.
 
@@ -64,6 +67,9 @@ GPU parity evidence, and product qualification exist.
 - `benchmark_validated=false`
 - `customer_execution_enabled=false`
 
-The release does not establish chemical applicability, calibrated pose
-generation or scoring, public redocking performance, GPU parity, product
-qualification, or customer execution.
+The preparation adapter is a diagnostic molecular-ingest boundary. It does not
+provide calibrated pKa selection, partial charges, OFFXML parameter assignment,
+or real-molecule applicability evidence. Accordingly, the release does not
+establish chemical applicability, calibrated pose generation or scoring,
+public redocking performance, GPU parity, product qualification, or customer
+execution.

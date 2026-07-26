@@ -23,7 +23,14 @@ classifiers = [
   "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+chemistry = [
+  "rdkit==2025.9.6",
+]
+
 [project.scripts]
+betelgeuze-engine-v2-prepare-ligand = "betelgeuze_engine_v2.molecular.rdkit_openff_preparation:main"
+betelgeuze-engine-v2-redock-diagnostic = "betelgeuze_engine_v2.benchmark.redocking_cli:main"
 betelgeuze-engine-v2-openmm-materialize = "betelgeuze_engine_v2.offline.openmm_reference_materialization:main"
 betelgeuze-engine-v2-openmm-native-minimization = "betelgeuze_engine_v2.offline.openmm_reference_native_minimization:main"
 betelgeuze-engine-v2-openmm-fixed-born-disposition = "betelgeuze_engine_v2.offline.openmm_reference_fixed_born_disposition:main"
