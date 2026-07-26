@@ -275,6 +275,23 @@ scientific claim from a package version.
   canonical system rather than perceived, no matched parameter value is applied
   to any energy term, and independent review is absent, so `claim_safe=false`
   stays fixed.
+- Added fail-closed valence and vdW parameter assignment, joining the OFFXML
+  parameter table, the SMIRKS parser, and the subgraph matcher. For one canonical
+  system the assigner enumerates each handler's own topology -- vdW atoms, bonded
+  pairs, angle triples, proper-torsion quadruples, and improper centres -- and
+  resolves every tuple by the SMIRNOFF rule that the last declared match wins,
+  retaining each superseded candidate with its declaration order. Angle and
+  torsion tuples use canonical endpoint order, and several symmetric embeddings
+  of one parameter collapse to a single tuple so a parameter never supersedes
+  itself. Coverage is a gate, not a statistic: vdW, Bonds, Angles, and
+  ProperTorsions must cover their entire topology or assignment fails closed,
+  improper coverage stays optional by SMIRNOFF convention and is reported
+  explicitly, and a document publishing incomplete required coverage is rejected.
+  Assignment documents, handler sections, and term rows are each
+  self-authenticating. Assignment attaches reviewed values to topology only: no
+  energy or force is evaluated, exclusions and 1-4 scaling are not applied,
+  partial charges and masses remain unassigned, and calibration is unreviewed, so
+  `claim_safe=false` stays fixed.
 
 ### Changed
 
