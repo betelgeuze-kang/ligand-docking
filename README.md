@@ -659,10 +659,12 @@ Implemented and GitHub-hosted CPU tested:
   internal/oracle RMSD deltas, adapter failures, pose failures, and blocked
   upstream rows remain authenticated in the original all-case denominator.
   This is an executable evidence carrier, not a completed public result: no
-  official 308-case production receipt is bundled, and target/chemistry strata,
-  official-cohort runtime/memory measurements, same-input external-engine comparisons,
-  second-host rerun, bundle validation, and independent scientific review are
-  still missing. Therefore `benchmark_executed=false` and `claim_safe=false`;
+  official 308-case production receipt is bundled. Target/chemistry strata and
+  runtime measurements are supplied only by the separate claim-closed
+  companions below; official-cohort execution, same-input external-engine
+  comparison, second-host rerun, bundle validation, and independent scientific
+  review are still missing. Therefore `benchmark_executed=false` and
+  `claim_safe=false`;
 - an installable runtime/RSS observation companion,
   `betelgeuze-engine-v2-posebusters-internal-oracle-runtime`. It reexecutes the
   exact deterministic oracle receipt with a payload-independent case observer,
@@ -679,6 +681,23 @@ Implemented and GitHub-hosted CPU tested:
   a kernel-enforced isolated case maximum; observer overhead is not subtracted,
   and the local receipt is unsigned with no physical-host proof or second-host
   observation. Therefore `benchmark_executed=false` and `claim_safe=false`;
+- an installable all-case target/chemistry stratification companion,
+  `betelgeuze-engine-v2-posebusters-internal-oracle-strata`. It exactly
+  re-verifies the deterministic internal-oracle chain, corpus/preparation
+  artifacts, conservative observed-target clusters, and frozen RCSB/Pfam
+  annotation binding, then binds the caller-pinned runtime observation.
+  Exact Pfam sets are the primary target strata; incomplete annotations and
+  mapping failures fall back to explicit observed-sequence-cluster strata.
+  Prepared-case charge, size, elements, aromaticity, ring, and stereo come
+  from verified canonical prepared ligands; preparation-unavailable cases use
+  the corpus-audited native ligand as an explicit fallback. Receptor
+  metal/cofactor context comes from the all-case corpus audit. Preparation failures,
+  chemistry abstentions, blocked cases, and unknown target OOD status remain
+  in primary strata and Wilson 95% denominators. Per-stratum runtime covers
+  only the downstream oracle loop and RSS remains sampled. No official
+  production result, training-manifest OOD audit, second-host observation,
+  independent review, or public bundle validation is claimed; therefore
+  `benchmark_executed=false` and `claim_safe=false`;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,

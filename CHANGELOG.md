@@ -98,7 +98,7 @@ scientific claim from a package version.
   the pinned PoseBusters 0.6.5 `redock` full report, and records complete
   physical-validity/RMSD report rows plus internal/oracle RMSD deltas and every
   adapter, pose, or upstream failure. Production execution of the official
-  cohort, target/chemistry strata, official-cohort runtime measurements, same-input external
+  cohort, an official-cohort stratified result receipt, same-input external
   baselines, second-host reproduction, bundle validation, and independent
   review remain explicit blockers; no public benchmark result or docking claim
   is opened.
@@ -110,8 +110,22 @@ scientific claim from a package version.
   deterministic oracle receipt. Sampled RSS is not a kernel-enforced isolated
   peak, observer overhead remains included, and measurements are unsigned and
   intentionally not byte-reproducible. Official-cohort execution, second-host
-  observation, full-pipeline per-case breakdown, target/chemistry strata,
-  external-baseline bundling, validation, and review remain required.
+  observation, full-pipeline per-case breakdown, an official-cohort stratified
+  result receipt, external-baseline bundling, validation, and review remain
+  required.
+- Added an all-case internal-oracle stratification companion. It exactly joins
+  the deterministic oracle, measured runtime receipt, corpus/preparation tree,
+  observed-target clusters, and frozen RCSB/Pfam annotations. Exact Pfam sets
+  are primary target strata; missing annotations and mapping failures retain
+  explicit cluster fallbacks. Verified prepared-ligand charge/size/elements/
+  aromaticity/ring/stereo take precedence; unavailable preparation uses an
+  explicit corpus-native fallback, while receptor context remains corpus-bound.
+  These fields form one primary chemistry stratum per case. Every failure,
+  blocked, no-pose, and abstention row remains in
+  Wilson 95% denominators with downstream-oracle-loop runtime and sampled-RSS
+  aggregates. Training-manifest OOD, official production execution,
+  full-pipeline per-case timing, second-host reproduction, bundle validation,
+  and independent review remain blockers, so no benchmark claim is opened.
 
 ### Changed
 

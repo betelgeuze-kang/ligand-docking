@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
@@ -35,6 +36,7 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     public_posebusters_generated_pose_evaluation as generated_pose_module,
     public_posebusters_internal_oracle_evaluation as internal_oracle_module,
     public_posebusters_internal_oracle_runtime_observation as internal_oracle_runtime_module,
+    public_posebusters_internal_oracle_stratification as internal_oracle_stratification_module,
     public_posebusters_rcsb_target_family_binding as rcsb_target_family_module,
     public_posebusters_target_cluster_binding as target_cluster_module,
     public_posebusters_vina_execution as vina_execution_module,
@@ -107,6 +109,11 @@ from betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_runtime_o
     PoseBustersInternalOracleRuntimeObservationError,
     materialize_posebusters_internal_oracle_runtime_observation,
     verify_posebusters_internal_oracle_runtime_observation_receipt,
+)
+from betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_stratification import (  # noqa: E402
+    PoseBustersInternalOracleStratificationError,
+    materialize_posebusters_internal_oracle_stratification,
+    verify_posebusters_internal_oracle_stratification_receipt,
 )
 from betelgeuze_engine_v2.benchmark.redocking_cli import (  # noqa: E402
     verify_redocking_diagnostic_report,
@@ -3491,3 +3498,308 @@ def test_rcsb_target_annotation_snapshot_mode_and_hash_fail_closed(
             snapshot_path,
             expected_snapshot_sha256="f" * 64,
         )
+
+
+def test_internal_oracle_stratification_is_all_case_exact_and_claim_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("rdkit")
+    root = tmp_path / "combined-stratification"
+    binding_common, snapshot, target_cluster = _rcsb_target_family_fixture(root)
+    target_family = (
+        rcsb_target_family_module.materialize_posebusters_rcsb_target_family_binding(
+            **binding_common
+        )
+    )
+    target_family_path = root / "rcsb-target-families.json"
+    target_family.write_json(target_family_path)
+
+    archive_path = binding_common["archive_path"]
+    selection_path = binding_common["selection_path"]
+    intake_path = binding_common["intake_receipt_path"]
+    contract = binding_common["contract"]
+    corpus = materialize_posebusters_corpus_audit(
+        archive_path,
+        selection_path,
+        intake_path,
+        contract=contract,
+    )
+    corpus_path = root / "corpus.json"
+    corpus.write_json(corpus_path)
+    preparation_artifact_root = root / "canonical-inputs"
+    preparation = materialize_posebusters_internal_preparation(
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        preparation_artifact_root,
+        contract=contract,
+    )
+    preparation_path = root / "internal-preparation.json"
+    preparation.write_json(preparation_path)
+    execution_configuration = PoseBustersInternalExecutionConfig(
+        candidate_count=1,
+        top_k=1,
+        max_torsions=0,
+        max_refinement_steps=0,
+    )
+    execution_artifact_root = root / "internal-redocking"
+    execution = materialize_posebusters_internal_execution(
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        execution_artifact_root,
+        contract=contract,
+        configuration=execution_configuration,
+    )
+    execution_path = root / "internal-execution.json"
+    execution.write_json(execution_path)
+    rmsd_configuration = PoseBustersInternalRMSDConfig(top_k=1)
+    rmsd = materialize_posebusters_internal_rmsd_evaluation(
+        execution_path,
+        execution_artifact_root,
+        preparation_path,
+        preparation_artifact_root,
+        archive_path,
+        selection_path,
+        intake_path,
+        corpus_path,
+        contract=contract,
+        execution_configuration=execution_configuration,
+        configuration=rmsd_configuration,
+    )
+    rmsd_path = root / "internal-rmsd.json"
+    rmsd.write_json(rmsd_path)
+    oracle_backend = _InternalOracleRuntime(
+        (_successful_internal_oracle_outcome(),)
+    )
+    monkeypatch.setattr(
+        internal_oracle_module,
+        "_load_posebusters_runtime",
+        lambda _scratch_root, _wheel_path: oracle_backend,
+    )
+    oracle_common = {
+        "internal_rmsd_receipt_path": rmsd_path,
+        "execution_receipt_path": execution_path,
+        "execution_artifact_root": execution_artifact_root,
+        "preparation_receipt_path": preparation_path,
+        "preparation_artifact_root": preparation_artifact_root,
+        "archive_path": archive_path,
+        "selection_path": selection_path,
+        "intake_receipt_path": intake_path,
+        "corpus_audit_receipt_path": corpus_path,
+        "posebusters_wheel_path": root / "posebusters.whl",
+        "scratch_root": root / "posebusters-scratch",
+        "expected_internal_rmsd_receipt_sha256": rmsd.fingerprint_sha256,
+        "contract": contract,
+        "execution_configuration": execution_configuration,
+        "rmsd_configuration": rmsd_configuration,
+    }
+    oracle = materialize_posebusters_internal_oracle_evaluation(
+        **oracle_common
+    )
+    oracle_path = root / "internal-oracle.json"
+    oracle.write_json(oracle_path)
+    engine_wheel_path, engine_wheel_sha256 = (
+        _internal_oracle_runtime_engine_wheel(root / "engine-wheel")
+    )
+    runtime = materialize_posebusters_internal_oracle_runtime_observation(
+        oracle_receipt_path=oracle_path,
+        engine_wheel_path=engine_wheel_path,
+        expected_oracle_receipt_sha256=oracle.fingerprint_sha256,
+        expected_engine_wheel_sha256=engine_wheel_sha256,
+        **oracle_common,
+    )
+    runtime_path = root / "internal-oracle-runtime.json"
+    runtime.write_json(runtime_path)
+    evaluation_inputs = {
+        row.engine_id: row.evaluation_receipt_sha256
+        for row in target_cluster.evaluation_inputs
+    }
+    strata_common = {
+        "oracle_receipt_path": oracle_path,
+        "runtime_observation_receipt_path": runtime_path,
+        **oracle_common,
+        "target_cluster_receipt_path": binding_common[
+            "target_cluster_receipt_path"
+        ],
+        "target_family_receipt_path": target_family_path,
+        "annotation_snapshot_path": binding_common[
+            "annotation_snapshot_path"
+        ],
+        "vina_evaluation_receipt_path": root / "source" / "vina.json",
+        "gnina_evaluation_receipt_path": root / "source" / "gnina.json",
+        "smina_evaluation_receipt_path": root / "source" / "smina.json",
+        "expected_oracle_receipt_sha256": oracle.fingerprint_sha256,
+        "expected_runtime_observation_receipt_sha256": (
+            runtime.fingerprint_sha256
+        ),
+        "expected_target_cluster_receipt_sha256": (
+            target_cluster.fingerprint_sha256
+        ),
+        "expected_annotation_snapshot_sha256": snapshot.fingerprint_sha256,
+        "expected_vina_evaluation_receipt_sha256": evaluation_inputs["vina"],
+        "expected_gnina_evaluation_receipt_sha256": evaluation_inputs["gnina"],
+        "expected_smina_evaluation_receipt_sha256": evaluation_inputs["smina"],
+    }
+    receipt = materialize_posebusters_internal_oracle_stratification(
+        **strata_common
+    )
+
+    assert len(receipt.case_rows) == len(_CASE_IDS)
+    assert tuple(row.case_id for row in receipt.case_rows) == _CASE_IDS
+    assert all(row.target_stratum_id for row in receipt.case_rows)
+    assert all(row.chemistry_stratum_id for row in receipt.case_rows)
+    preparation_by_id = {row.case_id: row for row in preparation.case_rows}
+    assert all(
+        row.chemistry_identity_source
+        == (
+            "canonical_prepared_ligand"
+            if preparation_by_id[row.case_id].status == "prepared"
+            else "corpus_native_ligand_fallback"
+        )
+        for row in receipt.case_rows
+    )
+    assert all(
+        row.target_ood_status == "unknown_no_internal_fit_or_training_manifest"
+        for row in receipt.case_rows
+    )
+    assert {
+        row.dimension for row in receipt.stratum_rows
+    } == {"target", "chemistry"}
+    for dimension in ("target", "chemistry"):
+        members = sorted(
+            case_id
+            for row in receipt.stratum_rows
+            if row.dimension == dimension
+            for case_id in row.member_case_ids
+        )
+        assert tuple(members) == _CASE_IDS
+    assert len(receipt.metrics) == len(receipt.stratum_rows) * 12
+    assert all(metric.denominator > 0 for metric in receipt.metrics)
+    assert all(
+        float.fromhex(metric.confidence_interval_binary64_hex[0])
+        <= float.fromhex(metric.estimate_binary64_hex)
+        <= float.fromhex(metric.confidence_interval_binary64_hex[1])
+        for metric in receipt.metrics
+    )
+    payload = receipt.to_dict()
+    assert payload["target_family_metrics_present"] is True
+    assert payload["chemistry_stratified_metrics_present"] is True
+    assert payload["runtime_memory_stratified_metrics_present"] is True
+    assert payload["unknown_and_ood_strata_retained"] is True
+    assert payload["benchmark_executed"] is False
+    assert payload["claim_safe"] is False
+
+    first_case = receipt.case_rows[0]
+    mismatched_ood = (
+        "unsupported_scope"
+        if first_case.chemistry_ood_status != "unsupported_scope"
+        else "preparation_failure"
+    )
+    mismatched_chemistry_id = (
+        internal_oracle_stratification_module._chemistry_stratum_id(
+            ood_status=mismatched_ood,
+            charge_class=first_case.charge_class,
+            heavy_atom_class=first_case.heavy_atom_class,
+            element_class=first_case.element_class,
+            aromaticity_class=first_case.aromaticity_class,
+            ring_class=first_case.ring_class,
+            stereo_class=first_case.stereo_class,
+            receptor_context_class=first_case.receptor_context_class,
+        )
+    )
+    with pytest.raises(
+        PoseBustersInternalOracleStratificationError,
+        match="chemistry primary-stratum disposition is inconsistent",
+    ):
+        replace(
+            first_case,
+            chemistry_ood_status=mismatched_ood,
+            chemistry_stratum_id=mismatched_chemistry_id,
+        )
+
+    receipt_path = root / "internal-oracle-strata.json"
+    receipt.write_json(receipt_path)
+    verified = verify_posebusters_internal_oracle_stratification_receipt(
+        stratification_receipt_path=receipt_path,
+        expected_stratification_receipt_sha256=receipt.fingerprint_sha256,
+        **strata_common,
+    )
+    assert verified.fingerprint_sha256 == receipt.fingerprint_sha256
+    assert stat.S_IMODE(receipt_path.stat().st_mode) == 0o600
+    receipt_path.chmod(0o644)
+    with pytest.raises(
+        PoseBustersInternalOracleStratificationError,
+        match="must remain mode 0600",
+    ):
+        verify_posebusters_internal_oracle_stratification_receipt(
+            stratification_receipt_path=receipt_path,
+            expected_stratification_receipt_sha256=receipt.fingerprint_sha256,
+            **strata_common,
+        )
+
+
+def test_internal_oracle_target_fallbacks_are_explicit() -> None:
+    chain = target_cluster_module.PoseBustersObservedTargetChain(
+        chain_ordinal=0,
+        chain_id="A",
+        residue_count=20,
+        residue_label_sequence_sha256="b" * 64,
+        comparison_eligible=True,
+    )
+    cluster = target_cluster_module.PoseBustersTargetClusterCase(
+        case_id="1ABC_ABC",
+        pdb_id="1ABC",
+        receptor_sha256="a" * 64,
+        target_sequence_set_sha256=_canonical_sha([chain.to_dict()]),
+        family_id=target_cluster_module._family_id(("1ABC_ABC",)),
+        chains=(chain,),
+    )
+    unannotated = rcsb_target_family_module.PoseBustersRcsbTargetCase(
+        case_id="1ABC_ABC",
+        pdb_id="1ABC",
+        receptor_sha256="a" * 64,
+        reference_ligand_sha256="c" * 64,
+        pocket_chain_ids=("A",),
+        mapping_status="complete",
+        mapped_entity_ids=("1ABC_1",),
+        unmapped_chain_ids=(),
+        ambiguous_chain_ids=(),
+        uniprot_ids=("P00001",),
+        pfam_ids=(),
+        pfam_set_id=None,
+        annotation_status="uniprot_without_pfam",
+    )
+    kind, stratum_id = internal_oracle_stratification_module._target_projection(
+        unannotated,
+        cluster,
+    )
+    assert kind == "observed_cluster_annotation_unavailable"
+    assert stratum_id.startswith("observed_cluster_annotation_unavailable::")
+
+    unmapped = rcsb_target_family_module.PoseBustersRcsbTargetCase(
+        case_id="1ABC_ABC",
+        pdb_id="1ABC",
+        receptor_sha256="a" * 64,
+        reference_ligand_sha256="c" * 64,
+        pocket_chain_ids=("A",),
+        mapping_status="pocket_chain_unmapped",
+        mapped_entity_ids=(),
+        unmapped_chain_ids=("A",),
+        ambiguous_chain_ids=(),
+        uniprot_ids=(),
+        pfam_ids=(),
+        pfam_set_id=None,
+        annotation_status="not_applicable",
+    )
+    kind, stratum_id = internal_oracle_stratification_module._target_projection(
+        unmapped,
+        cluster,
+    )
+    assert kind == "observed_cluster_mapping_unavailable"
+    assert stratum_id.startswith("observed_cluster_mapping_unavailable::")

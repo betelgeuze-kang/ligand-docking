@@ -724,8 +724,9 @@ This diagnostic deliberately uses connectivity symmetry only. It does not
 fully interpret atom stereochemistry and is not equivalent to PoseBusters
 robust RMSD or its external physical-validity tests. The separate carrier below
 supplies the pinned external-oracle execution boundary; production cohort
-results, target/chemistry strata, runtime evidence, second-host rerun, and
-independent review remain required before any public benchmark claim.
+results, a production target/chemistry companion receipt, runtime evidence,
+second-host rerun, and independent review remain required before any public
+benchmark claim.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_evaluation`
 provides the pinned external-oracle carrier for those selected internal poses.
@@ -746,10 +747,11 @@ byte-exact upstream and oracle reexecution.
 
 This boundary does not regenerate poses and does not make the internal scorer
 or refiner scientifically valid. No official 308-case production result is
-bundled. Target-family and chemistry strata, official-cohort wall-clock and peak-memory
-measurements, same-input Vina/GNINA/Smina comparison, second-host independent
-rerun, public result-bundle validation, and scientific review remain explicit
-blockers. Accordingly `benchmark_executed=false`,
+bundled. Target-family/chemistry strata and runtime measurements are separate
+claim-closed companions; official-cohort execution, same-input
+Vina/GNINA/Smina comparison, second-host independent rerun, public
+result-bundle validation, and scientific review remain explicit blockers.
+Accordingly `benchmark_executed=false`,
 `scientifically_validated=false`, and `claim_safe=false` are fixed.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_runtime_observation`
@@ -777,6 +779,38 @@ kernel-enforced isolated-case maximum. Sampling overhead is included. The
 receipt is unsigned and does not prove physical host identity, an independent
 second-host observation, full-pipeline per-case runtime, statistical benchmark
 completion, or scientific review. Consequently `benchmark_executed=false`,
+`scientifically_validated=false`, and `claim_safe=false` remain fixed.
+
+`betelgeuze_engine_v2.benchmark.public_posebusters_internal_oracle_stratification`
+adds a deterministic all-case join over the oracle result, runtime observation,
+corpus audit, canonical preparation tree, conservative observed-target
+clusters, and frozen RCSB/Pfam target-family receipt. The installed
+`betelgeuze-engine-v2-posebusters-internal-oracle-strata` command provides
+`materialize` and `verify` modes and requires caller-pinned identities for the
+oracle, runtime observation, target clusters, annotation snapshot, and each
+external evaluation receipt used to reconstruct the cluster binding.
+
+Every case receives exactly one primary target stratum and one primary
+chemistry stratum. Exact Pfam sets take precedence; cases without Pfam or with
+failed RCSB mapping retain their annotation/mapping disposition plus observed
+sequence-cluster ID. Prepared-case charge, heavy-atom count, elements,
+aromaticity, ring, and stereo are projected from a canonical prepared ligand
+whose artifact and system hashes have been exactly reverified. Cases without a
+prepared ligand use the corpus-audited native ligand for charge, size, and
+elements as an explicit fallback; receptor metal/cofactor context always comes
+from the corpus audit. Unavailable preparation remains an explicit
+chemistry/OOD stratum. Each stratum retains all failure, blocked,
+abstention, and no-pose cases, Wilson 95% intervals for validity/RMSD outcomes,
+wall-duration total/min/max, RSS sample counts, and the maximum sampled case
+peak.
+
+The per-case timing scope is only the downstream PoseBusters oracle loop, not
+the full preparation/redocking pipeline. Sampled RSS is not additive or a
+kernel-enforced isolated maximum, measurement values are not byte-reproducible,
+and target OOD cannot be evaluated without an internal fit/training manifest.
+The receipt is unsigned and does not establish an official 308-case production
+result, second-host reproduction, public bundle validation, or independent
+scientific review. Consequently `benchmark_executed=false`,
 `scientifically_validated=false`, and `claim_safe=false` remain fixed.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
