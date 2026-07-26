@@ -870,6 +870,37 @@ deterministic comparison may say
 host/nonce registry review, upstream receipt authorization, and scientific
 result review remain mandatory promotion gates.
 
+`betelgeuze_engine_v2.benchmark.public_posebusters_same_input_engine_comparison`
+adds the same-input engine comparison the oracle receipts have been naming as a
+blocker. The installed
+`betelgeuze-engine-v2-posebusters-same-input-compare` command provides
+`materialize` and `verify` modes and binds four caller-pinned receipts: the
+internal PoseBusters oracle evaluation and the Vina, GNINA, and Smina
+generated-pose evaluations. Every receipt is read as bounded mode-0600 canonical
+ASCII JSON, must self-authenticate against its pinned digest, must keep
+`benchmark_executed`, `scientifically_validated`, and `claim_safe` false, and
+must name the same `archive_intake_receipt_sha256`. Four distinct receipt
+digests are required, and each external receipt must declare its own engine id.
+
+The denominator is the union of every case appearing in any bound receipt, so a
+case the external engines never reached is retained as an explicit
+`absent_from_receipt` row rather than dropped. Each case row records, per
+engine, evaluated status, any-physically-valid-pose, Top-1 validity, Top-1 and
+Top-5 symmetry-aware RMSD threshold hits, and Top-1 valid-and-hit, all read
+from outcomes the upstream receipts already recorded. Six per-engine rates carry
+Wilson 95% intervals over that single all-case denominator, and pairwise
+internal-versus-external Top-1 agreement partitions every case into both,
+internal-only, external-only, and neither.
+
+This module regenerates no pose, executes no engine, and recalibrates no score;
+the external engines remain offline reference receipts. The external evaluations
+cover only the strictly prepared chemistry subset, so subset selection bias is
+unresolved, the internal engine remains uncalibrated, and target-family and
+chemistry stratification, an independent rerun, a public bundle validator, and
+scientific review are all still absent. Every comparison therefore keeps
+`benchmark_executed=false`, `scientifically_validated=false`, and
+`claim_safe=false`.
+
 `betelgeuze_engine_v2.benchmark.public_posebusters_native_geometry` adds an
 installable, extraction-free positive-control preflight. The
 `betelgeuze-engine-v2-posebusters-native-geometry` command exactly reexecutes

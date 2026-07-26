@@ -146,6 +146,18 @@ scientific claim from a package version.
   Because attested host identity and nonce single use remain self-declared, a
   passing comparison still remains explicitly unreviewed, non-independent,
   non-benchmark, and claim-closed.
+- Added a same-input internal-oracle versus Vina/GNINA/Smina comparison. It
+  binds four caller-pinned claim-closed receipts, requires an identical archive
+  intake and four distinct receipt digests, requires each external receipt to
+  declare its own engine id, and compares every case under one all-case
+  denominator formed from the union of all bound receipts. Cases missing from a
+  receipt are retained as explicit absent rows instead of being dropped. Six
+  per-engine rates carry Wilson 95% intervals and pairwise Top-1 agreement
+  partitions every case. No pose is regenerated, no engine is executed, and no
+  score is recalibrated, so the external engines stay offline reference
+  receipts. Prepared-subset selection bias, stratification, independent rerun,
+  bundle validation, and scientific review remain blockers and no docking claim
+  is opened.
 
 ### Changed
 

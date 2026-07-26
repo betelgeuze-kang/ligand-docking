@@ -721,6 +721,21 @@ Implemented and GitHub-hosted CPU tested:
   `physical_host_independence_reviewed=false`,
   `independent_external_rerun_present=false`, `benchmark_executed=false`, and
   `claim_safe=false` pending independent custody and scientific review;
+- an installable same-input engine comparison,
+  `betelgeuze-engine-v2-posebusters-same-input-compare`. It binds the internal
+  PoseBusters oracle evaluation and the Vina, GNINA, and Smina generated-pose
+  evaluations by exact receipt digest, requires all four to name the same
+  archive intake and to remain claim-closed, and compares every case under one
+  all-case denominator that is the union of every case in any bound receipt.
+  Cases the external engines never reached are retained as explicit
+  `absent_from_receipt` rows. Per engine it reports evaluated status,
+  any-valid-pose, Top-1 validity, Top-1/Top-5 symmetry-aware RMSD threshold
+  hits, and Top-1 valid-and-hit with Wilson 95% intervals, plus pairwise
+  internal-versus-external Top-1 agreement partitions. It regenerates no pose,
+  executes no engine, and recalibrates no score. The external receipts cover
+  only the strictly prepared chemistry subset, so subset selection bias,
+  stratification, independent rerun, bundle validation, and scientific review
+  remain open and `benchmark_executed=false` and `claim_safe=false` stay fixed;
 - an installable, extraction-free PoseBusters 308 native-geometry preflight. It
   exactly reexecutes the intake and corpus audit and records all-case fixed-
   radius receptor/ligand overlap, topology-excluded ligand self-overlap,
