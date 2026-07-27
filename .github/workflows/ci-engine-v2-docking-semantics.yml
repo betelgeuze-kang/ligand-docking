@@ -10,6 +10,7 @@ on:
       - "tests/unit/test_engine_v2_conformer_ensemble_stage3.py"
       - "tests/unit/test_engine_v2_guided_proposal_stage4.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
+      - "tests/unit/test_engine_v2_energy_local_refinement_stage6.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   push:
     branches: ["main"]
@@ -21,6 +22,7 @@ on:
       - "tests/unit/test_engine_v2_conformer_ensemble_stage3.py"
       - "tests/unit/test_engine_v2_guided_proposal_stage4.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
+      - "tests/unit/test_engine_v2_energy_local_refinement_stage6.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   workflow_dispatch:
 
@@ -92,6 +94,7 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py
             tests/unit/test_engine_v2_guided_proposal_stage4.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
+            tests/unit/test_engine_v2_energy_local_refinement_stage6.py
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -117,4 +120,5 @@ jobs:
             tests/unit/test_engine_v2_input_identity.py \
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_guided_proposal_stage4.py \
-            tests/unit/test_engine_v2_scorer_v1_stage5.py
+            tests/unit/test_engine_v2_scorer_v1_stage5.py \
+            tests/unit/test_engine_v2_energy_local_refinement_stage6.py

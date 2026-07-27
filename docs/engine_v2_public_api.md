@@ -363,6 +363,26 @@ and retains failed candidates in the denominator.
 Scorer v1 is deterministic and uncalibrated; it is not validated for docking
 ranking and does not report physical energy, binding affinity, or free energy.
 
+`EnergyBasedLocalRefiner(...)` binds an authenticated docking problem, its exact
+ligand system, a topology-matched `ReferenceForceFieldParameters` packet, and an
+immutable `EnergyLocalRefinementConfig`. Its `refine(..., max_steps=...)` method
+uses the existing bounded CPU reference minimizer and returns a proposal whose
+lineage names the exact `EnergyRefinementAttempt` receipt. The receipt retains
+binary64 pre/post coordinates, initial/final/delta kcal/mol energy, maximum
+atom displacement, convergence and evaluation counters, checkpoint identity,
+the effective step/config identity, or a failure row without fabricated post
+state. It can be passed as the `refiner` in authenticated docking search.
+`run_authenticated_energy_refined_scorer_v1_guided_search(...)` requires a
+positive refinement-step budget and returns an
+`EnergyRefinedGuidedSearchResult` that binds every generic and Scorer v1 search
+row to its exact attempt. The full success/failure denominator is retained, and
+proposal lineage, authority, configuration, parameter, and receipt cross-wires
+fail closed.
+
+This adapter relaxes ligand-internal coordinates only. It does not include
+receptor--ligand interaction energy, prove pose improvement, provide an
+affinity/free-energy estimate, or establish scientific/product readiness.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
