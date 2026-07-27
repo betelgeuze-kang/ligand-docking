@@ -91,6 +91,10 @@ def test_prepared_state_receipt_records_exact_denominators_and_provenance() -> N
     assert document["schema_id"] == CONFORMER_ENSEMBLE_SCHEMA_ID
     assert document["etkdg_variant"] == "ETKDGv3"
     assert document["requested_candidate_count"] == 8
+    assert document["input_atom_count"] > 0
+    assert document["prepared_atom_count"] == ensemble.system.atom_count
+    assert document["connected_component_policy"] == "exactly_one"
+    assert document["unspecified_potential_stereochemistry_allowed"] is False
     assert document["embedded_candidate_count"] == len(
         document["optimization_rows"]
     )
@@ -98,6 +102,10 @@ def test_prepared_state_receipt_records_exact_denominators_and_provenance() -> N
     assert document["selected_conformer_ids"] == [
         row.conformer_id for row in ensemble.records
     ]
+    assert document["selected_conformer_records"] == [
+        row.to_dict() for row in ensemble.records
+    ]
+    assert document["preparation_bounds"]["maximum_input_atoms"] == 256
     assert document["prepared_system_sha256"] == canonical_system_sha256(
         ensemble.system
     )
@@ -137,6 +145,90 @@ def test_prepared_state_receipt_rejects_mutation() -> None:
         match="prepared system changed",
     ):
         ensemble.to_dict()
+
+
+def test_conformer_record_fields_are_bound_to_the_receipt() -> None:
+    ensemble = prepare_deterministic_conformer_ensemble(
+        "CCCC",
+        config=_config(),
+    )
+    changed_record = replace(
+        ensemble.records[0],
+        energy_kcal_mol=ensemble.records[0].energy_kcal_mol + 1.0,
+    )
+    with pytest.raises(
+        ConformerPreparationError,
+        match="conformer records are cross-wired",
+    ):
+        replace(
+            ensemble,
+            records=(changed_record, *ensemble.records[1:]),
+        )
+
+
+def test_equivalent_smiles_are_rebuilt_in_canonical_atom_order() -> None:
+    first = prepare_deterministic_conformer_ensemble(
+        "CO",
+        config=_config(),
+    )
+    second = prepare_deterministic_conformer_ensemble(
+        "OC",
+        config=_config(),
+    )
+    assert canonical_system_sha256(first.system) == canonical_system_sha256(
+        second.system
+    )
+    assert torch.equal(first.system.coordinates, second.system.coordinates)
+    assert [row.conformer_id for row in first.records] == [
+        row.conformer_id for row in second.records
+    ]
+    assert first.receipt["input_smiles_sha256"] != (
+        second.receipt["input_smiles_sha256"]
+    )
+
+
+def test_disconnected_ligand_fails_closed() -> None:
+    with pytest.raises(
+        ConformerPreparationError,
+        match="one connected ligand component",
+    ):
+        prepare_deterministic_conformer_ensemble(
+            "CC.[Na+]",
+            config=_config(),
+        )
+
+
+def test_oversized_ligand_fails_before_embedding() -> None:
+    with pytest.raises(
+        ConformerPreparationError,
+        match="atom count exceeds",
+    ):
+        prepare_deterministic_conformer_ensemble(
+            "C" * 257,
+            config=_config(),
+        )
+
+
+@pytest.mark.parametrize("smiles", ["CC(F)Cl", "CC=CC"])
+def test_unspecified_potential_stereochemistry_fails_closed(
+    smiles: str,
+) -> None:
+    with pytest.raises(
+        ConformerPreparationError,
+        match="stereochemistry must be explicitly assigned",
+    ):
+        prepare_deterministic_conformer_ensemble(
+            smiles,
+            config=_config(),
+        )
+
+
+def test_explicit_stereochemistry_is_retained() -> None:
+    ensemble = prepare_deterministic_conformer_ensemble(
+        "C[C@H](F)Cl",
+        config=_config(),
+    )
+    assert any(atom.stereo in {"R", "S"} for atom in ensemble.system.atoms)
 
 
 @pytest.mark.parametrize("smiles", ["", "not-a-smiles"])

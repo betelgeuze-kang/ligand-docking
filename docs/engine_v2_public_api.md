@@ -313,8 +313,13 @@ heavy-atom Kabsch-RMSD diversity selection. The returned multi-model
 prepared-state receipt containing the exact configuration, RDKit version,
 candidate denominators, optimization rows, energy model, and output hashes.
 Missing RDKit, invalid SMILES, unsupported large ring systems, embedding
-failure, or unavailable energy parameters fail closed. The diversity metric is
-not symmetry-aware and the ensemble is not scientifically validated.
+failure, unavailable energy parameters, multiple components, oversized
+topologies, or potential unassigned atom/bond stereochemistry fail closed. The
+canonical isomeric SMILES is reparsed before atom indexing. Complete conformer
+record projections are receipt-bound and cross-checked against each selected
+coordinate model, energy row, identity, and RMSD value. A dedicated pinned
+RDKit CI job executes this capability. The diversity metric is not
+symmetry-aware and the ensemble is not scientifically validated.
 
 ### Internal APIs
 

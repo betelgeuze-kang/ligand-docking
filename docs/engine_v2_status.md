@@ -109,7 +109,9 @@ The current `main` branch contains:
 - capability-gated deterministic ETKDGv3 conformer preparation with exact
   seed/configuration and RDKit-version identity, MMFF94-or-UFF conformer
   energies, energy-window filtering, heavy-atom Kabsch-RMSD diversity, stable
-  conformer identities, and an immutable prepared-state receipt;
+  conformer identities, an immutable prepared-state receipt, bounded atom/bond
+  counts, exact-one-component input, explicit potential stereochemistry, and a
+  pinned RDKit CI lane;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
