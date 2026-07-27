@@ -1,4 +1,4 @@
-"""Bounded, non-claim docking proposal, authority, placement, contact, and search contracts."""
+"""Bounded, non-claim docking proposal, authority, placement, contact, scoring, and search contracts."""
 
 from .identity import (
     DockingIdentityError,
@@ -119,6 +119,21 @@ from .contact_validity import (  # noqa: E402
     build_element_aware_authenticated_known_pocket_docking_problem,
     element_aware_authority_document,
 )
+from .interpretable_scorer import (  # noqa: E402
+    INTERPRETABLE_POSE_APPLICABILITY_DOMAIN_ID,
+    INTERPRETABLE_POSE_SCORE_ALGORITHM_ID,
+    INTERPRETABLE_POSE_SCORE_CONFIG_SCHEMA_ID,
+    INTERPRETABLE_POSE_SCORE_ID,
+    INTERPRETABLE_POSE_SCORE_TERMS_SCHEMA_ID,
+    INTERPRETABLE_POSE_SCORER_ID,
+    INTERPRETABLE_POSE_SCORER_VERSION,
+    MAX_INTERPRETABLE_SCORER_LIGAND_PAIR_CHECKS,
+    MAX_INTERPRETABLE_SCORER_RECEPTOR_CANDIDATE_PAIRS,
+    InterpretablePoseScoreConfig,
+    InterpretablePoseScoreTerms,
+    InterpretablePoseScorerError,
+    InterpretablePoseScorerV0,
+)
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
@@ -136,6 +151,13 @@ __all__ = [
     "ELEMENT_AWARE_AUTHORITY_SCHEMA_ID",
     "ELEMENT_AWARE_VALIDITY_CONTEXT_SCHEMA_ID",
     "HAAR_ROTATION_SAMPLER_ID",
+    "INTERPRETABLE_POSE_APPLICABILITY_DOMAIN_ID",
+    "INTERPRETABLE_POSE_SCORE_ALGORITHM_ID",
+    "INTERPRETABLE_POSE_SCORE_CONFIG_SCHEMA_ID",
+    "INTERPRETABLE_POSE_SCORE_ID",
+    "INTERPRETABLE_POSE_SCORE_TERMS_SCHEMA_ID",
+    "INTERPRETABLE_POSE_SCORER_ID",
+    "INTERPRETABLE_POSE_SCORER_VERSION",
     "MAX_DOCKING_CANDIDATES",
     "MAX_DOCKING_REFINEMENT_STEPS",
     "MAX_DOCKING_TOP_K",
@@ -144,6 +166,8 @@ __all__ = [
     "MAX_ELEMENT_AWARE_LIGAND_PAIR_CHECKS",
     "MAX_ELEMENT_AWARE_RECEPTOR_ATOMS",
     "MAX_ELEMENT_AWARE_RECEPTOR_CANDIDATE_PAIRS",
+    "MAX_INTERPRETABLE_SCORER_LIGAND_PAIR_CHECKS",
+    "MAX_INTERPRETABLE_SCORER_RECEPTOR_CANDIDATE_PAIRS",
     "MAX_POCKET_PLACEMENT_PROPOSALS",
     "MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM",
     "MAX_SYMMETRY_PERMUTATIONS",
@@ -174,6 +198,10 @@ __all__ = [
     "DockingSearchRow",
     "ElementAwarePoseValidityContext",
     "ElementAwareValidityError",
+    "InterpretablePoseScoreConfig",
+    "InterpretablePoseScoreTerms",
+    "InterpretablePoseScorerError",
+    "InterpretablePoseScorerV0",
     "PocketDefinition",
     "PocketPlacementPolicy",
     "PocketPlacementReceipt",
