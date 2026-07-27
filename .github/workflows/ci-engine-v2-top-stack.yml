@@ -95,6 +95,7 @@ jobs:
             tests/unit/test_engine_v2_docking_authority_search.py \
             tests/unit/test_engine_v2_pocket_placement_round6.py \
             tests/unit/test_engine_v2_element_contact_round8.py \
+            tests/unit/test_engine_v2_interpretable_scorer_round10.py \
             tests/unit/test_engine_v2_release_integration_cut_c.py \
             tests/unit/test_engine_v2_reference_minimization_validation_dependency_identity.py \
             tests/unit/test_engine_v2_reference_minimization_validation_preimport_binding.py \
