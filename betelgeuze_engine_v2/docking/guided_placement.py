@@ -46,9 +46,7 @@ from .proposals import DockingBudget, DockingProposal
 GUIDED_PLACEMENT_CONTEXT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_context/1.0.0"
 )
-GUIDED_PLACEMENT_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_guided_placement_policy/1.0.0"
-)
+GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.0.0"
 GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_receipt/1.0.0"
 )
@@ -58,9 +56,7 @@ GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
 GUIDED_PLACEMENT_POLICY_ID = (
     "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.0.0"
 )
-GUIDED_FEATURE_POLICY_ID = (
-    "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
-)
+GUIDED_FEATURE_POLICY_ID = "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
 GUIDED_MODES = (
     "donor_acceptor_hotspot",
     "charge_anchor",
@@ -121,24 +117,16 @@ def _freeze_json(value: Any) -> Any:
         return float(value)
     if isinstance(value, Mapping):
         return MappingProxyType(
-            {
-                str(key): _freeze_json(item)
-                for key, item in value.items()
-            }
+            {str(key): _freeze_json(item) for key, item in value.items()}
         )
     if isinstance(value, (tuple, list)):
         return tuple(_freeze_json(item) for item in value)
-    raise DockingAuthorityError(
-        "guided placement metadata is not JSON-compatible"
-    )
+    raise DockingAuthorityError("guided placement metadata is not JSON-compatible")
 
 
 def _thaw_json(value: Any) -> Any:
     if isinstance(value, Mapping):
-        return {
-            str(key): _thaw_json(item)
-            for key, item in value.items()
-        }
+        return {str(key): _thaw_json(item) for key, item in value.items()}
     if isinstance(value, tuple):
         return [_thaw_json(item) for item in value]
     return value
@@ -224,9 +212,7 @@ def _feature_indices(system: AllAtomSystem) -> dict[str, tuple[int, ...]]:
             system.atoms[neighbor].element.upper() == "H"
             for neighbor in adjacency[index]
         )
-        if element in {"N", "O", "S"} and (
-            attached_hydrogen or charge > 0
-        ):
+        if element in {"N", "O", "S"} and (attached_hydrogen or charge > 0):
             donors.append(index)
         if (
             element in {"N", "O", "S"}
@@ -256,16 +242,12 @@ def _feature_indices(system: AllAtomSystem) -> dict[str, tuple[int, ...]]:
         "aromatic": tuple(aromatic),
     }
     if any(len(indices) > MAX_GUIDED_FEATURE_ATOMS for indices in result.values()):
-        raise DockingAuthorityError(
-            "guided feature atom count exceeds its hard bound"
-        )
+        raise DockingAuthorityError("guided feature atom count exceeds its hard bound")
     return result
 
 
 def _aromatic_systems(system: AllAtomSystem) -> tuple[tuple[int, ...], ...]:
-    aromatic_atoms = {
-        int(atom.index) for atom in system.atoms if bool(atom.aromatic)
-    }
+    aromatic_atoms = {int(atom.index) for atom in system.atoms if bool(atom.aromatic)}
     rows: dict[int, set[int]] = {index: set() for index in aromatic_atoms}
     for bond in system.bonds:
         first, second = int(bond.atom_i), int(bond.atom_j)
@@ -360,10 +342,7 @@ def _principal_axes(
             axes[:, column] = -axes[:, column]
     if float(torch.linalg.det(axes).item()) < 0.0:
         axes[:, -1] = -axes[:, -1]
-    return tuple(
-        tuple(float(value) for value in row)
-        for row in axes.tolist()
-    )
+    return tuple(tuple(float(value) for value in row) for row in axes.tolist())
 
 
 @dataclass(frozen=True, slots=True)
@@ -407,14 +386,14 @@ class GuidedPlacementContext:
             for name, values in self.ligand_features.items()
         }
         if set(ligand_features) != set(_FEATURE_KINDS) or any(
-            values != tuple(sorted(set(values)))
-            for values in ligand_features.values()
+            values != tuple(sorted(set(values))) for values in ligand_features.values()
         ):
             raise DockingAuthorityError("guided ligand features are invalid")
-        receptor_atom_indices = tuple(int(value) for value in self.receptor_atom_indices)
-        if (
-            receptor_atom_indices != tuple(sorted(set(receptor_atom_indices)))
-            or any(value < 0 for value in receptor_atom_indices)
+        receptor_atom_indices = tuple(
+            int(value) for value in self.receptor_atom_indices
+        )
+        if receptor_atom_indices != tuple(sorted(set(receptor_atom_indices))) or any(
+            value < 0 for value in receptor_atom_indices
         ):
             raise DockingAuthorityError("guided receptor atom indices are invalid")
         allowed_receptor = set(receptor_atom_indices)
@@ -469,8 +448,7 @@ class GuidedPlacementContext:
             for system in self.ligand_aromatic_systems
         )
         if any(
-            len(system) < 3
-            or system != tuple(sorted(set(system)))
+            len(system) < 3 or system != tuple(sorted(set(system)))
             for system in ligand_aromatic
         ):
             raise DockingAuthorityError("guided ligand aromatic systems are invalid")
@@ -505,7 +483,9 @@ class GuidedPlacementContext:
         if ligand_shape_atom_count < 1 or receptor_shape_atom_count < 1:
             raise DockingAuthorityError("guided shape atom counts must be positive")
         if receptor_shape_atom_count != len(receptor_atom_indices):
-            raise DockingAuthorityError("guided receptor shape atom count is cross-wired")
+            raise DockingAuthorityError(
+                "guided receptor shape atom count is cross-wired"
+            )
         if any(
             index < 0 or index >= ligand_shape_atom_count
             for values in ligand_features.values()
@@ -519,22 +499,23 @@ class GuidedPlacementContext:
         if axes:
             axes_tensor = torch.tensor(axes, dtype=torch.float64)
             identity = torch.eye(3, dtype=torch.float64)
-            if (
-                not torch.allclose(
-                    axes_tensor.T @ axes_tensor,
-                    identity,
-                    atol=1.0e-10,
-                    rtol=0.0,
-                )
-                or not math.isclose(
-                    float(torch.linalg.det(axes_tensor).item()),
-                    1.0,
-                    abs_tol=1.0e-10,
-                )
+            if not torch.allclose(
+                axes_tensor.T @ axes_tensor,
+                identity,
+                atol=1.0e-10,
+                rtol=0.0,
+            ) or not math.isclose(
+                float(torch.linalg.det(axes_tensor).item()),
+                1.0,
+                abs_tol=1.0e-10,
             ):
-                raise DockingAuthorityError("receptor shape axes are not a proper frame")
+                raise DockingAuthorityError(
+                    "receptor shape axes are not a proper frame"
+                )
         object.__setattr__(self, "ligand_features", MappingProxyType(ligand_features))
-        object.__setattr__(self, "receptor_feature_rows", MappingProxyType(receptor_rows))
+        object.__setattr__(
+            self, "receptor_feature_rows", MappingProxyType(receptor_rows)
+        )
         object.__setattr__(self, "receptor_atom_indices", receptor_atom_indices)
         object.__setattr__(
             self,
@@ -567,7 +548,9 @@ class GuidedPlacementContext:
                 name: [
                     {
                         "atom_index": index,
-                        "coordinate_binary64_hex": [value.hex() for value in coordinate],
+                        "coordinate_binary64_hex": [
+                            value.hex() for value in coordinate
+                        ],
                         "formal_charge": charge,
                     }
                     for index, coordinate, charge in rows
@@ -585,7 +568,9 @@ class GuidedPlacementContext:
                 }
                 for patch, center in self.receptor_hydrophobic_patches
             ],
-            "ligand_aromatic_systems": [list(row) for row in self.ligand_aromatic_systems],
+            "ligand_aromatic_systems": [
+                list(row) for row in self.ligand_aromatic_systems
+            ],
             "receptor_aromatic_planes": [
                 {
                     "atom_indices": list(indices),
@@ -612,22 +597,24 @@ class GuidedPlacementContext:
         return observed
 
     def feature_counts(self) -> dict[str, int]:
-        return {
-            f"ligand_{name}": len(values)
-            for name, values in self.ligand_features.items()
-        } | {
-            f"receptor_{name}": len(values)
-            for name, values in self.receptor_feature_rows.items()
-        } | {
-            "ligand_aromatic_system": len(self.ligand_aromatic_systems),
-            "receptor_aromatic_plane": len(self.receptor_aromatic_planes),
-            "ligand_hydrophobic_patch": len(self.ligand_hydrophobic_patches),
-            "receptor_hydrophobic_patch": len(
-                self.receptor_hydrophobic_patches
-            ),
-            "ligand_shape_atom": self.ligand_shape_atom_count,
-            "receptor_shape_atom": self.receptor_shape_atom_count,
-        }
+        return (
+            {
+                f"ligand_{name}": len(values)
+                for name, values in self.ligand_features.items()
+            }
+            | {
+                f"receptor_{name}": len(values)
+                for name, values in self.receptor_feature_rows.items()
+            }
+            | {
+                "ligand_aromatic_system": len(self.ligand_aromatic_systems),
+                "receptor_aromatic_plane": len(self.receptor_aromatic_planes),
+                "ligand_hydrophobic_patch": len(self.ligand_hydrophobic_patches),
+                "receptor_hydrophobic_patch": len(self.receptor_hydrophobic_patches),
+                "ligand_shape_atom": self.ligand_shape_atom_count,
+                "receptor_shape_atom": self.receptor_shape_atom_count,
+            }
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {**self._projection(), "fingerprint_sha256": self.fingerprint_sha256}
@@ -695,7 +682,10 @@ def build_guided_placement_context(
 ) -> GuidedPlacementContext:
     if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
         raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
-    for name, system in (("receptor_system", receptor_system), ("ligand_system", ligand_system)):
+    for name, system in (
+        ("receptor_system", receptor_system),
+        ("ligand_system", ligand_system),
+    ):
         if not isinstance(system, AllAtomSystem):
             raise TypeError(f"{name} must be AllAtomSystem")
         require_valid_all_atom_system(system)
@@ -706,9 +696,11 @@ def build_guided_placement_context(
         raise DockingAuthorityError("guided receptor system is cross-wired")
     if ligand_sha256 != authenticated_problem.ligand_system_sha256:
         raise DockingAuthorityError("guided ligand system is cross-wired")
-    receptor_coordinates = receptor_system.coordinates[
-        authenticated_problem.receptor_model_index
-    ].detach().to(dtype=torch.float64, device="cpu")
+    receptor_coordinates = (
+        receptor_system.coordinates[authenticated_problem.receptor_model_index]
+        .detach()
+        .to(dtype=torch.float64, device="cpu")
+    )
     receptor_features_full = _feature_indices(receptor_system)
     ligand_features = _feature_indices(ligand_system)
     allowed_receptor = set(authenticated_problem.receptor_atom_indices)
@@ -755,17 +747,13 @@ def build_guided_placement_context(
         receptor_hydrophobic_patches=tuple(
             (
                 patch,
-                _coordinates_tuple(
-                    receptor_coordinates[list(patch)].mean(dim=0)
-                ),
+                _coordinates_tuple(receptor_coordinates[list(patch)].mean(dim=0)),
             )
             for patch in receptor_hydrophobic_patch_indices
         ),
         ligand_aromatic_systems=_aromatic_systems(ligand_system),
         receptor_aromatic_planes=tuple(receptor_aromatic_planes),
-        receptor_shape_axes=(
-            _principal_axes(receptor_subset_coordinates) or ()
-        ),
+        receptor_shape_axes=(_principal_axes(receptor_subset_coordinates) or ()),
         ligand_shape_atom_count=ligand_system.atom_count,
         receptor_shape_atom_count=len(authenticated_problem.receptor_atom_indices),
     )
@@ -783,10 +771,7 @@ def _available_modes(context: GuidedPlacementContext) -> tuple[str, ...]:
         ligand["negative"] and receptor["positive"]
     ):
         modes.append("charge_anchor")
-    if (
-        context.ligand_hydrophobic_patches
-        and context.receptor_hydrophobic_patches
-    ):
+    if context.ligand_hydrophobic_patches and context.receptor_hydrophobic_patches:
         modes.append("hydrophobic_patch")
     if context.ligand_aromatic_systems and context.receptor_aromatic_planes:
         modes.append("aromatic_plane")
@@ -820,12 +805,14 @@ def _unit_toward_pocket(
         return direction / norm
     values = torch.tensor(
         [
-            2.0 * _counter_uniform(
+            2.0
+            * _counter_uniform(
                 seed=seed,
                 proposal_index=proposal_index,
                 domain="guided-degenerate-direction",
                 counter=counter,
-            ) - 1.0
+            )
+            - 1.0
             for counter in range(3)
         ],
         dtype=receptor_coordinate.dtype,
@@ -875,18 +862,15 @@ def _principal_rotation(
         target_axes[:, -1] = -target_axes[:, -1]
         rotation = target_axes @ ligand_axes.T
     identity = torch.eye(3, dtype=rotation.dtype)
-    if (
-        not torch.allclose(
-            rotation.T @ rotation,
-            identity,
-            atol=1.0e-10,
-            rtol=0.0,
-        )
-        or not math.isclose(
-            float(torch.linalg.det(rotation).item()),
-            1.0,
-            abs_tol=1.0e-10,
-        )
+    if not torch.allclose(
+        rotation.T @ rotation,
+        identity,
+        atol=1.0e-10,
+        rtol=0.0,
+    ) or not math.isclose(
+        float(torch.linalg.det(rotation).item()),
+        1.0,
+        abs_tol=1.0e-10,
     ):
         raise DockingAuthorityError("guided shape rotation is not proper")
     return rotation
@@ -933,10 +917,31 @@ def _guided_transform(
         if ligand["acceptor"] and receptor["donor"]:
             choices.append((ligand["acceptor"], receptor["donor"]))
         ligand_rows, receptor_rows = choices[
-            _pick_index(len(choices), seed=seed, proposal_index=proposal_index, domain="donor-acceptor-direction")
+            _pick_index(
+                len(choices),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="donor-acceptor-direction",
+            )
         ]
-        ligand_anchor_indices = (ligand_rows[_pick_index(len(ligand_rows), seed=seed, proposal_index=proposal_index, domain="donor-acceptor-ligand")],)
-        receptor_row = receptor_rows[_pick_index(len(receptor_rows), seed=seed, proposal_index=proposal_index, domain="donor-acceptor-receptor")]
+        ligand_anchor_indices = (
+            ligand_rows[
+                _pick_index(
+                    len(ligand_rows),
+                    seed=seed,
+                    proposal_index=proposal_index,
+                    domain="donor-acceptor-ligand",
+                )
+            ],
+        )
+        receptor_row = receptor_rows[
+            _pick_index(
+                len(receptor_rows),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="donor-acceptor-receptor",
+            )
+        ]
         receptor_coordinate = torch.tensor(receptor_row[1], dtype=conformer.dtype)
         receptor_anchor_indices = (receptor_row[0],)
         distance = policy.donor_acceptor_distance_angstrom
@@ -947,10 +952,31 @@ def _guided_transform(
         if ligand["negative"] and receptor["positive"]:
             choices.append((ligand["negative"], receptor["positive"]))
         ligand_rows, receptor_rows = choices[
-            _pick_index(len(choices), seed=seed, proposal_index=proposal_index, domain="charge-direction")
+            _pick_index(
+                len(choices),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="charge-direction",
+            )
         ]
-        ligand_anchor_indices = (ligand_rows[_pick_index(len(ligand_rows), seed=seed, proposal_index=proposal_index, domain="charge-ligand")],)
-        receptor_row = receptor_rows[_pick_index(len(receptor_rows), seed=seed, proposal_index=proposal_index, domain="charge-receptor")]
+        ligand_anchor_indices = (
+            ligand_rows[
+                _pick_index(
+                    len(ligand_rows),
+                    seed=seed,
+                    proposal_index=proposal_index,
+                    domain="charge-ligand",
+                )
+            ],
+        )
+        receptor_row = receptor_rows[
+            _pick_index(
+                len(receptor_rows),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="charge-receptor",
+            )
+        ]
         receptor_coordinate = torch.tensor(receptor_row[1], dtype=conformer.dtype)
         receptor_anchor_indices = (receptor_row[0],)
         distance = policy.charge_anchor_distance_angstrom
@@ -963,16 +989,14 @@ def _guided_transform(
                 domain="hydrophobic-ligand-patch",
             )
         ]
-        receptor_patch, receptor_center = (
-            context.receptor_hydrophobic_patches[
-                _pick_index(
-                    len(context.receptor_hydrophobic_patches),
-                    seed=seed,
-                    proposal_index=proposal_index,
-                    domain="hydrophobic-receptor-patch",
-                )
-            ]
-        )
+        receptor_patch, receptor_center = context.receptor_hydrophobic_patches[
+            _pick_index(
+                len(context.receptor_hydrophobic_patches),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="hydrophobic-receptor-patch",
+            )
+        ]
         receptor_coordinate = torch.tensor(
             receptor_center,
             dtype=conformer.dtype,
@@ -981,10 +1005,20 @@ def _guided_transform(
         distance = policy.hydrophobic_distance_angstrom
     elif mode == "aromatic_plane":
         ligand_system = context.ligand_aromatic_systems[
-            _pick_index(len(context.ligand_aromatic_systems), seed=seed, proposal_index=proposal_index, domain="aromatic-ligand")
+            _pick_index(
+                len(context.ligand_aromatic_systems),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="aromatic-ligand",
+            )
         ]
         receptor_plane = context.receptor_aromatic_planes[
-            _pick_index(len(context.receptor_aromatic_planes), seed=seed, proposal_index=proposal_index, domain="aromatic-receptor")
+            _pick_index(
+                len(context.receptor_aromatic_planes),
+                seed=seed,
+                proposal_index=proposal_index,
+                domain="aromatic-receptor",
+            )
         ]
         ligand_plane = _plane(conformer, ligand_system)
         if ligand_plane is None:
@@ -1031,9 +1065,7 @@ def _guided_transform(
         ligand_anchor_indices,
     )
     observed_distance = float(
-        torch.linalg.vector_norm(
-            observed_ligand_anchor - receptor_coordinate
-        ).item()
+        torch.linalg.vector_norm(observed_ligand_anchor - receptor_coordinate).item()
     )
     return (
         coordinates.contiguous(),
@@ -1069,10 +1101,17 @@ class GuidedPlacementReceipt:
             "budget_sha256",
         ):
             object.__setattr__(self, name, _digest(getattr(self, name), name=name))
-        fingerprints = tuple(_digest(value, name="proposal fingerprint") for value in self.proposal_fingerprint_sha256s)
+        fingerprints = tuple(
+            _digest(value, name="proposal fingerprint")
+            for value in self.proposal_fingerprint_sha256s
+        )
         modes = tuple(str(value) for value in self.proposal_modes)
         allowed = set(GUIDED_MODES) | {UNIFORM_FALLBACK_MODE}
-        if not fingerprints or len(fingerprints) != len(modes) or any(mode not in allowed for mode in modes):
+        if (
+            not fingerprints
+            or len(fingerprints) != len(modes)
+            or any(mode not in allowed for mode in modes)
+        ):
             raise DockingAuthorityError("guided proposal rows are invalid")
         ligand_anchors = tuple(
             tuple(int(index) for index in row)
@@ -1115,8 +1154,15 @@ class GuidedPlacementReceipt:
             ):
                 raise DockingAuthorityError("guided anchor atom indices are invalid")
             if mode == UNIFORM_FALLBACK_MODE:
-                if ligand_row or receptor_row or requested is not None or observed is not None:
-                    raise DockingAuthorityError("uniform fallback cannot declare guided anchors")
+                if (
+                    ligand_row
+                    or receptor_row
+                    or requested is not None
+                    or observed is not None
+                ):
+                    raise DockingAuthorityError(
+                        "uniform fallback cannot declare guided anchors"
+                    )
             elif (
                 not ligand_row
                 or requested is None
@@ -1134,8 +1180,12 @@ class GuidedPlacementReceipt:
         object.__setattr__(self, "proposal_modes", modes)
         object.__setattr__(self, "ligand_anchor_atom_indices", ligand_anchors)
         object.__setattr__(self, "receptor_anchor_atom_indices", receptor_anchors)
-        object.__setattr__(self, "requested_anchor_distance_angstroms", requested_distances)
-        object.__setattr__(self, "observed_anchor_distance_angstroms", observed_distances)
+        object.__setattr__(
+            self, "requested_anchor_distance_angstroms", requested_distances
+        )
+        object.__setattr__(
+            self, "observed_anchor_distance_angstroms", observed_distances
+        )
         object.__setattr__(self, "feature_counts", MappingProxyType(counts))
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
@@ -1178,8 +1228,12 @@ class GuidedPlacementReceipt:
                     )
                 )
             ],
-            "guided_proposal_count": sum(mode != UNIFORM_FALLBACK_MODE for mode in self.proposal_modes),
-            "uniform_fallback_count": sum(mode == UNIFORM_FALLBACK_MODE for mode in self.proposal_modes),
+            "guided_proposal_count": sum(
+                mode != UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
+            ),
+            "uniform_fallback_count": sum(
+                mode == UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
+            ),
             "uniform_random_placement_retained_as_fallback": True,
             "feature_counts": dict(self.feature_counts),
             "scientifically_validated": False,
@@ -1214,15 +1268,17 @@ def generate_guided_docking_proposals(
     if not isinstance(selected_policy, GuidedPlacementPolicy):
         raise TypeError("policy must be GuidedPlacementPolicy")
     authenticated_problem.input_receipt_sha256
-    if context.authority_input_receipt_sha256 != authenticated_problem.input_receipt_sha256:
-        raise DockingAuthorityError("guided context is cross-wired to another authority")
     if (
-        context.receptor_system_sha256
-        != authenticated_problem.receptor_system_sha256
-        or context.ligand_system_sha256
-        != authenticated_problem.ligand_system_sha256
-        or context.receptor_atom_indices
-        != authenticated_problem.receptor_atom_indices
+        context.authority_input_receipt_sha256
+        != authenticated_problem.input_receipt_sha256
+    ):
+        raise DockingAuthorityError(
+            "guided context is cross-wired to another authority"
+        )
+    if (
+        context.receptor_system_sha256 != authenticated_problem.receptor_system_sha256
+        or context.ligand_system_sha256 != authenticated_problem.ligand_system_sha256
+        or context.receptor_atom_indices != authenticated_problem.receptor_atom_indices
     ):
         raise DockingAuthorityError("guided context system identity is cross-wired")
     context.fingerprint_sha256
@@ -1233,7 +1289,9 @@ def generate_guided_docking_proposals(
     )
     modes = _available_modes(context)
     if modes:
-        guided_count = int(math.floor(budget.candidate_count * selected_policy.guided_fraction))
+        guided_count = int(
+            math.floor(budget.candidate_count * selected_policy.guided_fraction)
+        )
         guided_count = max(1, guided_count)
         if budget.candidate_count >= 2:
             guided_count = min(budget.candidate_count - 1, guided_count)
@@ -1283,7 +1341,10 @@ def generate_guided_docking_proposals(
         centroid_offset = float(
             torch.linalg.vector_norm(coordinates.mean(dim=0) - pocket_center).item()
         )
-        if centroid_offset > budget.translation_radius_angstrom + _CENTROID_TOLERANCE_ANGSTROM:
+        if (
+            centroid_offset
+            > budget.translation_radius_angstrom + _CENTROID_TOLERANCE_ANGSTROM
+        ):
             raise DockingAuthorityError("guided proposal exceeds the translation bound")
         coordinate_digest = coordinate_fingerprint(coordinates)
         fingerprint = proposal_module._proposal_fingerprint(
@@ -1347,15 +1408,22 @@ class GuidedPlacementSearchResult:
     def __post_init__(self) -> None:
         if not isinstance(self.guided_receipt, GuidedPlacementReceipt):
             raise TypeError("guided_receipt must be GuidedPlacementReceipt")
-        if not isinstance(self.authenticated_search_result, AuthenticatedDockingSearchResult):
-            raise TypeError("authenticated_search_result must be AuthenticatedDockingSearchResult")
+        if not isinstance(
+            self.authenticated_search_result, AuthenticatedDockingSearchResult
+        ):
+            raise TypeError(
+                "authenticated_search_result must be AuthenticatedDockingSearchResult"
+            )
         observed = tuple(
             row.proposal_fingerprint_sha256
             for row in self.authenticated_search_result.search_result.rows
         )
         if observed != self.guided_receipt.proposal_fingerprint_sha256s:
             raise DockingAuthorityError("guided search proposals are cross-wired")
-        if self.authenticated_search_result.authenticated_input_receipt_sha256 != self.guided_receipt.authenticated_input_receipt_sha256:
+        if (
+            self.authenticated_search_result.authenticated_input_receipt_sha256
+            != self.guided_receipt.authenticated_input_receipt_sha256
+        ):
             raise DockingAuthorityError("guided search authority is cross-wired")
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 

@@ -295,8 +295,7 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
     for index, mode in enumerate(receipt.proposal_modes):
         observed_offset = float(
             torch.linalg.vector_norm(
-                first[index].coordinates.mean(dim=0)
-                - authority.pocket.center
+                first[index].coordinates.mean(dim=0) - authority.pocket.center
             ).item()
         )
         assert observed_offset <= _budget().translation_radius_angstrom + 1.0e-10
@@ -370,9 +369,7 @@ def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:
 
     hydrophobic_index = receipt.proposal_modes.index("hydrophobic_patch")
     assert len(receipt.ligand_anchor_atom_indices[hydrophobic_index]) > 1
-    guidance_row = receipt.to_dict()["proposal_guidance_rows"][
-        hydrophobic_index
-    ]
+    guidance_row = receipt.to_dict()["proposal_guidance_rows"][hydrophobic_index]
     assert guidance_row["ligand_anchor_atom_indices"] == list(
         receipt.ligand_anchor_atom_indices[hydrophobic_index]
     )
@@ -444,10 +441,7 @@ def test_guided_context_rejects_crosswired_systems_and_is_immutable() -> None:
 def test_unavailable_guidance_is_the_exact_uniform_batch() -> None:
     authority, receptor, ligand = _authority()
     context = build_guided_placement_context(authority, receptor, ligand)
-    empty_features = {
-        name: ()
-        for name in context.ligand_features
-    }
+    empty_features = {name: () for name in context.ligand_features}
     unavailable = replace(
         context,
         ligand_features=empty_features,
@@ -468,9 +462,9 @@ def test_unavailable_guidance_is_the_exact_uniform_batch() -> None:
         authority,
         _budget(),
     )
-    assert receipt.proposal_modes == (
-        UNIFORM_FALLBACK_MODE,
-    ) * _budget().candidate_count
+    assert (
+        receipt.proposal_modes == (UNIFORM_FALLBACK_MODE,) * _budget().candidate_count
+    )
     assert tuple(row.fingerprint_sha256 for row in guided) == tuple(
         row.fingerprint_sha256 for row in baseline
     )
@@ -490,9 +484,7 @@ def test_guided_receipt_detects_anchor_distance_mutation() -> None:
     )
     observed = list(receipt.observed_anchor_distance_angstroms)
     guided_index = next(
-        index
-        for index, value in enumerate(observed)
-        if value is not None
+        index for index, value in enumerate(observed) if value is not None
     )
     observed[guided_index] = float(observed[guided_index]) + 0.25
     object.__setattr__(
@@ -511,10 +503,7 @@ def test_unavailable_guidance_reproduces_the_entire_uniform_batch() -> None:
         receptor,
         ligand,
     )
-    empty_features = {
-        name: ()
-        for name in context.ligand_features
-    }
+    empty_features = {name: () for name in context.ligand_features}
     no_guidance = replace(
         context,
         ligand_features=empty_features,
