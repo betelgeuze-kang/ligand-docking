@@ -153,6 +153,7 @@ class ReleaseReviewExpectationV3:
     ruleset_sha256: str
     codeowners_sha256: str
     required_check_names: tuple[str, ...]
+    required_check_workflow_source_sha256s: Mapping[str, str]
     required_roles: tuple[str, ...]
     trusted_reviewers: Mapping[str, TrustedReviewer]
     trusted_attestor_keys: Mapping[str, bytes]
@@ -196,9 +197,26 @@ class ReleaseReviewExpectationV3:
         if any(not isinstance(name, str) or not name for name in checks):
             raise EvidenceContractError("required check names are invalid")
         object.__setattr__(self, "required_check_names", checks)
+        workflow_sources = {
+            str(name): _digest(digest, name=f"{name} workflow source")
+            for name, digest in self.required_check_workflow_source_sha256s.items()
+        }
+        if set(workflow_sources) != set(checks):
+            raise EvidenceContractError(
+                "required workflow source identities must match required checks"
+            )
+        object.__setattr__(
+            self,
+            "required_check_workflow_source_sha256s",
+            workflow_sources,
+        )
         roles = tuple(sorted(set(self.required_roles)))
         if not roles or any(role not in _REVIEW_ROLES for role in roles):
             raise EvidenceContractError("required reviewer roles are invalid")
+        if "codeowner" not in roles:
+            raise EvidenceContractError(
+                "required reviewer roles must include codeowner"
+            )
         object.__setattr__(self, "required_roles", roles)
         reviewers = dict(self.trusted_reviewers)
         if not reviewers or any(
@@ -423,6 +441,16 @@ def verify_release_review_attestation_v3(
             raise EvidenceContractError("check timestamp order is invalid")
         latest_check = max(latest_check, completed)
         names.append(name)
+        workflow_source = _digest(
+            row["workflow_source_sha256"], name="workflow source"
+        )
+        if (
+            workflow_source
+            != expected.required_check_workflow_source_sha256s.get(str(name))
+        ):
+            raise EvidenceContractError(
+                "required check workflow source is cross-wired"
+            )
         canonical_checks.append(
             {
                 "name": name,
@@ -438,9 +466,7 @@ def verify_release_review_attestation_v3(
                 "workflow_run_attempt": _positive_int(
                     row["workflow_run_attempt"], name="workflow_run_attempt"
                 ),
-                "workflow_source_sha256": _digest(
-                    row["workflow_source_sha256"], name="workflow source"
-                ),
+                "workflow_source_sha256": workflow_source,
                 "check_head_sha": expected.pull_request_head_sha,
                 "event_name": row["event_name"],
                 "conclusion": "success",

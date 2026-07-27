@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 # Torch is optional for collection, so imports depending on it intentionally follow
 # the importorskip guard below.
 # ruff: noqa: E402
@@ -170,3 +172,15 @@ def test_authenticated_problem_cross_binds_every_derived_contract() -> None:
     assert authority.validity_context.bond_pairs == ((0, 1), (1, 2), (2, 3))
     assert len(authority.input_receipt_sha256) == 64
     assert authority.to_dict()["caller_supplied_validity_context_allowed"] is False
+
+
+def test_authenticated_problem_rejects_model_index_cross_wiring() -> None:
+    authority = build_authenticated_known_pocket_docking_problem(
+        _receptor(),
+        _ligand(),
+        _pocket(),
+    )
+    with pytest.raises(DockingAuthorityError, match="ligand model index"):
+        replace(authority, ligand_model_index=1)
+    with pytest.raises(DockingAuthorityError, match="receptor_model_index"):
+        replace(authority, receptor_model_index=True)

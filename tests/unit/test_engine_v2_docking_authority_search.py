@@ -142,6 +142,14 @@ def test_authenticated_search_retains_input_authority() -> None:
     assert result.search_result.search_space_fingerprint_sha256 == authority.search_space.fingerprint_sha256
     assert result.search_result.validity_context_fingerprint_sha256 == authority.validity_context.fingerprint_sha256
     assert result.search_result.diversity_metric == "symmetry_aware_direct_rmsd"
+    for row in result.search_result.rows:
+        assert row.proposal is not None
+        assert torch.allclose(
+            row.proposal.coordinates.mean(dim=0),
+            authority.pocket.center,
+            atol=1.0e-10,
+            rtol=0.0,
+        )
     assert len(result.receipt_sha256) == 64
     assert result.to_dict()["claim_safe"] is False
 

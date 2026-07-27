@@ -519,6 +519,7 @@ def _install_symmetry_aware_direct_diversity() -> None:
         diversity_metric: str = "direct_rmsd",
         symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
         problem: object | None = None,
+        placement_center: torch.Tensor | None = None,
     ) -> object:
         if diversity_metric != "symmetry_aware_direct_rmsd":
             return original_run(
@@ -531,6 +532,7 @@ def _install_symmetry_aware_direct_diversity() -> None:
                 diversity_metric=diversity_metric,
                 symmetry_permutations=symmetry_permutations,
                 problem=problem,
+                placement_center=placement_center,
             )
         if symmetry_permutations is None:
             raise ValueError(
@@ -548,6 +550,7 @@ def _install_symmetry_aware_direct_diversity() -> None:
                 diversity_metric="symmetry_aware_kabsch_rmsd",
                 symmetry_permutations=symmetry_permutations,
                 problem=problem,
+                placement_center=placement_center,
             )
         finally:
             _DIRECT_SYMMETRY_MODE.reset(token)

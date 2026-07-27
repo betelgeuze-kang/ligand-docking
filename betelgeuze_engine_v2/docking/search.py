@@ -384,6 +384,7 @@ def run_bounded_docking_search(
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     problem: DockingProblemIdentity | None = None,
+    placement_center: torch.Tensor | None = None,
 ) -> DockingSearchResult:
     """Generate, validate, score, and diversity-filter one fixed candidate budget."""
 
@@ -434,6 +435,7 @@ def run_bounded_docking_search(
         search_space,
         budget,
         problem=problem_identity,
+        placement_center=placement_center,
     )
     rows: list[DockingSearchRow] = []
     for proposal in proposals:

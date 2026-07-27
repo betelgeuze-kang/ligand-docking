@@ -518,6 +518,7 @@ def generate_bounded_docking_proposals(
     budget: DockingBudget,
     *,
     problem: DockingProblemIdentity | None = None,
+    placement_center: torch.Tensor | None = None,
 ) -> tuple[DockingProposal, ...]:
     """Generate a deterministic baseline plus bounded torsion/rigid proposals."""
 
@@ -537,6 +538,16 @@ def generate_bounded_docking_proposals(
     problem_fingerprint = problem_identity.fingerprint_sha256
     search_fingerprint = search_space.fingerprint_sha256
     dtype = search_space.local_offsets.dtype
+    center = None
+    if placement_center is not None:
+        center = _frozen_tensor(placement_center, name="placement_center")
+        if center.shape != (3,):
+            raise DockingProposalError("placement_center must have shape [3]")
+        _finite_cpu_floating(center, name="placement_center")
+        if center.dtype != dtype:
+            raise DockingProposalError(
+                "placement_center must share the search-space dtype"
+            )
     generator = torch.Generator(device="cpu")
     generator.manual_seed(budget.seed)
     proposals: list[DockingProposal] = []
@@ -562,7 +573,7 @@ def generate_bounded_docking_proposals(
         )
         if proposal_index == 0:
             rotation = torch.eye(3, dtype=dtype)
-            translation = torch.zeros(3, dtype=dtype)
+            offset = torch.zeros(3, dtype=dtype)
         else:
             axis = _random_unit_axis(generator, dtype)
             rigid_angle = (
@@ -576,10 +587,16 @@ def generate_bounded_docking_proposals(
             radius = torch.rand((), generator=generator, dtype=dtype) ** (
                 1.0 / 3.0
             )
-            translation = (
+            offset = (
                 direction * radius * budget.translation_radius_angstrom
             )
-        coordinates = kinematic.coordinates @ rotation.T + translation
+        if center is None:
+            translation = offset
+            coordinates = kinematic.coordinates @ rotation.T + translation
+        else:
+            ligand_centroid = kinematic.coordinates.mean(dim=0)
+            translation = center + offset - ligand_centroid @ rotation.T
+            coordinates = kinematic.coordinates @ rotation.T + translation
         coordinate_digest = coordinate_fingerprint(coordinates)
         fingerprint = _proposal_fingerprint(
             proposal_index=proposal_index,
