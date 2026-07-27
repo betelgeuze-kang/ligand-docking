@@ -67,7 +67,6 @@ from .authority import (
     TorsionSearchSpaceDerivationReceipt,
     authenticated_docking_derivation_policy_document,
     build_authenticated_known_pocket_docking_problem,
-    derive_authoritative_torsion_search_space,
     run_authenticated_bounded_docking_search,
 )
 from .authority_rotor_compat import (
@@ -79,7 +78,7 @@ AUTHORITY_ROTOR_STEREO_COMPAT_SHA256 = (
 )
 
 # Rebind the public function after the installer updates the owning module.
-from .authority import derive_authoritative_torsion_search_space
+from .authority import derive_authoritative_torsion_search_space  # noqa: E402
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
