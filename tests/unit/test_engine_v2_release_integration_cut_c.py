@@ -62,6 +62,8 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
         "test_engine_v2_interpretable_result_round12.py",
         "test_engine_v2_canonical_cli_round14.py",
         "test_engine_v2_sparse_base_validity_round16.py",
+        "test_engine_v2_cli_result_verifier_round18.py",
+        "test_engine_v2_cli_result_verifier_release_round19.py",
         "test_engine_v2_release_integration_cut_c.py",
     ):
         assert filename in source
@@ -79,6 +81,9 @@ def test_package_lane_builds_two_identical_wheels_and_executes_cli() -> None:
     assert "Import wheel outside checkout" in source
     assert "Run installed canonical CLI outside checkout" in source
     assert "betelgeuze-engine-v2\" dock-canonical" in source
+    assert "betelgeuze-engine-v2\" verify-result" in source
+    assert "canonical_bytes_verified" in source
+    assert "failure_denominator_verified" in source
     assert "CLI_DOCKING_RESULT_SCHEMA_ID" in source
     for api_name in (
         "EngineV2CliError",
