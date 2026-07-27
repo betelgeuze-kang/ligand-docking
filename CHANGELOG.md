@@ -32,8 +32,9 @@ scientific claim from a package version.
   advances strict PDB parser semantics to 1.1.0. No structure data or
   performance result is bundled or scientifically promoted. Report
   construction now rejects per-row CPU/timeout policy drift, binds the exact
-  pinned Torch build, quarantines stale external outputs before reruns, and
-  marks cross-process runtime boundaries non-comparable.
+  pinned Torch build (including the official `2.6.0+cpu` package tag),
+  quarantines stale external outputs before reruns, and marks cross-process
+  runtime boundaries non-comparable.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,

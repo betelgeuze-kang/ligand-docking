@@ -65,8 +65,9 @@ deltas remain descriptive because the search regions and algorithms differ.
 They are not process-boundary comparable: each external case includes fresh
 process startup and model loading, while Engine V2 reuses one imported Python
 process. The report therefore records `runtime_boundary_comparable: false`.
-The exact Torch build must be one of the repository's pinned 2.6.0 CPU or
-2.6.0+rocm6.1 builds and is retained in every Engine V2 row and engine identity.
+The exact Torch build must be one of the repository's pinned 2.6.0,
+2.6.0+cpu, or 2.6.0+rocm6.1 build identifiers and is retained in every Engine
+V2 row and engine identity.
 
 Engine V2 preparation assigns explicit claim-blocked charges before Scorer v1:
 

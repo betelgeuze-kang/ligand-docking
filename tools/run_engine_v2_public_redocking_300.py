@@ -70,7 +70,7 @@ RECEPTOR_CHARGE_METHOD_ID = (
 )
 LIGAND_CHARGE_METHOD_ID = "rdkit_gasteiger_12_iter_conserved/2022.09.5"
 ENGINE_V2_CANDIDATE_COUNT = 64
-ALLOWED_TORCH_VERSIONS = ("2.6.0", "2.6.0+rocm6.1")
+ALLOWED_TORCH_VERSIONS = ("2.6.0", "2.6.0+cpu", "2.6.0+rocm6.1")
 ENGINE_V2_CPU_POLICY = {
     "cpu_count": 1,
     "torch_intraop_threads": 1,

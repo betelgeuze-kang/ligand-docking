@@ -460,6 +460,11 @@ def test_cpu_policy_configures_and_verifies_single_torch_threads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     state = {"intra": 8, "inter": 4}
+    monkeypatch.setitem(
+        runner.ENGINE_V2_CPU_POLICY,
+        "torch_version",
+        "2.6.0+cpu",
+    )
     monkeypatch.setattr(
         runner.torch,
         "set_num_threads",
@@ -484,6 +489,22 @@ def test_cpu_policy_configures_and_verifies_single_torch_threads(
     runner._configure_engine_v2_cpu()
 
     assert state == {"intra": 1, "inter": 1}
+
+
+def test_cpu_policy_rejects_unfrozen_torch_build(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(
+        runner.ENGINE_V2_CPU_POLICY,
+        "torch_version",
+        "2.7.0+cpu",
+    )
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="Torch build is outside the frozen runtime set",
+    ):
+        runner._configure_engine_v2_cpu()
 
 
 def test_external_runtime_stops_before_evaluation_and_evaluator_errors_abort(
