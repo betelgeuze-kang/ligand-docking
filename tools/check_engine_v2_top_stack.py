@@ -41,6 +41,7 @@ REDUNDANT_STACK_WORKFLOWS = (
     "ci-engine-v2-sparse-base-validity-round16.yml",
     "ci-engine-v2-cli-result-verifier-round18.yml",
     "ci-engine-v2-cli-result-verifier-package-round19.yml",
+    "ci-engine-v2-search-fingerprint-material-round20.yml",
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
     "contents: write",

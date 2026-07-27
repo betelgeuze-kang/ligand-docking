@@ -307,7 +307,7 @@ jobs:
           assert verification["canonical_bytes_verified"] is True
           assert verification["nested_receipts_verified"] is True
           assert verification["failure_denominator_verified"] is True
-          assert verification["generic_search_fingerprint_fully_recomputed"] is False
+          assert verification["generic_search_fingerprint_fully_recomputed"] is True
           assert verification["generic_search_fingerprint_crosslinked"] is True
           assert verification["network_fetch_performed"] is False
           assert verification["calibrated"] is False
