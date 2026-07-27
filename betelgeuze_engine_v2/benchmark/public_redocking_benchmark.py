@@ -160,6 +160,21 @@ def _require_command_flag(command: Sequence[str], flag: str) -> None:
         )
 
 
+def _require_case_input_path(
+    command: Sequence[str],
+    option: str,
+    *,
+    expected_basename: str,
+    engine_id: str,
+) -> None:
+    value = _command_option_value(command, option)
+    basename = value.replace("\\", "/").rsplit("/", 1)[-1]
+    if basename != expected_basename:
+        raise PublicRedockingBenchmarkError(
+            f"{engine_id} command {option} is cross-wired to another case"
+        )
+
+
 def _validate_engine_commands(
     identity: "PublicRedockingEngineIdentity",
     rows: Sequence["PublicRedockingCaseResult"],
@@ -200,13 +215,18 @@ def _validate_engine_commands(
                 raise PublicRedockingBenchmarkError(
                     "Engine V2 row command is cross-wired to another case"
                 )
-            for option in (
-                "--receptor",
-                "--ligand",
-                "--pocket-source",
-                "--seed",
-                "--out",
+            for option, suffix in (
+                ("--receptor", "protein.pdb"),
+                ("--ligand", "ligand_start_conf.sdf"),
+                ("--pocket-source", "ligand.sdf"),
             ):
+                _require_case_input_path(
+                    row.execution_command,
+                    option,
+                    expected_basename=f"{row.case_id}_{suffix}",
+                    engine_id="Engine V2",
+                )
+            for option in ("--seed", "--out"):
                 _command_option_value(row.execution_command, option)
         return
 
@@ -235,10 +255,18 @@ def _validate_engine_commands(
     _require_command_flag(identity.command, "--no_gpu")
     for row in rows:
         _require_command_flag(row.execution_command, "--no_gpu")
+        for option, suffix in (
+            ("--receptor", "protein.pdb"),
+            ("--ligand", "ligand_start_conf.sdf"),
+            ("--autobox_ligand", "ligand.sdf"),
+        ):
+            _require_case_input_path(
+                row.execution_command,
+                option,
+                expected_basename=f"{row.case_id}_{suffix}",
+                engine_id=identity.engine_id,
+            )
         for option, expected in (
-            ("--receptor", None),
-            ("--ligand", None),
-            ("--autobox_ligand", None),
             ("--autobox_add", "4"),
             ("--num_modes", "5"),
             ("--exhaustiveness", "1"),

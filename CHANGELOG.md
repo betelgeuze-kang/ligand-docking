@@ -37,7 +37,10 @@ scientific claim from a package version.
   runtime boundaries non-comparable. Public report reconstruction now rejects
   unsupported Torch builds, boolean-as-integer policies, and commands
   cross-wired to another engine mode; unevaluated PoseBusters cells abort
-  evidence construction rather than becoming truthy validity results.
+  evidence construction rather than becoming truthy validity results. Timed
+  cache receipts now bind a hashed boot/host environment, PoseBusters cells are
+  validated eagerly before reduction, and case-specific input path names and
+  GNINA's base scoring mode are checked in complete-report construction.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,

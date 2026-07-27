@@ -11,6 +11,7 @@ import json
 import math
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import time
@@ -55,7 +56,7 @@ from betelgeuze_engine_v2.io import (
 from betelgeuze_engine_v2.molecular import AllAtomSystem
 
 
-RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.4.0"
+RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.5.0"
 DEFAULT_SEED = 2_026_072_700
 POSEBUSTERS_VERSION = "0.3.1"
 RDKit_VERSION = "2022.09.5"
@@ -207,6 +208,25 @@ def _sha256_path(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _execution_environment_sha256() -> str:
+    boot_id_path = Path("/proc/sys/kernel/random/boot_id")
+    try:
+        boot_session = boot_id_path.read_text(encoding="ascii").strip()
+    except OSError:
+        boot_session = platform.node()
+    projection = {
+        "boot_session": boot_session,
+        "logical_cpu_count": os.cpu_count(),
+        "machine": platform.machine(),
+        "python_implementation": platform.python_implementation(),
+        "python_version": platform.python_version(),
+        "system": platform.system(),
+        "system_release": platform.release(),
+        "torch_version": str(torch.__version__),
+    }
+    return _sha256_bytes(_canonical_bytes(projection))
 
 
 def _atomic_json(path: Path, payload: object) -> None:
@@ -571,11 +591,21 @@ def _posebusters_outcomes(
         return value
 
     chemical = tuple(
-        all(required_boolean(index, column) for column in CHEMICAL_COLUMNS)
+        all(
+            tuple(
+                required_boolean(index, column)
+                for column in CHEMICAL_COLUMNS
+            )
+        )
         for index in range(5)
     )
     geometric = tuple(
-        all(required_boolean(index, column) for column in GEOMETRIC_COLUMNS)
+        all(
+            tuple(
+                required_boolean(index, column)
+                for column in GEOMETRIC_COLUMNS
+            )
+        )
         for index in range(5)
     )
     return rmsds, geometric, chemical
@@ -589,6 +619,7 @@ def _row_payload(
     input_sha256s: dict[str, str],
     implementation_sha256: str,
     evaluation_pipeline_sha256: str,
+    execution_environment_sha256: str,
 ) -> dict[str, object]:
     expected_inputs = _result_input_fields(input_sha256s)
     if any(
@@ -609,6 +640,7 @@ def _row_payload(
         "input_sha256s": input_sha256s,
         "implementation_sha256": implementation_sha256,
         "evaluation_pipeline_sha256": evaluation_pipeline_sha256,
+        "execution_environment_sha256": execution_environment_sha256,
         "result": row.to_dict(),
     }
     return {
@@ -628,6 +660,7 @@ def _load_cached_row(
     input_sha256s: dict[str, str],
     implementation_sha256: str,
     evaluation_pipeline_sha256: str,
+    execution_environment_sha256: str,
 ) -> PublicRedockingCaseResult | None:
     if not path.is_file():
         return None
@@ -651,6 +684,8 @@ def _load_cached_row(
             or projection.get("implementation_sha256") != implementation_sha256
             or projection.get("evaluation_pipeline_sha256")
             != evaluation_pipeline_sha256
+            or projection.get("execution_environment_sha256")
+            != execution_environment_sha256
         ):
             return None
         result = projection["result"]
@@ -1195,6 +1230,76 @@ def _evaluation_policy_from_arguments(
     )
 
 
+def _report_engine_identities(
+    *,
+    binary: Path,
+    binary_version: str,
+    binary_sha256: str,
+    engine_source_sha256: str,
+    evaluation_pipeline_sha256: str,
+    timeout_seconds: int,
+) -> tuple[PublicRedockingEngineIdentity, ...]:
+    return (
+        PublicRedockingEngineIdentity(
+            engine_id="engine_v2",
+            version=(
+                "source-stage7; torch "
+                f"{ENGINE_V2_CPU_POLICY['torch_version']}"
+            ),
+            implementation_sha256=engine_source_sha256,
+            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+            command=(
+                RUNNER_ID,
+                "engine_v2",
+                "--candidate-count",
+                str(ENGINE_V2_CANDIDATE_COUNT),
+                "--cpu",
+                "1",
+                "--torch-version",
+                str(ENGINE_V2_CPU_POLICY["torch_version"]),
+            ),
+        ),
+        PublicRedockingEngineIdentity(
+            engine_id="vina",
+            version=f"{binary_version}; vina scoring; CNN disabled",
+            implementation_sha256=binary_sha256,
+            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+            command=(
+                str(binary),
+                "--scoring",
+                "vina",
+                "--cnn_scoring",
+                "none",
+                "--cpu",
+                "1",
+                "--no_gpu",
+                "--timeout-seconds",
+                str(timeout_seconds),
+            ),
+        ),
+        PublicRedockingEngineIdentity(
+            engine_id="gnina",
+            version=f"{binary_version}; crossdock_default2018 CNN rescore",
+            implementation_sha256=binary_sha256,
+            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+            command=(
+                str(binary),
+                "--scoring",
+                "vina",
+                "--cnn_scoring",
+                "rescore",
+                "--cnn",
+                "crossdock_default2018",
+                "--cpu",
+                "1",
+                "--no_gpu",
+                "--timeout-seconds",
+                str(timeout_seconds),
+            ),
+        ),
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     repo_root = Path(__file__).resolve().parents[1]
@@ -1232,6 +1337,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         repo_root,
         evaluator_versions=evaluator_versions,
     )
+    execution_environment_sha256 = _execution_environment_sha256()
     all_case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS
     if not 0 <= arguments.start_index < len(all_case_ids):
         raise PublicRedockingRunnerError("start-index is outside the cohort")
@@ -1281,6 +1387,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 input_sha256s=inputs,
                 implementation_sha256=engine_source_sha256,
                 evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+                execution_environment_sha256=execution_environment_sha256,
             )
             if engine_row is None:
                 engine_row = _engine_v2_result(
@@ -1299,6 +1406,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         input_sha256s=inputs,
                         implementation_sha256=engine_source_sha256,
                         evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
+                        execution_environment_sha256=(
+                            execution_environment_sha256
+                        ),
                     ),
                 )
             rows_by_engine["engine_v2"].append(engine_row)
@@ -1326,6 +1436,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     input_sha256s=inputs,
                     implementation_sha256=binary_sha256,
                     evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+                    execution_environment_sha256=execution_environment_sha256,
                 )
                 if row is None:
                     row, command = _external_result(
@@ -1349,6 +1460,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                             input_sha256s=inputs,
                             implementation_sha256=binary_sha256,
                             evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
+                            execution_environment_sha256=(
+                                execution_environment_sha256
+                            ),
                         ),
                     )
                 rows_by_engine[engine_id].append(row)
@@ -1372,62 +1486,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 0
 
-    identities = (
-        PublicRedockingEngineIdentity(
-            engine_id="engine_v2",
-            version=(
-                "source-stage7; torch "
-                f"{ENGINE_V2_CPU_POLICY['torch_version']}"
-            ),
-            implementation_sha256=engine_source_sha256,
-            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
-            command=(
-                RUNNER_ID,
-                "engine_v2",
-                "--candidate-count",
-                str(ENGINE_V2_CANDIDATE_COUNT),
-                "--cpu",
-                "1",
-                "--torch-version",
-                str(ENGINE_V2_CPU_POLICY["torch_version"]),
-            ),
-        ),
-        PublicRedockingEngineIdentity(
-            engine_id="vina",
-            version=f"{binary_version}; vina scoring; CNN disabled",
-            implementation_sha256=binary_sha256,
-            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
-            command=(
-                str(binary),
-                "--scoring",
-                "vina",
-                "--cnn_scoring",
-                "none",
-                "--cpu",
-                "1",
-                "--no_gpu",
-                "--timeout-seconds",
-                str(arguments.timeout_seconds),
-            ),
-        ),
-        PublicRedockingEngineIdentity(
-            engine_id="gnina",
-            version=f"{binary_version}; crossdock_default2018 CNN rescore",
-            implementation_sha256=binary_sha256,
-            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
-            command=(
-                str(binary),
-                "--cnn_scoring",
-                "rescore",
-                "--cnn",
-                "crossdock_default2018",
-                "--cpu",
-                "1",
-                "--no_gpu",
-                "--timeout-seconds",
-                str(arguments.timeout_seconds),
-            ),
-        ),
+    identities = _report_engine_identities(
+        binary=binary,
+        binary_version=binary_version,
+        binary_sha256=binary_sha256,
+        engine_source_sha256=engine_source_sha256,
+        evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+        timeout_seconds=arguments.timeout_seconds,
     )
     ordered_rows = tuple(
         row

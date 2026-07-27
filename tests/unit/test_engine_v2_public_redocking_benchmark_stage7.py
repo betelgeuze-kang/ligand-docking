@@ -124,11 +124,11 @@ def _input_fields(
             "--case-id",
             case_id,
             "--receptor",
-            f"{case_id}-receptor.pdb",
+            f"{case_id}_protein.pdb",
             "--ligand",
-            f"{case_id}-seed.sdf",
+            f"{case_id}_ligand_start_conf.sdf",
             "--pocket-source",
-            f"{case_id}-native.sdf",
+            f"{case_id}_ligand.sdf",
             "--candidate-count",
             "64",
             "--cpu",
@@ -142,11 +142,11 @@ def _input_fields(
         else (
             "fixture-engine",
             "--receptor",
-            f"{case_id}-receptor.pdb",
+            f"{case_id}_protein.pdb",
             "--ligand",
-            f"{case_id}-seed.sdf",
+            f"{case_id}_ligand_start_conf.sdf",
             "--autobox_ligand",
-            f"{case_id}-native.sdf",
+            f"{case_id}_ligand.sdf",
             "--autobox_add",
             "4",
             "--num_modes",
@@ -648,6 +648,27 @@ def test_report_rejects_row_command_cross_wired_to_another_engine() -> None:
     with pytest.raises(
         PublicRedockingBenchmarkError,
         match="vina command contradicts frozen --cnn_scoring",
+    ):
+        build_public_redocking_benchmark_report(
+            _profiles(),
+            _identities(),
+            tuple(rows),
+            policy=_policy(),
+        )
+
+
+def test_report_rejects_engine_v2_input_path_cross_wired_to_another_case() -> None:
+    rows = list(_rows())
+    command = list(rows[0].execution_command)
+    receptor_index = command.index("--receptor") + 1
+    command[receptor_index] = (
+        f"/tmp/{FROZEN_PUBLIC_REDOCKING_CASE_IDS[1]}_protein.pdb"
+    )
+    rows[0] = replace(rows[0], execution_command=tuple(command))
+
+    with pytest.raises(
+        PublicRedockingBenchmarkError,
+        match="Engine V2 command --receptor is cross-wired",
     ):
         build_public_redocking_benchmark_report(
             _profiles(),

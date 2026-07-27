@@ -144,6 +144,39 @@ def test_external_commands_make_vina_and_gnina_modes_explicit(
         assert command[command.index("--seed") + 1] == "11"
 
 
+def test_complete_report_identities_retain_external_scoring_modes(
+    tmp_path: Path,
+) -> None:
+    identities = runner._report_engine_identities(
+        binary=tmp_path / "gnina",
+        binary_version="v1.1",
+        binary_sha256="1" * 64,
+        engine_source_sha256="2" * 64,
+        evaluation_pipeline_sha256="3" * 64,
+        timeout_seconds=300,
+    )
+    by_engine = {identity.engine_id: identity for identity in identities}
+
+    assert (
+        by_engine["vina"].command[
+            by_engine["vina"].command.index("--scoring") + 1
+        ]
+        == "vina"
+    )
+    assert (
+        by_engine["gnina"].command[
+            by_engine["gnina"].command.index("--scoring") + 1
+        ]
+        == "vina"
+    )
+    assert (
+        by_engine["gnina"].command[
+            by_engine["gnina"].command.index("--cnn_scoring") + 1
+        ]
+        == "rescore"
+    )
+
+
 def test_posebusters_outcomes_reject_unevaluated_boolean_check(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -157,7 +190,8 @@ def test_posebusters_outcomes_reject_unevaluated_boolean_check(
         {column: (1.0 if column == "rmsd" else True) for column in columns}
         for _ in range(5)
     ]
-    rows[0][runner.CHEMICAL_COLUMNS[0]] = float("nan")
+    rows[0][runner.CHEMICAL_COLUMNS[0]] = False
+    rows[0][runner.CHEMICAL_COLUMNS[1]] = float("nan")
 
     class FakeColumn:
         def __init__(self, values):
@@ -262,6 +296,7 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
     }
     implementation = "2" * 64
     evaluation = "7" * 64
+    environment = "8" * 64
     runner._atomic_json(
         path,
         runner._row_payload(
@@ -271,6 +306,7 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
+            execution_environment_sha256=environment,
         ),
     )
 
@@ -285,8 +321,24 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
+            execution_environment_sha256=environment,
         )
         == row
+    )
+    assert (
+        runner._load_cached_row(
+            path,
+            case_id=case_id,
+            engine_id="engine_v2",
+            command=command,
+            execution_policy=execution_policy,
+            pose_output=tmp_path / "unused.sdf",
+            input_sha256s=inputs,
+            implementation_sha256=implementation,
+            evaluation_pipeline_sha256=evaluation,
+            execution_environment_sha256="9" * 64,
+        )
+        is None
     )
 
     payload = json.loads(path.read_text(encoding="ascii"))
@@ -303,6 +355,7 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
+            execution_environment_sha256=environment,
         )
         is None
     )
@@ -343,6 +396,7 @@ def test_cached_row_is_invalidated_when_timeout_policy_changes(
             input_sha256s=inputs,
             implementation_sha256="2" * 64,
             evaluation_pipeline_sha256="7" * 64,
+            execution_environment_sha256="8" * 64,
         ),
     )
 
@@ -357,6 +411,7 @@ def test_cached_row_is_invalidated_when_timeout_policy_changes(
             input_sha256s=inputs,
             implementation_sha256="2" * 64,
             evaluation_pipeline_sha256="7" * 64,
+            execution_environment_sha256="8" * 64,
         )
         is None
     )
@@ -407,6 +462,7 @@ def test_cached_success_row_revalidates_pose_artifacts(
             input_sha256s=inputs,
             implementation_sha256="2" * 64,
             evaluation_pipeline_sha256="7" * 64,
+            execution_environment_sha256="8" * 64,
         ),
     )
 
@@ -420,6 +476,7 @@ def test_cached_success_row_revalidates_pose_artifacts(
         input_sha256s=inputs,
         implementation_sha256="2" * 64,
         evaluation_pipeline_sha256="7" * 64,
+        execution_environment_sha256="8" * 64,
     )
     assert loaded == row
 
@@ -435,6 +492,7 @@ def test_cached_success_row_revalidates_pose_artifacts(
             input_sha256s=inputs,
             implementation_sha256="2" * 64,
             evaluation_pipeline_sha256="7" * 64,
+            execution_environment_sha256="8" * 64,
         )
         is None
     )

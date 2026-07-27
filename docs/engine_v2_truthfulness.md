@@ -64,9 +64,11 @@ sphere and the external autobox. Its standard-residue receptor charge proxy and
 RDKit Gasteiger ligand charges enable Scorer v1 execution but are explicitly
 uncalibrated and not scientifically validated. Runtime deltas do not claim
 equivalent process-start boundaries. Unevaluated PoseBusters validity checks
-abort rather than count as valid, and row commands are checked against their
-declared engine mode. Neither contract supplies a public holdout result,
-equal-search-effort or equal-region comparison, statistical
+are validated eagerly and abort rather than count as valid or hide behind an
+earlier false result. Row commands are checked against their declared engine
+mode and case-specific input names; timed cache reuse is boot/host-bound.
+Neither contract supplies a public holdout result, equal-search-effort or
+equal-region comparison, statistical
 representativeness, independent attestation, scientific validation, product
 qualification, production authorization, or customer execution.
 

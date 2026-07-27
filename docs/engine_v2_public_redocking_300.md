@@ -65,6 +65,10 @@ deltas remain descriptive because the search regions and algorithms differ.
 They are not process-boundary comparable: each external case includes fresh
 process startup and model loading, while Engine V2 reuses one imported Python
 process. The report therefore records `runtime_boundary_comparable: false`.
+Timed cache receipts also bind a SHA-256-only execution-environment identity
+covering the boot session, OS/kernel, machine architecture, Python, Torch, and
+logical CPU count. Moving or rebooting the run invalidates timed cache rows
+instead of mixing runtime samples across environments.
 The exact Torch build must be one of the repository's pinned 2.6.0,
 2.6.0+cpu, or 2.6.0+rocm6.1 build identifiers and is retained in every Engine
 V2 row and engine identity.
@@ -114,10 +118,12 @@ fingerprint, all 900 engine/case rows, profiles, and metric rows. Evaluator or
 artifact-I/O failures abort the run instead of being counted as engine
 failures. Report construction independently rejects row-level CPU, Torch
 thread, exact Torch build, timeout, or engine-mode command fields that
-contradict the report policy and engine identity. PoseBusters validity cells
-must be evaluated Python booleans; missing, errored, or non-boolean cells abort
-the evidence run instead of becoming truthy validity results. Before rerunning
-an invalidated external receipt, the runner moves any old pose file to a
+contradict the report policy and engine identity. Case-specific receptor,
+ligand, and pocket/autobox path basenames are tied to the retained case ID.
+PoseBusters validity cells must all be evaluated Python booleans before any row
+reduction; missing, errored, or non-boolean cells abort the evidence run instead
+of becoming truthy or being masked by an earlier failure. Before rerunning an
+invalidated external receipt, the runner moves any old pose file to a
 timestamped `.stale-*` evidence file and requires the new process to create a
 fresh output.
 
