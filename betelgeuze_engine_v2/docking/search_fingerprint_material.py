@@ -124,6 +124,9 @@ def _material_from_result(result: object) -> dict[str, object]:
         "proposal_fingerprints": [
             row.proposal_fingerprint_sha256 for row in result.rows
         ],
+        "top_candidate_ids": [
+            row.candidate_id for row in result.top_rows
+        ],
     }
 
 

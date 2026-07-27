@@ -222,7 +222,12 @@ def _pocket_from_document(document: Mapping[str, object]) -> PocketDefinition:
         )
     try:
         center_tensor = torch.tensor(center, dtype=torch.float64)
-        radius = float(document["radius_angstrom"])
+        radius_value = document["radius_angstrom"]
+        if isinstance(radius_value, bool) or not isinstance(
+            radius_value, (int, float)
+        ):
+            raise TypeError("pocket radius must be a JSON number")
+        radius = float(radius_value)
     except (TypeError, ValueError) as exc:
         raise EngineV2CliError("pocket geometry is invalid") from exc
     metadata = document.get("metadata", {})
@@ -396,6 +401,7 @@ def run_canonical_docking(
         "scorer_source_sha256": source_sha,
         "scorer_source_binding_mode": SCORER_SOURCE_BINDING_MODE,
         "scorer_source_preimport_attested": False,
+        "scorer_qualification": scorer.qualification_document(),
         "result_receipt_sha256": result.receipt_sha256,
         "candidate_count": len(result.rows),
         "success_count": result.success_count,

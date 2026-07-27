@@ -32,7 +32,11 @@ LEGACY_GENERIC_SEARCH_RESULT_SCHEMA_ID = (
 CliResultVerificationError = _base.CliResultVerificationError
 
 
-_ORIGINAL_VERIFY_GENERIC_SEARCH = _base._verify_generic_search
+if not hasattr(_base, "_strict_original_verify_generic_search"):
+    _base._strict_original_verify_generic_search = _base._verify_generic_search
+_ORIGINAL_VERIFY_GENERIC_SEARCH = (
+    _base._strict_original_verify_generic_search
+)
 
 
 def _require_mapping(value: object, *, name: str) -> Mapping[str, object]:
@@ -121,6 +125,7 @@ def _verify_search_material(generic: Mapping[str, object]) -> bool:
         "problem_fingerprint_sha256",
         "search_space_fingerprint_sha256",
         "proposal_fingerprints",
+        "top_candidate_ids",
     }
     if set(material) != expected_keys:
         raise CliResultVerificationError(
@@ -210,6 +215,14 @@ def _verify_search_material(generic: Mapping[str, object]) -> bool:
     if proposal_fingerprints != material_proposals:
         raise CliResultVerificationError(
             "search fingerprint proposal list disagrees with generic rows"
+        )
+    top_candidate_ids = _require_sequence(
+        generic.get("top_candidate_ids"),
+        name="generic top candidate IDs",
+    )
+    if material.get("top_candidate_ids") != top_candidate_ids:
+        raise CliResultVerificationError(
+            "search fingerprint top candidate IDs disagree with generic result"
         )
 
     symmetry = _require_mapping(
@@ -431,7 +444,7 @@ class CliResultVerificationReceipt:
 
     def _projection(self) -> dict[str, object]:
         return {
-            "schema_id": _base.CLI_RESULT_VERIFICATION_SCHEMA_ID,
+            "schema_id": STRICT_CLI_RESULT_VERIFICATION_SCHEMA_ID,
             "input_document_sha256": self.input_document_sha256,
             "nested_result_receipt_sha256": self.nested_result_receipt_sha256,
             "authenticated_input_receipt_sha256": (
