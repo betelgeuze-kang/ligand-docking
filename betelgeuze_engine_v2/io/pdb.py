@@ -29,7 +29,7 @@ from betelgeuze_engine_v2.molecular import (
 
 
 PDB_PARSER_NAME = "betelgeuze_engine_v2.strict_pdb"
-PDB_PARSER_VERSION = "1.0.0"
+PDB_PARSER_VERSION = "1.1.0"
 
 
 class PDBParseError(ValueError):

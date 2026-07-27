@@ -144,11 +144,42 @@ def test_external_commands_make_vina_and_gnina_modes_explicit(
         assert command[command.index("--seed") + 1] == "11"
 
 
+def test_offline_benchmark_exports_five_score_ranked_proposals_even_if_invalid():
+    proposals = tuple(object() for _ in range(6))
+    scores = (6.0, 2.0, 5.0, 1.0, 4.0, 3.0)
+    search = SimpleNamespace(
+        rows=tuple(
+            SimpleNamespace(
+                status="success",
+                proposal=proposal,
+                score=score,
+                proposal_index=index,
+                selection_eligible=False,
+            )
+            for index, (proposal, score) in enumerate(
+                zip(proposals, scores, strict=True)
+            )
+        )
+    )
+
+    ranked = runner._benchmark_ranked_proposals(search)
+
+    assert ranked == (
+        proposals[3],
+        proposals[1],
+        proposals[5],
+        proposals[4],
+        proposals[2],
+    )
+
+
 def test_cached_failure_row_is_bound_to_inputs_command_and_source(
     tmp_path: Path,
 ) -> None:
     case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
     path = tmp_path / "receipt.json"
+    command = (runner.RUNNER_ID, "engine_v2", "--seed", "17")
+    execution_policy = {"cpu_count": 1, "timeout_seconds": 300}
     row = PublicRedockingCaseResult(
         case_id=case_id,
         engine_id="engine_v2",
@@ -158,9 +189,10 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
         reference_artifact_sha256="4" * 64,
         native_artifact_sha256="5" * 64,
         seed_artifact_sha256="6" * 64,
+        execution_command=command,
+        execution_policy=runner._execution_policy_tokens(execution_policy),
         failure_code="fixture_failure",
     )
-    command = (runner.RUNNER_ID, "engine_v2", "--seed", "17")
     inputs = {
         "receptor": row.receptor_artifact_sha256,
         "reference": row.reference_artifact_sha256,
@@ -169,7 +201,6 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
     }
     implementation = "2" * 64
     evaluation = "7" * 64
-    execution_policy = {"cpu_count": 1, "timeout_seconds": 300}
     runner._atomic_json(
         path,
         runner._row_payload(
@@ -189,6 +220,7 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             engine_id="engine_v2",
             command=command,
             execution_policy=execution_policy,
+            pose_output=tmp_path / "unused.sdf",
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
@@ -206,6 +238,7 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             engine_id="engine_v2",
             command=command,
             execution_policy=execution_policy,
+            pose_output=tmp_path / "unused.sdf",
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
@@ -219,6 +252,8 @@ def test_cached_row_is_invalidated_when_timeout_policy_changes(
 ) -> None:
     case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
     path = tmp_path / "receipt.json"
+    command = ("gnina", "--cpu", "1")
+    original_policy = {"cpu_count": 1, "timeout_seconds": 30}
     row = PublicRedockingCaseResult(
         case_id=case_id,
         engine_id="vina",
@@ -228,9 +263,10 @@ def test_cached_row_is_invalidated_when_timeout_policy_changes(
         reference_artifact_sha256="4" * 64,
         native_artifact_sha256="5" * 64,
         seed_artifact_sha256="6" * 64,
+        execution_command=command,
+        execution_policy=runner._execution_policy_tokens(original_policy),
         failure_code="external_timeout",
     )
-    command = ("gnina", "--cpu", "1")
     inputs = {
         "receptor": row.receptor_artifact_sha256,
         "reference": row.reference_artifact_sha256,
@@ -242,7 +278,7 @@ def test_cached_row_is_invalidated_when_timeout_policy_changes(
         runner._row_payload(
             row,
             command=command,
-            execution_policy={"cpu_count": 1, "timeout_seconds": 30},
+            execution_policy=original_policy,
             input_sha256s=inputs,
             implementation_sha256="2" * 64,
             evaluation_pipeline_sha256="7" * 64,
@@ -256,6 +292,85 @@ def test_cached_row_is_invalidated_when_timeout_policy_changes(
             engine_id="vina",
             command=command,
             execution_policy={"cpu_count": 1, "timeout_seconds": 300},
+            pose_output=tmp_path / "unused.sdf",
+            input_sha256s=inputs,
+            implementation_sha256="2" * 64,
+            evaluation_pipeline_sha256="7" * 64,
+        )
+        is None
+    )
+
+
+def test_cached_success_row_revalidates_pose_artifacts(
+    tmp_path: Path,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    receipt = tmp_path / "receipt.json"
+    output = tmp_path / "poses.sdf"
+    records = tuple(
+        f"pose-{index}\n$$$$\n".encode("ascii") for index in range(5)
+    )
+    output.write_bytes(b"".join(records))
+    command = ("gnina", "--cpu", "1")
+    execution_policy = {"cpu_count": 1, "timeout_seconds": 300}
+    row = PublicRedockingCaseResult(
+        case_id=case_id,
+        engine_id="vina",
+        status="success",
+        runtime_seconds=2.0,
+        receptor_artifact_sha256="3" * 64,
+        reference_artifact_sha256="4" * 64,
+        native_artifact_sha256="5" * 64,
+        seed_artifact_sha256="6" * 64,
+        execution_command=command,
+        execution_policy=runner._execution_policy_tokens(execution_policy),
+        rmsd_angstroms=(1.0, 2.0, 3.0, 4.0, 5.0),
+        geometric_valid=(True,) * 5,
+        chemical_valid=(True,) * 5,
+        pose_artifact_sha256s=tuple(
+            runner._sha256_bytes(record) for record in records
+        ),
+    )
+    inputs = {
+        "receptor": row.receptor_artifact_sha256,
+        "reference": row.reference_artifact_sha256,
+        "native": row.native_artifact_sha256,
+        "seed": row.seed_artifact_sha256,
+    }
+    runner._atomic_json(
+        receipt,
+        runner._row_payload(
+            row,
+            command=command,
+            execution_policy=execution_policy,
+            input_sha256s=inputs,
+            implementation_sha256="2" * 64,
+            evaluation_pipeline_sha256="7" * 64,
+        ),
+    )
+
+    loaded = runner._load_cached_row(
+        receipt,
+        case_id=case_id,
+        engine_id="vina",
+        command=command,
+        execution_policy=execution_policy,
+        pose_output=output,
+        input_sha256s=inputs,
+        implementation_sha256="2" * 64,
+        evaluation_pipeline_sha256="7" * 64,
+    )
+    assert loaded == row
+
+    output.write_bytes(b"tampered\n$$$$\n" * 5)
+    assert (
+        runner._load_cached_row(
+            receipt,
+            case_id=case_id,
+            engine_id="vina",
+            command=command,
+            execution_policy=execution_policy,
+            pose_output=output,
             input_sha256s=inputs,
             implementation_sha256="2" * 64,
             evaluation_pipeline_sha256="7" * 64,
@@ -281,6 +396,64 @@ def test_engine_source_identity_hashes_the_full_python_package(
     second = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
 
     assert first != second
+
+
+def test_evaluator_environment_requires_every_frozen_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed = dict(runner.EVALUATOR_DISTRIBUTION_VERSIONS)
+    monkeypatch.setattr(
+        runner.metadata,
+        "version",
+        lambda name: "9.9.9" if name == "pandas" else observed[name],
+    )
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="pandas must equal",
+    ):
+        runner._evaluator_environment_versions()
+
+
+@pytest.mark.parametrize(
+    ("timeout_seconds", "bootstrap_samples", "message"),
+    (
+        (86_401, 2_000, "external_timeout_seconds"),
+        (300, 99, "bootstrap_samples"),
+        (300, 20_001, "bootstrap_samples"),
+    ),
+)
+def test_expensive_run_policy_bounds_are_validated_at_preflight(
+    timeout_seconds: int,
+    bootstrap_samples: int,
+    message: str,
+) -> None:
+    arguments = SimpleNamespace(
+        timeout_seconds=timeout_seconds,
+        bootstrap_samples=bootstrap_samples,
+        seed=runner.DEFAULT_SEED,
+    )
+
+    with pytest.raises(Exception, match=message):
+        runner._evaluation_policy_from_arguments(arguments)
+
+
+def test_ligand_gasteiger_assignment_is_complete_and_charge_conserving(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "ligand.sdf"
+    _ligand(source)
+    system = runner.parse_sdf_v2000(source.read_text(encoding="ascii"))
+
+    charged = runner._assign_ligand_gasteiger_charges(system, source)
+
+    assert all(atom.partial_charge_e is not None for atom in charged.atoms)
+    assert sum(float(atom.partial_charge_e) for atom in charged.atoms) == (
+        pytest.approx(sum(atom.formal_charge for atom in charged.atoms), abs=1.0e-8)
+    )
+    assert charged.metadata["partial_charge_method_id"] == (
+        runner.LIGAND_CHARGE_METHOD_ID
+    )
 
 
 def test_cpu_policy_configures_and_verifies_single_torch_threads(

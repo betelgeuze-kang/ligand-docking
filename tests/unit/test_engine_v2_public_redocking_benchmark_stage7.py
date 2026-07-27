@@ -58,7 +58,7 @@ def _identities() -> tuple[PublicRedockingEngineIdentity, ...]:
     )
 
 
-def _input_fields(case_id: str) -> dict[str, str]:
+def _input_fields(case_id: str) -> dict[str, object]:
     profile = next(
         row for row in frozen_public_redocking_profiles() if row.case_id == case_id
     )
@@ -71,6 +71,8 @@ def _input_fields(case_id: str) -> dict[str, str]:
         "reference_artifact_sha256": digest("reference"),
         "native_artifact_sha256": profile.ligand_artifact_sha256,
         "seed_artifact_sha256": digest("seed"),
+        "execution_command": ("fixture-engine", "--case-id", case_id),
+        "execution_policy": ("cpu_count=1", "timeout_seconds=300"),
     }
 
 
@@ -274,6 +276,7 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
     assert len(report.rows) == 900
     assert report.to_dict()["full_failure_denominator_retained"] is True
     assert report.to_dict()["same_ranked_pose_count"] is True
+    assert report.to_dict()["exact_case_commands_bound"] is True
     assert report.to_dict()["same_pocket_source"] is True
     assert report.to_dict()["same_pocket_geometry"] is False
     assert report.to_dict()["same_search_effort_budget"] is False

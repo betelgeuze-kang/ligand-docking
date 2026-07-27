@@ -49,8 +49,8 @@ pocket source, case seed, one enforced CPU, and five retained output poses.
 Their exact pocket geometry is not equal: Engine V2 uses a sphere derived from
 the crystal ligand, while Vina and GNINA use the corresponding ligand-derived
 axis-aligned autobox. Their internal search effort is also not equal: Engine V2
-uses five proposals, while the external engines use their own
-`exhaustiveness=1` search. The report therefore records
+scores 64 bounded guided proposals and exports the best five, while the
+external engines use their own `exhaustiveness=1` search. The report therefore records
 `same_ranked_pose_count: true` and `same_pocket_source: true`, but keeps
 `same_pocket_geometry`, `same_search_effort_budget`, and
 `search_effort_comparable` false. Paired recovery deltas are descriptive under
@@ -62,6 +62,22 @@ threads are both fixed to one for Engine V2, and both external modes receive
 `--cpu 1`. The external timeout is part of the policy, engine identity, and
 per-case cache receipt; changing it invalidates cached external rows. Runtime
 deltas remain descriptive because the search regions and algorithms differ.
+
+Engine V2 preparation assigns explicit claim-blocked charges before Scorer v1:
+
+- ligand atoms use RDKit 2022.09.5 Gasteiger charges with 12 iterations,
+  including implicit-hydrogen charge and an exact formal-charge conservation
+  correction;
+- receptor atoms use a deterministic standard-residue formal-charge proxy for
+  Asp, Glu, Lys, Arg, and protonated His, while preserving explicit input
+  formal charges elsewhere.
+
+These charge methods are functionality-enabling proxies, not calibrated
+force-field charges or scientific validation. The offline benchmark exports
+the five lowest-score successfully computed Engine V2 proposals even when the
+product-path validity filter would reject them; the shared PoseBusters
+geometric and chemical validity columns retain those failures instead of
+turning them into missing cases.
 
 ## Required outputs
 
@@ -94,9 +110,12 @@ failures.
 
 ## Local execution
 
-The evaluator is frozen to RDKit 2022.09.5 and PoseBusters 0.3.1. Install the
-older RDKit distribution first and install PoseBusters without dependency
-resolution so pip does not replace it with a newer `rdkit` distribution:
+The evaluator is frozen to NumPy 1.26.4, pandas 2.3.3, PyYAML 6.0.3, RDKit
+2022.09.5, and PoseBusters 0.3.1. All five installed distribution versions are
+verified before case execution and included in the evaluation-pipeline
+identity. Install the older RDKit distribution first and install PoseBusters
+without dependency resolution so pip does not replace it with a newer `rdkit`
+distribution:
 
 ```bash
 python -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 \

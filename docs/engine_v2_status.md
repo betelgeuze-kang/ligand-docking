@@ -155,7 +155,11 @@ The current `main` branch contains:
   receipts. It binds timeout and the full Engine V2 Python source closure,
   enforces one CPU, stops engine runtime before shared evaluation, and records
   that Engine V2's ligand-derived spherical region is not geometrically equal
-  to the external ligand-derived autobox. The external structures, engine
+  to the external ligand-derived autobox. Engine V2 benchmark preparation uses
+  explicit, claim-blocked standard-residue receptor charge proxies and
+  conserved RDKit Gasteiger ligand charges; these are not calibrated
+  force-field charges. Exact per-case commands, cached pose hashes, and all
+  evaluator dependency versions are bound. The external structures, engine
   outputs, and benchmark result remain absent from the repository;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that

@@ -1075,6 +1075,8 @@ class PublicRedockingCaseResult:
     reference_artifact_sha256: str
     native_artifact_sha256: str
     seed_artifact_sha256: str
+    execution_command: tuple[str, ...]
+    execution_policy: tuple[str, ...]
     rmsd_angstroms: tuple[float, ...] = ()
     geometric_valid: tuple[bool, ...] = ()
     chemical_valid: tuple[bool, ...] = ()
@@ -1107,6 +1109,20 @@ class PublicRedockingCaseResult:
                 self,
                 field_name,
                 _digest(getattr(self, field_name), name=field_name),
+            )
+        command = tuple(str(value) for value in self.execution_command)
+        execution_policy = tuple(str(value) for value in self.execution_policy)
+        if not command or any(not value for value in command):
+            raise PublicRedockingBenchmarkError(
+                "result execution_command must be non-empty"
+            )
+        if (
+            not execution_policy
+            or execution_policy != tuple(sorted(execution_policy))
+            or any("=" not in value for value in execution_policy)
+        ):
+            raise PublicRedockingBenchmarkError(
+                "result execution_policy must be non-empty sorted key=value tokens"
             )
         rmsds = tuple(
             _finite(value, name="rmsd_angstrom", minimum=0.0)
@@ -1143,6 +1159,8 @@ class PublicRedockingCaseResult:
         object.__setattr__(self, "engine_id", engine_id)
         object.__setattr__(self, "status", status)
         object.__setattr__(self, "runtime_seconds", runtime)
+        object.__setattr__(self, "execution_command", command)
+        object.__setattr__(self, "execution_policy", execution_policy)
         object.__setattr__(self, "rmsd_angstroms", rmsds)
         object.__setattr__(self, "geometric_valid", geometric)
         object.__setattr__(self, "chemical_valid", chemical)
@@ -1188,6 +1206,8 @@ class PublicRedockingCaseResult:
             "reference_artifact_sha256": self.reference_artifact_sha256,
             "native_artifact_sha256": self.native_artifact_sha256,
             "seed_artifact_sha256": self.seed_artifact_sha256,
+            "execution_command": list(self.execution_command),
+            "execution_policy": list(self.execution_policy),
             "rmsd_angstroms": list(self.rmsd_angstroms),
             "geometric_valid": list(self.geometric_valid),
             "chemical_valid": list(self.chemical_valid),
@@ -1420,6 +1440,7 @@ class PublicRedockingBenchmarkReport:
             "full_failure_denominator_retained": True,
             "policy": self.policy.to_dict(),
             "same_ranked_pose_count": True,
+            "exact_case_commands_bound": True,
             "same_pocket_source": True,
             "same_pocket_geometry": False,
             "same_search_effort_budget": False,

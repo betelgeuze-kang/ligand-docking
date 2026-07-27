@@ -126,6 +126,7 @@ def test_strict_pdb_parser_can_explicitly_ignore_nonperiodic_crystal_metadata() 
 
     system = parse_pdb(nonorthorhombic, unit_cell_policy="ignore")
     assert system.cell is None
+    assert system.provenance.parser_version == "1.1.0"
     assert system.provenance.metadata["unit_cell_policy"] == "ignore"
     assert system.provenance.metadata["ignored_record_counts"]["CRYST1"] == 1
 

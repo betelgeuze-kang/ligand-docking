@@ -24,8 +24,13 @@ scientific claim from a package version.
   one Torch CPU, aligns runtime boundaries before evaluation, separates
   evaluator failures from engine failures, and explicitly records that the
   ligand-derived sphere and external autobox are not identical search
-  geometries. No structure data or performance result is bundled or
-  scientifically promoted.
+  geometries. The runner now prepares explicit claim-blocked receptor
+  residue-charge proxies and conserved RDKit Gasteiger ligand charges before
+  Scorer v1, exports five score-ranked offline proposals while retaining
+  evaluator validity failures, revalidates cached pose bytes, records exact
+  per-case commands, freezes the complete evaluator dependency versions, and
+  advances strict PDB parser semantics to 1.1.0. No structure data or
+  performance result is bundled or scientifically promoted.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import hashlib
 from importlib import metadata
 import json
@@ -49,12 +50,25 @@ from betelgeuze_engine_v2.io import (
     parse_pdb,
     parse_sdf_v2000,
 )
+from betelgeuze_engine_v2.molecular import AllAtomSystem
 
 
-RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.2.0"
+RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.3.0"
 DEFAULT_SEED = 2_026_072_700
 POSEBUSTERS_VERSION = "0.3.1"
 RDKit_VERSION = "2022.09.5"
+EVALUATOR_DISTRIBUTION_VERSIONS = {
+    "numpy": "1.26.4",
+    "pandas": "2.3.3",
+    "PyYAML": "6.0.3",
+    "rdkit-pypi": "2022.9.5",
+    "posebusters": POSEBUSTERS_VERSION,
+}
+RECEPTOR_CHARGE_METHOD_ID = (
+    "betelgeuze.public_redocking_standard_residue_formal_charge_proxy/1.0.0"
+)
+LIGAND_CHARGE_METHOD_ID = "rdkit_gasteiger_12_iter_conserved/2022.09.5"
+ENGINE_V2_CANDIDATE_COUNT = 64
 ENGINE_V2_CPU_POLICY = {
     "cpu_count": 1,
     "torch_intraop_threads": 1,
@@ -135,6 +149,32 @@ def _external_execution_policy(timeout_seconds: int) -> dict[str, object]:
         "cpu_count": 1,
         "timeout_seconds": timeout_seconds,
     }
+
+
+def _execution_policy_tokens(policy: dict[str, object]) -> tuple[str, ...]:
+    if not policy:
+        raise PublicRedockingRunnerError("execution policy cannot be empty")
+    return tuple(
+        f"{key}={json.dumps(value, allow_nan=False, separators=(',', ':'))}"
+        for key, value in sorted(policy.items())
+    )
+
+
+def _evaluator_environment_versions() -> dict[str, str]:
+    observed: dict[str, str] = {}
+    for distribution, expected in EVALUATOR_DISTRIBUTION_VERSIONS.items():
+        try:
+            version = metadata.version(distribution)
+        except metadata.PackageNotFoundError as exc:
+            raise PublicRedockingRunnerError(
+                f"evaluator dependency is missing: {distribution}"
+            ) from exc
+        if version != expected:
+            raise PublicRedockingRunnerError(
+                f"evaluator dependency {distribution} must equal {expected}"
+            )
+        observed[distribution] = version
+    return observed
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -251,7 +291,7 @@ def _serialize_pose_records(
             molecule,
             confId=0,
             includeStereo=True,
-            kekulize=False,
+            kekulize=True,
         )
         records.append((block.rstrip("\n") + "\n$$$$\n").encode("ascii"))
     return tuple(records)
@@ -315,6 +355,157 @@ def _first_molecule(path: Path):
     if molecule is None:
         raise PublicRedockingRunnerError("ligand SDF contains no valid molecule")
     return molecule
+
+
+def _with_benchmark_partial_charges(
+    system: AllAtomSystem,
+    *,
+    charges: Sequence[float],
+    formal_charges: Sequence[int],
+    method_id: str,
+) -> AllAtomSystem:
+    if (
+        len(charges) != system.atom_count
+        or len(formal_charges) != system.atom_count
+        or any(not math.isfinite(float(value)) for value in charges)
+    ):
+        raise EngineV2CaseFailure("partial charge assignment is incomplete")
+    if not math.isclose(
+        sum(float(value) for value in charges),
+        float(sum(int(value) for value in formal_charges)),
+        abs_tol=1.0e-8,
+    ):
+        raise EngineV2CaseFailure("partial charge assignment does not conserve charge")
+    charge_sha256 = _sha256_bytes(
+        _canonical_bytes(
+            {
+                "method_id": method_id,
+                "partial_charge_binary64_hex": [
+                    float(value).hex() for value in charges
+                ],
+                "formal_charges": [int(value) for value in formal_charges],
+            }
+        )
+    )
+    atoms = tuple(
+        replace(
+            atom,
+            formal_charge=int(formal_charge),
+            partial_charge_e=float(charge),
+            metadata={
+                **dict(atom.metadata),
+                "partial_charge_method_id": method_id,
+                "partial_charge_assignment_sha256": charge_sha256,
+                "partial_charge_scientifically_validated": False,
+            },
+        )
+        for atom, charge, formal_charge in zip(
+            system.atoms,
+            charges,
+            formal_charges,
+            strict=True,
+        )
+    )
+    provenance_metadata = {
+        **dict(system.provenance.metadata),
+        "partial_charge_method_id": method_id,
+        "partial_charge_assignment_sha256": charge_sha256,
+        "partial_charge_scientifically_validated": False,
+    }
+    return replace(
+        system,
+        atoms=atoms,
+        provenance=replace(
+            system.provenance,
+            operations=(*system.provenance.operations, method_id),
+            transformation_chain_verified=False,
+            chemistry_validated=False,
+            scientifically_validated=False,
+            product_qualified=False,
+            metadata=provenance_metadata,
+        ),
+        metadata={
+            **dict(system.metadata),
+            "partial_charge_method_id": method_id,
+            "partial_charge_assignment_sha256": charge_sha256,
+        },
+    )
+
+
+def _assign_receptor_proxy_charges(system: AllAtomSystem) -> AllAtomSystem:
+    charges = [float(atom.formal_charge) for atom in system.atoms]
+    formal_charges = [int(atom.formal_charge) for atom in system.atoms]
+    residue_rules = {
+        "ASP": (("OD1", "OD2"), -1),
+        "GLU": (("OE1", "OE2"), -1),
+        "LYS": (("NZ",), 1),
+        "ARG": (("NH1", "NH2"), 1),
+        "HIP": (("ND1", "NE2"), 1),
+        "HSP": (("ND1", "NE2"), 1),
+    }
+    for residue in system.residues:
+        rule = residue_rules.get(residue.name)
+        if rule is None:
+            continue
+        atom_names, total_charge = rule
+        indices = [
+            index
+            for index in residue.atom_indices
+            if system.atoms[index].name.upper() in atom_names
+        ]
+        if not indices:
+            continue
+        for index in indices:
+            charges[index] = float(total_charge) / len(indices)
+            formal_charges[index] = 0
+        formal_charges[indices[0]] = total_charge
+    return _with_benchmark_partial_charges(
+        system,
+        charges=charges,
+        formal_charges=formal_charges,
+        method_id=RECEPTOR_CHARGE_METHOD_ID,
+    )
+
+
+def _assign_ligand_gasteiger_charges(
+    system: AllAtomSystem,
+    source_ligand: Path,
+) -> AllAtomSystem:
+    from rdkit.Chem import AllChem
+
+    molecule = _first_molecule(source_ligand)
+    if molecule.GetNumAtoms() != system.atom_count or any(
+        molecule.GetAtomWithIdx(index).GetAtomicNum() != atom.atomic_number
+        for index, atom in enumerate(system.atoms)
+    ):
+        raise EngineV2CaseFailure(
+            "ligand charge assignment atom order does not match parsed input"
+        )
+    try:
+        AllChem.ComputeGasteigerCharges(
+            molecule,
+            nIter=12,
+            throwOnParamFailure=True,
+        )
+        charges = [
+            float(atom.GetProp("_GasteigerCharge"))
+            + float(atom.GetProp("_GasteigerHCharge"))
+            for atom in molecule.GetAtoms()
+        ]
+    except (RuntimeError, ValueError) as exc:
+        raise EngineV2CaseFailure("ligand partial charge assignment failed") from exc
+    if any(not math.isfinite(value) for value in charges):
+        raise EngineV2CaseFailure("ligand partial charge assignment is non-finite")
+    formal_charges = [int(atom.formal_charge) for atom in system.atoms]
+    residual = float(sum(formal_charges)) - sum(charges)
+    correction_index = max(range(len(charges)), key=lambda index: abs(charges[index]))
+    charges[correction_index] += residual
+    return _with_benchmark_partial_charges(
+        system,
+        charges=charges,
+        formal_charges=formal_charges,
+        method_id=LIGAND_CHARGE_METHOD_ID,
+    )
 
 
 def _profile(
@@ -382,6 +573,10 @@ def _row_payload(
         for field_name, digest in expected_inputs.items()
     ):
         raise PublicRedockingRunnerError("result row input hashes are cross-wired")
+    if row.execution_command != tuple(command):
+        raise PublicRedockingRunnerError("result row command is cross-wired")
+    if row.execution_policy != _execution_policy_tokens(execution_policy):
+        raise PublicRedockingRunnerError("result row execution policy is cross-wired")
     projection = {
         "runner_id": RUNNER_ID,
         "archive_sha256": PUBLIC_REDOCKING_ARCHIVE_SHA256,
@@ -406,6 +601,7 @@ def _load_cached_row(
     engine_id: str,
     command: Sequence[str],
     execution_policy: dict[str, object],
+    pose_output: Path,
     input_sha256s: dict[str, str],
     implementation_sha256: str,
     evaluation_pipeline_sha256: str,
@@ -444,6 +640,8 @@ def _load_cached_row(
             reference_artifact_sha256=result["reference_artifact_sha256"],
             native_artifact_sha256=result["native_artifact_sha256"],
             seed_artifact_sha256=result["seed_artifact_sha256"],
+            execution_command=tuple(result["execution_command"]),
+            execution_policy=tuple(result["execution_policy"]),
             rmsd_angstroms=tuple(result["rmsd_angstroms"]),
             geometric_valid=tuple(result["geometric_valid"]),
             chemical_valid=tuple(result["chemical_valid"]),
@@ -452,12 +650,30 @@ def _load_cached_row(
         )
         if row.case_id != case_id or row.engine_id != engine_id:
             return None
+        if (
+            row.execution_command != tuple(command)
+            or row.execution_policy != _execution_policy_tokens(execution_policy)
+        ):
+            return None
         expected_inputs = _result_input_fields(input_sha256s)
         if any(
             getattr(row, field_name) != digest
             for field_name, digest in expected_inputs.items()
         ):
             return None
+        if row.status == "success":
+            if not pose_output.is_file():
+                return None
+            try:
+                records = _split_sdf_records(pose_output.read_bytes())
+            except (OSError, PublicRedockingRunnerError):
+                return None
+            if (
+                len(records) != 5
+                or tuple(_sha256_bytes(record) for record in records)
+                != row.pose_artifact_sha256s
+            ):
+                return None
         return row
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         return None
@@ -481,15 +697,22 @@ def _engine_source_sha256(
     return hashlib.sha256(_canonical_bytes(projection)).hexdigest()
 
 
-def _evaluation_pipeline_sha256(repo_root: Path) -> str:
+def _evaluation_pipeline_sha256(
+    repo_root: Path,
+    *,
+    evaluator_versions: dict[str, str] | None = None,
+) -> str:
     paths = (
         repo_root / "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
         Path(__file__).resolve(),
     )
     projection = {
         "runner_id": RUNNER_ID,
-        "rdkit_version": RDKit_VERSION,
-        "posebusters_version": POSEBUSTERS_VERSION,
+        "evaluator_distribution_versions": (
+            _evaluator_environment_versions()
+            if evaluator_versions is None
+            else dict(sorted(evaluator_versions.items()))
+        ),
         "chemical_columns": list(CHEMICAL_COLUMNS),
         "geometric_columns": list(GEOMETRIC_COLUMNS),
         "source_sha256s": [
@@ -572,6 +795,52 @@ def _external_command(
     return tuple(command)
 
 
+def _engine_v2_command(
+    case_id: str,
+    paths: dict[str, Path],
+    *,
+    output: Path,
+    seed: int,
+) -> tuple[str, ...]:
+    return (
+        RUNNER_ID,
+        "engine_v2",
+        "--case-id",
+        case_id,
+        "--receptor",
+        str(paths["receptor"]),
+        "--ligand",
+        str(paths["seed"]),
+        "--pocket-source",
+        str(paths["native"]),
+        "--candidate-count",
+        str(ENGINE_V2_CANDIDATE_COUNT),
+        "--cpu",
+        "1",
+        "--seed",
+        str(seed),
+        "--out",
+        str(output),
+    )
+
+
+def _benchmark_ranked_proposals(search) -> tuple[object, ...]:
+    rows = [
+        row
+        for row in search.rows
+        if row.status == "success"
+        and row.proposal is not None
+        and row.score is not None
+        and math.isfinite(float(row.score))
+    ]
+    rows.sort(key=lambda row: (float(row.score), row.proposal_index))
+    if len(rows) < 5:
+        raise EngineV2CaseFailure(
+            "Engine V2 did not produce five score-ranked proposals"
+        )
+    return tuple(row.proposal for row in rows[:5])
+
+
 def _engine_v2_pose_coordinates(
     case_id: str,
     paths: dict[str, Path],
@@ -601,6 +870,8 @@ def _engine_v2_pose_coordinates(
         dtype=torch.float64,
         device="cpu",
     )
+    receptor = _assign_receptor_proxy_charges(receptor)
+    ligand = _assign_ligand_gasteiger_charges(ligand, paths["seed"])
     native_coordinates = native.coordinates[0]
     center = native_coordinates.mean(dim=0)
     radius = max(
@@ -643,7 +914,7 @@ def _engine_v2_pose_coordinates(
     )
     context = build_guided_placement_context(authority, receptor, ligand)
     budget = DockingBudget(
-        candidate_count=5,
+        candidate_count=ENGINE_V2_CANDIDATE_COUNT,
         top_k=5,
         max_torsions=32,
         max_refinement_steps=0,
@@ -660,16 +931,8 @@ def _engine_v2_pose_coordinates(
         diversity_rmsd_angstrom=0.0,
     )
     search = result.guided_search_result.authenticated_search_result.search_result
-    if len(search.top_rows) != 5:
-        raise EngineV2CaseFailure("Engine V2 did not retain five poses")
-    proposals = tuple(row.proposal for row in search.top_rows)
-    if any(proposal is None for proposal in proposals):
-        raise EngineV2CaseFailure(
-            "Engine V2 retained a row without pose coordinates"
-        )
-    return tuple(
-        proposal.coordinates for proposal in proposals if proposal is not None
-    )
+    proposals = _benchmark_ranked_proposals(search)
+    return tuple(proposal.coordinates for proposal in proposals)
 
 
 def _engine_v2_failure_code(exc: Exception) -> str:
@@ -696,6 +959,13 @@ def _engine_v2_result(
     seed: int,
 ) -> PublicRedockingCaseResult:
     started = time.perf_counter()
+    command = _engine_v2_command(
+        case_id,
+        paths,
+        output=output,
+        seed=seed,
+    )
+    execution_policy = _execution_policy_tokens(ENGINE_V2_CPU_POLICY)
     try:
         coordinates = _engine_v2_pose_coordinates(case_id, paths, seed=seed)
         try:
@@ -714,6 +984,8 @@ def _engine_v2_result(
             status="failure",
             runtime_seconds=time.perf_counter() - started,
             **_result_input_fields(input_sha256s),
+            execution_command=command,
+            execution_policy=execution_policy,
             failure_code=_engine_v2_failure_code(exc),
         )
     runtime = time.perf_counter() - started
@@ -724,6 +996,8 @@ def _engine_v2_result(
         status="success",
         runtime_seconds=runtime,
         **_result_input_fields(input_sha256s),
+        execution_command=command,
+        execution_policy=execution_policy,
         rmsd_angstroms=rmsds,
         geometric_valid=geometric,
         chemical_valid=chemical,
@@ -751,6 +1025,9 @@ def _external_result(
         seed=seed,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
+    execution_policy = _execution_policy_tokens(
+        _external_execution_policy(timeout_seconds)
+    )
     started = time.perf_counter()
     try:
         completed = subprocess.run(
@@ -768,6 +1045,8 @@ def _external_result(
                 status="failure",
                 runtime_seconds=time.perf_counter() - started,
                 **_result_input_fields(input_sha256s),
+                execution_command=command,
+                execution_policy=execution_policy,
                 failure_code="external_timeout",
             ),
             command,
@@ -785,6 +1064,8 @@ def _external_result(
                 status="failure",
                 runtime_seconds=runtime,
                 **_result_input_fields(input_sha256s),
+                execution_command=command,
+                execution_policy=execution_policy,
                 failure_code="external_process_failed",
             ),
             command,
@@ -799,6 +1080,8 @@ def _external_result(
                 status="failure",
                 runtime_seconds=runtime,
                 **_result_input_fields(input_sha256s),
+                execution_command=command,
+                execution_policy=execution_policy,
                 failure_code="external_pose_output_invalid",
             ),
             command,
@@ -811,6 +1094,8 @@ def _external_result(
                 status="failure",
                 runtime_seconds=runtime,
                 **_result_input_fields(input_sha256s),
+                execution_command=command,
+                execution_policy=execution_policy,
                 failure_code="external_pose_count_incomplete",
             ),
             command,
@@ -824,6 +1109,8 @@ def _external_result(
             status="success",
             runtime_seconds=runtime,
             **_result_input_fields(input_sha256s),
+            execution_command=command,
+            execution_policy=execution_policy,
             rmsd_angstroms=rmsds,
             geometric_valid=geometric,
             chemical_valid=chemical,
@@ -865,6 +1152,17 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _evaluation_policy_from_arguments(
+    arguments: argparse.Namespace,
+) -> PublicRedockingEvaluationPolicy:
+    return PublicRedockingEvaluationPolicy(
+        bootstrap_samples=arguments.bootstrap_samples,
+        bootstrap_seed=arguments.seed,
+        external_timeout_seconds=arguments.timeout_seconds,
+        cpu_count=1,
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     repo_root = Path(__file__).resolve().parents[1]
@@ -888,17 +1186,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise PublicRedockingRunnerError("GNINA binary is missing")
     _load_rdkit_modules()
     _load_posebusters()
+    evaluator_versions = _evaluator_environment_versions()
     _configure_engine_v2_cpu()
     if type(arguments.seed) is not int or not 0 <= arguments.seed <= 2_147_483_348:
         raise PublicRedockingRunnerError(
             "seed must leave room for all 300 signed-32-bit case seeds"
         )
-    if type(arguments.timeout_seconds) is not int or arguments.timeout_seconds < 1:
-        raise PublicRedockingRunnerError("timeout-seconds must be positive")
+    evaluation_policy = _evaluation_policy_from_arguments(arguments)
     binary_sha256 = _sha256_path(binary)
     binary_version = _binary_version(binary)
     engine_source_sha256 = _engine_source_sha256(repo_root)
-    evaluation_pipeline_sha256 = _evaluation_pipeline_sha256(repo_root)
+    evaluation_pipeline_sha256 = _evaluation_pipeline_sha256(
+        repo_root,
+        evaluator_versions=evaluator_versions,
+    )
     all_case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS
     if not 0 <= arguments.start_index < len(all_case_ids):
         raise PublicRedockingRunnerError("start-index is outside the cohort")
@@ -931,15 +1232,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"[{index + 1}/{len(all_case_ids)}] {case_id}", flush=True)
 
             engine_output = output_root / "poses" / "engine_v2" / f"{case_id}.sdf"
-            engine_command = (
-                RUNNER_ID,
-                "engine_v2",
-                "--candidate-count",
-                "5",
-                "--seed",
-                str(case_seed),
-                "--out",
-                str(engine_output),
+            engine_command = _engine_v2_command(
+                case_id,
+                paths,
+                output=engine_output,
+                seed=case_seed,
             )
             engine_receipt = output_root / "receipts" / "engine_v2" / f"{case_id}.json"
             engine_row = _load_cached_row(
@@ -948,6 +1245,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 engine_id="engine_v2",
                 command=engine_command,
                 execution_policy=ENGINE_V2_CPU_POLICY,
+                pose_output=engine_output,
                 input_sha256s=inputs,
                 implementation_sha256=engine_source_sha256,
                 evaluation_pipeline_sha256=evaluation_pipeline_sha256,
@@ -992,6 +1290,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     execution_policy=_external_execution_policy(
                         arguments.timeout_seconds
                     ),
+                    pose_output=pose_output,
                     input_sha256s=inputs,
                     implementation_sha256=binary_sha256,
                     evaluation_pipeline_sha256=evaluation_pipeline_sha256,
@@ -1051,7 +1350,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 RUNNER_ID,
                 "engine_v2",
                 "--candidate-count",
-                "5",
+                str(ENGINE_V2_CANDIDATE_COUNT),
                 "--cpu",
                 "1",
             ),
@@ -1100,12 +1399,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         tuple(profiles),
         identities,
         ordered_rows,
-        policy=PublicRedockingEvaluationPolicy(
-            bootstrap_samples=arguments.bootstrap_samples,
-            bootstrap_seed=arguments.seed,
-            external_timeout_seconds=arguments.timeout_seconds,
-            cpu_count=1,
-        ),
+        policy=evaluation_policy,
     )
     _atomic_json(output_root / "public-redocking-report.json", report.to_dict())
     print(report.fingerprint_sha256)
