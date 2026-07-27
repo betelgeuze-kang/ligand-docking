@@ -366,7 +366,8 @@ ranking and does not report physical energy, binding affinity, or free energy.
 `EnergyBasedLocalRefiner(...)` binds an authenticated docking problem, its exact
 ligand system, a topology-matched `ReferenceForceFieldParameters` packet, and an
 immutable `EnergyLocalRefinementConfig`. Its `refine(..., max_steps=...)` method
-uses the existing bounded CPU reference minimizer and returns a proposal whose
+requires CPU float64 coordinates, uses the existing bounded CPU reference
+minimizer, and returns a proposal whose
 lineage names the exact `EnergyRefinementAttempt` receipt. The receipt retains
 binary64 pre/post coordinates, initial/final/delta kcal/mol energy, maximum
 atom displacement, convergence and evaluation counters, checkpoint identity,

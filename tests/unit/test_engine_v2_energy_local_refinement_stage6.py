@@ -580,6 +580,81 @@ def test_energy_refined_result_rejects_cross_wired_attempt_row():
     assert isinstance(result, EnergyRefinedGuidedSearchResult)
 
 
+def test_energy_refined_result_rejects_forged_effective_config_identity():
+    authority, receptor, ligand = _authority()
+    refiner = _refiner(authority, ligand)
+    result = run_authenticated_energy_refined_scorer_v1_guided_search(
+        authority,
+        _guided_budget(seed=1330),
+        ChemistryPoseScorerV1(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="f" * 64,
+        ),
+        build_guided_placement_context(authority, receptor, ligand),
+        refiner,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+    )
+    forged_refiner = _refiner(authority, ligand)
+    rows = list(result.rows)
+    forged_attempt = replace(
+        rows[0].attempt,
+        effective_minimization_config_fingerprint_sha256="0" * 64,
+    )
+    rows[0] = replace(rows[0], attempt=forged_attempt)
+    for index, row in enumerate(rows):
+        forged_refiner._attempts[row.source_proposal_fingerprint_sha256] = (
+            forged_attempt if index == 0 else row.attempt
+        )
+
+    with pytest.raises(EnergyRefinementError, match="attempt identity"):
+        replace(result, refiner=forged_refiner, rows=tuple(rows))
+
+
+def test_energy_refined_search_rejects_same_problem_different_authority():
+    authority, receptor, ligand = _authority()
+    alternate_authority = (
+        build_element_aware_authenticated_known_pocket_docking_problem(
+            receptor,
+            ligand,
+            authority.pocket,
+            receptor_margin_angstrom=4.0,
+            contact_policy=replace(
+                authority.validity_context.contact_policy,
+                severe_overlap_scale=0.5,
+            ),
+        )
+    )
+    assert (
+        alternate_authority.problem.fingerprint_sha256
+        == authority.problem.fingerprint_sha256
+    )
+    assert alternate_authority.input_receipt_sha256 != authority.input_receipt_sha256
+
+    with pytest.raises(EnergyRefinementError, match="authority is cross-wired"):
+        run_authenticated_energy_refined_scorer_v1_guided_search(
+            alternate_authority,
+            _guided_budget(seed=1332),
+            ChemistryPoseScorerV1(
+                alternate_authority,
+                receptor,
+                ligand,
+                implementation_source_sha256="f" * 64,
+            ),
+            build_guided_placement_context(
+                alternate_authority,
+                receptor,
+                ligand,
+            ),
+            _refiner(authority, ligand),
+            receptor_system=receptor,
+            ligand_system=ligand,
+        )
+
+
 def test_energy_refined_search_preflights_attempt_state_and_capacity():
     authority, receptor, ligand = _authority()
     scorer = ChemistryPoseScorerV1(

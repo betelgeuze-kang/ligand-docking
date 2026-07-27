@@ -529,6 +529,13 @@ class EnergyBasedLocalRefiner:
         if not isinstance(ligand_system, AllAtomSystem):
             raise TypeError("ligand_system must be AllAtomSystem")
         require_valid_all_atom_system(ligand_system)
+        if (
+            ligand_system.coordinates.device.type != "cpu"
+            or ligand_system.coordinates.dtype != torch.float64
+        ):
+            raise EnergyRefinementError(
+                "energy refinement requires CPU float64 ligand coordinates"
+            )
         if canonical_system_sha256(ligand_system) != authority.ligand_system_sha256:
             raise EnergyRefinementError("refiner ligand system is cross-wired")
         if not isinstance(parameters, ReferenceForceFieldParameters):
@@ -568,6 +575,14 @@ class EnergyBasedLocalRefiner:
         return self._parameters.fingerprint_sha256
 
     @property
+    def authority_input_receipt_sha256(self) -> str:
+        return self._authority.input_receipt_sha256
+
+    @property
+    def ligand_system_sha256(self) -> str:
+        return self._authority.ligand_system_sha256
+
+    @property
     def attempts(self) -> Mapping[str, EnergyRefinementAttempt]:
         return MappingProxyType(dict(self._attempts))
 
@@ -598,6 +613,7 @@ class EnergyBasedLocalRefiner:
             != (self._authority.search_space.atom_count, 3)
             or tuple(proposal.torsion_angles.shape)
             != (self._authority.search_space.atom_count,)
+            or proposal.coordinates.dtype != torch.float64
         ):
             raise EnergyRefinementError("refinement proposal is cross-wired")
         steps = _exact_int(
@@ -923,8 +939,14 @@ class EnergyRefinedGuidedSearchResult:
             attempt = retained.attempt
             if (
                 attempt.authority_input_receipt_sha256 != authority_receipt
+                or attempt.ligand_system_sha256 != self.refiner.ligand_system_sha256
                 or attempt.refiner_config_fingerprint_sha256 != refiner_config
                 or attempt.parameter_fingerprint_sha256 != parameter_fingerprint
+                or attempt.effective_minimization_config_fingerprint_sha256
+                != replace(
+                    self.refiner.config.minimization,
+                    max_iterations=attempt.max_steps,
+                ).fingerprint_sha256
                 or attempt.receipt_sha256
                 != self.refiner.attempt_for(
                     source.proposal_fingerprint_sha256
@@ -1072,6 +1094,8 @@ def run_authenticated_energy_refined_scorer_v1_guided_search(
     if (
         refiner.problem_fingerprint_sha256
         != authenticated_problem.problem.fingerprint_sha256
+        or refiner.authority_input_receipt_sha256
+        != authenticated_problem.input_receipt_sha256
     ):
         raise EnergyRefinementError("energy refiner authority is cross-wired")
     result = run_authenticated_scorer_v1_guided_search(
