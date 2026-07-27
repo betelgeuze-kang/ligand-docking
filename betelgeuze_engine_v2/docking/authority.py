@@ -370,6 +370,7 @@ class TorsionSearchSpaceDerivationReceipt:
     model_index: int
     atom_count: int
     bond_count: int
+    parent_atom_indices: tuple[int, ...]
     root_atom_indices: tuple[int, ...]
     rotatable_child_atom_indices: tuple[int, ...]
     rotor_bond_dispositions: tuple[tuple[int, int, str], ...]
@@ -416,6 +417,7 @@ class TorsionSearchSpaceDerivationReceipt:
             minimum=0,
             maximum=AUTHENTICATED_DOCKING_MAX_LIGAND_BONDS,
         )
+        parents = tuple(int(value) for value in self.parent_atom_indices)
         roots = tuple(int(value) for value in self.root_atom_indices)
         rotors = tuple(int(value) for value in self.rotatable_child_atom_indices)
         dispositions: list[tuple[int, int, str]] = []
@@ -436,9 +438,21 @@ class TorsionSearchSpaceDerivationReceipt:
             tuple(int(value) for value in system)
             for system in self.rigid_ring_system_atom_indices
         )
+        if (
+            len(parents) != atom_count
+            or any(
+                value < -1 or value >= atom_count
+                for value in parents
+            )
+            or any(value == index for index, value in enumerate(parents))
+        ):
+            raise DockingAuthorityError("parent atom indices are invalid")
+        derived_roots = tuple(
+            index for index, value in enumerate(parents) if value < 0
+        )
         if roots != tuple(sorted(set(roots))) or any(
             not 0 <= value < atom_count for value in roots
-        ):
+        ) or roots != derived_roots:
             raise DockingAuthorityError("root atom indices are invalid")
         if rotors != tuple(sorted(set(rotors))) or any(
             not 0 <= value < atom_count for value in rotors
@@ -446,6 +460,20 @@ class TorsionSearchSpaceDerivationReceipt:
             raise DockingAuthorityError("rotatable child indices are invalid")
         if not roots:
             raise DockingAuthorityError("search-space receipt requires a root")
+        for atom_index in range(atom_count):
+            cursor = atom_index
+            visited: set[int] = set()
+            while parents[cursor] >= 0:
+                if cursor in visited:
+                    raise DockingAuthorityError(
+                        "parent atom indices contain a cycle"
+                    )
+                visited.add(cursor)
+                cursor = parents[cursor]
+            if cursor not in roots:
+                raise DockingAuthorityError(
+                    "parent atom indices do not terminate at a root"
+                )
         disposition_pairs = tuple(
             (first, second)
             for first, second, _ in rotor_bond_dispositions
@@ -463,10 +491,29 @@ class TorsionSearchSpaceDerivationReceipt:
             )
         ):
             raise DockingAuthorityError("rotor bond dispositions are invalid")
-        if sum(
-            disposition == "rotatable"
-            for _, _, disposition in rotor_bond_dispositions
-        ) != len(rotors):
+        disposition_by_pair = {
+            (first, second): disposition
+            for first, second, disposition in rotor_bond_dispositions
+        }
+        parent_bond_pairs = {
+            tuple(sorted((child, ancestor)))
+            for child, ancestor in enumerate(parents)
+            if ancestor >= 0
+        }
+        if not parent_bond_pairs.issubset(disposition_by_pair):
+            raise DockingAuthorityError(
+                "parent bonds are missing rotor dispositions"
+            )
+        rotatable_bond_pairs = {
+            pair
+            for pair, disposition in disposition_by_pair.items()
+            if disposition == "rotatable"
+        }
+        expected_rotatable_bond_pairs = {
+            tuple(sorted((child, parents[child])))
+            for child in rotors
+        }
+        if rotatable_bond_pairs != expected_rotatable_bond_pairs:
             raise DockingAuthorityError(
                 "rotatable bond dispositions and child indices disagree"
             )
@@ -512,10 +559,6 @@ class TorsionSearchSpaceDerivationReceipt:
             raise DockingAuthorityError(
                 "ring bonds cannot cross rigid ring systems"
             )
-        disposition_by_pair = {
-            (first, second): disposition
-            for first, second, disposition in rotor_bond_dispositions
-        }
         if any(
             disposition_by_pair.get(pair) != "ring_bond"
             for pair in ring_bonds
@@ -563,6 +606,7 @@ class TorsionSearchSpaceDerivationReceipt:
         object.__setattr__(self, "model_index", model_index)
         object.__setattr__(self, "atom_count", atom_count)
         object.__setattr__(self, "bond_count", bond_count)
+        object.__setattr__(self, "parent_atom_indices", parents)
         object.__setattr__(self, "root_atom_indices", roots)
         object.__setattr__(self, "rotatable_child_atom_indices", rotors)
         object.__setattr__(
@@ -607,6 +651,7 @@ class TorsionSearchSpaceDerivationReceipt:
             "model_index": self.model_index,
             "atom_count": self.atom_count,
             "bond_count": self.bond_count,
+            "parent_atom_indices": list(self.parent_atom_indices),
             "root_atom_indices": list(self.root_atom_indices),
             "rotatable_child_atom_indices": list(
                 self.rotatable_child_atom_indices
@@ -1078,6 +1123,23 @@ def _derive_rotor_perception(
             for neighbor, bond in incident_bonds[atom_index]
         )
 
+    def sulfonyl_oxygen_count(atom_index: int) -> int:
+        center_charge = int(ligand_system.atoms[atom_index].formal_charge)
+        return sum(
+            element(neighbor) == "O"
+            and (
+                is_order(bond, 2.0)
+                or (
+                    is_order(bond, 1.0)
+                    and center_charge > 0
+                    and int(
+                        ligand_system.atoms[neighbor].formal_charge
+                    ) < 0
+                )
+            )
+            for neighbor, bond in incident_bonds[atom_index]
+        )
+
     def single_neighbor_elements(atom_index: int) -> tuple[str, ...]:
         return tuple(
             element(neighbor)
@@ -1122,7 +1184,7 @@ def _derive_rotor_perception(
             if (
                 center_element == "S"
                 and partner_element == "N"
-                and double_oxygen_count(center) >= 2
+                and sulfonyl_oxygen_count(center) >= 2
             ):
                 return "sulfonamide"
         return None
@@ -1330,6 +1392,7 @@ def derive_authoritative_torsion_search_space(
         model_index=model_index,
         atom_count=atom_count,
         bond_count=bond_count,
+        parent_atom_indices=tuple(parent),
         root_atom_indices=(0,),
         rotatable_child_atom_indices=tuple(
             int(index)

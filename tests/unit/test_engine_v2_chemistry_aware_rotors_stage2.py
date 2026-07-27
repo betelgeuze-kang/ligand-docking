@@ -29,8 +29,13 @@ _ATOMIC_NUMBERS = {"H": 1, "C": 6, "N": 7, "O": 8, "S": 16}
 def _system(
     elements: list[str],
     bonds: list[tuple[int, int, float, str]],
+    *,
+    formal_charges: list[int] | None = None,
 ) -> AllAtomSystem:
     atom_count = len(elements)
+    charges = formal_charges or [0] * atom_count
+    if len(charges) != atom_count:
+        raise ValueError("formal charge fixture length mismatch")
     return AllAtomSystem(
         system_id="chemistry-aware-rotor-stage2",
         atoms=tuple(
@@ -40,6 +45,7 @@ def _system(
                 element=element,
                 atomic_number=_ATOMIC_NUMBERS[element],
                 residue_index=0,
+                formal_charge=charges[index],
             )
             for index, element in enumerate(elements)
         ),
@@ -236,6 +242,24 @@ def test_urea_and_carbamate_classify_each_restricted_center_bond() -> None:
     assert carbamate_dispositions[(1, 4)] == "carbamate"
 
 
+def test_charge_separated_sulfonamide_is_not_a_rotor() -> None:
+    dispositions, torsion_count = _dispositions(
+        _system(
+            ["O", "S", "O", "N", "C", "C"],
+            [
+                (0, 1, 1.0, "none"),
+                (1, 2, 1.0, "none"),
+                (1, 3, 1.0, "none"),
+                (3, 4, 1.0, "none"),
+                (1, 5, 1.0, "none"),
+            ],
+            formal_charges=[-1, 2, -1, 0, 0, 0],
+        )
+    )
+    assert dispositions[(1, 3)] == "sulfonamide"
+    assert torsion_count == 0
+
+
 def test_ordinary_nonterminal_aliphatic_single_bonds_remain_rotors() -> None:
     dispositions, torsion_count = _dispositions(
         _system(
@@ -312,3 +336,23 @@ def test_receipt_records_one_canonical_disposition_per_bond() -> None:
             receipt,
             rotor_bond_dispositions=receipt.rotor_bond_dispositions[:-1],
         )
+
+    swapped = tuple(
+        (
+            first,
+            second,
+            (
+                "rotatable"
+                if (first, second) == (0, 1)
+                else "terminal_heavy_atom"
+                if (first, second) == (1, 2)
+                else disposition
+            ),
+        )
+        for first, second, disposition in receipt.rotor_bond_dispositions
+    )
+    with pytest.raises(
+        ValueError,
+        match="rotatable bond dispositions and child indices disagree",
+    ):
+        replace(receipt, rotor_bond_dispositions=swapped)
