@@ -33,6 +33,7 @@ REDUNDANT_STACK_WORKFLOWS = (
     "ci-engine-v2-molecular-round3.yml",
     "ci-engine-v2-docking-authority-round4.yml",
     "ci-engine-v2-release-integration-round5.yml",
+    "ci-engine-v2-pocket-placement-round6.yml",
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
     "contents: write",
