@@ -52,11 +52,16 @@ minimization validation process entrypoints are implemented and wired.  It does
 **not** claim that a production authorization, production result receipt, or
 independent result review exists.
 
-The frozen public redocking cohort now has a result-free reference-ligand matcher
-and bounded heavy-atom symmetry materializer.  It still has no authorized
-benchmark execution, public holdout result document, statistical
-representativeness, PoseBusters Benchmark equivalence, independent attestation,
-scientific validation, product qualification, or customer execution.
+The frozen four-case public redocking cohort has a result-free reference-ligand
+matcher and bounded heavy-atom symmetry materializer.  A separate 300-case
+contract now freezes a result-independent subset of the published PoseBusters
+308-case journal list and defines failure-complete Engine V2/Vina/GNINA
+Top-1/3/5, validity, runtime, subgroup, paired-delta, and bootstrap-CI reporting.
+Its local runner may execute only against operator-supplied, hash-verified
+public inputs and retains failures and receipts. Neither contract supplies a
+public holdout result, equal-search-effort comparison, statistical
+representativeness, independent attestation, scientific validation, product
+qualification, production authorization, or customer execution.
 
 Frozen historical contracts are not rewritten to make their old blocker text
 appear current.  `superseded_blockers` records implementation blockers that are

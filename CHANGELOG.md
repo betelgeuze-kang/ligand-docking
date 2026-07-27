@@ -8,6 +8,19 @@ scientific claim from a package version.
 
 ### Changed
 
+- Added a frozen 300-case PoseBusters redocking evaluation contract selected
+  deterministically from the published 308-case journal subset before results.
+  It binds the external archive and identifier bytes, requires exactly five
+  artifact-hashed ranked poses for Engine V2, Vina, and GNINA, explicitly
+  records that internal search effort is not equal, retains all engine/case
+  failures, and emits deterministic
+  bootstrap confidence intervals for Top-1/3/5 RMSD and valid-pose success,
+  top-pose geometric/chemical validity, runtime, ligand-size and rotor
+  subgroups, and paired Engine-V2-versus-baseline deltas. Source-ligand hashes
+  and RDKit-2022.09.5 strict-rotor profiles are frozen before execution. A local
+  resumable runner verifies and materializes the public source, serializes
+  Engine V2 poses, launches the two external modes, and retains receipts. No
+  structure data or performance result is bundled or scientifically promoted.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,
@@ -63,11 +76,13 @@ scientific claim from a package version.
 ### Scientific boundary
 
 This stage does not add ring-conformer or macrocycle sampling, scientific
-conformer-quality, guided-placement, or docking-score validation, or benchmark
-evidence. Guided chemical features and Scorer v1 terms are bounded auditable
+conformer-quality, guided-placement, docking-score validation, or committed
+benchmark evidence. Guided chemical features and Scorer v1 terms are bounded auditable
 heuristics; Scorer v1 is not a calibrated energy, affinity, or free-energy
 estimate. Energy-based local refinement is not evidence of docking improvement
-and does not minimize receptor--ligand interaction energy.
+and does not minimize receptor--ligand interaction energy. The 300-case
+redocking contract and runner are an execution work surface, not a bundled
+performance result or scientific validation.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

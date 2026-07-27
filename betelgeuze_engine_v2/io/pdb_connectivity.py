@@ -30,6 +30,7 @@ def parse_pdb(
     dtype=None,
     device="cpu",
     connectivity_policy: PDBConnectivityPolicy = "reject_unrepresented",
+    unit_cell_policy="preserve_orthorhombic",
 ):
     """Parse a strict PDB subset under an explicit LINK/SSBOND policy.
 
@@ -59,6 +60,7 @@ def parse_pdb(
         "source_id": source_id,
         "limits": limits,
         "device": device,
+        "unit_cell_policy": unit_cell_policy,
     }
     if dtype is not None:
         kwargs["dtype"] = dtype

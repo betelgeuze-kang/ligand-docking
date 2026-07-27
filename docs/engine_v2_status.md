@@ -143,6 +143,17 @@ The current `main` branch contains:
   bundled, no network fetch or benchmark execution is implemented or authorized,
   no result document exists, and the four fixtures do not establish statistical
   representativeness or PoseBusters Benchmark equivalence;
+- a separate frozen 300-case public redocking evaluation contract selected by
+  a result-independent SHA-256 rule from the published PoseBusters 308-case
+  journal subset. It binds the external Zenodo archive and identifier-document
+  bytes, requires one failure-complete five-pose row for each of Engine V2,
+  Vina, and GNINA, and defines bootstrap-CI Top-1/3/5 RMSD and valid-pose
+  success, top-pose geometric/chemical validity, runtime, ligand-size/rotor
+  subgroups, and paired baseline deltas. A local resumable runner verifies the
+  source archive and identifier list, materializes only the frozen inputs,
+  serializes Engine V2 poses, invokes Vina/GNINA modes, and retains exact
+  receipts. The external structures, engine outputs, and benchmark result
+  remain absent from the repository;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that
   every runtime value is supplied explicitly by the caller, and enumerates the
@@ -423,8 +434,8 @@ not currently establish:
   local refinement improves pose recovery, or a validated docking-refinement
   energy surface;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
-  representative public holdout; the frozen four-case protocol fixture is not a
-  benchmark result;
+  representative public holdout; neither the frozen four-case fixture nor the
+  300-case evaluation contract and result-free runner are a benchmark result;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;
 - CUDA, ROCm, or HIP numerical/performance parity;
 - customer API integration for Engine v2;

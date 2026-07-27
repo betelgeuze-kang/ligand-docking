@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass
 import hashlib
 import math
-from typing import Any
+from typing import Any, Literal
 
 import torch
 
@@ -135,10 +135,15 @@ def parse_pdb(
     limits: PDBParserLimits | None = None,
     dtype: torch.dtype = torch.float64,
     device: torch.device | str = "cpu",
+    unit_cell_policy: Literal["preserve_orthorhombic", "ignore"] = (
+        "preserve_orthorhombic"
+    ),
 ) -> AllAtomSystem:
     """Parse one explicit PDB coordinate model without chemistry inference."""
 
     parser_limits = limits or PDBParserLimits()
+    if unit_cell_policy not in {"preserve_orthorhombic", "ignore"}:
+        raise ValueError("unsupported PDB unit_cell_policy")
     raw, text = _source_bytes(source, parser_limits)
     lines = text.splitlines()
     if len(lines) > parser_limits.max_lines:
@@ -265,6 +270,9 @@ def parse_pdb(
             continue
 
         if record == "CRYST1":
+            if unit_cell_policy == "ignore":
+                ignored["CRYST1"] += 1
+                continue
             if cell is not None:
                 raise PDBParseError("multiple CRYST1 records are not supported")
             a = _float_field(line, 6, 15, name="cell a")
@@ -350,6 +358,7 @@ def parse_pdb(
                 "atom_count": len(atoms),
                 "bond_count": len(bonds),
                 "ignored_record_counts": dict(sorted(ignored.items())),
+                "unit_cell_policy": unit_cell_policy,
                 "limitations": [
                     "single_model_only",
                     "alternate_locations_rejected",

@@ -116,6 +116,20 @@ def test_strict_pdb_parser_builds_verified_ingest_without_chemistry_promotion() 
         parse_pdb("MODEL        1\n" + _valid_pdb() + "MODEL        2\nENDMDL\n")
 
 
+def test_strict_pdb_parser_can_explicitly_ignore_nonperiodic_crystal_metadata() -> None:
+    nonorthorhombic = _valid_pdb().replace(
+        f"{90.0:7.2f}{90.0:7.2f}{90.0:7.2f}",
+        f"{90.0:7.2f}{105.0:7.2f}{90.0:7.2f}",
+    )
+    with pytest.raises(PDBParseError, match="orthorhombic"):
+        parse_pdb(nonorthorhombic)
+
+    system = parse_pdb(nonorthorhombic, unit_cell_policy="ignore")
+    assert system.cell is None
+    assert system.provenance.metadata["unit_cell_policy"] == "ignore"
+    assert system.provenance.metadata["ignored_record_counts"]["CRYST1"] == 1
+
+
 def test_strict_sdf_parser_accepts_explicit_charge_isotope_and_rejects_multi_record() -> None:
     system = parse_sdf_v2000(_valid_sdf(), source_id="sdf-fixture")
     assert system.atom_count == 2

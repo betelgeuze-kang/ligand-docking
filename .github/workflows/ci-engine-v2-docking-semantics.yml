@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "betelgeuze_engine_v2/contracts/**"
+      - "betelgeuze_engine_v2/benchmark/**"
       - "betelgeuze_engine_v2/docking/**"
       - "betelgeuze_engine_v2/physics/registry.py"
       - "betelgeuze_engine_v2/physics/reference_forcefield.py"
@@ -14,11 +15,15 @@ on:
       - "tests/unit/test_engine_v2_guided_proposal_stage4.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
       - "tests/unit/test_engine_v2_energy_local_refinement_stage6.py"
+      - "tests/unit/test_engine_v2_public_redocking_benchmark_stage7.py"
+      - "tests/unit/test_engine_v2_public_redocking_runner_stage7.py"
+      - "tools/run_engine_v2_public_redocking_300.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   push:
     branches: ["main"]
     paths:
       - "betelgeuze_engine_v2/contracts/**"
+      - "betelgeuze_engine_v2/benchmark/**"
       - "betelgeuze_engine_v2/docking/**"
       - "betelgeuze_engine_v2/physics/registry.py"
       - "betelgeuze_engine_v2/physics/reference_forcefield.py"
@@ -29,6 +34,9 @@ on:
       - "tests/unit/test_engine_v2_guided_proposal_stage4.py"
       - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
       - "tests/unit/test_engine_v2_energy_local_refinement_stage6.py"
+      - "tests/unit/test_engine_v2_public_redocking_benchmark_stage7.py"
+      - "tests/unit/test_engine_v2_public_redocking_runner_stage7.py"
+      - "tools/run_engine_v2_public_redocking_300.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   workflow_dispatch:
 
@@ -56,7 +64,9 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            tools/run_engine_v2_public_redocking_300.py
             tests/unit/test_engine_v2_conformer_ensemble_stage3.py
+            tests/unit/test_engine_v2_public_redocking_runner_stage7.py
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -73,7 +83,8 @@ jobs:
       - name: Run deterministic conformer ensemble contracts
         run: |
           python -m pytest -q \
-            tests/unit/test_engine_v2_conformer_ensemble_stage3.py
+            tests/unit/test_engine_v2_conformer_ensemble_stage3.py \
+            tests/unit/test_engine_v2_public_redocking_runner_stage7.py
 
   docking-semantics:
     runs-on: ubuntu-latest
@@ -101,6 +112,7 @@ jobs:
             tests/unit/test_engine_v2_guided_proposal_stage4.py
             tests/unit/test_engine_v2_scorer_v1_stage5.py
             tests/unit/test_engine_v2_energy_local_refinement_stage6.py
+            tests/unit/test_engine_v2_public_redocking_benchmark_stage7.py
           sparse-checkout-cone-mode: false
           show-progress: false
 
@@ -127,4 +139,5 @@ jobs:
             tests/unit/test_engine_v2_docking_semantics.py \
             tests/unit/test_engine_v2_guided_proposal_stage4.py \
             tests/unit/test_engine_v2_scorer_v1_stage5.py \
-            tests/unit/test_engine_v2_energy_local_refinement_stage6.py
+            tests/unit/test_engine_v2_energy_local_refinement_stage6.py \
+            tests/unit/test_engine_v2_public_redocking_benchmark_stage7.py
