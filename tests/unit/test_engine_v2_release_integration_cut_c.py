@@ -60,12 +60,13 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
         "test_engine_v2_element_contact_round8.py",
         "test_engine_v2_interpretable_scorer_round10.py",
         "test_engine_v2_interpretable_result_round12.py",
+        "test_engine_v2_canonical_cli_round14.py",
         "test_engine_v2_release_integration_cut_c.py",
     ):
         assert filename in source
 
 
-def test_package_lane_builds_two_identical_wheels_and_imports_term_evidence_api() -> None:
+def test_package_lane_builds_two_identical_wheels_and_executes_cli() -> None:
     source = (
         ROOT / ".github" / "workflows" / "ci-engine-v2-package.yml"
     ).read_text(encoding="utf-8")
@@ -75,7 +76,12 @@ def test_package_lane_builds_two_identical_wheels_and_imports_term_evidence_api(
     assert "sha256sum dist-engine-v2/*.whl" in source
     assert "pip check" in source
     assert "Import wheel outside checkout" in source
+    assert "Run installed canonical CLI outside checkout" in source
+    assert "betelgeuze-engine-v2\" dock-canonical" in source
+    assert "CLI_DOCKING_RESULT_SCHEMA_ID" in source
     for api_name in (
+        "EngineV2CliError",
+        "run_canonical_docking",
         "AuthenticatedDockingProblem",
         "ElementAwarePoseValidityContext",
         "ElementAwareValidityError",
