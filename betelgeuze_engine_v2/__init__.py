@@ -130,6 +130,33 @@ from .stack_round2_evaluator import (
 
 STACK_ROUND2_EVALUATOR_SHA256 = _install_stack_round2_evaluator()
 
+from .stack_round3_molecular import (
+    MolecularIntegrityError,
+    install_stack_round3_molecular as _install_stack_round3_molecular,
+)
+
+STACK_ROUND3_MOLECULAR_SHA256 = _install_stack_round3_molecular()
+
+from .stack_round3_integrity_compat import (
+    install_stack_round3_integrity_compat as _install_stack_round3_integrity_compat,
+)
+
+STACK_ROUND3_INTEGRITY_COMPAT_SHA256 = (
+    _install_stack_round3_integrity_compat()
+)
+
+from .stack_round3_list_compat import (
+    install_stack_round3_list_compat as _install_stack_round3_list_compat,
+)
+
+STACK_ROUND3_LIST_COMPAT_SHA256 = _install_stack_round3_list_compat()
+
+from .molecular import (
+    chemical_graph_sha256,
+    indexed_topology_sha256,
+    source_bound_topology_sha256,
+)
+
 __version__ = ENGINE_API_VERSION
 
 __all__ = [
@@ -152,6 +179,9 @@ __all__ = [
     "STACK_ROUND1_HARDENING_SHA256",
     "STACK_ROUND1_MINIMIZATION_COMPAT_SHA256",
     "STACK_ROUND2_EVALUATOR_SHA256",
+    "STACK_ROUND3_INTEGRITY_COMPAT_SHA256",
+    "STACK_ROUND3_LIST_COMPAT_SHA256",
+    "STACK_ROUND3_MOLECULAR_SHA256",
     "VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256",
     "VERSION_TAXONOMY",
     "AllAtomSystem",
@@ -173,6 +203,7 @@ __all__ = [
     "KinematicResult",
     "LocalEnergyConfig",
     "LocalEnergyTerms",
+    "MolecularIntegrityError",
     "MolecularValidationError",
     "NeighborBuildDiagnostics",
     "NeighborOverflowError",
@@ -201,14 +232,17 @@ __all__ = [
     "canonical_coordinates_sha256",
     "canonical_system_sha256",
     "canonical_topology_sha256",
+    "chemical_graph_sha256",
     "compose_energy_terms",
     "evaluate_physics_gates",
     "fixed_rank_orthogonal_complement",
     "fixed_rank_projection_adjoint",
+    "indexed_topology_sha256",
     "physics_informed_objective",
     "project_rigid_body_forces",
     "require_valid_all_atom_system",
     "run_internal_cpu_reference",
+    "source_bound_topology_sha256",
     "torsion_tree_forward_kinematics",
     "validate_all_atom_system",
 ]
