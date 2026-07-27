@@ -57,12 +57,13 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
         "test_engine_v2_docking_authority_contract.py",
         "test_engine_v2_docking_authority_search.py",
         "test_engine_v2_pocket_placement_round6.py",
+        "test_engine_v2_element_contact_round8.py",
         "test_engine_v2_release_integration_cut_c.py",
     ):
         assert filename in source
 
 
-def test_package_lane_builds_two_identical_wheels_and_imports_authority_api() -> None:
+def test_package_lane_builds_two_identical_wheels_and_imports_contact_api() -> None:
     source = (
         ROOT / ".github" / "workflows" / "ci-engine-v2-package.yml"
     ).read_text(encoding="utf-8")
@@ -74,11 +75,15 @@ def test_package_lane_builds_two_identical_wheels_and_imports_authority_api() ->
     assert "Import wheel outside checkout" in source
     for api_name in (
         "AuthenticatedDockingProblem",
+        "ElementAwarePoseValidityContext",
+        "ElementAwareValidityError",
         "PocketDefinition",
         "PocketPlacementPolicy",
         "PocketPlacementReceipt",
         "PocketPlacementSearchResult",
         "TorsionSearchSpaceDerivationReceipt",
+        "VdwContactPolicy",
+        "build_element_aware_authenticated_known_pocket_docking_problem",
     ):
         assert api_name in source
 
