@@ -105,8 +105,8 @@ def _run(root: Path):
     )
 
 
-def _stall_worker(connection: object) -> None:
-    del connection
+def _stall_worker(connection: object, application_seed: int) -> None:
+    del connection, application_seed
     time.sleep(10)
 
 
@@ -289,10 +289,42 @@ def test_supervisor_hard_stops_a_stalled_child_and_retains_all_rows(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(module, "_matrix_worker_main", _stall_worker)
-    rows = module._run_supervised_case_matrix(deadline=time.monotonic() + 0.05)
+    rows = module._run_supervised_case_matrix(
+        deadline=time.monotonic() + 0.05,
+        application_seed=456,
+    )
     assert len(rows) == 14
     assert all(row.observed_error_code == "runner_wall_time_exhausted" for row in rows)
     assert all(row.case_passed is False for row in rows)
+
+
+def test_matrix_worker_configures_determinism_before_running_cases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[object] = []
+
+    class Connection:
+        def send_bytes(self, payload: bytes) -> None:
+            events.append(("send", payload))
+
+        def close(self) -> None:
+            events.append("close")
+
+    monkeypatch.setattr(
+        module,
+        "_configure_deterministic_matrix_worker",
+        lambda seed: events.append(("configure", seed)),
+    )
+    monkeypatch.setattr(
+        module,
+        "_run_case_matrix_in_process",
+        lambda: events.append("matrix") or (),
+    )
+
+    module._matrix_worker_main(Connection(), 456)
+
+    assert events[0:2] == [("configure", 456), "matrix"]
+    assert events[-1] == "close"
 
 
 def test_run_persists_one_canonical_mode_0600_marker_and_no_receipt(
