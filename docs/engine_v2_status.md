@@ -112,6 +112,12 @@ The current `main` branch contains:
   conformer identities, an immutable prepared-state receipt, bounded atom/bond
   counts, exact-one-component input, explicit potential stereochemistry, and a
   pinned RDKit CI lane;
+- deterministic authenticated guided proposals for donor/acceptor hotspots,
+  opposite formal-charge anchors, connected hydrophobic patches, aromatic-plane
+  alignment, and principal-axis shape alignment. Exact context/policy/mode and
+  proposal receipts are retained, multi-candidate batches keep a uniform
+  Haar/spherical fallback, and unavailable guidance reproduces the uniform
+  baseline exactly;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -394,6 +400,9 @@ not currently establish:
   scientifically unvalidated;
 - scientific validation of ETKDG ensemble quality, symmetry-aware conformer
   diversity, or a default Engine V2 RDKit dependency;
+- validated pharmacophore perception, calibrated guided-placement quality, or
+  evidence that the current graph and principal-axis heuristics improve pose
+  recovery;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
   representative public holdout; the frozen four-case protocol fixture is not a
   benchmark result;
