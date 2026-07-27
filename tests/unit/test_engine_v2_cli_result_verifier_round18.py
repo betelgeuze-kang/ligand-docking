@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import hashlib
+import importlib
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,8 @@ from betelgeuze_engine_v2.result_verifier_strict import (  # noqa: E402
     verify_canonical_cli_result_bytes,
     verify_canonical_cli_result_document,
 )
+from betelgeuze_engine_v2 import result_verifier as base_verifier  # noqa: E402
+from betelgeuze_engine_v2 import result_verifier_strict as strict_verifier  # noqa: E402
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -209,6 +212,9 @@ def test_strict_verifier_accepts_a_canonical_cli_result(tmp_path: Path) -> None:
     assert verification["failure_denominator_verified"] is True
     assert verification["generic_search_fingerprint_fully_recomputed"] is True
     assert verification["generic_search_fingerprint_crosslinked"] is True
+    assert verification["schema_id"] == (
+        "betelgeuze.engine_v2_strict_cli_result_verification/2.0.0"
+    )
     assert verification["claim_safe"] is False
 
 
@@ -234,6 +240,96 @@ def test_nested_score_term_tamper_is_rejected_even_with_new_top_sha(
         match="score terms receipt SHA does not match",
     ):
         verify_canonical_cli_result_document(document)
+
+
+def test_term_components_must_reproduce_total_after_receipt_rehash(
+    tmp_path: Path,
+) -> None:
+    document = _document(tmp_path)
+    rows = document["result"]["rows"]
+    successful = next(row for row in rows if row["search_status"] == "success")
+    terms = deepcopy(successful["terms"])
+    terms["ligand_overlap_penalty_hex"] = (
+        float.fromhex(terms["ligand_overlap_penalty_hex"]) + 1.0
+    ).hex()
+    projection = dict(terms)
+    projection.pop("receipt_sha256")
+    terms["receipt_sha256"] = _sha256(projection)
+    with pytest.raises(
+        CliResultVerificationError,
+        match="components do not reproduce",
+    ):
+        base_verifier._verify_score_terms(terms)
+
+
+def test_top_candidate_ids_are_bound_to_search_fingerprint(
+    tmp_path: Path,
+) -> None:
+    document = deepcopy(_document(tmp_path))
+    generic = (
+        document["result"]["placement_search_result"]["search"]["search_result"]
+    )
+    eligible = [
+        row["candidate_id"]
+        for row in generic["rows"]
+        if row["selection_eligible"]
+    ]
+    replacement = next(
+        candidate
+        for candidate in eligible
+        if candidate not in generic["top_candidate_ids"]
+    )
+    generic["top_candidate_ids"][-1] = replacement
+    _recompute_cli_document_sha(document)
+    with pytest.raises(
+        CliResultVerificationError,
+        match="top candidate IDs",
+    ):
+        verify_canonical_cli_result_document(document)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("command_id", "unsupported-command"),
+        ("engine_api_version", "999.0"),
+        ("distribution_version", "999.0"),
+    ),
+)
+def test_producer_identity_fields_are_fixed(
+    tmp_path: Path,
+    field: str,
+    value: str,
+) -> None:
+    document = deepcopy(_document(tmp_path))
+    document[field] = value
+    _recompute_cli_document_sha(document)
+    with pytest.raises(CliResultVerificationError, match=field):
+        verify_canonical_cli_result_document(document)
+
+
+def test_scorer_source_is_bound_to_recomputed_contract(
+    tmp_path: Path,
+) -> None:
+    document = deepcopy(_document(tmp_path))
+    document["scorer_source_sha256"] = "9" * 64
+    _recompute_cli_document_sha(document)
+    with pytest.raises(
+        CliResultVerificationError,
+        match="scorer qualification is cross-wired",
+    ):
+        verify_canonical_cli_result_document(document)
+
+
+def test_strict_verifier_survives_repeated_module_reload(
+    tmp_path: Path,
+) -> None:
+    document = _document(tmp_path)
+    first = importlib.reload(strict_verifier)
+    second = importlib.reload(first)
+    assert second.verify_canonical_cli_result_document(
+        document
+    ).generic_search_fingerprint_fully_recomputed is True
 
 
 def test_generic_search_fingerprint_crosslink_tamper_is_rejected(

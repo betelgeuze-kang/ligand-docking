@@ -175,6 +175,29 @@ def _run(tmp_path: Path) -> dict[str, object]:
     )
 
 
+@pytest.mark.parametrize("radius", [True, "12.0"])
+def test_canonical_cli_rejects_nonnumeric_pocket_radius(
+    tmp_path: Path,
+    radius: object,
+) -> None:
+    receptor, ligand, pocket = _inputs(tmp_path)
+    document = json.loads(pocket.read_bytes())
+    document["radius_angstrom"] = radius
+    pocket.write_bytes(_canonical_json_bytes(document))
+    with pytest.raises(EngineV2CliError, match="geometry is invalid"):
+        run_canonical_docking(
+            receptor_path=receptor,
+            ligand_path=ligand,
+            pocket_path=pocket,
+            candidate_count=1,
+            top_k=1,
+            max_torsions=1,
+            translation_radius_angstrom=0.0,
+            seed=131,
+            receptor_margin_angstrom=4.0,
+        )
+
+
 def test_canonical_cli_vertical_slice_emits_failure_complete_evidence(
     tmp_path: Path,
 ) -> None:

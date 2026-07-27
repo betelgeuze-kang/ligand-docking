@@ -166,16 +166,38 @@ def _verify_score_terms(document: object) -> tuple[str, str]:
     if terms.get("schema_id") != INTERPRETABLE_POSE_SCORE_TERMS_SCHEMA_ID:
         raise CliResultVerificationError("score-term schema is unsupported")
     receipt = _verify_receipt(terms, name="score terms")
-    total_hex = str(terms.get("total_score_hex") or "")
-    try:
-        total = float.fromhex(total_hex)
-    except ValueError as exc:
+    component_keys = (
+        "ligand_overlap_penalty_hex",
+        "receptor_overlap_penalty_hex",
+        "contact_reward_hex",
+        "pocket_center_penalty_hex",
+        "torsion_penalty_hex",
+    )
+    parsed: list[float] = []
+    for key in (*component_keys, "total_score_hex"):
+        value = terms.get(key)
+        if not isinstance(value, str):
+            raise CliResultVerificationError(
+                f"score-term {key} is not a hexadecimal float"
+            )
+        try:
+            number = float.fromhex(value)
+        except ValueError as exc:
+            raise CliResultVerificationError(
+                f"score-term {key} is not a hexadecimal float"
+            ) from exc
+        if not math.isfinite(number) or number.hex() != value:
+            raise CliResultVerificationError(
+                f"score-term {key} is non-finite or non-canonical"
+            )
+        parsed.append(number)
+    expected_total = (
+        parsed[0] + parsed[1] - parsed[2] + parsed[3] + parsed[4]
+    )
+    total_hex = str(terms["total_score_hex"])
+    if expected_total.hex() != total_hex:
         raise CliResultVerificationError(
-            "score-term total is not a hexadecimal float"
-        ) from exc
-    if not math.isfinite(total) or total.hex() != total_hex:
-        raise CliResultVerificationError(
-            "score-term total is non-finite or non-canonical"
+            "score-term components do not reproduce the total"
         )
     _require_false(
         terms,
@@ -184,6 +206,127 @@ def _verify_score_terms(document: object) -> tuple[str, str]:
         "claim_safe",
     )
     return receipt, total_hex
+
+
+def _verify_scorer_qualification(
+    document: object,
+    *,
+    expected_source_sha256: str,
+    expected_contract_sha256: str,
+    expected_problem_sha256: str,
+    expected_authority_sha256: str,
+) -> None:
+    qualification = _require_dict(
+        document,
+        name="scorer qualification",
+    )
+    fields = {
+        "schema_id",
+        "scorer_id",
+        "scorer_version",
+        "score_descriptor",
+        "problem_fingerprint_sha256",
+        "authority_input_receipt_sha256",
+        "implementation_source_sha256",
+        "config_fingerprint_sha256",
+        "component_contract_fingerprint_sha256",
+        "validated_for_docking_ranking",
+        "affinity_estimate",
+        "free_energy_estimate",
+        "calibrated",
+        "scientifically_validated",
+        "benchmark_validated",
+        "product_qualified",
+        "claim_safe",
+        "document_sha256",
+    }
+    if set(qualification) != fields:
+        raise CliResultVerificationError(
+            "scorer qualification fields are invalid"
+        )
+    if (
+        qualification.get("schema_id")
+        != "betelgeuze.engine_v2_interpretable_pose_scorer_status/1.0.0"
+    ):
+        raise CliResultVerificationError(
+            "scorer qualification schema is unsupported"
+        )
+    projection = dict(qualification)
+    retained_document_sha = _require_sha256(
+        projection.pop("document_sha256"),
+        name="scorer qualification document",
+    )
+    if _sha256(projection) != retained_document_sha:
+        raise CliResultVerificationError(
+            "scorer qualification document SHA does not match"
+        )
+    source = _require_sha256(
+        qualification.get("implementation_source_sha256"),
+        name="scorer qualification source",
+    )
+    problem = _require_sha256(
+        qualification.get("problem_fingerprint_sha256"),
+        name="scorer qualification problem",
+    )
+    authority = _require_sha256(
+        qualification.get("authority_input_receipt_sha256"),
+        name="scorer qualification authority",
+    )
+    config = _require_sha256(
+        qualification.get("config_fingerprint_sha256"),
+        name="scorer qualification config",
+    )
+    descriptor = _require_dict(
+        qualification.get("score_descriptor"),
+        name="scorer qualification descriptor",
+    )
+    contract_projection = {
+        "schema_id": "betelgeuze.engine_v2_docking_component_contract/2.0.0",
+        "kind": "scorer",
+        "id": qualification.get("scorer_id"),
+        "version": qualification.get("scorer_version"),
+        "class": (
+            "betelgeuze_engine_v2.docking.interpretable_scorer."
+            "InterpretablePoseScorerV0"
+        ),
+        "problem_fingerprint_sha256": problem,
+        "implementation_source_sha256": source,
+        "config_fingerprint_sha256": config,
+        "unbound_internal_compatibility": False,
+        "validated_for_docking_ranking": False,
+        "score_descriptor": descriptor,
+    }
+    contract = _require_sha256(
+        qualification.get("component_contract_fingerprint_sha256"),
+        name="scorer qualification contract",
+    )
+    if _sha256(contract_projection) != contract:
+        raise CliResultVerificationError(
+            "scorer qualification contract does not match its material"
+        )
+    if (
+        source != expected_source_sha256
+        or contract != expected_contract_sha256
+        or problem != expected_problem_sha256
+        or authority != expected_authority_sha256
+    ):
+        raise CliResultVerificationError(
+            "scorer qualification is cross-wired"
+        )
+    if qualification.get("validated_for_docking_ranking") is not False:
+        raise CliResultVerificationError(
+            "scorer qualification overstates ranking validation"
+        )
+    _require_false(
+        qualification,
+        "affinity_estimate",
+        "free_energy_estimate",
+        "calibrated",
+        "scientifically_validated",
+        "benchmark_validated",
+        "product_qualified",
+        "claim_safe",
+    )
 
 
 def _verify_term_row(document: object) -> dict[str, object]:
@@ -696,6 +839,10 @@ def _verify_interpretable_result(document: object) -> dict[str, object]:
         "success_count": success_count,
         "failure_count": failure_count,
         "generic_search_fingerprint_sha256": generic["search_fingerprint_sha256"],
+        "generic_problem_fingerprint_sha256": (
+            generic["problem_fingerprint_sha256"]
+        ),
+        "scorer_contract_fingerprint_sha256": scorer_contract,
     }
 
 
@@ -786,13 +933,26 @@ def verify_canonical_cli_result_document(
     document: Mapping[str, object],
 ) -> CliResultVerificationReceipt:
     from .cli import (
+        CLI_COMMAND_ID,
         CLI_DOCKING_RESULT_SCHEMA_ID,
+        DISTRIBUTION_VERSION,
+        ENGINE_API_VERSION,
         SCORER_SOURCE_BINDING_MODE,
     )
 
     result_document = _require_dict(document, name="CLI docking result")
     if result_document.get("schema_id") != CLI_DOCKING_RESULT_SCHEMA_ID:
         raise CliResultVerificationError("CLI docking-result schema is unsupported")
+    producer_fields = {
+        "command_id": CLI_COMMAND_ID,
+        "engine_api_version": ENGINE_API_VERSION,
+        "distribution_version": DISTRIBUTION_VERSION,
+    }
+    for key, expected in producer_fields.items():
+        if result_document.get(key) != expected:
+            raise CliResultVerificationError(
+                f"CLI {key} is unsupported"
+            )
     document_sha = _require_sha256(
         result_document.get("document_sha256"),
         name="CLI document_sha256",
@@ -801,6 +961,7 @@ def verify_canonical_cli_result_document(
     projection.pop("document_sha256", None)
     if _sha256(projection) != document_sha:
         raise CliResultVerificationError("CLI document SHA does not match")
+    digests: dict[str, str] = {}
     for name in (
         "receptor_artifact_sha256",
         "ligand_artifact_sha256",
@@ -810,7 +971,9 @@ def verify_canonical_cli_result_document(
         "scorer_source_sha256",
         "result_receipt_sha256",
     ):
-        _require_sha256(result_document.get(name), name=f"CLI {name}")
+        digests[name] = _require_sha256(
+            result_document.get(name), name=f"CLI {name}"
+        )
     if result_document.get("scorer_source_binding_mode") != SCORER_SOURCE_BINDING_MODE:
         raise CliResultVerificationError("CLI scorer-source binding mode changed")
     if result_document.get("scorer_source_preimport_attested") is not False:
@@ -852,6 +1015,17 @@ def verify_canonical_cli_result_document(
         raise CliResultVerificationError(
             "CLI and nested authenticated input receipts disagree"
         )
+    _verify_scorer_qualification(
+        result_document.get("scorer_qualification"),
+        expected_source_sha256=digests["scorer_source_sha256"],
+        expected_contract_sha256=(
+            nested["scorer_contract_fingerprint_sha256"]
+        ),
+        expected_problem_sha256=(
+            nested["generic_problem_fingerprint_sha256"]
+        ),
+        expected_authority_sha256=authority,
+    )
     for key in ("candidate_count", "success_count", "failure_count"):
         if _exact_int(result_document.get(key), name=f"CLI {key}") != nested[key]:
             raise CliResultVerificationError(
