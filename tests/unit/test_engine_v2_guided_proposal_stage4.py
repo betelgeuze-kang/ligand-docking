@@ -31,6 +31,9 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     generate_pocket_centered_docking_proposals,
     run_authenticated_guided_placement_search,
 )
+from betelgeuze_engine_v2.docking.guided_placement import (  # noqa: E402
+    _aromatic_systems,
+)
 
 
 def _provenance(name: str, digest: str) -> StructureProvenance:
@@ -494,6 +497,183 @@ def test_guided_receipt_detects_anchor_distance_mutation() -> None:
     )
     with pytest.raises(DockingAuthorityError, match="receipt changed"):
         _ = receipt.receipt_sha256
+
+
+def test_feature_capacity_is_applied_to_the_authenticated_pocket_subset() -> None:
+    base = _receptor()
+    extra_count = 2_050
+    extra_atoms = tuple(
+        Atom(
+            index=base.atom_count + offset,
+            name=f"X{offset}",
+            element="C",
+            atomic_number=6,
+            residue_index=0,
+        )
+        for offset in range(extra_count)
+    )
+    extra_coordinates = torch.tensor(
+        [[50.0 + 0.01 * offset, 50.0, 50.0] for offset in range(extra_count)],
+        dtype=torch.float64,
+    )
+    receptor = AllAtomSystem(
+        system_id="large-guided-receptor",
+        atoms=(*base.atoms, *extra_atoms),
+        bonds=base.bonds,
+        residues=(
+            replace(
+                base.residues[0],
+                atom_indices=tuple(range(base.atom_count + extra_count)),
+            ),
+        ),
+        chains=base.chains,
+        coordinates=torch.cat(
+            (base.coordinates, extra_coordinates.unsqueeze(0)),
+            dim=1,
+        ),
+        provenance=_provenance("large-guided-receptor-source", "9" * 64),
+    )
+    ligand = _ligand()
+    pocket = PocketDefinition(
+        scope=DockingScope.KNOWN_POCKET,
+        method_id="guided-reviewed-sphere",
+        method_version="1.0.0",
+        coordinate_frame_id="prepared-receptor-frame-v1",
+        center=torch.zeros(3, dtype=torch.float64),
+        radius_angstrom=10.0,
+        source_artifact_sha256="c" * 64,
+        implementation_source_sha256="d" * 64,
+    )
+    authority = build_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        pocket,
+        receptor_margin_angstrom=4.0,
+    )
+
+    context = build_guided_placement_context(authority, receptor, ligand)
+    assert len(context.receptor_feature_rows["hydrophobic"]) < 2_048
+    assert max(authority.receptor_atom_indices) < base.atom_count
+
+
+def test_degenerate_ligand_shape_and_aromatic_frames_use_uniform_fallback() -> None:
+    ligand = AllAtomSystem(
+        system_id="linear-guided-ligand",
+        atoms=_atoms(("C", "C", "C"), aromatic={0, 1, 2}),
+        bonds=(
+            Bond(index=0, atom_i=0, atom_j=1, order=1.5, aromatic=True),
+            Bond(index=1, atom_i=1, atom_j=2, order=1.5, aromatic=True),
+            Bond(index=2, atom_i=0, atom_j=2, order=1.5, aromatic=True),
+        ),
+        residues=(
+            Residue(
+                index=0,
+                name="LIG",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=(0, 1, 2),
+                entity_type="non-polymer",
+                hetero=True,
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+        coordinates=torch.tensor(
+            [[[-1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]],
+            dtype=torch.float64,
+        ),
+        provenance=_provenance("linear-guided-ligand-source", "7" * 64),
+    )
+    receptor = AllAtomSystem(
+        system_id="shape-only-receptor",
+        atoms=_atoms(("H", "H", "H")),
+        bonds=(),
+        residues=(
+            Residue(
+                index=0,
+                name="REC",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=(0, 1, 2),
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="A", residue_indices=(0,)),),
+        coordinates=torch.tensor(
+            [[[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [0.0, 2.0, 0.0]]],
+            dtype=torch.float64,
+        ),
+        provenance=_provenance("shape-only-receptor-source", "8" * 64),
+    )
+    pocket = PocketDefinition(
+        scope=DockingScope.KNOWN_POCKET,
+        method_id="guided-reviewed-sphere",
+        method_version="1.0.0",
+        coordinate_frame_id="prepared-receptor-frame-v1",
+        center=torch.zeros(3, dtype=torch.float64),
+        radius_angstrom=10.0,
+        source_artifact_sha256="c" * 64,
+        implementation_source_sha256="d" * 64,
+    )
+    authority = build_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        pocket,
+        receptor_margin_angstrom=4.0,
+    )
+    context = build_guided_placement_context(authority, receptor, ligand)
+    guided, receipt = generate_guided_docking_proposals(
+        authority,
+        _budget(),
+        context,
+    )
+    baseline, _ = generate_pocket_centered_docking_proposals(authority, _budget())
+
+    assert context.ligand_shape_frame_available is False
+    assert context.ligand_aromatic_systems == ()
+    assert receipt.proposal_modes == (UNIFORM_FALLBACK_MODE,) * 8
+    assert tuple(row.fingerprint_sha256 for row in guided) == tuple(
+        row.fingerprint_sha256 for row in baseline
+    )
+
+
+def test_nonaromatic_biaryl_bridge_does_not_merge_aromatic_planes() -> None:
+    atoms = _atoms(tuple("C" for _ in range(12)), aromatic=set(range(12)))
+    bonds: list[Bond] = []
+    for start in (0, 6):
+        for offset in range(6):
+            first = start + offset
+            second = start + ((offset + 1) % 6)
+            bonds.append(
+                Bond(
+                    index=len(bonds),
+                    atom_i=min(first, second),
+                    atom_j=max(first, second),
+                    order=1.5,
+                    aromatic=True,
+                )
+            )
+    bonds.append(Bond(index=len(bonds), atom_i=5, atom_j=6, order=1.0))
+    system = AllAtomSystem(
+        system_id="biaryl-guided-fixture",
+        atoms=atoms,
+        bonds=tuple(bonds),
+        residues=(
+            Residue(
+                index=0,
+                name="LIG",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=tuple(range(12)),
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+        coordinates=torch.zeros((1, 12, 3), dtype=torch.float64),
+        provenance=_provenance("biaryl-guided-source", "6" * 64),
+    )
+
+    assert _aromatic_systems(system) == (
+        tuple(range(6)),
+        tuple(range(6, 12)),
+    )
 
 
 def test_unavailable_guidance_reproduces_the_entire_uniform_batch() -> None:

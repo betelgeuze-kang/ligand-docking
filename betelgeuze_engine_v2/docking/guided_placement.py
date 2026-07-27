@@ -195,7 +195,11 @@ def _is_amide_or_sulfonamide_nitrogen(
     return False
 
 
-def _feature_indices(system: AllAtomSystem) -> dict[str, tuple[int, ...]]:
+def _feature_indices(
+    system: AllAtomSystem,
+    *,
+    allowed_indices: set[int] | None = None,
+) -> dict[str, tuple[int, ...]]:
     adjacency = _adjacency(system)
     bonds = _bond_by_pair(system)
     donors: list[int] = []
@@ -206,6 +210,8 @@ def _feature_indices(system: AllAtomSystem) -> dict[str, tuple[int, ...]]:
     aromatic: list[int] = []
     for atom in system.atoms:
         index = int(atom.index)
+        if allowed_indices is not None and index not in allowed_indices:
+            continue
         element = atom.element.upper()
         charge = int(atom.formal_charge)
         attached_hydrogen = any(
@@ -246,12 +252,18 @@ def _feature_indices(system: AllAtomSystem) -> dict[str, tuple[int, ...]]:
     return result
 
 
-def _aromatic_systems(system: AllAtomSystem) -> tuple[tuple[int, ...], ...]:
+def _aromatic_systems(
+    system: AllAtomSystem,
+    *,
+    allowed_indices: set[int] | None = None,
+) -> tuple[tuple[int, ...], ...]:
     aromatic_atoms = {int(atom.index) for atom in system.atoms if bool(atom.aromatic)}
+    if allowed_indices is not None:
+        aromatic_atoms &= allowed_indices
     rows: dict[int, set[int]] = {index: set() for index in aromatic_atoms}
     for bond in system.bonds:
         first, second = int(bond.atom_i), int(bond.atom_j)
-        if first in aromatic_atoms and second in aromatic_atoms:
+        if first in aromatic_atoms and second in aromatic_atoms and bool(bond.aromatic):
             rows[first].add(second)
             rows[second].add(first)
     remaining = set(aromatic_atoms)
@@ -367,6 +379,7 @@ class GuidedPlacementContext:
         ...,
     ]
     receptor_shape_axes: tuple[tuple[float, ...], ...]
+    ligand_shape_frame_available: bool
     ligand_shape_atom_count: int
     receptor_shape_atom_count: int
     feature_policy_id: str = GUIDED_FEATURE_POLICY_ID
@@ -478,6 +491,10 @@ class GuidedPlacementContext:
         )
         if axes and len(axes) != 3:
             raise DockingAuthorityError("receptor shape axes must be empty or 3x3")
+        if type(self.ligand_shape_frame_available) is not bool:
+            raise DockingAuthorityError(
+                "ligand shape frame availability must be boolean"
+            )
         ligand_shape_atom_count = int(self.ligand_shape_atom_count)
         receptor_shape_atom_count = int(self.receptor_shape_atom_count)
         if ligand_shape_atom_count < 1 or receptor_shape_atom_count < 1:
@@ -585,6 +602,7 @@ class GuidedPlacementContext:
             "ligand_shape_atom_count": self.ligand_shape_atom_count,
             "receptor_shape_atom_count": self.receptor_shape_atom_count,
             "shape_frame_available": bool(self.receptor_shape_axes),
+            "ligand_shape_frame_available": self.ligand_shape_frame_available,
             "chemistry_feature_perception_scientifically_validated": False,
             "claim_safe": False,
         }
@@ -701,9 +719,17 @@ def build_guided_placement_context(
         .detach()
         .to(dtype=torch.float64, device="cpu")
     )
-    receptor_features_full = _feature_indices(receptor_system)
-    ligand_features = _feature_indices(ligand_system)
+    ligand_coordinates = (
+        ligand_system.coordinates[authenticated_problem.ligand_model_index]
+        .detach()
+        .to(dtype=torch.float64, device="cpu")
+    )
     allowed_receptor = set(authenticated_problem.receptor_atom_indices)
+    receptor_features_full = _feature_indices(
+        receptor_system,
+        allowed_indices=allowed_receptor,
+    )
+    ligand_features = _feature_indices(ligand_system)
     receptor_rows = {
         name: tuple(
             (
@@ -717,9 +743,10 @@ def build_guided_placement_context(
         for name, values in receptor_features_full.items()
     }
     receptor_aromatic_planes = []
-    for system in _aromatic_systems(receptor_system):
-        if not set(system).issubset(allowed_receptor):
-            continue
+    for system in _aromatic_systems(
+        receptor_system,
+        allowed_indices=allowed_receptor,
+    ):
         observed = _plane(receptor_coordinates, system)
         if observed is not None:
             center, normal = observed
@@ -751,9 +778,14 @@ def build_guided_placement_context(
             )
             for patch in receptor_hydrophobic_patch_indices
         ),
-        ligand_aromatic_systems=_aromatic_systems(ligand_system),
+        ligand_aromatic_systems=tuple(
+            system
+            for system in _aromatic_systems(ligand_system)
+            if _plane(ligand_coordinates, system) is not None
+        ),
         receptor_aromatic_planes=tuple(receptor_aromatic_planes),
         receptor_shape_axes=(_principal_axes(receptor_subset_coordinates) or ()),
+        ligand_shape_frame_available=(_principal_axes(ligand_coordinates) is not None),
         ligand_shape_atom_count=ligand_system.atom_count,
         receptor_shape_atom_count=len(authenticated_problem.receptor_atom_indices),
     )
@@ -775,7 +807,7 @@ def _available_modes(context: GuidedPlacementContext) -> tuple[str, ...]:
         modes.append("hydrophobic_patch")
     if context.ligand_aromatic_systems and context.receptor_aromatic_planes:
         modes.append("aromatic_plane")
-    if context.ligand_shape_atom_count >= 3 and context.receptor_shape_axes:
+    if context.ligand_shape_frame_available and context.receptor_shape_axes:
         modes.append("shape_complementarity")
     return tuple(modes)
 
