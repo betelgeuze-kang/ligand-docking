@@ -8,6 +8,14 @@ scientific claim from a package version.
 
 ### Changed
 
+- Authenticated known-pocket docking now has a deterministic interaction-guided
+  proposal layer. Bounded graph features drive donor/acceptor, opposite-charge,
+  connected hydrophobic-patch, aromatic-plane, and principal-shape placements
+  while the existing Haar/spherical uniform generator remains an exact
+  fallback. Context, policy,
+  per-proposal mode, selected atom anchors, requested and observed anchor
+  distances, feature counts, proposal fingerprints, budget, and search authority
+  are cross-wired through immutable receipts.
 - A capability-gated deterministic ETKDGv3 conformer-preparation contract now
   generates an energy-ranked, heavy-atom Kabsch-RMSD-diverse ensemble with
   stable conformer IDs and an exact prepared-state receipt. It rejects
@@ -33,7 +41,9 @@ scientific claim from a package version.
 ### Scientific boundary
 
 This stage does not add ring-conformer or macrocycle sampling, scientific
-conformer-quality validation, docking-score validation, or benchmark evidence.
+conformer-quality or guided-placement validation, docking-score validation, or
+benchmark evidence. Guided chemical features are a bounded auditable graph
+profile, and principal-axis alignment is only a shape heuristic.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

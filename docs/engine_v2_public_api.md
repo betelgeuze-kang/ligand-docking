@@ -321,6 +321,23 @@ coordinate model, energy row, identity, and RMSD value. A dedicated pinned
 RDKit CI job executes this capability. The diversity metric is not
 symmetry-aware and the ensemble is not scientifically validated.
 
+`build_guided_placement_context(...)`,
+`generate_guided_docking_proposals(...)`, and
+`run_authenticated_guided_placement_search(...)` provide a provisional,
+deterministic known-pocket proposal layer. The context derives bounded
+donor/acceptor, formal-charge, connected hydrophobic-patch, aromatic-plane, and
+principal-shape features only from the authenticated receptor subset and ligand
+graph. A fixed fraction of the existing pocket-centered uniform batch is
+replaced by guided
+proposals; every multi-candidate guided batch retains at least one byte-identical
+uniform fallback proposal, and unavailable guidance leaves the entire baseline
+batch unchanged. Immutable receipts bind the input authority, system hashes,
+receptor subset, feature context, policy, budget, per-proposal modes, feature
+counts, and proposal fingerprints to the failure-complete authenticated search.
+These features and placements are auditable heuristics, not validated
+pharmacophore perception, docking accuracy, ranking evidence, or a product
+claim.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
