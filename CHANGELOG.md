@@ -11,9 +11,10 @@ scientific claim from a package version.
 - The provisional authenticated torsion derivation schema and policy advance to
   `2.0.0`. Ordinary ring systems are now retained as rigid components,
   ring-external eligible single bonds remain rotor candidates, and detected
-  macrocycles of 12 or more atoms fail closed. Receipts now include canonical
-  ring bonds, disjoint rigid-ring atom sets, and the maximum detected cycle
-  size.
+  ring systems of 12 or more atoms conservatively fail closed so shorter
+  alternate paths cannot hide an unsupported macrocycle. Receipts now include
+  canonical ring bonds, disjoint rigid-ring atom sets, the maximum ring-system
+  atom count, and the maximum detected shortest cycle size.
 
 ### Scientific boundary
 

@@ -357,6 +357,7 @@ class TorsionSearchSpaceDerivationReceipt:
     rotatable_child_atom_indices: tuple[int, ...]
     ring_bond_pairs: tuple[tuple[int, int], ...]
     rigid_ring_system_atom_indices: tuple[tuple[int, ...], ...]
+    maximum_ring_system_atom_count: int
     maximum_ring_cycle_size: int
     search_space_fingerprint_sha256: str
     zero_torsion_coordinate_sha256: str
@@ -469,6 +470,24 @@ class TorsionSearchSpaceDerivationReceipt:
             raise DockingAuthorityError(
                 "ring cycle size must agree with retained ring bonds"
             )
+        maximum_ring_system_atom_count = _exact_int(
+            self.maximum_ring_system_atom_count,
+            name="maximum_ring_system_atom_count",
+            minimum=0,
+            maximum=AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS - 1,
+        )
+        expected_maximum_ring_system_atom_count = (
+            max(len(system) for system in ring_systems)
+            if ring_systems
+            else 0
+        )
+        if (
+            maximum_ring_system_atom_count
+            != expected_maximum_ring_system_atom_count
+        ):
+            raise DockingAuthorityError(
+                "maximum ring-system atom count is cross-wired"
+            )
         if ring_systems and maximum_ring_cycle_size > max(
             len(system) for system in ring_systems
         ):
@@ -485,6 +504,11 @@ class TorsionSearchSpaceDerivationReceipt:
             self,
             "rigid_ring_system_atom_indices",
             ring_systems,
+        )
+        object.__setattr__(
+            self,
+            "maximum_ring_system_atom_count",
+            maximum_ring_system_atom_count,
         )
         object.__setattr__(
             self,
@@ -523,6 +547,9 @@ class TorsionSearchSpaceDerivationReceipt:
                 list(system)
                 for system in self.rigid_ring_system_atom_indices
             ],
+            "maximum_ring_system_atom_count": (
+                self.maximum_ring_system_atom_count
+            ),
             "maximum_ring_cycle_size": self.maximum_ring_cycle_size,
             "search_space_fingerprint_sha256": (
                 self.search_space_fingerprint_sha256
@@ -818,6 +845,7 @@ def _adjacency(system: AllAtomSystem) -> tuple[tuple[int, ...], ...]:
 class _RingTopology:
     ring_bond_pairs: tuple[tuple[int, int], ...]
     rigid_ring_system_atom_indices: tuple[tuple[int, ...], ...]
+    maximum_ring_system_atom_count: int
     maximum_ring_cycle_size: int
 
 
@@ -882,7 +910,7 @@ def _derive_ring_topology(
     all_bonds = set(_bond_pairs(system))
     ring_bonds = tuple(sorted(all_bonds - _bridge_bond_pairs(adjacency)))
     if not ring_bonds:
-        return _RingTopology((), (), 0)
+        return _RingTopology((), (), 0, 0)
 
     ring_adjacency: dict[int, set[int]] = {}
     for first, second in ring_bonds:
@@ -903,19 +931,24 @@ def _derive_ring_topology(
         remaining -= component
         systems.append(tuple(sorted(component)))
 
+    maximum_ring_system_atom_count = max(len(system) for system in systems)
+    if (
+        maximum_ring_system_atom_count
+        >= AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS
+    ):
+        raise DockingAuthorityError(
+            "authoritative torsion derivation conservatively rejects ring "
+            "systems with "
+            f"{AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS} or more atoms"
+        )
     maximum_cycle_size = max(
         _shortest_cycle_size_for_bond(adjacency, pair)
         for pair in ring_bonds
     )
-    if maximum_cycle_size >= AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS:
-        raise DockingAuthorityError(
-            "authoritative torsion derivation does not support macrocycles "
-            f"with {AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS} or more "
-            "ring atoms"
-        )
     return _RingTopology(
         ring_bond_pairs=ring_bonds,
         rigid_ring_system_atom_indices=tuple(sorted(systems)),
+        maximum_ring_system_atom_count=maximum_ring_system_atom_count,
         maximum_ring_cycle_size=maximum_cycle_size,
     )
 
@@ -1111,6 +1144,9 @@ def derive_authoritative_torsion_search_space(
         ring_bond_pairs=ring_topology.ring_bond_pairs,
         rigid_ring_system_atom_indices=(
             ring_topology.rigid_ring_system_atom_indices
+        ),
+        maximum_ring_system_atom_count=(
+            ring_topology.maximum_ring_system_atom_count
         ),
         maximum_ring_cycle_size=ring_topology.maximum_ring_cycle_size,
         search_space_fingerprint_sha256=search_space.fingerprint_sha256,

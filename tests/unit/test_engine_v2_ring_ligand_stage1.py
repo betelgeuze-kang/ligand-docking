@@ -123,6 +123,18 @@ def _simple_ring(size: int) -> AllAtomSystem:
     return _system(coordinates, bonds)
 
 
+def _chorded_ring(size: int) -> AllAtomSystem:
+    system = _simple_ring(size)
+    return _system(
+        system.coordinates[0].tolist(),
+        [
+            (index, (index + 1) % size)
+            for index in range(size)
+        ]
+        + [(0, size // 2)],
+    )
+
+
 def test_ring_system_is_rigid_and_only_external_bonds_are_rotatable() -> None:
     ligand = _substituted_cyclohexane()
     search_space, receipt = derive_authoritative_torsion_search_space(ligand)
@@ -136,6 +148,7 @@ def test_ring_system_is_rigid_and_only_external_bonds_are_rotatable() -> None:
         (3, 4),
         (4, 5),
     )
+    assert receipt.maximum_ring_system_atom_count == 6
     assert receipt.maximum_ring_cycle_size == 6
     assert receipt.rotatable_child_atom_indices == (6, 8)
     assert search_space.torsion_count == 2
@@ -178,9 +191,16 @@ def test_generated_proposals_preserve_all_ring_pair_distances() -> None:
 
 def test_macrocycle_lane_is_explicitly_unsupported() -> None:
     assert AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS == 12
-    with pytest.raises(DockingAuthorityError, match="does not support macrocycles"):
+    with pytest.raises(DockingAuthorityError, match="conservatively rejects"):
         derive_authoritative_torsion_search_space(
             _simple_ring(AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS)
+        )
+
+
+def test_chord_cannot_hide_an_unsupported_large_ring_system() -> None:
+    with pytest.raises(DockingAuthorityError, match="conservatively rejects"):
+        derive_authoritative_torsion_search_space(
+            _chorded_ring(AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS)
         )
 
 
@@ -189,6 +209,7 @@ def test_small_ring_is_supported_without_internal_rotors() -> None:
         _simple_ring(7)
     )
     assert search_space.torsion_count == 0
+    assert receipt.maximum_ring_system_atom_count == 7
     assert receipt.maximum_ring_cycle_size == 7
     assert receipt.rigid_ring_system_atom_indices == ((0, 1, 2, 3, 4, 5, 6),)
     document = receipt.to_dict()
