@@ -31,6 +31,7 @@ from .scoring import (
     ScoreDirection,
     UNCALIBRATED_INTERNAL_DOCKING_SCORE,
     component_contract_fingerprint,
+    component_problem_fingerprint,
     scorer_descriptor,
 )
 from .search import (
@@ -43,6 +44,7 @@ from .search import (
 )
 from .validity import (
     PoseValidityConfig,
+    PoseValidityContext,
     PoseValidityError,
     PoseValidityResult,
     evaluate_pose_validity,
@@ -67,6 +69,7 @@ __all__ = [
     "DockingSearchRow",
     "PoseMetricError",
     "PoseValidityConfig",
+    "PoseValidityContext",
     "PoseValidityError",
     "PoseValidityResult",
     "RMSDResult",
@@ -74,6 +77,7 @@ __all__ = [
     "TorsionSearchSpace",
     "UNCALIBRATED_INTERNAL_DOCKING_SCORE",
     "component_contract_fingerprint",
+    "component_problem_fingerprint",
     "coordinate_fingerprint",
     "direct_rmsd",
     "evaluate_pose_validity",
