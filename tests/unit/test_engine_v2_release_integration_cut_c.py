@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def _load_checker():
     path = ROOT / "tools" / "check_engine_v2_top_stack.py"
     spec = importlib.util.spec_from_file_location(
-        "engine_v2_top_stack_checker_cut_b",
+        "engine_v2_top_stack_checker_cut_c",
         path,
     )
     assert spec is not None and spec.loader is not None
@@ -19,7 +19,7 @@ def _load_checker():
     return module
 
 
-def test_cut_b_checker_accepts_the_authoritative_repository_stack() -> None:
+def test_cut_c_checker_accepts_the_authoritative_repository_stack() -> None:
     checker = _load_checker()
     assert checker.main() == 0
     assert set(checker.TARGET_WORKFLOWS) == {
@@ -45,7 +45,7 @@ def test_top_stack_runs_on_pull_requests_and_exact_main_without_path_filters() -
     assert "paths-ignore:" not in trigger
 
 
-def test_top_stack_explicitly_runs_all_reconstructed_cut_b_contracts() -> None:
+def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
     source = (
         ROOT / ".github" / "workflows" / "ci-engine-v2-top-stack.yml"
     ).read_text(encoding="utf-8")
@@ -56,7 +56,8 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_b_contracts() -> None:
         "test_engine_v2_stack_round3_compatibility.py",
         "test_engine_v2_docking_authority_contract.py",
         "test_engine_v2_docking_authority_search.py",
-        "test_engine_v2_release_integration_cut_b.py",
+        "test_engine_v2_pocket_placement_round6.py",
+        "test_engine_v2_release_integration_cut_c.py",
     ):
         assert filename in source
 
@@ -71,9 +72,15 @@ def test_package_lane_builds_two_identical_wheels_and_imports_authority_api() ->
     assert "sha256sum dist-engine-v2/*.whl" in source
     assert "pip check" in source
     assert "Import wheel outside checkout" in source
-    assert "AuthenticatedDockingProblem" in source
-    assert "PocketDefinition" in source
-    assert "TorsionSearchSpaceDerivationReceipt" in source
+    for api_name in (
+        "AuthenticatedDockingProblem",
+        "PocketDefinition",
+        "PocketPlacementPolicy",
+        "PocketPlacementReceipt",
+        "PocketPlacementSearchResult",
+        "TorsionSearchSpaceDerivationReceipt",
+    ):
+        assert api_name in source
 
 
 def test_release_workflows_remain_read_only_and_disable_checkout_credentials() -> None:

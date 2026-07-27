@@ -1,4 +1,4 @@
-"""Bounded, non-claim docking proposal, authority, and search contracts."""
+"""Bounded, non-claim docking proposal, authority, placement, and search contracts."""
 
 from .identity import (
     DockingIdentityError,
@@ -67,7 +67,6 @@ from .authority import (
     TorsionSearchSpaceDerivationReceipt,
     authenticated_docking_derivation_policy_document,
     build_authenticated_known_pocket_docking_problem,
-    run_authenticated_bounded_docking_search,
 )
 from .authority_rotor_compat import (
     install_authority_rotor_stereo_compat as _install_authority_rotor_stereo_compat,
@@ -77,8 +76,31 @@ AUTHORITY_ROTOR_STEREO_COMPAT_SHA256 = (
     _install_authority_rotor_stereo_compat()
 )
 
-# Rebind the public function after the installer updates the owning module.
-from .authority import derive_authoritative_torsion_search_space  # noqa: E402
+# Rebind the public functions after the compatibility installer updates authority.
+from .authority import (  # noqa: E402
+    derive_authoritative_torsion_search_space,
+    run_authenticated_bounded_docking_search,
+)
+from .placement import (  # noqa: E402
+    CENTROID_POLICY_ID,
+    COUNTER_PRNG_ID,
+    HAAR_ROTATION_SAMPLER_ID,
+    MAX_POCKET_PLACEMENT_PROPOSALS,
+    MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM,
+    POCKET_PLACEMENT_POLICY_ID,
+    POCKET_PLACEMENT_POLICY_SCHEMA_ID,
+    POCKET_PLACEMENT_RECEIPT_SCHEMA_ID,
+    POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID,
+    SPHERICAL_TRANSLATION_SAMPLER_ID,
+    PocketPlacementPolicy,
+    PocketPlacementReceipt,
+    PocketPlacementSearchResult,
+    generate_pocket_centered_docking_proposals,
+    install_pocket_proposal_override as _install_pocket_proposal_override,
+    run_authenticated_pocket_placement_search,
+)
+
+POCKET_PROPOSAL_OVERRIDE_SHA256 = _install_pocket_proposal_override()
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
@@ -91,11 +113,22 @@ __all__ = [
     "AUTHENTICATED_DOCKING_MAX_RECEPTOR_MARGIN_ANGSTROM",
     "AUTHENTICATED_DOCKING_SEARCH_RESULT_SCHEMA_ID",
     "AUTHORITY_ROTOR_STEREO_COMPAT_SHA256",
+    "CENTROID_POLICY_ID",
+    "COUNTER_PRNG_ID",
+    "HAAR_ROTATION_SAMPLER_ID",
     "MAX_DOCKING_CANDIDATES",
     "MAX_DOCKING_REFINEMENT_STEPS",
     "MAX_DOCKING_TOP_K",
     "MAX_DOCKING_TORSIONS",
+    "MAX_POCKET_PLACEMENT_PROPOSALS",
+    "MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM",
     "MAX_SYMMETRY_PERMUTATIONS",
+    "POCKET_PLACEMENT_POLICY_ID",
+    "POCKET_PLACEMENT_POLICY_SCHEMA_ID",
+    "POCKET_PLACEMENT_RECEIPT_SCHEMA_ID",
+    "POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID",
+    "POCKET_PROPOSAL_OVERRIDE_SHA256",
+    "SPHERICAL_TRANSLATION_SAMPLER_ID",
     "AuthenticatedDockingProblem",
     "AuthenticatedDockingSearchResult",
     "DockingAuthorityError",
@@ -112,6 +145,9 @@ __all__ = [
     "DockingSearchResult",
     "DockingSearchRow",
     "PocketDefinition",
+    "PocketPlacementPolicy",
+    "PocketPlacementReceipt",
+    "PocketPlacementSearchResult",
     "PoseMetricError",
     "PoseValidityConfig",
     "PoseValidityContext",
@@ -131,9 +167,11 @@ __all__ = [
     "direct_rmsd",
     "evaluate_pose_validity",
     "generate_bounded_docking_proposals",
+    "generate_pocket_centered_docking_proposals",
     "kabsch_aligned_coordinates",
     "kabsch_aligned_rmsd",
     "run_authenticated_bounded_docking_search",
+    "run_authenticated_pocket_placement_search",
     "run_bounded_docking_search",
     "scorer_descriptor",
     "search_space_fingerprint",
