@@ -13,7 +13,7 @@ import hashlib
 from importlib import metadata
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import stat
 import sys
 import sysconfig
@@ -54,6 +54,81 @@ def _canonical_bytes(value: object) -> bytes:
         ) from exc
 
 
+def _stat_signature(file_stat: os.stat_result) -> tuple[int, ...]:
+    """Return the metadata that must stay stable while trusted bytes are read."""
+
+    return (
+        int(file_stat.st_dev),
+        int(file_stat.st_ino),
+        int(file_stat.st_uid),
+        int(file_stat.st_gid),
+        int(file_stat.st_mode),
+        int(file_stat.st_nlink),
+        int(file_stat.st_size),
+        int(file_stat.st_mtime_ns),
+        int(file_stat.st_ctime_ns),
+    )
+
+
+def _require_trusted_directory_stat(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISDIR(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) & 0o022
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency directory is not root-owned read-only storage"
+        )
+
+
+def _require_trusted_regular_file_stat(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISREG(file_stat.st_mode)
+        or file_stat.st_uid != 0
+        or stat.S_IMODE(file_stat.st_mode) & 0o022
+        or file_stat.st_nlink != 1
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file is not a root-owned read-only single-link regular file"
+        )
+
+
+def _require_trusted_directory_ancestry(
+    path: Path,
+    *,
+    minimum_root: Path | None = None,
+) -> None:
+    """Require every traversed directory to be canonical root-owned storage."""
+
+    current = path
+    if minimum_root is not None and not current.is_relative_to(minimum_root):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency path escaped its trusted directory ancestry"
+        )
+    while True:
+        try:
+            file_stat = current.lstat()
+        except OSError as exc:
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                "dependency directory ancestry is unavailable"
+            ) from exc
+        if current.is_symlink():
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                "dependency directory ancestry contains a symbolic link"
+            )
+        _require_trusted_directory_stat(file_stat)
+        if minimum_root is not None and current == minimum_root:
+            return
+        parent = current.parent
+        if parent == current:
+            if minimum_root is not None:
+                raise ReferenceMinimizationValidationDependencyIdentityError(
+                    "dependency path did not reach its trusted root"
+                )
+            return
+        current = parent
+
+
 def _require_trusted_roots(
     raw_roots: Iterable[str | os.PathLike[str]],
 ) -> tuple[Path, ...]:
@@ -71,13 +146,12 @@ def _require_trusted_roots(
             not candidate.is_absolute()
             or candidate.is_symlink()
             or candidate != resolved
-            or not stat.S_ISDIR(file_stat.st_mode)
-            or file_stat.st_uid != 0
-            or stat.S_IMODE(file_stat.st_mode) & 0o022
         ):
             raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency root is not root-owned read-only storage"
+                "dependency root is not canonical root-owned read-only storage"
             )
+        _require_trusted_directory_stat(file_stat)
+        _require_trusted_directory_ancestry(resolved)
         if resolved not in roots:
             roots.append(resolved)
     if not roots:
@@ -87,19 +161,29 @@ def _require_trusted_roots(
     return tuple(roots)
 
 
+def _matching_trusted_root(path: Path, allowed_roots: tuple[Path, ...]) -> Path:
+    matches = tuple(root for root in allowed_roots if path.is_relative_to(root))
+    if not matches:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file escaped its trusted root"
+        )
+    return max(matches, key=lambda root: len(root.parts))
+
+
 def _hash_regular_file(
     path: Path, *, allowed_roots: tuple[Path, ...]
 ) -> tuple[str, int]:
     try:
         resolved = path.resolve(strict=True)
+        path_before = resolved.lstat()
     except OSError as exc:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file is unavailable"
         ) from exc
-    if not any(resolved.is_relative_to(root) for root in allowed_roots):
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "dependency file escaped its trusted root"
-        )
+    trusted_root = _matching_trusted_root(resolved, allowed_roots)
+    _require_trusted_directory_ancestry(resolved.parent, minimum_root=trusted_root)
+    _require_trusted_regular_file_stat(path_before)
+
     flags = os.O_RDONLY
     for flag_name in ("O_CLOEXEC", "O_NOFOLLOW"):
         if not hasattr(os, flag_name):
@@ -108,16 +192,17 @@ def _hash_regular_file(
             )
         flags |= getattr(os, flag_name)
     try:
-        descriptor = os.open(path, flags)
+        descriptor = os.open(resolved, flags)
     except OSError as exc:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file cannot be opened securely"
         ) from exc
     try:
         before = os.fstat(descriptor)
-        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+        _require_trusted_regular_file_stat(before)
+        if (before.st_dev, before.st_ino) != (path_before.st_dev, path_before.st_ino):
             raise ReferenceMinimizationValidationDependencyIdentityError(
-                "dependency file is not a single-link regular file"
+                "dependency path changed before it was opened"
             )
         digest = hashlib.sha256()
         observed_size = 0
@@ -128,18 +213,27 @@ def _hash_regular_file(
             digest.update(chunk)
             observed_size += len(chunk)
         after = os.fstat(descriptor)
+        _require_trusted_regular_file_stat(after)
     except OSError as exc:
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file cannot be measured"
         ) from exc
     finally:
         os.close(descriptor)
-    if observed_size != before.st_size or (
-        before.st_dev,
-        before.st_ino,
-        before.st_size,
-        before.st_mtime_ns,
-    ) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+
+    try:
+        path_after = resolved.lstat()
+    except OSError as exc:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "dependency file disappeared after measurement"
+        ) from exc
+    _require_trusted_regular_file_stat(path_after)
+    if (
+        observed_size != before.st_size
+        or _stat_signature(path_before) != _stat_signature(before)
+        or _stat_signature(before) != _stat_signature(after)
+        or _stat_signature(after) != _stat_signature(path_after)
+    ):
         raise ReferenceMinimizationValidationDependencyIdentityError(
             "dependency file changed while being measured"
         )
@@ -178,10 +272,8 @@ def _standard_library_identity(*, allowed_roots: tuple[Path, ...]) -> str:
             "Python standard-library root is unavailable"
         )
     root = Path(configured).resolve(strict=True)
-    if not any(root.is_relative_to(allowed) for allowed in allowed_roots):
-        raise ReferenceMinimizationValidationDependencyIdentityError(
-            "Python standard library escaped trusted storage"
-        )
+    trusted_root = _matching_trusted_root(root, allowed_roots)
+    _require_trusted_directory_ancestry(root, minimum_root=trusted_root)
     excluded_roots: tuple[Path, ...] = tuple(
         Path(value).resolve(strict=True)
         for key in ("purelib", "platlib")
@@ -205,11 +297,9 @@ def _standard_library_identity(*, allowed_roots: tuple[Path, ...]) -> str:
                 "Python standard-library entry is unavailable"
             ) from exc
         if stat.S_ISDIR(file_stat.st_mode):
+            _require_trusted_directory_stat(file_stat)
             continue
-        if not stat.S_ISREG(file_stat.st_mode) or path.is_symlink():
-            raise ReferenceMinimizationValidationDependencyIdentityError(
-                "Python standard-library entry is not a regular file"
-            )
+        _require_trusted_regular_file_stat(file_stat)
         digest, size = _hash_regular_file(path, allowed_roots=allowed_roots)
         total_bytes += size
         rows.append({"path": relative.as_posix(), "sha256": digest, "size": size})
@@ -225,6 +315,67 @@ def _standard_library_identity(*, allowed_roots: tuple[Path, ...]) -> str:
             "Python standard-library identity is empty"
         )
     return _manifest_sha256("python-standard-library", rows)
+
+
+def _normalized_distribution_relative_path(package_path: object) -> str:
+    """Accept canonical wheel paths, including a leading wheel-script parent prefix."""
+
+    raw = str(package_path)
+    if not raw or "\\" in raw:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD path is not canonical POSIX text"
+        )
+    relative = PurePosixPath(raw)
+    parts = relative.parts
+    parent_prefix_finished = False
+    for part in parts:
+        if part == "..":
+            if parent_prefix_finished:
+                raise ReferenceMinimizationValidationDependencyIdentityError(
+                    "distribution RECORD parent traversal is not a leading prefix"
+                )
+        else:
+            parent_prefix_finished = True
+    if (
+        relative.is_absolute()
+        or not parts
+        or any(part in {"", "."} for part in parts)
+        or all(part == ".." for part in parts)
+        or relative.as_posix() != raw
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD path is not canonical"
+        )
+    return raw
+
+
+def _decode_canonical_record_sha256(value: object) -> str:
+    """Decode one canonical, unpadded urlsafe-base64 SHA-256 digest."""
+
+    if not isinstance(value, str) or not value or "=" in value:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD hash is malformed"
+        )
+    try:
+        encoded = value.encode("ascii")
+        decoded = base64.b64decode(
+            encoded + b"=",
+            altchars=b"-_",
+            validate=True,
+        )
+    except (UnicodeEncodeError, ValueError) as exc:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD hash is malformed"
+        ) from exc
+    if (
+        len(encoded) != 43
+        or len(decoded) != hashlib.sha256().digest_size
+        or base64.urlsafe_b64encode(decoded).rstrip(b"=") != encoded
+    ):
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            "distribution RECORD hash is malformed"
+        )
+    return decoded.hex()
 
 
 def _distribution_identity(
@@ -245,14 +396,38 @@ def _distribution_identity(
         raise ReferenceMinimizationValidationDependencyIdentityError(
             f"{distribution_name} distribution version is invalid"
         )
+    try:
+        distribution_root = Path(distribution.locate_file("")).resolve(strict=True)
+    except OSError as exc:
+        raise ReferenceMinimizationValidationDependencyIdentityError(
+            f"{distribution_name} installation root is unavailable"
+        ) from exc
+    trusted_root = _matching_trusted_root(distribution_root, allowed_roots)
+    _require_trusted_directory_ancestry(
+        distribution_root,
+        minimum_root=trusted_root,
+    )
+
     rows: list[dict[str, object]] = []
     total_bytes = 0
     record_seen = False
+    seen_paths: set[str] = set()
     for package_path in sorted(distribution.files or (), key=str):
-        relative = str(package_path).replace(os.sep, "/")
+        relative = _normalized_distribution_relative_path(package_path)
+        if relative in seen_paths:
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                f"{distribution_name} RECORD contains a duplicate normalized path"
+            )
+        seen_paths.add(relative)
         if relative.endswith(".pyc") or "/__pycache__/" in f"/{relative}":
             continue
-        located = Path(distribution.locate_file(package_path))
+        try:
+            located = Path(distribution.locate_file(package_path)).resolve(strict=True)
+        except OSError as exc:
+            raise ReferenceMinimizationValidationDependencyIdentityError(
+                f"{distribution_name} RECORD payload is unavailable"
+            ) from exc
+        _matching_trusted_root(located, allowed_roots)
         digest, size = _hash_regular_file(located, allowed_roots=allowed_roots)
         declared_hash = package_path.hash
         if relative.endswith(".dist-info/RECORD"):
@@ -262,8 +437,7 @@ def _distribution_identity(
                 f"{distribution_name} RECORD has an unhashed payload row"
             )
         else:
-            padding = "=" * (-len(declared_hash.value) % 4)
-            expected = base64.urlsafe_b64decode(declared_hash.value + padding).hex()
+            expected = _decode_canonical_record_sha256(declared_hash.value)
             if expected != digest:
                 raise ReferenceMinimizationValidationDependencyIdentityError(
                     f"{distribution_name} payload does not match RECORD"
