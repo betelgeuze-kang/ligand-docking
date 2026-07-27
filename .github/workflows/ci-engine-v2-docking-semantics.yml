@@ -7,6 +7,7 @@ on:
       - "betelgeuze_engine_v2/docking/**"
       - "betelgeuze_engine_v2/physics/registry.py"
       - "tests/unit/test_engine_v2_docking_semantics.py"
+      - "tests/unit/test_engine_v2_conformer_ensemble_stage3.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   push:
     branches: ["main"]
@@ -15,6 +16,7 @@ on:
       - "betelgeuze_engine_v2/docking/**"
       - "betelgeuze_engine_v2/physics/registry.py"
       - "tests/unit/test_engine_v2_docking_semantics.py"
+      - "tests/unit/test_engine_v2_conformer_ensemble_stage3.py"
       - ".github/workflows/ci-engine-v2-docking-semantics.yml"
   workflow_dispatch:
 
@@ -26,6 +28,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  conformer-ensemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      HIP_VISIBLE_DEVICES: ""
+      ROCR_VISIBLE_DEVICES: ""
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      PYTEST_ADDOPTS: "--confcutdir=tests/unit"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          clean: true
+          sparse-checkout: |
+            betelgeuze_engine_v2
+            tests/unit/test_engine_v2_conformer_ensemble_stage3.py
+          sparse-checkout-cone-mode: false
+          show-progress: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.10"
+
+      - name: Install pinned conformer capability dependencies
+        run: |
+          python -m pip install pip==25.0.1
+          python -m pip install pytest==8.3.5 numpy==1.26.4 rdkit-pypi==2022.9.5
+          python -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Run deterministic conformer ensemble contracts
+        run: |
+          python -m pytest -q \
+            tests/unit/test_engine_v2_conformer_ensemble_stage3.py
+
   docking-semantics:
     runs-on: ubuntu-latest
     timeout-minutes: 30

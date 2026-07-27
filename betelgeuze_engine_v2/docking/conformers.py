@@ -33,6 +33,10 @@ CONFORMER_ENSEMBLE_SCHEMA_ID = (
 CONFORMER_PREPARATION_POLICY_ID = (
     "betelgeuze.engine_v2_deterministic_etkdgv3_energy_rmsd/1.0.0"
 )
+MAX_CONFORMER_INPUT_ATOMS = 256
+MAX_CONFORMER_INPUT_BONDS = 512
+MAX_CONFORMER_PREPARED_ATOMS = 512
+MAX_CONFORMER_PREPARED_BONDS = 2_048
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -110,6 +114,55 @@ def _load_rdkit():
             "RDKit is required for deterministic ETKDG preparation"
         ) from exc
     return chemistry, all_chem, rd_base
+
+
+def _coordinate_model_sha256(coordinates: torch.Tensor) -> str:
+    tensor = coordinates.detach().to(
+        dtype=torch.float64,
+        device="cpu",
+    ).contiguous()
+    if tensor.ndim != 2 or tensor.shape[1] != 3:
+        raise ConformerPreparationError(
+            "conformer coordinates must have shape [N,3]"
+        )
+    if not bool(torch.isfinite(tensor).all().item()):
+        raise ConformerPreparationError(
+            "conformer coordinates must be finite"
+        )
+    return _sha256(
+        {
+            "shape": [int(tensor.shape[0]), 3],
+            "dtype": "float64",
+            "rows_binary64_hex": [
+                [float(value).hex() for value in row]
+                for row in tensor.tolist()
+            ],
+        }
+    )
+
+
+def _conformer_identity(
+    *,
+    canonical_smiles: str,
+    rdkit_version: str,
+    config_projection: Mapping[str, Any],
+    source_conformer_index: int,
+    energy_model: str,
+    energy_kcal_mol: float,
+    coordinates_sha256: str,
+) -> str:
+    return _sha256(
+        {
+            "policy_id": CONFORMER_PREPARATION_POLICY_ID,
+            "canonical_isomeric_smiles": canonical_smiles,
+            "rdkit_version": rdkit_version,
+            "config": _thaw_json(config_projection),
+            "source_conformer_index": source_conformer_index,
+            "energy_model": energy_model,
+            "energy_kcal_mol_binary64_hex": energy_kcal_mol.hex(),
+            "coordinates_sha256": coordinates_sha256,
+        }
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,6 +278,91 @@ class PreparedConformerEnsemble:
     receipt: Mapping[str, Any]
     receipt_sha256: str
 
+    def _verify_records(
+        self,
+        receipt: Mapping[str, Any],
+        records: tuple[PreparedConformerRecord, ...],
+    ) -> None:
+        projections = [row.to_dict() for row in records]
+        if receipt.get("selected_conformer_records") != projections:
+            raise ConformerPreparationError(
+                "prepared conformer records are cross-wired"
+            )
+        optimization_rows = receipt.get("optimization_rows")
+        if not isinstance(optimization_rows, list):
+            raise ConformerPreparationError(
+                "optimization rows are missing from the receipt"
+            )
+        optimization_by_source = {
+            int(row["source_conformer_index"]): row
+            for row in optimization_rows
+            if isinstance(row, dict)
+        }
+        heavy_indices = tuple(
+            atom.index
+            for atom in self.system.atoms
+            if atom.atomic_number > 1
+        )
+        for model_index, record in enumerate(records):
+            observed_coordinates_sha256 = _coordinate_model_sha256(
+                self.system.coordinates[model_index]
+            )
+            if observed_coordinates_sha256 != record.coordinates_sha256:
+                raise ConformerPreparationError(
+                    "conformer record coordinates are cross-wired"
+                )
+            optimization = optimization_by_source.get(
+                record.source_conformer_index
+            )
+            if (
+                optimization is None
+                or optimization.get("energy_kcal_mol_binary64_hex")
+                != record.energy_kcal_mol.hex()
+                or optimization.get("admitted_to_energy_filter") is not True
+            ):
+                raise ConformerPreparationError(
+                    "conformer record energy is cross-wired"
+                )
+            expected_id = _conformer_identity(
+                canonical_smiles=str(
+                    receipt.get("canonical_isomeric_smiles") or ""
+                ),
+                rdkit_version=str(receipt.get("rdkit_version") or ""),
+                config_projection=receipt.get("config", {}),
+                source_conformer_index=record.source_conformer_index,
+                energy_model=str(receipt.get("energy_model") or ""),
+                energy_kcal_mol=record.energy_kcal_mol,
+                coordinates_sha256=record.coordinates_sha256,
+            )
+            if record.conformer_id != expected_id:
+                raise ConformerPreparationError(
+                    "conformer identity is cross-wired"
+                )
+            rmsds = [
+                _heavy_atom_rmsd(
+                    self.system.coordinates[model_index],
+                    self.system.coordinates[previous],
+                    heavy_indices,
+                )
+                for previous in range(model_index)
+            ]
+            expected_rmsd = min(rmsds) if rmsds else None
+            if expected_rmsd is None:
+                if record.minimum_selected_rmsd_angstrom is not None:
+                    raise ConformerPreparationError(
+                        "first conformer RMSD must be absent"
+                    )
+            elif (
+                record.minimum_selected_rmsd_angstrom is None
+                or abs(
+                    record.minimum_selected_rmsd_angstrom - expected_rmsd
+                )
+                > 1.0e-10
+            ):
+                raise ConformerPreparationError(
+                    "conformer diversity RMSD is cross-wired"
+                )
+
     def __post_init__(self) -> None:
         if not isinstance(self.system, AllAtomSystem):
             raise TypeError("system must be AllAtomSystem")
@@ -263,6 +401,7 @@ class PreparedConformerEnsemble:
             raise ConformerPreparationError(
                 "prepared conformer identities are cross-wired"
             )
+        self._verify_records(receipt, records)
         object.__setattr__(self, "records", records)
         object.__setattr__(self, "receipt", _freeze_json(receipt))
         object.__setattr__(self, "receipt_sha256", digest)
@@ -287,6 +426,7 @@ class PreparedConformerEnsemble:
             raise ConformerPreparationError(
                 "prepared conformer identities changed after preparation"
             )
+        self._verify_records(receipt, self.records)
         return receipt
 
     def to_dict(self) -> dict[str, object]:
@@ -454,12 +594,54 @@ def prepare_deterministic_conformer_ensemble(
     molecule = chemistry.MolFromSmiles(raw_smiles)
     if molecule is None:
         raise ConformerPreparationError("SMILES parsing failed")
+    input_atom_count = int(molecule.GetNumAtoms())
+    input_bond_count = int(molecule.GetNumBonds())
+    if input_atom_count > MAX_CONFORMER_INPUT_ATOMS:
+        raise ConformerPreparationError(
+            "ligand atom count exceeds the conformer preparation bound"
+        )
+    if input_bond_count > MAX_CONFORMER_INPUT_BONDS:
+        raise ConformerPreparationError(
+            "ligand bond count exceeds the conformer preparation bound"
+        )
+    if len(chemistry.GetMolFrags(molecule)) != 1:
+        raise ConformerPreparationError(
+            "conformer preparation requires one connected ligand component"
+        )
     canonical_smiles = chemistry.MolToSmiles(
         molecule,
         canonical=True,
         isomericSmiles=True,
     )
+    molecule = chemistry.MolFromSmiles(canonical_smiles)
+    if molecule is None:
+        raise ConformerPreparationError(
+            "canonical SMILES reconstruction failed"
+        )
+    unspecified_stereo = [
+        row
+        for row in chemistry.FindPotentialStereo(
+            molecule,
+            cleanIt=True,
+            flagPossible=True,
+        )
+        if str(row.specified) != "Specified"
+    ]
+    if unspecified_stereo:
+        raise ConformerPreparationError(
+            "potential ligand stereochemistry must be explicitly assigned"
+        )
     molecule = chemistry.AddHs(molecule)
+    prepared_atom_count = int(molecule.GetNumAtoms())
+    prepared_bond_count = int(molecule.GetNumBonds())
+    if prepared_atom_count > MAX_CONFORMER_PREPARED_ATOMS:
+        raise ConformerPreparationError(
+            "hydrogen-expanded atom count exceeds the preparation bound"
+        )
+    if prepared_bond_count > MAX_CONFORMER_PREPARED_BONDS:
+        raise ConformerPreparationError(
+            "hydrogen-expanded bond count exceeds the preparation bound"
+        )
     chemistry.AssignStereochemistry(
         molecule,
         cleanIt=True,
@@ -587,26 +769,15 @@ def prepare_deterministic_conformer_ensemble(
     records = []
     conformer_ids = []
     for source_id, _, energy, coordinates, minimum_rmsd in selected:
-        coordinates_sha256 = canonical_coordinates_sha256(
-            _system_from_rdkit(
-                molecule,
-                canonical_smiles=canonical_smiles,
-                coordinates=coordinates.unsqueeze(0),
-                conformer_ids=("0" * 64,),
-                rdkit_version=str(rd_base.rdkitVersion),
-            )
-        )
-        conformer_id = _sha256(
-            {
-                "policy_id": CONFORMER_PREPARATION_POLICY_ID,
-                "canonical_isomeric_smiles": canonical_smiles,
-                "rdkit_version": str(rd_base.rdkitVersion),
-                "config": config_projection,
-                "source_conformer_index": source_id,
-                "energy_model": energy_model,
-                "energy_kcal_mol_binary64_hex": energy.hex(),
-                "coordinates_sha256": coordinates_sha256,
-            }
+        coordinates_sha256 = _coordinate_model_sha256(coordinates)
+        conformer_id = _conformer_identity(
+            canonical_smiles=canonical_smiles,
+            rdkit_version=str(rd_base.rdkitVersion),
+            config_projection=config_projection,
+            source_conformer_index=source_id,
+            energy_model=energy_model,
+            energy_kcal_mol=energy,
+            coordinates_sha256=coordinates_sha256,
         )
         conformer_ids.append(conformer_id)
         records.append(
@@ -633,6 +804,18 @@ def prepare_deterministic_conformer_ensemble(
         "input_smiles_sha256": hashlib.sha256(
             raw_smiles.encode("utf-8")
         ).hexdigest(),
+        "input_atom_count": input_atom_count,
+        "input_bond_count": input_bond_count,
+        "prepared_atom_count": prepared_atom_count,
+        "prepared_bond_count": prepared_bond_count,
+        "preparation_bounds": {
+            "maximum_input_atoms": MAX_CONFORMER_INPUT_ATOMS,
+            "maximum_input_bonds": MAX_CONFORMER_INPUT_BONDS,
+            "maximum_prepared_atoms": MAX_CONFORMER_PREPARED_ATOMS,
+            "maximum_prepared_bonds": MAX_CONFORMER_PREPARED_BONDS,
+        },
+        "connected_component_policy": "exactly_one",
+        "unspecified_potential_stereochemistry_allowed": False,
         "rdkit_version": str(rd_base.rdkitVersion),
         "etkdg_variant": "ETKDGv3",
         "energy_model": energy_model,
@@ -647,6 +830,9 @@ def prepare_deterministic_conformer_ensemble(
         "energy_window_survivor_count": len(energy_filtered),
         "selected_conformer_count": len(records),
         "selected_conformer_ids": conformer_ids,
+        "selected_conformer_records": [
+            row.to_dict() for row in records
+        ],
         "optimization_rows": [
             {
                 "source_conformer_index": source_id,
