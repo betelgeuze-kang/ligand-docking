@@ -288,6 +288,24 @@ def test_top_candidate_ids_are_bound_to_search_fingerprint(
         verify_canonical_cli_result_document(document)
 
 
+def test_search_budget_candidate_count_is_bound_to_retained_rows(
+    tmp_path: Path,
+) -> None:
+    document = deepcopy(_document(tmp_path))
+    generic = (
+        document["result"]["placement_search_result"]["search"]["search_result"]
+    )
+    generic["budget"]["candidate_count"] = 5
+    material = generic["search_fingerprint_material"]
+    material["budget"]["candidate_count"] = 5
+    generic["search_fingerprint_sha256"] = _sha256(material)
+    with pytest.raises(
+        CliResultVerificationError,
+        match="budget candidate_count does not match rows",
+    ):
+        strict_verifier._verify_search_material(generic)
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (

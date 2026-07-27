@@ -199,6 +199,67 @@ def _verify_search_material(generic: Mapping[str, object]) -> bool:
         )
 
     rows = _require_sequence(generic.get("rows"), name="generic search rows")
+    budget = _require_mapping(
+        material.get("budget"),
+        name="search fingerprint budget",
+    )
+    expected_budget_keys = {
+        "candidate_count",
+        "top_k",
+        "max_torsions",
+        "max_refinement_steps",
+        "translation_radius_angstrom",
+        "seed",
+    }
+    if set(budget) != expected_budget_keys:
+        raise CliResultVerificationError(
+            "search fingerprint budget has unexpected fields"
+        )
+    candidate_count = _base._exact_int(
+        budget.get("candidate_count"),
+        name="search fingerprint budget candidate_count",
+        minimum=1,
+    )
+    top_k = _base._exact_int(
+        budget.get("top_k"),
+        name="search fingerprint budget top_k",
+        minimum=1,
+    )
+    _base._exact_int(
+        budget.get("max_torsions"),
+        name="search fingerprint budget max_torsions",
+    )
+    _base._exact_int(
+        budget.get("max_refinement_steps"),
+        name="search fingerprint budget max_refinement_steps",
+    )
+    _base._exact_int(
+        budget.get("seed"),
+        name="search fingerprint budget seed",
+    )
+    radius = budget.get("translation_radius_angstrom")
+    if isinstance(radius, bool):
+        raise CliResultVerificationError(
+            "search fingerprint budget translation radius must be numeric"
+        )
+    try:
+        numeric_radius = float(radius)
+    except (TypeError, ValueError) as exc:
+        raise CliResultVerificationError(
+            "search fingerprint budget translation radius must be numeric"
+        ) from exc
+    if not math.isfinite(numeric_radius) or numeric_radius < 0.0:
+        raise CliResultVerificationError(
+            "search fingerprint budget translation radius is invalid"
+        )
+    if candidate_count != len(rows):
+        raise CliResultVerificationError(
+            "search fingerprint budget candidate_count does not match rows"
+        )
+    if top_k > candidate_count:
+        raise CliResultVerificationError(
+            "search fingerprint budget top_k exceeds candidate_count"
+        )
     proposal_fingerprints = [
         _base._require_sha256(
             _require_mapping(row, name="generic search row").get(
@@ -220,6 +281,10 @@ def _verify_search_material(generic: Mapping[str, object]) -> bool:
         generic.get("top_candidate_ids"),
         name="generic top candidate IDs",
     )
+    if len(top_candidate_ids) > top_k:
+        raise CliResultVerificationError(
+            "search fingerprint top candidates exceed budget top_k"
+        )
     if material.get("top_candidate_ids") != top_candidate_ids:
         raise CliResultVerificationError(
             "search fingerprint top candidate IDs disagree with generic result"

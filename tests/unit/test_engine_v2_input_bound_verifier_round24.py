@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 import json
 import os
@@ -29,6 +30,7 @@ from betelgeuze_engine_v2.input_bound_verifier import (  # noqa: E402
     InputBoundVerificationError,
     verify_input_bound_cli_bundle_bytes,
 )
+from betelgeuze_engine_v2 import input_bound_verifier as verifier_module  # noqa: E402
 from betelgeuze_engine_v2.molecular import (  # noqa: E402
     write_canonical_system_json,
 )
@@ -242,6 +244,28 @@ def test_reference_bundle_recomputes_derivation_authority_and_scorer(
     assert document["customer_execution_enabled"] is False
     assert document["claim_safe"] is False
     assert len(receipt.receipt_sha256) == 64
+
+
+def test_input_bound_receipt_preserves_retained_only_search_status(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _bundle(tmp_path)
+    original = verifier_module.verify_canonical_cli_result_bytes
+
+    def retained_only_verification(raw: bytes):
+        return replace(
+            original(raw),
+            generic_search_fingerprint_fully_recomputed=False,
+        )
+
+    monkeypatch.setattr(
+        verifier_module,
+        "verify_canonical_cli_result_bytes",
+        retained_only_verification,
+    )
+    document = _verify(paths).to_dict()
+    assert document["search_fingerprint_fully_recomputed"] is False
 
 
 def test_wrong_ligand_artifact_is_rejected_before_authority_replay(
