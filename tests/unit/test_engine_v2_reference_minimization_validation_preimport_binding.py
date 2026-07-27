@@ -66,6 +66,54 @@ def test_bootstrap_authorization_schema_matches_the_canonical_receipt_builder() 
     )
 
 
+def _trust_payload(
+    *,
+    revoked_authorizations: tuple[str, ...] = (),
+    revoked_reviews: tuple[str, ...] = (),
+    conflicting_nonces: tuple[str, ...] = (),
+    revoked_network: tuple[str, ...] = (),
+    superseded_operators: tuple[str, ...] = (),
+    superseded_reviewers: tuple[str, ...] = (),
+) -> dict[str, object]:
+    return {
+        "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID,
+        "reviewer_keys": [],
+        "operator_keys": [
+            {
+                "key_id": "operator-key",
+                "operator_identity_sha256": "b" * 64,
+                "verification_key_hex": "6b" * 32,
+            }
+        ],
+        "revoked_authorization_receipt_sha256s": list(revoked_authorizations),
+        "revoked_review_attestation_sha256s": list(revoked_reviews),
+        "externally_conflicting_nonce_sha256s": list(conflicting_nonces),
+        "revoked_network_attestation_sha256s": list(revoked_network),
+        "superseded_operator_key_ids": list(superseded_operators),
+        "superseded_reviewer_key_ids": list(superseded_reviewers),
+        "minimum_authorization_receipt_schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+        ),
+        "minimum_review_attestation_schema_id": (
+            bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID
+        ),
+    }
+
+
+def _revocation_state(payload: dict[str, object]) -> dict[str, tuple[str, ...]]:
+    return {
+        name: tuple(payload[name])
+        for name in (
+            "revoked_authorization_receipt_sha256s",
+            "revoked_review_attestation_sha256s",
+            "externally_conflicting_nonce_sha256s",
+            "revoked_network_attestation_sha256s",
+            "superseded_operator_key_ids",
+            "superseded_reviewer_key_ids",
+        )
+    }
+
+
 def test_signed_dependency_rows_are_normalized_to_the_required_mapping() -> None:
     assert bootstrap._require_signed_dependency_artifact_rows(
         _signed_dependency_rows()
@@ -94,7 +142,7 @@ def test_bootstrap_authorization_returns_only_verified_signed_dependency_rows(
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_operator_keys",
-        lambda: {"operator-key": ("b" * 64, b"k" * 32)},
+        lambda payload=None: {"operator-key": ("b" * 64, b"k" * 32)},
     )
     monkeypatch.setattr(
         bootstrap,
@@ -110,6 +158,8 @@ def test_bootstrap_authorization_returns_only_verified_signed_dependency_rows(
         request,
         expected_commit="d" * 40,
         expected_source="e" * 64,
+        trust_payload=_trust_payload(),
+        trusted_revocation_state=_revocation_state(_trust_payload()),
     ) == _dependency_rows()
 
 
@@ -119,7 +169,7 @@ def test_bootstrap_authorization_binds_the_request_nonce_before_import(
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_operator_keys",
-        lambda: {"operator-key": ("b" * 64, b"k" * 32)},
+        lambda payload=None: {"operator-key": ("b" * 64, b"k" * 32)},
     )
     monkeypatch.setattr(
         bootstrap,
@@ -139,6 +189,8 @@ def test_bootstrap_authorization_binds_the_request_nonce_before_import(
             request,
             expected_commit="d" * 40,
             expected_source="e" * 64,
+            trust_payload=_trust_payload(),
+            trusted_revocation_state=_revocation_state(_trust_payload()),
         )
 
 
@@ -162,7 +214,7 @@ def test_bootstrap_authorization_schema_rejects_unknown_or_missing_fields(
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_operator_keys",
-        lambda: {"operator-key": ("b" * 64, b"k" * 32)},
+        lambda payload=None: {"operator-key": ("b" * 64, b"k" * 32)},
     )
     monkeypatch.setattr(
         bootstrap,
@@ -187,6 +239,8 @@ def test_bootstrap_authorization_schema_rejects_unknown_or_missing_fields(
             request,
             expected_commit="d" * 40,
             expected_source="e" * 64,
+            trust_payload=_trust_payload(),
+            trusted_revocation_state=_revocation_state(_trust_payload()),
         )
 
     assert signature_verification_attempted is False
@@ -261,6 +315,7 @@ def test_clean_checkout_rejects_an_ignored_importable_module(
 ) -> None:
     expected_commit = "d" * 40
     expected_source = "e" * 64
+    trust_payload = _trust_payload()
     monkeypatch.setattr(
         bootstrap,
         "_require_external_private_root",
@@ -268,8 +323,26 @@ def test_clean_checkout_rejects_an_ignored_importable_module(
     )
     monkeypatch.setattr(
         bootstrap,
+        "_require_verified_source_finder",
+        lambda: SimpleNamespace(
+            repository_root="/checkout",
+            verify_repository_binding=lambda: None,
+        ),
+    )
+    monkeypatch.setattr(
+        bootstrap,
         "_require_bootstrap_authorization_signature",
         lambda *args, **kwargs: _dependency_rows(),
+    )
+    monkeypatch.setattr(
+        bootstrap,
+        "_load_bootstrap_trust_store_payload",
+        lambda: trust_payload,
+    )
+    monkeypatch.setattr(
+        bootstrap,
+        "_require_trusted_revocation_state",
+        lambda request, payload: _revocation_state(trust_payload),
     )
     monkeypatch.setattr(
         bootstrap,
@@ -310,4 +383,135 @@ def test_clean_checkout_rejects_an_ignored_importable_module(
         bootstrap._require_signed_clean_checkout_before_import(
             "/checkout",
             request,
+        )
+
+
+def test_preimport_revocation_state_rejects_hidden_or_added_entries() -> None:
+    review_sha = "7" * 64
+    network_sha = "8" * 64
+    payload = _trust_payload(revoked_reviews=(review_sha,))
+    request = {
+        "authorization_nonce_sha256": "c" * 64,
+        "review_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": "9" * 64,
+        },
+        "network_isolation_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": network_sha,
+        },
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+    }
+    with pytest.raises(
+        bootstrap._ReferenceMinimizationValidationBootstrapError,
+        match="does not match the trusted store",
+    ):
+        bootstrap._require_trusted_revocation_state(request, payload)
+
+
+def test_preimport_revocation_state_rejects_conflicting_nonce_and_revoked_attestations() -> None:
+    nonce = "c" * 64
+    review_sha = "7" * 64
+    network_sha = "8" * 64
+    request = {
+        "authorization_nonce_sha256": nonce,
+        "review_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": review_sha,
+        },
+        "network_isolation_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": network_sha,
+        },
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [review_sha],
+        "externally_conflicting_nonce_sha256s": [nonce],
+        "revoked_network_attestation_sha256s": [network_sha],
+    }
+    payload = _trust_payload(
+        revoked_reviews=(review_sha,),
+        conflicting_nonces=(nonce,),
+        revoked_network=(network_sha,),
+    )
+    with pytest.raises(
+        bootstrap._ReferenceMinimizationValidationBootstrapError,
+        match="nonce is externally conflicting",
+    ):
+        bootstrap._require_trusted_revocation_state(request, payload)
+
+    request["externally_conflicting_nonce_sha256s"] = []
+    payload = _trust_payload(
+        revoked_reviews=(review_sha,),
+        revoked_network=(network_sha,),
+    )
+    with pytest.raises(
+        bootstrap._ReferenceMinimizationValidationBootstrapError,
+        match="review attestation is externally revoked",
+    ):
+        bootstrap._require_trusted_revocation_state(request, payload)
+
+
+def test_authorization_rejects_revoked_receipt_superseded_key_and_schema_downgrade(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        bootstrap,
+        "_load_bootstrap_operator_keys",
+        lambda payload=None: {"operator-key": ("b" * 64, b"k" * 32)},
+    )
+    monkeypatch.setattr(
+        bootstrap,
+        "_verify_ed25519_with_trusted_openssl",
+        lambda message, signature, key: True,
+    )
+    request = {
+        "authorization_receipt": _signed_authorization_receipt(),
+        "authorization_nonce_sha256": "c" * 64,
+    }
+    receipt_sha = request["authorization_receipt"]["receipt_sha256"]
+    payload = _trust_payload(revoked_authorizations=(receipt_sha,))
+    with pytest.raises(
+        bootstrap._ReferenceMinimizationValidationBootstrapError,
+        match="externally revoked",
+    ):
+        bootstrap._require_bootstrap_authorization_signature(
+            request,
+            expected_commit="d" * 40,
+            expected_source="e" * 64,
+            trust_payload=payload,
+            trusted_revocation_state=_revocation_state(payload),
+        )
+
+    payload = _trust_payload(superseded_operators=("operator-key",))
+    with pytest.raises(
+        bootstrap._ReferenceMinimizationValidationBootstrapError,
+        match="key is superseded",
+    ):
+        bootstrap._require_bootstrap_authorization_signature(
+            request,
+            expected_commit="d" * 40,
+            expected_source="e" * 64,
+            trust_payload=payload,
+            trusted_revocation_state=_revocation_state(payload),
+        )
+
+    downgraded = _signed_authorization_receipt()
+    downgraded["schema_id"] = (
+        "betelgeuze.engine_v2_reference_minimization_validation_authorization_receipt/0.9.0"
+    )
+    request["authorization_receipt"] = downgraded
+    payload = _trust_payload()
+    with pytest.raises(
+        bootstrap._ReferenceMinimizationValidationBootstrapError,
+        match="source binding",
+    ):
+        bootstrap._require_bootstrap_authorization_signature(
+            request,
+            expected_commit="d" * 40,
+            expected_source="e" * 64,
+            trust_payload=payload,
+            trusted_revocation_state=_revocation_state(payload),
         )
