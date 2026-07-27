@@ -8,8 +8,11 @@ than accepting those values independently from a caller.
 The current derivation is deliberately conservative:
 
 * one float64 CPU model is selected from each molecular system;
-* the ligand must be one connected acyclic component;
-* rotors are topology-only single, non-aromatic, non-terminal heavy-atom edges;
+* the ligand must be one connected component;
+* ordinary ring systems are retained as rigid components;
+* macrocycles remain outside the supported lane;
+* rotor candidates are ring-external single, non-aromatic, non-terminal
+  heavy-atom edges without declared bond stereo;
 * chirality covers only non-degenerate degree-four centers;
 * the receptor subset is bounded to atoms near the supplied spherical pocket;
 * the frozen public-redocking geometric validity policy is reused as an
@@ -63,19 +66,22 @@ AUTHENTICATED_DOCKING_SEARCH_RESULT_SCHEMA_ID = (
 )
 POCKET_DEFINITION_SCHEMA_ID = "betelgeuze.engine_v2_pocket_definition/1.0.0"
 TORSION_SEARCH_SPACE_DERIVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_torsion_search_space_derivation/1.0.0"
+    "betelgeuze.engine_v2_torsion_search_space_derivation/2.0.0"
 )
 AUTHENTICATED_DOCKING_DERIVATION_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_authenticated_docking_derivation_policy/1.0.0"
+    "betelgeuze.engine_v2_authenticated_docking_derivation_policy/2.0.0"
 )
 AUTHENTICATED_DOCKING_DERIVATION_ID = (
-    "betelgeuze.engine_v2_known_pocket_docking_derivation/1.0.0"
+    "betelgeuze.engine_v2_known_pocket_docking_derivation/2.0.0"
 )
 TORSION_FOREST_ALGORITHM_ID = (
     "betelgeuze.engine_v2_sorted_breadth_first_acyclic_forest/1.0.0"
 )
 ROTOR_SELECTION_POLICY_ID = (
-    "betelgeuze.engine_v2_topology_only_nonterminal_heavy_single_rotor/1.0.0"
+    "betelgeuze.engine_v2_ring_external_nonterminal_heavy_single_rotor/2.0.0"
+)
+RING_SYSTEM_POLICY_ID = (
+    "betelgeuze.engine_v2_rigid_ring_system_bridge_analysis/1.0.0"
 )
 LOCAL_COORDINATE_POLICY_ID = (
     "betelgeuze.engine_v2_parent_frame_bond_offsets/1.0.0"
@@ -89,9 +95,11 @@ AUTHENTICATED_DOCKING_MAX_RECEPTOR_ATOMS = 200_000
 AUTHENTICATED_DOCKING_MAX_POCKET_RADIUS_ANGSTROM = 100.0
 AUTHENTICATED_DOCKING_MAX_RECEPTOR_MARGIN_ANGSTROM = 20.0
 AUTHENTICATED_DOCKING_ZERO_TORSION_TOLERANCE_ANGSTROM = 1.0e-10
+AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS = 12
 
 _SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._:/+@-]{1,256}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_UNDECLARED_BOND_STEREO = frozenset({"none", "unspecified"})
 
 
 class DockingAuthorityError(ValueError):
@@ -347,6 +355,9 @@ class TorsionSearchSpaceDerivationReceipt:
     bond_count: int
     root_atom_indices: tuple[int, ...]
     rotatable_child_atom_indices: tuple[int, ...]
+    ring_bond_pairs: tuple[tuple[int, int], ...]
+    rigid_ring_system_atom_indices: tuple[tuple[int, ...], ...]
+    maximum_ring_cycle_size: int
     search_space_fingerprint_sha256: str
     zero_torsion_coordinate_sha256: str
     derivation_policy_sha256: str
@@ -388,6 +399,14 @@ class TorsionSearchSpaceDerivationReceipt:
         )
         roots = tuple(int(value) for value in self.root_atom_indices)
         rotors = tuple(int(value) for value in self.rotatable_child_atom_indices)
+        ring_bonds = tuple(
+            tuple(int(value) for value in pair)
+            for pair in self.ring_bond_pairs
+        )
+        ring_systems = tuple(
+            tuple(int(value) for value in system)
+            for system in self.rigid_ring_system_atom_indices
+        )
         if roots != tuple(sorted(set(roots))) or any(
             not 0 <= value < atom_count for value in roots
         ):
@@ -398,11 +417,80 @@ class TorsionSearchSpaceDerivationReceipt:
             raise DockingAuthorityError("rotatable child indices are invalid")
         if not roots:
             raise DockingAuthorityError("search-space receipt requires a root")
+        if ring_bonds != tuple(sorted(set(ring_bonds))) or any(
+            len(pair) != 2
+            or pair[0] >= pair[1]
+            or not 0 <= pair[0] < atom_count
+            or not 0 <= pair[1] < atom_count
+            for pair in ring_bonds
+        ):
+            raise DockingAuthorityError("ring bond pairs are invalid")
+        if ring_systems != tuple(sorted(set(ring_systems))) or any(
+            system != tuple(sorted(set(system)))
+            or len(system) < 3
+            or any(not 0 <= value < atom_count for value in system)
+            for system in ring_systems
+        ):
+            raise DockingAuthorityError("rigid ring systems are invalid")
+        flattened_ring_atoms = tuple(
+            value for system in ring_systems for value in system
+        )
+        if len(flattened_ring_atoms) != len(set(flattened_ring_atoms)):
+            raise DockingAuthorityError(
+                "rigid ring systems must be atom-disjoint"
+            )
+        ring_atoms = set(flattened_ring_atoms)
+        bonded_ring_atoms = {
+            value for pair in ring_bonds for value in pair
+        }
+        if ring_atoms != bonded_ring_atoms:
+            raise DockingAuthorityError(
+                "ring bonds and rigid ring systems must cover the same atoms"
+            )
+        ring_system_by_atom = {
+            value: system_index
+            for system_index, system in enumerate(ring_systems)
+            for value in system
+        }
+        if any(
+            ring_system_by_atom[first] != ring_system_by_atom[second]
+            for first, second in ring_bonds
+        ):
+            raise DockingAuthorityError(
+                "ring bonds cannot cross rigid ring systems"
+            )
+        maximum_ring_cycle_size = _exact_int(
+            self.maximum_ring_cycle_size,
+            name="maximum_ring_cycle_size",
+            minimum=0,
+            maximum=AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS - 1,
+        )
+        if bool(ring_bonds) != bool(maximum_ring_cycle_size):
+            raise DockingAuthorityError(
+                "ring cycle size must agree with retained ring bonds"
+            )
+        if ring_systems and maximum_ring_cycle_size > max(
+            len(system) for system in ring_systems
+        ):
+            raise DockingAuthorityError(
+                "ring cycle size exceeds its rigid ring system"
+            )
         object.__setattr__(self, "model_index", model_index)
         object.__setattr__(self, "atom_count", atom_count)
         object.__setattr__(self, "bond_count", bond_count)
         object.__setattr__(self, "root_atom_indices", roots)
         object.__setattr__(self, "rotatable_child_atom_indices", rotors)
+        object.__setattr__(self, "ring_bond_pairs", ring_bonds)
+        object.__setattr__(
+            self,
+            "rigid_ring_system_atom_indices",
+            ring_systems,
+        )
+        object.__setattr__(
+            self,
+            "maximum_ring_cycle_size",
+            maximum_ring_cycle_size,
+        )
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     def _projection(self) -> dict[str, object]:
@@ -428,6 +516,14 @@ class TorsionSearchSpaceDerivationReceipt:
             "rotatable_child_atom_indices": list(
                 self.rotatable_child_atom_indices
             ),
+            "ring_bond_pairs": [
+                list(pair) for pair in self.ring_bond_pairs
+            ],
+            "rigid_ring_system_atom_indices": [
+                list(system)
+                for system in self.rigid_ring_system_atom_indices
+            ],
+            "maximum_ring_cycle_size": self.maximum_ring_cycle_size,
             "search_space_fingerprint_sha256": (
                 self.search_space_fingerprint_sha256
             ),
@@ -436,8 +532,14 @@ class TorsionSearchSpaceDerivationReceipt:
             ),
             "derivation_policy_sha256": self.derivation_policy_sha256,
             "connected_ligand_required": True,
-            "acyclic_ligand_required": True,
-            "ring_closure_supported": False,
+            "acyclic_ligand_required": False,
+            "ring_closure_supported": True,
+            "ring_closure_sampling_supported": False,
+            "ring_systems_retained_as_rigid_components": True,
+            "macrocycle_min_ring_atoms": (
+                AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS
+            ),
+            "macrocycle_supported": False,
             "rotor_perception_chemically_validated": False,
         }
 
@@ -666,7 +768,15 @@ def authenticated_docking_derivation_policy_document() -> dict[str, object]:
         ],
         "coordinate_policy": "selected_cpu_float64_model",
         "ligand_component_policy": "exactly_one_connected_component",
-        "ring_policy": "reject_graph_cycles",
+        "ring_policy": (
+            "rigid_ring_systems_with_macrocycles_rejected"
+        ),
+        "ring_system_policy_id": RING_SYSTEM_POLICY_ID,
+        "macrocycle_min_ring_atoms": (
+            AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS
+        ),
+        "macrocycle_supported": False,
+        "ring_closure_sampling_supported": False,
         "forest_algorithm_id": TORSION_FOREST_ALGORITHM_ID,
         "rotor_selection_policy_id": ROTOR_SELECTION_POLICY_ID,
         "local_coordinate_policy_id": LOCAL_COORDINATE_POLICY_ID,
@@ -702,6 +812,152 @@ def _adjacency(system: AllAtomSystem) -> tuple[tuple[int, ...], ...]:
         rows[first].add(second)
         rows[second].add(first)
     return tuple(tuple(sorted(row)) for row in rows)
+
+
+@dataclass(frozen=True, slots=True)
+class _RingTopology:
+    ring_bond_pairs: tuple[tuple[int, int], ...]
+    rigid_ring_system_atom_indices: tuple[tuple[int, ...], ...]
+    maximum_ring_cycle_size: int
+
+
+def _bridge_bond_pairs(
+    adjacency: tuple[tuple[int, ...], ...],
+) -> set[tuple[int, int]]:
+    """Return graph bridges using deterministic linear-time DFS."""
+
+    discovery = [-1] * len(adjacency)
+    low = [-1] * len(adjacency)
+    parent = [-1] * len(adjacency)
+    bridges: set[tuple[int, int]] = set()
+    clock = 0
+
+    def visit(node: int) -> None:
+        nonlocal clock
+        discovery[node] = clock
+        low[node] = clock
+        clock += 1
+        for neighbor in adjacency[node]:
+            if discovery[neighbor] < 0:
+                parent[neighbor] = node
+                visit(neighbor)
+                low[node] = min(low[node], low[neighbor])
+                if low[neighbor] > discovery[node]:
+                    bridges.add(tuple(sorted((node, neighbor))))
+            elif neighbor != parent[node]:
+                low[node] = min(low[node], discovery[neighbor])
+
+    for root in range(len(adjacency)):
+        if discovery[root] < 0:
+            visit(root)
+    return bridges
+
+
+def _shortest_cycle_size_for_bond(
+    adjacency: tuple[tuple[int, ...], ...],
+    bond_pair: tuple[int, int],
+) -> int:
+    first, second = bond_pair
+    queue: deque[tuple[int, int]] = deque([(first, 0)])
+    visited = {first}
+    while queue:
+        node, distance = queue.popleft()
+        for neighbor in adjacency[node]:
+            if tuple(sorted((node, neighbor))) == bond_pair:
+                continue
+            if neighbor == second:
+                return distance + 2
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, distance + 1))
+    raise DockingAuthorityError(
+        "ring bond does not retain an alternate graph path"
+    )
+
+
+def _derive_ring_topology(
+    system: AllAtomSystem,
+    adjacency: tuple[tuple[int, ...], ...],
+) -> _RingTopology:
+    all_bonds = set(_bond_pairs(system))
+    ring_bonds = tuple(sorted(all_bonds - _bridge_bond_pairs(adjacency)))
+    if not ring_bonds:
+        return _RingTopology((), (), 0)
+
+    ring_adjacency: dict[int, set[int]] = {}
+    for first, second in ring_bonds:
+        ring_adjacency.setdefault(first, set()).add(second)
+        ring_adjacency.setdefault(second, set()).add(first)
+    remaining = set(ring_adjacency)
+    systems: list[tuple[int, ...]] = []
+    while remaining:
+        root = min(remaining)
+        component: set[int] = set()
+        queue: deque[int] = deque([root])
+        while queue:
+            node = queue.popleft()
+            if node in component:
+                continue
+            component.add(node)
+            queue.extend(sorted(ring_adjacency[node] - component))
+        remaining -= component
+        systems.append(tuple(sorted(component)))
+
+    maximum_cycle_size = max(
+        _shortest_cycle_size_for_bond(adjacency, pair)
+        for pair in ring_bonds
+    )
+    if maximum_cycle_size >= AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS:
+        raise DockingAuthorityError(
+            "authoritative torsion derivation does not support macrocycles "
+            f"with {AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS} or more "
+            "ring atoms"
+        )
+    return _RingTopology(
+        ring_bond_pairs=ring_bonds,
+        rigid_ring_system_atom_indices=tuple(sorted(systems)),
+        maximum_ring_cycle_size=maximum_cycle_size,
+    )
+
+
+def _derive_rotatable_mask(
+    ligand_system: AllAtomSystem,
+    *,
+    parent: Sequence[int],
+    order: Sequence[int],
+    ring_bond_pairs: Sequence[tuple[int, int]],
+) -> torch.Tensor:
+    atom_count = ligand_system.atom_count
+    pair_to_bond = {
+        tuple(sorted((int(bond.atom_i), int(bond.atom_j)))): bond
+        for bond in ligand_system.bonds
+    }
+    subtree_size = [1] * atom_count
+    for node in reversed(order):
+        ancestor = parent[node]
+        if ancestor >= 0:
+            subtree_size[ancestor] += subtree_size[node]
+    ring_bonds = set(ring_bond_pairs)
+    rotatable = torch.zeros(atom_count, dtype=torch.bool)
+    for child, ancestor in enumerate(parent):
+        if ancestor < 0:
+            continue
+        pair = tuple(sorted((child, ancestor)))
+        bond = pair_to_bond[pair]
+        stereo = str(bond.stereo or "none").strip().lower()
+        child_side = subtree_size[child]
+        parent_side = atom_count - child_side
+        rotatable[child] = bool(
+            pair not in ring_bonds
+            and float(bond.order) == 1.0
+            and not bool(bond.aromatic)
+            and stereo in _UNDECLARED_BOND_STEREO
+            and ligand_system.atoms[child].element.upper() != "H"
+            and ligand_system.atoms[ancestor].element.upper() != "H"
+            and child_side > 1
+            and parent_side > 1
+        )
+    return rotatable
 
 
 def _derive_exclusions(system: AllAtomSystem) -> tuple[tuple[int, int], ...]:
@@ -790,14 +1046,7 @@ def derive_authoritative_torsion_search_space(
         raise DockingAuthorityError(
             "authoritative docking requires one connected ligand component"
         )
-    if bond_count != atom_count - 1:
-        raise DockingAuthorityError(
-            "authoritative torsion derivation does not support ring closure"
-        )
-    pair_to_bond = {
-        tuple(sorted((int(bond.atom_i), int(bond.atom_j)))): bond
-        for bond in ligand_system.bonds
-    }
+    ring_topology = _derive_ring_topology(ligand_system, adjacency)
     parent_tensor = torch.tensor(parent, dtype=torch.long)
     local_offsets = torch.zeros((atom_count, 3), dtype=torch.float64)
     local_axes = torch.zeros((atom_count, 3), dtype=torch.float64)
@@ -813,29 +1062,12 @@ def derive_authoritative_torsion_search_space(
             )
         local_offsets[child] = offset
         local_axes[child] = offset / norm
-    subtree_size = [1] * atom_count
-    for node in reversed(order):
-        ancestor = parent[node]
-        if ancestor >= 0:
-            subtree_size[ancestor] += subtree_size[node]
-    rotatable = torch.zeros(atom_count, dtype=torch.bool)
-    for child, ancestor in enumerate(parent):
-        if ancestor < 0:
-            continue
-        bond = pair_to_bond[tuple(sorted((child, ancestor)))]
-        child_atom = ligand_system.atoms[child]
-        parent_atom = ligand_system.atoms[ancestor]
-        child_side = subtree_size[child]
-        parent_side = atom_count - child_side
-        rotatable[child] = bool(
-            float(bond.order) == 1.0
-            and not bool(bond.aromatic)
-            and not str(bond.stereo or "")
-            and child_atom.element.upper() != "H"
-            and parent_atom.element.upper() != "H"
-            and child_side > 1
-            and parent_side > 1
-        )
+    rotatable = _derive_rotatable_mask(
+        ligand_system,
+        parent=parent,
+        order=order,
+        ring_bond_pairs=ring_topology.ring_bond_pairs,
+    )
     root_positions = coordinates[[0]].clone().contiguous()
     search_space = TorsionSearchSpace(
         local_offsets=local_offsets,
@@ -876,6 +1108,11 @@ def derive_authoritative_torsion_search_space(
             int(index)
             for index in torch.nonzero(rotatable, as_tuple=False).reshape(-1).tolist()
         ),
+        ring_bond_pairs=ring_topology.ring_bond_pairs,
+        rigid_ring_system_atom_indices=(
+            ring_topology.rigid_ring_system_atom_indices
+        ),
+        maximum_ring_cycle_size=ring_topology.maximum_ring_cycle_size,
         search_space_fingerprint_sha256=search_space.fingerprint_sha256,
         zero_torsion_coordinate_sha256=coordinate_fingerprint(reconstructed),
         derivation_policy_sha256=str(policy["policy_sha256"]),
@@ -1055,6 +1292,7 @@ __all__ = [
     "AUTHENTICATED_DOCKING_SEARCH_RESULT_SCHEMA_ID",
     "AUTHENTICATED_DOCKING_MAX_LIGAND_ATOMS",
     "AUTHENTICATED_DOCKING_MAX_LIGAND_BONDS",
+    "AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS",
     "AUTHENTICATED_DOCKING_MAX_POCKET_RADIUS_ANGSTROM",
     "AUTHENTICATED_DOCKING_MAX_RECEPTOR_ATOMS",
     "AUTHENTICATED_DOCKING_MAX_RECEPTOR_MARGIN_ANGSTROM",
@@ -1063,6 +1301,7 @@ __all__ = [
     "DockingAuthorityError",
     "DockingScope",
     "PocketDefinition",
+    "RING_SYSTEM_POLICY_ID",
     "TorsionSearchSpaceDerivationReceipt",
     "authenticated_docking_derivation_policy_document",
     "build_authenticated_known_pocket_docking_problem",

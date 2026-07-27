@@ -4,6 +4,23 @@ This changelog tracks the independent `betelgeuze-engine-v2` distribution. The
 legacy/product monorepo has separate operational evidence and does not inherit a
 scientific claim from a package version.
 
+## Unreleased
+
+### Changed
+
+- The provisional authenticated torsion derivation schema and policy advance to
+  `2.0.0`. Ordinary ring systems are now retained as rigid components,
+  ring-external eligible single bonds remain rotor candidates, and detected
+  macrocycles of 12 or more atoms fail closed. Receipts now include canonical
+  ring bonds, disjoint rigid-ring atom sets, and the maximum detected cycle
+  size.
+
+### Scientific boundary
+
+This stage does not add ring-conformer sampling, macrocycle docking,
+chemistry-complete rotor perception, docking-score validation, or benchmark
+evidence.
+
 ## 0.2.0rc2 — Runtime identity release candidate
 
 ### Added
