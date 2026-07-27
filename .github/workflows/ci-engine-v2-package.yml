@@ -199,6 +199,7 @@ jobs:
           outside="/tmp/engine-v2-outside-${{ matrix.python-version }}"
           cd "$outside"
           "$venv/bin/betelgeuze-engine-v2" --help
+          "$venv/bin/betelgeuze-engine-v2" pocket-from-reference --help
           "$venv/bin/betelgeuze-engine-v2" dock-canonical --help
           "$venv/bin/betelgeuze-engine-v2" verify-result --help
           "$venv/bin/python" - <<'PY'
@@ -270,10 +271,16 @@ jobs:
           }
           Path("pocket.json").write_bytes(json.dumps(pocket, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")).encode("ascii") + b"\n")
           PY
+          "$venv/bin/betelgeuze-engine-v2" pocket-from-reference \
+            --ligand ligand.json \
+            --coordinate-frame-id prepared-receptor-frame-v1 \
+            --padding-angstrom 4.0 \
+            --minimum-radius-angstrom 6.0 \
+            --output reference-pocket.json
           "$venv/bin/betelgeuze-engine-v2" dock-canonical \
             --receptor receptor.json \
             --ligand ligand.json \
-            --pocket pocket.json \
+            --pocket reference-pocket.json \
             --output result.json \
             --candidate-count 2 \
             --top-k 1 \
@@ -285,17 +292,50 @@ jobs:
             --output verification.json
           "$venv/bin/python" - <<'PY'
           from pathlib import Path
+          import hashlib
           import json
           import stat
           from betelgeuze_engine_v2.cli import CLI_DOCKING_RESULT_SCHEMA_ID
 
           result_path = Path("result.json")
           verification_path = Path("verification.json")
+          ligand_path = Path("ligand.json")
+          pocket_path = Path("reference-pocket.json")
+          pocket = json.loads(pocket_path.read_bytes())
           result = json.loads(result_path.read_bytes())
           verification = json.loads(verification_path.read_bytes())
-          assert stat.S_IMODE(result_path.stat().st_mode) == 0o600
-          assert stat.S_IMODE(verification_path.stat().st_mode) == 0o600
+          for path in (pocket_path, result_path, verification_path):
+              assert stat.S_IMODE(path.stat().st_mode) == 0o600
+          metadata = pocket["metadata"]
+          derivation = dict(metadata)
+          derivation_receipt_sha256 = derivation.pop("derivation_receipt_sha256")
+          canonical = json.dumps(
+              derivation,
+              ensure_ascii=True,
+              allow_nan=False,
+              sort_keys=True,
+              separators=(",", ":"),
+          ).encode("ascii")
+          assert derivation_receipt_sha256 == hashlib.sha256(canonical).hexdigest()
+          assert pocket["scope"] == "known_reference_pocket_redocking"
+          assert metadata["ligand_artifact_sha256"] == hashlib.sha256(
+              ligand_path.read_bytes()
+          ).hexdigest()
+          assert metadata["heavy_atom_indices"] == [0, 1, 2, 3]
+          assert metadata["heavy_atom_count"] == 4
+          assert metadata["hydrogen_coordinates_used"] is False
+          assert metadata["receptor_coordinates_used"] is False
+          assert metadata["pocket_prediction_performed"] is False
+          assert metadata["chemistry_inference_performed"] is False
+          assert metadata["scientifically_validated"] is False
+          assert metadata["claim_safe"] is False
           assert result["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
+          assert result["ligand_artifact_sha256"] == metadata[
+              "ligand_artifact_sha256"
+          ]
+          assert result["pocket_artifact_sha256"] == hashlib.sha256(
+              pocket_path.read_bytes()
+          ).hexdigest()
           assert result["candidate_count"] == 2
           assert result["success_count"] + result["failure_count"] == 2
           assert result["scorer_source_preimport_attested"] is False
