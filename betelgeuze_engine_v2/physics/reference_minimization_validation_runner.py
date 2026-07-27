@@ -1120,8 +1120,38 @@ def require_reference_minimization_validation_run_observation_document(
     return observation
 
 
-def _matrix_worker_main(connection: Any) -> None:
+def _configure_deterministic_matrix_worker(application_seed: int) -> None:
+    """Apply the frozen deterministic runtime policy inside the spawned worker."""
+
+    if (
+        type(application_seed) is not int
+        or application_seed < 0
+        or application_seed > 2**63 - 1
+    ):
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker application seed is invalid"
+        )
+    import torch
+
+    torch.set_num_threads(1)
+    if torch.get_num_interop_threads() != 1:
+        try:
+            torch.set_num_interop_threads(1)
+        except RuntimeError as exc:
+            raise ReferenceMinimizationValidationRunnerError(
+                "matrix worker cannot enforce one interop thread"
+            ) from exc
+    if torch.get_num_interop_threads() != 1:
+        raise ReferenceMinimizationValidationRunnerError(
+            "matrix worker cannot enforce one interop thread"
+        )
+    torch.use_deterministic_algorithms(True)
+    torch.manual_seed(application_seed)
+
+
+def _matrix_worker_main(connection: Any, application_seed: int) -> None:
     try:
+        _configure_deterministic_matrix_worker(application_seed)
         payload = _canonical_bytes(
             [row.to_dict() for row in _run_case_matrix_in_process()]
         )
@@ -1131,7 +1161,7 @@ def _matrix_worker_main(connection: Any) -> None:
 
 
 def _run_supervised_case_matrix(
-    *, deadline: float
+    *, deadline: float, application_seed: int
 ) -> tuple[ReferenceMinimizationValidationCaseObservation, ...]:
     """Hard-stop a fixed child on deadline, including native-code stalls."""
 
@@ -1140,7 +1170,10 @@ def _run_supervised_case_matrix(
         return _failure_complete_matrix("runner_wall_time_exhausted")
     context = multiprocessing.get_context("spawn")
     parent, child = context.Pipe(duplex=False)
-    process = context.Process(target=_matrix_worker_main, args=(child,))
+    process = context.Process(
+        target=_matrix_worker_main,
+        args=(child, application_seed),
+    )
     process.start()
     child.close()
     try:
@@ -1451,7 +1484,10 @@ def run_bounded_cpu_reference_minimization_validation(
         runner_source_sha256=source_sha256,
         started_at_utc=started_at,
     )
-    case_results = _run_supervised_case_matrix(deadline=deadline)
+    case_results = _run_supervised_case_matrix(
+        deadline=deadline,
+        application_seed=receipt.application_seed,
+    )
     all_observed = len(case_results) == 14
     return ReferenceMinimizationValidationRunObservation(
         authorization_nonce_sha256=nonce,
