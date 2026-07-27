@@ -2,14 +2,14 @@
 
 The protocol binds a small, public, license-metadata-reviewed contract cohort to
 exact upstream bytes, predefined metrics, failure-inclusive denominators, and
-the source identities of the bounded Engine v2 scorers.  It deliberately does
-not download data, run docking, emit benchmark results, establish statistical
-representativeness, or promote scientific, benchmark, product, or customer
-claims.
+the source identities of the bounded Engine v2 evaluators and input
+materializer. It deliberately does not download data, run docking, emit
+benchmark results, establish statistical representativeness, or promote
+scientific, benchmark, product, or customer claims.
 
 The four cases are the packaged PDB examples in one immutable PoseBusters
-repository commit.  They are protocol fixtures, not the PoseBusters Benchmark
-and not a scientifically sufficient holdout.  Raw receptor and ligand files are
+repository commit. They are protocol fixtures, not the PoseBusters Benchmark
+and not a scientifically sufficient holdout. Raw receptor and ligand files are
 not bundled by this package.
 """
 
@@ -40,10 +40,10 @@ PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID = (
 PUBLIC_BENCHMARK_PROTOCOL_ID = (
     "posebusters_packaged_public_redocking_contract_cohort/1.0.0"
 )
-PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.0.0"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-17T01:30:00Z"
+PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.1"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T11:30:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "4ae0919cdbb65038cb64bd5fb014c99cd6107de9d25852c67c313cf3459e089c"
+    "40abed35d59219ad60e35301166818f64f5962479616616d25610d2726d11718"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -469,8 +469,11 @@ class FrozenPublicBenchmarkProtocol:
                 "failure_rows_retained": True,
                 "denominator": "all_manifest_cases",
                 "missing_or_failed_case_counts_as_primary_failure": True,
-                "symmetry_mapping_generation_implemented": False,
-                "reference_ligand_match_materializer_implemented": False,
+                "symmetry_mapping_generation_implemented": True,
+                "symmetry_permutation_direction": (
+                    "reference_position_to_candidate_position"
+                ),
+                "reference_ligand_match_materializer_implemented": True,
                 "posebusters_parity_claimed": False,
             },
             "split_policy": {
@@ -514,8 +517,6 @@ class FrozenPublicBenchmarkProtocol:
             "blockers": [
                 "four_case_contract_cohort_not_statistically_representative",
                 "posebusters_benchmark_equivalence_not_established",
-                "symmetry_mapping_materializer_not_implemented",
-                "reference_ligand_match_materializer_not_implemented",
                 "public_benchmark_not_executed",
                 "public_holdout_results_missing",
                 "independent_attestation_missing",
@@ -670,11 +671,19 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 ),
             ),
             PublicBenchmarkScorerIdentity(
+                purpose="input_materializer",
+                module="betelgeuze_engine_v2.benchmark.public_materializer",
+                relative_path="betelgeuze_engine_v2/benchmark/public_materializer.py",
+                source_sha256=(
+                    "94cde82b126c826458d689e89ff3dd958ec2ac2f3a12700ffd61a7de49eb77ed"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
                 purpose="pose_validity",
                 module="betelgeuze_engine_v2.docking.validity",
                 relative_path="betelgeuze_engine_v2/docking/validity.py",
                 source_sha256=(
-                    "8511e3dbb7ad6c009af7bfb32b6ae21a68de6b1c0fb76443f7406ff680623dd7"
+                    "996cfd1ea8ea230a5cb3a8449142babc1e17cf4103f07e70054fe977aef0318e"
                 ),
             ),
             PublicBenchmarkScorerIdentity(
@@ -792,7 +801,7 @@ def require_public_benchmark_report(report: BenchmarkReport) -> BenchmarkReport:
 def verify_public_benchmark_scorer_sources(
     repository_root: str | os.PathLike[str],
 ) -> dict[str, str]:
-    """Verify reviewed scorer source files in a checkout without executing them."""
+    """Verify reviewed evaluator/materializer source files without executing them."""
 
     root = Path(repository_root).resolve(strict=True)
     observed: dict[str, str] = {}

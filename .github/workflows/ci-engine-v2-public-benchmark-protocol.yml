@@ -9,6 +9,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/unit/test_engine_v2_public_benchmark_materializer.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -21,6 +22,7 @@ on:
       - "betelgeuze_engine_v2/capabilities.py"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tests/unit/test_engine_v2_public_benchmark_protocol.py"
+      - "tests/unit/test_engine_v2_public_benchmark_materializer.py"
       - "tests/unit/test_engine_v2_benchmark_contracts.py"
       - ".github/workflows/ci-engine-v2-public-benchmark-protocol.yml"
       - ".github/workflows/ci-engine-v2-main.yml"
@@ -56,6 +58,7 @@ jobs:
             betelgeuze_engine_v2
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_public_benchmark_protocol.py
+            tests/unit/test_engine_v2_public_benchmark_materializer.py
             tests/unit/test_engine_v2_benchmark_contracts.py
             .github/workflows/ci-engine-v2-public-benchmark-protocol.yml
             .github/workflows/ci-engine-v2-main.yml
@@ -77,8 +80,9 @@ jobs:
           python -m compileall -q betelgeuze_engine_v2
           python tools/check_engine_v2_architecture.py
 
-      - name: Verify frozen protocol and failure-inclusive report contract
+      - name: Verify frozen protocol and result-free materializer contracts
         run: |
           python -m pytest -q \
             tests/unit/test_engine_v2_public_benchmark_protocol.py \
+            tests/unit/test_engine_v2_public_benchmark_materializer.py \
             tests/unit/test_engine_v2_benchmark_contracts.py
