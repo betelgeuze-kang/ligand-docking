@@ -13,8 +13,9 @@ scientific claim from a package version.
   desolvation-proxy, torsion-energy, ligand-strain, and weak-pocket-prior terms.
   It requires complete charge-conserving explicit partial charges, binds the
   exact receptor subset and source systems, preserves a per-candidate term
-  receipt, and retains the full success/failure denominator when used with
-  guided placement.
+  receipt, derives periodic torsion terms from final coordinates, revalidates
+  retained decompositions against the active scorer, and retains the full
+  success/failure denominator when used with guided placement.
 - Authenticated known-pocket docking now has a deterministic interaction-guided
   proposal layer. Bounded graph features drive donor/acceptor, opposite-charge,
   connected hydrophobic-patch, aromatic-plane, and principal-shape placements

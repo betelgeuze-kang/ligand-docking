@@ -382,6 +382,29 @@ def test_periodic_torsion_energy_responds_to_sampled_rotor_angle() -> None:
     assert scorer.score_terms(proposals[0]).torsion_energy == pytest.approx(0.0)
     assert scorer.score_terms(proposals[1]).torsion_energy > 0.0
 
+    first_refined = proposals[0].with_refined_coordinates(
+        ligand.coordinates[0],
+        refiner_id="scorer-v1-coordinate-torsion-fixture",
+        refiner_version="1.0.0",
+    )
+    second_refined = proposals[1].with_refined_coordinates(
+        ligand.coordinates[0],
+        refiner_id="scorer-v1-coordinate-torsion-fixture",
+        refiner_version="1.0.0",
+    )
+    assert scorer.score_terms(first_refined).torsion_energy == pytest.approx(
+        scorer.score_terms(second_refined).torsion_energy,
+        abs=1.0e-12,
+    )
+
+
+def test_config_rejects_interaction_ranges_beyond_pair_cutoff() -> None:
+    with pytest.raises(ScorerV1Error, match="must cover"):
+        ScorerV1Config(
+            pair_cutoff_angstrom=3.0,
+            polar_burial_distance_angstrom=4.5,
+        )
+
 
 def test_missing_or_nonconserving_partial_charge_fails_closed() -> None:
     ligand = _ligand(complete_charges=False)
@@ -561,6 +584,16 @@ def test_guided_search_result_rejects_forged_term_configuration() -> None:
 
     with pytest.raises(ScorerV1Error, match="terms are cross-wired"):
         replace(result, rows=tuple(forged_rows))
+
+    offset_terms = replace(
+        source_row.terms,
+        typed_vdw=source_row.terms.typed_vdw + 1.0,
+        electrostatics=source_row.terms.electrostatics - 1.0,
+    )
+    offset_rows = list(result.rows)
+    offset_rows[row_index] = replace(source_row, terms=offset_terms)
+    with pytest.raises(ScorerV1Error, match="not the scorer output"):
+        replace(result, rows=tuple(offset_rows))
 
 
 def test_guided_search_retains_scorer_failures_and_rejects_result_crosswire() -> None:

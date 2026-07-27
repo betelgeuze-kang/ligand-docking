@@ -51,7 +51,9 @@ SCORER_V1_SEARCH_RESULT_SCHEMA_ID = (
 SCORER_V1_ID = "betelgeuze.engine_v2_chemistry_pose_scorer"
 SCORER_V1_VERSION = "1.0.0"
 SCORER_V1_SCORE_ID = f"{SCORER_V1_ID}/{SCORER_V1_VERSION}"
-SCORER_V1_ALGORITHM_ID = "sparse_typed_lj_charge_hbond_hydrophobic_strain/1.0.0"
+SCORER_V1_ALGORITHM_ID = (
+    "sparse_typed_lj_charge_hbond_hydrophobic_geometry_torsion_strain/1.0.0"
+)
 SCORER_V1_APPLICABILITY_DOMAIN_ID = (
     "authenticated_known_pocket_complete_explicit_partial_charge_v1"
 )
@@ -160,6 +162,31 @@ def _complete_charges(system: AllAtomSystem) -> tuple[float, ...]:
     ):
         raise ScorerV1Error("partial charges do not conserve the formal total charge")
     return tuple(result)
+
+
+def _dihedral_angle(
+    coordinates: torch.Tensor,
+    atoms: tuple[int, int, int, int],
+) -> float:
+    first, second, third, fourth = (coordinates[index] for index in atoms)
+    middle = third - second
+    middle_norm = float(torch.linalg.vector_norm(middle).item())
+    if middle_norm <= 1.0e-12:
+        raise ScorerV1Error("rotor geometry contains a degenerate central bond")
+    axis = middle / middle_norm
+    left = first - second
+    right = fourth - third
+    left = left - torch.dot(left, axis) * axis
+    right = right - torch.dot(right, axis) * axis
+    left_norm = float(torch.linalg.vector_norm(left).item())
+    right_norm = float(torch.linalg.vector_norm(right).item())
+    if min(left_norm, right_norm) <= 1.0e-12:
+        raise ScorerV1Error("rotor geometry lacks a stable dihedral anchor")
+    left = left / left_norm
+    right = right / right_norm
+    sine = float(torch.dot(torch.cross(left, right, dim=0), axis).item())
+    cosine = float(torch.dot(left, right).item())
+    return math.atan2(sine, cosine)
 
 
 def _features(
@@ -305,6 +332,13 @@ class ScorerV1Config:
                 maximum=8.0,
             ),
         )
+        if self.pair_cutoff_angstrom < max(
+            self.hbond_distance_max_angstrom,
+            self.polar_burial_distance_angstrom,
+        ):
+            raise ScorerV1Error(
+                "pair_cutoff_angstrom must cover hydrogen-bond and polar-burial ranges"
+            )
         object.__setattr__(
             self,
             "max_receptor_candidate_pairs",
@@ -749,6 +783,51 @@ class ChemistryPoseScorerV1:
             applicability_domain_id=SCORER_V1_APPLICABILITY_DOMAIN_ID,
         )
         self._receptor_cells = self._build_receptor_cells()
+        self._receptor_hydrophobic = frozenset(self._context.receptor_hydrophobic)
+        self._ligand_hydrophobic = frozenset(self._context.ligand_hydrophobic)
+        self._ligand_acceptors = frozenset(self._context.ligand_acceptors)
+        self._ligand_donor_heavy = frozenset(
+            donor for donor, _ in self._context.ligand_donors
+        )
+        ligand_adjacency = _adjacency(ligand_system)
+
+        def anchor(index: int, excluded: int) -> int:
+            candidates = [
+                neighbor for neighbor in ligand_adjacency[index] if neighbor != excluded
+            ]
+            if not candidates:
+                raise ScorerV1Error("rotatable bond lacks a dihedral anchor")
+            return min(
+                candidates,
+                key=lambda value: (
+                    ligand_system.atoms[value].element == "H",
+                    value,
+                ),
+            )
+
+        rotor_quads: list[tuple[int, int, int, int]] = []
+        for child in (
+            torch.nonzero(
+                authority.search_space.rotatable_mask,
+                as_tuple=False,
+            )
+            .reshape(-1)
+            .tolist()
+        ):
+            child = int(child)
+            parent = int(authority.search_space.parent[child].item())
+            rotor_quads.append(
+                (
+                    anchor(parent, child),
+                    parent,
+                    child,
+                    anchor(child, parent),
+                )
+            )
+        self._rotor_quads = tuple(rotor_quads)
+        self._reference_dihedrals = tuple(
+            _dihedral_angle(self._ligand_reference, quad) for quad in self._rotor_quads
+        )
         self._reference_internal_vdw, self._reference_ligand_pair_count = (
             self._ligand_internal_vdw(self._ligand_reference)
         )
@@ -866,6 +945,9 @@ class ChemistryPoseScorerV1:
         candidate_count = 0
         polar_buried: set[int] = set()
         polar_satisfied: set[int] = set()
+        ligand_hydrophobic = self._ligand_hydrophobic
+        receptor_hydrophobic = self._receptor_hydrophobic
+        ligand_polar = self._ligand_acceptors | self._ligand_donor_heavy
         pair_rows: dict[tuple[int, int], float] = {}
         for ligand_index, coordinate in enumerate(pose):
             center = _cell_key(coordinate, config.pair_cutoff_angstrom)
@@ -904,18 +986,15 @@ class ChemistryPoseScorerV1:
                                 ]
                             ) / (config.electrostatic_dielectric * max(distance, 0.5))
                             if (
-                                ligand_index in self._context.ligand_hydrophobic
-                                and receptor_index in self._context.receptor_hydrophobic
+                                ligand_index in ligand_hydrophobic
+                                and receptor_index in receptor_hydrophobic
                                 and distance <= 1.25 * sigma
                             ):
                                 hydrophobic_count += 1
                                 hydrophobic_raw += max(
                                     0.0, 1.0 - distance / (1.25 * sigma)
                                 )
-                            if ligand_index in self._context.ligand_acceptors or any(
-                                donor == ligand_index
-                                for donor, _ in self._context.ligand_donors
-                            ):
+                            if ligand_index in ligand_polar:
                                 if distance <= config.polar_burial_distance_angstrom:
                                     polar_buried.add(ligand_index)
 
@@ -975,11 +1054,24 @@ class ChemistryPoseScorerV1:
 
         current_internal, ligand_pair_count = self._ligand_internal_vdw(pose)
         strain_raw = max(0.0, current_internal - self._reference_internal_vdw)
-        rotatable = self._authority.search_space.rotatable_mask
-        torsion_raw = float(
-            (0.5 * (1.0 - torch.cos(3.0 * proposal.torsion_angles[rotatable])))
-            .sum()
-            .item()
+        pose_dihedrals = (_dihedral_angle(pose, quad) for quad in self._rotor_quads)
+        torsion_raw = math.fsum(
+            0.5
+            * (
+                1.0
+                - math.cos(
+                    3.0
+                    * math.atan2(
+                        math.sin(observed - reference),
+                        math.cos(observed - reference),
+                    )
+                )
+            )
+            for observed, reference in zip(
+                pose_dihedrals,
+                self._reference_dihedrals,
+                strict=True,
+            )
         )
         centroid_distance = float(
             torch.linalg.vector_norm(
@@ -1148,6 +1240,7 @@ class ScorerV1SearchTermRow:
 @dataclass(frozen=True, slots=True)
 class ScorerV1GuidedSearchResult:
     guided_search_result: GuidedPlacementSearchResult
+    scorer: ChemistryPoseScorerV1 = field(repr=False, compare=False)
     scorer_contract_fingerprint_sha256: str
     scorer_authority_input_receipt_sha256: str
     scorer_context_fingerprint_sha256: str
@@ -1161,6 +1254,8 @@ class ScorerV1GuidedSearchResult:
             GuidedPlacementSearchResult,
         ):
             raise TypeError("guided_search_result must be GuidedPlacementSearchResult")
+        if not isinstance(self.scorer, ChemistryPoseScorerV1):
+            raise TypeError("scorer must be ChemistryPoseScorerV1")
         scorer_contract = _digest(
             self.scorer_contract_fingerprint_sha256,
             name="scorer_contract_fingerprint_sha256",
@@ -1182,6 +1277,13 @@ class ScorerV1GuidedSearchResult:
             raise ScorerV1Error("scorer v1 search authority is cross-wired")
         if search.search_result.scorer_contract_fingerprint_sha256 != scorer_contract:
             raise ScorerV1Error("scorer v1 search contract is cross-wired")
+        if (
+            self.scorer.contract_fingerprint_sha256 != scorer_contract
+            or self.scorer.authority_input_receipt_sha256 != scorer_authority
+            or self.scorer.context.fingerprint_sha256 != scorer_context
+            or self.scorer.config.fingerprint_sha256 != scorer_config
+        ):
+            raise ScorerV1Error("scorer v1 result scorer is cross-wired")
         rows = tuple(self.rows)
         source_rows = search.search_result.rows
         if len(rows) != len(source_rows):
@@ -1203,6 +1305,11 @@ class ScorerV1GuidedSearchResult:
                 or retained.terms.config_fingerprint_sha256 != scorer_config
             ):
                 raise ScorerV1Error("scorer v1 row terms are cross-wired")
+            if retained.terms is not None:
+                assert source.proposal is not None
+                expected_terms = self.scorer.score_terms(source.proposal)
+                if retained.terms.receipt_sha256 != expected_terms.receipt_sha256:
+                    raise ScorerV1Error("scorer v1 row terms are not the scorer output")
             if (
                 retained.selection_eligible != source.selection_eligible
                 or retained.error_code != source.error_code
@@ -1360,6 +1467,7 @@ def run_authenticated_scorer_v1_guided_search(
             )
     return ScorerV1GuidedSearchResult(
         guided_search_result=guided,
+        scorer=scorer,
         scorer_contract_fingerprint_sha256=(scorer.contract_fingerprint_sha256),
         scorer_authority_input_receipt_sha256=(scorer.authority_input_receipt_sha256),
         scorer_context_fingerprint_sha256=(scorer.context.fingerprint_sha256),
