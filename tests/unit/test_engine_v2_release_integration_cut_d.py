@@ -70,6 +70,8 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_d_contracts() -> None:
         "test_engine_v2_reference_pocket_release_round23.py",
         "test_engine_v2_input_bound_verifier_round24.py",
         "test_engine_v2_input_bound_verifier_release_round25.py",
+        "test_engine_v2_execution_parameter_attestation_round26.py",
+        "test_engine_v2_execution_parameter_release_round27.py",
         "test_engine_v2_release_integration_cut_d.py",
     ):
         assert filename in source
