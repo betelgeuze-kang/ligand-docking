@@ -299,8 +299,11 @@ The `3.0.0` torsion derivation receipt records one canonical disposition for
 every ligand bond. Its bounded chemistry-aware rotor rules explicitly exclude
 amide, urea, carbamate, sulfonamide, conjugated, ring, aromatic, non-single,
 hydrogen, terminal-heavy-atom, and stereo-constrained bonds. This deterministic
-graph profile is auditable from the receipt but is not a claim of equivalence
-to a complete external cheminformatics toolkit or scientific validation.
+graph profile records the full torsion-tree parent array and checks every
+rotatable child against its exact parent bond. Both double-bonded and
+charge-separated sulfonamide resonance forms are recognized. The profile is
+auditable from the receipt but is not a claim of equivalence to a complete
+external cheminformatics toolkit or scientific validation.
 
 ### Internal APIs
 

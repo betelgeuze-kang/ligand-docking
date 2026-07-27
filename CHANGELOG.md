@@ -12,7 +12,9 @@ scientific claim from a package version.
   Every ligand bond now receives a canonical rotor disposition. Bounded graph
   rules exclude amide, urea, carbamate, sulfonamide, conjugated, ring, aromatic,
   non-single, hydrogen, terminal-heavy-atom, and stereo-constrained bonds while
-  retaining eligible non-terminal aliphatic single bonds.
+  retaining eligible non-terminal aliphatic single bonds. The receipt binds the
+  complete parent array so each rotatable child is checked against its exact
+  parent bond, and charge-separated sulfonamide resonance forms are recognized.
 - The provisional authenticated torsion derivation schema and policy advance to
   `2.0.0`. Ordinary ring systems are now retained as rigid components,
   ring-external eligible single bonds remain rotor candidates, and detected
