@@ -90,6 +90,7 @@ from .public_protocol import (
 )
 from .public_redocking_benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
+    PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS,
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
     PUBLIC_REDOCKING_COHORT_COUNT,
     PUBLIC_REDOCKING_COHORT_ID,
@@ -214,6 +215,7 @@ __all__ = [
     "verify_signed_benchmark_report",
     "write_public_benchmark_protocol_json",
     "FROZEN_PUBLIC_REDOCKING_CASE_IDS",
+    "PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS",
     "PUBLIC_REDOCKING_ARCHIVE_SHA256",
     "PUBLIC_REDOCKING_COHORT_COUNT",
     "PUBLIC_REDOCKING_COHORT_ID",

@@ -63,8 +63,10 @@ source but does not claim equal search-region geometry between Engine V2's
 sphere and the external autobox. Its standard-residue receptor charge proxy and
 RDKit Gasteiger ligand charges enable Scorer v1 execution but are explicitly
 uncalibrated and not scientifically validated. Runtime deltas do not claim
-equivalent process-start boundaries. Neither contract supplies a public holdout
-result, equal-search-effort or equal-region comparison, statistical
+equivalent process-start boundaries. Unevaluated PoseBusters validity checks
+abort rather than count as valid, and row commands are checked against their
+declared engine mode. Neither contract supplies a public holdout result,
+equal-search-effort or equal-region comparison, statistical
 representativeness, independent attestation, scientific validation, product
 qualification, production authorization, or customer execution.
 

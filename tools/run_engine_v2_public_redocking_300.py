@@ -21,6 +21,7 @@ import torch
 
 from betelgeuze_engine_v2.benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
+    PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS,
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
     PUBLIC_REDOCKING_PRIMARY_ENGINES,
     PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
@@ -54,7 +55,7 @@ from betelgeuze_engine_v2.io import (
 from betelgeuze_engine_v2.molecular import AllAtomSystem
 
 
-RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.3.0"
+RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.4.0"
 DEFAULT_SEED = 2_026_072_700
 POSEBUSTERS_VERSION = "0.3.1"
 RDKit_VERSION = "2022.09.5"
@@ -70,7 +71,6 @@ RECEPTOR_CHARGE_METHOD_ID = (
 )
 LIGAND_CHARGE_METHOD_ID = "rdkit_gasteiger_12_iter_conserved/2022.09.5"
 ENGINE_V2_CANDIDATE_COUNT = 64
-ALLOWED_TORCH_VERSIONS = ("2.6.0", "2.6.0+cpu", "2.6.0+rocm6.1")
 ENGINE_V2_CPU_POLICY = {
     "cpu_count": 1,
     "torch_intraop_threads": 1,
@@ -132,7 +132,10 @@ _ENGINE_V2_CASE_EXCEPTIONS = (
 
 
 def _configure_engine_v2_cpu() -> None:
-    if ENGINE_V2_CPU_POLICY["torch_version"] not in ALLOWED_TORCH_VERSIONS:
+    if (
+        ENGINE_V2_CPU_POLICY["torch_version"]
+        not in PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS
+    ):
         raise PublicRedockingRunnerError(
             "Engine V2 Torch build is outside the frozen runtime set"
         )
@@ -554,12 +557,25 @@ def _posebusters_outcomes(
     rmsds = tuple(float(value) for value in report["rmsd"].tolist())
     if any(not math.isfinite(value) or value < 0.0 for value in rmsds):
         raise PublicRedockingRunnerError("PoseBusters RMSD is invalid")
+    boolean_values = {
+        column: report[column].tolist()
+        for column in (*CHEMICAL_COLUMNS, *GEOMETRIC_COLUMNS)
+    }
+
+    def required_boolean(index: int, column: str) -> bool:
+        value = boolean_values[column][index]
+        if type(value) is not bool:
+            raise PublicRedockingRunnerError(
+                f"PoseBusters check is not an evaluated boolean: {column}"
+            )
+        return value
+
     chemical = tuple(
-        all(bool(report.iloc[index][column]) for column in CHEMICAL_COLUMNS)
+        all(required_boolean(index, column) for column in CHEMICAL_COLUMNS)
         for index in range(5)
     )
     geometric = tuple(
-        all(bool(report.iloc[index][column]) for column in GEOMETRIC_COLUMNS)
+        all(required_boolean(index, column) for column in GEOMETRIC_COLUMNS)
         for index in range(5)
     )
     return rmsds, geometric, chemical
@@ -1372,6 +1388,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 str(ENGINE_V2_CANDIDATE_COUNT),
                 "--cpu",
                 "1",
+                "--torch-version",
+                str(ENGINE_V2_CPU_POLICY["torch_version"]),
             ),
         ),
         PublicRedockingEngineIdentity(
@@ -1387,6 +1405,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "none",
                 "--cpu",
                 "1",
+                "--no_gpu",
                 "--timeout-seconds",
                 str(arguments.timeout_seconds),
             ),
@@ -1404,6 +1423,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "crossdock_default2018",
                 "--cpu",
                 "1",
+                "--no_gpu",
                 "--timeout-seconds",
                 str(arguments.timeout_seconds),
             ),

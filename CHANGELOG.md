@@ -34,7 +34,10 @@ scientific claim from a package version.
   construction now rejects per-row CPU/timeout policy drift, binds the exact
   pinned Torch build (including the official `2.6.0+cpu` package tag),
   quarantines stale external outputs before reruns, and marks cross-process
-  runtime boundaries non-comparable.
+  runtime boundaries non-comparable. Public report reconstruction now rejects
+  unsupported Torch builds, boolean-as-integer policies, and commands
+  cross-wired to another engine mode; unevaluated PoseBusters cells abort
+  evidence construction rather than becoming truthy validity results.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,

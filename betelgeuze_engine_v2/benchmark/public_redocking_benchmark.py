@@ -50,6 +50,11 @@ PUBLIC_REDOCKING_PROFILES_SHA256 = (
     "18ed3a4a50d5663a2dfb6f159ac515b15d6aebac9793831467aa2950e4710312"
 )
 PUBLIC_REDOCKING_PRIMARY_ENGINES = ("engine_v2", "vina", "gnina")
+PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS = (
+    "2.6.0",
+    "2.6.0+cpu",
+    "2.6.0+rocm6.1",
+)
 PUBLIC_REDOCKING_TOP_KS = (1, 3, 5)
 PUBLIC_REDOCKING_RMSD_THRESHOLD_ANGSTROM = 2.0
 PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES = 2_000
@@ -130,6 +135,121 @@ def _execution_policy_mapping(tokens: Sequence[str]) -> dict[str, object]:
                 "result execution_policy value is malformed"
             ) from exc
     return result
+
+
+def _command_option_value(command: Sequence[str], option: str) -> str:
+    indexes = tuple(
+        index for index, token in enumerate(command) if token == option
+    )
+    if len(indexes) != 1:
+        raise PublicRedockingBenchmarkError(
+            f"engine command must contain exactly one {option}"
+        )
+    index = indexes[0]
+    if index + 1 >= len(command) or command[index + 1].startswith("--"):
+        raise PublicRedockingBenchmarkError(
+            f"engine command value is missing for {option}"
+        )
+    return command[index + 1]
+
+
+def _require_command_flag(command: Sequence[str], flag: str) -> None:
+    if sum(token == flag for token in command) != 1:
+        raise PublicRedockingBenchmarkError(
+            f"engine command must contain exactly one {flag}"
+        )
+
+
+def _validate_engine_commands(
+    identity: "PublicRedockingEngineIdentity",
+    rows: Sequence["PublicRedockingCaseResult"],
+    *,
+    policy: "PublicRedockingEvaluationPolicy",
+) -> None:
+    if any(row.execution_command[0] != identity.command[0] for row in rows):
+        raise PublicRedockingBenchmarkError(
+            f"{identity.engine_id} row command executable contradicts its identity"
+        )
+    if identity.engine_id == "engine_v2":
+        if (
+            len(identity.command) < 2
+            or identity.command[1] != "engine_v2"
+            or any(
+                len(row.execution_command) < 2
+                or row.execution_command[1] != "engine_v2"
+                for row in rows
+            )
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 row command contradicts its identity"
+            )
+        expected_options = {
+            "--candidate-count": "64",
+            "--cpu": str(policy.cpu_count),
+        }
+        for option, expected in expected_options.items():
+            if _command_option_value(identity.command, option) != expected or any(
+                _command_option_value(row.execution_command, option) != expected
+                for row in rows
+            ):
+                raise PublicRedockingBenchmarkError(
+                    f"Engine V2 command contradicts frozen {option}"
+                )
+        for row in rows:
+            if _command_option_value(row.execution_command, "--case-id") != row.case_id:
+                raise PublicRedockingBenchmarkError(
+                    "Engine V2 row command is cross-wired to another case"
+                )
+            for option in (
+                "--receptor",
+                "--ligand",
+                "--pocket-source",
+                "--seed",
+                "--out",
+            ):
+                _command_option_value(row.execution_command, option)
+        return
+
+    expected_options = {
+        "--scoring": "vina",
+        "--cnn_scoring": "none" if identity.engine_id == "vina" else "rescore",
+        "--cpu": str(policy.cpu_count),
+    }
+    if identity.engine_id == "gnina":
+        expected_options["--cnn"] = "crossdock_default2018"
+    for option, expected in expected_options.items():
+        if _command_option_value(identity.command, option) != expected or any(
+            _command_option_value(row.execution_command, option) != expected
+            for row in rows
+        ):
+            raise PublicRedockingBenchmarkError(
+                f"{identity.engine_id} command contradicts frozen {option}"
+            )
+    if (
+        _command_option_value(identity.command, "--timeout-seconds")
+        != str(policy.external_timeout_seconds)
+    ):
+        raise PublicRedockingBenchmarkError(
+            f"{identity.engine_id} identity timeout contradicts report policy"
+        )
+    _require_command_flag(identity.command, "--no_gpu")
+    for row in rows:
+        _require_command_flag(row.execution_command, "--no_gpu")
+        for option, expected in (
+            ("--receptor", None),
+            ("--ligand", None),
+            ("--autobox_ligand", None),
+            ("--autobox_add", "4"),
+            ("--num_modes", "5"),
+            ("--exhaustiveness", "1"),
+            ("--seed", None),
+            ("--out", None),
+        ):
+            observed = _command_option_value(row.execution_command, option)
+            if expected is not None and observed != expected:
+                raise PublicRedockingBenchmarkError(
+                    f"{identity.engine_id} command contradicts frozen {option}"
+                )
 
 
 def _selection_key(case_id: str) -> tuple[str, str]:
@@ -1410,15 +1530,46 @@ class PublicRedockingBenchmarkReport:
         engine_v2_policy = _execution_policy_mapping(
             next(iter(engine_v2_policies))
         )
+        required_engine_v2_policy = {
+            "cpu_count",
+            "torch_intraop_threads",
+            "torch_interop_threads",
+            "torch_version",
+        }
+        if set(engine_v2_policy) != required_engine_v2_policy:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 row policy fields contradict the report policy"
+            )
+        for field_name in (
+            "cpu_count",
+            "torch_intraop_threads",
+            "torch_interop_threads",
+        ):
+            if type(engine_v2_policy[field_name]) is not int:
+                raise PublicRedockingBenchmarkError(
+                    "Engine V2 row policy integer fields must be integers"
+                )
+        torch_version = engine_v2_policy["torch_version"]
         if (
             engine_v2_policy.get("cpu_count") != self.policy.cpu_count
             or engine_v2_policy.get("torch_intraop_threads") != 1
             or engine_v2_policy.get("torch_interop_threads") != 1
-            or not isinstance(engine_v2_policy.get("torch_version"), str)
-            or not engine_v2_policy["torch_version"]
+            or type(torch_version) is not str
+            or torch_version not in PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS
         ):
             raise PublicRedockingBenchmarkError(
                 "Engine V2 row policy contradicts the report policy"
+            )
+        engine_v2_identity = identities[0]
+        if (
+            _command_option_value(
+                engine_v2_identity.command,
+                "--torch-version",
+            )
+            != torch_version
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 Torch policy contradicts its identity"
             )
         expected_external_policy = {
             "cpu_count": self.policy.cpu_count,
@@ -1428,12 +1579,29 @@ class PublicRedockingBenchmarkReport:
             policies = {
                 row.execution_policy for row in rows if row.engine_id == engine_id
             }
-            if len(policies) != 1 or _execution_policy_mapping(
-                next(iter(policies))
-            ) != expected_external_policy:
+            if len(policies) != 1:
                 raise PublicRedockingBenchmarkError(
                     f"{engine_id} row policy contradicts the report policy"
                 )
+            external_policy = _execution_policy_mapping(next(iter(policies)))
+            if (
+                set(external_policy) != set(expected_external_policy)
+                or any(
+                    type(external_policy[field_name]) is not int
+                    for field_name in expected_external_policy
+                )
+                or external_policy != expected_external_policy
+            ):
+                raise PublicRedockingBenchmarkError(
+                    f"{engine_id} row policy contradicts the report policy"
+                )
+        identity_map = {identity.engine_id: identity for identity in identities}
+        for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES:
+            _validate_engine_commands(
+                identity_map[engine_id],
+                tuple(row for row in rows if row.engine_id == engine_id),
+                policy=self.policy,
+            )
         for case_id in self.cohort.case_ids:
             case_rows = tuple(
                 row_map[(engine_id, case_id)]

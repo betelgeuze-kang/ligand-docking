@@ -144,6 +144,67 @@ def test_external_commands_make_vina_and_gnina_modes_explicit(
         assert command[command.index("--seed") + 1] == "11"
 
 
+def test_posebusters_outcomes_reject_unevaluated_boolean_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    columns = {
+        "rmsd",
+        *runner.CHEMICAL_COLUMNS,
+        *runner.GEOMETRIC_COLUMNS,
+    }
+    rows = [
+        {column: (1.0 if column == "rmsd" else True) for column in columns}
+        for _ in range(5)
+    ]
+    rows[0][runner.CHEMICAL_COLUMNS[0]] = float("nan")
+
+    class FakeColumn:
+        def __init__(self, values):
+            self._values = values
+
+        def tolist(self):
+            return list(self._values)
+
+    class FakeILoc:
+        def __getitem__(self, index):
+            return rows[index]
+
+    class FakeReport:
+        iloc = FakeILoc()
+
+        def __len__(self):
+            return len(rows)
+
+        @property
+        def columns(self):
+            return tuple(columns)
+
+        def __getitem__(self, column):
+            return FakeColumn(row[column] for row in rows)
+
+    class FakePoseBusters:
+        def __init__(self, **kwargs):
+            pass
+
+        def bust(self, *args, **kwargs):
+            return FakeReport()
+
+    monkeypatch.setattr(runner, "_load_posebusters", lambda: FakePoseBusters)
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="PoseBusters check is not an evaluated boolean",
+    ):
+        runner._posebusters_outcomes(
+            tmp_path / "poses.sdf",
+            {
+                "native": tmp_path / "native.sdf",
+                "receptor": tmp_path / "receptor.pdb",
+            },
+        )
+
+
 def test_offline_benchmark_exports_five_score_ranked_proposals_even_if_invalid():
     proposals = tuple(object() for _ in range(6))
     scores = (6.0, 2.0, 5.0, 1.0, 4.0, 3.0)

@@ -113,7 +113,10 @@ external binary SHA-256, command, CPU/timeout policy, cohort fingerprint, policy
 fingerprint, all 900 engine/case rows, profiles, and metric rows. Evaluator or
 artifact-I/O failures abort the run instead of being counted as engine
 failures. Report construction independently rejects row-level CPU, Torch
-thread, or timeout policies that contradict the report policy. Before rerunning
+thread, exact Torch build, timeout, or engine-mode command fields that
+contradict the report policy and engine identity. PoseBusters validity cells
+must be evaluated Python booleans; missing, errored, or non-boolean cells abort
+the evidence run instead of becoming truthy validity results. Before rerunning
 an invalidated external receipt, the runner moves any old pose file to a
 timestamped `.stale-*` evidence file and requires the new process to create a
 fresh output.
