@@ -8,6 +8,10 @@ scientific claim from a package version.
 
 ### Changed
 
+- A capability-gated deterministic ETKDGv3 conformer-preparation contract now
+  generates an energy-ranked, heavy-atom Kabsch-RMSD-diverse ensemble with
+  stable conformer IDs and an exact prepared-state receipt. RDKit remains an
+  explicit lane dependency rather than a default Engine V2 dependency.
 - The authenticated torsion derivation schema and policy advance to `3.0.0`.
   Every ligand bond now receives a canonical rotor disposition. Bounded graph
   rules exclude amide, urea, carbamate, sulfonamide, conjugated, ring, aromatic,
@@ -25,9 +29,8 @@ scientific claim from a package version.
 
 ### Scientific boundary
 
-This stage does not add ring-conformer sampling, macrocycle docking,
-third-party-toolkit-equivalent chemical perception, docking-score validation,
-or benchmark evidence.
+This stage does not add ring-conformer or macrocycle sampling, scientific
+conformer-quality validation, docking-score validation, or benchmark evidence.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

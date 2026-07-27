@@ -305,6 +305,17 @@ charge-separated sulfonamide resonance forms are recognized. The profile is
 auditable from the receipt but is not a claim of equivalence to a complete
 external cheminformatics toolkit or scientific validation.
 
+`prepare_deterministic_conformer_ensemble(...)` is a capability-gated
+preparation API. When RDKit is available, it uses one-thread ETKDGv3 with an
+explicit seed, MMFF94 or UFF energy optimization, an energy window, and greedy
+heavy-atom Kabsch-RMSD diversity selection. The returned multi-model
+`AllAtomSystem` is cross-wired to stable conformer IDs and an immutable
+prepared-state receipt containing the exact configuration, RDKit version,
+candidate denominators, optimization rows, energy model, and output hashes.
+Missing RDKit, invalid SMILES, unsupported large ring systems, embedding
+failure, or unavailable energy parameters fail closed. The diversity metric is
+not symmetry-aware and the ensemble is not scientifically validated.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
