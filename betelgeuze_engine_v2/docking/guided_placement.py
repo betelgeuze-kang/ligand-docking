@@ -67,6 +67,7 @@ GUIDED_MODES = (
 UNIFORM_FALLBACK_MODE = "uniform_fallback"
 MAX_GUIDED_FEATURE_ATOMS = 2_048
 MAX_GUIDED_AROMATIC_SYSTEMS = 128
+MAX_GUIDED_RECEPTOR_BONDS_SCANNED = 1_000_000
 _CENTROID_TOLERANCE_ANGSTROM = 1.0e-10
 _FEATURE_KINDS = (
     "donor",
@@ -76,6 +77,10 @@ _FEATURE_KINDS = (
     "hydrophobic",
     "aromatic",
 )
+
+
+class _GuidanceUnavailable(RuntimeError):
+    """One guided mode is unavailable for one sampled conformer."""
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -145,26 +150,54 @@ def _coordinates_tuple(value: torch.Tensor) -> tuple[float, float, float]:
     return _tuple3(value.detach().to(dtype=torch.float64).tolist(), name="coordinate")
 
 
-def _adjacency(system: AllAtomSystem) -> tuple[tuple[int, ...], ...]:
-    rows = [set() for _ in range(system.atom_count)]
+def _adjacency(
+    system: AllAtomSystem,
+    *,
+    allowed_indices: set[int] | None = None,
+) -> dict[int, tuple[int, ...]]:
+    if allowed_indices is None:
+        retained = set(range(system.atom_count))
+    else:
+        retained = set(allowed_indices)
+        first_hop = set(retained)
+        for bond in system.bonds:
+            first, second = int(bond.atom_i), int(bond.atom_j)
+            if first in retained or second in retained:
+                first_hop.update((first, second))
+        retained = set(first_hop)
+        for bond in system.bonds:
+            first, second = int(bond.atom_i), int(bond.atom_j)
+            if first in first_hop or second in first_hop:
+                retained.update((first, second))
+    rows = {index: set() for index in retained}
     for bond in system.bonds:
         first, second = int(bond.atom_i), int(bond.atom_j)
-        rows[first].add(second)
-        rows[second].add(first)
-    return tuple(tuple(sorted(row)) for row in rows)
+        if first in retained and second in retained:
+            rows[first].add(second)
+            rows[second].add(first)
+    return {index: tuple(sorted(row)) for index, row in rows.items()}
 
 
-def _bond_by_pair(system: AllAtomSystem) -> dict[tuple[int, int], Any]:
+def _bond_by_pair(
+    system: AllAtomSystem,
+    *,
+    retained_indices: set[int] | None = None,
+) -> dict[tuple[int, int], Any]:
     return {
         tuple(sorted((int(bond.atom_i), int(bond.atom_j)))): bond
         for bond in system.bonds
+        if retained_indices is None
+        or (
+            int(bond.atom_i) in retained_indices
+            and int(bond.atom_j) in retained_indices
+        )
     }
 
 
 def _is_amide_or_sulfonamide_nitrogen(
     system: AllAtomSystem,
     atom_index: int,
-    adjacency: tuple[tuple[int, ...], ...],
+    adjacency: Mapping[int, tuple[int, ...]],
     bonds: Mapping[tuple[int, int], Any],
 ) -> bool:
     if system.atoms[atom_index].element.upper() != "N":
@@ -200,8 +233,11 @@ def _feature_indices(
     *,
     allowed_indices: set[int] | None = None,
 ) -> dict[str, tuple[int, ...]]:
-    adjacency = _adjacency(system)
-    bonds = _bond_by_pair(system)
+    adjacency = _adjacency(system, allowed_indices=allowed_indices)
+    bonds = _bond_by_pair(
+        system,
+        retained_indices=set(adjacency),
+    )
     donors: list[int] = []
     acceptors: list[int] = []
     positive: list[int] = []
@@ -298,7 +334,7 @@ def _hydrophobic_patches(
     allowed = set(int(index) for index in hydrophobic_indices)
     if allowed_indices is not None:
         allowed &= allowed_indices
-    adjacency = _adjacency(system)
+    adjacency = _adjacency(system, allowed_indices=allowed_indices)
     remaining = set(allowed)
     patches: list[tuple[int, ...]] = []
     while remaining:
@@ -609,6 +645,7 @@ class GuidedPlacementContext:
             "receptor_shape_atom_count": self.receptor_shape_atom_count,
             "shape_frame_available": bool(self.receptor_shape_axes),
             "ligand_shape_frame_available": self.ligand_shape_frame_available,
+            "max_receptor_bonds_scanned": MAX_GUIDED_RECEPTOR_BONDS_SCANNED,
             "chemistry_feature_perception_scientifically_validated": False,
             "claim_safe": False,
         }
@@ -720,6 +757,10 @@ def build_guided_placement_context(
         raise DockingAuthorityError("guided receptor system is cross-wired")
     if ligand_sha256 != authenticated_problem.ligand_system_sha256:
         raise DockingAuthorityError("guided ligand system is cross-wired")
+    if len(receptor_system.bonds) > MAX_GUIDED_RECEPTOR_BONDS_SCANNED:
+        raise DockingAuthorityError(
+            "guided receptor bond count exceeds its hard scan bound"
+        )
     receptor_coordinates = (
         receptor_system.coordinates[authenticated_problem.receptor_model_index]
         .detach()
@@ -892,7 +933,7 @@ def _principal_rotation(
 ) -> torch.Tensor:
     ligand_frame = _principal_axes(ligand_coordinates)
     if ligand_frame is None:
-        raise DockingAuthorityError("guided ligand shape frame is degenerate")
+        raise _GuidanceUnavailable("guided ligand shape frame is degenerate")
     ligand_axes = torch.tensor(ligand_frame, dtype=ligand_coordinates.dtype)
     target_axes = torch.tensor(receptor_axes, dtype=ligand_coordinates.dtype)
     rotation = target_axes @ ligand_axes.T
@@ -1061,7 +1102,7 @@ def _guided_transform(
         ]
         ligand_plane = _plane(conformer, ligand_system)
         if ligand_plane is None:
-            raise DockingAuthorityError("guided ligand aromatic plane is degenerate")
+            raise _GuidanceUnavailable("guided ligand aromatic plane is degenerate")
         ligand_normal = torch.tensor(ligand_plane[1], dtype=conformer.dtype)
         receptor_normal = torch.tensor(receptor_plane[2], dtype=conformer.dtype)
         rotation = _rotation_between(ligand_normal, receptor_normal)
@@ -1379,25 +1420,28 @@ def generate_guided_docking_proposals(
             local_axes=search_space.local_axes,
             root_positions=search_space.root_positions,
         ).coordinates
-        (
-            coordinates,
-            rotation,
-            translation,
-            ligand_anchor_indices,
-            receptor_anchor_indices,
-            requested_anchor_distance,
-            observed_anchor_distance,
-        ) = _guided_transform(
-            mode=mode,
-            context=context,
-            policy=selected_policy,
-            conformer=conformer,
-            base_rotation=base.rotation,
-            pocket_center=pocket_center,
-            translation_radius_angstrom=budget.translation_radius_angstrom,
-            seed=budget.seed,
-            proposal_index=proposal_index,
-        )
+        try:
+            (
+                coordinates,
+                rotation,
+                translation,
+                ligand_anchor_indices,
+                receptor_anchor_indices,
+                requested_anchor_distance,
+                observed_anchor_distance,
+            ) = _guided_transform(
+                mode=mode,
+                context=context,
+                policy=selected_policy,
+                conformer=conformer,
+                base_rotation=base.rotation,
+                pocket_center=pocket_center,
+                translation_radius_angstrom=budget.translation_radius_angstrom,
+                seed=budget.seed,
+                proposal_index=proposal_index,
+            )
+        except _GuidanceUnavailable:
+            continue
         centroid_offset = float(
             torch.linalg.vector_norm(coordinates.mean(dim=0) - pocket_center).item()
         )
@@ -1569,6 +1613,9 @@ __all__ = [
     "GUIDED_PLACEMENT_POLICY_SCHEMA_ID",
     "GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID",
     "GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID",
+    "MAX_GUIDED_AROMATIC_SYSTEMS",
+    "MAX_GUIDED_FEATURE_ATOMS",
+    "MAX_GUIDED_RECEPTOR_BONDS_SCANNED",
     "UNIFORM_FALLBACK_MODE",
     "GuidedPlacementContext",
     "GuidedPlacementPolicy",

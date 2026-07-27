@@ -336,7 +336,11 @@ receptor subset, feature context, policy, budget, per-proposal modes, feature
 counts, and proposal fingerprints to the failure-complete authenticated search.
 Proposal generation and search require the bound receptor and ligand systems
 and rederive the context before accepting a caller-provided context, so a
-self-consistent but fabricated feature projection fails closed.
+self-consistent but fabricated feature projection fails closed. Receptor
+feature perception keeps only a pocket-local two-hop adjacency and fails closed
+before scanning more than the exported receptor-bond hard bound. A guided mode
+whose sampled conformer geometry is degenerate falls back for that candidate
+without discarding the rest of the batch.
 These features and placements are auditable heuristics, not validated
 pharmacophore perception, docking accuracy, ranking evidence, or a product
 claim.

@@ -7,6 +7,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
+from betelgeuze_engine_v2.docking import guided_placement as guided_module  # noqa: E402
+
 from betelgeuze_engine_v2 import (  # noqa: E402
     AllAtomSystem,
     Atom,
@@ -32,6 +34,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     run_authenticated_guided_placement_search,
 )
 from betelgeuze_engine_v2.docking.guided_placement import (  # noqa: E402
+    _adjacency,
     _aromatic_systems,
     _feature_indices,
     _principal_axes,
@@ -571,6 +574,24 @@ def test_feature_capacity_is_applied_to_the_authenticated_pocket_subset() -> Non
     context = build_guided_placement_context(authority, receptor, ligand)
     assert len(context.receptor_feature_rows["hydrophobic"]) < 2_048
     assert max(authority.receptor_atom_indices) < base.atom_count
+    local_adjacency = _adjacency(
+        receptor,
+        allowed_indices=set(authority.receptor_atom_indices),
+    )
+    assert max(local_adjacency) < base.atom_count
+
+
+def test_receptor_bond_scan_work_is_hard_bounded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority, receptor, ligand = _authority()
+    monkeypatch.setattr(
+        guided_module,
+        "MAX_GUIDED_RECEPTOR_BONDS_SCANNED",
+        1,
+    )
+    with pytest.raises(DockingAuthorityError, match="bond count"):
+        build_guided_placement_context(authority, receptor, ligand)
 
 
 def test_degenerate_ligand_shape_and_aromatic_frames_use_uniform_fallback() -> None:
@@ -746,6 +767,31 @@ def test_repeated_principal_values_disable_shape_guidance() -> None:
         dtype=torch.float64,
     )
     assert _principal_axes(symmetric_ring) is None
+
+
+def test_sampled_degenerate_shape_frame_falls_back_per_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority, receptor, ligand = _authority()
+    context = build_guided_placement_context(authority, receptor, ligand)
+    baseline, _ = generate_pocket_centered_docking_proposals(authority, _budget())
+
+    def unavailable_shape(*args, **kwargs):
+        raise guided_module._GuidanceUnavailable("sampled shape frame is degenerate")
+
+    monkeypatch.setattr(guided_module, "_principal_rotation", unavailable_shape)
+    proposals, receipt = generate_guided_docking_proposals(
+        authority,
+        _budget(),
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+    )
+    shape_index = GUIDED_MODES.index("shape_complementarity")
+    assert receipt.proposal_modes[shape_index] == UNIFORM_FALLBACK_MODE
+    assert proposals[shape_index].fingerprint_sha256 == (
+        baseline[shape_index].fingerprint_sha256
+    )
 
 
 def test_guided_search_reuses_failure_complete_search_and_resets_override() -> None:

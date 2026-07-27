@@ -17,7 +17,8 @@ scientific claim from a package version.
   distances, feature counts, proposal fingerprints, budget, and search authority
   are cross-wired through immutable receipts. Proposal generation rederives the
   feature context from the required bound receptor and ligand systems before
-  accepting it.
+  accepting it. Receptor topology work uses a bounded pocket-local two-hop
+  adjacency, and sampled degenerate guidance falls back per candidate.
 - A capability-gated deterministic ETKDGv3 conformer-preparation contract now
   generates an energy-ranked, heavy-atom Kabsch-RMSD-diverse ensemble with
   stable conformer IDs and an exact prepared-state receipt. It rejects
