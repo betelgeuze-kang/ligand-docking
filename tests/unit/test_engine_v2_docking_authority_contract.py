@@ -153,8 +153,18 @@ def test_torsion_derivation_is_exact_and_fail_closed() -> None:
     assert receipt.root_atom_indices == (0,)
     assert receipt.rotatable_child_atom_indices == (2,)
     assert receipt.selected_model_coordinate_sha256 == receipt.zero_torsion_coordinate_sha256
-    with pytest.raises(DockingAuthorityError, match="ring closure"):
-        derive_authoritative_torsion_search_space(_ligand(ring=True))
+    ring_space, ring_receipt = derive_authoritative_torsion_search_space(
+        _ligand(ring=True)
+    )
+    assert ring_space.torsion_count == 0
+    assert ring_receipt.ring_bond_pairs == (
+        (0, 1),
+        (0, 3),
+        (1, 2),
+        (2, 3),
+    )
+    assert ring_receipt.rigid_ring_system_atom_indices == ((0, 1, 2, 3),)
+    assert ring_receipt.maximum_ring_cycle_size == 4
     with pytest.raises(DockingAuthorityError, match="connected ligand"):
         derive_authoritative_torsion_search_space(_ligand(disconnected=True))
 

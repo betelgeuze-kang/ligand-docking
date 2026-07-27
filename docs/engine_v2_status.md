@@ -95,7 +95,13 @@ The current `main` branch contains:
   insertion-code exact identity join across scheme, atom-site, and connection rows,
   while unresolved nonpoly components are never guessed to be cofactors;
 - an independent physics-term registry contract;
-- deterministic bounded docking proposal/search scaffolds;
+- deterministic bounded docking proposal/search scaffolds, including
+  deterministic bridge analysis that retains ordinary ring systems as rigid
+  components, exposes ring-system identity in the torsion derivation receipt,
+  and admits rotor candidates only on ring-external single, non-aromatic,
+  non-terminal heavy-atom bonds without declared stereo. Rings whose shortest
+  retained cycle contains 12 or more atoms fail closed as unsupported
+  macrocycles;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -372,6 +378,10 @@ not currently establish:
   text/token/category-order/comment/whitespace round trip, or a
   parameterable `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
+- macrocycle docking, ring conformer sampling, or chemistry-complete rotor
+  perception. Ordinary supported ring systems are rigid; amide, urea,
+  carbamate, sulfonamide, conjugation, and other chemistry-aware rotor
+  exclusions remain a separate validation stage;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
   representative public holdout; the frozen four-case protocol fixture is not a
   benchmark result;

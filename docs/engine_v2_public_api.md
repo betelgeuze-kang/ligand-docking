@@ -286,6 +286,13 @@ Their schema IDs and serialized receipts are versioned, but Python convenience
 signatures may change before the distribution reaches `1.0.0`. Callers should
 pin the distribution version and validate schema IDs.
 
+The provisional docking authority supports ordinary ring-containing ligands
+only as rigid ring systems. Its derivation receipt records ring bonds, rigid
+ring-system atom sets, and the largest detected cycle. Macrocycles with a
+detected cycle size of 12 atoms or more fail closed. This is not yet
+chemistry-complete rotor perception, ring-closure sampling, or ring-conformer
+sampling.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
