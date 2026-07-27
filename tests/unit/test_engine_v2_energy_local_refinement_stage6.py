@@ -33,6 +33,8 @@ from betelgeuze_engine_v2.docking.energy_refinement import (  # noqa: E402
     EnergyRefinementError,
     run_authenticated_energy_refined_scorer_v1_guided_search,
 )
+from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint  # noqa: E402
+from betelgeuze_engine_v2.docking.proposals import _proposal_fingerprint  # noqa: E402
 from betelgeuze_engine_v2.molecular import canonical_topology_sha256  # noqa: E402
 from betelgeuze_engine_v2.physics.reference_minimization import (  # noqa: E402
     ReferenceMinimizationConfig,
@@ -275,6 +277,38 @@ def _refiner(
     )
 
 
+class _ShiftedPoseRefiner(EnergyBasedLocalRefiner):
+    def refine(self, proposal, *, max_steps):
+        refined = super().refine(proposal, max_steps=max_steps)
+        shifted = refined.coordinates + torch.tensor(
+            [0.2, 0.0, 0.0],
+            dtype=refined.coordinates.dtype,
+        )
+        coordinate_sha256 = coordinate_fingerprint(shifted)
+        fingerprint_sha256 = _proposal_fingerprint(
+            proposal_index=refined.proposal_index,
+            seed=refined.seed,
+            torsion_angles=refined.torsion_angles,
+            rotation=refined.rotation,
+            translation=refined.translation,
+            problem_fingerprint_sha256=refined.problem_fingerprint_sha256,
+            search_space_fingerprint_sha256=(refined.search_space_fingerprint_sha256),
+            coordinate_fingerprint_sha256=coordinate_sha256,
+            parent_proposal_fingerprint_sha256=(
+                refined.parent_proposal_fingerprint_sha256
+            ),
+            refiner_id=refined.refiner_id,
+            refiner_version=refined.refiner_version,
+            refinement_receipt_sha256=refined.refinement_receipt_sha256,
+        )
+        return replace(
+            refined,
+            coordinates=shifted,
+            coordinate_fingerprint_sha256=coordinate_sha256,
+            fingerprint_sha256=fingerprint_sha256,
+        )
+
+
 def test_ligand_internal_reference_energy_refinement_is_bounded_and_auditable():
     authority, _, ligand = _authority()
     proposal = _proposal(authority)
@@ -428,6 +462,8 @@ def test_attempt_constructor_rejects_coordinate_and_counter_forgery():
         replace(attempt, accepted_iterations=attempt.max_steps + 1)
     with pytest.raises(EnergyRefinementError, match="must be an integer"):
         replace(attempt, evaluation_count=0.0)
+    with pytest.raises(EnergyRefinementError, match="counters are inconsistent"):
+        replace(attempt, evaluation_count=attempt.evaluation_count + 1)
     with pytest.raises(EnergyRefinementError, match="outcome evidence"):
         replace(
             attempt,
@@ -441,6 +477,31 @@ def test_attempt_constructor_rejects_coordinate_and_counter_forgery():
             minimization_status="converged",
             converged=True,
             minimization_failure_code="fake",
+        )
+
+
+def test_attempt_rejects_displacement_beyond_accepted_step_budget():
+    authority, _, ligand = _authority()
+    proposal = _proposal(authority)
+    coordinates = proposal.coordinates.clone()
+    coordinates[4, 0] -= 0.4
+    source = proposal.with_refined_coordinates(
+        coordinates,
+        refiner_id="energy-refinement-displacement-bound-fixture",
+        refiner_version="1.0.0",
+    )
+    refiner = _refiner(authority, ligand)
+    refiner.refine(source, max_steps=7)
+    attempt = refiner.attempt_for(source.fingerprint_sha256)
+    assert attempt.accepted_iterations > 0
+    assert float(attempt.maximum_displacement_angstrom) > 0.0
+    impossible_per_step = float(attempt.maximum_displacement_angstrom) / (
+        2.0 * attempt.accepted_iterations
+    )
+    with pytest.raises(EnergyRefinementError, match="exceeds the step bound"):
+        replace(
+            attempt,
+            maximum_atom_displacement_per_step_angstrom=impossible_per_step,
         )
 
 
@@ -655,6 +716,33 @@ def test_energy_refined_result_rejects_forged_effective_config_identity():
 
     with pytest.raises(EnergyRefinementError, match="attempt identity"):
         replace(result, refiner=forged_refiner, rows=tuple(rows))
+
+
+def test_energy_refined_search_rejects_pose_coordinates_not_in_attempt():
+    authority, receptor, ligand = _authority()
+    refiner = _ShiftedPoseRefiner(
+        authority,
+        ligand,
+        _parameters(ligand),
+        implementation_source_sha256="e" * 64,
+        config=_config(),
+    )
+    with pytest.raises(EnergyRefinementError, match="refined proposal receipt"):
+        run_authenticated_energy_refined_scorer_v1_guided_search(
+            authority,
+            _guided_budget(seed=1331),
+            ChemistryPoseScorerV1(
+                authority,
+                receptor,
+                ligand,
+                implementation_source_sha256="f" * 64,
+            ),
+            build_guided_placement_context(authority, receptor, ligand),
+            refiner,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            diversity_rmsd_angstrom=0.0,
+        )
 
 
 def test_energy_refined_search_rejects_same_problem_different_authority():

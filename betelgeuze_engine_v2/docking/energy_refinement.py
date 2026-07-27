@@ -233,6 +233,7 @@ class EnergyRefinementAttempt:
     refiner_config_fingerprint_sha256: str
     effective_minimization_config_fingerprint_sha256: str
     max_steps: int
+    maximum_atom_displacement_per_step_angstrom: float
     status: str
     pre_coordinates_sha256: str
     pre_coordinates_binary64_hex: tuple[tuple[str, str, str], ...]
@@ -270,6 +271,15 @@ class EnergyRefinementAttempt:
             minimum=1,
             maximum=1_000_000,
         )
+        per_step_displacement = _finite(
+            self.maximum_atom_displacement_per_step_angstrom,
+            name="maximum_atom_displacement_per_step_angstrom",
+            minimum=0.0,
+        )
+        if per_step_displacement <= 0.0:
+            raise EnergyRefinementError(
+                "maximum_atom_displacement_per_step_angstrom must be positive"
+            )
         for name in (
             "source_proposal_fingerprint_sha256",
             "authority_input_receipt_sha256",
@@ -390,12 +400,16 @@ class EnergyRefinementAttempt:
                 raise EnergyRefinementError(
                     "accepted iterations exceed the requested step bound"
                 )
-            if self.evaluation_count < 1 or (
-                self.accepted_iterations + self.rejected_evaluations
-                > self.evaluation_count
+            if self.evaluation_count != (
+                1 + self.accepted_iterations + self.rejected_evaluations
             ):
                 raise EnergyRefinementError(
                     "refinement evaluation counters are inconsistent"
+                )
+            displacement_bound = self.accepted_iterations * per_step_displacement
+            if displacement > displacement_bound + 1.0e-12:
+                raise EnergyRefinementError(
+                    "maximum refinement displacement exceeds the step bound"
                 )
             if (
                 self.public_error_code
@@ -449,6 +463,11 @@ class EnergyRefinementAttempt:
         object.__setattr__(self, "candidate_id", candidate_id)
         object.__setattr__(self, "proposal_index", proposal_index)
         object.__setattr__(self, "max_steps", max_steps)
+        object.__setattr__(
+            self,
+            "maximum_atom_displacement_per_step_angstrom",
+            per_step_displacement,
+        )
         object.__setattr__(self, "parameter_set_id", parameter_set_id)
         object.__setattr__(self, "parameter_set_version", parameter_set_version)
         object.__setattr__(self, "status", status)
@@ -484,6 +503,9 @@ class EnergyRefinementAttempt:
                 self.effective_minimization_config_fingerprint_sha256
             ),
             "max_steps": self.max_steps,
+            "maximum_atom_displacement_per_step_angstrom_binary64_hex": (
+                self.maximum_atom_displacement_per_step_angstrom.hex()
+            ),
             "status": self.status,
             "pre_coordinates_sha256": self.pre_coordinates_sha256,
             "pre_coordinates_binary64_hex": [
@@ -702,6 +724,9 @@ class EnergyBasedLocalRefiner:
                 effective_config.fingerprint_sha256
             ),
             "max_steps": steps,
+            "maximum_atom_displacement_per_step_angstrom": (
+                effective_config.maximum_atom_displacement_angstrom
+            ),
             "pre_coordinates_sha256": coordinate_fingerprint(pre_coordinates),
             "pre_coordinates_binary64_hex": _coordinate_hex(pre_coordinates),
         }
@@ -981,6 +1006,8 @@ class EnergyRefinedGuidedSearchResult:
                     self.refiner.config.minimization,
                     max_iterations=attempt.max_steps,
                 ).fingerprint_sha256
+                or attempt.maximum_atom_displacement_per_step_angstrom.hex()
+                != self.refiner.config.minimization.maximum_atom_displacement_angstrom.hex()
                 or attempt.receipt_sha256
                 != self.refiner.attempt_for(
                     source.proposal_fingerprint_sha256
@@ -997,6 +1024,8 @@ class EnergyRefinedGuidedSearchResult:
                     != source.proposal_fingerprint_sha256
                     or source.proposal.refinement_receipt_sha256
                     != attempt.receipt_sha256
+                    or source.proposal.coordinate_fingerprint_sha256
+                    != attempt.post_coordinates_sha256
                 ):
                     raise EnergyRefinementError(
                         "refined proposal receipt is cross-wired"
