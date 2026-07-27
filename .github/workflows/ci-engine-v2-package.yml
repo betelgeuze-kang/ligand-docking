@@ -31,7 +31,7 @@ concurrency:
 jobs:
   independent-wheel:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -113,6 +113,7 @@ jobs:
           "$venv/bin/python" -m pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           "$venv/bin/python" -m pip install --no-deps dist-engine-v2/*.whl
           "$venv/bin/python" -m pip check
+          test -x "$venv/bin/betelgeuze-engine-v2"
 
       - name: Import wheel outside checkout and verify package isolation
         shell: bash
@@ -128,6 +129,12 @@ jobs:
           import importlib.util
           import sys
           import betelgeuze_engine_v2 as engine
+          from betelgeuze_engine_v2.cli import (
+              CLI_DOCKING_RESULT_SCHEMA_ID,
+              EngineV2CliError,
+              main,
+              run_canonical_docking,
+          )
           from betelgeuze_engine_v2.docking import (
               AuthenticatedDockingProblem,
               ElementAwarePoseValidityContext,
@@ -152,7 +159,11 @@ jobs:
           assert metadata.version("betelgeuze-engine-v2") == engine.DISTRIBUTION_VERSION
           assert engine.DISTRIBUTION_NAME == "betelgeuze-engine-v2"
           assert engine.__version__ == engine.ENGINE_API_VERSION
+          assert CLI_DOCKING_RESULT_SCHEMA_ID.endswith("/1.0.0")
           for value in (
+              EngineV2CliError,
+              main,
+              run_canonical_docking,
               AuthenticatedDockingProblem,
               ElementAwarePoseValidityContext,
               ElementAwareValidityError,
@@ -178,6 +189,109 @@ jobs:
           assert importlib.util.find_spec("train") is None
           assert not any(name == "api" or name.startswith("api.") for name in sys.modules)
           assert not any(name == "core" or name.startswith("core.") for name in sys.modules)
+          PY
+
+      - name: Run installed canonical CLI outside checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="/tmp/betelgeuze-engine-v2-${{ matrix.python-version }}"
+          outside="/tmp/engine-v2-outside-${{ matrix.python-version }}"
+          cd "$outside"
+          "$venv/bin/betelgeuze-engine-v2" --help
+          "$venv/bin/betelgeuze-engine-v2" dock-canonical --help
+          "$venv/bin/python" - <<'PY'
+          from pathlib import Path
+          import json
+          import torch
+          from betelgeuze_engine_v2 import (
+              AllAtomSystem,
+              Atom,
+              Bond,
+              Chain,
+              Residue,
+              StructureProvenance,
+          )
+          from betelgeuze_engine_v2.cli import CLI_POCKET_INPUT_SCHEMA_ID
+          from betelgeuze_engine_v2.molecular import write_canonical_system_json
+
+          def provenance(name: str, digest: str) -> StructureProvenance:
+              return StructureProvenance(
+                  source_format="package-smoke",
+                  source_id=name,
+                  source_sha256=digest,
+                  parser_name="package-smoke",
+                  parser_version="1.0.0",
+              )
+
+          ligand = AllAtomSystem(
+              system_id="package-smoke-ligand",
+              atoms=(
+                  Atom(index=0, name="C1", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=1, name="N1", element="N", atomic_number=7, residue_index=0),
+                  Atom(index=2, name="C2", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=3, name="O1", element="O", atomic_number=8, residue_index=0),
+              ),
+              bonds=(
+                  Bond(index=0, atom_i=0, atom_j=1, order=1.0),
+                  Bond(index=1, atom_i=1, atom_j=2, order=1.0),
+                  Bond(index=2, atom_i=2, atom_j=3, order=1.0),
+              ),
+              residues=(Residue(index=0, name="LIG", chain_index=0, sequence_number=1, atom_indices=(0, 1, 2, 3)),),
+              chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+              coordinates=torch.tensor([[[0.0, 0.0, 0.0], [1.4, 0.0, 0.0], [2.8, 0.3, 0.0], [4.1, 1.0, 0.2]]], dtype=torch.float64),
+              provenance=provenance("package-smoke-ligand", "a" * 64),
+          )
+          receptor = AllAtomSystem(
+              system_id="package-smoke-receptor",
+              atoms=(
+                  Atom(index=0, name="R1", element="C", atomic_number=6, residue_index=0),
+                  Atom(index=1, name="R2", element="C", atomic_number=6, residue_index=0),
+              ),
+              bonds=(),
+              residues=(Residue(index=0, name="REC", chain_index=0, sequence_number=1, atom_indices=(0, 1)),),
+              chains=(Chain(index=0, chain_id="A", residue_indices=(0,)),),
+              coordinates=torch.tensor([[[0.0, 0.0, 0.0], [5.0, 0.0, 0.0]]], dtype=torch.float64),
+              provenance=provenance("package-smoke-receptor", "b" * 64),
+          )
+          write_canonical_system_json(receptor, Path("receptor.json"))
+          write_canonical_system_json(ligand, Path("ligand.json"))
+          pocket = {
+              "schema_id": CLI_POCKET_INPUT_SCHEMA_ID,
+              "scope": "known_pocket_docking",
+              "method_id": "package-smoke-sphere",
+              "method_version": "1.0.0",
+              "coordinate_frame_id": "prepared-receptor-frame-v1",
+              "center_angstrom": [2.5, 2.0, 0.0],
+              "radius_angstrom": 12.0,
+              "source_artifact_sha256": "c" * 64,
+              "implementation_source_sha256": "d" * 64,
+          }
+          Path("pocket.json").write_bytes(json.dumps(pocket, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")).encode("ascii") + b"\n")
+          PY
+          "$venv/bin/betelgeuze-engine-v2" dock-canonical \
+            --receptor receptor.json \
+            --ligand ligand.json \
+            --pocket pocket.json \
+            --output result.json \
+            --candidate-count 2 \
+            --top-k 1 \
+            --max-torsions 1 \
+            --translation-radius-angstrom 1.0 \
+            --seed 151
+          "$venv/bin/python" - <<'PY'
+          from pathlib import Path
+          import json
+          from betelgeuze_engine_v2.cli import CLI_DOCKING_RESULT_SCHEMA_ID
+
+          document = json.loads(Path("result.json").read_bytes())
+          assert document["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
+          assert document["candidate_count"] == 2
+          assert document["success_count"] + document["failure_count"] == 2
+          assert document["scorer_source_preimport_attested"] is False
+          assert document["chemistry_inference_performed"] is False
+          assert document["calibrated"] is False
+          assert document["claim_safe"] is False
           PY
 
       - name: Upload reproducible wheel and digest
