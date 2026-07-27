@@ -5,6 +5,10 @@ primitives, and a fail-closed CPU orchestrator. It is not a calibrated docking,
 MD, free-energy, GPU, or product engine.
 """
 
+# Stack installers intentionally run before the public symbols they patch are
+# rebound below.
+# ruff: noqa: E402
+
 import sys as _sys
 
 from .ai import (

@@ -2,6 +2,8 @@ name: ci-engine-v2-top-stack
 
 on:
   pull_request:
+  push:
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -33,7 +35,7 @@ jobs:
 
   focused-security-and-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -85,6 +87,13 @@ jobs:
             tests/unit/test_engine_v2_authenticated_public_evaluator.py \
             tests/unit/test_engine_v2_evidence_contracts.py \
             tests/unit/test_engine_v2_evidence_contracts_v3.py \
+            tests/unit/test_engine_v2_stack_round1_hardening.py \
+            tests/unit/test_engine_v2_stack_round2_evaluator.py \
+            tests/unit/test_engine_v2_stack_round3_molecular.py \
+            tests/unit/test_engine_v2_stack_round3_compatibility.py \
+            tests/unit/test_engine_v2_docking_authority_contract.py \
+            tests/unit/test_engine_v2_docking_authority_search.py \
+            tests/unit/test_engine_v2_release_integration_cut_b.py \
             tests/unit/test_engine_v2_reference_minimization_validation_dependency_identity.py \
             tests/unit/test_engine_v2_reference_minimization_validation_preimport_binding.py \
             tests/unit/test_engine_v2_reference_minimization_validation_bootstrap_e2e.py \
