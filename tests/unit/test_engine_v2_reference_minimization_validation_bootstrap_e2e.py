@@ -27,9 +27,15 @@ def _request() -> dict[str, object]:
         "artifact_output_root": "/private/artifacts",
         "authorization_nonce_sha256": "1" * 64,
         "authorization_receipt": {"signed": True},
-        "review_attestation": {"reviewed": True},
+        "review_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": "7" * 64,
+        },
         "expected_implementation_author_identity_sha256": "2" * 64,
-        "network_isolation_attestation": {"network_disabled": True},
+        "network_isolation_attestation": {
+            "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID,
+            "attestation_sha256": "8" * 64,
+        },
         "expected_code_commit_sha": "3" * 40,
         "expected_runner_source_sha256": "4" * 64,
         "expected_dependency_artifact_sha256_rows": dict(DEPENDENCIES),
@@ -37,6 +43,22 @@ def _request() -> dict[str, object]:
         "revoked_review_attestation_sha256s": [],
         "externally_conflicting_nonce_sha256s": [],
         "revoked_network_attestation_sha256s": [],
+    }
+
+
+def _trust_payload() -> dict[str, object]:
+    return {
+        "schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID,
+        "reviewer_keys": [{}],
+        "operator_keys": [{}],
+        "revoked_authorization_receipt_sha256s": [],
+        "revoked_review_attestation_sha256s": [],
+        "externally_conflicting_nonce_sha256s": [],
+        "revoked_network_attestation_sha256s": [],
+        "superseded_operator_key_ids": [],
+        "superseded_reviewer_key_ids": [],
+        "minimum_authorization_receipt_schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID,
+        "minimum_review_attestation_schema_id": bootstrap._REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID,
     }
 
 
@@ -56,7 +78,7 @@ def test_verified_request_runs_environment_runner_and_writer_in_order(
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_trust_store_payload",
-        lambda: {"reviewer_keys": [{}], "operator_keys": [{}]},
+        _trust_payload,
     )
     monkeypatch.setattr(
         bootstrap,
@@ -98,7 +120,12 @@ def test_verified_request_runs_environment_runner_and_writer_in_order(
         write_result,
     )
 
-    response = bootstrap._execute_verified_request(b"ignored", _request())
+    trust_payload = bootstrap._load_bootstrap_trust_store_payload()
+    response = bootstrap._execute_verified_request(
+        b"ignored",
+        _request(),
+        expected_trust_store_sha256=bootstrap._sha256(trust_payload),
+    )
 
     assert calls == ["determinism", "environment", "runner", "writer"]
     assert response["environment_receipt_sha256"] == "5" * 64
@@ -124,6 +151,7 @@ def test_environment_and_observation_do_not_complete_a_failed_result_write(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[str] = []
+    trust_payload = _trust_payload()
     monkeypatch.setattr(
         bootstrap,
         "_configure_deterministic_torch_runtime",
@@ -132,7 +160,7 @@ def test_environment_and_observation_do_not_complete_a_failed_result_write(
     monkeypatch.setattr(
         bootstrap,
         "_load_bootstrap_trust_store_payload",
-        lambda: {"reviewer_keys": [{}], "operator_keys": [{}]},
+        lambda: trust_payload,
     )
     monkeypatch.setattr(
         bootstrap,
@@ -171,7 +199,11 @@ def test_environment_and_observation_do_not_complete_a_failed_result_write(
     )
 
     with pytest.raises(RuntimeError, match="was not persisted"):
-        bootstrap._execute_verified_request(b"ignored", _request())
+        bootstrap._execute_verified_request(
+            b"ignored",
+            _request(),
+            expected_trust_store_sha256=bootstrap._sha256(trust_payload),
+        )
 
     assert calls == ["determinism", "environment", "runner", "writer"]
 
@@ -188,16 +220,27 @@ def test_bootstrap_main_emits_one_canonical_response_after_all_boundaries(
     }
     observed: list[str] = []
 
+    finder = SimpleNamespace(verify_repository_binding=lambda: observed.append("finder"))
     monkeypatch.setattr(
         bootstrap,
         "_prepare_isolated_import_boundary",
-        lambda: ("bootstrap", "/checkout", ("/dependencies",), ("/checkout",)),
+        lambda: (
+            "bootstrap",
+            "/checkout",
+            ("/dependencies",),
+            ("/dependencies",),
+            "7" * 64,
+            "8" * 64,
+        ),
     )
+    monkeypatch.setattr(bootstrap, "_require_verified_source_finder", lambda: finder)
     monkeypatch.setattr(bootstrap, "_read_bootstrap_request", lambda: (raw, request))
     monkeypatch.setattr(
         bootstrap,
         "_require_signed_clean_checkout_before_import",
-        lambda repository_root, supplied: (observed.append("source") or dict(DEPENDENCIES)),
+        lambda repository_root, supplied: (
+            observed.append("source") or (dict(DEPENDENCIES), "9" * 64)
+        ),
     )
     monkeypatch.setattr(
         bootstrap,
@@ -207,12 +250,14 @@ def test_bootstrap_main_emits_one_canonical_response_after_all_boundaries(
     monkeypatch.setattr(
         bootstrap,
         "_execute_verified_request",
-        lambda supplied_raw, supplied_request: (observed.append("execute") or response),
+        lambda supplied_raw, supplied_request, **kwargs: (
+            observed.append("execute") or response
+        ),
     )
     monkeypatch.setattr(bootstrap.sys, "stdout", SimpleNamespace(buffer=output))
 
     assert bootstrap.main() == 0
-    assert observed == ["source", "dependencies", "execute"]
+    assert observed == ["source", "dependencies", "finder", "execute"]
     assert output.getvalue() == bootstrap._canonical_bytes(response) + b"\n"
     assert json.loads(output.getvalue()) == response
 

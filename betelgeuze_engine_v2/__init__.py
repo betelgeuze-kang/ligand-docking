@@ -5,6 +5,8 @@ primitives, and a fail-closed CPU orchestrator. It is not a calibrated docking,
 MD, free-energy, GPU, or product engine.
 """
 
+import sys as _sys
+
 from .ai import (
     EnergyForcePrediction,
     KinematicResult,
@@ -94,6 +96,20 @@ from .physics import (
     project_rigid_body_forces,
 )
 
+_VERIFIED_SOURCE_FINDER_ATTRIBUTE = (
+    "_betelgeuze_reference_minimization_validation_source_finder"
+)
+if hasattr(_sys, _VERIFIED_SOURCE_FINDER_ATTRIBUTE):
+    from .runtime_snapshot_hardening import (
+        install_verified_source_runtime_hardening as _install_verified_source_runtime_hardening,
+    )
+
+    VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256 = (
+        _install_verified_source_runtime_hardening()
+    )
+else:
+    VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256 = ""
+
 __version__ = ENGINE_API_VERSION
 
 __all__ = [
@@ -113,6 +129,7 @@ __all__ = [
     "REFERENCE_EXECUTION_MODE",
     "RIGID_PROJECTION_NOTE",
     "RUNTIME_INPUT_SCHEMA_VERSION",
+    "VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256",
     "VERSION_TAXONOMY",
     "AllAtomSystem",
     "Atom",

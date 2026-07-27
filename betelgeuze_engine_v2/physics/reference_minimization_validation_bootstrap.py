@@ -11,6 +11,8 @@ closed.
 from __future__ import annotations
 
 import hashlib
+import importlib.abc
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -18,6 +20,7 @@ import stat
 import subprocess
 import sys
 import sysconfig
+import types
 
 
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH = (
@@ -38,6 +41,29 @@ REFERENCE_MINIMIZATION_VALIDATION_LOGICAL_RUNNER_ARGV = (
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE = (
     "_betelgeuze_reference_minimization_validation_bootstrap_state"
 )
+REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE = (
+    "_betelgeuze_reference_minimization_validation_source_finder"
+)
+REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE = (
+    "_betelgeuze_reference_minimization_validation_source_manifest_sha256"
+)
+REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/2.0.0"
+)
+REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_FILES = 4_096
+REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_FILE_BYTES = 8 * 1_048_576
+REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_TOTAL_BYTES = 64 * 1_048_576
+_SOURCE_PATH_PRIMITIVES_AVAILABLE = (
+    os.name == "posix"
+    and all(
+        hasattr(os, name)
+        for name in ("O_CLOEXEC", "O_DIRECTORY", "O_NOFOLLOW")
+    )
+    and os.open in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+    and os.listdir in os.supports_fd
+)
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_MAX_REQUEST_BYTES = 1_048_576
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_MAX_BYTES = 65_536
 REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_TRUST_STORE_PATH = (
@@ -47,7 +73,28 @@ REFERENCE_MINIMIZATION_VALIDATION_RUNNER_RESPONSE_SCHEMA_ID = (
     "betelgeuze.engine_v2_reference_minimization_validation_runner_response/1.0.0"
 )
 _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_reference_minimization_validation_trust_store/1.0.0"
+    "betelgeuze.engine_v2_reference_minimization_validation_trust_store/2.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_review_attestation/1.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_reference_minimization_validation_network_isolation_attestation/1.0.0"
+)
+_REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS = frozenset(
+    {
+        "schema_id",
+        "reviewer_keys",
+        "operator_keys",
+        "revoked_authorization_receipt_sha256s",
+        "revoked_review_attestation_sha256s",
+        "externally_conflicting_nonce_sha256s",
+        "revoked_network_attestation_sha256s",
+        "superseded_operator_key_ids",
+        "superseded_reviewer_key_ids",
+        "minimum_authorization_receipt_schema_id",
+        "minimum_review_attestation_schema_id",
+    }
 )
 _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_SIGNATURE_ALGORITHM = "ed25519"
 _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID = (
@@ -184,6 +231,132 @@ def _require_string_sequence(value: object, *, name: str) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _require_sorted_unique_digest_sequence(
+    value: object, *, name: str
+) -> tuple[str, ...]:
+    rows = _require_string_sequence(value, name=name)
+    normalized = tuple(
+        _require_lower_hex(item, length=64, name=name) for item in rows
+    )
+    if normalized != tuple(sorted(set(normalized))):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} must be uniquely sorted"
+        )
+    return normalized
+
+
+def _require_sorted_unique_key_id_sequence(
+    value: object, *, name: str
+) -> tuple[str, ...]:
+    rows = _require_string_sequence(value, name=name)
+    normalized = tuple(_require_key_id(item, name=name) for item in rows)
+    if normalized != tuple(sorted(set(normalized))):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} must be uniquely sorted"
+        )
+    return normalized
+
+
+def _require_embedded_receipt_sha256(
+    value: object, *, field_name: str, name: str
+) -> str:
+    if not isinstance(value, dict):
+        raise _ReferenceMinimizationValidationBootstrapError(f"{name} is invalid")
+    return _require_lower_hex(
+        value.get(field_name), length=64, name=f"{name} {field_name}"
+    )
+
+
+def _require_trusted_revocation_state(
+    request: dict[str, object], trust_payload: dict[str, object]
+) -> dict[str, tuple[str, ...]]:
+    state = {
+        "revoked_authorization_receipt_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("revoked_authorization_receipt_sha256s"),
+                name="trusted revoked authorization receipts",
+            )
+        ),
+        "revoked_review_attestation_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("revoked_review_attestation_sha256s"),
+                name="trusted revoked review attestations",
+            )
+        ),
+        "externally_conflicting_nonce_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("externally_conflicting_nonce_sha256s"),
+                name="trusted externally conflicting nonces",
+            )
+        ),
+        "revoked_network_attestation_sha256s": (
+            _require_sorted_unique_digest_sequence(
+                trust_payload.get("revoked_network_attestation_sha256s"),
+                name="trusted revoked network attestations",
+            )
+        ),
+        "superseded_operator_key_ids": _require_sorted_unique_key_id_sequence(
+            trust_payload.get("superseded_operator_key_ids"),
+            name="trusted superseded operator keys",
+        ),
+        "superseded_reviewer_key_ids": _require_sorted_unique_key_id_sequence(
+            trust_payload.get("superseded_reviewer_key_ids"),
+            name="trusted superseded reviewer keys",
+        ),
+    }
+    for request_field in (
+        "revoked_authorization_receipt_sha256s",
+        "revoked_review_attestation_sha256s",
+        "externally_conflicting_nonce_sha256s",
+        "revoked_network_attestation_sha256s",
+    ):
+        request_rows = _require_sorted_unique_digest_sequence(
+            request.get(request_field), name=f"bootstrap request {request_field}"
+        )
+        if request_rows != state[request_field]:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "bootstrap request revocation state does not match the trusted store"
+            )
+    nonce = _require_lower_hex(
+        request.get("authorization_nonce_sha256"),
+        length=64,
+        name="bootstrap request authorization nonce",
+    )
+    if nonce in state["externally_conflicting_nonce_sha256s"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap authorization nonce is externally conflicting"
+        )
+    review = request.get("review_attestation")
+    review_sha256 = _require_embedded_receipt_sha256(
+        review, field_name="attestation_sha256", name="bootstrap review attestation"
+    )
+    if not isinstance(review, dict) or review.get("schema_id") != trust_payload.get(
+        "minimum_review_attestation_schema_id"
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap review attestation schema is below the trusted minimum"
+        )
+    if review_sha256 in state["revoked_review_attestation_sha256s"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap review attestation is externally revoked"
+        )
+    network = request.get("network_isolation_attestation")
+    network_sha256 = _require_embedded_receipt_sha256(
+        network, field_name="attestation_sha256", name="bootstrap network attestation"
+    )
+    if not isinstance(network, dict) or network.get("schema_id") != (
+        _REFERENCE_MINIMIZATION_VALIDATION_NETWORK_ATTESTATION_SCHEMA_ID
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap network attestation schema is unsupported"
+        )
+    if network_sha256 in state["revoked_network_attestation_sha256s"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap network attestation is externally revoked"
+        )
+    return state
+
+
 def _require_dependency_artifact_row_mapping(
     value: object,
     *,
@@ -244,50 +417,571 @@ def _require_signed_dependency_artifact_rows(value: object) -> dict[str, str]:
     )
 
 
-def reference_minimization_validation_execution_source_sha256() -> str:
-    """Bind the stdlib bootstrap, dependency helper, and bounded runner."""
+def _source_stat_signature(file_stat: os.stat_result) -> tuple[int, ...]:
+    return (
+        int(file_stat.st_dev),
+        int(file_stat.st_ino),
+        int(file_stat.st_uid),
+        int(file_stat.st_gid),
+        int(file_stat.st_mode),
+        int(file_stat.st_nlink),
+        int(file_stat.st_size),
+        int(file_stat.st_mtime_ns),
+        int(file_stat.st_ctime_ns),
+    )
 
-    physics_root = os.path.dirname(reference_minimization_validation_bootstrap_path())
-    source_rows: list[dict[str, str]] = []
-    for relative_path in (
+
+def _require_source_directory_stat(file_stat: os.stat_result) -> None:
+    if not stat.S_ISDIR(file_stat.st_mode):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source ancestry contains a non-directory"
+        )
+
+
+def _require_source_regular_file_stat(file_stat: os.stat_result) -> None:
+    if (
+        not stat.S_ISREG(file_stat.st_mode)
+        or file_stat.st_nlink != 1
+        or not 0 <= file_stat.st_size
+        <= REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_FILE_BYTES
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source is not a bounded single-link regular file"
+        )
+
+
+def _canonical_source_absolute_path(raw_path: object, *, name: str) -> str:
+    try:
+        raw = os.fspath(raw_path)
+    except TypeError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} is invalid"
+        ) from exc
+    if (
+        not isinstance(raw, str)
+        or not raw
+        or "\x00" in raw
+        or not os.path.isabs(raw)
+        or os.path.normpath(raw) != raw
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            f"{name} is not a canonical absolute path"
+        )
+    return raw
+
+
+def _source_lstat_at(directory_fd: int, component: str) -> os.stat_result:
+    return os.stat(component, dir_fd=directory_fd, follow_symlinks=False)
+
+
+def _open_source_child_directory(parent_fd: int, component: str) -> int:
+    if (
+        not isinstance(component, str)
+        or not component
+        or component in {".", ".."}
+        or os.sep in component
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source directory component is invalid"
+        )
+    directory_flags = os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW
+    path_before = _source_lstat_at(parent_fd, component)
+    _require_source_directory_stat(path_before)
+    next_fd = -1
+    try:
+        next_fd = os.open(component, directory_flags, dir_fd=parent_fd)
+        opened = os.fstat(next_fd)
+        path_after = _source_lstat_at(parent_fd, component)
+        _require_source_directory_stat(opened)
+        _require_source_directory_stat(path_after)
+        if not (
+            _source_stat_signature(path_before)
+            == _source_stat_signature(opened)
+            == _source_stat_signature(path_after)
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source directory changed while it was opened"
+            )
+        result = next_fd
+        next_fd = -1
+        return result
+    except _ReferenceMinimizationValidationBootstrapError:
+        raise
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source directory cannot be opened securely"
+        ) from exc
+    finally:
+        if next_fd >= 0:
+            os.close(next_fd)
+
+
+def _open_source_absolute_directory(raw_path: object) -> int:
+    if not _SOURCE_PATH_PRIMITIVES_AVAILABLE:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "secure validation source traversal is unavailable"
+        )
+    path = _canonical_source_absolute_path(
+        raw_path, name="validation source directory"
+    )
+    components = tuple(part for part in path.split(os.sep) if part)
+    directory_flags = os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW
+    current_fd = -1
+    try:
+        current_fd = os.open(os.sep, directory_flags)
+        _require_source_directory_stat(os.fstat(current_fd))
+        for component in components:
+            next_fd = _open_source_child_directory(current_fd, component)
+            os.close(current_fd)
+            current_fd = next_fd
+        result = current_fd
+        current_fd = -1
+        return result
+    except _ReferenceMinimizationValidationBootstrapError:
+        raise
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source directory cannot be opened securely"
+        ) from exc
+    finally:
+        if current_fd >= 0:
+            os.close(current_fd)
+
+
+def _read_source_file_at(directory_fd: int, name: str) -> bytes:
+    if (
+        not isinstance(name, str)
+        or not name
+        or name in {".", ".."}
+        or os.sep in name
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source file name is invalid"
+        )
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW
+    path_before = _source_lstat_at(directory_fd, name)
+    _require_source_regular_file_stat(path_before)
+    descriptor = -1
+    try:
+        descriptor = os.open(name, flags, dir_fd=directory_fd)
+        before = os.fstat(descriptor)
+        path_opened = _source_lstat_at(directory_fd, name)
+        _require_source_regular_file_stat(before)
+        _require_source_regular_file_stat(path_opened)
+        if not (
+            _source_stat_signature(path_before)
+            == _source_stat_signature(before)
+            == _source_stat_signature(path_opened)
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source changed before it was read"
+            )
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(descriptor, 1_048_576)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_FILE_BYTES:
+                raise _ReferenceMinimizationValidationBootstrapError(
+                    "validation source file exceeds its byte bound"
+                )
+        after = os.fstat(descriptor)
+        path_after = _source_lstat_at(directory_fd, name)
+        _require_source_regular_file_stat(after)
+        _require_source_regular_file_stat(path_after)
+        if (
+            total != before.st_size
+            or _source_stat_signature(before) != _source_stat_signature(after)
+            or _source_stat_signature(after) != _source_stat_signature(path_after)
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source changed while it was read"
+            )
+        return b"".join(chunks)
+    except _ReferenceMinimizationValidationBootstrapError:
+        raise
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source cannot be read securely"
+        ) from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+def _snapshot_source_directory(
+    directory_fd: int,
+    relative_parts: tuple[str, ...],
+    source_by_relative_path: dict[str, bytes],
+    counters: list[int],
+) -> None:
+    before = os.fstat(directory_fd)
+    _require_source_directory_stat(before)
+    try:
+        names_before = tuple(sorted(os.listdir(directory_fd)))
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source directory cannot be enumerated"
+        ) from exc
+    for name in names_before:
+        if not isinstance(name, str) or name in {"", ".", ".."} or os.sep in name:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source directory entry is invalid"
+            )
+        entry_stat = _source_lstat_at(directory_fd, name)
+        if stat.S_ISDIR(entry_stat.st_mode):
+            if name == "__pycache__":
+                continue
+            child_fd = _open_source_child_directory(directory_fd, name)
+            try:
+                _snapshot_source_directory(
+                    child_fd,
+                    (*relative_parts, name),
+                    source_by_relative_path,
+                    counters,
+                )
+            finally:
+                os.close(child_fd)
+            continue
+        if not stat.S_ISREG(entry_stat.st_mode):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source tree contains a symlink or special file"
+            )
+        if not name.endswith(".py"):
+            continue
+        payload = _read_source_file_at(directory_fd, name)
+        relative_path = "/".join((*relative_parts, name))
+        if relative_path in source_by_relative_path:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source path is duplicated"
+            )
+        source_by_relative_path[relative_path] = payload
+        counters[0] += 1
+        counters[1] += len(payload)
+        if (
+            counters[0] > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_FILES
+            or counters[1] > REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MAX_TOTAL_BYTES
+        ):
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation source snapshot exceeds its bounds"
+            )
+    try:
+        names_after = tuple(sorted(os.listdir(directory_fd)))
+        after = os.fstat(directory_fd)
+    except OSError as exc:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source directory cannot be rechecked"
+        ) from exc
+    _require_source_directory_stat(after)
+    if names_before != names_after or _source_stat_signature(before) != _source_stat_signature(after):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source directory changed during snapshot"
+        )
+
+
+def _snapshot_reference_minimization_validation_sources(
+    repository_root: str,
+) -> tuple[str, types.MappingProxyType, tuple[int, ...]]:
+    repository = _canonical_source_absolute_path(
+        repository_root, name="validation repository root"
+    )
+    repository_fd = _open_source_absolute_directory(repository)
+    package_fd = -1
+    try:
+        repository_identity = _source_stat_signature(os.fstat(repository_fd))
+        package_fd = _open_source_child_directory(
+            repository_fd, "betelgeuze_engine_v2"
+        )
+        sources: dict[str, bytes] = {}
+        counters = [0, 0]
+        _snapshot_source_directory(
+            package_fd,
+            ("betelgeuze_engine_v2",),
+            sources,
+            counters,
+        )
+    finally:
+        if package_fd >= 0:
+            os.close(package_fd)
+        os.close(repository_fd)
+    required_paths = {
         REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_RELATIVE_PATH,
         REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
         "betelgeuze_engine_v2/physics/reference_minimization_validation_runner.py",
-    ):
-        source = os.path.join(physics_root, os.path.basename(relative_path))
-        try:
-            file_stat = os.lstat(source)
-            with open(source, "rb") as stream:
-                payload = stream.read()
-        except OSError as exc:
-            raise _ReferenceMinimizationValidationBootstrapError(
-                "validation execution source is unavailable"
-            ) from exc
-        if (
-            os.path.islink(source)
-            or not stat.S_ISREG(file_stat.st_mode)
-            or file_stat.st_nlink != 1
-            or len(payload) != file_stat.st_size
-        ):
-            raise _ReferenceMinimizationValidationBootstrapError(
-                "validation execution source is not a stable regular file"
-            )
-        source_rows.append(
-            {
-                "path": relative_path,
-                "sha256": hashlib.sha256(payload).hexdigest(),
-            }
+    }
+    if not required_paths.issubset(sources):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source snapshot is missing required execution sources"
         )
-    return _sha256(
+    rows = [
         {
-            "schema_id": (
-                "betelgeuze.engine_v2_reference_minimization_validation_execution_sources/"
-                "1.0.0"
-            ),
-            "sources": source_rows,
+            "path": relative_path,
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "size": len(payload),
+        }
+        for relative_path, payload in sorted(sources.items())
+    ]
+    manifest_sha256 = _sha256(
+        {
+            "schema_id": REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_SCHEMA_ID,
+            "source_count": len(rows),
+            "total_source_bytes": sum(int(row["size"]) for row in rows),
+            "sources": rows,
         }
     )
+    verification_fd = _open_source_absolute_directory(repository)
+    try:
+        if _source_stat_signature(os.fstat(verification_fd)) != repository_identity:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation repository root changed during source snapshot"
+            )
+    finally:
+        os.close(verification_fd)
+    return manifest_sha256, types.MappingProxyType(sources), repository_identity
 
+
+def _module_record_from_relative_path(
+    repository_root: str,
+    relative_path: str,
+    payload: bytes,
+) -> tuple[str, str, bytes, bool]:
+    parts = relative_path.split("/")
+    if not parts or parts[0] != "betelgeuze_engine_v2" or not parts[-1].endswith(".py"):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source module path is invalid"
+        )
+    is_package = parts[-1] == "__init__.py"
+    module_parts = parts[:-1] if is_package else (*parts[:-1], parts[-1][:-3])
+    module_name = ".".join(module_parts)
+    if not module_name:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation source module name is invalid"
+        )
+    filename = os.path.join(repository_root, *parts)
+    return module_name, filename, payload, is_package
+
+
+class _VerifiedSourceLoader(importlib.abc.Loader):
+    __slots__ = ("_filename", "_fullname", "_is_package", "_payload")
+
+    def __init__(
+        self,
+        fullname: str,
+        filename: str,
+        payload: bytes,
+        is_package: bool,
+    ) -> None:
+        self._fullname = fullname
+        self._filename = filename
+        self._payload = payload
+        self._is_package = is_package
+
+    def create_module(self, spec: object) -> None:
+        del spec
+        return None
+
+    def exec_module(self, module: object) -> None:
+        module.__file__ = self._filename
+        module.__cached__ = None
+        code = compile(
+            self._payload,
+            self._filename,
+            "exec",
+            dont_inherit=True,
+            optimize=sys.flags.optimize,
+        )
+        exec(code, module.__dict__)
+
+    def get_filename(self, fullname: str) -> str:
+        if fullname != self._fullname:
+            raise ImportError("verified source loader name mismatch")
+        return self._filename
+
+    def get_source(self, fullname: str) -> str:
+        if fullname != self._fullname:
+            raise ImportError("verified source loader name mismatch")
+        return self._payload.decode("utf-8")
+
+    def is_package(self, fullname: str) -> bool:
+        if fullname != self._fullname:
+            raise ImportError("verified source loader name mismatch")
+        return self._is_package
+
+
+class _VerifiedSourceFinder(importlib.abc.MetaPathFinder):
+    __slots__ = (
+        "_records",
+        "_repository_identity",
+        "_repository_root",
+        "_sources",
+        "finder_identity_sha256",
+        "source_manifest_sha256",
+    )
+
+    def __init__(
+        self,
+        repository_root: str,
+        source_manifest_sha256: str,
+        sources: types.MappingProxyType,
+        repository_identity: tuple[int, ...],
+    ) -> None:
+        records: dict[str, tuple[str, bytes, bool]] = {}
+        for relative_path, payload in sources.items():
+            module_name, filename, source, is_package = _module_record_from_relative_path(
+                repository_root,
+                relative_path,
+                payload,
+            )
+            if module_name in records:
+                raise _ReferenceMinimizationValidationBootstrapError(
+                    "validation source module name is duplicated"
+                )
+            records[module_name] = (filename, source, is_package)
+        self._repository_root = repository_root
+        self._repository_identity = repository_identity
+        self._sources = sources
+        self._records = types.MappingProxyType(records)
+        self.source_manifest_sha256 = source_manifest_sha256
+        self.finder_identity_sha256 = _sha256(
+            {
+                "schema_id": (
+                    "betelgeuze.engine_v2_reference_minimization_validation_source_finder/"
+                    "1.0.0"
+                ),
+                "source_manifest_sha256": source_manifest_sha256,
+                "module_count": len(records),
+            }
+        )
+
+    @property
+    def repository_root(self) -> str:
+        return self._repository_root
+
+    def source_bytes_for_relative_path(self, relative_path: str) -> bytes:
+        try:
+            return self._sources[relative_path]
+        except KeyError as exc:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "verified source path is unavailable"
+            ) from exc
+
+    def verify_repository_binding(self) -> None:
+        descriptor = _open_source_absolute_directory(self._repository_root)
+        try:
+            observed = _source_stat_signature(os.fstat(descriptor))
+        finally:
+            os.close(descriptor)
+        if observed != self._repository_identity:
+            raise _ReferenceMinimizationValidationBootstrapError(
+                "validation repository root changed after source snapshot"
+            )
+
+    def find_spec(
+        self,
+        fullname: str,
+        path: object = None,
+        target: object = None,
+    ) -> object:
+        del path, target
+        record = self._records.get(fullname)
+        if record is None:
+            if fullname == "betelgeuze_engine_v2" or fullname.startswith(
+                "betelgeuze_engine_v2."
+            ):
+                raise ModuleNotFoundError(
+                    f"{fullname} is absent from the verified source snapshot"
+                )
+            return None
+        filename, payload, is_package = record
+        loader = _VerifiedSourceLoader(fullname, filename, payload, is_package)
+        spec = importlib.machinery.ModuleSpec(
+            fullname,
+            loader,
+            origin=filename,
+            is_package=is_package,
+        )
+        if is_package:
+            spec.submodule_search_locations = [
+                f"<verified-source:{self.source_manifest_sha256}>/{fullname.replace('.', '/')}"
+            ]
+        return spec
+
+
+def _install_verified_source_finder(
+    repository_root: str,
+    source_manifest_sha256: str,
+    sources: types.MappingProxyType,
+    repository_identity: tuple[int, ...],
+) -> _VerifiedSourceFinder:
+    if any(
+        name == "betelgeuze_engine_v2" or name.startswith("betelgeuze_engine_v2.")
+        for name in sys.modules
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "Engine v2 was imported before source verification"
+        )
+    if hasattr(sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "verified source finder is already installed"
+        )
+    finder = _VerifiedSourceFinder(
+        repository_root,
+        source_manifest_sha256,
+        sources,
+        repository_identity,
+    )
+    sys.meta_path.insert(0, finder)
+    setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE, finder)
+    setattr(
+        sys,
+        REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE,
+        source_manifest_sha256,
+    )
+    return finder
+
+
+def _require_verified_source_finder() -> _VerifiedSourceFinder:
+    finder = getattr(
+        sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_FINDER_ATTRIBUTE, None
+    )
+    manifest = getattr(
+        sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE, None
+    )
+    if (
+        not isinstance(finder, _VerifiedSourceFinder)
+        or finder not in sys.meta_path
+        or manifest != finder.source_manifest_sha256
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "verified source finder is unavailable"
+        )
+    return finder
+
+
+def reference_minimization_validation_execution_source_sha256() -> str:
+    """Return the package-wide verified source manifest identity."""
+
+    existing = getattr(
+        sys, REFERENCE_MINIMIZATION_VALIDATION_SOURCE_MANIFEST_ATTRIBUTE, None
+    )
+    if (
+        isinstance(existing, str)
+        and len(existing) == 64
+        and all(character in "0123456789abcdef" for character in existing)
+    ):
+        return existing
+    repository_root = os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(reference_minimization_validation_bootstrap_path())
+        )
+    )
+    manifest_sha256, _, _ = _snapshot_reference_minimization_validation_sources(
+        repository_root
+    )
+    return manifest_sha256
 
 def _require_root_owned_read_only_directory(raw_path: str) -> str:
     if not raw_path or not os.path.isabs(raw_path) or os.pathsep in raw_path:
@@ -592,20 +1286,53 @@ def _load_bootstrap_trust_store_payload() -> dict[str, object]:
         ) from exc
     if (
         not isinstance(payload, dict)
-        or set(payload) != {"schema_id", "reviewer_keys", "operator_keys"}
+        or set(payload) != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_FIELDS
         or payload.get("schema_id") != _REFERENCE_MINIMIZATION_VALIDATION_TRUST_STORE_SCHEMA_ID
         or not isinstance(payload.get("reviewer_keys"), list)
         or not isinstance(payload.get("operator_keys"), list)
+        or payload.get("minimum_authorization_receipt_schema_id")
+        != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
+        or payload.get("minimum_review_attestation_schema_id")
+        != _REFERENCE_MINIMIZATION_VALIDATION_REVIEW_ATTESTATION_SCHEMA_ID
         or _canonical_bytes(payload) + b"\n" != raw
     ):
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap trust store is not the exact canonical schema"
         )
+    reviewer_ids = tuple(
+        row.get("key_id") for row in payload["reviewer_keys"] if isinstance(row, dict)
+    )
+    operator_ids = tuple(
+        row.get("key_id") for row in payload["operator_keys"] if isinstance(row, dict)
+    )
+    if reviewer_ids != tuple(sorted(set(reviewer_ids))) or operator_ids != tuple(
+        sorted(set(operator_ids))
+    ):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust-store active key ids must be uniquely sorted"
+        )
+    superseded_reviewers = _require_sorted_unique_key_id_sequence(
+        payload.get("superseded_reviewer_key_ids"),
+        name="trusted superseded reviewer keys",
+    )
+    superseded_operators = _require_sorted_unique_key_id_sequence(
+        payload.get("superseded_operator_key_ids"),
+        name="trusted superseded operator keys",
+    )
+    if set(reviewer_ids).intersection(superseded_reviewers) or set(
+        operator_ids
+    ).intersection(superseded_operators):
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust store contains active superseded keys"
+        )
     return payload
 
 
-def _load_bootstrap_operator_keys() -> dict[str, tuple[str, bytes]]:
-    payload = _load_bootstrap_trust_store_payload()
+def _load_bootstrap_operator_keys(
+    payload: dict[str, object] | None = None,
+) -> dict[str, tuple[str, bytes]]:
+    if payload is None:
+        payload = _load_bootstrap_trust_store_payload()
     result: dict[str, tuple[str, bytes]] = {}
     for row in payload["operator_keys"]:
         if not isinstance(row, dict) or set(row) != {
@@ -742,6 +1469,8 @@ def _require_bootstrap_authorization_signature(
     *,
     expected_commit: str,
     expected_source: str,
+    trust_payload: dict[str, object],
+    trusted_revocation_state: dict[str, tuple[str, ...]],
 ) -> dict[str, str]:
     raw_receipt = request.get("authorization_receipt")
     if not isinstance(raw_receipt, dict):
@@ -771,7 +1500,11 @@ def _require_bootstrap_authorization_signature(
         signature.get("key_id"),
         name="bootstrap authorization key id",
     )
-    operator_keys = _load_bootstrap_operator_keys()
+    if key_id in trusted_revocation_state["superseded_operator_key_ids"]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap authorization key is superseded"
+        )
+    operator_keys = _load_bootstrap_operator_keys(trust_payload)
     if key_id not in operator_keys:
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap authorization key is not trusted"
@@ -789,8 +1522,16 @@ def _require_bootstrap_authorization_signature(
         length=64,
         name="bootstrap request authorization nonce",
     )
+    if receipt_sha256 in trusted_revocation_state[
+        "revoked_authorization_receipt_sha256s"
+    ]:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap authorization receipt is externally revoked"
+        )
     if (
         receipt_sha256 != _sha256(payload)
+        or payload.get("schema_id")
+        != trust_payload.get("minimum_authorization_receipt_schema_id")
         or payload.get("schema_id")
         != _REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_RECEIPT_SCHEMA_ID
         or payload.get("authorization_key_id") != key_id
@@ -810,7 +1551,7 @@ def _require_bootstrap_authorization_signature(
 def _require_signed_clean_checkout_before_import(
     repository_root: str,
     request: dict[str, object],
-) -> dict[str, str]:
+) -> tuple[dict[str, str], str]:
     _require_external_private_root(
         request.get("reservation_root"),
         repository_root=repository_root,
@@ -821,6 +1562,12 @@ def _require_signed_clean_checkout_before_import(
         repository_root=repository_root,
         name="artifact output root",
     )
+    finder = _require_verified_source_finder()
+    if finder.repository_root != repository_root:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "verified source finder repository is cross-wired"
+        )
+    finder.verify_repository_binding()
     expected_commit = _require_lower_hex(
         request.get("expected_code_commit_sha"),
         length=40,
@@ -831,10 +1578,16 @@ def _require_signed_clean_checkout_before_import(
         length=64,
         name="expected validation source",
     )
+    trust_payload = _load_bootstrap_trust_store_payload()
+    trusted_revocation_state = _require_trusted_revocation_state(
+        request, trust_payload
+    )
     signed_dependency_rows = _require_bootstrap_authorization_signature(
         request,
         expected_commit=expected_commit,
         expected_source=expected_source,
+        trust_payload=trust_payload,
+        trusted_revocation_state=trusted_revocation_state,
     )
     git_executable = _require_trusted_root_executable("/usr/bin/git", name="Git")
     environment = {
@@ -910,6 +1663,7 @@ def _require_signed_clean_checkout_before_import(
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap checkout cannot be verified"
         ) from exc
+    finder.verify_repository_binding()
     if (
         observed_head.returncode != 0
         or observed_head.stdout != expected_commit.encode("ascii") + b"\n"
@@ -924,7 +1678,7 @@ def _require_signed_clean_checkout_before_import(
         raise _ReferenceMinimizationValidationBootstrapError(
             "validation bootstrap checkout is not the signed clean source"
         )
-    return signed_dependency_rows
+    return signed_dependency_rows, _sha256(trust_payload)
 
 
 def _ignored_importable_checkout_paths(raw: object) -> tuple[bytes, ...]:
@@ -969,14 +1723,32 @@ def _require_observed_dependency_artifact_rows_before_import(
         raise _ReferenceMinimizationValidationBootstrapError(
             "bootstrap request dependency rows do not match the signed authorization"
         )
+    finder = _require_verified_source_finder()
+    if finder.repository_root != repository_root:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "verified dependency helper repository is cross-wired"
+        )
     helper_path = os.path.join(
         repository_root,
         REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH,
     )
     try:
-        spec = importlib.util.spec_from_file_location(
-            "_betelgeuze_reference_minimization_validation_dependency_identity",
+        helper_source = finder.source_bytes_for_relative_path(
+            REFERENCE_MINIMIZATION_VALIDATION_DEPENDENCY_IDENTITY_RELATIVE_PATH
+        )
+        helper_name = (
+            "_betelgeuze_reference_minimization_validation_dependency_identity"
+        )
+        loader = _VerifiedSourceLoader(
+            helper_name,
             helper_path,
+            helper_source,
+            False,
+        )
+        spec = importlib.util.spec_from_loader(
+            helper_name,
+            loader,
+            origin=helper_path,
         )
         if spec is None or spec.loader is None:
             raise ImportError("dependency identity loader is unavailable")
@@ -1035,24 +1807,33 @@ def _prepare_isolated_import_boundary() -> tuple[object, ...]:
     repository_root = os.path.dirname(
         os.path.dirname(os.path.dirname(expected_bootstrap))
     )
-    package_root = os.path.join(repository_root, "betelgeuze_engine_v2")
-    if not os.path.isdir(package_root):
-        raise _ReferenceMinimizationValidationBootstrapError(
-            "validation bootstrap checkout is unavailable"
-        )
+    source_manifest_sha256, sources, repository_identity = (
+        _snapshot_reference_minimization_validation_sources(repository_root)
+    )
+    finder = _install_verified_source_finder(
+        repository_root,
+        source_manifest_sha256,
+        sources,
+        repository_identity,
+    )
     standard_library_roots = _trusted_standard_library_roots()
     dependency_roots = _trusted_dependency_roots()
     sanitized_path = (
-        repository_root,
         *standard_library_roots,
         *dependency_roots,
     )
     sys.path[:] = list(dict.fromkeys(sanitized_path))
+    if repository_root in sys.path:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "validation repository remained importable from the live checkout"
+        )
     return (
         expected_bootstrap,
         repository_root,
         dependency_roots,
         tuple(sys.path),
+        source_manifest_sha256,
+        finder.finder_identity_sha256,
     )
 
 
@@ -1156,7 +1937,12 @@ def _configure_deterministic_torch_runtime(torch_module: object) -> None:
     torch_module.manual_seed(seed)
 
 
-def _execute_verified_request(raw_request: bytes, request: dict[str, object]) -> dict[str, object]:
+def _execute_verified_request(
+    raw_request: bytes,
+    request: dict[str, object],
+    *,
+    expected_trust_store_sha256: str,
+) -> dict[str, object]:
     from betelgeuze_engine_v2.physics import (
         MinimizationAuthorizationOperatorTrustAnchor,
         MinimizationScientificReviewerTrustAnchor,
@@ -1173,6 +1959,13 @@ def _execute_verified_request(raw_request: bytes, request: dict[str, object]) ->
         )
     _configure_deterministic_torch_runtime(torch_module)
     trust_payload = _load_bootstrap_trust_store_payload()
+    if _sha256(trust_payload) != expected_trust_store_sha256:
+        raise _ReferenceMinimizationValidationBootstrapError(
+            "bootstrap trust store changed after pre-import verification"
+        )
+    trusted_revocation_state = _require_trusted_revocation_state(
+        request, trust_payload
+    )
     reviewers, operators = _runtime_trust_anchors(
         trust_payload,
         MinimizationScientificReviewerTrustAnchor,
@@ -1182,22 +1975,18 @@ def _execute_verified_request(raw_request: bytes, request: dict[str, object]) ->
         request.get("expected_dependency_artifact_sha256_rows"),
         name="runtime request",
     )
-    revoked_authorizations = _require_string_sequence(
-        request.get("revoked_authorization_receipt_sha256s"),
-        name="revoked authorization receipts",
-    )
-    revoked_reviews = _require_string_sequence(
-        request.get("revoked_review_attestation_sha256s"),
-        name="revoked review attestations",
-    )
-    conflicting_nonces = _require_string_sequence(
-        request.get("externally_conflicting_nonce_sha256s"),
-        name="externally conflicting nonces",
-    )
-    revoked_network = _require_string_sequence(
-        request.get("revoked_network_attestation_sha256s"),
-        name="revoked network attestations",
-    )
+    revoked_authorizations = trusted_revocation_state[
+        "revoked_authorization_receipt_sha256s"
+    ]
+    revoked_reviews = trusted_revocation_state[
+        "revoked_review_attestation_sha256s"
+    ]
+    conflicting_nonces = trusted_revocation_state[
+        "externally_conflicting_nonce_sha256s"
+    ]
+    revoked_network = trusted_revocation_state[
+        "revoked_network_attestation_sha256s"
+    ]
     environment = create_reference_minimization_validation_execution_environment_receipt(
         request["reservation_root"],
         request["artifact_output_root"],
@@ -1269,8 +2058,8 @@ def main() -> int:
     try:
         state = _prepare_isolated_import_boundary()
         raw_request, request = _read_bootstrap_request()
-        signed_dependency_rows = _require_signed_clean_checkout_before_import(
-            state[1], request
+        signed_dependency_rows, trust_store_sha256 = (
+            _require_signed_clean_checkout_before_import(state[1], request)
         )
         _require_observed_dependency_artifact_rows_before_import(
             state[1],
@@ -1278,8 +2067,13 @@ def main() -> int:
             request,
             signed_expected=signed_dependency_rows,
         )
+        _require_verified_source_finder().verify_repository_binding()
         setattr(sys, REFERENCE_MINIMIZATION_VALIDATION_BOOTSTRAP_STATE_ATTRIBUTE, state)
-        response = _execute_verified_request(raw_request, request)
+        response = _execute_verified_request(
+            raw_request,
+            request,
+            expected_trust_store_sha256=trust_store_sha256,
+        )
         output_stream.write(_canonical_bytes(response) + b"\n")
         output_stream.flush()
     except Exception:
