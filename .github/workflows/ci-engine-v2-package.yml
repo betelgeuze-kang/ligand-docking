@@ -202,6 +202,7 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2" pocket-from-reference --help
           "$venv/bin/betelgeuze-engine-v2" dock-canonical --help
           "$venv/bin/betelgeuze-engine-v2" verify-result --help
+          "$venv/bin/betelgeuze-engine-v2" verify-bundle --help
           "$venv/bin/python" - <<'PY'
           from pathlib import Path
           import json
@@ -286,10 +287,21 @@ jobs:
             --top-k 1 \
             --max-torsions 1 \
             --translation-radius-angstrom 1.0 \
+            --receptor-margin-angstrom 4.0 \
             --seed 151
           "$venv/bin/betelgeuze-engine-v2" verify-result \
             --input result.json \
             --output verification.json
+          "$venv/bin/betelgeuze-engine-v2" verify-bundle \
+            --result result.json \
+            --receptor receptor.json \
+            --ligand ligand.json \
+            --pocket reference-pocket.json \
+            --receptor-model-index 0 \
+            --ligand-model-index 0 \
+            --receptor-margin-angstrom 4.0 \
+            --require-reference-pocket-derivation \
+            --output bundle-verification.json
           "$venv/bin/python" - <<'PY'
           from pathlib import Path
           import hashlib
@@ -299,12 +311,14 @@ jobs:
 
           result_path = Path("result.json")
           verification_path = Path("verification.json")
+          bundle_path = Path("bundle-verification.json")
           ligand_path = Path("ligand.json")
           pocket_path = Path("reference-pocket.json")
           pocket = json.loads(pocket_path.read_bytes())
           result = json.loads(result_path.read_bytes())
           verification = json.loads(verification_path.read_bytes())
-          for path in (pocket_path, result_path, verification_path):
+          bundle = json.loads(bundle_path.read_bytes())
+          for path in (pocket_path, result_path, verification_path, bundle_path):
               assert stat.S_IMODE(path.stat().st_mode) == 0o600
           metadata = pocket["metadata"]
           derivation = dict(metadata)
@@ -356,6 +370,25 @@ jobs:
           assert verification["product_qualified"] is False
           assert verification["customer_execution_enabled"] is False
           assert verification["claim_safe"] is False
+          assert bundle["result_document_sha256"] == result["document_sha256"]
+          assert bundle["input_artifact_sha256s_verified"] is True
+          assert bundle["pocket_definition_fully_recomputed"] is True
+          assert bundle["reference_pocket_derivation_fully_recomputed"] is True
+          assert bundle["authority_state_fully_recomputed"] is True
+          assert bundle[
+              "scorer_contract_recomputed_from_declared_source_sha"
+          ] is True
+          assert bundle["scorer_source_bytes_locally_attested"] is False
+          assert bundle["search_fingerprint_fully_recomputed"] is True
+          assert bundle["receptor_margin_uniquely_attested"] is False
+          assert bundle["model_indices_uniquely_attested"] is False
+          assert bundle["candidate_count"] == 2
+          assert bundle["success_count"] + bundle["failure_count"] == 2
+          assert bundle["scientifically_validated"] is False
+          assert bundle["benchmark_validated"] is False
+          assert bundle["product_qualified"] is False
+          assert bundle["customer_execution_enabled"] is False
+          assert bundle["claim_safe"] is False
           PY
 
       - name: Upload reproducible wheel and digest
@@ -366,6 +399,7 @@ jobs:
             dist-engine-v2
             /tmp/engine-v2-outside-${{ matrix.python-version }}/result.json
             /tmp/engine-v2-outside-${{ matrix.python-version }}/verification.json
+            /tmp/engine-v2-outside-${{ matrix.python-version }}/bundle-verification.json
           if-no-files-found: error
           retention-days: 7
 

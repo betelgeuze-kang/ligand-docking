@@ -44,6 +44,8 @@ REDUNDANT_STACK_WORKFLOWS = (
     "ci-engine-v2-search-fingerprint-material-round20.yml",
     "ci-engine-v2-reference-pocket-round22.yml",
     "ci-engine-v2-reference-pocket-release-round23.yml",
+    "ci-engine-v2-input-bound-verifier-round24.yml",
+    "ci-engine-v2-input-bound-verifier-release-round25.yml",
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
     "contents: write",
