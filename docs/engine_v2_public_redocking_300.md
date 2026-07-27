@@ -44,13 +44,24 @@ Each failed row retains a failure code and runtime. Missing poses turn the
 entire engine/case row into a failure, so Top-3 or Top-5 cannot silently use a
 smaller candidate budget.
 
-The engines share the frozen receptor, starting conformer, crystal-defined
-pocket, case seed, one CPU, and five retained output poses. Their internal
-search effort is not equal: Engine V2 uses five proposals, while the external
-engines use their own `exhaustiveness=1` search. The report therefore records
-`same_ranked_pose_count: true`, but keeps `same_search_effort_budget` and
-`search_effort_comparable` false. Paired deltas are descriptive under these
-explicit settings, not equal-compute performance claims.
+The engines share the frozen receptor, starting conformer, crystal-ligand
+pocket source, case seed, one enforced CPU, and five retained output poses.
+Their exact pocket geometry is not equal: Engine V2 uses a sphere derived from
+the crystal ligand, while Vina and GNINA use the corresponding ligand-derived
+axis-aligned autobox. Their internal search effort is also not equal: Engine V2
+uses five proposals, while the external engines use their own
+`exhaustiveness=1` search. The report therefore records
+`same_ranked_pose_count: true` and `same_pocket_source: true`, but keeps
+`same_pocket_geometry`, `same_search_effort_budget`, and
+`search_effort_comparable` false. Paired recovery deltas are descriptive under
+these explicit settings, not equal-region or equal-compute performance claims.
+
+Runtime covers each engine invocation through ranked-pose serialization and
+stops before the shared PoseBusters evaluator. Torch intra-op and inter-op
+threads are both fixed to one for Engine V2, and both external modes receive
+`--cpu 1`. The external timeout is part of the policy, engine identity, and
+per-case cache receipt; changing it invalidates cached external rows. Runtime
+deltas remain descriptive because the search regions and algorithms differ.
 
 ## Required outputs
 
@@ -75,9 +86,11 @@ its chemistry-aware rotor policy remain separate execution outcomes; an
 unsupported macrocycle must become a failure row rather than being removed from
 the denominator.
 
-The report binds exact engine version, implementation/binary SHA-256, command,
-cohort fingerprint, policy fingerprint, all 900 engine/case rows, profiles, and
-metric rows.
+The report binds exact engine version, full Engine V2 Python source-closure or
+external binary SHA-256, command, CPU/timeout policy, cohort fingerprint, policy
+fingerprint, all 900 engine/case rows, profiles, and metric rows. Evaluator or
+artifact-I/O failures abort the run instead of being counted as engine
+failures.
 
 ## Local execution
 

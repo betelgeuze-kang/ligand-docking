@@ -152,8 +152,11 @@ The current `main` branch contains:
   subgroups, and paired baseline deltas. A local resumable runner verifies the
   source archive and identifier list, materializes only the frozen inputs,
   serializes Engine V2 poses, invokes Vina/GNINA modes, and retains exact
-  receipts. The external structures, engine outputs, and benchmark result
-  remain absent from the repository;
+  receipts. It binds timeout and the full Engine V2 Python source closure,
+  enforces one CPU, stops engine runtime before shared evaluation, and records
+  that Engine V2's ligand-derived spherical region is not geometrically equal
+  to the external ligand-derived autobox. The external structures, engine
+  outputs, and benchmark result remain absent from the repository;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that
   every runtime value is supplied explicitly by the caller, and enumerates the

@@ -58,8 +58,10 @@ contract now freezes a result-independent subset of the published PoseBusters
 308-case journal list and defines failure-complete Engine V2/Vina/GNINA
 Top-1/3/5, validity, runtime, subgroup, paired-delta, and bootstrap-CI reporting.
 Its local runner may execute only against operator-supplied, hash-verified
-public inputs and retains failures and receipts. Neither contract supplies a
-public holdout result, equal-search-effort comparison, statistical
+public inputs and retains failures and receipts. It records the common pocket
+source but does not claim equal search-region geometry between Engine V2's
+sphere and the external autobox. Neither contract supplies a public holdout
+result, equal-search-effort or equal-region comparison, statistical
 representativeness, independent attestation, scientific validation, product
 qualification, production authorization, or customer execution.
 

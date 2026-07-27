@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import zipfile
 
 import pytest
@@ -168,11 +169,13 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
     }
     implementation = "2" * 64
     evaluation = "7" * 64
+    execution_policy = {"cpu_count": 1, "timeout_seconds": 300}
     runner._atomic_json(
         path,
         runner._row_payload(
             row,
             command=command,
+            execution_policy=execution_policy,
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
@@ -185,6 +188,7 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             case_id=case_id,
             engine_id="engine_v2",
             command=command,
+            execution_policy=execution_policy,
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
@@ -201,9 +205,235 @@ def test_cached_failure_row_is_bound_to_inputs_command_and_source(
             case_id=case_id,
             engine_id="engine_v2",
             command=command,
+            execution_policy=execution_policy,
             input_sha256s=inputs,
             implementation_sha256=implementation,
             evaluation_pipeline_sha256=evaluation,
         )
         is None
     )
+
+
+def test_cached_row_is_invalidated_when_timeout_policy_changes(
+    tmp_path: Path,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    path = tmp_path / "receipt.json"
+    row = PublicRedockingCaseResult(
+        case_id=case_id,
+        engine_id="vina",
+        status="failure",
+        runtime_seconds=30.0,
+        receptor_artifact_sha256="3" * 64,
+        reference_artifact_sha256="4" * 64,
+        native_artifact_sha256="5" * 64,
+        seed_artifact_sha256="6" * 64,
+        failure_code="external_timeout",
+    )
+    command = ("gnina", "--cpu", "1")
+    inputs = {
+        "receptor": row.receptor_artifact_sha256,
+        "reference": row.reference_artifact_sha256,
+        "native": row.native_artifact_sha256,
+        "seed": row.seed_artifact_sha256,
+    }
+    runner._atomic_json(
+        path,
+        runner._row_payload(
+            row,
+            command=command,
+            execution_policy={"cpu_count": 1, "timeout_seconds": 30},
+            input_sha256s=inputs,
+            implementation_sha256="2" * 64,
+            evaluation_pipeline_sha256="7" * 64,
+        ),
+    )
+
+    assert (
+        runner._load_cached_row(
+            path,
+            case_id=case_id,
+            engine_id="vina",
+            command=command,
+            execution_policy={"cpu_count": 1, "timeout_seconds": 300},
+            input_sha256s=inputs,
+            implementation_sha256="2" * 64,
+            evaluation_pipeline_sha256="7" * 64,
+        )
+        is None
+    )
+
+
+def test_engine_source_identity_hashes_the_full_python_package(
+    tmp_path: Path,
+) -> None:
+    dependency = (
+        tmp_path / "betelgeuze_engine_v2" / "docking" / "contact_validity.py"
+    )
+    dependency.parent.mkdir(parents=True)
+    dependency.write_text("VALUE = 1\n", encoding="ascii")
+    runner_path = tmp_path / "tools" / "runner.py"
+    runner_path.parent.mkdir()
+    runner_path.write_text("RUNNER = 1\n", encoding="ascii")
+    first = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
+
+    dependency.write_text("VALUE = 2\n", encoding="ascii")
+    second = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
+
+    assert first != second
+
+
+def test_cpu_policy_configures_and_verifies_single_torch_threads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = {"intra": 8, "inter": 4}
+    monkeypatch.setattr(
+        runner.torch,
+        "set_num_threads",
+        lambda value: state.__setitem__("intra", value),
+    )
+    monkeypatch.setattr(
+        runner.torch,
+        "get_num_threads",
+        lambda: state["intra"],
+    )
+    monkeypatch.setattr(
+        runner.torch,
+        "set_num_interop_threads",
+        lambda value: state.__setitem__("inter", value),
+    )
+    monkeypatch.setattr(
+        runner.torch,
+        "get_num_interop_threads",
+        lambda: state["inter"],
+    )
+
+    runner._configure_engine_v2_cpu()
+
+    assert state == {"intra": 1, "inter": 1}
+
+
+def test_external_runtime_stops_before_evaluation_and_evaluator_errors_abort(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    output = tmp_path / "poses.sdf"
+    output.write_bytes(b"fixture\n$$$$\n" * 5)
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+    times = iter((10.0, 12.5))
+    monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0),
+    )
+
+    def evaluator_failure(*args, **kwargs):
+        raise RuntimeError("evaluator infrastructure failed")
+
+    monkeypatch.setattr(runner, "_posebusters_outcomes", evaluator_failure)
+
+    with pytest.raises(RuntimeError, match="evaluator infrastructure"):
+        runner._external_result(
+            case_id,
+            "vina",
+            paths,
+            binary=tmp_path / "gnina",
+            input_sha256s=inputs,
+            output=output,
+            seed=11,
+            timeout_seconds=300,
+        )
+
+
+def test_external_success_runtime_excludes_shared_evaluator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    output = tmp_path / "poses.sdf"
+    output.write_bytes(b"fixture\n$$$$\n" * 5)
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+    times = iter((10.0, 12.5))
+    monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_posebusters_outcomes",
+        lambda *args, **kwargs: (
+            (1.0, 2.0, 3.0, 4.0, 5.0),
+            (True,) * 5,
+            (True,) * 5,
+        ),
+    )
+
+    row, _ = runner._external_result(
+        case_id,
+        "vina",
+        paths,
+        binary=tmp_path / "gnina",
+        input_sha256s=inputs,
+        output=output,
+        seed=11,
+        timeout_seconds=300,
+    )
+
+    assert row.status == "success"
+    assert row.runtime_seconds == 2.5
+
+
+def test_engine_v2_evaluator_failure_aborts_instead_of_counting_engine_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+    times = iter((10.0, 12.0))
+    monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+    monkeypatch.setattr(
+        runner,
+        "_engine_v2_pose_coordinates",
+        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_write_engine_v2_poses",
+        lambda *args, **kwargs: tuple(str(index + 1) * 64 for index in range(5)),
+    )
+
+    def evaluator_failure(*args, **kwargs):
+        raise RuntimeError("evaluator infrastructure failed")
+
+    monkeypatch.setattr(runner, "_posebusters_outcomes", evaluator_failure)
+
+    with pytest.raises(RuntimeError, match="evaluator infrastructure"):
+        runner._engine_v2_result(
+            case_id,
+            paths,
+            input_sha256s=inputs,
+            output=tmp_path / "engine-v2.sdf",
+            seed=11,
+        )

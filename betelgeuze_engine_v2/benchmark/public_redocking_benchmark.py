@@ -844,7 +844,7 @@ def verify_public_redocking_source_identifiers(source: bytes) -> tuple[str, ...]
 
 @dataclass(frozen=True, slots=True)
 class PublicRedockingEvaluationPolicy:
-    """One comparable-input, fixed-output evaluation policy."""
+    """One source-matched, fixed-output evaluation policy."""
 
     ranked_pose_count: int = 5
     top_ks: tuple[int, ...] = PUBLIC_REDOCKING_TOP_KS
@@ -852,6 +852,8 @@ class PublicRedockingEvaluationPolicy:
     confidence_level: float = PUBLIC_REDOCKING_DEFAULT_CONFIDENCE_LEVEL
     bootstrap_samples: int = PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES
     bootstrap_seed: int = PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SEED
+    external_timeout_seconds: int = 300
+    cpu_count: int = 1
     schema_id: str = PUBLIC_REDOCKING_POLICY_SCHEMA_ID
 
     def __post_init__(self) -> None:
@@ -889,6 +891,17 @@ class PublicRedockingEvaluationPolicy:
             )
         if type(self.bootstrap_seed) is not int:
             raise PublicRedockingBenchmarkError("bootstrap_seed must be an integer")
+        if (
+            type(self.external_timeout_seconds) is not int
+            or not 1 <= self.external_timeout_seconds <= 86_400
+        ):
+            raise PublicRedockingBenchmarkError(
+                "external_timeout_seconds must be in [1,86400]"
+            )
+        if type(self.cpu_count) is not int or self.cpu_count != 1:
+            raise PublicRedockingBenchmarkError(
+                "public redocking cpu_count must equal 1"
+            )
         object.__setattr__(self, "top_ks", top_ks)
         object.__setattr__(self, "rmsd_threshold_angstrom", threshold)
         object.__setattr__(self, "confidence_level", level)
@@ -906,7 +919,12 @@ class PublicRedockingEvaluationPolicy:
             "confidence_level": self.confidence_level,
             "bootstrap_samples": self.bootstrap_samples,
             "bootstrap_seed": self.bootstrap_seed,
-            "same_input_and_output_conditions_required": True,
+            "external_timeout_seconds": self.external_timeout_seconds,
+            "cpu_count": self.cpu_count,
+            "same_source_artifacts_required": True,
+            "same_pocket_source_required": True,
+            "same_pocket_geometry": False,
+            "same_ranked_pose_count_required": True,
             "same_search_effort_required": False,
             "failure_denominator": "all_300_frozen_cases",
             "missing_candidate_policy": "case_failure",
@@ -1400,9 +1418,14 @@ class PublicRedockingBenchmarkReport:
             "case_count": len(self.cohort.case_ids),
             "row_count": len(self.rows),
             "full_failure_denominator_retained": True,
+            "policy": self.policy.to_dict(),
             "same_ranked_pose_count": True,
+            "same_pocket_source": True,
+            "same_pocket_geometry": False,
             "same_search_effort_budget": False,
             "search_effort_comparable": False,
+            "runtime_boundary_comparable": True,
+            "cpu_limit_comparable": True,
             "bootstrap_confidence_intervals": True,
             "benchmark_executed": True,
             "scientifically_validated": False,

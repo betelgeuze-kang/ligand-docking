@@ -19,8 +19,13 @@ scientific claim from a package version.
   subgroups, and paired Engine-V2-versus-baseline deltas. Source-ligand hashes
   and RDKit-2022.09.5 strict-rotor profiles are frozen before execution. A local
   resumable runner verifies and materializes the public source, serializes
-  Engine V2 poses, launches the two external modes, and retains receipts. No
-  structure data or performance result is bundled or scientifically promoted.
+  Engine V2 poses, launches the two external modes, and retains receipts. It
+  binds the full Engine V2 Python source closure and external timeout, enforces
+  one Torch CPU, aligns runtime boundaries before evaluation, separates
+  evaluator failures from engine failures, and explicitly records that the
+  ligand-derived sphere and external autobox are not identical search
+  geometries. No structure data or performance result is bundled or
+  scientifically promoted.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,

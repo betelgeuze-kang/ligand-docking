@@ -33,19 +33,33 @@ from betelgeuze_engine_v2.benchmark import (
 from betelgeuze_engine_v2.docking import (
     ChemistryPoseScorerV1,
     DockingBudget,
+    DockingAuthorityError,
+    DockingSearchError,
     DockingScope,
+    ElementAwareValidityError,
     PocketDefinition,
+    ScorerV1Error,
     build_element_aware_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
     run_authenticated_scorer_v1_guided_search,
 )
-from betelgeuze_engine_v2.io import parse_pdb, parse_sdf_v2000
+from betelgeuze_engine_v2.io import (
+    PDBParseError,
+    SDFParseError,
+    parse_pdb,
+    parse_sdf_v2000,
+)
 
 
-RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.1.0"
+RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.2.0"
 DEFAULT_SEED = 2_026_072_700
 POSEBUSTERS_VERSION = "0.3.1"
 RDKit_VERSION = "2022.09.5"
+ENGINE_V2_CPU_POLICY = {
+    "cpu_count": 1,
+    "torch_intraop_threads": 1,
+    "torch_interop_threads": 1,
+}
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
     "ligands.sdf",
@@ -82,6 +96,45 @@ GEOMETRIC_COLUMNS = (
 
 class PublicRedockingRunnerError(RuntimeError):
     """The local operator run cannot preserve its frozen evidence contract."""
+
+
+class EngineV2CaseFailure(PublicRedockingRunnerError):
+    """One source case is outside the bounded Engine V2 execution lane."""
+
+
+_ENGINE_V2_CASE_EXCEPTIONS = (
+    DockingAuthorityError,
+    DockingSearchError,
+    ElementAwareValidityError,
+    EngineV2CaseFailure,
+    PDBParseError,
+    ScorerV1Error,
+    SDFParseError,
+    UnicodeDecodeError,
+)
+
+
+def _configure_engine_v2_cpu() -> None:
+    torch.set_num_threads(ENGINE_V2_CPU_POLICY["torch_intraop_threads"])
+    if torch.get_num_interop_threads() != ENGINE_V2_CPU_POLICY[
+        "torch_interop_threads"
+    ]:
+        torch.set_num_interop_threads(ENGINE_V2_CPU_POLICY["torch_interop_threads"])
+    if (
+        torch.get_num_threads() != ENGINE_V2_CPU_POLICY["torch_intraop_threads"]
+        or torch.get_num_interop_threads()
+        != ENGINE_V2_CPU_POLICY["torch_interop_threads"]
+    ):
+        raise PublicRedockingRunnerError(
+            "Engine V2 could not enforce the frozen one-CPU Torch policy"
+        )
+
+
+def _external_execution_policy(timeout_seconds: int) -> dict[str, object]:
+    return {
+        "cpu_count": 1,
+        "timeout_seconds": timeout_seconds,
+    }
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -318,6 +371,7 @@ def _row_payload(
     row: PublicRedockingCaseResult,
     *,
     command: Sequence[str],
+    execution_policy: dict[str, object],
     input_sha256s: dict[str, str],
     implementation_sha256: str,
     evaluation_pipeline_sha256: str,
@@ -333,6 +387,7 @@ def _row_payload(
         "archive_sha256": PUBLIC_REDOCKING_ARCHIVE_SHA256,
         "source_ids_sha256": PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
         "command": list(command),
+        "execution_policy": execution_policy,
         "input_sha256s": input_sha256s,
         "implementation_sha256": implementation_sha256,
         "evaluation_pipeline_sha256": evaluation_pipeline_sha256,
@@ -350,6 +405,7 @@ def _load_cached_row(
     case_id: str,
     engine_id: str,
     command: Sequence[str],
+    execution_policy: dict[str, object],
     input_sha256s: dict[str, str],
     implementation_sha256: str,
     evaluation_pipeline_sha256: str,
@@ -371,6 +427,7 @@ def _load_cached_row(
             or projection.get("archive_sha256") != PUBLIC_REDOCKING_ARCHIVE_SHA256
             or projection.get("source_ids_sha256") != PUBLIC_REDOCKING_SOURCE_IDS_SHA256
             or projection.get("command") != list(command)
+            or projection.get("execution_policy") != execution_policy
             or projection.get("input_sha256s") != input_sha256s
             or projection.get("implementation_sha256") != implementation_sha256
             or projection.get("evaluation_pipeline_sha256")
@@ -406,14 +463,18 @@ def _load_cached_row(
         return None
 
 
-def _engine_source_sha256(repo_root: Path) -> str:
-    paths = (
-        repo_root / "betelgeuze_engine_v2/docking/scorer_v1.py",
-        repo_root / "betelgeuze_engine_v2/docking/guided_placement.py",
-        repo_root / "betelgeuze_engine_v2/docking/authority.py",
-        repo_root / "betelgeuze_engine_v2/io/pdb.py",
-        Path(__file__).resolve(),
-    )
+def _engine_source_sha256(
+    repo_root: Path,
+    *,
+    runner_path: Path | None = None,
+) -> str:
+    package_root = repo_root / "betelgeuze_engine_v2"
+    active_runner = Path(__file__).resolve() if runner_path is None else runner_path
+    paths = tuple(sorted(package_root.rglob("*.py"))) + (active_runner,)
+    if not paths or any(not path.is_file() for path in paths):
+        raise PublicRedockingRunnerError(
+            "Engine V2 implementation source closure is incomplete"
+        )
     projection = [
         (path.relative_to(repo_root).as_posix(), _sha256_path(path)) for path in paths
     ]
@@ -511,6 +572,121 @@ def _external_command(
     return tuple(command)
 
 
+def _engine_v2_pose_coordinates(
+    case_id: str,
+    paths: dict[str, Path],
+    *,
+    seed: int,
+) -> tuple[torch.Tensor, ...]:
+    receptor_bytes = paths["receptor"].read_bytes()
+    seed_bytes = paths["seed"].read_bytes()
+    native_bytes = paths["native"].read_bytes()
+    receptor = parse_pdb(
+        receptor_bytes,
+        source_id=f"{case_id}:receptor",
+        dtype=torch.float64,
+        device="cpu",
+        connectivity_policy="record_unrepresented",
+        unit_cell_policy="ignore",
+    )
+    ligand = parse_sdf_v2000(
+        seed_bytes.decode("ascii"),
+        source_id=f"{case_id}:seed",
+        dtype=torch.float64,
+        device="cpu",
+    )
+    native = parse_sdf_v2000(
+        native_bytes.decode("ascii"),
+        source_id=f"{case_id}:native",
+        dtype=torch.float64,
+        device="cpu",
+    )
+    native_coordinates = native.coordinates[0]
+    center = native_coordinates.mean(dim=0)
+    radius = max(
+        6.0,
+        float(
+            torch.linalg.vector_norm(
+                native_coordinates - center,
+                dim=-1,
+            )
+            .max()
+            .item()
+        )
+        + 4.0,
+    )
+    pocket = PocketDefinition(
+        scope=DockingScope.KNOWN_POCKET,
+        method_id="posebusters-crystal-redocking-sphere",
+        method_version="1.0.0",
+        coordinate_frame_id="posebusters-receptor-frame-v1",
+        center=center,
+        radius_angstrom=radius,
+        source_artifact_sha256=_sha256_bytes(native_bytes),
+        implementation_source_sha256=_sha256_bytes(
+            b"posebusters-crystal-redocking-sphere/1.0.0"
+        ),
+    )
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        pocket,
+        receptor_margin_angstrom=4.0,
+    )
+    scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256=_sha256_bytes(
+            b"engine-v2-public-redocking-scorer-v1"
+        ),
+    )
+    context = build_guided_placement_context(authority, receptor, ligand)
+    budget = DockingBudget(
+        candidate_count=5,
+        top_k=5,
+        max_torsions=32,
+        max_refinement_steps=0,
+        translation_radius_angstrom=min(4.0, radius),
+        seed=seed,
+    )
+    result = run_authenticated_scorer_v1_guided_search(
+        authority,
+        budget,
+        scorer,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+    )
+    search = result.guided_search_result.authenticated_search_result.search_result
+    if len(search.top_rows) != 5:
+        raise EngineV2CaseFailure("Engine V2 did not retain five poses")
+    proposals = tuple(row.proposal for row in search.top_rows)
+    if any(proposal is None for proposal in proposals):
+        raise EngineV2CaseFailure(
+            "Engine V2 retained a row without pose coordinates"
+        )
+    return tuple(
+        proposal.coordinates for proposal in proposals if proposal is not None
+    )
+
+
+def _engine_v2_failure_code(exc: Exception) -> str:
+    message = str(exc).lower()
+    if "partial charges" in message:
+        return "receptor_partial_charge_generation_unavailable"
+    if "unsupported vdw element" in message:
+        return "unsupported_receptor_element"
+    if "ring systems with 12 or more atoms" in message:
+        return "unsupported_macrocycle"
+    if "five poses" in message or "pose coordinates" in message:
+        return "engine_v2_pose_count_incomplete"
+    if isinstance(exc, (PDBParseError, SDFParseError, UnicodeDecodeError)):
+        return "engine_v2_input_unsupported"
+    return "engine_v2_case_failed"
+
+
 def _engine_v2_result(
     case_id: str,
     paths: dict[str, Path],
@@ -521,130 +697,38 @@ def _engine_v2_result(
 ) -> PublicRedockingCaseResult:
     started = time.perf_counter()
     try:
-        receptor_bytes = paths["receptor"].read_bytes()
-        seed_bytes = paths["seed"].read_bytes()
-        native_bytes = paths["native"].read_bytes()
-        receptor = parse_pdb(
-            receptor_bytes,
-            source_id=f"{case_id}:receptor",
-            dtype=torch.float64,
-            device="cpu",
-            connectivity_policy="record_unrepresented",
-            unit_cell_policy="ignore",
-        )
-        ligand = parse_sdf_v2000(
-            seed_bytes.decode("ascii"),
-            source_id=f"{case_id}:seed",
-            dtype=torch.float64,
-            device="cpu",
-        )
-        native = parse_sdf_v2000(
-            native_bytes.decode("ascii"),
-            source_id=f"{case_id}:native",
-            dtype=torch.float64,
-            device="cpu",
-        )
-        native_coordinates = native.coordinates[0]
-        center = native_coordinates.mean(dim=0)
-        radius = max(
-            6.0,
-            float(
-                torch.linalg.vector_norm(
-                    native_coordinates - center,
-                    dim=-1,
-                )
-                .max()
-                .item()
+        coordinates = _engine_v2_pose_coordinates(case_id, paths, seed=seed)
+        try:
+            artifacts = _write_engine_v2_poses(
+                output,
+                paths["seed"],
+                coordinates,
+                case_id=case_id,
             )
-            + 4.0,
-        )
-        pocket = PocketDefinition(
-            scope=DockingScope.KNOWN_POCKET,
-            method_id="posebusters-crystal-redocking-sphere",
-            method_version="1.0.0",
-            coordinate_frame_id="posebusters-receptor-frame-v1",
-            center=center,
-            radius_angstrom=radius,
-            source_artifact_sha256=_sha256_bytes(native_bytes),
-            implementation_source_sha256=_sha256_bytes(
-                b"posebusters-crystal-redocking-sphere/1.0.0"
-            ),
-        )
-        authority = build_element_aware_authenticated_known_pocket_docking_problem(
-            receptor,
-            ligand,
-            pocket,
-            receptor_margin_angstrom=4.0,
-        )
-        scorer = ChemistryPoseScorerV1(
-            authority,
-            receptor,
-            ligand,
-            implementation_source_sha256=_sha256_bytes(
-                b"engine-v2-public-redocking-scorer-v1"
-            ),
-        )
-        context = build_guided_placement_context(authority, receptor, ligand)
-        budget = DockingBudget(
-            candidate_count=5,
-            top_k=5,
-            max_torsions=32,
-            max_refinement_steps=0,
-            translation_radius_angstrom=min(4.0, radius),
-            seed=seed,
-        )
-        result = run_authenticated_scorer_v1_guided_search(
-            authority,
-            budget,
-            scorer,
-            context,
-            receptor_system=receptor,
-            ligand_system=ligand,
-            diversity_rmsd_angstrom=0.0,
-        )
-        search = result.guided_search_result.authenticated_search_result.search_result
-        if len(search.top_rows) != 5:
-            raise PublicRedockingRunnerError("Engine V2 did not retain five poses")
-        proposals = tuple(row.proposal for row in search.top_rows)
-        if any(proposal is None for proposal in proposals):
-            raise PublicRedockingRunnerError(
-                "Engine V2 retained a row without pose coordinates"
-            )
-        artifacts = _write_engine_v2_poses(
-            output,
-            paths["seed"],
-            tuple(
-                proposal.coordinates for proposal in proposals if proposal is not None
-            ),
-            case_id=case_id,
-        )
-        rmsds, geometric, chemical = _posebusters_outcomes(output, paths)
-        return PublicRedockingCaseResult(
-            case_id=case_id,
-            engine_id="engine_v2",
-            status="success",
-            runtime_seconds=time.perf_counter() - started,
-            **_result_input_fields(input_sha256s),
-            rmsd_angstroms=rmsds,
-            geometric_valid=geometric,
-            chemical_valid=chemical,
-            pose_artifact_sha256s=artifacts,
-        )
-    except Exception as exc:
-        if "partial charges" in str(exc).lower():
-            code = "receptor_partial_charge_generation_unavailable"
-        elif "five poses" in str(exc).lower():
-            code = "engine_v2_pose_count_incomplete"
-        else:
-            code = "engine_v2_case_failed"
+        except PublicRedockingRunnerError as exc:
+            raise EngineV2CaseFailure(str(exc)) from exc
+    except _ENGINE_V2_CASE_EXCEPTIONS as exc:
         return PublicRedockingCaseResult(
             case_id=case_id,
             engine_id="engine_v2",
             status="failure",
             runtime_seconds=time.perf_counter() - started,
             **_result_input_fields(input_sha256s),
-            failure_code=code,
+            failure_code=_engine_v2_failure_code(exc),
         )
+    runtime = time.perf_counter() - started
+    rmsds, geometric, chemical = _posebusters_outcomes(output, paths)
+    return PublicRedockingCaseResult(
+        case_id=case_id,
+        engine_id="engine_v2",
+        status="success",
+        runtime_seconds=runtime,
+        **_result_input_fields(input_sha256s),
+        rmsd_angstroms=rmsds,
+        geometric_valid=geometric,
+        chemical_valid=chemical,
+        pose_artifact_sha256s=artifacts,
+    )
 
 
 def _external_result(
@@ -676,44 +760,74 @@ def _external_result(
             stderr=subprocess.DEVNULL,
             timeout=timeout_seconds,
         )
-        runtime = time.perf_counter() - started
-        if completed.returncode != 0 or not output.is_file():
-            raise PublicRedockingRunnerError("external process failed")
-        records = _split_sdf_records(output.read_bytes())
-        if len(records) != 5:
-            raise PublicRedockingRunnerError("external engine did not emit five poses")
-        rmsds, geometric, chemical = _posebusters_outcomes(output, paths)
-        artifacts = tuple(_sha256_bytes(record) for record in records)
+    except subprocess.TimeoutExpired:
         return (
             PublicRedockingCaseResult(
                 case_id=case_id,
                 engine_id=engine_id,
-                status="success",
-                runtime_seconds=runtime,
+                status="failure",
+                runtime_seconds=time.perf_counter() - started,
                 **_result_input_fields(input_sha256s),
-                rmsd_angstroms=rmsds,
-                geometric_valid=geometric,
-                chemical_valid=chemical,
-                pose_artifact_sha256s=artifacts,
+                failure_code="external_timeout",
             ),
             command,
         )
-    except subprocess.TimeoutExpired:
-        code = "external_timeout"
-    except Exception as exc:
-        code = (
-            "external_pose_count_incomplete"
-            if "five poses" in str(exc).lower()
-            else "external_case_failed"
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise PublicRedockingRunnerError(
+            "external engine infrastructure failed"
+        ) from exc
+    runtime = time.perf_counter() - started
+    if completed.returncode != 0 or not output.is_file():
+        return (
+            PublicRedockingCaseResult(
+                case_id=case_id,
+                engine_id=engine_id,
+                status="failure",
+                runtime_seconds=runtime,
+                **_result_input_fields(input_sha256s),
+                failure_code="external_process_failed",
+            ),
+            command,
         )
+    try:
+        records = _split_sdf_records(output.read_bytes())
+    except PublicRedockingRunnerError:
+        return (
+            PublicRedockingCaseResult(
+                case_id=case_id,
+                engine_id=engine_id,
+                status="failure",
+                runtime_seconds=runtime,
+                **_result_input_fields(input_sha256s),
+                failure_code="external_pose_output_invalid",
+            ),
+            command,
+        )
+    if len(records) != 5:
+        return (
+            PublicRedockingCaseResult(
+                case_id=case_id,
+                engine_id=engine_id,
+                status="failure",
+                runtime_seconds=runtime,
+                **_result_input_fields(input_sha256s),
+                failure_code="external_pose_count_incomplete",
+            ),
+            command,
+        )
+    artifacts = tuple(_sha256_bytes(record) for record in records)
+    rmsds, geometric, chemical = _posebusters_outcomes(output, paths)
     return (
         PublicRedockingCaseResult(
             case_id=case_id,
             engine_id=engine_id,
-            status="failure",
-            runtime_seconds=time.perf_counter() - started,
+            status="success",
+            runtime_seconds=runtime,
             **_result_input_fields(input_sha256s),
-            failure_code=code,
+            rmsd_angstroms=rmsds,
+            geometric_valid=geometric,
+            chemical_valid=chemical,
+            pose_artifact_sha256s=artifacts,
         ),
         command,
     )
@@ -774,6 +888,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise PublicRedockingRunnerError("GNINA binary is missing")
     _load_rdkit_modules()
     _load_posebusters()
+    _configure_engine_v2_cpu()
     if type(arguments.seed) is not int or not 0 <= arguments.seed <= 2_147_483_348:
         raise PublicRedockingRunnerError(
             "seed must leave room for all 300 signed-32-bit case seeds"
@@ -832,6 +947,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 case_id=case_id,
                 engine_id="engine_v2",
                 command=engine_command,
+                execution_policy=ENGINE_V2_CPU_POLICY,
                 input_sha256s=inputs,
                 implementation_sha256=engine_source_sha256,
                 evaluation_pipeline_sha256=evaluation_pipeline_sha256,
@@ -849,6 +965,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     _row_payload(
                         engine_row,
                         command=engine_command,
+                        execution_policy=ENGINE_V2_CPU_POLICY,
                         input_sha256s=inputs,
                         implementation_sha256=engine_source_sha256,
                         evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
@@ -872,6 +989,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     case_id=case_id,
                     engine_id=engine_id,
                     command=expected_command,
+                    execution_policy=_external_execution_policy(
+                        arguments.timeout_seconds
+                    ),
                     input_sha256s=inputs,
                     implementation_sha256=binary_sha256,
                     evaluation_pipeline_sha256=evaluation_pipeline_sha256,
@@ -892,6 +1012,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         _row_payload(
                             row,
                             command=command,
+                            execution_policy=_external_execution_policy(
+                                arguments.timeout_seconds
+                            ),
                             input_sha256s=inputs,
                             implementation_sha256=binary_sha256,
                             evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
@@ -924,14 +1047,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             version="source-stage7",
             implementation_sha256=engine_source_sha256,
             evaluation_pipeline_sha256=evaluation_pipeline_sha256,
-            command=(RUNNER_ID, "engine_v2", "--candidate-count", "5"),
+            command=(
+                RUNNER_ID,
+                "engine_v2",
+                "--candidate-count",
+                "5",
+                "--cpu",
+                "1",
+            ),
         ),
         PublicRedockingEngineIdentity(
             engine_id="vina",
             version=f"{binary_version}; vina scoring; CNN disabled",
             implementation_sha256=binary_sha256,
             evaluation_pipeline_sha256=evaluation_pipeline_sha256,
-            command=(str(binary), "--scoring", "vina", "--cnn_scoring", "none"),
+            command=(
+                str(binary),
+                "--scoring",
+                "vina",
+                "--cnn_scoring",
+                "none",
+                "--cpu",
+                "1",
+                "--timeout-seconds",
+                str(arguments.timeout_seconds),
+            ),
         ),
         PublicRedockingEngineIdentity(
             engine_id="gnina",
@@ -944,6 +1084,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "rescore",
                 "--cnn",
                 "crossdock_default2018",
+                "--cpu",
+                "1",
+                "--timeout-seconds",
+                str(arguments.timeout_seconds),
             ),
         ),
     )
@@ -959,6 +1103,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         policy=PublicRedockingEvaluationPolicy(
             bootstrap_samples=arguments.bootstrap_samples,
             bootstrap_seed=arguments.seed,
+            external_timeout_seconds=arguments.timeout_seconds,
+            cpu_count=1,
         ),
     )
     _atomic_json(output_root / "public-redocking-report.json", report.to_dict())

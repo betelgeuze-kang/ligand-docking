@@ -227,6 +227,8 @@ def test_frozen_profiles_bind_ligand_artifacts_and_cover_all_subgroups() -> None
         ({"top_ks": (1, 5)}, "top_ks"),
         ({"rmsd_threshold_angstrom": 2.1}, "threshold"),
         ({"bootstrap_samples": 99}, "bootstrap_samples"),
+        ({"external_timeout_seconds": 0}, "external_timeout_seconds"),
+        ({"cpu_count": 2}, "cpu_count"),
     ),
 )
 def test_equal_budget_policy_fails_closed(changes, message) -> None:
@@ -272,8 +274,14 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
     assert len(report.rows) == 900
     assert report.to_dict()["full_failure_denominator_retained"] is True
     assert report.to_dict()["same_ranked_pose_count"] is True
+    assert report.to_dict()["same_pocket_source"] is True
+    assert report.to_dict()["same_pocket_geometry"] is False
     assert report.to_dict()["same_search_effort_budget"] is False
     assert report.to_dict()["search_effort_comparable"] is False
+    assert report.to_dict()["runtime_boundary_comparable"] is True
+    assert report.to_dict()["cpu_limit_comparable"] is True
+    assert report.to_dict()["policy"]["external_timeout_seconds"] == 300
+    assert report.to_dict()["policy"]["cpu_count"] == 1
     assert report.to_dict()["benchmark_executed"] is True
     assert report.to_dict()["bootstrap_confidence_intervals"] is True
     assert _metric(
