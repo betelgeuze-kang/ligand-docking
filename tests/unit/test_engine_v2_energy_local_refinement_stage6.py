@@ -259,12 +259,18 @@ def _proposal(authority):
     return generate_pocket_centered_docking_proposals(authority, budget)[0][0]
 
 
-def _refiner(authority, ligand, *, parameters=None):
+def _refiner(
+    authority,
+    ligand,
+    *,
+    parameters=None,
+    implementation_source_sha256: str = "e" * 64,
+):
     return EnergyBasedLocalRefiner(
         authority,
         ligand,
         _parameters(ligand) if parameters is None else parameters,
-        implementation_source_sha256="e" * 64,
+        implementation_source_sha256=implementation_source_sha256,
         config=_config(),
     )
 
@@ -325,6 +331,17 @@ def test_refinement_is_deterministic_and_binds_effective_step_budget():
     assert first_attempt.effective_minimization_config_fingerprint_sha256 != (
         first.config.minimization.fingerprint_sha256
     )
+
+    alternate = _refiner(
+        authority,
+        ligand,
+        implementation_source_sha256="1" * 64,
+    )
+    alternate_result = alternate.refine(source, max_steps=7)
+    alternate_attempt = alternate.attempt_for(source.fingerprint_sha256)
+    assert torch.equal(first_result.coordinates, alternate_result.coordinates)
+    assert first_attempt.receipt_sha256 != alternate_attempt.receipt_sha256
+    assert alternate_attempt.implementation_source_sha256 == "1" * 64
 
 
 def test_parameter_topology_and_step_budget_fail_closed():
@@ -411,6 +428,20 @@ def test_attempt_constructor_rejects_coordinate_and_counter_forgery():
         replace(attempt, accepted_iterations=attempt.max_steps + 1)
     with pytest.raises(EnergyRefinementError, match="must be an integer"):
         replace(attempt, evaluation_count=0.0)
+    with pytest.raises(EnergyRefinementError, match="outcome evidence"):
+        replace(
+            attempt,
+            minimization_status="converged",
+            converged=False,
+            minimization_failure_code="fake",
+        )
+    with pytest.raises(EnergyRefinementError, match="outcome evidence"):
+        replace(
+            attempt,
+            minimization_status="converged",
+            converged=True,
+            minimization_failure_code="fake",
+        )
 
 
 def test_source_mutation_and_attempt_capacity_fail_closed():
@@ -431,6 +462,8 @@ def test_source_mutation_and_attempt_capacity_fail_closed():
         refiner.refine(proposals[1], max_steps=1)
     with pytest.raises(AttributeError):
         refiner.problem_fingerprint_sha256 = "0" * 64
+    with pytest.raises(AttributeError):
+        refiner.implementation_source_sha256 = "0" * 64
 
     mutated = _refiner(authority, ligand)
     object.__setattr__(
@@ -440,6 +473,16 @@ def test_source_mutation_and_attempt_capacity_fail_closed():
     )
     with pytest.raises(EnergyRefinementError, match="source state changed"):
         mutated.refine(_proposal(authority), max_steps=1)
+
+    parameters = _parameters(_ligand())
+    parameter_bound = _refiner(
+        authority,
+        _ligand(),
+        parameters=parameters,
+    )
+    object.__setattr__(parameters, "dielectric", parameters.dielectric + 1.0)
+    with pytest.raises(EnergyRefinementError, match="parameter state changed"):
+        parameter_bound.refine(_proposal(authority), max_steps=1)
 
 
 def test_refiner_integrates_with_failure_complete_docking_search():

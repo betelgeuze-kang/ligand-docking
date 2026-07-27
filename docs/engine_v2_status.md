@@ -125,7 +125,8 @@ The current `main` branch contains:
 - an authenticated ligand-internal energy-refinement adapter that connects
   docking proposal lineage to the bounded CPU reference minimizer and retains
   exact pre/post coordinates, energy delta, displacement, convergence,
-  effective parameters/configuration, and failure-complete attempt evidence.
+  implementation source, immutable parameters/configuration, and
+  failure-complete attempt evidence.
   Its Scorer v1 guided-search result binds every candidate row to the exact
   attempt while preserving the full denominator;
 - a benchmark manifest and one-row-per-case success/failure ledger;

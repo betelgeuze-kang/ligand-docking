@@ -11,7 +11,8 @@ scientific claim from a package version.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,
-  convergence and evaluation counters, effective step/config identity, and a
+  coherent convergence and evaluation counters, implementation source,
+  immutable parameter fingerprint, effective step/config identity, and a
   failure-complete attempt receipt. The Scorer v1 guided-search integration
   binds every generic success or failure row to its exact attempt without
   dropping the candidate denominator. This stage minimizes ligand-internal

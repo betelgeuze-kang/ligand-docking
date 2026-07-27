@@ -65,6 +65,17 @@ ENERGY_REFINER_ALGORITHM_ID = (
 )
 MAX_ENERGY_REFINEMENT_ATTEMPTS = 10_000
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_MINIMIZATION_OUTCOMES = MappingProxyType(
+    {
+        "converged": (True, ""),
+        "checkpointed": (False, ""),
+        "max_iterations_reached": (
+            False,
+            "maximum_iteration_budget_exhausted",
+        ),
+        "line_search_failed": (False, "bounded_backtracking_exhausted"),
+    }
+)
 
 
 class EnergyRefinementError(DockingAuthorityError):
@@ -218,6 +229,7 @@ class EnergyRefinementAttempt:
     parameter_fingerprint_sha256: str
     parameter_set_id: str
     parameter_set_version: str
+    implementation_source_sha256: str
     refiner_config_fingerprint_sha256: str
     effective_minimization_config_fingerprint_sha256: str
     max_steps: int
@@ -263,6 +275,7 @@ class EnergyRefinementAttempt:
             "authority_input_receipt_sha256",
             "ligand_system_sha256",
             "parameter_fingerprint_sha256",
+            "implementation_source_sha256",
             "refiner_config_fingerprint_sha256",
             "effective_minimization_config_fingerprint_sha256",
             "pre_coordinates_sha256",
@@ -358,8 +371,17 @@ class EnergyRefinementAttempt:
             if final > initial + 1.0e-12:
                 raise EnergyRefinementError("bounded minimization increased energy")
             minimization_status = str(self.minimization_status or "").strip()
-            if not minimization_status:
-                raise EnergyRefinementError("minimization status is empty")
+            expected_outcome = _MINIMIZATION_OUTCOMES.get(minimization_status)
+            if expected_outcome is None:
+                raise EnergyRefinementError("minimization status is invalid")
+            expected_converged, expected_failure_code = expected_outcome
+            if (
+                self.converged is not expected_converged
+                or minimization_failure_code != expected_failure_code
+            ):
+                raise EnergyRefinementError(
+                    "minimization outcome evidence is inconsistent"
+                )
             checkpoint = _digest(
                 self.checkpoint_sha256,
                 name="checkpoint_sha256",
@@ -454,6 +476,7 @@ class EnergyRefinementAttempt:
             "parameter_fingerprint_sha256": self.parameter_fingerprint_sha256,
             "parameter_set_id": self.parameter_set_id,
             "parameter_set_version": self.parameter_set_version,
+            "implementation_source_sha256": self.implementation_source_sha256,
             "refiner_config_fingerprint_sha256": (
                 self.refiner_config_fingerprint_sha256
             ),
@@ -547,12 +570,13 @@ class EnergyBasedLocalRefiner:
             raise TypeError("config must be EnergyLocalRefinementConfig")
         authority.input_receipt_sha256
         selected_config.fingerprint_sha256
-        parameters.fingerprint_sha256
+        parameter_fingerprint_sha256 = parameters.fingerprint_sha256
         self._authority = authority
         self._ligand_system = ligand_system
         self._parameters = parameters
         self._config = selected_config
-        self.implementation_source_sha256 = _digest(
+        self._parameter_fingerprint_sha256 = parameter_fingerprint_sha256
+        self._implementation_source_sha256 = _digest(
             implementation_source_sha256,
             name="implementation_source_sha256",
         )
@@ -572,7 +596,14 @@ class EnergyBasedLocalRefiner:
 
     @property
     def parameter_fingerprint_sha256(self) -> str:
-        return self._parameters.fingerprint_sha256
+        observed = self._parameters.fingerprint_sha256
+        if observed != self._parameter_fingerprint_sha256:
+            raise EnergyRefinementError("refiner parameter state changed")
+        return observed
+
+    @property
+    def implementation_source_sha256(self) -> str:
+        return self._implementation_source_sha256
 
     @property
     def authority_input_receipt_sha256(self) -> str:
@@ -629,7 +660,7 @@ class EnergyBasedLocalRefiner:
             raise EnergyRefinementError("energy-refinement attempt capacity exceeded")
         self._authority.input_receipt_sha256
         self._config.fingerprint_sha256
-        self._parameters.fingerprint_sha256
+        self.parameter_fingerprint_sha256
         try:
             source_system_sha256 = canonical_system_sha256(self._ligand_system)
             source_topology_sha256 = canonical_topology_sha256(self._ligand_system)
@@ -662,9 +693,10 @@ class EnergyBasedLocalRefiner:
             "source_proposal_fingerprint_sha256": proposal.fingerprint_sha256,
             "authority_input_receipt_sha256": self._authority.input_receipt_sha256,
             "ligand_system_sha256": self._authority.ligand_system_sha256,
-            "parameter_fingerprint_sha256": self._parameters.fingerprint_sha256,
+            "parameter_fingerprint_sha256": self._parameter_fingerprint_sha256,
             "parameter_set_id": self._parameters.parameter_set_id,
             "parameter_set_version": self._parameters.parameter_set_version,
+            "implementation_source_sha256": self._implementation_source_sha256,
             "refiner_config_fingerprint_sha256": self._config.fingerprint_sha256,
             "effective_minimization_config_fingerprint_sha256": (
                 effective_config.fingerprint_sha256
@@ -940,6 +972,8 @@ class EnergyRefinedGuidedSearchResult:
             if (
                 attempt.authority_input_receipt_sha256 != authority_receipt
                 or attempt.ligand_system_sha256 != self.refiner.ligand_system_sha256
+                or attempt.implementation_source_sha256
+                != self.refiner.implementation_source_sha256
                 or attempt.refiner_config_fingerprint_sha256 != refiner_config
                 or attempt.parameter_fingerprint_sha256 != parameter_fingerprint
                 or attempt.effective_minimization_config_fingerprint_sha256

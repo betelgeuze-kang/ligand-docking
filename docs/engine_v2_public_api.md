@@ -371,8 +371,10 @@ minimizer, and returns a proposal whose
 lineage names the exact `EnergyRefinementAttempt` receipt. The receipt retains
 binary64 pre/post coordinates, initial/final/delta kcal/mol energy, maximum
 atom displacement, convergence and evaluation counters, checkpoint identity,
-the effective step/config identity, or a failure row without fabricated post
-state. It can be passed as the `refiner` in authenticated docking search.
+the implementation source, immutable parameter fingerprint, effective
+step/config identity, or a failure row without fabricated post state.
+Contradictory minimizer status, convergence, and failure-code combinations fail
+closed. It can be passed as the `refiner` in authenticated docking search.
 `run_authenticated_energy_refined_scorer_v1_guided_search(...)` requires a
 positive refinement-step budget and returns an
 `EnergyRefinedGuidedSearchResult` that binds every generic and Scorer v1 search
