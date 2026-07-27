@@ -175,6 +175,7 @@ def install_search_fingerprint_material() -> str:
             Sequence[int] | torch.Tensor
         ] | None = None,
         problem: object | None = None,
+        placement_center: torch.Tensor | None = None,
     ) -> object:
         threshold = float(diversity_rmsd_angstrom)
         problem_identity = problem or search_module.DockingProblemIdentity.unbound()
@@ -201,6 +202,7 @@ def install_search_fingerprint_material() -> str:
             diversity_metric=diversity_metric,
             symmetry_permutations=symmetry_permutations,
             problem=problem,
+            placement_center=placement_center,
         )
         object.__setattr__(
             result,
