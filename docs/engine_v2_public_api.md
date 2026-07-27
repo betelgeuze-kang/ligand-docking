@@ -288,8 +288,10 @@ pin the distribution version and validate schema IDs.
 
 The provisional docking authority supports ordinary ring-containing ligands
 only as rigid ring systems. Its derivation receipt records ring bonds, rigid
-ring-system atom sets, and the largest detected cycle. Macrocycles with a
-detected cycle size of 12 atoms or more fail closed. This is not yet
+ring-system atom sets, the largest ring-system atom count, and the largest
+detected shortest cycle. A connected ring system with 12 or more atoms fails
+closed conservatively, including ambiguous fused or bridged systems whose
+shorter cycles could hide an unsupported macrocycle. This is not yet
 chemistry-complete rotor perception, ring-closure sampling, or ring-conformer
 sampling.
 

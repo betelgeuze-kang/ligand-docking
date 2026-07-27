@@ -164,6 +164,7 @@ def test_torsion_derivation_is_exact_and_fail_closed() -> None:
         (2, 3),
     )
     assert ring_receipt.rigid_ring_system_atom_indices == ((0, 1, 2, 3),)
+    assert ring_receipt.maximum_ring_system_atom_count == 4
     assert ring_receipt.maximum_ring_cycle_size == 4
     with pytest.raises(DockingAuthorityError, match="connected ligand"):
         derive_authoritative_torsion_search_space(_ligand(disconnected=True))

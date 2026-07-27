@@ -99,9 +99,9 @@ The current `main` branch contains:
   deterministic bridge analysis that retains ordinary ring systems as rigid
   components, exposes ring-system identity in the torsion derivation receipt,
   and admits rotor candidates only on ring-external single, non-aromatic,
-  non-terminal heavy-atom bonds without declared stereo. Rings whose shortest
-  retained cycle contains 12 or more atoms fail closed as unsupported
-  macrocycles;
+  non-terminal heavy-atom bonds without declared stereo. Connected ring systems
+  containing 12 or more atoms fail closed conservatively so a shorter cycle or
+  chord cannot hide an unsupported macrocycle;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
