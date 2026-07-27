@@ -48,7 +48,7 @@ through that file rather than duplicated in `pyproject.toml`.
 | Default offline runtime/tests | `pip install -r requirements.txt && pip install -r requirements-dev.txt` | Base runtime, Torch CPU/default wheel, pytest. |
 | Product API smoke | `pip install -r requirements-api.txt` in addition to runtime deps | FastAPI, Uvicorn, API config helpers, API HTTP test helper. |
 | Installable CLI/package audit | `pip install -e .` | Dynamic dependencies from `requirements-package.txt`. |
-| RDKit chemistry/backmapping paths | Capability profile or environment that provides RDKit; see `requirements-product-rocm.txt` for the current pinned product ROCm entry | RDKit-backed ligand topology, chemistry states, ETKDG/backmapping, and selected product-runner checks. |
+| RDKit chemistry/backmapping/conformer paths | Capability profile or environment that provides RDKit; see `requirements-product-rocm.txt` for the current pinned product ROCm entry | RDKit-backed ligand topology, chemistry states, deterministic Engine V2 ETKDG conformer preparation, backmapping, and selected product-runner checks. |
 | OpenMM/all-atom reference replay | External OpenMM-capable environment plus required local artifacts/manifests | OpenMM reference/minimization evidence. This is not a default clean-clone dependency. |
 
 ## Guardrail

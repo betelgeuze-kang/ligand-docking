@@ -106,6 +106,10 @@ The current `main` branch contains:
   bond and excludes amide, urea, carbamate, sulfonamide, conjugated, ring,
   aromatic, non-single, hydrogen, terminal-heavy-atom, and stereo-constrained
   bonds;
+- capability-gated deterministic ETKDGv3 conformer preparation with exact
+  seed/configuration and RDKit-version identity, MMFF94-or-UFF conformer
+  energies, energy-window filtering, heavy-atom Kabsch-RMSD diversity, stable
+  conformer identities, and an immutable prepared-state receipt;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -386,6 +390,8 @@ not currently establish:
   third-party-toolkit-equivalent rotor perception. Ordinary supported ring
   systems are rigid, and the bounded chemistry-aware rules remain
   scientifically unvalidated;
+- scientific validation of ETKDG ensemble quality, symmetry-aware conformer
+  diversity, or a default Engine V2 RDKit dependency;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
   representative public holdout; the frozen four-case protocol fixture is not a
   benchmark result;
