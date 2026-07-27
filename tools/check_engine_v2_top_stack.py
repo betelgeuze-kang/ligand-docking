@@ -36,6 +36,7 @@ REDUNDANT_STACK_WORKFLOWS = (
     "ci-engine-v2-pocket-placement-round6.yml",
     "ci-engine-v2-element-contact-round8.yml",
     "ci-engine-v2-interpretable-scorer-round10.yml",
+    "ci-engine-v2-interpretable-result-round12.yml",
 )
 FORBIDDEN_SOURCE_FRAGMENTS = (
     "contents: write",
