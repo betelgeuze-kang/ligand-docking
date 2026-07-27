@@ -25,6 +25,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScoreDescriptor,
     DockingScope,
     GuidedPlacementPolicy,
+    GuidedPlacementSearchResult,
     PocketDefinition,
     ScoreDirection,
     build_authenticated_known_pocket_docking_problem,
@@ -828,3 +829,34 @@ def test_guided_search_reuses_failure_complete_search_and_resets_override() -> N
     assert tuple(row.fingerprint_sha256 for row in baseline) != (
         result.guided_receipt.proposal_fingerprint_sha256s
     )
+
+
+def test_guided_search_result_rejects_a_different_top_k_budget() -> None:
+    authority, receptor, ligand = _authority()
+    context = build_guided_placement_context(authority, receptor, ligand)
+    first = run_authenticated_guided_placement_search(
+        authority,
+        _budget(919),
+        _Scorer(authority.problem.fingerprint_sha256),
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+    )
+    second = run_authenticated_guided_placement_search(
+        authority,
+        replace(_budget(919), top_k=2),
+        _Scorer(authority.problem.fingerprint_sha256),
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+    )
+    assert first.guided_receipt.proposal_fingerprint_sha256s == (
+        second.guided_receipt.proposal_fingerprint_sha256s
+    )
+    with pytest.raises(DockingAuthorityError, match="budget is cross-wired"):
+        GuidedPlacementSearchResult(
+            guided_receipt=first.guided_receipt,
+            authenticated_search_result=second.authenticated_search_result,
+        )

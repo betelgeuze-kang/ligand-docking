@@ -1525,6 +1525,11 @@ class GuidedPlacementSearchResult:
         if observed != self.guided_receipt.proposal_fingerprint_sha256s:
             raise DockingAuthorityError("guided search proposals are cross-wired")
         if (
+            _budget_sha256(self.authenticated_search_result.search_result.budget)
+            != self.guided_receipt.budget_sha256
+        ):
+            raise DockingAuthorityError("guided search budget is cross-wired")
+        if (
             self.authenticated_search_result.authenticated_input_receipt_sha256
             != self.guided_receipt.authenticated_input_receipt_sha256
         ):
