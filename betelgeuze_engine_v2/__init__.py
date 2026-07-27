@@ -110,6 +110,26 @@ if hasattr(_sys, _VERIFIED_SOURCE_FINDER_ATTRIBUTE):
 else:
     VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256 = ""
 
+from .stack_round1_hardening import (
+    install_stack_round1_hardening as _install_stack_round1_hardening,
+)
+
+STACK_ROUND1_HARDENING_SHA256 = _install_stack_round1_hardening()
+
+from .stack_round1_minimization_compat import (
+    install_stack_round1_minimization_compat as _install_stack_round1_minimization_compat,
+)
+
+STACK_ROUND1_MINIMIZATION_COMPAT_SHA256 = (
+    _install_stack_round1_minimization_compat()
+)
+
+from .stack_round2_evaluator import (
+    install_stack_round2_evaluator as _install_stack_round2_evaluator,
+)
+
+STACK_ROUND2_EVALUATOR_SHA256 = _install_stack_round2_evaluator()
+
 __version__ = ENGINE_API_VERSION
 
 __all__ = [
@@ -129,6 +149,9 @@ __all__ = [
     "REFERENCE_EXECUTION_MODE",
     "RIGID_PROJECTION_NOTE",
     "RUNTIME_INPUT_SCHEMA_VERSION",
+    "STACK_ROUND1_HARDENING_SHA256",
+    "STACK_ROUND1_MINIMIZATION_COMPAT_SHA256",
+    "STACK_ROUND2_EVALUATOR_SHA256",
     "VERIFIED_SOURCE_RUNTIME_HARDENING_SHA256",
     "VERSION_TAXONOMY",
     "AllAtomSystem",
