@@ -200,6 +200,7 @@ jobs:
           cd "$outside"
           "$venv/bin/betelgeuze-engine-v2" --help
           "$venv/bin/betelgeuze-engine-v2" dock-canonical --help
+          "$venv/bin/betelgeuze-engine-v2" verify-result --help
           "$venv/bin/python" - <<'PY'
           from pathlib import Path
           import json
@@ -279,26 +280,52 @@ jobs:
             --max-torsions 1 \
             --translation-radius-angstrom 1.0 \
             --seed 151
+          "$venv/bin/betelgeuze-engine-v2" verify-result \
+            --input result.json \
+            --output verification.json
           "$venv/bin/python" - <<'PY'
           from pathlib import Path
           import json
+          import stat
           from betelgeuze_engine_v2.cli import CLI_DOCKING_RESULT_SCHEMA_ID
 
-          document = json.loads(Path("result.json").read_bytes())
-          assert document["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
-          assert document["candidate_count"] == 2
-          assert document["success_count"] + document["failure_count"] == 2
-          assert document["scorer_source_preimport_attested"] is False
-          assert document["chemistry_inference_performed"] is False
-          assert document["calibrated"] is False
-          assert document["claim_safe"] is False
+          result_path = Path("result.json")
+          verification_path = Path("verification.json")
+          result = json.loads(result_path.read_bytes())
+          verification = json.loads(verification_path.read_bytes())
+          assert stat.S_IMODE(result_path.stat().st_mode) == 0o600
+          assert stat.S_IMODE(verification_path.stat().st_mode) == 0o600
+          assert result["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
+          assert result["candidate_count"] == 2
+          assert result["success_count"] + result["failure_count"] == 2
+          assert result["scorer_source_preimport_attested"] is False
+          assert result["chemistry_inference_performed"] is False
+          assert result["calibrated"] is False
+          assert result["claim_safe"] is False
+          assert verification["candidate_count"] == 2
+          assert verification["success_count"] + verification["failure_count"] == 2
+          assert verification["canonical_bytes_verified"] is True
+          assert verification["nested_receipts_verified"] is True
+          assert verification["failure_denominator_verified"] is True
+          assert verification["generic_search_fingerprint_fully_recomputed"] is False
+          assert verification["generic_search_fingerprint_crosslinked"] is True
+          assert verification["network_fetch_performed"] is False
+          assert verification["calibrated"] is False
+          assert verification["scientifically_validated"] is False
+          assert verification["benchmark_validated"] is False
+          assert verification["product_qualified"] is False
+          assert verification["customer_execution_enabled"] is False
+          assert verification["claim_safe"] is False
           PY
 
       - name: Upload reproducible wheel and digest
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: engine-v2-wheel-py${{ matrix.python-version }}-${{ github.sha }}
-          path: dist-engine-v2
+          path: |
+            dist-engine-v2
+            /tmp/engine-v2-outside-${{ matrix.python-version }}/result.json
+            /tmp/engine-v2-outside-${{ matrix.python-version }}/verification.json
           if-no-files-found: error
           retention-days: 7
 

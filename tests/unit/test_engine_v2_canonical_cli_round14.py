@@ -135,6 +135,7 @@ def _canonical_json_bytes(value: object) -> bytes:
 
 
 def _inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     receptor = tmp_path / "receptor.json"
     ligand = tmp_path / "ligand.json"
     pocket = tmp_path / "pocket.json"
@@ -208,54 +209,33 @@ def test_console_command_writes_private_canonical_output(
 ) -> None:
     receptor, ligand, pocket = _inputs(tmp_path)
     output = tmp_path / "result.json"
-    status_code = main(
-        [
-            "dock-canonical",
-            "--receptor",
-            str(receptor),
-            "--ligand",
-            str(ligand),
-            "--pocket",
-            str(pocket),
-            "--output",
-            str(output),
-            "--candidate-count",
-            "3",
-            "--top-k",
-            "2",
-            "--max-torsions",
-            "1",
-            "--translation-radius-angstrom",
-            "1.0",
-            "--seed",
-            "137",
-        ]
-    )
-    assert status_code == 0
+    arguments = [
+        "dock-canonical",
+        "--receptor",
+        str(receptor),
+        "--ligand",
+        str(ligand),
+        "--pocket",
+        str(pocket),
+        "--output",
+        str(output),
+        "--candidate-count",
+        "3",
+        "--top-k",
+        "2",
+        "--max-torsions",
+        "1",
+        "--translation-radius-angstrom",
+        "1.0",
+        "--seed",
+        "137",
+    ]
+    assert main(arguments) == 0
     assert stat.S_IMODE(os.stat(output).st_mode) == 0o600
     raw = output.read_bytes()
     assert raw.endswith(b"\n")
-    document = json.loads(raw)
-    assert document["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
-    assert main(
-        [
-            "dock-canonical",
-            "--receptor",
-            str(receptor),
-            "--ligand",
-            str(ligand),
-            "--pocket",
-            str(pocket),
-            "--output",
-            str(output),
-            "--candidate-count",
-            "1",
-            "--top-k",
-            "1",
-            "--max-torsions",
-            "1",
-        ]
-    ) == 2
+    assert json.loads(raw)["schema_id"] == CLI_DOCKING_RESULT_SCHEMA_ID
+    assert main(arguments) == 2
 
 
 def test_noncanonical_pocket_and_symlink_input_fail_closed(
@@ -277,13 +257,15 @@ def test_noncanonical_pocket_and_symlink_input_fail_closed(
             receptor_margin_angstrom=4.0,
         )
 
-    _, _, canonical_pocket = _inputs(tmp_path / "fresh")
+    fresh_receptor, fresh_ligand, canonical_pocket = _inputs(
+        tmp_path / "fresh"
+    )
     receptor_link = tmp_path / "receptor-link.json"
-    receptor_link.symlink_to(receptor)
+    receptor_link.symlink_to(fresh_receptor)
     with pytest.raises(EngineV2CliError, match="could not be read"):
         run_canonical_docking(
             receptor_path=receptor_link,
-            ligand_path=ligand,
+            ligand_path=fresh_ligand,
             pocket_path=canonical_pocket,
             candidate_count=1,
             top_k=1,
@@ -294,12 +276,12 @@ def test_noncanonical_pocket_and_symlink_input_fail_closed(
         )
 
 
-def test_package_declares_the_console_entry_point() -> None:
+def test_package_declares_the_console_dispatch_entry_point() -> None:
     pyproject = (
         ROOT / "packaging" / "engine-v2" / "pyproject.toml"
     ).read_text(encoding="utf-8")
-    assert '[project.scripts]' in pyproject
+    assert "[project.scripts]" in pyproject
     assert (
-        'betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli:main"'
+        'betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli_dispatch:main"'
         in pyproject
     )

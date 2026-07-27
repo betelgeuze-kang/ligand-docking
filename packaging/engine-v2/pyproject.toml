@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.scripts]
-betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli:main"
+betelgeuze-engine-v2 = "betelgeuze_engine_v2.cli_dispatch:main"
 
 [tool.setuptools.packages.find]
 include = ["betelgeuze_engine_v2*"]
