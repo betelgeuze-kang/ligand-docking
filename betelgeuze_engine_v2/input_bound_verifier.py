@@ -292,9 +292,14 @@ class InputBoundVerificationReceipt:
     candidate_count: int
     success_count: int
     failure_count: int
+    search_fingerprint_fully_recomputed: bool
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        if type(self.search_fingerprint_fully_recomputed) is not bool:
+            raise InputBoundVerificationError(
+                "search fingerprint recomputation flag must be boolean"
+            )
         required_digests = (
             "result_verification_receipt_sha256",
             "result_document_sha256",
@@ -406,7 +411,9 @@ class InputBoundVerificationReceipt:
             "model_indices_uniquely_attested": False,
             "scorer_contract_recomputed_from_declared_source_sha": True,
             "scorer_source_bytes_locally_attested": False,
-            "search_fingerprint_fully_recomputed": True,
+            "search_fingerprint_fully_recomputed": (
+                self.search_fingerprint_fully_recomputed
+            ),
             "network_fetch_performed": False,
             "chemistry_inference_performed": False,
             "pocket_prediction_performed": False,
@@ -643,6 +650,9 @@ def verify_input_bound_cli_bundle_bytes(
         candidate_count=candidate_count,
         success_count=success_count,
         failure_count=failure_count,
+        search_fingerprint_fully_recomputed=(
+            strict_receipt.generic_search_fingerprint_fully_recomputed
+        ),
     )
 
 

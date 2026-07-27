@@ -16,7 +16,8 @@ product qualification, customer execution, or claim safety.
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
+from collections.abc import Iterator, Mapping as MappingABC
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -727,6 +728,90 @@ class ExecutionEvidenceExpectation:
         object.__setattr__(self, "trusted_attestor_keys", keys)
 
 
+_EXECUTION_VERIFICATION_TOKEN = object()
+
+
+@dataclass(frozen=True, slots=True)
+class VerifiedExecutionEvidence(MappingABC[str, object]):
+    """Immutable result produced only after signed execution verification."""
+
+    capability_id: str
+    engine_commit: str
+    evidence_sha256: str
+    test_count: int
+    _construction_token: object = field(repr=False, compare=False)
+    _verification_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self._construction_token is not _EXECUTION_VERIFICATION_TOKEN:
+            raise EvidenceContractError(
+                "verified execution evidence must come from signature verification"
+            )
+        object.__setattr__(
+            self,
+            "capability_id",
+            _require_safe_id(self.capability_id, name="verified capability_id"),
+        )
+        object.__setattr__(
+            self,
+            "engine_commit",
+            _require_commit(self.engine_commit, name="verified engine_commit"),
+        )
+        object.__setattr__(
+            self,
+            "evidence_sha256",
+            _require_sha256(
+                self.evidence_sha256,
+                name="verified execution evidence",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "test_count",
+            _positive_int(self.test_count, name="verified test_count"),
+        )
+        object.__setattr__(
+            self,
+            "_verification_sha256",
+            _sha256(self._projection()),
+        )
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": EXECUTION_EVIDENCE_VERIFICATION_SCHEMA_ID,
+            "capability_id": self.capability_id,
+            "engine_commit": self.engine_commit,
+            "evidence_sha256": self.evidence_sha256,
+            "test_count": self.test_count,
+            "failure_count": 0,
+            "component_tested": True,
+            "canonical_entrypoint_wired": True,
+            "signature_verified": True,
+            "production_execution_authorized": False,
+            "production_result_receipt_present": False,
+            "independent_result_reviewed": False,
+            "scientifically_validated": False,
+            "claim_safe": False,
+        }
+
+    def validated_projection(self) -> dict[str, object]:
+        projection = self._projection()
+        if _sha256(projection) != self._verification_sha256:
+            raise EvidenceContractError(
+                "verified execution evidence changed after construction"
+            )
+        return projection
+
+    def __getitem__(self, key: str) -> object:
+        return self.validated_projection()[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.validated_projection())
+
+    def __len__(self) -> int:
+        return len(self.validated_projection())
+
+
 def _execution_unsigned_projection(payload: Mapping[str, object]) -> dict[str, object]:
     projection = dict(payload)
     projection.pop("signature_base64", None)
@@ -741,7 +826,7 @@ def verify_execution_evidence_receipt(
     payload: object,
     *,
     expected: ExecutionEvidenceExpectation,
-) -> dict[str, object]:
+) -> VerifiedExecutionEvidence:
     fields = {
         "schema_id",
         "capability_id",
@@ -813,42 +898,32 @@ def verify_execution_evidence_receipt(
         signature_base64=payload["signature_base64"],
         message=_canonical_bytes(unsigned),
     )
-    return {
-        "schema_id": EXECUTION_EVIDENCE_VERIFICATION_SCHEMA_ID,
-        "capability_id": expected.capability_id,
-        "engine_commit": expected.engine_commit,
-        "evidence_sha256": _sha256(dict(payload)),
-        "test_count": test_count,
-        "failure_count": 0,
-        "component_tested": True,
-        "canonical_entrypoint_wired": True,
-        "signature_verified": True,
-        "production_execution_authorized": False,
-        "production_result_receipt_present": False,
-        "independent_result_reviewed": False,
-        "scientifically_validated": False,
-        "claim_safe": False,
-    }
+    return VerifiedExecutionEvidence(
+        capability_id=expected.capability_id,
+        engine_commit=expected.engine_commit,
+        evidence_sha256=_sha256(dict(payload)),
+        test_count=test_count,
+        _construction_token=_EXECUTION_VERIFICATION_TOKEN,
+    )
 
 
 def evidence_bound_capability_snapshot(
-    execution_verifications: Sequence[Mapping[str, object]],
+    execution_verifications: Sequence[VerifiedExecutionEvidence],
 ) -> dict[str, object]:
     """Derive tested/wired state only from verified execution receipts."""
 
     base = capability_truthfulness_snapshot()
-    verified: dict[str, Mapping[str, object]] = {}
+    verified: dict[str, dict[str, object]] = {}
     for verification in execution_verifications:
-        if not isinstance(verification, Mapping) or verification.get("schema_id") != EXECUTION_EVIDENCE_VERIFICATION_SCHEMA_ID:
+        if not isinstance(verification, VerifiedExecutionEvidence):
             raise EvidenceContractError("execution verification is invalid")
+        projection = verification.validated_projection()
         capability_id = _require_safe_id(
-            verification.get("capability_id"), name="verified capability_id"
+            projection.get("capability_id"), name="verified capability_id"
         )
         if capability_id in verified:
             raise EvidenceContractError("duplicate capability execution evidence")
-        if verification.get("signature_verified") is not True:
-            raise EvidenceContractError("execution verification is not signed")
-        verified[capability_id] = verification
+        verified[capability_id] = projection
     rows: dict[str, object] = {}
     for capability_id, source_row in base["capabilities"].items():
         receipt = verified.get(capability_id)
@@ -896,6 +971,7 @@ __all__ = [
     "SCOPED_METRIC_EVIDENCE_V2_SCHEMA_ID",
     "EvidenceContractError",
     "ExecutionEvidenceExpectation",
+    "VerifiedExecutionEvidence",
     "ReviewEvidenceExpectation",
     "ScopedMetricEvidenceV2",
     "TrustedReviewer",

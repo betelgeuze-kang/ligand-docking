@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from betelgeuze_engine_v2.evidence_contracts import (
     EXECUTION_EVIDENCE_RECEIPT_SCHEMA_ID,
+    EXECUTION_EVIDENCE_VERIFICATION_SCHEMA_ID,
     RELEASE_REVIEW_ATTESTATION_SCHEMA_ID,
     EvidenceContractError,
     ExecutionEvidenceExpectation,
@@ -285,6 +286,29 @@ def test_execution_evidence_drives_tested_and_wired_state() -> None:
     assert row["canonical_entrypoint_wired"] is True
     assert row["execution_evidence_sha256"] == verification["evidence_sha256"]
     assert snapshot["claim_safe"] is False
+
+
+def test_evidence_bound_snapshot_rejects_forged_verification_mapping() -> None:
+    forged = {
+        "schema_id": EXECUTION_EVIDENCE_VERIFICATION_SCHEMA_ID,
+        "capability_id": (
+            "v2_cpu_reference_minimization_validation_protocol"
+        ),
+        "engine_commit": "a" * 40,
+        "evidence_sha256": "1" * 64,
+        "test_count": 1,
+        "failure_count": 0,
+        "component_tested": True,
+        "canonical_entrypoint_wired": True,
+        "signature_verified": True,
+        "production_execution_authorized": False,
+        "production_result_receipt_present": False,
+        "independent_result_reviewed": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+    with pytest.raises(EvidenceContractError, match="verification is invalid"):
+        evidence_bound_capability_snapshot((forged,))
 
 
 def test_execution_evidence_rejects_failures_cross_wiring_and_bad_signature() -> None:
