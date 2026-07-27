@@ -35,7 +35,7 @@ jobs:
 
   focused-security-and-evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -103,7 +103,9 @@ jobs:
             tests/unit/test_engine_v2_cli_result_verifier_release_round19.py \
             tests/unit/test_engine_v2_search_fingerprint_material_round20.py \
             tests/unit/test_engine_v2_search_fingerprint_release_round21.py \
-            tests/unit/test_engine_v2_release_integration_cut_c.py \
+            tests/unit/test_engine_v2_reference_pocket_round22.py \
+            tests/unit/test_engine_v2_reference_pocket_release_round23.py \
+            tests/unit/test_engine_v2_release_integration_cut_d.py \
             tests/unit/test_engine_v2_reference_minimization_validation_dependency_identity.py \
             tests/unit/test_engine_v2_reference_minimization_validation_preimport_binding.py \
             tests/unit/test_engine_v2_reference_minimization_validation_bootstrap_e2e.py \

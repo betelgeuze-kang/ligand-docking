@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def _load_checker():
     path = ROOT / "tools" / "check_engine_v2_top_stack.py"
     spec = importlib.util.spec_from_file_location(
-        "engine_v2_top_stack_checker_cut_c",
+        "engine_v2_top_stack_checker_cut_d",
         path,
     )
     assert spec is not None and spec.loader is not None
@@ -19,7 +19,7 @@ def _load_checker():
     return module
 
 
-def test_cut_c_checker_accepts_the_authoritative_repository_stack() -> None:
+def test_cut_d_checker_accepts_the_authoritative_repository_stack() -> None:
     checker = _load_checker()
     assert checker.main() == 0
     assert set(checker.TARGET_WORKFLOWS) == {
@@ -45,7 +45,7 @@ def test_top_stack_runs_on_pull_requests_and_exact_main_without_path_filters() -
     assert "paths-ignore:" not in trigger
 
 
-def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
+def test_top_stack_explicitly_runs_all_reconstructed_cut_d_contracts() -> None:
     source = (
         ROOT / ".github" / "workflows" / "ci-engine-v2-top-stack.yml"
     ).read_text(encoding="utf-8")
@@ -66,7 +66,9 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
         "test_engine_v2_cli_result_verifier_release_round19.py",
         "test_engine_v2_search_fingerprint_material_round20.py",
         "test_engine_v2_search_fingerprint_release_round21.py",
-        "test_engine_v2_release_integration_cut_c.py",
+        "test_engine_v2_reference_pocket_round22.py",
+        "test_engine_v2_reference_pocket_release_round23.py",
+        "test_engine_v2_release_integration_cut_d.py",
     ):
         assert filename in source
 
