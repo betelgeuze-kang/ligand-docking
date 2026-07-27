@@ -61,6 +61,7 @@ def test_top_stack_explicitly_runs_all_reconstructed_cut_c_contracts() -> None:
         "test_engine_v2_interpretable_scorer_round10.py",
         "test_engine_v2_interpretable_result_round12.py",
         "test_engine_v2_canonical_cli_round14.py",
+        "test_engine_v2_sparse_base_validity_round16.py",
         "test_engine_v2_release_integration_cut_c.py",
     ):
         assert filename in source
