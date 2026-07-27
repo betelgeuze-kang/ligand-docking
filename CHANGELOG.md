@@ -8,6 +8,11 @@ scientific claim from a package version.
 
 ### Changed
 
+- The authenticated torsion derivation schema and policy advance to `3.0.0`.
+  Every ligand bond now receives a canonical rotor disposition. Bounded graph
+  rules exclude amide, urea, carbamate, sulfonamide, conjugated, ring, aromatic,
+  non-single, hydrogen, terminal-heavy-atom, and stereo-constrained bonds while
+  retaining eligible non-terminal aliphatic single bonds.
 - The provisional authenticated torsion derivation schema and policy advance to
   `2.0.0`. Ordinary ring systems are now retained as rigid components,
   ring-external eligible single bonds remain rotor candidates, and detected
@@ -19,8 +24,8 @@ scientific claim from a package version.
 ### Scientific boundary
 
 This stage does not add ring-conformer sampling, macrocycle docking,
-chemistry-complete rotor perception, docking-score validation, or benchmark
-evidence.
+third-party-toolkit-equivalent chemical perception, docking-score validation,
+or benchmark evidence.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

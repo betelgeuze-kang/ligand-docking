@@ -102,6 +102,10 @@ The current `main` branch contains:
   non-terminal heavy-atom bonds without declared stereo. Connected ring systems
   containing 12 or more atoms fail closed conservatively so a shorter cycle or
   chord cannot hide an unsupported macrocycle;
+- bounded chemistry-aware rotor perception that records one disposition per
+  bond and excludes amide, urea, carbamate, sulfonamide, conjugated, ring,
+  aromatic, non-single, hydrogen, terminal-heavy-atom, and stereo-constrained
+  bonds;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -378,10 +382,10 @@ not currently establish:
   text/token/category-order/comment/whitespace round trip, or a
   parameterable `AllAtomSystem`;
 - a scientifically validated docking scorer or ranker;
-- macrocycle docking, ring conformer sampling, or chemistry-complete rotor
-  perception. Ordinary supported ring systems are rigid; amide, urea,
-  carbamate, sulfonamide, conjugation, and other chemistry-aware rotor
-  exclusions remain a separate validation stage;
+- macrocycle docking, ring conformer sampling, or
+  third-party-toolkit-equivalent rotor perception. Ordinary supported ring
+  systems are rigid, and the bounded chemistry-aware rules remain
+  scientifically unvalidated;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
   representative public holdout; the frozen four-case protocol fixture is not a
   benchmark result;

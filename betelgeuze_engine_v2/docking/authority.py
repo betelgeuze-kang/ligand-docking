@@ -11,8 +11,9 @@ The current derivation is deliberately conservative:
 * the ligand must be one connected component;
 * ordinary ring systems are retained as rigid components;
 * macrocycles remain outside the supported lane;
-* rotor candidates are ring-external single, non-aromatic, non-terminal
-  heavy-atom edges without declared bond stereo;
+* rotor candidates are ring-external, non-terminal heavy-atom single bonds
+  without declared stereo, restricted functional groups, or bounded
+  conjugation markers;
 * chirality covers only non-degenerate degree-four centers;
 * the receptor subset is bounded to atoms near the supplied spherical pocket;
 * the frozen public-redocking geometric validity policy is reused as an
@@ -66,19 +67,19 @@ AUTHENTICATED_DOCKING_SEARCH_RESULT_SCHEMA_ID = (
 )
 POCKET_DEFINITION_SCHEMA_ID = "betelgeuze.engine_v2_pocket_definition/1.0.0"
 TORSION_SEARCH_SPACE_DERIVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_torsion_search_space_derivation/2.0.0"
+    "betelgeuze.engine_v2_torsion_search_space_derivation/3.0.0"
 )
 AUTHENTICATED_DOCKING_DERIVATION_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_authenticated_docking_derivation_policy/2.0.0"
+    "betelgeuze.engine_v2_authenticated_docking_derivation_policy/3.0.0"
 )
 AUTHENTICATED_DOCKING_DERIVATION_ID = (
-    "betelgeuze.engine_v2_known_pocket_docking_derivation/2.0.0"
+    "betelgeuze.engine_v2_known_pocket_docking_derivation/3.0.0"
 )
 TORSION_FOREST_ALGORITHM_ID = (
     "betelgeuze.engine_v2_sorted_breadth_first_acyclic_forest/1.0.0"
 )
 ROTOR_SELECTION_POLICY_ID = (
-    "betelgeuze.engine_v2_ring_external_nonterminal_heavy_single_rotor/2.0.0"
+    "betelgeuze.engine_v2_chemistry_aware_heavy_single_rotor/3.0.0"
 )
 RING_SYSTEM_POLICY_ID = (
     "betelgeuze.engine_v2_rigid_ring_system_bridge_analysis/1.0.0"
@@ -100,6 +101,22 @@ AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS = 12
 _SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._:/+@-]{1,256}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _UNDECLARED_BOND_STEREO = frozenset({"none", "unspecified"})
+_ROTOR_BOND_DISPOSITIONS = frozenset(
+    {
+        "rotatable",
+        "ring_bond",
+        "aromatic_bond",
+        "non_single_bond",
+        "stereo_constrained_bond",
+        "hydrogen_bond",
+        "terminal_heavy_atom",
+        "amide",
+        "urea",
+        "carbamate",
+        "sulfonamide",
+        "conjugated_bond",
+    }
+)
 
 
 class DockingAuthorityError(ValueError):
@@ -355,6 +372,7 @@ class TorsionSearchSpaceDerivationReceipt:
     bond_count: int
     root_atom_indices: tuple[int, ...]
     rotatable_child_atom_indices: tuple[int, ...]
+    rotor_bond_dispositions: tuple[tuple[int, int, str], ...]
     ring_bond_pairs: tuple[tuple[int, int], ...]
     rigid_ring_system_atom_indices: tuple[tuple[int, ...], ...]
     maximum_ring_system_atom_count: int
@@ -400,6 +418,16 @@ class TorsionSearchSpaceDerivationReceipt:
         )
         roots = tuple(int(value) for value in self.root_atom_indices)
         rotors = tuple(int(value) for value in self.rotatable_child_atom_indices)
+        dispositions: list[tuple[int, int, str]] = []
+        for row in self.rotor_bond_dispositions:
+            if not isinstance(row, (tuple, list)) or len(row) != 3:
+                raise DockingAuthorityError(
+                    "rotor bond dispositions must be three-field rows"
+                )
+            dispositions.append(
+                (int(row[0]), int(row[1]), str(row[2]).strip())
+            )
+        rotor_bond_dispositions = tuple(dispositions)
         ring_bonds = tuple(
             tuple(int(value) for value in pair)
             for pair in self.ring_bond_pairs
@@ -418,6 +446,30 @@ class TorsionSearchSpaceDerivationReceipt:
             raise DockingAuthorityError("rotatable child indices are invalid")
         if not roots:
             raise DockingAuthorityError("search-space receipt requires a root")
+        disposition_pairs = tuple(
+            (first, second)
+            for first, second, _ in rotor_bond_dispositions
+        )
+        if (
+            rotor_bond_dispositions != tuple(sorted(rotor_bond_dispositions))
+            or len(disposition_pairs) != len(set(disposition_pairs))
+            or len(rotor_bond_dispositions) != bond_count
+            or any(
+                first >= second
+                or not 0 <= first < atom_count
+                or not 0 <= second < atom_count
+                or disposition not in _ROTOR_BOND_DISPOSITIONS
+                for first, second, disposition in rotor_bond_dispositions
+            )
+        ):
+            raise DockingAuthorityError("rotor bond dispositions are invalid")
+        if sum(
+            disposition == "rotatable"
+            for _, _, disposition in rotor_bond_dispositions
+        ) != len(rotors):
+            raise DockingAuthorityError(
+                "rotatable bond dispositions and child indices disagree"
+            )
         if ring_bonds != tuple(sorted(set(ring_bonds))) or any(
             len(pair) != 2
             or pair[0] >= pair[1]
@@ -460,6 +512,20 @@ class TorsionSearchSpaceDerivationReceipt:
             raise DockingAuthorityError(
                 "ring bonds cannot cross rigid ring systems"
             )
+        disposition_by_pair = {
+            (first, second): disposition
+            for first, second, disposition in rotor_bond_dispositions
+        }
+        if any(
+            disposition_by_pair.get(pair) != "ring_bond"
+            for pair in ring_bonds
+        ) or any(
+            disposition == "ring_bond" and (first, second) not in ring_bonds
+            for first, second, disposition in rotor_bond_dispositions
+        ):
+            raise DockingAuthorityError(
+                "ring topology and rotor dispositions are cross-wired"
+            )
         maximum_ring_cycle_size = _exact_int(
             self.maximum_ring_cycle_size,
             name="maximum_ring_cycle_size",
@@ -499,6 +565,11 @@ class TorsionSearchSpaceDerivationReceipt:
         object.__setattr__(self, "bond_count", bond_count)
         object.__setattr__(self, "root_atom_indices", roots)
         object.__setattr__(self, "rotatable_child_atom_indices", rotors)
+        object.__setattr__(
+            self,
+            "rotor_bond_dispositions",
+            rotor_bond_dispositions,
+        )
         object.__setattr__(self, "ring_bond_pairs", ring_bonds)
         object.__setattr__(
             self,
@@ -540,6 +611,13 @@ class TorsionSearchSpaceDerivationReceipt:
             "rotatable_child_atom_indices": list(
                 self.rotatable_child_atom_indices
             ),
+            "rotor_bond_dispositions": [
+                {
+                    "atom_indices": [first, second],
+                    "disposition": disposition,
+                }
+                for first, second, disposition in self.rotor_bond_dispositions
+            ],
             "ring_bond_pairs": [
                 list(pair) for pair in self.ring_bond_pairs
             ],
@@ -567,6 +645,7 @@ class TorsionSearchSpaceDerivationReceipt:
                 AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS
             ),
             "macrocycle_supported": False,
+            "chemistry_aware_rotor_rules_applied": True,
             "rotor_perception_chemically_validated": False,
         }
 
@@ -806,6 +885,8 @@ def authenticated_docking_derivation_policy_document() -> dict[str, object]:
         "ring_closure_sampling_supported": False,
         "forest_algorithm_id": TORSION_FOREST_ALGORITHM_ID,
         "rotor_selection_policy_id": ROTOR_SELECTION_POLICY_ID,
+        "rotor_bond_dispositions": sorted(_ROTOR_BOND_DISPOSITIONS),
+        "rotor_disposition_recorded_for_every_bond": True,
         "local_coordinate_policy_id": LOCAL_COORDINATE_POLICY_ID,
         "receptor_subset_policy_id": RECEPTOR_SUBSET_POLICY_ID,
         "nonbonded_exclusions": "ligand_graph_distance_at_most_two",
@@ -953,44 +1034,157 @@ def _derive_ring_topology(
     )
 
 
-def _derive_rotatable_mask(
+@dataclass(frozen=True, slots=True)
+class _RotorPerception:
+    rotatable_mask: torch.Tensor
+    bond_dispositions: tuple[tuple[int, int, str], ...]
+
+
+def _derive_rotor_perception(
     ligand_system: AllAtomSystem,
     *,
     parent: Sequence[int],
-    order: Sequence[int],
     ring_bond_pairs: Sequence[tuple[int, int]],
-) -> torch.Tensor:
+) -> _RotorPerception:
     atom_count = ligand_system.atom_count
     pair_to_bond = {
         tuple(sorted((int(bond.atom_i), int(bond.atom_j)))): bond
         for bond in ligand_system.bonds
     }
-    subtree_size = [1] * atom_count
-    for node in reversed(order):
-        ancestor = parent[node]
-        if ancestor >= 0:
-            subtree_size[ancestor] += subtree_size[node]
+    incident_bonds: list[list[tuple[int, object]]] = [
+        [] for _ in range(atom_count)
+    ]
+    for pair, bond in pair_to_bond.items():
+        first, second = pair
+        incident_bonds[first].append((second, bond))
+        incident_bonds[second].append((first, bond))
+    for rows in incident_bonds:
+        rows.sort(key=lambda row: row[0])
+
+    def element(atom_index: int) -> str:
+        return ligand_system.atoms[atom_index].element.upper()
+
+    def is_order(bond: object, expected: float) -> bool:
+        return math.isclose(
+            float(getattr(bond, "order")),
+            expected,
+            rel_tol=0.0,
+            abs_tol=1.0e-6,
+        )
+
+    def double_oxygen_count(atom_index: int) -> int:
+        return sum(
+            element(neighbor) == "O" and is_order(bond, 2.0)
+            for neighbor, bond in incident_bonds[atom_index]
+        )
+
+    def single_neighbor_elements(atom_index: int) -> tuple[str, ...]:
+        return tuple(
+            element(neighbor)
+            for neighbor, bond in incident_bonds[atom_index]
+            if is_order(bond, 1.0) and not bool(getattr(bond, "aromatic"))
+        )
+
+    def pi_center(atom_index: int) -> bool:
+        atom = ligand_system.atoms[atom_index]
+        return bool(atom.aromatic) or any(
+            bool(getattr(bond, "aromatic"))
+            or float(getattr(bond, "order")) > 1.0 + 1.0e-6
+            for _, bond in incident_bonds[atom_index]
+        )
+
+    def neutral_lone_pair_center(atom_index: int) -> bool:
+        atom = ligand_system.atoms[atom_index]
+        return (
+            element(atom_index) in {"N", "O", "S"}
+            and int(atom.formal_charge) <= 0
+        )
+
+    def functional_disposition(first: int, second: int) -> str | None:
+        for center, partner in ((first, second), (second, first)):
+            center_element = element(center)
+            partner_element = element(partner)
+            if (
+                center_element == "C"
+                and double_oxygen_count(center) >= 1
+            ):
+                neighbor_elements = single_neighbor_elements(center)
+                nitrogen_count = neighbor_elements.count("N")
+                oxygen_count = neighbor_elements.count("O")
+                if partner_element == "N":
+                    if nitrogen_count >= 2:
+                        return "urea"
+                    if oxygen_count >= 1:
+                        return "carbamate"
+                    return "amide"
+                if partner_element == "O" and nitrogen_count >= 1:
+                    return "carbamate"
+            if (
+                center_element == "S"
+                and partner_element == "N"
+                and double_oxygen_count(center) >= 2
+            ):
+                return "sulfonamide"
+        return None
+
     ring_bonds = set(ring_bond_pairs)
+    heavy_degrees = tuple(
+        sum(element(neighbor) != "H" for neighbor, _ in rows)
+        for rows in incident_bonds
+    )
+    dispositions: list[tuple[int, int, str]] = []
+    disposition_by_pair: dict[tuple[int, int], str] = {}
+    for pair, bond in sorted(pair_to_bond.items()):
+        first, second = pair
+        stereo = str(getattr(bond, "stereo") or "none").strip().lower()
+        if pair in ring_bonds:
+            disposition = "ring_bond"
+        elif bool(getattr(bond, "aromatic")):
+            disposition = "aromatic_bond"
+        elif not is_order(bond, 1.0):
+            disposition = "non_single_bond"
+        elif stereo not in _UNDECLARED_BOND_STEREO:
+            disposition = "stereo_constrained_bond"
+        elif element(first) == "H" or element(second) == "H":
+            disposition = "hydrogen_bond"
+        else:
+            disposition = functional_disposition(first, second) or ""
+            if not disposition and (
+                (
+                    pi_center(first)
+                    and (
+                        pi_center(second)
+                        or neutral_lone_pair_center(second)
+                    )
+                )
+                or (
+                    pi_center(second)
+                    and (
+                        pi_center(first)
+                        or neutral_lone_pair_center(first)
+                    )
+                )
+            ):
+                disposition = "conjugated_bond"
+            if not disposition and (
+                heavy_degrees[first] <= 1 or heavy_degrees[second] <= 1
+            ):
+                disposition = "terminal_heavy_atom"
+            if not disposition:
+                disposition = "rotatable"
+        dispositions.append((first, second, disposition))
+        disposition_by_pair[pair] = disposition
+
     rotatable = torch.zeros(atom_count, dtype=torch.bool)
     for child, ancestor in enumerate(parent):
         if ancestor < 0:
             continue
         pair = tuple(sorted((child, ancestor)))
-        bond = pair_to_bond[pair]
-        stereo = str(bond.stereo or "none").strip().lower()
-        child_side = subtree_size[child]
-        parent_side = atom_count - child_side
-        rotatable[child] = bool(
-            pair not in ring_bonds
-            and float(bond.order) == 1.0
-            and not bool(bond.aromatic)
-            and stereo in _UNDECLARED_BOND_STEREO
-            and ligand_system.atoms[child].element.upper() != "H"
-            and ligand_system.atoms[ancestor].element.upper() != "H"
-            and child_side > 1
-            and parent_side > 1
-        )
-    return rotatable
+        rotatable[child] = disposition_by_pair[pair] == "rotatable"
+    return _RotorPerception(
+        rotatable_mask=rotatable,
+        bond_dispositions=tuple(dispositions),
+    )
 
 
 def _derive_exclusions(system: AllAtomSystem) -> tuple[tuple[int, int], ...]:
@@ -1095,12 +1289,12 @@ def derive_authoritative_torsion_search_space(
             )
         local_offsets[child] = offset
         local_axes[child] = offset / norm
-    rotatable = _derive_rotatable_mask(
+    rotor_perception = _derive_rotor_perception(
         ligand_system,
         parent=parent,
-        order=order,
         ring_bond_pairs=ring_topology.ring_bond_pairs,
     )
+    rotatable = rotor_perception.rotatable_mask
     root_positions = coordinates[[0]].clone().contiguous()
     search_space = TorsionSearchSpace(
         local_offsets=local_offsets,
@@ -1141,6 +1335,7 @@ def derive_authoritative_torsion_search_space(
             int(index)
             for index in torch.nonzero(rotatable, as_tuple=False).reshape(-1).tolist()
         ),
+        rotor_bond_dispositions=rotor_perception.bond_dispositions,
         ring_bond_pairs=ring_topology.ring_bond_pairs,
         rigid_ring_system_atom_indices=(
             ring_topology.rigid_ring_system_atom_indices
