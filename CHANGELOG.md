@@ -15,7 +15,9 @@ scientific claim from a package version.
   immutable parameter fingerprint, effective step/config identity, and a
   failure-complete attempt receipt. The Scorer v1 guided-search integration
   binds every generic success or failure row to its exact attempt without
-  dropping the candidate denominator. This stage minimizes ligand-internal
+  dropping the candidate denominator. Parameter identity also participates in
+  the generic refiner contract and search fingerprint, and refined coordinates
+  carry recomputed torsion metadata. This stage minimizes ligand-internal
   reference energy only; receptor--ligand interaction energy is not included.
 - Added an authenticated, deterministic Scorer v1 pose-ordering contract with
   separate typed-vdW, electrostatic, directional hydrogen-bond, hydrophobic,

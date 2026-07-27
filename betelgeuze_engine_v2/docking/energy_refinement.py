@@ -163,6 +163,35 @@ def _coordinates_from_hex(
     return normalized, coordinates
 
 
+def _dihedral_angle(
+    coordinates: torch.Tensor,
+    atoms: tuple[int, int, int, int],
+) -> float:
+    first, second, third, fourth = (coordinates[index] for index in atoms)
+    middle = third - second
+    middle_norm = float(torch.linalg.vector_norm(middle).item())
+    if middle_norm <= 1.0e-12:
+        raise EnergyRefinementError(
+            "refined torsion geometry contains a degenerate central bond"
+        )
+    axis = middle / middle_norm
+    left = first - second
+    right = fourth - third
+    left = left - torch.dot(left, axis) * axis
+    right = right - torch.dot(right, axis) * axis
+    left_norm = float(torch.linalg.vector_norm(left).item())
+    right_norm = float(torch.linalg.vector_norm(right).item())
+    if min(left_norm, right_norm) <= 1.0e-12:
+        raise EnergyRefinementError(
+            "refined torsion geometry lacks a stable dihedral anchor"
+        )
+    left = left / left_norm
+    right = right / right_norm
+    sine = float(torch.dot(torch.cross(left, right, dim=0), axis).item())
+    cosine = float(torch.dot(left, right).item())
+    return math.atan2(sine, cosine)
+
+
 @dataclass(frozen=True, slots=True)
 class EnergyLocalRefinementConfig:
     """Immutable adapter configuration around the reference minimizer."""
@@ -598,10 +627,65 @@ class EnergyBasedLocalRefiner:
         self._parameters = parameters
         self._config = selected_config
         self._parameter_fingerprint_sha256 = parameter_fingerprint_sha256
+        self._refinement_config_fingerprint_sha256 = selected_config.fingerprint_sha256
+        self._component_config_fingerprint_sha256 = _sha256(
+            {
+                "schema_id": (
+                    "betelgeuze.engine_v2_energy_refiner_component_config/1.0.0"
+                ),
+                "refinement_config_fingerprint_sha256": (
+                    self._refinement_config_fingerprint_sha256
+                ),
+                "parameter_fingerprint_sha256": (self._parameter_fingerprint_sha256),
+            }
+        )
         self._implementation_source_sha256 = _digest(
             implementation_source_sha256,
             name="implementation_source_sha256",
         )
+        adjacency: list[list[int]] = [[] for _ in range(ligand_system.atom_count)]
+        for bond in ligand_system.bonds:
+            first = int(bond.atom_i)
+            second = int(bond.atom_j)
+            adjacency[first].append(second)
+            adjacency[second].append(first)
+
+        def anchor(index: int, excluded: int) -> int:
+            candidates = [
+                neighbor for neighbor in adjacency[index] if neighbor != excluded
+            ]
+            if not candidates:
+                raise EnergyRefinementError("rotatable bond lacks a dihedral anchor")
+            return min(
+                candidates,
+                key=lambda value: (
+                    ligand_system.atoms[value].element == "H",
+                    value,
+                ),
+            )
+
+        reference_coordinates = ligand_system.coordinates[authority.ligand_model_index]
+        rotor_rows: list[tuple[int, tuple[int, int, int, int], float]] = []
+        for child_value in torch.nonzero(
+            authority.search_space.rotatable_mask,
+            as_tuple=False,
+        ).reshape(-1):
+            child = int(child_value.item())
+            parent = int(authority.search_space.parent[child].item())
+            atoms = (
+                anchor(parent, child),
+                parent,
+                child,
+                anchor(child, parent),
+            )
+            rotor_rows.append(
+                (
+                    child,
+                    atoms,
+                    _dihedral_angle(reference_coordinates, atoms),
+                )
+            )
+        self._rotor_rows = tuple(rotor_rows)
         self._attempts: dict[str, EnergyRefinementAttempt] = {}
 
     @property
@@ -614,7 +698,11 @@ class EnergyBasedLocalRefiner:
 
     @property
     def config_fingerprint_sha256(self) -> str:
-        return self._config.fingerprint_sha256
+        return self._component_config_fingerprint_sha256
+
+    @property
+    def refinement_config_fingerprint_sha256(self) -> str:
+        return self._refinement_config_fingerprint_sha256
 
     @property
     def parameter_fingerprint_sha256(self) -> str:
@@ -638,6 +726,41 @@ class EnergyBasedLocalRefiner:
     @property
     def attempts(self) -> Mapping[str, EnergyRefinementAttempt]:
         return MappingProxyType(dict(self._attempts))
+
+    def assert_ready(self) -> None:
+        """Fail before search if construction-bound inputs have changed."""
+
+        self._authority.input_receipt_sha256
+        if (
+            self._config.fingerprint_sha256
+            != self._refinement_config_fingerprint_sha256
+        ):
+            raise EnergyRefinementError("refiner configuration state changed")
+        self.parameter_fingerprint_sha256
+        try:
+            source_system_sha256 = canonical_system_sha256(self._ligand_system)
+            source_topology_sha256 = canonical_topology_sha256(self._ligand_system)
+        except (TypeError, ValueError, RuntimeError) as exc:
+            raise EnergyRefinementError("refiner source state changed") from exc
+        if (
+            source_system_sha256 != self._authority.ligand_system_sha256
+            or source_topology_sha256 != self._parameters.topology_sha256
+        ):
+            raise EnergyRefinementError("refiner source state changed")
+
+    def _torsion_angles_for(self, coordinates: torch.Tensor) -> torch.Tensor:
+        result = torch.zeros(
+            self._authority.search_space.atom_count,
+            dtype=coordinates.dtype,
+            device="cpu",
+        )
+        for child, atoms, reference in self._rotor_rows:
+            observed = _dihedral_angle(coordinates, atoms)
+            result[child] = math.atan2(
+                math.sin(observed - reference),
+                math.cos(observed - reference),
+            )
+        return result
 
     def attempt_for(
         self,
@@ -680,19 +803,7 @@ class EnergyBasedLocalRefiner:
             and len(self._attempts) >= self._config.max_attempts
         ):
             raise EnergyRefinementError("energy-refinement attempt capacity exceeded")
-        self._authority.input_receipt_sha256
-        self._config.fingerprint_sha256
-        self.parameter_fingerprint_sha256
-        try:
-            source_system_sha256 = canonical_system_sha256(self._ligand_system)
-            source_topology_sha256 = canonical_topology_sha256(self._ligand_system)
-        except (TypeError, ValueError, RuntimeError) as exc:
-            raise EnergyRefinementError("refiner source state changed") from exc
-        if (
-            source_system_sha256 != self._authority.ligand_system_sha256
-            or source_topology_sha256 != self._parameters.topology_sha256
-        ):
-            raise EnergyRefinementError("refiner source state changed")
+        self.assert_ready()
         return steps
 
     def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
@@ -780,6 +891,7 @@ class EnergyBasedLocalRefiner:
                 refiner_id=self.refiner_id,
                 refiner_version=self.refiner_version,
                 refinement_receipt_sha256=attempt.receipt_sha256,
+                torsion_angles=self._torsion_angles_for(post_coordinates),
             )
             self._attempts[proposal.fingerprint_sha256] = attempt
             self._assert_inputs(proposal, steps)
@@ -960,7 +1072,7 @@ class EnergyRefinedGuidedSearchResult:
             refiner_contract != expected_contract
             or search.refiner_contract_fingerprint_sha256 != refiner_contract
             or search.refiner_id != self.refiner.refiner_id
-            or refiner_config != self.refiner.config_fingerprint_sha256
+            or refiner_config != self.refiner.refinement_config_fingerprint_sha256
             or parameter_fingerprint != self.refiner.parameter_fingerprint_sha256
         ):
             raise EnergyRefinementError(
@@ -1026,6 +1138,10 @@ class EnergyRefinedGuidedSearchResult:
                     != attempt.receipt_sha256
                     or source.proposal.coordinate_fingerprint_sha256
                     != attempt.post_coordinates_sha256
+                    or not torch.equal(
+                        source.proposal.torsion_angles,
+                        self.refiner._torsion_angles_for(source.proposal.coordinates),
+                    )
                 ):
                     raise EnergyRefinementError(
                         "refined proposal receipt is cross-wired"
@@ -1150,6 +1266,7 @@ def run_authenticated_energy_refined_scorer_v1_guided_search(
         raise EnergyRefinementError(
             "energy-refined search requires a fresh refiner with no prior attempts"
         )
+    refiner.assert_ready()
     if budget.candidate_count > refiner.config.max_attempts:
         raise EnergyRefinementError(
             "search candidate count exceeds the refinement attempt capacity"
@@ -1194,7 +1311,9 @@ def run_authenticated_energy_refined_scorer_v1_guided_search(
         refiner_contract_fingerprint_sha256=(
             search.refiner_contract_fingerprint_sha256
         ),
-        refiner_config_fingerprint_sha256=refiner.config_fingerprint_sha256,
+        refiner_config_fingerprint_sha256=(
+            refiner.refinement_config_fingerprint_sha256
+        ),
         parameter_fingerprint_sha256=refiner.parameter_fingerprint_sha256,
         rows=rows,
     )

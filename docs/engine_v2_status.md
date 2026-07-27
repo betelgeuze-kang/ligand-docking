@@ -128,7 +128,9 @@ The current `main` branch contains:
   implementation source, immutable parameters/configuration, and
   failure-complete attempt evidence.
   Its Scorer v1 guided-search result binds every candidate row to the exact
-  attempt while preserving the full denominator;
+  attempt while preserving the full denominator. Parameter identity contributes
+  to the generic refiner/search contract, and final coordinates carry
+  recomputed torsion metadata;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit

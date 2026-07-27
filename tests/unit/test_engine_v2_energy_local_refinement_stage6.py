@@ -105,6 +105,46 @@ def _ligand() -> AllAtomSystem:
     )
 
 
+def _rotor_ligand() -> AllAtomSystem:
+    coordinates = (
+        [0.0, 0.0, 0.0],
+        [1.5, 0.0, 0.0],
+        [2.8, 0.8, 0.0],
+        [4.0, 1.0, 0.9],
+    )
+    return AllAtomSystem(
+        system_id="energy-refinement-rotor-ligand",
+        atoms=tuple(
+            Atom(
+                index=index,
+                name=f"C{index}",
+                element="C",
+                atomic_number=6,
+                residue_index=0,
+                partial_charge_e=0.0,
+            )
+            for index in range(4)
+        ),
+        bonds=tuple(
+            Bond(index=index, atom_i=index, atom_j=index + 1) for index in range(3)
+        ),
+        residues=(
+            Residue(
+                index=0,
+                name="LIG",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=(0, 1, 2, 3),
+                entity_type="non-polymer",
+                hetero=True,
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+        coordinates=torch.tensor([coordinates], dtype=torch.float64),
+        provenance=_provenance("energy-refinement-rotor-source", "9" * 64),
+    )
+
+
 def _receptor() -> AllAtomSystem:
     elements = ("O", "N", "H", "C", "H")
     charges = (-0.4, -0.2, 0.2, 0.0, 0.4)
@@ -144,9 +184,9 @@ def _receptor() -> AllAtomSystem:
     )
 
 
-def _authority():
+def _authority(ligand: AllAtomSystem | None = None):
     receptor = _receptor()
-    ligand = _ligand()
+    ligand = _ligand() if ligand is None else ligand
     pocket = PocketDefinition(
         scope=DockingScope.KNOWN_POCKET,
         method_id="energy-refinement-reviewed-sphere",
@@ -222,6 +262,56 @@ def _parameters(ligand: AllAtomSystem) -> ReferenceForceFieldParameters:
                 for bond in ligand.bonds
             )
         ),
+        cutoff_angstrom=6.0,
+        switch_start_angstrom=5.0,
+        applicability_domain=ReferenceApplicabilityDomain(
+            max_atoms=16,
+            max_bonds=16,
+            max_angles=16,
+            max_torsions=16,
+            max_nonbonded_pairs=64,
+        ),
+    )
+
+
+def _rotor_parameters(ligand: AllAtomSystem) -> ReferenceForceFieldParameters:
+    coordinates = ligand.coordinates[0]
+
+    def angle(first: int, center: int, third: int) -> float:
+        left = coordinates[first] - coordinates[center]
+        right = coordinates[third] - coordinates[center]
+        cosine = torch.dot(left, right) / (
+            torch.linalg.vector_norm(left) * torch.linalg.vector_norm(right)
+        )
+        return float(torch.acos(cosine.clamp(-1.0, 1.0)).item())
+
+    return ReferenceForceFieldParameters(
+        parameter_set_id="energy-refinement-rotor-parameters",
+        parameter_set_version="1.0.0",
+        topology_sha256=canonical_topology_sha256(ligand),
+        atom_parameters=tuple(
+            AtomNonbondedParameter(index, 1.0, 0.0, 0.0)
+            for index in range(ligand.atom_count)
+        ),
+        bonds=tuple(
+            HarmonicBondParameter(
+                bond.atom_i,
+                bond.atom_j,
+                float(
+                    torch.linalg.vector_norm(
+                        coordinates[bond.atom_i] - coordinates[bond.atom_j]
+                    ).item()
+                ),
+                50.0,
+            )
+            for bond in ligand.bonds
+        ),
+        angles=(
+            HarmonicAngleParameter(0, 1, 2, angle(0, 1, 2), 20.0),
+            HarmonicAngleParameter(1, 2, 3, angle(1, 2, 3), 20.0),
+        ),
+        torsions=(PeriodicTorsionParameter(0, 1, 2, 3, 3, 0.0, 0.5),),
+        excluded_pairs=((0, 1), (1, 2), (2, 3), (0, 2), (1, 3)),
         cutoff_angstrom=6.0,
         switch_start_angstrom=5.0,
         applicability_domain=ReferenceApplicabilityDomain(
@@ -376,6 +466,47 @@ def test_refinement_is_deterministic_and_binds_effective_step_budget():
     assert torch.equal(first_result.coordinates, alternate_result.coordinates)
     assert first_attempt.receipt_sha256 != alternate_attempt.receipt_sha256
     assert alternate_attempt.implementation_source_sha256 == "1" * 64
+
+
+def test_refinement_recomputes_torsion_metadata_from_final_coordinates():
+    ligand = _rotor_ligand()
+    authority, _, ligand = _authority(ligand)
+    assert authority.search_space.torsion_count == 1
+    proposals = generate_pocket_centered_docking_proposals(
+        authority,
+        DockingBudget(
+            candidate_count=2,
+            top_k=1,
+            max_torsions=1,
+            translation_radius_angstrom=1.0,
+            seed=1337,
+        ),
+    )[0]
+    proposal = proposals[1]
+    refiner = EnergyBasedLocalRefiner(
+        authority,
+        ligand,
+        _rotor_parameters(ligand),
+        implementation_source_sha256="e" * 64,
+        config=_config(),
+    )
+
+    assert torch.allclose(
+        proposal.torsion_angles,
+        refiner._torsion_angles_for(proposal.coordinates),
+        rtol=0.0,
+        atol=1.0e-12,
+    )
+    refined = refiner.refine(proposal, max_steps=7)
+    assert torch.equal(
+        refined.torsion_angles,
+        refiner._torsion_angles_for(refined.coordinates),
+    )
+    assert bool(
+        torch.isfinite(
+            refined.torsion_angles[authority.search_space.rotatable_mask]
+        ).all()
+    )
 
 
 def test_parameter_topology_and_step_budget_fail_closed():
@@ -544,6 +675,83 @@ def test_source_mutation_and_attempt_capacity_fail_closed():
     object.__setattr__(parameters, "dielectric", parameters.dielectric + 1.0)
     with pytest.raises(EnergyRefinementError, match="parameter state changed"):
         parameter_bound.refine(_proposal(authority), max_steps=1)
+
+
+def test_parameter_identity_changes_refiner_and_search_contracts():
+    authority, receptor, ligand = _authority()
+    first_parameters = _parameters(ligand)
+    second_parameters = replace(
+        _parameters(ligand),
+        dielectric=_parameters(ligand).dielectric + 1.0,
+    )
+    first = _refiner(authority, ligand, parameters=first_parameters)
+    second = _refiner(authority, ligand, parameters=second_parameters)
+
+    assert first.config_fingerprint_sha256 != second.config_fingerprint_sha256
+    assert first.parameter_fingerprint_sha256 != second.parameter_fingerprint_sha256
+    budget = DockingBudget(
+        candidate_count=1,
+        top_k=1,
+        max_torsions=1,
+        max_refinement_steps=1,
+        translation_radius_angstrom=1.0,
+        seed=1315,
+    )
+    scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="f" * 64,
+    )
+    first_search = run_authenticated_pocket_placement_search(
+        authority,
+        budget,
+        scorer,
+        refiner=first,
+        diversity_rmsd_angstrom=0.0,
+    ).authenticated_search_result.search_result
+    second_search = run_authenticated_pocket_placement_search(
+        authority,
+        budget,
+        scorer,
+        refiner=second,
+        diversity_rmsd_angstrom=0.0,
+    ).authenticated_search_result.search_result
+
+    assert (
+        first_search.refiner_contract_fingerprint_sha256
+        != second_search.refiner_contract_fingerprint_sha256
+    )
+    assert (
+        first_search.search_fingerprint_sha256
+        != second_search.search_fingerprint_sha256
+    )
+
+
+def test_energy_search_preflights_changed_refiner_state():
+    authority, receptor, ligand = _authority()
+    scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="f" * 64,
+    )
+    context = build_guided_placement_context(authority, receptor, ligand)
+    parameters = _parameters(ligand)
+    refiner = _refiner(authority, ligand, parameters=parameters)
+    object.__setattr__(parameters, "dielectric", parameters.dielectric + 1.0)
+
+    with pytest.raises(EnergyRefinementError, match="parameter state changed"):
+        run_authenticated_energy_refined_scorer_v1_guided_search(
+            authority,
+            _guided_budget(seed=1317),
+            scorer,
+            context,
+            refiner,
+            receptor_system=receptor,
+            ligand_system=ligand,
+        )
+    assert not refiner.attempts
 
 
 def test_refiner_integrates_with_failure_complete_docking_search():

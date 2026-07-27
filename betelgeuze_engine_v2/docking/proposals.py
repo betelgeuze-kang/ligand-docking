@@ -452,6 +452,7 @@ class DockingProposal:
         refiner_id: str,
         refiner_version: str,
         refinement_receipt_sha256: str = "",
+        torsion_angles: torch.Tensor | None = None,
     ) -> "DockingProposal":
         self.assert_integrity()
         normalized_refiner_id = str(refiner_id or "").strip()
@@ -473,6 +474,23 @@ class DockingProposal:
             raise DockingProposalError(
                 "refined coordinates must preserve the proposal dtype"
             )
+        frozen_torsion_angles = (
+            self.torsion_angles
+            if torsion_angles is None
+            else _frozen_tensor(torsion_angles, name="refined torsion angles")
+        )
+        if frozen_torsion_angles.shape != self.torsion_angles.shape:
+            raise DockingProposalError(
+                "refined torsion angles must preserve the ligand atom count"
+            )
+        _finite_cpu_floating(
+            frozen_torsion_angles,
+            name="refined torsion angles",
+        )
+        if frozen_torsion_angles.dtype != self.torsion_angles.dtype:
+            raise DockingProposalError(
+                "refined torsion angles must preserve the proposal dtype"
+            )
         receipt = _require_digest(
             refinement_receipt_sha256,
             field_name="refinement_receipt_sha256",
@@ -482,7 +500,7 @@ class DockingProposal:
         fingerprint = _proposal_fingerprint(
             proposal_index=self.proposal_index,
             seed=self.seed,
-            torsion_angles=self.torsion_angles,
+            torsion_angles=frozen_torsion_angles,
             rotation=self.rotation,
             translation=self.translation,
             problem_fingerprint_sha256=self.problem_fingerprint_sha256,
@@ -496,6 +514,7 @@ class DockingProposal:
         return replace(
             self,
             coordinates=frozen_coordinates,
+            torsion_angles=frozen_torsion_angles,
             fingerprint_sha256=fingerprint,
             coordinate_fingerprint_sha256=coordinate_digest,
             parent_proposal_fingerprint_sha256=self.fingerprint_sha256,
