@@ -28,6 +28,11 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     run_authenticated_pocket_placement_search,
     run_authenticated_scorer_v1_guided_search,
 )
+from betelgeuze_engine_v2.docking.identity import coordinate_fingerprint  # noqa: E402
+from betelgeuze_engine_v2.docking.proposals import (  # noqa: E402
+    DockingProposal,
+    _proposal_fingerprint,
+)
 
 
 def _provenance(name: str, digest: str) -> StructureProvenance:
@@ -484,6 +489,52 @@ def test_config_changes_component_and_term_identity() -> None:
     assert first.score_terms(proposal).weak_pocket_prior != (
         second.score_terms(proposal).weak_pocket_prior
     )
+    with pytest.raises(AttributeError):
+        first.config_fingerprint_sha256 = "0" * 64
+
+
+def test_truncated_but_internally_consistent_proposal_fails_closed() -> None:
+    authority, receptor, ligand = _authority()
+    scorer = _scorer(authority, receptor, ligand)
+    source = _interaction_proposal(authority, ligand)
+    coordinates = source.coordinates[:-1]
+    torsion_angles = source.torsion_angles[:-1]
+    coordinate_sha256 = coordinate_fingerprint(coordinates)
+    forged = DockingProposal(
+        candidate_id=source.candidate_id,
+        coordinates=coordinates,
+        torsion_angles=torsion_angles,
+        rotation=source.rotation,
+        translation=source.translation,
+        proposal_index=source.proposal_index,
+        seed=source.seed,
+        fingerprint_sha256=_proposal_fingerprint(
+            proposal_index=source.proposal_index,
+            seed=source.seed,
+            torsion_angles=torsion_angles,
+            rotation=source.rotation,
+            translation=source.translation,
+            problem_fingerprint_sha256=source.problem_fingerprint_sha256,
+            search_space_fingerprint_sha256=source.search_space_fingerprint_sha256,
+            coordinate_fingerprint_sha256=coordinate_sha256,
+            parent_proposal_fingerprint_sha256=(
+                source.parent_proposal_fingerprint_sha256
+            ),
+            refiner_id=source.refiner_id,
+            refiner_version=source.refiner_version,
+            refinement_receipt_sha256=source.refinement_receipt_sha256,
+        ),
+        problem_fingerprint_sha256=source.problem_fingerprint_sha256,
+        search_space_fingerprint_sha256=source.search_space_fingerprint_sha256,
+        coordinate_fingerprint_sha256=coordinate_sha256,
+        parent_proposal_fingerprint_sha256=(source.parent_proposal_fingerprint_sha256),
+        refiner_id=source.refiner_id,
+        refiner_version=source.refiner_version,
+        refinement_receipt_sha256=source.refinement_receipt_sha256,
+    )
+    forged.assert_integrity()
+    with pytest.raises(ScorerV1Error, match="atom count is cross-wired"):
+        scorer.score_terms(forged)
 
 
 def test_failure_complete_search_accepts_scorer_v1_contract() -> None:

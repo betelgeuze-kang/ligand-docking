@@ -773,7 +773,6 @@ class ChemistryPoseScorerV1:
         self.implementation_source_sha256 = _digest(
             implementation_source_sha256, name="implementation_source_sha256"
         )
-        self.config_fingerprint_sha256 = selected_config.fingerprint_sha256
         self.score_descriptor = DockingScoreDescriptor(
             score_id=SCORER_V1_SCORE_ID,
             direction=ScoreDirection.MINIMIZE,
@@ -841,6 +840,10 @@ class ChemistryPoseScorerV1:
         return self._config
 
     @property
+    def config_fingerprint_sha256(self) -> str:
+        return self._config.fingerprint_sha256
+
+    @property
     def authority_input_receipt_sha256(self) -> str:
         return self._authority.input_receipt_sha256
 
@@ -875,6 +878,11 @@ class ChemistryPoseScorerV1:
         self._validity.fingerprint_sha256
         self._config.fingerprint_sha256
         proposal.assert_integrity()
+        expected_atom_count = self._authority.search_space.atom_count
+        if tuple(proposal.coordinates.shape) != (expected_atom_count, 3) or tuple(
+            proposal.torsion_angles.shape
+        ) != (expected_atom_count,):
+            raise ScorerV1Error("proposal atom count is cross-wired")
         if (
             proposal.problem_fingerprint_sha256 != self.problem_fingerprint_sha256
             or proposal.search_space_fingerprint_sha256
