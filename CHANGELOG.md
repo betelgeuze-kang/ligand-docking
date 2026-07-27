@@ -8,6 +8,17 @@ scientific claim from a package version.
 
 ### Changed
 
+- Added an authenticated energy-based local-refinement adapter that connects
+  docking proposals to the bounded CPU reference minimizer. It retains exact
+  pre/post coordinates, initial/final/delta energy, maximum displacement,
+  coherent convergence and evaluation counters, implementation source,
+  immutable parameter fingerprint, effective step/config identity, and a
+  failure-complete attempt receipt. The Scorer v1 guided-search integration
+  binds every generic success or failure row to its exact attempt without
+  dropping the candidate denominator. Parameter identity also participates in
+  the generic refiner contract and search fingerprint, and refined coordinates
+  carry recomputed torsion metadata. This stage minimizes ligand-internal
+  reference energy only; receptor--ligand interaction energy is not included.
 - Added an authenticated, deterministic Scorer v1 pose-ordering contract with
   separate typed-vdW, electrostatic, directional hydrogen-bond, hydrophobic,
   desolvation-proxy, torsion-energy, ligand-strain, and weak-pocket-prior terms.
@@ -55,7 +66,8 @@ This stage does not add ring-conformer or macrocycle sampling, scientific
 conformer-quality, guided-placement, or docking-score validation, or benchmark
 evidence. Guided chemical features and Scorer v1 terms are bounded auditable
 heuristics; Scorer v1 is not a calibrated energy, affinity, or free-energy
-estimate.
+estimate. Energy-based local refinement is not evidence of docking improvement
+and does not minimize receptor--ligand interaction energy.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

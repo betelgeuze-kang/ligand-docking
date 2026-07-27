@@ -122,6 +122,15 @@ The current `main` branch contains:
   admission, sparse bounded contact work, eight separately receipted terms,
   source-system/config/proposal cross-wire rejection, and failure-complete
   guided-search term evidence;
+- an authenticated ligand-internal energy-refinement adapter that connects
+  docking proposal lineage to the bounded CPU reference minimizer and retains
+  exact pre/post coordinates, energy delta, displacement, convergence,
+  implementation source, immutable parameters/configuration, and
+  failure-complete attempt evidence.
+  Its Scorer v1 guided-search result binds every candidate row to the exact
+  attempt while preserving the full denominator. Parameter identity contributes
+  to the generic refiner/search contract, and final coordinates carry
+  recomputed torsion metadata;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -410,6 +419,9 @@ not currently establish:
 - calibrated or scientifically validated Scorer v1 weights, physical-energy
   semantics, affinity/free-energy interpretation, or evidence that Scorer v1
   improves pose ranking;
+- receptor--ligand interaction-energy minimization, evidence that ligand-only
+  local refinement improves pose recovery, or a validated docking-refinement
+  energy surface;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
   representative public holdout; the frozen four-case protocol fixture is not a
   benchmark result;
