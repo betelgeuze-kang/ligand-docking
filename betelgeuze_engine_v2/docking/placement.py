@@ -543,10 +543,16 @@ def install_pocket_proposal_override() -> str:
         budget: DockingBudget,
         *,
         problem=None,
+        placement_center: torch.Tensor | None = None,
     ) -> tuple[DockingProposal, ...]:
         override = _PROPOSAL_OVERRIDE.get()
         if override is None:
-            return original(search_space, budget, problem=problem)
+            return original(
+                search_space,
+                budget,
+                problem=problem,
+                placement_center=placement_center,
+            )
         problem_fingerprint = (
             "" if problem is None else problem.fingerprint_sha256
         )
