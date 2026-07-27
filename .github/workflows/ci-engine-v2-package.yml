@@ -365,6 +365,18 @@ jobs:
           assert execution["receipt_sha256"] == result[
               "execution_parameters_receipt_sha256"
           ]
+          assert execution["receptor_artifact_sha256"] == hashlib.sha256(
+              Path("receptor.json").read_bytes()
+          ).hexdigest()
+          assert execution["ligand_artifact_sha256"] == hashlib.sha256(
+              ligand_path.read_bytes()
+          ).hexdigest()
+          assert execution["pocket_artifact_sha256"] == hashlib.sha256(
+              pocket_path.read_bytes()
+          ).hexdigest()
+          assert execution["authenticated_input_receipt_sha256"] == result[
+              "authenticated_input_receipt_sha256"
+          ]
           assert verification["candidate_count"] == 2
           assert verification["success_count"] + verification["failure_count"] == 2
           assert verification["canonical_bytes_verified"] is True
@@ -388,6 +400,14 @@ jobs:
               "scorer_contract_recomputed_from_declared_source_sha"
           ] is True
           assert bundle["scorer_source_bytes_locally_attested"] is False
+          assert bundle["scorer_source_bytes_locally_observed"] is True
+          assert bundle["scorer_source_bytes_sha256_matched_result"] is True
+          assert bundle["scorer_source_bytes_observed_after_import"] is True
+          assert bundle["scorer_source_execution_preimport_attested"] is False
+          assert bundle["scorer_source_signature_verified"] is False
+          assert bundle["scorer_source_sha256"] == result["scorer_source_sha256"]
+          assert bundle["scorer_source_byte_count"] > 0
+          assert len(bundle["scorer_source_observation_receipt_sha256"]) == 64
           assert bundle["search_fingerprint_fully_recomputed"] is True
           assert bundle["execution_parameters_fully_verified"] is True
           assert bundle["receptor_margin_uniquely_attested"] is True
