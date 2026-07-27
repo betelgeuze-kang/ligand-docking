@@ -43,7 +43,7 @@ PUBLIC_BENCHMARK_PROTOCOL_ID = (
 PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.1"
 PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T11:30:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "40abed35d59219ad60e35301166818f64f5962479616616d25610d2726d11718"
+    "ab198408ee33830d11a108e6e59c7d32d661c7300507b233867f734b5f156fec"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -684,6 +684,36 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                 relative_path="betelgeuze_engine_v2/docking/validity.py",
                 source_sha256=(
                     "996cfd1ea8ea230a5cb3a8449142babc1e17cf4103f07e70054fe977aef0318e"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="runtime_authenticated_evaluator",
+                module=(
+                    "betelgeuze_engine_v2.benchmark."
+                    "public_evaluator_authenticated"
+                ),
+                relative_path=(
+                    "betelgeuze_engine_v2/benchmark/"
+                    "public_evaluator_authenticated.py"
+                ),
+                source_sha256=(
+                    "7eea963a60e43e790c1bf495b7009a76fccc239a01f3460fd62bd78afe60b397"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="runtime_round1_hardening",
+                module="betelgeuze_engine_v2.stack_round1_hardening",
+                relative_path="betelgeuze_engine_v2/stack_round1_hardening.py",
+                source_sha256=(
+                    "067575476b0a369162521f51f87fffd8e42fc87003b6fec34255aaabb2ce95b1"
+                ),
+            ),
+            PublicBenchmarkScorerIdentity(
+                purpose="runtime_round2_evaluator",
+                module="betelgeuze_engine_v2.stack_round2_evaluator",
+                relative_path="betelgeuze_engine_v2/stack_round2_evaluator.py",
+                source_sha256=(
+                    "652fab563ba4964d20883bf06205c850574dd19a73f7868c07c3348079d6d225"
                 ),
             ),
             PublicBenchmarkScorerIdentity(

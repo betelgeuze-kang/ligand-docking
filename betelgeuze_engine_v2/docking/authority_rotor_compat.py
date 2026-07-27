@@ -181,6 +181,7 @@ def install_authority_rotor_stereo_compat() -> str:
             diversity_metric=diversity_metric,
             symmetry_permutations=symmetry_permutations,
             problem=authenticated_problem.problem,
+            placement_center=authenticated_problem.pocket.center,
         )
         if (
             result.problem_fingerprint_sha256

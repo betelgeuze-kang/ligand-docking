@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
             _read_json(args.review_evidence)
         )
         output["review_evidence_sha256"] = verification["evidence_sha256"]
-        output["operational_review_evidence_verified"] = True
+        output["review_evidence_validation_level"] = "legacy_unsigned"
     if args.print_snapshot:
         output["snapshot"] = snapshot
     print(

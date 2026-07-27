@@ -497,6 +497,22 @@ class AuthenticatedDockingProblem:
             self.authority_policy_sha256,
             name="authority_policy_sha256",
         )
+        receptor_model_index = _exact_int(
+            self.receptor_model_index,
+            name="receptor_model_index",
+            minimum=0,
+            maximum=AUTHENTICATED_DOCKING_MAX_RECEPTOR_ATOMS,
+        )
+        ligand_model_index = _exact_int(
+            self.ligand_model_index,
+            name="ligand_model_index",
+            minimum=0,
+            maximum=AUTHENTICATED_DOCKING_MAX_LIGAND_ATOMS,
+        )
+        if ligand_model_index != self.search_space_receipt.model_index:
+            raise DockingAuthorityError(
+                "ligand model index and search-space receipt are cross-wired"
+            )
         if self.problem.receptor_system_sha256 != receptor_sha:
             raise DockingAuthorityError("problem receptor identity is cross-wired")
         if self.problem.ligand_system_sha256 != ligand_sha:
@@ -522,6 +538,8 @@ class AuthenticatedDockingProblem:
         object.__setattr__(self, "receptor_system_sha256", receptor_sha)
         object.__setattr__(self, "ligand_system_sha256", ligand_sha)
         object.__setattr__(self, "authority_policy_sha256", policy_sha)
+        object.__setattr__(self, "receptor_model_index", receptor_model_index)
+        object.__setattr__(self, "ligand_model_index", ligand_model_index)
         object.__setattr__(
             self,
             "_input_receipt_sha256",
@@ -1011,6 +1029,7 @@ def run_authenticated_bounded_docking_search(
         diversity_metric=diversity_metric,
         symmetry_permutations=symmetry_permutations,
         problem=authenticated_problem.problem,
+        placement_center=authenticated_problem.pocket.center,
     )
     if result.problem_fingerprint_sha256 != authenticated_problem.problem.fingerprint_sha256:
         raise DockingAuthorityError("search result problem identity is cross-wired")

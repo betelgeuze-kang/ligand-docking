@@ -224,7 +224,7 @@ def test_round2_authenticated_report_retains_authoritative_input_identity(
     assert document["schema_id"] == PUBLIC_BENCHMARK_EVALUATION_REPORT_V2_SCHEMA_ID
     assert document["input_binding_mode"] == AUTHENTICATED_INPUT_BINDING_MODE
     assert document["authoritative_input_binding"] is True
-    assert document["execution_identity_authoritative"] is True
+    assert document["execution_identity_authoritative"] is False
     assert document["execution_receipt_sha256"] == "c" * 64
     assert document["evaluation_scope"] == PUBLIC_BENCHMARK_EVALUATION_SCOPE
     assert document["evaluator_integrity_complete"] is True

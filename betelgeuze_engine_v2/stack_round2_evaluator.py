@@ -136,9 +136,9 @@ def _install_public_evaluator_v2() -> None:
                 raise module.PublicBenchmarkEvaluationError(
                     "prepared reports cannot assert authoritative input binding"
                 )
-            if bool(execution) != bool(self.execution_identity_authoritative):
+            if self.execution_identity_authoritative and not execution:
                 raise module.PublicBenchmarkEvaluationError(
-                    "execution authority must match the execution receipt"
+                    "execution authority requires an execution receipt"
                 )
             if self.evaluation_scope != PUBLIC_BENCHMARK_EVALUATION_SCOPE:
                 raise module.PublicBenchmarkEvaluationError(
@@ -516,7 +516,9 @@ def _install_public_evaluator_v2() -> None:
             sorted((authenticated_case_input_sha256s or {}).items())
         )
         authoritative = input_binding_mode == AUTHENTICATED_INPUT_BINDING_MODE
-        execution_authoritative = bool(execution_receipt_sha256)
+        # A bare digest is only a cross-link.  Authority requires verification
+        # of the receipt payload, signer, execution context, and this exact run.
+        execution_authoritative = False
         provisional = PublicBenchmarkEvaluationReport(
             protocol_sha256=materialization_manifest.protocol_sha256,
             materialization_manifest_sha256=(

@@ -40,6 +40,10 @@ def _expectation(public_key: bytes, *, duplicate_identity: bool = False):
         ruleset_sha256="1" * 64,
         codeowners_sha256="2" * 64,
         required_check_names=("ci-engine-v2-main", "ci-engine-v2-top-stack"),
+        required_check_workflow_source_sha256s={
+            "ci-engine-v2-main": "7" * 64,
+            "ci-engine-v2-top-stack": "8" * 64,
+        },
         required_roles=(
             "codeowner",
             "numerical_methods",
@@ -219,6 +223,42 @@ def test_v3_rejects_review_and_check_head_cross_wiring() -> None:
             check,
             expected=expected,
             verified_at_utc="2026-07-21T12:08:00Z",
+        )
+
+
+def test_v3_rejects_workflow_source_cross_wiring() -> None:
+    private, public = _key_pair()
+    expected = _expectation(public)
+    payload = _signed_payload(private, expected)
+    payload["required_checks"][0]["workflow_source_sha256"] = "9" * 64
+    with pytest.raises(EvidenceContractError, match="workflow source"):
+        verify_release_review_attestation_v3(
+            payload,
+            expected=expected,
+            verified_at_utc="2026-07-21T12:08:00Z",
+        )
+
+
+def test_v3_expectation_requires_codeowner_role() -> None:
+    _, public = _key_pair()
+    expected = _expectation(public)
+    with pytest.raises(EvidenceContractError, match="include codeowner"):
+        ReleaseReviewExpectationV3(
+            repository_full_name=expected.repository_full_name,
+            pull_request_number=expected.pull_request_number,
+            pull_request_head_sha=expected.pull_request_head_sha,
+            pull_request_author_identity_sha256=(
+                expected.pull_request_author_identity_sha256
+            ),
+            ruleset_sha256=expected.ruleset_sha256,
+            codeowners_sha256=expected.codeowners_sha256,
+            required_check_names=expected.required_check_names,
+            required_check_workflow_source_sha256s=(
+                expected.required_check_workflow_source_sha256s
+            ),
+            required_roles=("security",),
+            trusted_reviewers=expected.trusted_reviewers,
+            trusted_attestor_keys=expected.trusted_attestor_keys,
         )
 
 

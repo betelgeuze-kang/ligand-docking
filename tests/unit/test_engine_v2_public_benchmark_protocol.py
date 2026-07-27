@@ -39,7 +39,7 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     assert protocol.protocol_version == "1.1.1"
     assert protocol.protocol_sha256 == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
     assert protocol.protocol_sha256 == (
-        "40abed35d59219ad60e35301166818f64f5962479616616d25610d2726d11718"
+        "ab198408ee33830d11a108e6e59c7d32d661c7300507b233867f734b5f156fec"
     )
     assert POSEBUSTERS_SOURCE_COMMIT_SHA == (
         "1a5f26aa7270fafba21b7fec8b3633f4c4e45ead"
@@ -316,6 +316,9 @@ def test_scorer_source_identities_verify_and_detect_checkout_drift(
         "failure_inclusive_report",
         "input_materializer",
         "pose_validity",
+        "runtime_authenticated_evaluator",
+        "runtime_round1_hardening",
+        "runtime_round2_evaluator",
         "symmetry_aware_rmsd",
     }
 
