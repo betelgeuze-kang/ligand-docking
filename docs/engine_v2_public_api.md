@@ -345,6 +345,24 @@ These features and placements are auditable heuristics, not validated
 pharmacophore perception, docking accuracy, ranking evidence, or a product
 claim.
 
+`ChemistryPoseScorerV1(...)` (also exported as `PoseScorerV1`) requires the
+element-aware authority plus the exact bound receptor and ligand systems. It
+fails closed unless every explicit atom has a finite partial charge and each
+system's partial charges reproduce its formal total charge. `score_terms(...)`
+returns an immutable `ScorerV1Terms` receipt containing separate typed-vdW,
+electrostatic, directional hydrogen-bond, hydrophobic-contact,
+desolvation-proxy, torsion-energy, ligand-strain, and weak-pocket-prior terms.
+The periodic torsion term is derived from the final pose coordinates relative
+to the authenticated prepared ligand, so coordinate refinement cannot leave it
+bound to stale sampled-angle metadata. Configured pair cutoffs must cover the
+enabled hydrogen-bond and polar-burial ranges.
+`run_authenticated_scorer_v1_guided_search(...)` combines this scorer with the
+guided proposal layer and binds every successful term receipt to its exact
+generic search row, revalidates the decomposition against the active scorer,
+and retains failed candidates in the denominator.
+Scorer v1 is deterministic and uncalibrated; it is not validated for docking
+ranking and does not report physical energy, binding affinity, or free energy.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package

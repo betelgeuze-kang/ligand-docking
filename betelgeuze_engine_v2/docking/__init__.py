@@ -83,9 +83,7 @@ from .authority_rotor_compat import (
     install_authority_rotor_stereo_compat as _install_authority_rotor_stereo_compat,
 )
 
-AUTHORITY_ROTOR_STEREO_COMPAT_SHA256 = (
-    _install_authority_rotor_stereo_compat()
-)
+AUTHORITY_ROTOR_STEREO_COMPAT_SHA256 = _install_authority_rotor_stereo_compat()
 
 # Rebind the public functions after the compatibility installer updates authority.
 from .authority import (  # noqa: E402
@@ -182,6 +180,30 @@ from .interpretable_result import (  # noqa: E402
     InterpretableSearchTermRow,
     run_authenticated_interpretable_pocket_search,
 )
+from .scorer_v1 import (  # noqa: E402
+    MAX_SCORER_V1_LIGAND_PAIR_CHECKS,
+    MAX_SCORER_V1_RECEPTOR_BONDS_SCANNED,
+    MAX_SCORER_V1_RECEPTOR_CANDIDATE_PAIRS,
+    SCORER_V1_ALGORITHM_ID,
+    SCORER_V1_APPLICABILITY_DOMAIN_ID,
+    SCORER_V1_CONFIG_SCHEMA_ID,
+    SCORER_V1_CONTEXT_SCHEMA_ID,
+    SCORER_V1_ID,
+    SCORER_V1_SCORE_ID,
+    SCORER_V1_SEARCH_RESULT_SCHEMA_ID,
+    SCORER_V1_TERMS_SCHEMA_ID,
+    SCORER_V1_TERM_ROW_SCHEMA_ID,
+    SCORER_V1_VERSION,
+    ChemistryPoseScorerV1,
+    PoseScorerV1,
+    ScorerV1Config,
+    ScorerV1Context,
+    ScorerV1Error,
+    ScorerV1GuidedSearchResult,
+    ScorerV1SearchTermRow,
+    ScorerV1Terms,
+    run_authenticated_scorer_v1_guided_search,
+)
 
 __all__ = [
     "AUTHENTICATED_DOCKING_DERIVATION_ID",
@@ -233,6 +255,9 @@ __all__ = [
     "MAX_INTERPRETABLE_SCORER_RECEPTOR_CANDIDATE_PAIRS",
     "MAX_POCKET_PLACEMENT_PROPOSALS",
     "MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM",
+    "MAX_SCORER_V1_LIGAND_PAIR_CHECKS",
+    "MAX_SCORER_V1_RECEPTOR_BONDS_SCANNED",
+    "MAX_SCORER_V1_RECEPTOR_CANDIDATE_PAIRS",
     "MAX_SYMMETRY_PERMUTATIONS",
     "POCKET_PLACEMENT_POLICY_ID",
     "POCKET_PLACEMENT_POLICY_SCHEMA_ID",
@@ -240,6 +265,16 @@ __all__ = [
     "POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID",
     "POCKET_PROPOSAL_OVERRIDE_SHA256",
     "RING_SYSTEM_POLICY_ID",
+    "SCORER_V1_ALGORITHM_ID",
+    "SCORER_V1_APPLICABILITY_DOMAIN_ID",
+    "SCORER_V1_CONFIG_SCHEMA_ID",
+    "SCORER_V1_CONTEXT_SCHEMA_ID",
+    "SCORER_V1_ID",
+    "SCORER_V1_SCORE_ID",
+    "SCORER_V1_SEARCH_RESULT_SCHEMA_ID",
+    "SCORER_V1_TERMS_SCHEMA_ID",
+    "SCORER_V1_TERM_ROW_SCHEMA_ID",
+    "SCORER_V1_VERSION",
     "SPARSE_BASE_RECEPTOR_CLASH_ALGORITHM_ID",
     "SPARSE_BASE_VALIDITY_INSTALLER_SCHEMA_ID",
     "SPARSE_BASE_VALIDITY_SHA256",
@@ -250,6 +285,7 @@ __all__ = [
     "VDW_RADII_TABLE_ID",
     "AuthenticatedDockingProblem",
     "AuthenticatedDockingSearchResult",
+    "ChemistryPoseScorerV1",
     "ConformerPreparationConfig",
     "ConformerPreparationError",
     "DockingAuthorityError",
@@ -282,6 +318,7 @@ __all__ = [
     "PocketPlacementPolicy",
     "PocketPlacementReceipt",
     "PocketPlacementSearchResult",
+    "PoseScorerV1",
     "PoseMetricError",
     "PoseValidityConfig",
     "PoseValidityContext",
@@ -291,6 +328,12 @@ __all__ = [
     "PreparedConformerRecord",
     "RMSDResult",
     "ScoreDirection",
+    "ScorerV1Config",
+    "ScorerV1Context",
+    "ScorerV1Error",
+    "ScorerV1GuidedSearchResult",
+    "ScorerV1SearchTermRow",
+    "ScorerV1Terms",
     "TorsionSearchSpace",
     "TorsionSearchSpaceDerivationReceipt",
     "UNIFORM_FALLBACK_MODE",
@@ -317,6 +360,7 @@ __all__ = [
     "run_authenticated_guided_placement_search",
     "run_authenticated_interpretable_pocket_search",
     "run_authenticated_pocket_placement_search",
+    "run_authenticated_scorer_v1_guided_search",
     "run_bounded_docking_search",
     "scorer_descriptor",
     "search_space_fingerprint",

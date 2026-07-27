@@ -8,6 +8,14 @@ scientific claim from a package version.
 
 ### Changed
 
+- Added an authenticated, deterministic Scorer v1 pose-ordering contract with
+  separate typed-vdW, electrostatic, directional hydrogen-bond, hydrophobic,
+  desolvation-proxy, torsion-energy, ligand-strain, and weak-pocket-prior terms.
+  It requires complete charge-conserving explicit partial charges, binds the
+  exact receptor subset and source systems, preserves a per-candidate term
+  receipt, derives periodic torsion terms from final coordinates, revalidates
+  retained decompositions against the active scorer, and retains the full
+  success/failure denominator when used with guided placement.
 - Authenticated known-pocket docking now has a deterministic interaction-guided
   proposal layer. Bounded graph features drive donor/acceptor, opposite-charge,
   connected hydrophobic-patch, aromatic-plane, and principal-shape placements
@@ -44,9 +52,10 @@ scientific claim from a package version.
 ### Scientific boundary
 
 This stage does not add ring-conformer or macrocycle sampling, scientific
-conformer-quality or guided-placement validation, docking-score validation, or
-benchmark evidence. Guided chemical features are a bounded auditable graph
-profile, and principal-axis alignment is only a shape heuristic.
+conformer-quality, guided-placement, or docking-score validation, or benchmark
+evidence. Guided chemical features and Scorer v1 terms are bounded auditable
+heuristics; Scorer v1 is not a calibrated energy, affinity, or free-energy
+estimate.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

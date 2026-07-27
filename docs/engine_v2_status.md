@@ -118,6 +118,10 @@ The current `main` branch contains:
   proposal receipts are retained, multi-candidate batches keep a uniform
   Haar/spherical fallback, and unavailable guidance reproduces the uniform
   baseline exactly;
+- an authenticated Scorer v1 baseline with complete explicit-partial-charge
+  admission, sparse bounded contact work, eight separately receipted terms,
+  source-system/config/proposal cross-wire rejection, and failure-complete
+  guided-search term evidence;
 - a benchmark manifest and one-row-per-case success/failure ledger;
 - a frozen four-case public redocking protocol definition bound to the
   PoseBusters packaged PDB examples at commit
@@ -403,6 +407,9 @@ not currently establish:
 - validated pharmacophore perception, calibrated guided-placement quality, or
   evidence that the current graph and principal-axis heuristics improve pose
   recovery;
+- calibrated or scientifically validated Scorer v1 weights, physical-energy
+  semantics, affinity/free-energy interpretation, or evidence that Scorer v1
+  improves pose ranking;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
   representative public holdout; the frozen four-case protocol fixture is not a
   benchmark result;
