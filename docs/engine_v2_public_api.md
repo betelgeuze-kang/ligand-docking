@@ -295,6 +295,13 @@ shorter cycles could hide an unsupported macrocycle. This is not yet
 chemistry-complete rotor perception, ring-closure sampling, or ring-conformer
 sampling.
 
+The `3.0.0` torsion derivation receipt records one canonical disposition for
+every ligand bond. Its bounded chemistry-aware rotor rules explicitly exclude
+amide, urea, carbamate, sulfonamide, conjugated, ring, aromatic, non-single,
+hydrogen, terminal-heavy-atom, and stereo-constrained bonds. This deterministic
+graph profile is auditable from the receipt but is not a claim of equivalence
+to a complete external cheminformatics toolkit or scientific validation.
+
 ### Internal APIs
 
 Names beginning with `_`, implementation files not re-exported from a package
