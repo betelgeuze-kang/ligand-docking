@@ -15,7 +15,9 @@ scientific claim from a package version.
   fallback. Context, policy,
   per-proposal mode, selected atom anchors, requested and observed anchor
   distances, feature counts, proposal fingerprints, budget, and search authority
-  are cross-wired through immutable receipts.
+  are cross-wired through immutable receipts. Proposal generation rederives the
+  feature context from the required bound receptor and ligand systems before
+  accepting it.
 - A capability-gated deterministic ETKDGv3 conformer-preparation contract now
   generates an energy-ranked, heavy-atom Kabsch-RMSD-diverse ensemble with
   stable conformer IDs and an exact prepared-state receipt. It rejects

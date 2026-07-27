@@ -218,11 +218,12 @@ def _feature_indices(
             system.atoms[neighbor].element.upper() == "H"
             for neighbor in adjacency[index]
         )
-        if element in {"N", "O", "S"} and (attached_hydrogen or charge > 0):
+        if element in {"N", "O", "S"} and attached_hydrogen:
             donors.append(index)
         if (
             element in {"N", "O", "S"}
             and charge <= 0
+            and not (element == "N" and bool(atom.aromatic) and attached_hydrogen)
             and not _is_amide_or_sulfonamide_nitrogen(
                 system,
                 index,
@@ -346,6 +347,11 @@ def _principal_axes(
         or len(singular_values) != 3
         or float(singular_values[1].item()) <= 1.0e-8
     ):
+        return None
+    values = tuple(float(value.item()) for value in singular_values)
+    if math.isclose(
+        values[0], values[1], rel_tol=1.0e-8, abs_tol=1.0e-10
+    ) or math.isclose(values[1], values[2], rel_tol=1.0e-8, abs_tol=1.0e-10):
         return None
     axes = vh.T
     for column in range(3):
@@ -941,6 +947,7 @@ def _guided_transform(
     ligand_anchor_indices: tuple[int, ...]
     receptor_coordinate: torch.Tensor
     receptor_anchor_indices: tuple[int, ...]
+    anchor_direction: torch.Tensor | None = None
     distance: float
     if mode == "donor_acceptor_hotspot":
         choices = []
@@ -1061,6 +1068,14 @@ def _guided_transform(
         ligand_anchor_indices = ligand_system
         receptor_anchor_indices = receptor_plane[0]
         receptor_coordinate = torch.tensor(receptor_plane[1], dtype=conformer.dtype)
+        anchor_direction = receptor_normal
+        if (
+            float(
+                torch.dot(anchor_direction, pocket_center - receptor_coordinate).item()
+            )
+            < 0.0
+        ):
+            anchor_direction = -anchor_direction
         distance = policy.aromatic_plane_distance_angstrom
     elif mode == "shape_complementarity":
         rotation = _principal_rotation(conformer, context.receptor_shape_axes)
@@ -1073,12 +1088,14 @@ def _guided_transform(
 
     rotated = conformer @ rotation.T
     ligand_anchor = _anchor_coordinates(rotated, ligand_anchor_indices)
-    direction = _unit_toward_pocket(
-        receptor_coordinate,
-        pocket_center,
-        seed=seed,
-        proposal_index=proposal_index,
-    )
+    direction = anchor_direction
+    if direction is None:
+        direction = _unit_toward_pocket(
+            receptor_coordinate,
+            pocket_center,
+            seed=seed,
+            proposal_index=proposal_index,
+        )
     target_anchor = receptor_coordinate + distance * direction
     translation = target_anchor - ligand_anchor
     coordinates = rotated + translation
@@ -1288,6 +1305,8 @@ def generate_guided_docking_proposals(
     budget: DockingBudget,
     context: GuidedPlacementContext,
     *,
+    receptor_system: AllAtomSystem,
+    ligand_system: AllAtomSystem,
     policy: GuidedPlacementPolicy | None = None,
 ) -> tuple[tuple[DockingProposal, ...], GuidedPlacementReceipt]:
     if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
@@ -1314,6 +1333,15 @@ def generate_guided_docking_proposals(
     ):
         raise DockingAuthorityError("guided context system identity is cross-wired")
     context.fingerprint_sha256
+    derived_context = build_guided_placement_context(
+        authenticated_problem,
+        receptor_system,
+        ligand_system,
+    )
+    if derived_context.fingerprint_sha256 != context.fingerprint_sha256:
+        raise DockingAuthorityError(
+            "guided context does not match its authenticated derivation"
+        )
     selected_policy.fingerprint_sha256
     baseline, _ = generate_pocket_centered_docking_proposals(
         authenticated_problem,
@@ -1490,6 +1518,8 @@ def run_authenticated_guided_placement_search(
     scorer,
     context: GuidedPlacementContext,
     *,
+    receptor_system: AllAtomSystem,
+    ligand_system: AllAtomSystem,
     refiner=None,
     policy: GuidedPlacementPolicy | None = None,
     diversity_rmsd_angstrom: float = 0.5,
@@ -1500,6 +1530,8 @@ def run_authenticated_guided_placement_search(
         authenticated_problem,
         budget,
         context,
+        receptor_system=receptor_system,
+        ligand_system=ligand_system,
         policy=policy,
     )
     override = _ProposalOverride(

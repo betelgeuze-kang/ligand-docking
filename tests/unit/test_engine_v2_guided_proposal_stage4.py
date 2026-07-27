@@ -33,6 +33,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
 )
 from betelgeuze_engine_v2.docking.guided_placement import (  # noqa: E402
     _aromatic_systems,
+    _feature_indices,
+    _principal_axes,
 )
 
 
@@ -273,11 +275,15 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
         authority,
         _budget(),
         context,
+        receptor_system=receptor,
+        ligand_system=ligand,
     )
     second, second_receipt = generate_guided_docking_proposals(
         authority,
         _budget(),
         context,
+        receptor_system=receptor,
+        ligand_system=ligand,
     )
 
     assert receipt.receipt_sha256 == second_receipt.receipt_sha256
@@ -339,6 +345,8 @@ def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:
         authority,
         _budget(),
         context,
+        receptor_system=receptor,
+        ligand_system=ligand,
         policy=policy,
     )
     receptor_coordinates = receptor.coordinates[0]
@@ -391,6 +399,22 @@ def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:
         policy.aromatic_plane_distance_angstrom,
         abs=1.0e-8,
     )
+    aromatic_delta = ligand_center - receptor_center
+    receptor_normal = torch.tensor(receptor_plane[2], dtype=torch.float64)
+    assert float(
+        torch.linalg.vector_norm(
+            torch.cross(aromatic_delta, receptor_normal, dim=0)
+        ).item()
+    ) == pytest.approx(
+        0.0,
+        abs=1.0e-8,
+    )
+    assert abs(
+        float(torch.dot(aromatic_delta, receptor_normal).item())
+    ) == pytest.approx(
+        policy.aromatic_plane_distance_angstrom,
+        abs=1.0e-8,
+    )
 
     shape = _mode_proposal(
         proposals,
@@ -438,10 +462,12 @@ def test_guided_context_rejects_crosswired_systems_and_is_immutable() -> None:
             authority,
             _budget(),
             crosswired,
+            receptor_system=receptor,
+            ligand_system=ligand,
         )
 
 
-def test_unavailable_guidance_is_the_exact_uniform_batch() -> None:
+def test_caller_forged_guidance_context_is_rejected() -> None:
     authority, receptor, ligand = _authority()
     context = build_guided_placement_context(authority, receptor, ligand)
     empty_features = {name: () for name in context.ligand_features}
@@ -456,25 +482,14 @@ def test_unavailable_guidance_is_the_exact_uniform_batch() -> None:
         receptor_shape_axes=(),
     )
 
-    guided, receipt = generate_guided_docking_proposals(
-        authority,
-        _budget(),
-        unavailable,
-    )
-    baseline, _ = generate_pocket_centered_docking_proposals(
-        authority,
-        _budget(),
-    )
-    assert (
-        receipt.proposal_modes == (UNIFORM_FALLBACK_MODE,) * _budget().candidate_count
-    )
-    assert tuple(row.fingerprint_sha256 for row in guided) == tuple(
-        row.fingerprint_sha256 for row in baseline
-    )
-    assert all(
-        torch.equal(guided_row.coordinates, baseline_row.coordinates)
-        for guided_row, baseline_row in zip(guided, baseline)
-    )
+    with pytest.raises(DockingAuthorityError, match="authenticated derivation"):
+        generate_guided_docking_proposals(
+            authority,
+            _budget(),
+            unavailable,
+            receptor_system=receptor,
+            ligand_system=ligand,
+        )
 
 
 def test_guided_receipt_detects_anchor_distance_mutation() -> None:
@@ -484,6 +499,8 @@ def test_guided_receipt_detects_anchor_distance_mutation() -> None:
         authority,
         _budget(),
         context,
+        receptor_system=receptor,
+        ligand_system=ligand,
     )
     observed = list(receipt.observed_anchor_distance_angstroms)
     guided_index = next(
@@ -624,6 +641,8 @@ def test_degenerate_ligand_shape_and_aromatic_frames_use_uniform_fallback() -> N
         authority,
         _budget(),
         context,
+        receptor_system=receptor,
+        ligand_system=ligand,
     )
     baseline, _ = generate_pocket_centered_docking_proposals(authority, _budget())
 
@@ -676,43 +695,57 @@ def test_nonaromatic_biaryl_bridge_does_not_merge_aromatic_planes() -> None:
     )
 
 
-def test_unavailable_guidance_reproduces_the_entire_uniform_batch() -> None:
-    authority, receptor, ligand = _authority()
-    context = build_guided_placement_context(
-        authority,
-        receptor,
-        ligand,
+def test_donor_and_acceptor_features_exclude_false_aromatic_and_charge_cases() -> None:
+    atoms = _atoms(
+        ("N", "H", "N", "C", "C", "C", "C"),
+        charges={2: 1},
+        aromatic={0},
     )
-    empty_features = {name: () for name in context.ligand_features}
-    no_guidance = replace(
-        context,
-        ligand_features=empty_features,
-        receptor_feature_rows=empty_features,
-        ligand_hydrophobic_patches=(),
-        receptor_hydrophobic_patches=(),
-        ligand_aromatic_systems=(),
-        receptor_aromatic_planes=(),
-        receptor_shape_axes=(),
+    system = AllAtomSystem(
+        system_id="guided-feature-edge-cases",
+        atoms=atoms,
+        bonds=(
+            Bond(index=0, atom_i=0, atom_j=1),
+            Bond(index=1, atom_i=2, atom_j=3),
+            Bond(index=2, atom_i=2, atom_j=4),
+            Bond(index=3, atom_i=2, atom_j=5),
+            Bond(index=4, atom_i=2, atom_j=6),
+        ),
+        residues=(
+            Residue(
+                index=0,
+                name="LIG",
+                chain_index=0,
+                sequence_number=1,
+                atom_indices=tuple(range(7)),
+            ),
+        ),
+        chains=(Chain(index=0, chain_id="L", residue_indices=(0,)),),
+        coordinates=torch.zeros((1, 7, 3), dtype=torch.float64),
+        provenance=_provenance("guided-feature-edge-source", "5" * 64),
     )
 
-    proposals, receipt = generate_guided_docking_proposals(
-        authority,
-        _budget(911),
-        no_guidance,
-    )
-    baseline, _ = generate_pocket_centered_docking_proposals(
-        authority,
-        _budget(911),
-    )
+    features = _feature_indices(system)
+    assert 0 in features["donor"]
+    assert 0 not in features["acceptor"]
+    assert 2 in features["positive"]
+    assert 2 not in features["donor"]
 
-    assert set(receipt.proposal_modes) == {UNIFORM_FALLBACK_MODE}
-    assert receipt.proposal_fingerprint_sha256s == tuple(
-        row.fingerprint_sha256 for row in baseline
+
+def test_repeated_principal_values_disable_shape_guidance() -> None:
+    root = 3.0**0.5 / 2.0
+    symmetric_ring = torch.tensor(
+        [
+            [1.0, 0.0, 0.0],
+            [0.5, root, 0.0],
+            [-0.5, root, 0.0],
+            [-1.0, 0.0, 0.0],
+            [-0.5, -root, 0.0],
+            [0.5, -root, 0.0],
+        ],
+        dtype=torch.float64,
     )
-    assert all(
-        torch.equal(guided.coordinates, uniform.coordinates)
-        for guided, uniform in zip(proposals, baseline)
-    )
+    assert _principal_axes(symmetric_ring) is None
 
 
 def test_guided_search_reuses_failure_complete_search_and_resets_override() -> None:
@@ -727,6 +760,8 @@ def test_guided_search_reuses_failure_complete_search_and_resets_override() -> N
         _budget(907),
         _Scorer(authority.problem.fingerprint_sha256),
         context,
+        receptor_system=receptor,
+        ligand_system=ligand,
         diversity_rmsd_angstrom=0.0,
         diversity_metric="symmetry_aware_direct_rmsd",
         symmetry_permutations=(tuple(range(ligand.atom_count)),),
