@@ -9,6 +9,7 @@ import hashlib
 from importlib import metadata
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -69,10 +70,12 @@ RECEPTOR_CHARGE_METHOD_ID = (
 )
 LIGAND_CHARGE_METHOD_ID = "rdkit_gasteiger_12_iter_conserved/2022.09.5"
 ENGINE_V2_CANDIDATE_COUNT = 64
+ALLOWED_TORCH_VERSIONS = ("2.6.0", "2.6.0+rocm6.1")
 ENGINE_V2_CPU_POLICY = {
     "cpu_count": 1,
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
+    "torch_version": str(torch.__version__),
 }
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
@@ -129,6 +132,10 @@ _ENGINE_V2_CASE_EXCEPTIONS = (
 
 
 def _configure_engine_v2_cpu() -> None:
+    if ENGINE_V2_CPU_POLICY["torch_version"] not in ALLOWED_TORCH_VERSIONS:
+        raise PublicRedockingRunnerError(
+            "Engine V2 Torch build is outside the frozen runtime set"
+        )
     torch.set_num_threads(ENGINE_V2_CPU_POLICY["torch_intraop_threads"])
     if torch.get_num_interop_threads() != ENGINE_V2_CPU_POLICY[
         "torch_interop_threads"
@@ -1025,6 +1032,15 @@ def _external_result(
         seed=seed,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
+    if os.path.lexists(output):
+        if output.is_symlink() or not output.is_file():
+            raise PublicRedockingRunnerError(
+                "stale external pose output is not a regular file"
+            )
+        stale_output = output.with_name(
+            f"{output.name}.stale-{time.time_ns()}"
+        )
+        output.replace(stale_output)
     execution_policy = _execution_policy_tokens(
         _external_execution_policy(timeout_seconds)
     )
@@ -1343,7 +1359,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     identities = (
         PublicRedockingEngineIdentity(
             engine_id="engine_v2",
-            version="source-stage7",
+            version=(
+                "source-stage7; torch "
+                f"{ENGINE_V2_CPU_POLICY['torch_version']}"
+            ),
             implementation_sha256=engine_source_sha256,
             evaluation_pipeline_sha256=evaluation_pipeline_sha256,
             command=(

@@ -159,8 +159,10 @@ The current `main` branch contains:
   explicit, claim-blocked standard-residue receptor charge proxies and
   conserved RDKit Gasteiger ligand charges; these are not calibrated
   force-field charges. Exact per-case commands, cached pose hashes, and all
-  evaluator dependency versions are bound. The external structures, engine
-  outputs, and benchmark result remain absent from the repository;
+  evaluator dependency versions are bound. Exact Torch build and row-level
+  execution policies are also bound, while external fresh-process and Engine
+  V2 reused-process runtimes are explicitly non-comparable. The external
+  structures, engine outputs, and benchmark result remain absent from the repository;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that
   every runtime value is supplied explicitly by the caller, and enumerates the

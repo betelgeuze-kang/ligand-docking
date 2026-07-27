@@ -502,10 +502,15 @@ def test_external_runtime_stops_before_evaluation_and_evaluator_errors_abort(
     }
     times = iter((10.0, 12.5))
     monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+
+    def write_fresh_output(*args, **kwargs):
+        output.write_bytes(b"fixture\n$$$$\n" * 5)
+        return SimpleNamespace(returncode=0)
+
     monkeypatch.setattr(
         runner.subprocess,
         "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=0),
+        write_fresh_output,
     )
 
     def evaluator_failure(*args, **kwargs):
@@ -542,10 +547,15 @@ def test_external_success_runtime_excludes_shared_evaluator(
     }
     times = iter((10.0, 12.5))
     monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+
+    def write_fresh_output(*args, **kwargs):
+        output.write_bytes(b"fixture\n$$$$\n" * 5)
+        return SimpleNamespace(returncode=0)
+
     monkeypatch.setattr(
         runner.subprocess,
         "run",
-        lambda *args, **kwargs: SimpleNamespace(returncode=0),
+        write_fresh_output,
     )
     monkeypatch.setattr(
         runner,
@@ -570,6 +580,75 @@ def test_external_success_runtime_excludes_shared_evaluator(
 
     assert row.status == "success"
     assert row.runtime_seconds == 2.5
+
+
+def test_external_run_cannot_reuse_stale_pose_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    output = tmp_path / "poses.sdf"
+    output.write_bytes(b"stale\n$$$$\n" * 5)
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+    times = iter((10.0, 12.5))
+    monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=0),
+    )
+
+    row, _ = runner._external_result(
+        case_id,
+        "vina",
+        paths,
+        binary=tmp_path / "gnina",
+        input_sha256s=inputs,
+        output=output,
+        seed=11,
+        timeout_seconds=300,
+    )
+
+    assert row.status == "failure"
+    assert row.failure_code == "external_process_failed"
+    assert not output.exists()
+    assert len(tuple(tmp_path.glob("poses.sdf.stale-*"))) == 1
+
+
+def test_external_run_rejects_stale_pose_symlink(
+    tmp_path: Path,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    output = tmp_path / "poses.sdf"
+    output.symlink_to(tmp_path / "missing-target.sdf")
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="stale external pose output is not a regular file",
+    ):
+        runner._external_result(
+            case_id,
+            "vina",
+            paths,
+            binary=tmp_path / "gnina",
+            input_sha256s=inputs,
+            output=output,
+            seed=11,
+            timeout_seconds=300,
+        )
 
 
 def test_engine_v2_evaluator_failure_aborts_instead_of_counting_engine_failure(

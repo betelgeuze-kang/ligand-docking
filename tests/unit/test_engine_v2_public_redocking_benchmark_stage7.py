@@ -58,7 +58,10 @@ def _identities() -> tuple[PublicRedockingEngineIdentity, ...]:
     )
 
 
-def _input_fields(case_id: str) -> dict[str, object]:
+def _input_fields(
+    case_id: str,
+    engine_id: str = "engine_v2",
+) -> dict[str, object]:
     profile = next(
         row for row in frozen_public_redocking_profiles() if row.case_id == case_id
     )
@@ -66,13 +69,23 @@ def _input_fields(case_id: str) -> dict[str, object]:
     def digest(role: str) -> str:
         return hashlib.sha256(f"{case_id}:{role}".encode("ascii")).hexdigest()
 
+    execution_policy = (
+        (
+            "cpu_count=1",
+            "torch_interop_threads=1",
+            "torch_intraop_threads=1",
+            'torch_version="2.6.0"',
+        )
+        if engine_id == "engine_v2"
+        else ("cpu_count=1", "timeout_seconds=300")
+    )
     return {
         "receptor_artifact_sha256": digest("receptor"),
         "reference_artifact_sha256": digest("reference"),
         "native_artifact_sha256": profile.ligand_artifact_sha256,
         "seed_artifact_sha256": digest("seed"),
         "execution_command": ("fixture-engine", "--case-id", case_id),
-        "execution_policy": ("cpu_count=1", "timeout_seconds=300"),
+        "execution_policy": execution_policy,
     }
 
 
@@ -90,7 +103,7 @@ def _success(
         engine_id=engine_id,
         status="success",
         runtime_seconds=runtime,
-        **_input_fields(case_id),
+        **_input_fields(case_id, engine_id),
         rmsd_angstroms=(top1, top2, top3, 4.0, 5.0),
         geometric_valid=(True, True, True, False, False),
         chemical_valid=(True, True, True, False, False),
@@ -109,7 +122,7 @@ def _rows() -> tuple[PublicRedockingCaseResult, ...]:
                         engine_id=engine_id,
                         status="failure",
                         runtime_seconds=1.0 + index / 100.0,
-                        **_input_fields(case_id),
+                        **_input_fields(case_id, engine_id),
                         failure_code="fixture_failure",
                     )
                 )
@@ -281,7 +294,7 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
     assert report.to_dict()["same_pocket_geometry"] is False
     assert report.to_dict()["same_search_effort_budget"] is False
     assert report.to_dict()["search_effort_comparable"] is False
-    assert report.to_dict()["runtime_boundary_comparable"] is True
+    assert report.to_dict()["runtime_boundary_comparable"] is False
     assert report.to_dict()["cpu_limit_comparable"] is True
     assert report.to_dict()["policy"]["external_timeout_seconds"] == 300
     assert report.to_dict()["policy"]["cpu_count"] == 1
@@ -418,6 +431,26 @@ def test_report_rejects_cross_engine_input_or_evaluator_drift() -> None:
             _profiles(),
             identities,
             _rows(),
+            policy=_policy(),
+        )
+
+
+def test_report_rejects_row_execution_policy_drift() -> None:
+    rows = list(_rows())
+    vina_index = len(FROZEN_PUBLIC_REDOCKING_CASE_IDS)
+    rows[vina_index] = replace(
+        rows[vina_index],
+        execution_policy=("cpu_count=8", "timeout_seconds=10"),
+    )
+
+    with pytest.raises(
+        PublicRedockingBenchmarkError,
+        match="vina row policy contradicts",
+    ):
+        build_public_redocking_benchmark_report(
+            _profiles(),
+            _identities(),
+            tuple(rows),
             policy=_policy(),
         )
 

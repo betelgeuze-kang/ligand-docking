@@ -62,6 +62,11 @@ threads are both fixed to one for Engine V2, and both external modes receive
 `--cpu 1`. The external timeout is part of the policy, engine identity, and
 per-case cache receipt; changing it invalidates cached external rows. Runtime
 deltas remain descriptive because the search regions and algorithms differ.
+They are not process-boundary comparable: each external case includes fresh
+process startup and model loading, while Engine V2 reuses one imported Python
+process. The report therefore records `runtime_boundary_comparable: false`.
+The exact Torch build must be one of the repository's pinned 2.6.0 CPU or
+2.6.0+rocm6.1 builds and is retained in every Engine V2 row and engine identity.
 
 Engine V2 preparation assigns explicit claim-blocked charges before Scorer v1:
 
@@ -106,7 +111,11 @@ The report binds exact engine version, full Engine V2 Python source-closure or
 external binary SHA-256, command, CPU/timeout policy, cohort fingerprint, policy
 fingerprint, all 900 engine/case rows, profiles, and metric rows. Evaluator or
 artifact-I/O failures abort the run instead of being counted as engine
-failures.
+failures. Report construction independently rejects row-level CPU, Torch
+thread, or timeout policies that contradict the report policy. Before rerunning
+an invalidated external receipt, the runner moves any old pose file to a
+timestamped `.stale-*` evidence file and requires the new process to create a
+fresh output.
 
 ## Local execution
 

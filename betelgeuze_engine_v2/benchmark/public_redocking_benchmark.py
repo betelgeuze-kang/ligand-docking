@@ -115,6 +115,23 @@ def _finite(
     return result
 
 
+def _execution_policy_mapping(tokens: Sequence[str]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for token in tokens:
+        key, separator, encoded = str(token).partition("=")
+        if not key or separator != "=" or key in result:
+            raise PublicRedockingBenchmarkError(
+                "result execution_policy token is malformed"
+            )
+        try:
+            result[key] = json.loads(encoded)
+        except json.JSONDecodeError as exc:
+            raise PublicRedockingBenchmarkError(
+                "result execution_policy value is malformed"
+            ) from exc
+    return result
+
+
 def _selection_key(case_id: str) -> tuple[str, str]:
     payload = f"{PUBLIC_REDOCKING_SELECTION_SALT}:{case_id}".encode("ascii")
     return hashlib.sha256(payload).hexdigest(), case_id
@@ -1124,6 +1141,7 @@ class PublicRedockingCaseResult:
             raise PublicRedockingBenchmarkError(
                 "result execution_policy must be non-empty sorted key=value tokens"
             )
+        _execution_policy_mapping(execution_policy)
         rmsds = tuple(
             _finite(value, name="rmsd_angstrom", minimum=0.0)
             for value in self.rmsd_angstroms
@@ -1382,6 +1400,40 @@ class PublicRedockingBenchmarkReport:
             )
         profile_map = {profile.case_id: profile for profile in profiles}
         row_map = {(row.engine_id, row.case_id): row for row in rows}
+        engine_v2_policies = {
+            row.execution_policy for row in rows if row.engine_id == "engine_v2"
+        }
+        if len(engine_v2_policies) != 1:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 rows must use one execution policy"
+            )
+        engine_v2_policy = _execution_policy_mapping(
+            next(iter(engine_v2_policies))
+        )
+        if (
+            engine_v2_policy.get("cpu_count") != self.policy.cpu_count
+            or engine_v2_policy.get("torch_intraop_threads") != 1
+            or engine_v2_policy.get("torch_interop_threads") != 1
+            or not isinstance(engine_v2_policy.get("torch_version"), str)
+            or not engine_v2_policy["torch_version"]
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 row policy contradicts the report policy"
+            )
+        expected_external_policy = {
+            "cpu_count": self.policy.cpu_count,
+            "timeout_seconds": self.policy.external_timeout_seconds,
+        }
+        for engine_id in ("vina", "gnina"):
+            policies = {
+                row.execution_policy for row in rows if row.engine_id == engine_id
+            }
+            if len(policies) != 1 or _execution_policy_mapping(
+                next(iter(policies))
+            ) != expected_external_policy:
+                raise PublicRedockingBenchmarkError(
+                    f"{engine_id} row policy contradicts the report policy"
+                )
         for case_id in self.cohort.case_ids:
             case_rows = tuple(
                 row_map[(engine_id, case_id)]
@@ -1445,7 +1497,7 @@ class PublicRedockingBenchmarkReport:
             "same_pocket_geometry": False,
             "same_search_effort_budget": False,
             "search_effort_comparable": False,
-            "runtime_boundary_comparable": True,
+            "runtime_boundary_comparable": False,
             "cpu_limit_comparable": True,
             "bootstrap_confidence_intervals": True,
             "benchmark_executed": True,
