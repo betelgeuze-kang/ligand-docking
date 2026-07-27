@@ -356,6 +356,15 @@ jobs:
           assert result["chemistry_inference_performed"] is False
           assert result["calibrated"] is False
           assert result["claim_safe"] is False
+          execution = result["execution_parameters"]
+          assert execution["receptor_model_index"] == 0
+          assert execution["ligand_model_index"] == 0
+          assert execution["receptor_margin_angstrom_binary64_hex"] == (4.0).hex()
+          assert execution["parameters_uniquely_attested"] is True
+          assert execution["model_selection_fixed_by_cli"] is True
+          assert execution["receipt_sha256"] == result[
+              "execution_parameters_receipt_sha256"
+          ]
           assert verification["candidate_count"] == 2
           assert verification["success_count"] + verification["failure_count"] == 2
           assert verification["canonical_bytes_verified"] is True
@@ -380,8 +389,12 @@ jobs:
           ] is True
           assert bundle["scorer_source_bytes_locally_attested"] is False
           assert bundle["search_fingerprint_fully_recomputed"] is True
-          assert bundle["receptor_margin_uniquely_attested"] is False
-          assert bundle["model_indices_uniquely_attested"] is False
+          assert bundle["execution_parameters_fully_verified"] is True
+          assert bundle["receptor_margin_uniquely_attested"] is True
+          assert bundle["model_indices_uniquely_attested"] is True
+          assert bundle["execution_parameters_receipt_sha256"] == result[
+              "execution_parameters_receipt_sha256"
+          ]
           assert bundle["candidate_count"] == 2
           assert bundle["success_count"] + bundle["failure_count"] == 2
           assert bundle["scientifically_validated"] is False

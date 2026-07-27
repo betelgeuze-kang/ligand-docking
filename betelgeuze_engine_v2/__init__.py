@@ -165,6 +165,18 @@ from .docking.search_fingerprint_material import (
 
 SEARCH_FINGERPRINT_MATERIAL_SHA256 = _install_search_fingerprint_material()
 
+from .execution_parameter_attestation import (
+    ATTESTED_INPUT_BOUND_VERIFICATION_SCHEMA_ID,
+    CLI_EXECUTION_PARAMETERS_SCHEMA_ID,
+    AttestedInputBoundVerificationReceipt,
+    ExecutionParameterAttestationError,
+    install_execution_parameter_attestation as _install_execution_parameter_attestation,
+)
+
+EXECUTION_PARAMETER_ATTESTATION_SHA256 = (
+    _install_execution_parameter_attestation()
+)
+
 from .molecular import (
     chemical_graph_sha256,
     indexed_topology_sha256,
@@ -177,13 +189,16 @@ __all__ = [
     "ALL_ATOM_SCHEMA_ID",
     "ATOM_FEATURE_NAMES",
     "ATOM_FEATURE_SCHEMA_VERSION",
+    "ATTESTED_INPUT_BOUND_VERIFICATION_SCHEMA_ID",
     "CHECKPOINT_SCHEMA_VERSION",
+    "CLI_EXECUTION_PARAMETERS_SCHEMA_ID",
     "DISTRIBUTION_NAME",
     "DISTRIBUTION_VERSION",
     "DOCKING_SEARCH_FINGERPRINT_SCHEMA_ID",
     "DOCKING_SEARCH_RESULT_SCHEMA_ID",
     "ENGINE_API_VERSION",
     "ENGINE_RESULT_SCHEMA_VERSION",
+    "EXECUTION_PARAMETER_ATTESTATION_SHA256",
     "MAX_COMPACT_ATOMS_PER_CELL",
     "MAX_COMPACT_NEIGHBORS",
     "MAX_FIXED_PROJECTION_RANK",
@@ -204,6 +219,7 @@ __all__ = [
     "AllAtomSystem",
     "Atom",
     "AtomFeatureBatch",
+    "AttestedInputBoundVerificationReceipt",
     "Bond",
     "Chain",
     "ClaimBlocker",
@@ -213,6 +229,7 @@ __all__ = [
     "EnergyForcePrediction",
     "EnergyTermResult",
     "EngineExecutionProvenance",
+    "ExecutionParameterAttestationError",
     "IndependentEngineV2",
     "IndependentEngineV2Config",
     "IndependentEngineV2Result",
