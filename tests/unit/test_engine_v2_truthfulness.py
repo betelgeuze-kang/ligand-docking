@@ -99,12 +99,14 @@ def test_lifecycle_snapshot_separates_wiring_from_production_evidence() -> None:
         assert "result_receipt_writer_not_implemented" not in row["current_blockers"]
 
 
-def test_public_materializer_implementation_does_not_become_benchmark_execution() -> None:
+def test_public_redocking_runner_is_wired_without_benchmark_promotion() -> None:
     base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert base["current_state"] == (
-        "frozen_four_case_public_redocking_protocol_with_"
-        "result_free_input_materializer_without_execution_or_results"
+        "frozen_300_case_public_redocking_runner_with_298_case_"
+        "primary_blind_holdout_and_sealed_execution_receipts_"
+        "without_committed_results"
     )
+    assert base["internal_reference_execution_enabled"] is True
     assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]
     assert "reference_ligand_match_materializer_not_implemented" not in base["blockers"]
 
@@ -118,15 +120,16 @@ def test_public_materializer_implementation_does_not_become_benchmark_execution(
         "superseded_blockers"
     ]
     assert row["canonical_entrypoint_applicable"] is True
-    assert row["canonical_entrypoint_wired"] is False
+    assert row["canonical_entrypoint_wired"] is True
     assert row["production_execution_authorized"] is False
-    assert row["production_result_receipt_required"] is False
+    assert row["production_result_receipt_required"] is True
     assert row["independent_result_review_required"] is True
     assert "symmetry_mapping_materializer_not_implemented" not in row["current_blockers"]
     assert "reference_ligand_match_materializer_not_implemented" not in row[
         "current_blockers"
     ]
-    assert "public_benchmark_not_executed" in row["current_blockers"]
+    assert "primary_298_case_blind_holdout_not_executed" in row["current_blockers"]
+    assert "complete_300_case_descriptive_report_missing" in row["current_blockers"]
     assert "public_holdout_results_missing" in row["current_blockers"]
     assert row["benchmark_validated"] is False
     assert row["claim_safe"] is False

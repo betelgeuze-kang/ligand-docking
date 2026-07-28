@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_al_minimization_validation_runtime_byte_identity_rc2
+v2_am_public_redocking_evidence_correctness_rc3
 ```
 
 The current `main` branch contains:
@@ -143,6 +143,69 @@ The current `main` branch contains:
   bundled, no network fetch or benchmark execution is implemented or authorized,
   no result document exists, and the four fixtures do not establish statistical
   representativeness or PoseBusters Benchmark equivalence;
+- a separate frozen 300-case public redocking evaluation contract selected by
+  a result-independent SHA-256 rule from the published PoseBusters 308-case
+  journal subset. The two cases observed during runner engineering are an
+  explicit engineering-smoke subset, the remaining 298 cases are the designated
+  primary holdout (`primary_blind_holdout` in the schema), and all-300 metrics
+  are supplementary descriptive only. The code enforces this partition but
+  does not independently attest the operator's prior-observation history. It
+  binds the external Zenodo archive and identifier-document
+  bytes, requires one failure-complete five-pose row for each of Engine V2,
+  Vina, and GNINA, and defines bootstrap-CI Top-1/3/5 RMSD and valid-pose
+  success, top-pose geometric/chemical validity, runtime, ligand-size/rotor
+  subgroups, and paired baseline deltas. A local runner verifies the
+  source archive and identifier list, materializes only the frozen inputs,
+  serializes Engine V2 poses, invokes Vina/GNINA modes, and retains exact
+  receipts. It binds timeout and the full Engine V2 Python source closure,
+  enforces one CPU, stops engine runtime before shared evaluation, and records
+  that Engine V2's ligand-derived spherical region is not geometrically equal
+  to the external ligand-derived autobox. Engine V2 benchmark preparation uses
+  explicit, claim-blocked standard-residue receptor charge proxies and
+  conserved RDKit Gasteiger ligand charges; these are not calibrated
+  force-field charges. Exact per-case commands, pose hashes, and all
+  evaluator dependency versions are bound. Exact Torch build and row-level
+  execution policies are also bound and revalidated against engine-mode
+  commands and case-specific input path names. Unevaluated PoseBusters validity
+  cells abort evidence construction before row reduction. Every case carries a
+  materialization value for all four archive inputs that must match the frozen
+  per-case receipt manifest, plus a frozen, report-validated base-plus-index
+  seed that report construction cross-checks across all three commands. Private
+  read-only inputs are opened once and consumed through pinned descriptors.
+  PoseBusters decodes molecules from pinned bytes; GNINA uses suffix-bearing
+  hard-link aliases to the same inodes under an inherited private-directory
+  descriptor, with inotify mutation detection and path/inode/hash checks around
+  every engine/evaluator window. Row receipts record boot-session/runtime identity including CPU affinity/model,
+  selected runtime-variable hashes, the Python executable, and loaded
+  shared-file identities. Evaluator identity includes installed-file hashes in
+  addition to exact versions. Cache reads are disabled because a colocated
+  self-hash is not a trust anchor; no bootless or same-boot timed row is reused.
+  Public report construction accepts only exact fresh-run
+  `VerifiedPublicRedockingCaseExecution` receipts, not caller-reconstructed raw
+  rows. Each receipt binds the full success/failure result, runtime, evaluator
+  outcomes, pose hashes, materialization, implementation, evaluator, and one
+  common environment identity; mutation or identity drift is rejected before
+  metric derivation. This is a local typed API boundary, not an independent
+  process attestation.
+  Engine V2 pose hashes and evaluator outcomes are derived from one
+  `O_NOFOLLOW`-pinned serialized payload rather than separate pathname reads.
+  Every invocation atomically quarantines any prior canonical full report
+  before preflight, and every Engine V2 attempt quarantines a prior canonical
+  pose before execution. Exact-case-selection digests distinguish partial
+  summary filenames.
+  The external binary is copied to a private
+  SHA-256-named stage and executed through a pinned Linux file descriptor while
+  its path, inode, mode, and hash are revalidated around every launch and before
+  report creation. Incomplete Engine V2 ranked pose sets use a typed failure
+  code, and typed input-parse failures use the frozen
+  `engine_v2_input_unsupported` code accepted by report validation. Managed
+  output paths reject symlink ancestors and cleanup deletes only
+  the expected four inputs. Local row checksums are not signatures or
+  independent provenance attestations. External fresh-process and Engine V2
+  reused-process runtimes
+  remain explicitly non-comparable. The
+  external structures, engine outputs, and benchmark result remain absent from
+  the repository;
 - a frozen H5 reference-physics parameter-origin and runtime-envelope record.
   It binds seven exact implementation-source SHA-256 identities, records that
   every runtime value is supplied explicitly by the caller, and enumerates the
@@ -423,8 +486,8 @@ not currently establish:
   local refinement improves pose recovery, or a validated docking-refinement
   energy surface;
 - public CASF/PDBBind/LIT-PCBA/PoseBusters holdout performance or a statistically
-  representative public holdout; the frozen four-case protocol fixture is not a
-  benchmark result;
+  representative public holdout; neither the frozen four-case fixture nor the
+  300-case runner and its two-case engineering smoke are a benchmark result;
 - free-energy, MM/GBSA, FEP, or equilibrium MD accuracy;
 - CUDA, ROCm, or HIP numerical/performance parity;
 - customer API integration for Engine v2;

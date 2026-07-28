@@ -6,8 +6,86 @@ scientific claim from a package version.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.2.0rc3 — Public redocking evidence-correctness release candidate
+
 ### Changed
 
+- Added a frozen 300-case PoseBusters redocking evaluation contract selected
+  deterministically from the published 308-case journal subset before results.
+  It binds the external archive and identifier bytes, requires exactly five
+  artifact-hashed ranked poses for Engine V2, Vina, and GNINA, explicitly
+  records that internal search effort is not equal, retains all engine/case
+  failures, and emits deterministic
+  bootstrap confidence intervals for Top-1/3/5 RMSD and valid-pose success,
+  top-pose geometric/chemical validity, runtime, ligand-size and rotor
+  subgroups, and paired Engine-V2-versus-baseline deltas. Source-ligand hashes
+  and RDKit-2022.09.5 strict-rotor profiles are frozen before execution. A local
+  runner verifies and materializes the public source, serializes
+  Engine V2 poses, launches the two external modes, and retains receipts. It
+  binds the full Engine V2 Python source closure and external timeout, enforces
+  one Torch CPU, aligns runtime boundaries before evaluation, separates
+  evaluator failures from engine failures, and explicitly records that the
+  ligand-derived sphere and external autobox are not identical search
+  geometries. The runner now prepares explicit claim-blocked receptor
+  residue-charge proxies and conserved RDKit Gasteiger ligand charges before
+  Scorer v1, exports five score-ranked offline proposals while retaining
+  evaluator validity failures, records exact
+  per-case commands, freezes the complete evaluator dependency versions, and
+  advances strict PDB parser semantics to 1.1.0. No structure data or
+  performance result is bundled or scientifically promoted. Report
+  construction now rejects per-row CPU/timeout policy drift, binds the exact
+  pinned Torch build (including the official `2.6.0+cpu` package tag),
+  quarantines stale external outputs before reruns, and marks cross-process
+  runtime boundaries non-comparable. Public report reconstruction now rejects
+  unsupported Torch builds, boolean-as-integer policies, and commands
+  cross-wired to another engine mode; unevaluated PoseBusters cells abort
+  evidence construction rather than becoming truthy validity results. Row
+  receipts now include a hashed boot-session/runtime environment identity,
+  including CPU affinity/model, selected runtime-variable hashes, the Python
+  executable, and loaded shared-file identities. The evaluator identity hashes
+  every installed-file record in addition to exact package versions.
+  PoseBusters cells are validated eagerly before
+  reduction, and case-specific input path names and
+  GNINA's base scoring mode are checked in complete-report construction. The
+  two observed cases are now an explicit engineering-smoke subset, the
+  remaining 298 cases are the designated primary holdout, and all-300 metrics
+  are supplementary descriptive. Report reconstruction validates all four case
+  inputs against a frozen per-case materialization-receipt manifest and checks
+  each engine command against the same frozen, report-validated base-plus-index
+  case seed.
+  Materialized inputs are private, read-only files opened once and consumed
+  through pinned descriptors, with path/inode/hash checks around every
+  engine/evaluator window. PoseBusters receives RDKit molecules decoded
+  directly from pinned bytes. Because GNINA requires filename suffixes for
+  Open Babel format selection, its inputs use read-only hard-link aliases to
+  those exact pinned inodes under an inherited private-directory descriptor;
+  alias identity is checked and Linux inotify makes any write, attribute, or
+  directory-entry mutation fail closed. GNINA itself runs only from an open
+  descriptor for a private SHA-256-named staged copy; its pathname, inode,
+  mode, and hash are revalidated around every launch and before report
+  creation. Atomic artifact writes use descriptor-anchored exclusive temporary
+  files; managed output paths reject symlink ancestors, external output uses
+  an inherited directory descriptor, and cleanup unlinks only the expected
+  files. Row-cache reads are disabled because a local self-hash is not an
+  independent trust anchor, which also prevents cross-boot timed-row reuse.
+  Incomplete Engine V2 ranked pose sets are classified by typed exception.
+  Public report construction now accepts only exact fresh-run
+  `VerifiedPublicRedockingCaseExecution` receipts rather than arbitrary raw
+  result rows. Each receipt binds the complete outcome/runtime/pose hashes to
+  its frozen materialization, implementation, evaluator, and one common
+  environment identity; mutated or cross-wired receipts fail before metric
+  derivation. The frozen Engine V2 failure-code set now includes the runner's
+  typed input-parse failure code.
+  Engine V2 pose hashes and PoseBusters outcomes now use the same
+  `O_NOFOLLOW`-pinned serialized payload. New invocations atomically quarantine
+  a prior canonical full report before preflight, and fresh Engine V2 attempts
+  quarantine prior canonical poses, so failures cannot leave stale success
+  evidence active. Partial-summary filenames now bind an exact ordered-case
+  selection digest rather than only the slice length.
+  Local row-receipt SHA-256 values are diagnostic integrity checks rather than
+  signatures or independent provenance attestations.
 - Added an authenticated energy-based local-refinement adapter that connects
   docking proposals to the bounded CPU reference minimizer. It retains exact
   pre/post coordinates, initial/final/delta energy, maximum displacement,
@@ -63,11 +141,13 @@ scientific claim from a package version.
 ### Scientific boundary
 
 This stage does not add ring-conformer or macrocycle sampling, scientific
-conformer-quality, guided-placement, or docking-score validation, or benchmark
-evidence. Guided chemical features and Scorer v1 terms are bounded auditable
+conformer-quality, guided-placement, docking-score validation, or committed
+benchmark evidence. Guided chemical features and Scorer v1 terms are bounded auditable
 heuristics; Scorer v1 is not a calibrated energy, affinity, or free-energy
 estimate. Energy-based local refinement is not evidence of docking improvement
-and does not minimize receptor--ligand interaction energy.
+and does not minimize receptor--ligand interaction energy. The 300-case
+redocking contract and runner are an execution work surface, not a bundled
+performance result or scientific validation.
 
 ## 0.2.0rc2 — Runtime identity release candidate
 

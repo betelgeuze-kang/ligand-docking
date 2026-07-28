@@ -40,10 +40,10 @@ PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID = (
 PUBLIC_BENCHMARK_PROTOCOL_ID = (
     "posebusters_packaged_public_redocking_contract_cohort/1.0.0"
 )
-PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.1"
-PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-20T11:30:00Z"
+PUBLIC_BENCHMARK_PROTOCOL_VERSION = "1.1.2"
+PUBLIC_BENCHMARK_PROTOCOL_FROZEN_AT_UTC = "2026-07-27T21:35:00Z"
 FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256 = (
-    "ab198408ee33830d11a108e6e59c7d32d661c7300507b233867f734b5f156fec"
+    "45620c9b8bf47376a654e77fff4f2b8cc941b7adffc9d50b7787f46c489eb279"
 )
 
 POSEBUSTERS_REPOSITORY_URL = "https://github.com/maabuu/posebusters"
@@ -697,7 +697,7 @@ def _build_frozen_public_benchmark_protocol() -> FrozenPublicBenchmarkProtocol:
                     "public_evaluator_authenticated.py"
                 ),
                 source_sha256=(
-                    "7eea963a60e43e790c1bf495b7009a76fccc239a01f3460fd62bd78afe60b397"
+                    "d552a9405642a2f03334d18e886c2b1fcb186887820be2919ab9358eff107750"
                 ),
             ),
             PublicBenchmarkScorerIdentity(

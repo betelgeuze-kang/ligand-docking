@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_al_minimization_validation_runtime_byte_identity_rc2"
+IMPLEMENTATION_STAGE = "v2_am_public_redocking_evidence_correctness_rc3"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -539,10 +539,12 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "public_asymmetric_attestation_and_transparency_missing",
     ),
     PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: (
-        "four_case_contract_cohort_not_statistically_representative",
         "posebusters_benchmark_equivalence_not_established",
-        "public_benchmark_not_executed",
+        "engineering_smoke_is_not_primary_holdout_evidence",
+        "primary_298_case_blind_holdout_not_executed",
+        "complete_300_case_descriptive_report_missing",
         "public_holdout_results_missing",
+        "numeric_acceptance_thresholds_not_frozen",
         "independent_attestation_missing",
         "legal_compliance_determination_not_made",
         "scientific_validation_missing",
@@ -915,10 +917,11 @@ def capability_snapshot() -> dict[str, Any]:
             PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_four_case_public_redocking_protocol_with_"
-                    "result_free_input_materializer_without_execution_or_results"
+                    "frozen_300_case_public_redocking_runner_with_298_case_"
+                    "primary_blind_holdout_and_sealed_execution_receipts_"
+                    "without_committed_results"
                 ),
-                internal_execution_enabled=False,
+                internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
             EXTERNAL_BASELINE_CAPABILITY_ID: _row(

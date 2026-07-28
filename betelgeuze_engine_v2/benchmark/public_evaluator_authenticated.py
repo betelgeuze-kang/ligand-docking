@@ -293,7 +293,7 @@ def _derive_chirality_centers(
 def authenticated_public_benchmark_derivation_policy_document() -> dict[str, object]:
     projection: dict[str, object] = {
         "schema_id": AUTHENTICATED_PUBLIC_BENCHMARK_DERIVATION_POLICY_SCHEMA_ID,
-        "receptor_parser": "betelgeuze_engine_v2.strict_pdb/1.0.0",
+        "receptor_parser": "betelgeuze_engine_v2.strict_pdb/1.1.0",
         "ligand_parser": "betelgeuze_engine_v2.strict_sdf_v2000/1.0.0",
         "candidate_sha256_recomputed": True,
         "receptor_sha256_recomputed": True,

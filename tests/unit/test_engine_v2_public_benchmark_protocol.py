@@ -36,10 +36,10 @@ def test_frozen_protocol_binds_exact_source_cases_metrics_and_digest() -> None:
     protocol = frozen_public_benchmark_protocol()
 
     assert protocol.schema_id == PUBLIC_BENCHMARK_PROTOCOL_SCHEMA_ID
-    assert protocol.protocol_version == "1.1.1"
+    assert protocol.protocol_version == "1.1.2"
     assert protocol.protocol_sha256 == FROZEN_PUBLIC_BENCHMARK_PROTOCOL_SHA256
     assert protocol.protocol_sha256 == (
-        "ab198408ee33830d11a108e6e59c7d32d661c7300507b233867f734b5f156fec"
+        "45620c9b8bf47376a654e77fff4f2b8cc941b7adffc9d50b7787f46c489eb279"
     )
     assert POSEBUSTERS_SOURCE_COMMIT_SHA == (
         "1a5f26aa7270fafba21b7fec8b3633f4c4e45ead"

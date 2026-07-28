@@ -9,7 +9,7 @@ on:
       - "tools/build_engine_v2_sbom.py"
       - "tests/unit/test_engine_v2_release_candidate.py"
       - "CHANGELOG.md"
-      - "docs/engine_v2_0_2_0rc2.md"
+      - "docs/engine_v2_0_2_0rc3.md"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
   push:
     branches: ["main"]
@@ -20,7 +20,7 @@ on:
       - "tools/build_engine_v2_sbom.py"
       - "tests/unit/test_engine_v2_release_candidate.py"
       - "CHANGELOG.md"
-      - "docs/engine_v2_0_2_0rc2.md"
+      - "docs/engine_v2_0_2_0rc3.md"
       - ".github/workflows/ci-engine-v2-release-candidate.yml"
   workflow_dispatch:
 
@@ -122,7 +122,7 @@ jobs:
             tests/unit/test_engine_v2_release_candidate.py
             tests/unit/test_engine_v2_packaging_guards.py
             CHANGELOG.md
-            docs/engine_v2_0_2_0rc2.md
+            docs/engine_v2_0_2_0rc3.md
             docs/engine_v2_pr_overlap_matrix.md
             .github/workflows/ci-engine-v2-main.yml
             .github/workflows/ci-engine-v2-package.yml
@@ -172,14 +172,14 @@ jobs:
         run: |
           set -euo pipefail
           wheel="$(find dist-a -maxdepth 1 -name '*.whl' -print -quit)"
-          python tools/build_engine_v2_sbom.py "$wheel" --output dist-a/betelgeuze-engine-v2-0.2.0rc2.spdx.json
+          python tools/build_engine_v2_sbom.py "$wheel" --output dist-a/betelgeuze-engine-v2-0.2.0rc3.spdx.json
           python - <<'PY'
           import hashlib
           import json
           from pathlib import Path
 
           wheel = next(Path("dist-a").glob("*.whl"))
-          sbom = json.loads(Path("dist-a/betelgeuze-engine-v2-0.2.0rc2.spdx.json").read_text())
+          sbom = json.loads(Path("dist-a/betelgeuze-engine-v2-0.2.0rc3.spdx.json").read_text())
           assert sbom["spdxVersion"] == "SPDX-2.3"
           root = next(package for package in sbom["packages"] if package["name"] == "betelgeuze-engine-v2")
           observed = next(item["checksumValue"] for item in root["checksums"] if item["algorithm"] == "SHA256")
@@ -211,8 +211,8 @@ jobs:
           import importlib.util
           import betelgeuze_engine_v2 as engine
 
-          assert metadata.version("betelgeuze-engine-v2") == "0.2.0rc2"
-          assert engine.DISTRIBUTION_VERSION == "0.2.0rc2"
+          assert metadata.version("betelgeuze-engine-v2") == "0.2.0rc3"
+          assert engine.DISTRIBUTION_VERSION == "0.2.0rc3"
           assert engine.ENGINE_API_VERSION == "2.0.0"
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
@@ -223,7 +223,7 @@ jobs:
         if: matrix.python-version == '3.11'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: engine-v2-0.2.0rc2-${{ github.run_id }}
+          name: engine-v2-0.2.0rc3-${{ github.run_id }}
           path: |
             dist-a/*.whl
             dist-a/*.spdx.json
