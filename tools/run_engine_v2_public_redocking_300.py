@@ -2309,12 +2309,11 @@ def _engine_v2_pose_coordinates(
             key=lambda row: (float(row.score), row.proposal_index),
         )
     )
+    diagnostic_evaluation_started = time.perf_counter()
     evaluated_by_index: dict[
         int, tuple[float, bool, bool, str]
     ] = {}
-    diagnostic_evaluation_seconds = 0.0
     if successful_rows:
-        diagnostic_evaluation_started = time.perf_counter()
         records = _serialize_pose_records(
             paths["seed"],
             tuple(row.proposal.coordinates for row in successful_rows),
@@ -2325,9 +2324,6 @@ def _engine_v2_pose_coordinates(
             native_payload=native_bytes,
             receptor_payload=receptor_bytes,
             expected_pose_count=len(successful_rows),
-        )
-        diagnostic_evaluation_seconds = (
-            time.perf_counter() - diagnostic_evaluation_started
         )
         evaluated_by_index = {
             row.proposal_index: (
@@ -2380,21 +2376,28 @@ def _engine_v2_pose_coordinates(
                     error_code=str(row.error_code or "candidate_failed"),
                 )
             )
+    proposals: tuple[object, ...] = ()
+    ranking_failure: IncompleteRankedPoseSet | None = None
+    try:
+        proposals = _benchmark_ranked_proposals(search)
+    except IncompleteRankedPoseSet as exc:
+        ranking_failure = exc
+    diagnostic_evaluation_seconds = (
+        time.perf_counter() - diagnostic_evaluation_started
+    )
     diagnostics = PublicRedockingEngineV2Diagnostics(
         preparation_status="success",
         **preparation_counts,
         candidates=tuple(candidate_rows),
         diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
     )
-    try:
-        proposals = _benchmark_ranked_proposals(search)
-    except IncompleteRankedPoseSet as exc:
+    if ranking_failure is not None:
         raise EngineV2SearchCaseFailure(
-            str(exc),
+            str(ranking_failure),
             diagnostics=diagnostics,
-            failure_code=exc.failure_code,
+            failure_code=ranking_failure.failure_code,
             diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
-        ) from exc
+        ) from ranking_failure
     return EngineV2PoseSearchOutcome(
         ranked_coordinates=tuple(proposal.coordinates for proposal in proposals),
         diagnostics=diagnostics,

@@ -1957,6 +1957,153 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     )
 
 
+def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0) for _ in range(2))
+    system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    scorer = SimpleNamespace(
+        context=SimpleNamespace(
+            receptor_donors=(0,),
+            receptor_acceptors=(1,),
+            ligand_donors=(0,),
+            ligand_acceptors=(1,),
+        )
+    )
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
+    monkeypatch.setattr(
+        runner,
+        "parse_sdf_v2000",
+        lambda *args, **kwargs: system,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_receptor_proxy_charges",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_element_aware_authenticated_known_pocket_docking_problem",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "ChemistryPoseScorerV1",
+        lambda *args, **kwargs: scorer,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_guided_placement_context",
+        lambda *args, **kwargs: object(),
+    )
+
+    search_rows = tuple(
+        SimpleNamespace(
+            proposal_index=index,
+            status="success",
+            proposal=SimpleNamespace(
+                coordinates=torch.full((2, 3), float(index)),
+                fingerprint_sha256=f"{index + 1:064x}",
+            ),
+            score=float(index),
+            error_code="",
+        )
+        for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    term_rows = tuple(
+        SimpleNamespace(
+            proposal_index=index,
+            terms=SimpleNamespace(
+                receipt_sha256=f"{index + 65:064x}",
+                hbond_count=0,
+            ),
+        )
+        for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    search = SimpleNamespace(rows=search_rows)
+    result = SimpleNamespace(
+        rows=term_rows,
+        guided_search_result=SimpleNamespace(
+            authenticated_search_result=SimpleNamespace(search_result=search)
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_authenticated_scorer_v1_guided_search",
+        lambda *args, **kwargs: result,
+    )
+    records = tuple(
+        f"candidate-{index}".encode("ascii")
+        for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    monkeypatch.setattr(
+        runner,
+        "_serialize_pose_records",
+        lambda *args, **kwargs: records,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_posebusters_outcomes",
+        lambda *args, **kwargs: (
+            tuple(float(index) for index in range(len(records))),
+            (True,) * len(records),
+            (True,) * len(records),
+        ),
+    )
+
+    events: list[str] = []
+    times = iter((10.0, 13.0))
+
+    def timed() -> float:
+        events.append("timer")
+        return next(times)
+
+    original_candidate_type = runner.PublicRedockingEngineV2CandidateDiagnostic
+
+    def candidate_row(**kwargs):
+        events.append(f"candidate-{kwargs['proposal_index']}")
+        return original_candidate_type(**kwargs)
+
+    original_rank = runner._benchmark_ranked_proposals
+
+    def rank(search_result):
+        events.append("rank")
+        return original_rank(search_result)
+
+    monkeypatch.setattr(runner.time, "perf_counter", timed)
+    monkeypatch.setattr(
+        runner,
+        "PublicRedockingEngineV2CandidateDiagnostic",
+        candidate_row,
+    )
+    monkeypatch.setattr(runner, "_benchmark_ranked_proposals", rank)
+
+    outcome = runner._engine_v2_pose_coordinates(case_id, paths, seed=11)
+
+    assert outcome.diagnostic_evaluation_seconds == 3.0
+    assert outcome.diagnostics.diagnostic_evaluation_seconds == 3.0
+    assert events[0] == "timer"
+    assert events[-1] == "timer"
+    assert events.index("candidate-63") < events.index("rank") < len(events) - 1
+
+
 def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
