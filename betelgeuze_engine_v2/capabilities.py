@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_am_public_redocking_evidence_correctness_rc3"
+IMPLEMENTATION_STAGE = "v2_an_public_redocking_diagnostic_contract_rc4"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -918,8 +918,8 @@ def capability_snapshot() -> dict[str, Any]:
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
                 current_state=(
                     "frozen_300_case_public_redocking_runner_with_298_case_"
-                    "primary_blind_holdout_and_sealed_execution_receipts_"
-                    "without_committed_results"
+                    "primary_blind_holdout_and_sealed_64_candidate_"
+                    "diagnostic_execution_receipts_without_committed_results"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

@@ -22,6 +22,8 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PublicRedockingCaseProfile,
     PublicRedockingCaseResult,
+    PublicRedockingEngineV2CandidateDiagnostic,
+    PublicRedockingEngineV2Diagnostics,
     VerifiedPublicRedockingArchive,
 )
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract  # noqa: E402
@@ -61,6 +63,49 @@ def _evaluator_input_payloads(paths: dict[str, Path]) -> None:
     paths["receptor"].write_bytes(b"receptor-evaluator-fixture\n")
 
 
+def _engine_outcome(
+    coordinates: tuple[torch.Tensor, ...],
+) -> runner.EngineV2PoseSearchOutcome:
+    diagnostics = PublicRedockingEngineV2Diagnostics(
+        preparation_status="success",
+        receptor_atom_count=1,
+        ligand_atom_count=1,
+        receptor_partial_charge_count=1,
+        ligand_partial_charge_count=1,
+        receptor_donor_count=1,
+        receptor_acceptor_count=1,
+        ligand_donor_count=1,
+        ligand_acceptor_count=1,
+        candidates=tuple(
+            (
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=index,
+                    status="success",
+                    proposal_fingerprint_sha256=f"{index + 1:064x}",
+                    score=float(index),
+                    rmsd_angstrom=float(index + 1),
+                    geometric_valid=True,
+                    chemical_valid=True,
+                    pose_artifact_sha256=f"{index + 65:064x}",
+                    score_terms_receipt_sha256=f"{index + 129:064x}",
+                    hbond_count=1,
+                )
+                if index < 5
+                else PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=index,
+                    status="failure",
+                    error_code="fixture_candidate_failure",
+                )
+            )
+            for index in range(64)
+        ),
+    )
+    return runner.EngineV2PoseSearchOutcome(
+        ranked_coordinates=coordinates,
+        diagnostics=diagnostics,
+    )
+
+
 def test_materializer_reads_only_exact_frozen_case_members(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -97,6 +142,7 @@ def test_materializer_reads_only_exact_frozen_case_members(
                 case_id=case_id,
                 heavy_atom_count=1,
                 rotor_count=0,
+                ring_count=0,
                 ligand_artifact_sha256=runner._sha256_bytes(expected["ligand.sdf"]),
             ),
         ),
@@ -1718,7 +1764,7 @@ def test_engine_v2_evaluator_failure_aborts_instead_of_counting_engine_failure(
     monkeypatch.setattr(
         runner,
         "_engine_v2_pose_coordinates",
-        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+        lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
     def write_engine_v2_fixture(output, *args, **kwargs):
@@ -1758,7 +1804,7 @@ def test_engine_v2_artifact_failure_aborts_instead_of_counting_engine_failure(
     monkeypatch.setattr(
         runner,
         "_engine_v2_pose_coordinates",
-        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+        lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
     def artifact_failure(*args, **kwargs):
@@ -1819,6 +1865,98 @@ def test_engine_v2_failure_quarantines_prior_success_pose(
     assert stale[0].read_bytes() == b"prior-success\n$$$$\n" * 5
 
 
+@pytest.mark.parametrize(
+    "exception_type",
+    (
+        runner.DockingAuthorityError,
+        runner.DockingSearchError,
+        runner.ElementAwareValidityError,
+        runner.ScorerV1Error,
+    ),
+)
+def test_engine_v2_search_errors_retain_preparation_diagnostics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    exception_type: type[Exception],
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0) for _ in range(2))
+    system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    scorer = SimpleNamespace(
+        context=SimpleNamespace(
+            receptor_donors=(0,),
+            receptor_acceptors=(1,),
+            ligand_donors=(0,),
+            ligand_acceptors=(1,),
+        )
+    )
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
+    monkeypatch.setattr(
+        runner,
+        "parse_sdf_v2000",
+        lambda *args, **kwargs: system,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_receptor_proxy_charges",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_element_aware_authenticated_known_pocket_docking_problem",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "ChemistryPoseScorerV1",
+        lambda *args, **kwargs: scorer,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_guided_placement_context",
+        lambda *args, **kwargs: object(),
+    )
+
+    def fail_search(*args, **kwargs):
+        raise exception_type("fixture search failure")
+
+    monkeypatch.setattr(
+        runner,
+        "run_authenticated_scorer_v1_guided_search",
+        fail_search,
+    )
+
+    with pytest.raises(runner.EngineV2SearchCaseFailure) as captured:
+        runner._engine_v2_pose_coordinates(case_id, paths, seed=11)
+
+    diagnostics = captured.value.diagnostics
+    assert isinstance(captured.value.__cause__, exception_type)
+    assert diagnostics.preparation_status == "success"
+    assert diagnostics.receptor_atom_count == 2
+    assert diagnostics.ligand_atom_count == 2
+    assert len(diagnostics.candidates) == 64
+    assert all(
+        candidate.status == "failure"
+        and candidate.error_code == "search_execution_failed"
+        for candidate in diagnostics.candidates
+    )
+
+
 def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1844,7 +1982,7 @@ def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     monkeypatch.setattr(
         runner,
         "_engine_v2_pose_coordinates",
-        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+        lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
     def write_then_swap(output_path, *args, **kwargs):

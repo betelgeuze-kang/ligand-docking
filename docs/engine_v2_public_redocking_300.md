@@ -125,6 +125,15 @@ external engines use their own `exhaustiveness=1` search. The report therefore r
 `search_effort_comparable` false. Paired recovery deltas are descriptive under
 these explicit settings, not equal-region or equal-compute performance claims.
 
+For Engine V2, the diagnostic contract retains all 64 predeclared candidate
+slots in proposal-index order. Every successful candidate binds its proposal
+fingerprint, Scorer v1 scalar, score-term receipt, H-bond count, canonical pose
+artifact, symmetry-aware RMSD, and PoseBusters geometric/chemical validity.
+Failed slots retain a search error and remain in the denominator. The
+score-ranked first five candidate diagnostics must reproduce the published
+five-pose result row exactly; a separately substituted diagnostic or result row
+is rejected even if it is resealed as a fresh execution receipt.
+
 Runtime covers each engine invocation through ranked-pose serialization and
 stops before the shared PoseBusters evaluator. Torch intra-op and inter-op
 threads are both fixed to one for Engine V2, and both external modes receive
@@ -134,6 +143,9 @@ deltas remain descriptive because the search regions and algorithms differ.
 They are not process-boundary comparable: each external case includes fresh
 process startup and model loading, while Engine V2 reuses one imported Python
 process. The report therefore records `runtime_boundary_comparable: false`.
+The all-candidate Engine V2 diagnostic serialization and PoseBusters pass is
+timed separately and subtracted from Engine V2 runtime, so diagnostic
+instrumentation does not inflate the engine runtime row.
 Row receipts also include a SHA-256-only execution-environment identity
 covering the boot session, OS/kernel, machine architecture, Python executable,
 Torch, logical CPU count, CPU affinity/model, selected runtime-variable hashes,
@@ -203,16 +215,41 @@ for:
 - median runtime;
 - heavy-atom size subgroups: 1–20, 21–40, and 41+;
 - rotor subgroups: 0, 1–4, and 5+;
+- ring subgroups: acyclic, one ring, and two or more rings;
+- Engine V2 preparation and complete partial-charge coverage;
+- Engine V2 candidate-generation coverage across the fixed 64-slot
+  denominator;
+- Engine V2 proposal-oracle and validity-aware proposal-oracle recovery;
+- Engine V2 Top-1 scoring-regret and Top-5 selection-regret event rates and
+  median RMSD regret;
+- Engine V2 donor/acceptor feature coverage and Top-1 realized H-bond rate;
 - paired Engine V2 deltas against Vina and GNINA for recovery, valid recovery,
   failure rate, and runtime.
 
-Heavy-atom count and rotor subgroups are frozen from each source-bound ligand
-artifact using RDKit 2022.09.5 and strict
-`Lipinski.NumRotatableBonds`. The 300 profile rows and each ligand-artifact
-SHA-256 are protected by a separate aggregate SHA-256. Engine V2 admission and
-its chemistry-aware rotor policy remain separate execution outcomes; an
-unsupported macrocycle must become a failure row rather than being removed from
-the denominator.
+Heavy-atom count, rotor subgroup, and ring subgroup are frozen from each
+source-bound ligand artifact using RDKit 2022.09.5, strict
+`Lipinski.NumRotatableBonds`, and `rdMolDescriptors.CalcNumRings`. The
+heavy-atom/rotor profile rows, ligand-artifact SHA-256 values, and case-ordered
+ring counts have separate aggregate SHA-256 identities. Engine V2 admission
+and its chemistry-aware rotor policy remain separate execution outcomes; an
+unsupported macrocycle must become a failure row rather than being removed
+from the denominator.
+
+The proposal oracle is the minimum PoseBusters symmetry-aware RMSD across all
+successfully generated Engine V2 candidates. Top-1 scoring regret is
+`score-rank-1 RMSD - proposal-oracle RMSD`; Top-5 selection regret is
+`best score-ranked Top-5 RMSD - proposal-oracle RMSD`. Their event rates use
+the full case denominator and count cases where the oracle reaches 2 Å but the
+respective selected set does not. Median RMSD regret uses cases with the
+required candidate outcomes. These are failure-decomposition diagnostics, not
+performance acceptance thresholds.
+
+Complete charge coverage requires a finite explicit partial charge for every
+prepared receptor and ligand atom. H-bond feature coverage requires at least
+one complementary ligand-donor/receptor-acceptor or
+ligand-acceptor/receptor-donor pair in the fixed Scorer v1 context. It is a
+feature-availability diagnostic, not evidence that a native interaction is
+correctly reproduced.
 
 Missing Engine V2 proposals and incomplete five-pose serialization raise the
 typed `IncompleteRankedPoseSet` case failure. The evidence code is selected

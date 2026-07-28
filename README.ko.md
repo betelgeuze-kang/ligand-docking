@@ -19,7 +19,7 @@ V2 단거리 기하 경로는 밀도·cutoff·이웃/셀 용량·모델 폭·후
 현재 구현 단계:
 
 ```text
-v2_am_public_redocking_evidence_correctness_rc3
+v2_an_public_redocking_diagnostic_contract_rc4
 ```
 
 구현되어 GitHub-hosted CPU CI로 검증되는 범위:

@@ -296,7 +296,7 @@ jobs:
           )
           assert loaded == capability_snapshot()
           assert len(loaded["capabilities"]) == 44
-          assert loaded["implementation_stage"] == "v2_am_public_redocking_evidence_correctness_rc3"
+          assert loaded["implementation_stage"] == "v2_an_public_redocking_diagnostic_contract_rc4"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256

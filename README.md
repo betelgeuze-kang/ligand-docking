@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_am_public_redocking_evidence_correctness_rc3
+v2_an_public_redocking_diagnostic_contract_rc4
 ```
 
 Implemented and GitHub-hosted CPU tested:

@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_am_public_redocking_evidence_correctness_rc3
+implementation_stage: v2_an_public_redocking_diagnostic_contract_rc4
 
 claim_policy:
   customer_execution_enabled: false
@@ -971,7 +971,7 @@ capabilities:
       - public_asymmetric_attestation_and_transparency_missing
 
   v2_frozen_public_benchmark_protocol:
-    current_state: frozen_300_case_public_redocking_runner_with_298_case_primary_blind_holdout_and_sealed_execution_receipts_without_committed_results
+    current_state: frozen_300_case_public_redocking_runner_with_298_case_primary_blind_holdout_and_sealed_64_candidate_diagnostic_execution_receipts_without_committed_results
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true

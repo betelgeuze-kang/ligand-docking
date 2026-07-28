@@ -32,11 +32,14 @@ from betelgeuze_engine_v2.benchmark import (
     PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS,
     PUBLIC_REDOCKING_CASE_SEED_BASE,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
+    PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
     PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_PRIMARY_ENGINES,
     PUBLIC_REDOCKING_RUNNER_ID,
     PublicRedockingCaseProfile,
     PublicRedockingCaseResult,
+    PublicRedockingEngineV2CandidateDiagnostic,
+    PublicRedockingEngineV2Diagnostics,
     PublicRedockingEngineIdentity,
     PublicRedockingEvaluationPolicy,
     VerifiedCaseMaterialization,
@@ -98,7 +101,7 @@ RECEPTOR_CHARGE_METHOD_ID = (
     "betelgeuze.public_redocking_standard_residue_formal_charge_proxy/1.0.0"
 )
 LIGAND_CHARGE_METHOD_ID = "rdkit_gasteiger_12_iter_conserved/2022.09.5"
-ENGINE_V2_CANDIDATE_COUNT = 64
+ENGINE_V2_CANDIDATE_COUNT = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
 ENGINE_V2_CPU_POLICY = {
     "cpu_count": 1,
     "torch_intraop_threads": 1,
@@ -177,6 +180,59 @@ class IncompleteRankedPoseSet(EngineV2CaseFailure):
 
 class InvalidRankedPoseSet(EngineV2CaseFailure):
     """Engine V2 produced ranked coordinates that cannot represent the ligand."""
+
+
+class EngineV2PreparationFailure(EngineV2CaseFailure):
+    """Engine V2 could not complete its case-local preparation stage."""
+
+    def __init__(
+        self,
+        preparation_failure_code: str,
+        message: str,
+        *,
+        failure_code: str = "engine_v2_case_failed",
+    ) -> None:
+        super().__init__(message)
+        self.preparation_failure_code = preparation_failure_code
+        self.failure_code = failure_code
+
+
+class EngineV2SearchCaseFailure(EngineV2CaseFailure):
+    """Engine V2 failed after preparation and retains its fixed denominator."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        diagnostics: PublicRedockingEngineV2Diagnostics,
+        failure_code: str = "engine_v2_case_failed",
+        diagnostic_evaluation_seconds: float = 0.0,
+    ) -> None:
+        super().__init__(message)
+        self.diagnostics = diagnostics
+        self.failure_code = failure_code
+        self.diagnostic_evaluation_seconds = diagnostic_evaluation_seconds
+
+
+class EngineV2PoseSearchOutcome:
+    __slots__ = (
+        "diagnostic_evaluation_seconds",
+        "diagnostics",
+        "ranked_coordinates",
+    )
+
+    def __init__(
+        self,
+        *,
+        ranked_coordinates: tuple[torch.Tensor, ...],
+        diagnostics: PublicRedockingEngineV2Diagnostics,
+        diagnostic_evaluation_seconds: float = 0.0,
+    ) -> None:
+        self.ranked_coordinates = tuple(ranked_coordinates)
+        self.diagnostics = diagnostics
+        self.diagnostic_evaluation_seconds = float(
+            diagnostic_evaluation_seconds
+        )
 
 
 class ExecutionEnvironmentIdentity:
@@ -1287,7 +1343,7 @@ def _serialize_pose_records(
     *,
     case_id: str,
 ) -> tuple[bytes, ...]:
-    Chem, _ = _load_rdkit_modules()
+    Chem, _, _ = _load_rdkit_modules()
     template = _first_molecule(source_ligand)
     atom_count = int(template.GetNumAtoms())
     records: list[bytes] = []
@@ -1361,7 +1417,7 @@ def _write_engine_v2_poses(
 def _load_rdkit_modules():
     try:
         from rdkit import Chem, rdBase
-        from rdkit.Chem import Lipinski
+        from rdkit.Chem import Lipinski, rdMolDescriptors
     except ImportError as exc:
         raise PublicRedockingRunnerError(
             "RDKit is required for the public run"
@@ -1370,7 +1426,7 @@ def _load_rdkit_modules():
         raise PublicRedockingRunnerError(
             f"RDKit {RDKit_VERSION} is required for the frozen profiles"
         )
-    return Chem, Lipinski
+    return Chem, Lipinski, rdMolDescriptors
 
 
 def _load_posebusters():
@@ -1388,7 +1444,7 @@ def _load_posebusters():
 
 
 def _first_molecule(path: Path):
-    Chem, _ = _load_rdkit_modules()
+    Chem, _, _ = _load_rdkit_modules()
     supplier = Chem.SDMolSupplier(str(path), removeHs=False, sanitize=True)
     molecule = next((value for value in supplier if value is not None), None)
     if molecule is None:
@@ -1552,12 +1608,13 @@ def _profile(
     paths: dict[str, Path],
     expected: PublicRedockingCaseProfile,
 ) -> PublicRedockingCaseProfile:
-    _, Lipinski = _load_rdkit_modules()
+    _, Lipinski, rdMolDescriptors = _load_rdkit_modules()
     molecule = _first_molecule(paths["native"])
     observed = PublicRedockingCaseProfile(
         case_id=case_id,
         heavy_atom_count=sum(atom.GetAtomicNum() > 1 for atom in molecule.GetAtoms()),
         rotor_count=int(Lipinski.NumRotatableBonds(molecule)),
+        ring_count=int(rdMolDescriptors.CalcNumRings(molecule)),
         ligand_artifact_sha256=_sha256_path(paths["native"]),
     )
     if observed != expected:
@@ -1572,9 +1629,10 @@ def _posebusters_molecules(
     output_payload: bytes,
     native_payload: bytes,
     receptor_payload: bytes,
+    expected_pose_count: int = 5,
 ) -> tuple[tuple[object, ...], object, object]:
     """Decode pinned bytes with the exact PoseBusters 0.3.1 redock policy."""
-    Chem, _ = _load_rdkit_modules()
+    Chem, _, _ = _load_rdkit_modules()
     try:
         predicted = tuple(
             Chem.ForwardSDMolSupplier(
@@ -1610,9 +1668,12 @@ def _posebusters_molecules(
         raise PublicRedockingRunnerError(
             "PoseBusters inputs could not be decoded from pinned bytes"
         ) from exc
-    if len(predicted) != 5 or any(molecule is None for molecule in predicted):
+    if (
+        len(predicted) != expected_pose_count
+        or any(molecule is None for molecule in predicted)
+    ):
         raise PublicRedockingRunnerError(
-            "PoseBusters could not decode five predicted molecules"
+            "PoseBusters could not decode the expected predicted molecules"
         )
     if native is None or receptor is None:
         raise PublicRedockingRunnerError(
@@ -1626,21 +1687,25 @@ def _posebusters_outcomes(
     *,
     native_payload: bytes,
     receptor_payload: bytes,
+    expected_pose_count: int = 5,
 ) -> tuple[tuple[float, ...], tuple[bool, ...], tuple[bool, ...]]:
     PoseBusters = _load_posebusters()
     predicted, native, receptor = _posebusters_molecules(
         output_payload=output_payload,
         native_payload=native_payload,
         receptor_payload=receptor_payload,
+        expected_pose_count=expected_pose_count,
     )
-    report = PoseBusters(config="redock", top_n=5).bust(
+    report = PoseBusters(config="redock", top_n=expected_pose_count).bust(
         predicted,
         native,
         receptor,
         full_report=True,
     )
-    if len(report) != 5:
-        raise PublicRedockingRunnerError("PoseBusters did not retain five poses")
+    if len(report) != expected_pose_count:
+        raise PublicRedockingRunnerError(
+            "PoseBusters did not retain the expected pose count"
+        )
     required = {"rmsd", *CHEMICAL_COLUMNS, *GEOMETRIC_COLUMNS}
     if not required.issubset(report.columns):
         raise PublicRedockingRunnerError("PoseBusters report columns are incomplete")
@@ -1662,11 +1727,11 @@ def _posebusters_outcomes(
 
     chemical = tuple(
         all(tuple(required_boolean(index, column) for column in CHEMICAL_COLUMNS))
-        for index in range(5)
+        for index in range(expected_pose_count)
     )
     geometric = tuple(
         all(tuple(required_boolean(index, column) for column in GEOMETRIC_COLUMNS))
-        for index in range(5)
+        for index in range(expected_pose_count)
     )
     return rmsds, geometric, chemical
 
@@ -2068,32 +2133,45 @@ def _engine_v2_pose_coordinates(
     paths: dict[str, Path],
     *,
     seed: int,
-) -> tuple[torch.Tensor, ...]:
-    receptor_bytes = paths["receptor"].read_bytes()
-    seed_bytes = paths["seed"].read_bytes()
-    native_bytes = paths["native"].read_bytes()
-    receptor = parse_pdb(
-        receptor_bytes,
-        source_id=f"{case_id}:receptor",
-        dtype=torch.float64,
-        device="cpu",
-        connectivity_policy="record_unrepresented",
-        unit_cell_policy="ignore",
-    )
-    ligand = parse_sdf_v2000(
-        seed_bytes.decode("ascii"),
-        source_id=f"{case_id}:seed",
-        dtype=torch.float64,
-        device="cpu",
-    )
-    native = parse_sdf_v2000(
-        native_bytes.decode("ascii"),
-        source_id=f"{case_id}:native",
-        dtype=torch.float64,
-        device="cpu",
-    )
-    receptor = _assign_receptor_proxy_charges(receptor)
-    ligand = _assign_ligand_gasteiger_charges(ligand, paths["seed"])
+) -> EngineV2PoseSearchOutcome:
+    try:
+        receptor_bytes = paths["receptor"].read_bytes()
+        seed_bytes = paths["seed"].read_bytes()
+        native_bytes = paths["native"].read_bytes()
+        receptor = parse_pdb(
+            receptor_bytes,
+            source_id=f"{case_id}:receptor",
+            dtype=torch.float64,
+            device="cpu",
+            connectivity_policy="record_unrepresented",
+            unit_cell_policy="ignore",
+        )
+        ligand = parse_sdf_v2000(
+            seed_bytes.decode("ascii"),
+            source_id=f"{case_id}:seed",
+            dtype=torch.float64,
+            device="cpu",
+        )
+        native = parse_sdf_v2000(
+            native_bytes.decode("ascii"),
+            source_id=f"{case_id}:native",
+            dtype=torch.float64,
+            device="cpu",
+        )
+    except (PDBParseError, SDFParseError, UnicodeDecodeError) as exc:
+        raise EngineV2PreparationFailure(
+            "input_parse_unsupported",
+            "Engine V2 input parsing is unsupported",
+            failure_code="engine_v2_input_unsupported",
+        ) from exc
+    try:
+        receptor = _assign_receptor_proxy_charges(receptor)
+        ligand = _assign_ligand_gasteiger_charges(ligand, paths["seed"])
+    except EngineV2CaseFailure as exc:
+        raise EngineV2PreparationFailure(
+            "partial_charge_assignment_failed",
+            "Engine V2 partial-charge preparation failed",
+        ) from exc
     native_coordinates = native.coordinates[0]
     center = native_coordinates.mean(dim=0)
     radius = max(
@@ -2120,21 +2198,31 @@ def _engine_v2_pose_coordinates(
             b"posebusters-crystal-redocking-sphere/1.0.0"
         ),
     )
-    authority = build_element_aware_authenticated_known_pocket_docking_problem(
-        receptor,
-        ligand,
-        pocket,
-        receptor_margin_angstrom=4.0,
-    )
-    scorer = ChemistryPoseScorerV1(
-        authority,
-        receptor,
-        ligand,
-        implementation_source_sha256=_sha256_bytes(
-            b"engine-v2-public-redocking-scorer-v1"
-        ),
-    )
-    context = build_guided_placement_context(authority, receptor, ligand)
+    try:
+        authority = build_element_aware_authenticated_known_pocket_docking_problem(
+            receptor,
+            ligand,
+            pocket,
+            receptor_margin_angstrom=4.0,
+        )
+        scorer = ChemistryPoseScorerV1(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256=_sha256_bytes(
+                b"engine-v2-public-redocking-scorer-v1"
+            ),
+        )
+        context = build_guided_placement_context(authority, receptor, ligand)
+    except (
+        DockingAuthorityError,
+        ElementAwareValidityError,
+        ScorerV1Error,
+    ) as exc:
+        raise EngineV2PreparationFailure(
+            "docking_context_preparation_failed",
+            "Engine V2 docking-context preparation failed",
+        ) from exc
     budget = DockingBudget(
         candidate_count=ENGINE_V2_CANDIDATE_COUNT,
         top_k=5,
@@ -2143,18 +2231,175 @@ def _engine_v2_pose_coordinates(
         translation_radius_angstrom=min(4.0, radius),
         seed=seed,
     )
-    result = run_authenticated_scorer_v1_guided_search(
-        authority,
-        budget,
-        scorer,
-        context,
-        receptor_system=receptor,
-        ligand_system=ligand,
-        diversity_rmsd_angstrom=0.0,
-    )
+    preparation_counts = {
+        "receptor_atom_count": receptor.atom_count,
+        "ligand_atom_count": ligand.atom_count,
+        "receptor_partial_charge_count": sum(
+            atom.partial_charge_e is not None for atom in receptor.atoms
+        ),
+        "ligand_partial_charge_count": sum(
+            atom.partial_charge_e is not None for atom in ligand.atoms
+        ),
+        "receptor_donor_count": len(scorer.context.receptor_donors),
+        "receptor_acceptor_count": len(scorer.context.receptor_acceptors),
+        "ligand_donor_count": len(scorer.context.ligand_donors),
+        "ligand_acceptor_count": len(scorer.context.ligand_acceptors),
+    }
+
+    def search_failure_diagnostics(
+        error_code: str,
+    ) -> PublicRedockingEngineV2Diagnostics:
+        return PublicRedockingEngineV2Diagnostics(
+            preparation_status="success",
+            **preparation_counts,
+            candidates=tuple(
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=index,
+                    status="failure",
+                    error_code=error_code,
+                )
+                for index in range(ENGINE_V2_CANDIDATE_COUNT)
+            ),
+        )
+
+    try:
+        result = run_authenticated_scorer_v1_guided_search(
+            authority,
+            budget,
+            scorer,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            diversity_rmsd_angstrom=0.0,
+        )
+    except (
+        DockingAuthorityError,
+        DockingSearchError,
+        ElementAwareValidityError,
+        ScorerV1Error,
+    ) as exc:
+        raise EngineV2SearchCaseFailure(
+            "Engine V2 candidate search failed",
+            diagnostics=search_failure_diagnostics("search_execution_failed"),
+        ) from exc
     search = result.guided_search_result.authenticated_search_result.search_result
-    proposals = _benchmark_ranked_proposals(search)
-    return tuple(proposal.coordinates for proposal in proposals)
+    if (
+        len(search.rows) != ENGINE_V2_CANDIDATE_COUNT
+        or len(result.rows) != ENGINE_V2_CANDIDATE_COUNT
+        or tuple(row.proposal_index for row in search.rows)
+        != tuple(range(ENGINE_V2_CANDIDATE_COUNT))
+    ):
+        raise EngineV2SearchCaseFailure(
+            "Engine V2 search did not retain the fixed candidate denominator",
+            diagnostics=search_failure_diagnostics(
+                "candidate_denominator_incomplete"
+            ),
+        )
+    term_rows = {row.proposal_index: row for row in result.rows}
+    successful_rows = tuple(
+        sorted(
+            (
+                row
+                for row in search.rows
+                if row.status == "success"
+                and row.proposal is not None
+                and row.score is not None
+                and math.isfinite(float(row.score))
+            ),
+            key=lambda row: (float(row.score), row.proposal_index),
+        )
+    )
+    evaluated_by_index: dict[
+        int, tuple[float, bool, bool, str]
+    ] = {}
+    diagnostic_evaluation_seconds = 0.0
+    if successful_rows:
+        diagnostic_evaluation_started = time.perf_counter()
+        records = _serialize_pose_records(
+            paths["seed"],
+            tuple(row.proposal.coordinates for row in successful_rows),
+            case_id=case_id,
+        )
+        rmsds, geometric, chemical = _posebusters_outcomes(
+            b"".join(records),
+            native_payload=native_bytes,
+            receptor_payload=receptor_bytes,
+            expected_pose_count=len(successful_rows),
+        )
+        diagnostic_evaluation_seconds = (
+            time.perf_counter() - diagnostic_evaluation_started
+        )
+        evaluated_by_index = {
+            row.proposal_index: (
+                rmsd,
+                geometric_valid,
+                chemical_valid,
+                _sha256_bytes(record),
+            )
+            for row, rmsd, geometric_valid, chemical_valid, record in zip(
+                successful_rows,
+                rmsds,
+                geometric,
+                chemical,
+                records,
+                strict=True,
+            )
+        }
+    candidate_rows: list[PublicRedockingEngineV2CandidateDiagnostic] = []
+    for row in search.rows:
+        if row.proposal_index in evaluated_by_index:
+            terms = term_rows[row.proposal_index].terms
+            if terms is None or row.proposal is None or row.score is None:
+                raise PublicRedockingRunnerError(
+                    "successful Engine V2 candidate lacks retained score terms"
+                )
+            rmsd, geometric_valid, chemical_valid, artifact_sha256 = (
+                evaluated_by_index[row.proposal_index]
+            )
+            candidate_rows.append(
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=row.proposal_index,
+                    status="success",
+                    proposal_fingerprint_sha256=(
+                        row.proposal.fingerprint_sha256
+                    ),
+                    score=float(row.score),
+                    rmsd_angstrom=rmsd,
+                    geometric_valid=geometric_valid,
+                    chemical_valid=chemical_valid,
+                    pose_artifact_sha256=artifact_sha256,
+                    score_terms_receipt_sha256=terms.receipt_sha256,
+                    hbond_count=terms.hbond_count,
+                )
+            )
+        else:
+            candidate_rows.append(
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=row.proposal_index,
+                    status="failure",
+                    error_code=str(row.error_code or "candidate_failed"),
+                )
+            )
+    diagnostics = PublicRedockingEngineV2Diagnostics(
+        preparation_status="success",
+        **preparation_counts,
+        candidates=tuple(candidate_rows),
+        diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
+    )
+    try:
+        proposals = _benchmark_ranked_proposals(search)
+    except IncompleteRankedPoseSet as exc:
+        raise EngineV2SearchCaseFailure(
+            str(exc),
+            diagnostics=diagnostics,
+            failure_code=exc.failure_code,
+            diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
+        ) from exc
+    return EngineV2PoseSearchOutcome(
+        ranked_coordinates=tuple(proposal.coordinates for proposal in proposals),
+        diagnostics=diagnostics,
+        diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
+    )
 
 
 def _engine_v2_failure_code(exc: Exception) -> str:
@@ -2187,26 +2432,72 @@ def _engine_v2_result(
         seed=seed,
     )
     execution_policy = _execution_policy_tokens(ENGINE_V2_CPU_POLICY)
+    diagnostics: PublicRedockingEngineV2Diagnostics | None = None
+    diagnostic_evaluation_seconds = 0.0
     try:
-        coordinates = _engine_v2_pose_coordinates(case_id, paths, seed=seed)
+        outcome = _engine_v2_pose_coordinates(case_id, paths, seed=seed)
+        if type(outcome) is not EngineV2PoseSearchOutcome:
+            raise PublicRedockingRunnerError(
+                "Engine V2 search did not return typed diagnostics"
+            )
+        diagnostics = outcome.diagnostics
+        diagnostic_evaluation_seconds = outcome.diagnostic_evaluation_seconds
         pose_payload, artifacts = _write_engine_v2_poses(
             output,
             paths["seed"],
-            coordinates,
+            outcome.ranked_coordinates,
             case_id=case_id,
         )
     except _ENGINE_V2_CASE_EXCEPTIONS as exc:
+        if isinstance(exc, EngineV2SearchCaseFailure):
+            diagnostics = exc.diagnostics
+            diagnostic_evaluation_seconds = exc.diagnostic_evaluation_seconds
+        elif isinstance(exc, EngineV2PreparationFailure):
+            diagnostics = PublicRedockingEngineV2Diagnostics(
+                preparation_status="failure",
+                preparation_failure_code=exc.preparation_failure_code,
+                receptor_atom_count=0,
+                ligand_atom_count=0,
+                receptor_partial_charge_count=0,
+                ligand_partial_charge_count=0,
+                receptor_donor_count=0,
+                receptor_acceptor_count=0,
+                ligand_donor_count=0,
+                ligand_acceptor_count=0,
+            )
+        elif diagnostics is None:
+            diagnostics = PublicRedockingEngineV2Diagnostics(
+                preparation_status="failure",
+                preparation_failure_code="unclassified_engine_v2_case_failure",
+                receptor_atom_count=0,
+                ligand_atom_count=0,
+                receptor_partial_charge_count=0,
+                ligand_partial_charge_count=0,
+                receptor_donor_count=0,
+                receptor_acceptor_count=0,
+                ligand_donor_count=0,
+                ligand_acceptor_count=0,
+            )
         return PublicRedockingCaseResult(
             case_id=case_id,
             engine_id="engine_v2",
             status="failure",
-            runtime_seconds=time.perf_counter() - started,
+            runtime_seconds=max(
+                0.0,
+                time.perf_counter()
+                - started
+                - diagnostic_evaluation_seconds,
+            ),
             **_result_input_fields(input_sha256s),
             execution_command=command,
             execution_policy=execution_policy,
             failure_code=_engine_v2_failure_code(exc),
+            engine_v2_diagnostics=diagnostics,
         )
-    runtime = time.perf_counter() - started
+    runtime = max(
+        0.0,
+        time.perf_counter() - started - diagnostic_evaluation_seconds,
+    )
     rmsds, geometric, chemical = _posebusters_outcomes(
         pose_payload,
         native_payload=paths["native"].read_bytes(),
@@ -2224,6 +2515,7 @@ def _engine_v2_result(
         geometric_valid=geometric,
         chemical_valid=chemical,
         pose_artifact_sha256s=artifacts,
+        engine_v2_diagnostics=diagnostics,
     )
 
 

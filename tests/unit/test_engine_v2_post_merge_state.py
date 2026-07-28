@@ -495,8 +495,8 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     public_protocol = rows[PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert public_protocol["current_state"] == (
         "frozen_300_case_public_redocking_runner_with_298_case_"
-        "primary_blind_holdout_and_sealed_execution_receipts_"
-        "without_committed_results"
+        "primary_blind_holdout_and_sealed_64_candidate_"
+        "diagnostic_execution_receipts_without_committed_results"
     )
     assert public_protocol["internal_reference_execution_enabled"] is True
     assert "symmetry_mapping_materializer_not_implemented" not in (

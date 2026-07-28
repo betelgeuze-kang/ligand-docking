@@ -8,6 +8,28 @@ scientific claim from a package version.
 
 No changes yet.
 
+## 0.2.0rc4 — Public redocking diagnostic-contract release candidate
+
+### Changed
+
+- Froze a 64-slot Engine V2 candidate ledger for each public redocking case.
+  Every successful proposal retains its score, score-term receipt, pose hash,
+  PoseBusters RMSD and validity outcomes, and H-bond count; failed slots remain
+  in the denominator with a typed search-stage outcome.
+- Added complete-denominator preparation, charge, H-bond feature,
+  candidate-generation, proposal-oracle, validity-aware oracle, scoring-regret,
+  and selection-regret metrics. The same diagnostics are reported for frozen
+  heavy-atom, rotor, and RDKit ring-count subgroups.
+- Bound the score-ranked Top-5 Engine V2 result to the exact retained candidate
+  rows and excluded all-candidate diagnostic evaluation time from the engine
+  runtime boundary.
+- Advanced the frozen cohort, policy, report, runner, execution receipt,
+  capability snapshot, and implementation-stage identities without bundling
+  the 298-case blind-holdout result.
+- Reverified the two observed cases from an empty output root as
+  engineering-only smoke. This does not establish benchmark performance,
+  scientific validity, product qualification, or customer readiness.
+
 ## 0.2.0rc3 — Public redocking evidence-correctness release candidate
 
 ### Changed
