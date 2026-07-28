@@ -55,7 +55,12 @@ independent result review exists.
 The frozen four-case public redocking cohort has a result-free reference-ligand
 matcher and bounded heavy-atom symmetry materializer.  A separate 300-case
 contract now freezes a result-independent subset of the published PoseBusters
-308-case journal list and defines failure-complete Engine V2/Vina/GNINA
+308-case journal list. Its two already observed cases are engineering smoke,
+the remaining 298 cases are the designated primary holdout
+(`primary_blind_holdout` in the schema), and all-300 metrics are supplementary
+descriptive. The partition is code-enforced, but an operator's
+prior-observation history is not independently attested. It defines
+failure-complete Engine V2/Vina/GNINA
 Top-1/3/5, validity, runtime, subgroup, paired-delta, and bootstrap-CI reporting.
 Its local runner may execute only against operator-supplied, hash-verified
 public inputs and retains failures and receipts. It records the common pocket
@@ -66,7 +71,36 @@ uncalibrated and not scientifically validated. Runtime deltas do not claim
 equivalent process-start boundaries. Unevaluated PoseBusters validity checks
 are validated eagerly and abort rather than count as valid or hide behind an
 earlier false result. Row commands are checked against their declared engine
-mode and case-specific input names; timed cache reuse is boot/host-bound.
+mode, case-specific input names, and the identical frozen case seed.
+Materialization values bind all four archive inputs and must match a frozen
+per-case receipt manifest, so agreeing substituted hashes are insufficient.
+The public report builder accepts only exact fresh-run
+`VerifiedPublicRedockingCaseExecution` receipts and rejects raw or mutated
+result rows. Those receipts bind full outcomes and pose hashes to the case
+materialization, implementation, evaluator, and one common environment
+identity before metrics are derived. This is a local typed API boundary, not a
+signature or independent execution attestation.
+Engine V2 pose hashes and PoseBusters outcomes come from the same
+`O_NOFOLLOW`-pinned serialized bytes. A fresh invocation atomically quarantines
+any prior canonical full report before preflight, and a fresh Engine V2 case
+attempt quarantines any prior canonical pose; exact-selection digests prevent
+equal-length partial summaries from sharing a filename.
+Private read-only inputs are consumed from pinned Linux descriptors.
+PoseBusters decodes its RDKit molecules from pinned bytes; GNINA receives
+suffix-bearing hard-link aliases to the same inodes through a private
+directory descriptor. Alias and inode mutations are monitored with inotify and
+fail closed, while path/inode/hash identity is checked around every
+engine/evaluator window.
+The runner never reads local self-hashed rows as cache, so timed rows are not
+reused with or without a boot ID; a hostname is never used as a reboot-stable
+fallback. The external binary runs through an open Linux file
+descriptor for its private SHA-256-named stage and its path/inode/hash identity
+is reverified around every launch and before report construction. Incomplete
+ranked-pose failures are classified by exception type rather than message text;
+typed input-parse failures use a report-accepted frozen failure code.
+Managed output paths reject symlink ancestors and cleanup deletes only the
+expected aliases and four inputs. Local row checksums and report fingerprints are
+consistency checks, not signatures or independent provenance attestations.
 Neither contract supplies a public holdout result, equal-search-effort or
 equal-region comparison, statistical
 representativeness, independent attestation, scientific validation, product

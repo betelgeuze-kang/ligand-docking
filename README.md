@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_al_minimization_validation_runtime_byte_identity_rc2
+v2_am_public_redocking_evidence_correctness_rc3
 ```
 
 Implemented and GitHub-hosted CPU tested:

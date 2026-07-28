@@ -9,11 +9,13 @@
   ],
   "canonical_entrypoint_wired_capability_ids": [
     "v2_cpu_reference_minimization_validation_protocol",
-    "v2_cpu_reference_energy_force_validation_protocol"
+    "v2_cpu_reference_energy_force_validation_protocol",
+    "v2_frozen_public_benchmark_protocol"
   ],
   "production_result_receipt_required_capability_ids": [
     "v2_cpu_reference_minimization_validation_protocol",
-    "v2_cpu_reference_energy_force_validation_protocol"
+    "v2_cpu_reference_energy_force_validation_protocol",
+    "v2_frozen_public_benchmark_protocol"
   ],
   "independent_result_review_required_capability_ids": [
     "v2_cpu_reference_minimization_validation_protocol",

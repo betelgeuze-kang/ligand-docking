@@ -10,21 +10,33 @@ from dataclasses import dataclass, field
 import hashlib
 import json
 import math
+import os
+from pathlib import Path
 import random
 import re
+import stat
 import statistics
 from typing import Callable, Sequence
+import zipfile
 
 
-PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohort/1.0.0"
+PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohort/1.1.0"
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.0.0"
+    "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.1.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.0.0"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.2.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.9.1"
+PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
+)
+PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_case_execution/1.0.0"
+)
 PUBLIC_REDOCKING_COHORT_ID = "posebusters-journal-subset-sha256-300"
 PUBLIC_REDOCKING_COHORT_COUNT = 300
 PUBLIC_REDOCKING_SOURCE_COUNT = 308
 PUBLIC_REDOCKING_SELECTION_SALT = "betelgeuze-engine-v2-posebusters-300-v1"
+PUBLIC_REDOCKING_CASE_SEED_BASE = 2_026_072_700
 PUBLIC_REDOCKING_SOURCE_RECORD_ID = "8278563"
 PUBLIC_REDOCKING_SOURCE_URL = "https://zenodo.org/records/8278563"
 PUBLIC_REDOCKING_SOURCE_LICENSE = "CC-BY-4.0"
@@ -49,7 +61,37 @@ PUBLIC_REDOCKING_PROFILE_METHOD_ID = (
 PUBLIC_REDOCKING_PROFILES_SHA256 = (
     "18ed3a4a50d5663a2dfb6f159ac515b15d6aebac9793831467aa2950e4710312"
 )
+PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256 = (
+    "94bb879b181ec3de581f3f098aff2bd50b9f988fd1d4eb0c3c46cc673cfd640a"
+)
+PUBLIC_REDOCKING_MATERIALIZATION_RECEIPTS_SHA256 = (
+    "5182a24640c333944ca4b1e050a3cef348984a148cc784808881f7c57fce349b"
+)
 PUBLIC_REDOCKING_PRIMARY_ENGINES = ("engine_v2", "vina", "gnina")
+_PUBLIC_REDOCKING_FAILURE_CODES = {
+    "engine_v2": {
+        "engine_v2_case_failed",
+        "engine_v2_input_unsupported",
+        "engine_v2_pose_count_incomplete",
+    },
+    "vina": {
+        "external_timeout",
+        "external_process_failed",
+        "external_pose_output_invalid",
+        "external_pose_count_incomplete",
+    },
+    "gnina": {
+        "external_timeout",
+        "external_process_failed",
+        "external_pose_output_invalid",
+        "external_pose_count_incomplete",
+    },
+}
+PUBLIC_REDOCKING_ANALYSIS_SCOPES = (
+    "primary_blind_holdout",
+    "engineering_smoke",
+    "supplementary_descriptive",
+)
 PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS = (
     "2.6.0",
     "2.6.0+cpu",
@@ -73,6 +115,14 @@ PUBLIC_REDOCKING_ROTOR_SUBGROUPS = (
 )
 _CASE_ID_RE = re.compile(r"^[0-9][A-Z0-9]{3}_[A-Z0-9]{3}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_CASE_ARTIFACT_ROLES = (
+    ("receptor", "protein.pdb"),
+    ("reference", "ligands.sdf"),
+    ("native", "ligand.sdf"),
+    ("seed", "ligand_start_conf.sdf"),
+)
+_VERIFIED_ARCHIVE_AUTHORITY = object()
+_VERIFIED_EXECUTION_AUTHORITY = object()
 
 
 class PublicRedockingBenchmarkError(ValueError):
@@ -138,9 +188,7 @@ def _execution_policy_mapping(tokens: Sequence[str]) -> dict[str, object]:
 
 
 def _command_option_value(command: Sequence[str], option: str) -> str:
-    indexes = tuple(
-        index for index, token in enumerate(command) if token == option
-    )
+    indexes = tuple(index for index, token in enumerate(command) if token == option)
     if len(indexes) != 1:
         raise PublicRedockingBenchmarkError(
             f"engine command must contain exactly one {option}"
@@ -151,6 +199,21 @@ def _command_option_value(command: Sequence[str], option: str) -> str:
             f"engine command value is missing for {option}"
         )
     return command[index + 1]
+
+
+def _command_seed(command: Sequence[str]) -> int:
+    value = _command_option_value(command, "--seed")
+    try:
+        seed = int(value)
+    except ValueError as exc:
+        raise PublicRedockingBenchmarkError(
+            "engine command --seed must be a canonical integer"
+        ) from exc
+    if str(seed) != value or not 0 <= seed <= 2_147_483_647:
+        raise PublicRedockingBenchmarkError(
+            "engine command --seed must be a canonical signed-32-bit integer"
+        )
+    return seed
 
 
 def _require_command_flag(command: Sequence[str], flag: str) -> None:
@@ -164,15 +227,35 @@ def _require_case_input_path(
     command: Sequence[str],
     option: str,
     *,
-    expected_basename: str,
+    expected_path: Path,
     engine_id: str,
 ) -> None:
     value = _command_option_value(command, option)
-    basename = value.replace("\\", "/").rsplit("/", 1)[-1]
-    if basename != expected_basename:
+    if value != str(expected_path):
         raise PublicRedockingBenchmarkError(
-            f"{engine_id} command {option} is cross-wired to another case"
+            f"{engine_id} command {option} is outside the canonical case path"
         )
+
+
+def _command_run_root(
+    command: Sequence[str],
+    *,
+    case_id: str,
+    engine_id: str,
+) -> Path:
+    output_value = _command_option_value(command, "--out")
+    output = Path(output_value)
+    if (
+        not output.is_absolute()
+        or str(output) != output_value
+        or output.name != f"{case_id}.sdf"
+        or output.parent.name != engine_id
+        or output.parent.parent.name != "poses"
+    ):
+        raise PublicRedockingBenchmarkError(
+            f"{engine_id} command --out is outside the canonical run path"
+        )
+    return output.parents[2]
 
 
 def _validate_engine_commands(
@@ -180,40 +263,69 @@ def _validate_engine_commands(
     rows: Sequence["PublicRedockingCaseResult"],
     *,
     policy: "PublicRedockingEvaluationPolicy",
-) -> None:
+) -> Path:
     if any(row.execution_command[0] != identity.command[0] for row in rows):
         raise PublicRedockingBenchmarkError(
             f"{identity.engine_id} row command executable contradicts its identity"
         )
+    run_roots = {
+        _command_run_root(
+            row.execution_command,
+            case_id=row.case_id,
+            engine_id=identity.engine_id,
+        )
+        for row in rows
+    }
+    if len(run_roots) != 1:
+        raise PublicRedockingBenchmarkError(
+            f"{identity.engine_id} rows do not share one canonical run root"
+        )
+    run_root = next(iter(run_roots))
     if identity.engine_id == "engine_v2":
-        if (
-            len(identity.command) < 2
-            or identity.command[1] != "engine_v2"
-            or any(
-                len(row.execution_command) < 2
-                or row.execution_command[1] != "engine_v2"
-                for row in rows
-            )
-        ):
+        if identity.command[0] != PUBLIC_REDOCKING_RUNNER_ID:
             raise PublicRedockingBenchmarkError(
-                "Engine V2 row command contradicts its identity"
+                "Engine V2 identity does not use the frozen runner"
             )
-        expected_options = {
-            "--candidate-count": "64",
-            "--cpu": str(policy.cpu_count),
-        }
-        for option, expected in expected_options.items():
-            if _command_option_value(identity.command, option) != expected or any(
-                _command_option_value(row.execution_command, option) != expected
-                for row in rows
-            ):
-                raise PublicRedockingBenchmarkError(
-                    f"Engine V2 command contradicts frozen {option}"
-                )
+        torch_version = _command_option_value(identity.command, "--torch-version")
+        expected_identity_command = (
+            identity.command[0],
+            "engine_v2",
+            "--candidate-count",
+            "64",
+            "--cpu",
+            str(policy.cpu_count),
+            "--torch-version",
+            torch_version,
+        )
+        if identity.command != expected_identity_command:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 identity command does not match the frozen grammar"
+            )
         for row in rows:
-            if _command_option_value(row.execution_command, "--case-id") != row.case_id:
+            case_directory = run_root / "inputs" / row.case_id
+            expected_command = (
+                identity.command[0],
+                "engine_v2",
+                "--case-id",
+                row.case_id,
+                "--receptor",
+                str(case_directory / f"{row.case_id}_protein.pdb"),
+                "--ligand",
+                str(case_directory / f"{row.case_id}_ligand_start_conf.sdf"),
+                "--pocket-source",
+                str(case_directory / f"{row.case_id}_ligand.sdf"),
+                "--candidate-count",
+                "64",
+                "--cpu",
+                str(policy.cpu_count),
+                "--seed",
+                str(frozen_public_redocking_case_seed(row.case_id)),
+                "--out",
+                str(run_root / "poses" / "engine_v2" / f"{row.case_id}.sdf"),
+            )
+            if row.execution_command != expected_command:
                 raise PublicRedockingBenchmarkError(
-                    "Engine V2 row command is cross-wired to another case"
+                    "Engine V2 row command does not match the frozen grammar"
                 )
             for option, suffix in (
                 ("--receptor", "protein.pdb"),
@@ -223,38 +335,72 @@ def _validate_engine_commands(
                 _require_case_input_path(
                     row.execution_command,
                     option,
-                    expected_basename=f"{row.case_id}_{suffix}",
+                    expected_path=case_directory / f"{row.case_id}_{suffix}",
                     engine_id="Engine V2",
                 )
-            for option in ("--seed", "--out"):
-                _command_option_value(row.execution_command, option)
-        return
+        return run_root
 
-    expected_options = {
-        "--scoring": "vina",
-        "--cnn_scoring": "none" if identity.engine_id == "vina" else "rescore",
-        "--cpu": str(policy.cpu_count),
-    }
-    if identity.engine_id == "gnina":
-        expected_options["--cnn"] = "crossdock_default2018"
-    for option, expected in expected_options.items():
-        if _command_option_value(identity.command, option) != expected or any(
-            _command_option_value(row.execution_command, option) != expected
-            for row in rows
-        ):
-            raise PublicRedockingBenchmarkError(
-                f"{identity.engine_id} command contradicts frozen {option}"
-            )
-    if (
-        _command_option_value(identity.command, "--timeout-seconds")
-        != str(policy.external_timeout_seconds)
-    ):
-        raise PublicRedockingBenchmarkError(
-            f"{identity.engine_id} identity timeout contradicts report policy"
+    mode_options = (
+        ("--scoring", "vina", "--cnn_scoring", "none")
+        if identity.engine_id == "vina"
+        else (
+            "--scoring",
+            "vina",
+            "--cnn_scoring",
+            "rescore",
+            "--cnn",
+            "crossdock_default2018",
         )
-    _require_command_flag(identity.command, "--no_gpu")
+    )
+    expected_identity_command = (
+        identity.command[0],
+        *mode_options,
+        "--cpu",
+        str(policy.cpu_count),
+        "--no_gpu",
+        "--timeout-seconds",
+        str(policy.external_timeout_seconds),
+    )
+    if identity.command != expected_identity_command:
+        raise PublicRedockingBenchmarkError(
+            f"{identity.engine_id} identity command does not match the frozen grammar"
+        )
+    expected_binary = (
+        run_root / "private-external-binary" / identity.implementation_sha256
+    )
+    if identity.command[0] != str(expected_binary):
+        raise PublicRedockingBenchmarkError(
+            f"{identity.engine_id} identity does not use its canonical staged binary"
+        )
     for row in rows:
-        _require_command_flag(row.execution_command, "--no_gpu")
+        case_directory = run_root / "inputs" / row.case_id
+        expected_command = (
+            identity.command[0],
+            "--receptor",
+            str(case_directory / f"{row.case_id}_protein.pdb"),
+            "--ligand",
+            str(case_directory / f"{row.case_id}_ligand_start_conf.sdf"),
+            "--autobox_ligand",
+            str(case_directory / f"{row.case_id}_ligand.sdf"),
+            "--autobox_add",
+            "4",
+            "--num_modes",
+            "5",
+            "--exhaustiveness",
+            "1",
+            "--cpu",
+            str(policy.cpu_count),
+            "--no_gpu",
+            "--seed",
+            str(frozen_public_redocking_case_seed(row.case_id)),
+            "--out",
+            str(run_root / "poses" / identity.engine_id / f"{row.case_id}.sdf"),
+            *mode_options,
+        )
+        if row.execution_command != expected_command:
+            raise PublicRedockingBenchmarkError(
+                f"{identity.engine_id} row command does not match the frozen grammar"
+            )
         for option, suffix in (
             ("--receptor", "protein.pdb"),
             ("--ligand", "ligand_start_conf.sdf"),
@@ -263,21 +409,10 @@ def _validate_engine_commands(
             _require_case_input_path(
                 row.execution_command,
                 option,
-                expected_basename=f"{row.case_id}_{suffix}",
+                expected_path=case_directory / f"{row.case_id}_{suffix}",
                 engine_id=identity.engine_id,
             )
-        for option, expected in (
-            ("--autobox_add", "4"),
-            ("--num_modes", "5"),
-            ("--exhaustiveness", "1"),
-            ("--seed", None),
-            ("--out", None),
-        ):
-            observed = _command_option_value(row.execution_command, option)
-            if expected is not None and observed != expected:
-                raise PublicRedockingBenchmarkError(
-                    f"{identity.engine_id} command contradicts frozen {option}"
-                )
+    return run_root
 
 
 def _selection_key(case_id: str) -> tuple[str, str]:
@@ -593,6 +728,361 @@ _FROZEN_CASE_IDS_TEXT = """
 8SLG_G5A
 """.strip()
 FROZEN_PUBLIC_REDOCKING_CASE_IDS = tuple(_FROZEN_CASE_IDS_TEXT.splitlines())
+PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS = (
+    FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
+    FROZEN_PUBLIC_REDOCKING_CASE_IDS[1],
+)
+PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS = tuple(
+    case_id
+    for case_id in FROZEN_PUBLIC_REDOCKING_CASE_IDS
+    if case_id not in PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
+)
+
+
+def frozen_public_redocking_case_seed(case_id: str) -> int:
+    """Return the immutable shared Engine V2/Vina/GNINA seed for one case."""
+
+    try:
+        index = FROZEN_PUBLIC_REDOCKING_CASE_IDS.index(case_id)
+    except ValueError as exc:
+        raise PublicRedockingBenchmarkError(
+            "case seed requested for a non-frozen case"
+        ) from exc
+    return PUBLIC_REDOCKING_CASE_SEED_BASE + index
+
+
+_FROZEN_MATERIALIZATION_RECEIPT_SHA256S_TEXT = """
+5SAK_ZRY,179800efd20944bc9ab41a479a9f9b586698419455971438cdc42006c572f99d
+5SB2_1K2,687eb5d0edb3156d303371d6a4c851db4280b2bc2c817fd0c6e448e099c8f33d
+5SD5_HWI,120d4d28e04604941b93b17d491682526b977971777db53bf964d1d5d2a12dfb
+5SIS_JSM,92a2bfadcf27ec61a620e387aa8e21ac87ae4e09e15c4a0c2035c4de538c2201
+6M2B_EZO,d9702520e85a459ae1e5fc4843bcd88c05dd0c3f316258971f3e61859088ec4e
+6M73_FNR,fdf1646d366a4adad31ed9ef973e53cf576d07f22aff03b0c486baaf353eb07e
+6T88_MWQ,82e4ad0942b85141a5f17b5a5c36744e40fe4ce863d4006ef29801d377bd5f06
+6TW5_9M2,076e1fa07a885cd231a557162f73c2f56912a7a6d237d3f4972b12ff59ebef9e
+6TW7_NZB,521cb3fa141424e0d7b57bfc667718b305e1cd8f02f12ac05ddffe264b76d6d1
+6VTA_AKN,79d66ad929ee3c38b4f6af120167bd9bb719fe393534d74733268197611498a2
+6WTN_RXT,35f47abe5e7ea517fa08a90a1a301d1672dba5a5e18c7cbf2211f21032b97adf
+6XBO_5MC,eb2e0849175a0fef1e94108c00bfa1d39f83472b9b858d38546a26fd23ecd27c
+6XCT_478,8878a110ad052b90faaec04fc3acfb6c4f46bccc8ecbd5d1d7a96d4ed607cb69
+6XG5_TOP,bd17e9b77223a5ddeb413eb1827a2f85c13ce3080e496e73a7a23eebfaf0f6fa
+6XHT_V2V,a312fbee13e507a7ea0627273a7382fcc1442a9a19cf1790b886c6fd8694a227
+6XM9_V55,4949fed051c172ec8c17b535c28f19c0bf817b66c2ffc57c931b921aeea7c438
+6YJA_2BA,d9a681373b084937bdce6ca055c0bdf062663dab71e3e858e2a5b4a78494e53a
+6YMS_OZH,4cceaa292dbf549a5e8276db21d129b035768ecb234fea53d2c3fcad2b3f48fb
+6YQV_8K2,4a4d922142bb305f00b2ee1691e53801fd78fb683261b774f4bc522b0090ecfa
+6YQW_82I,81b9259af4702be17214742144cb8e41d74299f4a548a45d5dd83220f17520d4
+6YR2_T1C,ccf5e437f8440edb93085456bfd5c599818e7c2bebb314c0ee0759b20912240f
+6YRV_PJ8,428fd166417b9244116b5bdd5d5ae8039228b042865f116aa0ceec6f8d3c2610
+6YSP_PAL,14bc466a724080d40135faeaef9d02628e50b2c0602a1a576c0ee0fcb2fb7837
+6YT6_PKE,e665f0ae8706335fb02a231837077c28f0e4af94edd107d044b4e14916ba0fcd
+6YYO_Q1K,a645580c93fe953241af5c5d145ca2512b673e753d1500f60c30a2ed53db62f3
+6Z0R_Q4H,c5ffd4160ab6259326c555f60e2dcba8dcb2a6a3eae6aaf308e660fcdaffd4e1
+6Z14_Q4Z,6fea6eac81ee14837109e6b1996c43c0b87953d2719dbb8f1fe84f0021dd3e83
+6Z1C_7EY,93d3374eef2356840e494484e7640403da1a2d135effafdc61003c6f4c14a018
+6Z2C_Q5E,cacbc2eab72c170e9daac1646aefdff466a7af93f99a0d1e8e73c7c9ac9e7ac7
+6Z4N_Q7B,22802fc0835d8e5d36f4bce6adc056fce3b1e6e0c005924ab298ce6ad1f25735
+6ZAE_ACV,a4faa1a419f622cd0cf358700e5a4295016c69d57904206728e5894a4cbea039
+6ZC3_JOR,ab83b9b0983c6f7ca0cbf10a4db6d823d866829b3785b57eb0f1832d79010f13
+6ZCY_QF8,b4a1c4a8470db0382d0bd4a7ef94baa0859b30de6c4b760b30c07409884a235c
+6ZK5_IMH,ee6d1d3e5d196212de9ddf4bf565fe0346983b13df6833cc15bbc272ca7cb005
+6ZPB_3D1,5c920d9e30c4296ad774905263fa4a30904dc6706e423b34d04bf21c69f96950
+7A1P_QW2,47b0733814b409894a5c17b4d31511be60a1b87c1d673242320893386e282002
+7A9E_R4W,9084a6359445d26567a24a9ed7b58e95b8d95d29fe6d75b38e154e0e6cf1958e
+7A9H_TPP,e862dc75c10b13ff05e0c0cb65ae7e8714b7f003779948a1ecce5d9a5b436ee7
+7AFX_R9K,bb6e6a32e9e83098478ea5467d26b55105577f8a974bfce464b8cc871c53841b
+7AKL_RK5,3ea5e87075ca411a762a0be91e9a497ba939a7fc87c68d8301f4994130a0a3d4
+7AN5_RDH,3e7d7b921581a7b2303de4aac82c5955133b3ea42617243647e499dff63f3f8e
+7B2C_TP7,c900685326b08e997ed007dbf11c0be9b09f8e60cde9190f15bbecdb75fcc070
+7B94_ANP,f0e2d18787ea56aad5dec47802a7185dd2bba8f807b4faf50650dca69ec08c4e
+7BCP_GCO,98d21a30a363cb512c62a7dd0a07d7b17c9c6f44ba4b1f9095cfa308b6ca1d37
+7BJJ_TVW,e0ebb52f02f6bcb693a5ccf501e4d01aba856042d6e11466915a1160a6a086c2
+7BKA_4JC,713183db8209c7f85853a107873681e9531cb9cd87ee819a125d550ef5988914
+7BMI_U4B,182ce3ed23d1c433f3005f48471dce169d416953014186651a8f3ad1b927223e
+7BNH_BEZ,979f19672bc610a770f92f5eb54fc75d70063cb2cc45be924471a4af311d5f5d
+7BTT_F8R,05be4d0655da27420ddd26a20947dcd335046e2e7629272fbb9673c6dbf62ac3
+7C0U_FGO,89624c17d084394e2d86706e82f028a0d1da54b0b43c0f2b378baa0d55476a12
+7C3U_AZG,35c0aca30f7f3c1f7a39f146a4b3b9bbc8628ca90a4612f098f4778c5ee97f57
+7C8Q_DSG,ab35d2e81e7216e38f85d89694970cbaa61fec5febf2a577d99beed60a25cf37
+7CD9_FVR,0b201a9574d7495f9f18af32920182c847429a8139ecfce55a99629ebef0573f
+7CIJ_G0C,f5e6ae241bae5c22dc4d0e08b230f9b1ac13e05536910033ab1fc8e59258a92f
+7CL8_TES,d1f7a112412b182be6e0446e426b1d2daf9027ff64ca1345cbcaf71a477e9012
+7CNQ_G8X,501eee36e71ac142c12de528a25b4f06f5e818b3837c9aeae2464a42532a02d1
+7CNS_PMV,6b628914bc0388e80c85aae52c2a443464db94617571bc93a5e576542bdcfeb6
+7CTM_BDP,b4f6f2ef9a5c90da00e4fb068258848438b10ac9aeb2ecb829984d9d7f5bceb9
+7CUO_PHB,e0f64ecf466511210f9fd8739c8a536ae795e4a4044f8cb88b46756a90036d66
+7D5C_GV6,b8c263f55f70762ceb93cc6faddb7c130d1589a6a7f2a40e8da86f754c68ea4a
+7D6O_MTE,554c1f56a0a92e081f1d55fc2c3a9896d7c41db5a81375a1d740bf1ba82ffb59
+7DKT_GLF,5b0273d292800d2d287649a06f338bfec74c677e42ecc8c4f15cc790d797c3df
+7DQL_4CL,6a1e17672096b0b9d6773fccf82ad84791524f157dcf4a384465c37a6267d59b
+7DUA_HJ0,66c3485f9311876619efa99a8503e22319fd6ac118d8400dbec6e2ccd4bb25d3
+7E4L_MDN,e409d185bbe15bc6f9b3f9e4d9709ac61952b1e13634cdab21cc3c83fdc002d3
+7EBG_J0L,0c2dc8155f9360d4fc269be3e1ca67e5c5f7db99cd942afac75a802c4d6013d3
+7ECR_SIN,d7196ff59a1e827cd6d878a864433844f9eb44bf2e49a7edf88eec2e6b48f843
+7ED2_A3P,f758dbd9d404f7cf5442e54437d57e1aa15901f794d53aac42e6eb4e46622dbc
+7ELT_TYM,d54f2cdc96989954922c23f96083a460ea25e1b9d732034a65d9ad0ca83741b9
+7EPV_FDA,64a371d446ea625dfd70c15514359fce2f39cb2c157b2c6c7a89d70fa6fcd4e3
+7ES1_UDP,df992947329e261c8b6fbad95ae027513265f064fde3661ab1a87f987aa681db
+7F51_BA7,e865a3cc34d7475d4eb4c709da0989f8e36d3867e7e5d939568587d02ac2c792
+7F5D_EUO,16bd3a2f91328ebcd54de16a6ff3ecc01f5bd557bb71f8edc39d14b15f947ba3
+7F8T_FAD,7e499d51b38395f275a80348e0e98bea7e1a28e8649599d0a681fa69e121951a
+7FB7_8NF,ce88cd8026c34cab8ee9d899df480de7d46a5733957f8db260b686a3eb877bfe
+7FHA_ADX,67f17adc4c3ebf3fed7cf45614b472603b45fe1786ddc52248004385d27ffb76
+7FRX_O88,bfa8800f5bf5bc3fae6b18cf77da04b28d1b99859e8d1e79728199f4b13a3a86
+7FT9_4MB,59ce4d66dc1df7481f234709e6afc4ccab8286afa1fe29869e84e7b955ccce5c
+7JG0_GAR,299f535d5afb3d6e83dde6f74c05398e60e6df62d3a7b0a1b8fdfb2eaf497f9d
+7JHQ_VAJ,2cef9425fecf96740093751e245075e5355b06d6217c57c073d6408399fc1e3a
+7JMV_4NC,8fe58891cf51ca218e46144eb09989c8b147ca3731a08aeb89c3853f54d1822c
+7JXX_VP7,8e53f093fb0a2453847e56f3868df2e3142d788a5f4e1d80046b75912f815ebd
+7JY3_VUD,b6aff5e9058724898da0f14cf6f567d438181dda464f38225ed67768c4d1f270
+7K0V_VQP,1ea03fbd68ebfe2f559f8161bef9e153ce3e87272a80872edc93ff26fe183d97
+7KB1_WBJ,77ba6ad547a39656c838f1de9330ce00c990840fa9db7f9aef7f70227f97b241
+7KC5_BJZ,3231099baf83a6d17e2d164be3d859c6d54cb0659feb6dc33bd869cea82687a6
+7KM8_WPD,0b83f0223255c65ca0d03138c46b2bc98b3caad9b2aeefc82aa9b58942566306
+7KRU_ATP,be0b3857d3a0cf1e1d45d2fc06c156d0d679a698d821136f6661171e10729678
+7KZ9_XN7,cb504865acc6555f15d5866b0da3a7f45db4f60455fd014c73f2020e03b19ce0
+7L00_XCJ,982e7afe67916fa0a6f8e4e8fa108de6a46799811e1decdccba62d0bb9046d9b
+7L03_F9F,8c7b03694ebacb6689c95a331e626e9b53d0b7c88d0e3af3b3be839ee65205db
+7L5F_XNG,06ef5d6db1f3e2b6398d03103a25bbcacc73aeec45f29ac47b9d682164719324
+7L7C_XQ1,05dcbde36846d4d492f1ceb07515bc7a22aee43d1d6ce76507530695b28cbd4f
+7LCU_XTA,af067080e015319fa576c100358feeee4d2707f494e236352c885b56734565c6
+7LEV_0JO,ebff3aa367fa30e48ecde0b5143c83101518b0cb39dda14852ea96f8103123eb
+7LJN_GTP,07a2c2ae8409a2162be9914d03b2ab45368510b3150424a41014aa36e2513ebb
+7LMO_NYO,4dce518e3df1ff6906819b1209feac5a47eaccaccdc611dbff402d9b9052a1c6
+7LOE_Y84,4c6b45b03205d51cdd29e330c5d064ff81217910c6b78460273d504d2de77389
+7LOU_IFM,69bb3ad30d31d11351aff0b4bb967b11ebf9cf7cf91d87a884733b038e05a844
+7LT0_ONJ,c7c3a8ff49968a53194cb8b134a1be381829cc030cb9d45bfa100f6ceec1f5f2
+7LZD_YHY,db6adf9c6c0ea80901c13a66390f8bf5a1fe5f7db88ef09cf46d2f38415e2777
+7M31_TDR,9ae1f50a6695dae76cb45c617343c9967909882cf6450922bbc4e949b41054de
+7M3H_YPV,c33cce97627fd81a4a1372bbf8a064de45f12e3ed6fef626cdf5dd5dd9c63577
+7M6K_YRJ,2170538f3c8e5b5bd9094f44fcc5ca47ae67694ff0f97d66b86e9aeab81d4801
+7MFP_Z7P,12655ae84b79a4594922abc0c9f5e645614ec3d2d4ebf49e54bc200c1e6b487d
+7MGT_ZD4,268a1e825adf55e2d50a8a4528940124a22502a36b87a7269e1adf1be44a447d
+7MGY_ZD1,574c4094b8ec0275c72e4734b1f0c0c3f1f0b5ba60e777caf7df955dfc1579f2
+7MMH_ZJY,e0bbf924bb6d1f219738b8666c295571e264dbf7fb5e9ac2d6e6e7c36e7ec741
+7MOI_HPS,21378ac85214fc7c9304ba8a2216381f4f28c389991551bc709c65a2fc284160
+7MSR_DCA,464a6ab890bad2872be277451a3524af1f648279b1eb47b47516dfcef8cfd770
+7MWN_WI5,f03b20cda8b7b6481014fc00d3770f56330eef5e8d14ac67b646ef7997582d80
+7MWU_ZPM,28a6b39e2b396a85a43b466c9c00858e3b1f9ca72edaa068cae5391965cfa318
+7MY1_IPE,257a3d86e1451f830ef1a5728a7c0f08a2d48f8c4b7b400f33fd7dd9fa4e7d5d
+7MYU_ZR7,607a624c3da1e5732ab126952d2fbefce224e03b7404cc72c50ca9b78d844562
+7N03_ZRP,8a1c2f237ba6cf2bf7d5fe1f10209c0533fd45716e2685646fe0241c6d89ea85
+7N4N_0BK,cd3d5a321e63c4390a5e098eb76bd94f76d7b23346767dcc4d7858eff46e1d94
+7N4W_P4V,e4a74c88ef45f2d003c65dd2f3f221106f3cda5d6a499dbde3ffc0ae445bd0a1
+7N6F_0I1,8d7c79254466d9cb7c09bed8ef48c2895734afae5cf83996e4f57c4738926e0e
+7N7B_T3F,c986f16ba96db9a40ace54bd6505ad24406bfcf1971d84c5ca4d70540c0fcddc
+7N7H_CTP,7a5b6b7ea71410752e069674ddf9732ebf6830b0d515c4d6f322a8a688df8615
+7NF0_BYN,35a4f5396a6f035301f51419609cf74757afcf4941c6a3319795b12e51591f2d
+7NF3_4LU,5b90eb0768770fdbf0290964500fd34826dc3c33a9b09d4bb92e07b42f8f93dd
+7NFB_GEN,b5fc36bf148f9b4877173011a8382f4ea8244c8d6170861e193fe3125ad1bdf3
+7NGW_UAW,364ca67a43bc0c8ae932214c64a12eb129dbfca1d6736e22d9d82c69b40d865a
+7NLV_UJE,ea2522a9dcbe90c6a12e3eaef830fc0db7759f96ebef3fbad783b79b73584b59
+7NP6_UK8,2eec19bc3819d939110372e45f6461a1788edab719641b75b5649b2e7f189ed5
+7NPL_UKZ,0179786b35208e550c3be39285cfdaea5c920144aa698c5aaf6d28b5b2085d4f
+7NR8_UOE,5cd1751d888c919d9f08dab6d73ac7c073e0274ab196a3f8aad80bfe8b334c39
+7NSW_HC4,855d02dffa306c523791c699d8753b9e0bd0d1c1d1a8ea674b7c95b501d0a060
+7NU0_DCL,06041a9434a63aa5a47047739394f780fe8eb791fa1dfc6aac39180d09fad191
+7NUT_GLP,4705f7b98a601db876b990abbe372bc7431b5dc3de3c06f470ad97ff68adc08e
+7NXO_UU8,89982e07a65e09a374a1f2f5ea554ba2bb2dd73c6cb91a6425989018b7b6debb
+7O0N_CDP,82057ffcf612f2e456575424d3efd808304a55f5c2383650bbc9c9eb8e04199b
+7O1T_5X8,7218478f5e64d5fbec35be4f956a4f6e187d097fbc8dd170ac5b97b3badede28
+7ODY_DGI,9652b0aa7dfcebcd124db497f6288f6fec2f2325a446f46ff088d2aa767827fd
+7OFF_VCB,7719495174e814a71a7fbaf332dd7c5d94fe2f39295db30f83f42a99aa2fe0a8
+7OFK_VCH,22b2d9ac57ef3affbd7e4c78a55cc6849ebe00777ebc29798d891f96b79aabef
+7OLI_8HG,8c6b346f8f731db833ad5e02fc4cb7371018c6768fa952fde10280a7200ef467
+7OMX_CNA,c26b8341e4900fc917753ad8404023fd2136c625e8201d454e74aebce8bc8305
+7OP9_06K,f4094f0e115311a585e23874a8c7bf89ce384413291d6c51a463adf914bb4463
+7OPG_06N,44c26f0f9ac9f3aea8ed429fd2e258d8bc65be1ab4346fb6ca2af25654f3aa1d
+7OSO_0V1,83d683ef3d857d82a9859ec95ffd3cfaf0f0cb69c129ca35f8121d700f83d78c
+7OZ9_NGK,d5c24645375f0af7eea38fda2fb75f88f30e13136e4d471af8307fc4e66458bb
+7OZC_G6S,e078f6e759c931c5fe0078a81b6b36a54d9d7211db5e30e36a8e5f4e6932bc86
+7P1F_KFN,3f97d14ba01f9aa070157e010f49710b4a97f12225eaf39571e44de27879ef0e
+7P1M_4IU,879ec6240e61af266e6fb0074ed79264c0ce35574ce3d808ff9fa9bcc3d12eeb
+7P2I_MFU,32800c18c5181d447980f81cbf72aeb8a00d9b591a97e7ba08e047cc568dc744
+7P4C_5OV,f90e312c5a620abb99f378bb5709f2b0354f367246fdccaff9933f651a19bc6b
+7P5T_5YG,9226e331bdaa6a123429566e2928fd089a87941fcfd7b40fe699808c46400390
+7PGX_FMN,dfe1785923e4c06bff9a07533548d4751c92a337066a79cdd631f032a7d04220
+7PIH_7QW,5f66ea26771deefaa54bc8e2a2c1821c52b43bfc30d98490a7743effef63cc92
+7PJQ_OWH,673fa4396d668a7e90fdaf820728452be5da5d77e02eb89097d0250b085b3052
+7PK0_BYC,b8bc94d9851d2fab84e229da00d86625971b9dc356c8aebbce04461d14b867a8
+7PL1_SFG,0cfd9bf3628c2d5768c0d7635322e8f20c0aa1504ebd266cc635d94a2e0d7c2f
+7POM_7VZ,7ec6a119e3f6697b8c51b8832b42a5419fac2a0d42380ca0e1f0f50ed477f9f1
+7PRI_7TI,54b9e3cb7f2e48c5bbbdce47f785ac8d0cc6e1d8ddbca8541a4f7141d4540d47
+7PRM_81I,819272df9fced08f25573086b524957f76d82311c9817fd92d7bba4623286668
+7PT3_3KK,707a86ee46b2eb2ba216383caf967f7d35602e19cdc806ec272ed7b5bcc4cc97
+7PUV_84Z,80d90288d54ba2f0f6306f96812c15658caaa735ec7a8d9303c89f9cbbd5fb53
+7Q25_8J9,68eab67b7fc74a7a1d79106ce9d8e9f0d0b592f83abc8d8fd3b23458aabe9731
+7Q27_8KC,b79bf7931c9d5352929968a84b7a46da2cb753165c9133ffceee998a86ae4939
+7Q2B_M6H,1d72577cbf05bd7d8121e0d32ea133482ad05057268e99985b431c625a1b0d40
+7Q5I_I0F,06770a754a708d3434fac29d2e1945d64f5cc9b9887d0617797b7786848c3904
+7QE4_NGA,f8b99eaec186844d70f5f07c4e97e47c0340dbf0655956d4a78d7ce2a376f234
+7QF4_RBF,01f87e01dc56ce26b104f29274f95127405ab3d9216b1aef0e33869d72270e3a
+7QFM_AY3,c9527c161932a2a474d6abc80a3ab3688c32dc0320852f88a143596e152ef665
+7QGP_DJ8,865da9ce5953035f2c2e9fcf24372eb9747d312b3ecf754f13b68b9e759f5b6e
+7QHG_T3B,ae3f3ce6f87bc241710a65b1bf2af5a41c7af66b78a3b068c431e079b10b2af0
+7QHL_D5P,1c042dba6e535402d08021e8021125e2201e08e2785ceb7884ffb5d873f6468a
+7QPP_VDX,d8fceaa613b3e0cc30fa71f8e10e36d527a8b5d764c3c90bbb1cae29d2948bb3
+7QTA_URI,e75b2b68accbc15f028bb679770d700e8ee3c9f8e442c1260b53ac3e716883b8
+7R3D_APR,edd797064fce342639e9997daa32206d3cd04ddf87b28529f5baa68b61bd68ec
+7R59_I5F,026c158a66168f8d5d721180837bc03044880d7b9560a24fa58c597891efeda9
+7R6J_2I7,c8c5255fea873d3e8dc519e0a8e7f52d2bf5e706e575185886b4c2a5292b45ca
+7R7R_AWJ,4f5b81c61961589117573910118606895b36cad5286296e822a9f2810b6653a8
+7R9N_F97,12b02710cb08eae2a2261bbe154f4098d5194ef9e7eff00cdfa87faceb066a6e
+7RC3_SAH,9da88819426f945d8469ab3269a55b7005c6de25a899fa141b4a69b913f3b8e8
+7RH3_59O,069a69de481b89ec78d638060f4672e84fab010581775aae399b95eb7a3afc1a
+7RKW_5TV,afd0b15695b61f0b4e7f4b5dba234f44cfa90a02f4d22e6ffeba1dd3af6c37b2
+7RNI_60I,54b2f48e35099b9ce292ef4381dac0cb2ff88577128638d656473eb5756fb78c
+7ROR_69X,d9354f2f278dd18556ddc9a9d3cf8a03504b01f2a7a83c3063f63ba07664301c
+7ROU_66I,249257874d7459901bb8f2f9b14433950f254fa6c6f742dbf82f84b6d3774f7a
+7RSV_7IQ,197526bb988d27d7db379c523af8642b6eedc2c4b67ec28d95d23f3e6ed41f39
+7RWS_4UR,d8057655614dd71286b911142e521b229f0971b186b84e1430cd69b96da69b62
+7RZL_NPO,3ae8a1fda8196d2f48104922618739c61391b796834acabfbfbfc36b0018b2c0
+7SCW_GSP,5478fe1537b8262233a00eddc4c9fa4d901d20a79704b00c852c40de859b5c09
+7SDD_4IP,1f66314ac45e392824f743331e5d2e6ef8037e801a0ffe431ff71c3b59db9119
+7SFO_98L,eb965cd85f1fc9ce11e8f701082486a8127c6ec68af59fcbee42c432b8a25def
+7SIU_9ID,a1488243e23954d5347b5815c41d0a7fd3700399168cb7fdb61016636f95fe91
+7SUC_COM,d720d4f0d98883c59c50e3b5c466d18f4596a4d066b0b2d130fe95d180da50ec
+7SZA_DUI,755abd4ff2195478024567fa223fff678ffeaab18ccc3acb53c6fc0ec89b1714
+7T0D_FPP,6728b02f1517022b485d9d69ed603bd097bb93eb50a6b40e234c189705804bc7
+7T1D_E7K,bceec808f36525c16fff8bef7245ed18f34afebf8221c50f1ef25df97f3df44d
+7T3E_SLB,4b1e7075d411d71c147b32b04e1c734e8ec5bcbc059a319a846f6f1b91ef27d8
+7TB0_UD1,d4c61c14f824945587ca6483ebec0dd90f7115bf7b93f9de2ef29d96459ef259
+7TBU_S3P,a649eaf1234f1e387389552e33685709207c3f9affb0582279daf7eef82f7afa
+7TE8_P0T,9696e3062982e9a53662504bfae9ffb3a98df7fa49dd3293e4a6d1c9e2b7681c
+7TH4_FFO,53317b4ebc6ac60d7bcd2226c38b0677cbc1e7c55411abedc19551c8f2864196
+7THI_PGA,d60b2a7950af309f6631a20f9f0aa8e58767b572b8fd4878ae48c10d30425d6a
+7TM6_GPJ,3725c89cca2f3ce08fd575506b13ecfc161e6ccc1e8322d70b06ca5ffcd28bde
+7TOM_5AD,e5d1161a6736becce25a8f9a5ede866c4a57ead1d0fea5279158f296d2b0660c
+7TS6_KMI,2d93529cdd1b0dd3911e87a369698d31260261fa4550e02416af70c43199e20a
+7TSF_H4B,155366649ab663ae6d5cba771e37dd4638b98489522e50ec52fb31d8a839e5a2
+7TUO_KL9,35f03a9cfa4eb6940acc73d0cdcb4d7fcf3e37fd8142a11de44a63183dc0ff15
+7TXK_LW8,6676a4abe6d507afe73da69087ac220dbdf9f5357198a6efe771223f2877651c
+7TYP_KUR,506ec207e5dd77a4f2a363fc4b94156f53059eddb3c38341d14f82849d3f546e
+7U0U_FK5,63a2109707d4fa94bff632a36207f438e5351b22936ed73b00a18a963f4d72cf
+7U3J_L6U,e5264501530151156602692a3d92817461801993add21e9ccc67c88df8015427
+7UAS_MBU,e16daa0324fa4a281c7bbbc401069b22846c582b40c11a54a543a9043709c728
+7UAW_MF6,8bdf519d58267c52561a157f270192c146655aea9509dafbee96e405dbf32957
+7UJ5_DGL,b5b15dfe9cda95f25cb583818ff01a4941151e0b74522c30e91c433004552e3f
+7UJF_R3V,57326f333b9b3b4727c62e8d746f6674d1df6ac1f10476093e2befa01bfb0a75
+7ULC_56B,5d9fb960a523438175b994d9e86f9f01ff2358605f941d41cebffe1c352c7ddc
+7UMW_NAD,d5d9e02382c5f07fb6dff2dbdf014d03fe3e9c04aa1ac5d3eafc0a5533c90837
+7UQ3_O2U,bc7e94d3d9e1830b8dc3b3e6b34eb12eb2aea0e1f65cd50eb9c9eef6be1d1529
+7UTW_NAI,04cd0cabbdb0ca278d57976bd5623fe18ed670997fbd009e9e9a45932799493c
+7UXS_OJC,e3770f446b777e45af653b26a45b56a9e57276b0d21dc7e241d05dacbd05c4a0
+7UY4_SMI,9a89e35450ed870d089dee7f4a3ee2db5ae251f43412fa22fa85071876003a4d
+7UYB_OK0,f6c6d3b4a22e8fa81666c9bf5351cf1f3cc5e03b92ccf4e7b158a307bb687e7f
+7V3N_AKG,54ea5a5c22992d3e5b4baa94b7a795e73f36faa85bf8c5c2c7048228c133ecda
+7V3S_5I9,bcb77d6f9fb1673c28e09cd8f1475e3425667d506321ae479d5f78e723005f68
+7V43_C4O,657a4983aec19cb6ccc6b81be349a4bef14a8b64a0dc4321fdce867b89c2c1d6
+7VB8_STL,8d1abfe14d2a2786e630ed0a56995128f064d340ff465af3de75fc03c21ffccd
+7VC5_9SF,a6feca68ab2954dc58e8b0307f0e6f9bed2ad50bed081cb81ffbff1acd0fa857
+7VKZ_NOJ,18599e984e288c6e629211db7c5a0b497052b02ba8eba5a3aa754ffbeef297b5
+7VQ9_ISY,6894a6778fcec9e3c865714d77729fd7a97f2b516e22ec67117cd7ff67f83639
+7VWF_K55,4f3d3f7c1b73c270a3c9797bc3762ffe15234bb8b384be97a4f894c92ecd2aaa
+7W05_GMP,44ca34ee62f9364a1b75127a5b1178baabe0483c1794fe12e27d6c0701b85c64
+7W06_ITN,e865786fcf863062916979339dc23297985565124556e36480453f62adc2d209
+7WCF_ACP,1f5cd9ca26a8ab9e1d28d45fb8cf95bee162631c2ab31f9ce682bd29961295f1
+7WDT_NGS,cc202dfcfc3adee68b5eef3ce0cc17f345464624f1f1ebf2757654f4c9d4291a
+7WJB_BGC,d16cea10fd02ae72d7edfef3b449f78d9def3cd8eabe6e4baa3200d241d895b0
+7WKL_CAQ,012735ee586c92aa574e30679d8986555fb8e78b7e6405fdc5fd018c9f436f1f
+7WL4_JFU,78a34a2eef96d44964667dae0d5e99219735ab439570125c0dd794833e1f26b3
+7WPW_F15,a538a298e2001b455a30c3a43dcc0cf4409dbd82449c41f8e90daa6aeac4b903
+7WQQ_5Z6,7a5969c5e553368a5ef10334e6632e6841e02a16ba6fbdf19d2cdc7f81051f5d
+7WUX_6OI,f6bf6c1ec1c62b96ae42a629605c17801be8cf1ab9313ea7f0ae7474b2fcf003
+7WUY_76N,ad3b10e58c592e8cd58d0b08c652a8f9af2886ab6146912f398c51b35072a2bf
+7WY1_D0L,792212dd484ee6bbff90f4fd2e2cc7bcb5c6728ec17496880a704d5bf668c153
+7X5N_5M5,529d42b1d8d1fd20bbce817ba44cee9def073b87c4247bf813418f43b0aa352e
+7X9K_8OG,6ef848fd60c133f233c81aa8a3a142765d4d6dbb53e74de65f5345805e7e492f
+7XBV_APC,8f325155e20e40e700e62418654ec841e26c6fd56a9b3e5ae0c2c3f27b8476e6
+7XFA_D9J,5f6fd15c512309ceacd64bf5509dc8c4d11036c4d033cd90675a688193d2f666
+7XG5_PLP,48df3cbd33d7be33dd34e58b00797298b00cf29ed730ed5d462fc220a4dc45a2
+7XI7_4RI,ab73686676f73c37a188b28c0242b1bb1b04bdc503bb98054684325c592de0ad
+7XJN_NSD,def258a47229566dd19fe8cb368b139dfc42ea4aaf8ba6daf4d082cf250161a2
+7XPO_UPG,30fd27e8f6c8b335a936872d420e96223bfc64e467e61d7dae22e6bdc91e86f7
+7XQZ_FPF,a44511bf62c571080cc252cdfb4329afae702659976230d5f8335bf5bcdc37f1
+7XRL_FWK,43b3fabd615bf59413a79fb8d77bb5957e93a1000845671faa5b001eb146f0a6
+7YZU_DO7,3585c585c98fb317b4f78e2c8efa3adbec79261b209e2c5973f2ddc1dd555227
+7Z1Q_NIO,5af557e34cee6b72bc7b6ca2cb1b6f7f2459c916503f3a9dc53be5a7432def88
+7Z2O_IAJ,a77e6872f5d3cbe3f22ba987a03e59ebbc3b729695d53913fbb7e52a4fe8d642
+7Z7F_IF3,ed65f155df6bd92f8a690cd6abc203f014bb01a6b7722911cee6c96b72f10443
+7ZCC_OGA,73cf496c5d811fe8f48fb3fdab716869bc13033514914e3a1c9853398d7c25e8
+7ZF0_DHR,0950373311fcdedbe6ca1c32f3ef872e6b2d8890d80c8b643a701aa86a8bb555
+7ZHP_IQY,b22a919964850eddc15160e53481da4b4eb7d7039339c32c0fc399e90e60bc99
+7ZL5_IWE,6347ee3112b8a480da17e2cdd02fe8fa2e411f68c69cd15ec65fa4bed359e6aa
+7ZOC_T8E,a9cb1af25a4866b2feed9150d080511a5dfff1e7576fb1fc7970f7223e743700
+7ZTL_BCN,05f59d728cdd820762ff2d27cded14982766aeea5261b60db97560c1cdec8f1c
+7ZU2_DHT,72219f7085d001f74b00cb70023152740b8b62383cae0a336db96216dc23be5b
+7ZXV_45D,2702eabd3de2113048021e1998251591b627c917bd4ab197ff9acaffaffd4e7c
+7ZZW_KKW,a16e8b0f5d2faf7180e1c5fa40a264b492fab42e0efb73ed8849b4d4bc074dae
+8A1H_DLZ,90d1923f85b1084f2ce5826b705cce974069477c6a3037185b8368d0918cb6a9
+8A2D_KXY,b7deb079b77b2339128fe528457f1d58cf56f9ee9f6a215ed1e6bc1c20febda1
+8AAU_LH0,79f647c04aac5f10489d424f2d6fa90f5710625fe9f2d748534f9cd2ed6c2870
+8AEM_LVF,a2fc54b635ed63c78e7cc56e74fada9ef5dc3d97522617da5f87b08899dc0b82
+8AIE_M7L,0e65521015f0c084d7aa421a3d2e05deba8a4d168f3b4212859770e3ccf1dec4
+8AP0_PRP,d54a3a4a1f0ee825bd7b50105c401b0c3a6493e70c2f2707d8279cfa3117554c
+8AQL_PLG,57d808b04c2ebba9215c838ebcc0799317c48233e0f3e1e85ef8db5bacf001d6
+8AUH_L9I,decd26896f88a916ccba8405932a4d6e8a21a820c20a10b28b7a29247c2cc2cd
+8AY3_OE3,b9e8781fcc8a021e68b11d9e076b0320ef7e1997bda6a47292e915b85727c71f
+8B8H_OJQ,4b2fd35c54b96f8b04cd37b29bda37357cc3496eb323a36ead97c937dc25beb8
+8BOM_QU6,1c8e004804e8bf4462aa11d59a98d2d3c2cb6c87496099b82ed62922b6cebaac
+8BTI_RFO,f2b70f567a676fc447f0fa4ce602f7ebe6c90b1e50a9d473fd47e1b30c040f7d
+8C3N_ADP,d8303e2f922bd5eb029baf42f4bf467703bbbfcbf0a2de999af340af5e01ccce
+8C5M_MTA,5a36daaf5ed98d3baf58a0e69b8182c27e1641eb8981f0070e854fb8a48db09c
+8CNH_V6U,6b2d9718f3211ca8efe7ae8007d49a8a20735f22688d5ce48e13035d50e05f0d
+8CSD_C5P,f8834aa74d661d9c59f5128aa752c5327a1204239de82c20c63fe485534c950f
+8D19_GSH,9573212dc8f0ed8c1e4f2dd5115a339d2ba238bb405eee0a1c791a415aebe8b2
+8D39_QDB,aa061d95f21a6d6ca7713433c64db3074c1d19258dd68167301ac810cb96e488
+8D5D_5DK,a507a17b3b24029a95747f5e17b40ca8f7097d83033af72efca2af9b7b790dae
+8DHG_T78,b60667b2ef422808fb147fe20c3c57bfcc92f8af87b56e9746f0a5660d12cad9
+8DKO_TFB,2ba8b9a9b65d2b9a203f5d4d0ee8f85ea1b2305fe02db5b665a5bc031f5743d3
+8DP2_UMA,d8ab9c3fbe05ff6f41cbf69b8eadbfa2f8ccc6d4636ed08a11fd19aef119be83
+8DSC_NCA,66dd3608fdd3a839635b44e230735306d08d181b5a49d2cb33a78619d3543d31
+8EAB_VN2,d3963796ff08bfd15aac0715a2f7da0946f85a6612f6165709d7c37b534d3f04
+8EX2_Q2Q,a1600cc37e18c2da12bc11afd0f69c6c6d4697c2c956943959f7f082601debb1
+8EXL_799,9d9a5b9a9c0934432ce9bf71be3d2e8c1223dff80fbd70fa2a0611694ae9834a
+8EYE_X4I,ca586a11225ed9aeaf98bde5bcf4c95e761a755e1cd5a9d98c8875992e990ce7
+8F4J_PHO,bc1729eb503f527e40a1a00d19433580667831f8b7160972978bc7b46f921fd9
+8F8E_XJI,e3b5d8d8ea50a200f7a93cb0fe5f0fb98f7f0a5152e3e968c4188b733a7fac46
+8FAV_4Y5,448c87f36ca347a986764f4a0e1ef3bea133460ef609825dd0dfdb6c2905c2a9
+8FLV_ZB9,0bbaa0086aced58138912fc5c4905cfbc7007176fcb9e6c55c04160f78b43829
+8FO5_Y4U,e79c4efd14d96477e91469c41b68775034866e32d386edcb9a1e9ed678da808d
+8G0V_YHT,7c748c817d54b54f5fdf9295997e7bddff51631578d21dc8578887bf90f5a876
+8G6P_API,ce5af05035d116ab4b9b4296b1ef01c236c2a36e021946884542c3409c1ff6a0
+8GFD_ZHR,cbc24e51f50590e86f27fcf37e54e5666499220f3b8fbfb6cfb3c5072c286b2f
+8HFN_XGC,3a7a880112a5696927bb291c16ca71ab8cf6c85f7e9fa748ab414071d5aebfa9
+8HO0_3ZI,b0395ff0c97c65278aba873188f478ebd15fb651628e7dfacac3a68f0111edad
+8SLG_G5A,ad96c797101a65e45e4274dbca6462cb41d0f902a810225a5a187abd173e6722
+""".strip()
+_FROZEN_MATERIALIZATION_RECEIPT_ROWS = tuple(
+    line.split(",", 1)
+    for line in _FROZEN_MATERIALIZATION_RECEIPT_SHA256S_TEXT.splitlines()
+)
+if (
+    tuple(row[0] for row in _FROZEN_MATERIALIZATION_RECEIPT_ROWS)
+    != FROZEN_PUBLIC_REDOCKING_CASE_IDS
+    or any(
+        _SHA256_RE.fullmatch(row[1]) is None
+        for row in _FROZEN_MATERIALIZATION_RECEIPT_ROWS
+    )
+    or _sha256([row[1] for row in _FROZEN_MATERIALIZATION_RECEIPT_ROWS])
+    != PUBLIC_REDOCKING_MATERIALIZATION_RECEIPTS_SHA256
+):
+    raise RuntimeError("frozen materialization receipt manifest is invalid")
+_FROZEN_MATERIALIZATION_RECEIPT_SHA256_BY_CASE = dict(
+    _FROZEN_MATERIALIZATION_RECEIPT_ROWS
+)
+
+
+def frozen_public_redocking_materialization_receipt_sha256(case_id: str) -> str:
+    """Return the archive-derived four-input receipt identity for one case."""
+
+    try:
+        return _FROZEN_MATERIALIZATION_RECEIPT_SHA256_BY_CASE[case_id]
+    except KeyError as exc:
+        raise PublicRedockingBenchmarkError(
+            "materialization receipt requested for a non-frozen case"
+        ) from exc
+
 
 _FROZEN_PROFILE_ROWS_TEXT = """
 5SAK_ZRY,18,2,3c6c4d669c5590e8bef81bbf9e201abffe3d8bbf5b0e563d264d42faae2514cb
@@ -926,6 +1416,24 @@ class FrozenPublicRedockingCohort:
             PUBLIC_REDOCKING_SELECTED_IDS_SHA256
         ):
             raise PublicRedockingBenchmarkError("frozen redocking case IDs drifted")
+        if (
+            len(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS) != 2
+            or len(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS) != 298
+            or set(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS)
+            & set(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS)
+            or tuple(
+                sorted(
+                    (
+                        *PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
+                        *PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
+                    )
+                )
+            )
+            != case_ids
+        ):
+            raise PublicRedockingBenchmarkError(
+                "redocking smoke and primary holdout partitions drifted"
+            )
         object.__setattr__(self, "case_ids", case_ids)
 
     @property
@@ -957,10 +1465,55 @@ class FrozenPublicRedockingCohort:
                 "selected_ids_sha256": PUBLIC_REDOCKING_SELECTED_IDS_SHA256,
                 "selected_before_results": True,
             },
+            "case_seed_policy": {
+                "derivation": "base_plus_frozen_case_index",
+                "base_seed": PUBLIC_REDOCKING_CASE_SEED_BASE,
+                "case_seeds_sha256": _sha256(
+                    [
+                        {
+                            "case_id": case_id,
+                            "seed": frozen_public_redocking_case_seed(case_id),
+                        }
+                        for case_id in self.case_ids
+                    ]
+                ),
+                "shared_across_engines": True,
+            },
+            "analysis_partitions": {
+                "engineering_smoke": {
+                    "case_count": len(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS),
+                    "case_ids": list(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS),
+                    "observed_before_primary_holdout": True,
+                    "claim_role": "integration_and_engineering_smoke_only",
+                },
+                "primary_blind_holdout": {
+                    "case_count": len(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS),
+                    "case_ids": list(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS),
+                    "excludes_observed_smoke_cases": True,
+                    "claim_role": "primary_blind_holdout",
+                },
+                "supplementary_descriptive": {
+                    "case_count": len(self.case_ids),
+                    "case_ids": list(self.case_ids),
+                    "includes_observed_smoke_cases": True,
+                    "claim_role": "supplementary_descriptive_only",
+                },
+            },
             "profiles": {
                 "method_id": PUBLIC_REDOCKING_PROFILE_METHOD_ID,
                 "profiles_sha256": PUBLIC_REDOCKING_PROFILES_SHA256,
                 "heavy_atom_and_rotor_subgroups_frozen_before_results": True,
+            },
+            "materializations": {
+                "schema_id": PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
+                "artifact_filenames": [
+                    filename for _, filename in _CASE_ARTIFACT_ROLES
+                ],
+                "receipt_sha256s_sha256": (
+                    PUBLIC_REDOCKING_MATERIALIZATION_RECEIPTS_SHA256
+                ),
+                "materializations_sha256": (PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256),
+                "derived_from_hash_verified_archive": True,
             },
             "raw_structure_data_bundled": False,
             "benchmark_executed": False,
@@ -1005,6 +1558,349 @@ def verify_public_redocking_source_identifiers(source: bytes) -> tuple[str, ...]
     if selected != FROZEN_PUBLIC_REDOCKING_CASE_IDS:
         raise PublicRedockingBenchmarkError("source identifier selection drifted")
     return selected
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class VerifiedCaseMaterialization:
+    """Hash receipt created only from one opened, frozen source archive."""
+
+    case_id: str
+    frozen_case_seed: int
+    receptor_artifact_sha256: str
+    reference_artifact_sha256: str
+    native_artifact_sha256: str
+    seed_artifact_sha256: str
+    source_archive_sha256: str
+    archive_member_names: tuple[str, ...]
+    schema_id: str
+    _receipt_sha256: str = field(repr=False)
+
+    @classmethod
+    def _from_verified_archive(
+        cls,
+        *,
+        case_id: str,
+        artifact_sha256s: dict[str, str],
+        archive_member_names: Sequence[str],
+        verification_authority: object,
+    ) -> "VerifiedCaseMaterialization":
+        if verification_authority is not _VERIFIED_ARCHIVE_AUTHORITY:
+            raise TypeError(
+                "VerifiedCaseMaterialization requires verified archive authority"
+            )
+        if case_id not in FROZEN_PUBLIC_REDOCKING_CASE_IDS:
+            raise PublicRedockingBenchmarkError(
+                "materialization case is not in the frozen cohort"
+            )
+        expected_roles = tuple(role for role, _ in _CASE_ARTIFACT_ROLES)
+        if tuple(artifact_sha256s) != expected_roles:
+            raise PublicRedockingBenchmarkError(
+                "materialization artifact hash roles are incomplete or unordered"
+            )
+        expected_members = tuple(
+            f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+            for _, filename in _CASE_ARTIFACT_ROLES
+        )
+        members = tuple(str(value) for value in archive_member_names)
+        if members != expected_members:
+            raise PublicRedockingBenchmarkError(
+                "materialization archive members are cross-wired"
+            )
+        digests = {
+            role: _digest(
+                artifact_sha256s[role],
+                name=f"{role}_artifact_sha256",
+            )
+            for role in expected_roles
+        }
+        profile = next(
+            profile
+            for profile in frozen_public_redocking_profiles()
+            if profile.case_id == case_id
+        )
+        if digests["native"] != profile.ligand_artifact_sha256:
+            raise PublicRedockingBenchmarkError(
+                "materialized native ligand is not the frozen profile artifact"
+            )
+        instance = object.__new__(cls)
+        object.__setattr__(instance, "case_id", case_id)
+        object.__setattr__(
+            instance,
+            "frozen_case_seed",
+            frozen_public_redocking_case_seed(case_id),
+        )
+        object.__setattr__(
+            instance,
+            "receptor_artifact_sha256",
+            digests["receptor"],
+        )
+        object.__setattr__(
+            instance,
+            "reference_artifact_sha256",
+            digests["reference"],
+        )
+        object.__setattr__(
+            instance,
+            "native_artifact_sha256",
+            digests["native"],
+        )
+        object.__setattr__(
+            instance,
+            "seed_artifact_sha256",
+            digests["seed"],
+        )
+        object.__setattr__(
+            instance,
+            "source_archive_sha256",
+            PUBLIC_REDOCKING_ARCHIVE_SHA256,
+        )
+        object.__setattr__(instance, "archive_member_names", members)
+        object.__setattr__(
+            instance,
+            "schema_id",
+            PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
+        )
+        object.__setattr__(
+            instance,
+            "_receipt_sha256",
+            _sha256(instance._projection()),
+        )
+        return instance
+
+    @property
+    def input_artifact_sha256s(self) -> tuple[str, str, str, str]:
+        return (
+            self.receptor_artifact_sha256,
+            self.reference_artifact_sha256,
+            self.native_artifact_sha256,
+            self.seed_artifact_sha256,
+        )
+
+    @property
+    def input_artifact_sha256s_by_role(self) -> dict[str, str]:
+        return dict(
+            zip(
+                (role for role, _ in _CASE_ARTIFACT_ROLES),
+                self.input_artifact_sha256s,
+                strict=True,
+            )
+        )
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise PublicRedockingBenchmarkError(
+                "verified materialization receipt changed"
+            )
+        return observed
+
+    def _projection(self) -> dict[str, object]:
+        artifact_sha256s = self.input_artifact_sha256s_by_role
+        return {
+            "schema_id": self.schema_id,
+            "case_id": self.case_id,
+            "frozen_case_seed": self.frozen_case_seed,
+            "source_archive_sha256": self.source_archive_sha256,
+            "archive_members": {
+                filename: member
+                for (_, filename), member in zip(
+                    _CASE_ARTIFACT_ROLES,
+                    self.archive_member_names,
+                    strict=True,
+                )
+            },
+            "artifact_sha256s": {
+                filename: artifact_sha256s[role]
+                for role, filename in _CASE_ARTIFACT_ROLES
+            },
+            "hash_verified_archive": True,
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            **self._projection(),
+            "receipt_sha256": self.receipt_sha256,
+        }
+
+
+class VerifiedPublicRedockingArchive:
+    """An opened file descriptor whose complete bytes match the frozen archive."""
+
+    __slots__ = ("_archive", "_closed", "_file_identity", "_handle", "_path")
+
+    def __init__(self) -> None:
+        raise TypeError("use VerifiedPublicRedockingArchive.open")
+
+    @staticmethod
+    def _status_identity(file_status: os.stat_result) -> tuple[int, ...]:
+        return (
+            file_status.st_dev,
+            file_status.st_ino,
+            file_status.st_size,
+            file_status.st_mtime_ns,
+            file_status.st_ctime_ns,
+        )
+
+    @classmethod
+    def open(cls, path: str | Path) -> "VerifiedPublicRedockingArchive":
+        candidate = Path(path).resolve()
+        try:
+            handle = candidate.open("rb")
+        except OSError as exc:
+            raise PublicRedockingBenchmarkError(
+                "PoseBusters source archive cannot be opened"
+            ) from exc
+        try:
+            file_status = os.fstat(handle.fileno())
+            if (
+                not stat.S_ISREG(file_status.st_mode)
+                or file_status.st_size != PUBLIC_REDOCKING_ARCHIVE_SIZE_BYTES
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "PoseBusters source archive size or file type is invalid"
+                )
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+            if digest.hexdigest() != PUBLIC_REDOCKING_ARCHIVE_SHA256:
+                raise PublicRedockingBenchmarkError(
+                    "PoseBusters source archive hash does not match the frozen cohort"
+                )
+            final_status = os.fstat(handle.fileno())
+            if cls._status_identity(final_status) != cls._status_identity(file_status):
+                raise PublicRedockingBenchmarkError(
+                    "PoseBusters source archive changed during verification"
+                )
+            handle.seek(0)
+            archive = zipfile.ZipFile(handle, mode="r")
+        except zipfile.BadZipFile as exc:
+            handle.close()
+            raise PublicRedockingBenchmarkError(
+                "PoseBusters source archive is not a valid ZIP"
+            ) from exc
+        except Exception:
+            handle.close()
+            raise
+        instance = object.__new__(cls)
+        instance._path = candidate
+        instance._handle = handle
+        instance._archive = archive
+        instance._file_identity = cls._status_identity(final_status)
+        instance._closed = False
+        return instance
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def archive_sha256(self) -> str:
+        return PUBLIC_REDOCKING_ARCHIVE_SHA256
+
+    def verified_case(
+        self,
+        case_id: str,
+    ) -> tuple[VerifiedCaseMaterialization, dict[str, bytes]]:
+        if self._closed:
+            raise PublicRedockingBenchmarkError("verified archive is closed")
+        self._require_unchanged_file_identity()
+        if case_id not in FROZEN_PUBLIC_REDOCKING_CASE_IDS:
+            raise PublicRedockingBenchmarkError(
+                "archive case is not in the frozen cohort"
+            )
+        info_by_name: dict[str, list[zipfile.ZipInfo]] = {}
+        for info in self._archive.infolist():
+            info_by_name.setdefault(info.filename, []).append(info)
+        payloads: dict[str, bytes] = {}
+        members: list[str] = []
+        artifact_sha256s: dict[str, str] = {}
+        for role, filename in _CASE_ARTIFACT_ROLES:
+            member = f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+            matches = info_by_name.get(member, [])
+            if len(matches) != 1:
+                raise PublicRedockingBenchmarkError(
+                    f"source archive does not contain exactly one {member}"
+                )
+            info = matches[0]
+            if info.is_dir() or not 1 <= info.file_size <= 64 * 1024 * 1024:
+                raise PublicRedockingBenchmarkError(
+                    f"source archive member has invalid size: {member}"
+                )
+            try:
+                payload = self._archive.read(info)
+            except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+                raise PublicRedockingBenchmarkError(
+                    f"source archive member cannot be verified: {member}"
+                ) from exc
+            if len(payload) != info.file_size:
+                raise PublicRedockingBenchmarkError(
+                    f"source archive member size changed: {member}"
+                )
+            payloads[role] = payload
+            members.append(member)
+            artifact_sha256s[role] = hashlib.sha256(payload).hexdigest()
+        self._require_unchanged_file_identity()
+        receipt = VerifiedCaseMaterialization._from_verified_archive(
+            case_id=case_id,
+            artifact_sha256s=artifact_sha256s,
+            archive_member_names=members,
+            verification_authority=_VERIFIED_ARCHIVE_AUTHORITY,
+        )
+        if receipt.receipt_sha256 != (
+            frozen_public_redocking_materialization_receipt_sha256(case_id)
+        ):
+            raise PublicRedockingBenchmarkError(
+                "archive case inputs do not match the frozen materialization receipt"
+            )
+        return receipt, payloads
+
+    def _require_unchanged_file_identity(self) -> None:
+        current = self._status_identity(os.fstat(self._handle.fileno()))
+        if current != self._file_identity:
+            raise PublicRedockingBenchmarkError(
+                "PoseBusters source archive changed after hash verification"
+            )
+
+    def verify_complete_sha256(self) -> str:
+        if self._closed:
+            raise PublicRedockingBenchmarkError("verified archive is closed")
+        self._require_unchanged_file_identity()
+        position = self._handle.tell()
+        self._handle.seek(0)
+        digest = hashlib.sha256()
+        for chunk in iter(lambda: self._handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+        self._handle.seek(position)
+        observed = digest.hexdigest()
+        self._require_unchanged_file_identity()
+        if observed != PUBLIC_REDOCKING_ARCHIVE_SHA256:
+            raise PublicRedockingBenchmarkError(
+                "PoseBusters source archive changed after hash verification"
+            )
+        return observed
+
+    def close(self) -> None:
+        if not self._closed:
+            self._archive.close()
+            self._handle.close()
+            self._closed = True
+
+    def __enter__(self) -> "VerifiedPublicRedockingArchive":
+        if self._closed:
+            raise PublicRedockingBenchmarkError("verified archive is closed")
+        return self
+
+    def __exit__(
+        self,
+        exception_type: object,
+        *_: object,
+    ) -> None:
+        try:
+            if exception_type is None:
+                self.verify_complete_sha256()
+        finally:
+            self.close()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1091,7 +1987,10 @@ class PublicRedockingEvaluationPolicy:
             "same_pocket_geometry": False,
             "same_ranked_pose_count_required": True,
             "same_search_effort_required": False,
-            "failure_denominator": "all_300_frozen_cases",
+            "failure_denominator": "all_cases_in_each_analysis_scope",
+            "primary_failure_denominator": "298_blind_holdout_cases",
+            "engineering_smoke_failure_denominator": "2_observed_smoke_cases",
+            "supplementary_failure_denominator": "all_300_frozen_cases",
             "missing_candidate_policy": "case_failure",
         }
 
@@ -1382,10 +2281,150 @@ class PublicRedockingCaseResult:
         }
 
 
+@dataclass(frozen=True, slots=True, init=False)
+class VerifiedPublicRedockingCaseExecution:
+    """A fresh-run row sealed with every identity needed by the report."""
+
+    result: PublicRedockingCaseResult
+    materialization_receipt_sha256: str
+    implementation_sha256: str
+    evaluation_pipeline_sha256: str
+    execution_environment_sha256: str
+    schema_id: str
+    _receipt_sha256: str = field(repr=False)
+    _verification_authority: object = field(repr=False)
+
+    @classmethod
+    def _from_fresh_execution(
+        cls,
+        *,
+        result: PublicRedockingCaseResult,
+        materialization_receipt_sha256: str,
+        implementation_sha256: str,
+        evaluation_pipeline_sha256: str,
+        execution_environment_sha256: str,
+        verification_authority: object,
+    ) -> "VerifiedPublicRedockingCaseExecution":
+        if verification_authority is not _VERIFIED_EXECUTION_AUTHORITY:
+            raise TypeError(
+                "VerifiedPublicRedockingCaseExecution requires fresh-run authority"
+            )
+        if type(result) is not PublicRedockingCaseResult:
+            raise TypeError(
+                "fresh execution result must be PublicRedockingCaseResult"
+            )
+        instance = object.__new__(cls)
+        object.__setattr__(instance, "result", result)
+        object.__setattr__(
+            instance,
+            "materialization_receipt_sha256",
+            _digest(
+                materialization_receipt_sha256,
+                name="materialization_receipt_sha256",
+            ),
+        )
+        object.__setattr__(
+            instance,
+            "implementation_sha256",
+            _digest(implementation_sha256, name="implementation_sha256"),
+        )
+        object.__setattr__(
+            instance,
+            "evaluation_pipeline_sha256",
+            _digest(
+                evaluation_pipeline_sha256,
+                name="evaluation_pipeline_sha256",
+            ),
+        )
+        object.__setattr__(
+            instance,
+            "execution_environment_sha256",
+            _digest(
+                execution_environment_sha256,
+                name="execution_environment_sha256",
+            ),
+        )
+        object.__setattr__(
+            instance,
+            "schema_id",
+            PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID,
+        )
+        object.__setattr__(
+            instance,
+            "_verification_authority",
+            _VERIFIED_EXECUTION_AUTHORITY,
+        )
+        object.__setattr__(
+            instance,
+            "_receipt_sha256",
+            _sha256(instance._projection()),
+        )
+        return instance
+
+    @property
+    def receipt_sha256(self) -> str:
+        if self.schema_id != PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID:
+            raise PublicRedockingBenchmarkError(
+                "unsupported case execution schema"
+            )
+        if self._verification_authority is not _VERIFIED_EXECUTION_AUTHORITY:
+            raise PublicRedockingBenchmarkError(
+                "case execution was not sealed by the fresh-run verifier"
+            )
+        if type(self.result) is not PublicRedockingCaseResult:
+            raise TypeError(
+                "verified execution result must be PublicRedockingCaseResult"
+            )
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise PublicRedockingBenchmarkError(
+                "verified case execution receipt changed"
+            )
+        return observed
+
+    def _projection(self) -> dict[str, object]:
+        input_sha256s = dict(
+            zip(
+                (role for role, _ in _CASE_ARTIFACT_ROLES),
+                self.result.input_artifact_sha256s,
+                strict=True,
+            )
+        )
+        return {
+            "schema_id": self.schema_id,
+            "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
+            "archive_sha256": PUBLIC_REDOCKING_ARCHIVE_SHA256,
+            "source_ids_sha256": PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
+            "command": list(self.result.execution_command),
+            "execution_policy": _execution_policy_mapping(
+                self.result.execution_policy
+            ),
+            "input_sha256s": input_sha256s,
+            "materialization_receipt_sha256": (
+                self.materialization_receipt_sha256
+            ),
+            "implementation_sha256": self.implementation_sha256,
+            "evaluation_pipeline_sha256": self.evaluation_pipeline_sha256,
+            "execution_environment_sha256": (
+                self.execution_environment_sha256
+            ),
+            "cache_read_allowed": False,
+            "fresh_execution": True,
+            "result": self.result.to_dict(),
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            **self._projection(),
+            "receipt_sha256": self.receipt_sha256,
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class PublicRedockingMetricEstimate:
     engine_id: str
     metric_id: str
+    analysis_scope: str
     subgroup: str
     case_count: int
     value: float
@@ -1396,6 +2435,8 @@ class PublicRedockingMetricEstimate:
     def __post_init__(self) -> None:
         if self.engine_id not in PUBLIC_REDOCKING_PRIMARY_ENGINES:
             raise PublicRedockingBenchmarkError("metric engine_id is invalid")
+        if self.analysis_scope not in PUBLIC_REDOCKING_ANALYSIS_SCOPES:
+            raise PublicRedockingBenchmarkError("metric analysis_scope is invalid")
         if not self.metric_id or not self.subgroup:
             raise PublicRedockingBenchmarkError(
                 "metric_id and subgroup must be non-empty"
@@ -1421,6 +2462,7 @@ class PublicRedockingMetricEstimate:
         return {
             "engine_id": self.engine_id,
             "metric_id": self.metric_id,
+            "analysis_scope": self.analysis_scope,
             "subgroup": self.subgroup,
             "case_count": self.case_count,
             "value": self.value,
@@ -1473,6 +2515,7 @@ def _metric(
     *,
     engine_id: str,
     metric_id: str,
+    analysis_scope: str,
     subgroup: str,
     values: Sequence[float],
     statistic: Callable[[Sequence[float]], float],
@@ -1483,11 +2526,12 @@ def _metric(
         values,
         statistic=statistic,
         policy=policy,
-        identity=f"{engine_id}:{baseline}:{metric_id}:{subgroup}",
+        identity=(f"{analysis_scope}:{engine_id}:{baseline}:{metric_id}:{subgroup}"),
     )
     return PublicRedockingMetricEstimate(
         engine_id=engine_id,
         metric_id=metric_id,
+        analysis_scope=analysis_scope,
         subgroup=subgroup,
         case_count=len(values),
         value=value,
@@ -1502,8 +2546,9 @@ class PublicRedockingBenchmarkReport:
     cohort: FrozenPublicRedockingCohort
     policy: PublicRedockingEvaluationPolicy
     profiles: tuple[PublicRedockingCaseProfile, ...]
+    materializations: tuple[VerifiedCaseMaterialization, ...]
     engine_identities: tuple[PublicRedockingEngineIdentity, ...]
-    rows: tuple[PublicRedockingCaseResult, ...]
+    executions: tuple[VerifiedPublicRedockingCaseExecution, ...]
     metrics: tuple[PublicRedockingMetricEstimate, ...]
     schema_id: str = PUBLIC_REDOCKING_REPORT_SCHEMA_ID
     _fingerprint_sha256: str = field(init=False, repr=False)
@@ -1516,8 +2561,24 @@ class PublicRedockingBenchmarkReport:
         if not isinstance(self.policy, PublicRedockingEvaluationPolicy):
             raise TypeError("policy must be PublicRedockingEvaluationPolicy")
         profiles = tuple(self.profiles)
+        materializations = tuple(self.materializations)
         identities = tuple(self.engine_identities)
-        rows = tuple(self.rows)
+        executions = tuple(self.executions)
+        if any(
+            type(execution) is not VerifiedPublicRedockingCaseExecution
+            for execution in executions
+        ):
+            raise TypeError(
+                "executions must be VerifiedPublicRedockingCaseExecution receipts"
+            )
+        execution_receipt_sha256s = tuple(
+            execution.receipt_sha256 for execution in executions
+        )
+        if len(set(execution_receipt_sha256s)) != len(executions):
+            raise PublicRedockingBenchmarkError(
+                "verified case execution receipts must be unique"
+            )
+        rows = tuple(execution.result for execution in executions)
         metrics = tuple(self.metrics)
         if tuple(profile.case_id for profile in profiles) != self.cohort.case_ids:
             raise PublicRedockingBenchmarkError(
@@ -1526,6 +2587,36 @@ class PublicRedockingBenchmarkReport:
         if profiles != frozen_public_redocking_profiles():
             raise PublicRedockingBenchmarkError(
                 "profiles must match the frozen source-derived values"
+            )
+        if (
+            any(
+                type(row) is not VerifiedCaseMaterialization for row in materializations
+            )
+            or tuple(row.case_id for row in materializations) != self.cohort.case_ids
+        ):
+            raise TypeError(
+                "materializations must be ordered VerifiedCaseMaterialization rows"
+            )
+        if len({row.receipt_sha256 for row in materializations}) != len(
+            materializations
+        ):
+            raise PublicRedockingBenchmarkError(
+                "verified materialization receipts must be unique"
+            )
+        if any(
+            row.receipt_sha256
+            != frozen_public_redocking_materialization_receipt_sha256(row.case_id)
+            for row in materializations
+        ):
+            raise PublicRedockingBenchmarkError(
+                "verified materializations do not match per-case frozen receipts"
+            )
+        if (
+            _sha256([row.to_dict() for row in materializations])
+            != PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256
+        ):
+            raise PublicRedockingBenchmarkError(
+                "verified materializations do not match the frozen archive receipt set"
             )
         if tuple(identity.engine_id for identity in identities) != (
             PUBLIC_REDOCKING_PRIMARY_ENGINES
@@ -1544,9 +2635,21 @@ class PublicRedockingBenchmarkReport:
         )
         if tuple((row.engine_id, row.case_id) for row in rows) != expected_rows:
             raise PublicRedockingBenchmarkError(
-                "rows must retain one ordered row per engine and frozen case"
+                "rows must retain one ordered row for every engine/case"
+            )
+        if any(
+            row.status == "failure"
+            and row.failure_code not in _PUBLIC_REDOCKING_FAILURE_CODES[row.engine_id]
+            for row in rows
+        ):
+            raise PublicRedockingBenchmarkError(
+                "failure rows must use an engine-derived frozen failure code"
             )
         profile_map = {profile.case_id: profile for profile in profiles}
+        materialization_map = {
+            materialization.case_id: materialization
+            for materialization in materializations
+        }
         row_map = {(row.engine_id, row.case_id): row for row in rows}
         engine_v2_policies = {
             row.execution_policy for row in rows if row.engine_id == "engine_v2"
@@ -1555,9 +2658,7 @@ class PublicRedockingBenchmarkReport:
             raise PublicRedockingBenchmarkError(
                 "Engine V2 rows must use one execution policy"
             )
-        engine_v2_policy = _execution_policy_mapping(
-            next(iter(engine_v2_policies))
-        )
+        engine_v2_policy = _execution_policy_mapping(next(iter(engine_v2_policies)))
         required_engine_v2_policy = {
             "cpu_count",
             "torch_intraop_threads",
@@ -1624,30 +2725,82 @@ class PublicRedockingBenchmarkReport:
                     f"{engine_id} row policy contradicts the report policy"
                 )
         identity_map = {identity.engine_id: identity for identity in identities}
-        for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES:
+        if len({row.execution_environment_sha256 for row in executions}) != 1:
+            raise PublicRedockingBenchmarkError(
+                "all case executions must use one execution environment"
+            )
+        for execution in executions:
+            result = execution.result
+            identity = identity_map[result.engine_id]
+            materialization = materialization_map[result.case_id]
+            if execution.materialization_receipt_sha256 != (
+                materialization.receipt_sha256
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "case execution does not bind the verified materialization"
+                )
+            if execution.implementation_sha256 != identity.implementation_sha256:
+                raise PublicRedockingBenchmarkError(
+                    "case execution implementation contradicts its engine identity"
+                )
+            if execution.evaluation_pipeline_sha256 != (
+                identity.evaluation_pipeline_sha256
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "case execution evaluator contradicts its engine identity"
+                )
+        if (
+            identities[1].implementation_sha256 != identities[2].implementation_sha256
+            or identities[1].command[0] != identities[2].command[0]
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Vina and GNINA must use one identical staged binary"
+            )
+        command_run_roots = {
             _validate_engine_commands(
                 identity_map[engine_id],
                 tuple(row for row in rows if row.engine_id == engine_id),
                 policy=self.policy,
+            )
+            for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        }
+        if len(command_run_roots) != 1:
+            raise PublicRedockingBenchmarkError(
+                "all engine commands must share one canonical run root"
             )
         for case_id in self.cohort.case_ids:
             case_rows = tuple(
                 row_map[(engine_id, case_id)]
                 for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
             )
+            materialization = materialization_map[case_id]
             if len({row.input_artifact_sha256s for row in case_rows}) != 1:
                 raise PublicRedockingBenchmarkError(
                     "engines must use identical source artifacts per case"
                 )
-            if (
-                case_rows[0].native_artifact_sha256
-                != profile_map[case_id].ligand_artifact_sha256
+            if case_rows[0].input_artifact_sha256s != (
+                materialization.input_artifact_sha256s
             ):
                 raise PublicRedockingBenchmarkError(
-                    "result native ligand is not the frozen profile artifact"
+                    "result inputs do not match the verified case materialization"
                 )
-        if not metrics:
-            raise PublicRedockingBenchmarkError("report metrics cannot be empty")
+            if materialization.native_artifact_sha256 != (
+                profile_map[case_id].ligand_artifact_sha256
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "verified native ligand is not the frozen profile artifact"
+                )
+            case_seeds = tuple(
+                _command_seed(row.execution_command) for row in case_rows
+            )
+            if (
+                len(set(case_seeds)) != 1
+                or case_seeds[0] != materialization.frozen_case_seed
+                or case_seeds[0] != frozen_public_redocking_case_seed(case_id)
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "engine commands must use the identical frozen case seed"
+                )
         expected_metrics = _derive_public_redocking_metrics(
             profiles,
             identities,
@@ -1655,15 +2808,21 @@ class PublicRedockingBenchmarkReport:
             cohort=self.cohort,
             policy=self.policy,
         )
-        if metrics != expected_metrics:
+        if metrics and metrics != expected_metrics:
             raise PublicRedockingBenchmarkError(
                 "report metrics do not match the retained result rows"
             )
+        metrics = expected_metrics
         object.__setattr__(self, "profiles", profiles)
+        object.__setattr__(self, "materializations", materializations)
         object.__setattr__(self, "engine_identities", identities)
-        object.__setattr__(self, "rows", rows)
+        object.__setattr__(self, "executions", executions)
         object.__setattr__(self, "metrics", metrics)
         object.__setattr__(self, "_fingerprint_sha256", _sha256(self._projection()))
+
+    @property
+    def rows(self) -> tuple[PublicRedockingCaseResult, ...]:
+        return tuple(execution.result for execution in self.executions)
 
     @property
     def fingerprint_sha256(self) -> str:
@@ -1678,13 +2837,34 @@ class PublicRedockingBenchmarkReport:
             "cohort_fingerprint_sha256": self.cohort.fingerprint_sha256,
             "policy_fingerprint_sha256": self.policy.fingerprint_sha256,
             "profiles": [profile.to_dict() for profile in self.profiles],
+            "materializations": [
+                materialization.to_dict() for materialization in self.materializations
+            ],
             "engine_identities": [
                 identity.to_dict() for identity in self.engine_identities
+            ],
+            "execution_receipts": [
+                execution.to_dict() for execution in self.executions
             ],
             "rows": [row.to_dict() for row in self.rows],
             "metrics": [metric.to_dict() for metric in self.metrics],
             "case_count": len(self.cohort.case_ids),
             "row_count": len(self.rows),
+            "engineering_smoke_case_count": len(
+                PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
+            ),
+            "engineering_smoke_case_ids": list(
+                PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
+            ),
+            "primary_blind_holdout_case_count": len(
+                PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+            ),
+            "primary_blind_holdout_case_ids_sha256": _sha256(
+                list(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS)
+            ),
+            "supplementary_descriptive_case_count": len(self.cohort.case_ids),
+            "primary_metrics_exclude_engineering_smoke": True,
+            "all_300_metrics_are_supplementary_descriptive": True,
             "full_failure_denominator_retained": True,
             "policy": self.policy.to_dict(),
             "same_ranked_pose_count": True,
@@ -1705,6 +2885,193 @@ class PublicRedockingBenchmarkReport:
 
     def to_dict(self) -> dict[str, object]:
         return {**self._projection(), "fingerprint_sha256": self.fingerprint_sha256}
+
+
+def _derive_scope_all_metrics(
+    row_map: dict[tuple[str, str], PublicRedockingCaseResult],
+    *,
+    policy: PublicRedockingEvaluationPolicy,
+    analysis_scope: str,
+    case_ids: Sequence[str],
+) -> tuple[PublicRedockingMetricEstimate, ...]:
+    metrics: list[PublicRedockingMetricEstimate] = []
+    for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES:
+        selected = [row_map[(engine_id, case_id)] for case_id in case_ids]
+        metrics.extend(
+            (
+                _metric(
+                    engine_id=engine_id,
+                    metric_id="full_case_failure_rate",
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                    values=[float(row.status == "failure") for row in selected],
+                    statistic=_mean,
+                    policy=policy,
+                ),
+                _metric(
+                    engine_id=engine_id,
+                    metric_id="runtime_median_seconds",
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                    values=[row.runtime_seconds for row in selected],
+                    statistic=_median,
+                    policy=policy,
+                ),
+            )
+        )
+        for top_k in policy.top_ks:
+            metrics.extend(
+                (
+                    _metric(
+                        engine_id=engine_id,
+                        metric_id=f"top{top_k}_rmsd_success_rate",
+                        analysis_scope=analysis_scope,
+                        subgroup="all",
+                        values=[
+                            row.recovery(
+                                top_k,
+                                policy.rmsd_threshold_angstrom,
+                            )
+                            for row in selected
+                        ],
+                        statistic=_mean,
+                        policy=policy,
+                    ),
+                    _metric(
+                        engine_id=engine_id,
+                        metric_id=(f"top{top_k}_valid_pose_success_rate"),
+                        analysis_scope=analysis_scope,
+                        subgroup="all",
+                        values=[
+                            row.valid_recovery(
+                                top_k,
+                                policy.rmsd_threshold_angstrom,
+                            )
+                            for row in selected
+                        ],
+                        statistic=_mean,
+                        policy=policy,
+                    ),
+                )
+            )
+        metrics.extend(
+            (
+                _metric(
+                    engine_id=engine_id,
+                    metric_id="top1_geometric_validity_rate",
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                    values=[
+                        float(row.status == "success" and row.geometric_valid[0])
+                        for row in selected
+                    ],
+                    statistic=_mean,
+                    policy=policy,
+                ),
+                _metric(
+                    engine_id=engine_id,
+                    metric_id="top1_chemical_validity_rate",
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                    values=[
+                        float(row.status == "success" and row.chemical_valid[0])
+                        for row in selected
+                    ],
+                    statistic=_mean,
+                    policy=policy,
+                ),
+            )
+        )
+
+    for baseline in ("vina", "gnina"):
+        failure_deltas = [
+            float(row_map[("engine_v2", case_id)].status == "failure")
+            - float(row_map[(baseline, case_id)].status == "failure")
+            for case_id in case_ids
+        ]
+        runtime_deltas = [
+            (
+                row_map[("engine_v2", case_id)].runtime_seconds
+                - row_map[(baseline, case_id)].runtime_seconds
+            )
+            for case_id in case_ids
+        ]
+        metrics.extend(
+            (
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id="full_case_failure_rate_paired_delta",
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                    values=failure_deltas,
+                    statistic=_mean,
+                    policy=policy,
+                    baseline=baseline,
+                ),
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id="runtime_seconds_paired_median_delta",
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                    values=runtime_deltas,
+                    statistic=_median,
+                    policy=policy,
+                    baseline=baseline,
+                ),
+            )
+        )
+        for top_k in policy.top_ks:
+            recovery_deltas = [
+                (
+                    row_map[("engine_v2", case_id)].recovery(
+                        top_k,
+                        policy.rmsd_threshold_angstrom,
+                    )
+                    - row_map[(baseline, case_id)].recovery(
+                        top_k,
+                        policy.rmsd_threshold_angstrom,
+                    )
+                )
+                for case_id in case_ids
+            ]
+            valid_recovery_deltas = [
+                (
+                    row_map[("engine_v2", case_id)].valid_recovery(
+                        top_k,
+                        policy.rmsd_threshold_angstrom,
+                    )
+                    - row_map[(baseline, case_id)].valid_recovery(
+                        top_k,
+                        policy.rmsd_threshold_angstrom,
+                    )
+                )
+                for case_id in case_ids
+            ]
+            metrics.extend(
+                (
+                    _metric(
+                        engine_id="engine_v2",
+                        metric_id=(f"top{top_k}_rmsd_success_rate_paired_delta"),
+                        analysis_scope=analysis_scope,
+                        subgroup="all",
+                        values=recovery_deltas,
+                        statistic=_mean,
+                        policy=policy,
+                        baseline=baseline,
+                    ),
+                    _metric(
+                        engine_id="engine_v2",
+                        metric_id=(f"top{top_k}_valid_pose_success_rate_paired_delta"),
+                        analysis_scope=analysis_scope,
+                        subgroup="all",
+                        values=valid_recovery_deltas,
+                        statistic=_mean,
+                        policy=policy,
+                        baseline=baseline,
+                    ),
+                )
+            )
+    return tuple(metrics)
 
 
 def _derive_public_redocking_metrics(
@@ -1759,8 +3126,9 @@ def _derive_public_redocking_metrics(
             "results must cover every engine/case pair in exact order"
         )
 
+    metric_case_ids = PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
     subgroup_ids: dict[str, tuple[str, ...]] = {
-        "all": active_cohort.case_ids,
+        "all": metric_case_ids,
     }
     for attribute in ("size_subgroup", "rotor_subgroup"):
         for subgroup in sorted(
@@ -1769,7 +3137,10 @@ def _derive_public_redocking_metrics(
             subgroup_ids[subgroup] = tuple(
                 profile.case_id
                 for profile in profile_rows
-                if getattr(profile, attribute) == subgroup
+                if (
+                    profile.case_id in metric_case_ids
+                    and getattr(profile, attribute) == subgroup
+                )
             )
 
     metrics: list[PublicRedockingMetricEstimate] = []
@@ -1786,6 +3157,7 @@ def _derive_public_redocking_metrics(
                     _metric(
                         engine_id=engine_id,
                         metric_id="full_case_failure_rate",
+                        analysis_scope="primary_blind_holdout",
                         subgroup=subgroup,
                         values=failure_values,
                         statistic=_mean,
@@ -1794,6 +3166,7 @@ def _derive_public_redocking_metrics(
                     _metric(
                         engine_id=engine_id,
                         metric_id="runtime_median_seconds",
+                        analysis_scope="primary_blind_holdout",
                         subgroup=subgroup,
                         values=runtime_values,
                         statistic=_median,
@@ -1818,6 +3191,7 @@ def _derive_public_redocking_metrics(
                         _metric(
                             engine_id=engine_id,
                             metric_id=f"top{top_k}_rmsd_success_rate",
+                            analysis_scope="primary_blind_holdout",
                             subgroup=subgroup,
                             values=recovery,
                             statistic=_mean,
@@ -1826,6 +3200,7 @@ def _derive_public_redocking_metrics(
                         _metric(
                             engine_id=engine_id,
                             metric_id=f"top{top_k}_valid_pose_success_rate",
+                            analysis_scope="primary_blind_holdout",
                             subgroup=subgroup,
                             values=valid_recovery,
                             statistic=_mean,
@@ -1846,6 +3221,7 @@ def _derive_public_redocking_metrics(
                     _metric(
                         engine_id=engine_id,
                         metric_id="top1_geometric_validity_rate",
+                        analysis_scope="primary_blind_holdout",
                         subgroup=subgroup,
                         values=top1_geometric,
                         statistic=_mean,
@@ -1854,6 +3230,7 @@ def _derive_public_redocking_metrics(
                     _metric(
                         engine_id=engine_id,
                         metric_id="top1_chemical_validity_rate",
+                        analysis_scope="primary_blind_holdout",
                         subgroup=subgroup,
                         values=top1_chemical,
                         statistic=_mean,
@@ -1865,11 +3242,11 @@ def _derive_public_redocking_metrics(
     for baseline in ("vina", "gnina"):
         engine_failures = [
             float(row_map[("engine_v2", case_id)].status == "failure")
-            for case_id in active_cohort.case_ids
+            for case_id in metric_case_ids
         ]
         baseline_failures = [
             float(row_map[(baseline, case_id)].status == "failure")
-            for case_id in active_cohort.case_ids
+            for case_id in metric_case_ids
         ]
         failure_deltas = [
             engine - external
@@ -1884,13 +3261,14 @@ def _derive_public_redocking_metrics(
                 row_map[("engine_v2", case_id)].runtime_seconds
                 - row_map[(baseline, case_id)].runtime_seconds
             )
-            for case_id in active_cohort.case_ids
+            for case_id in metric_case_ids
         ]
         metrics.extend(
             (
                 _metric(
                     engine_id="engine_v2",
                     metric_id="full_case_failure_rate_paired_delta",
+                    analysis_scope="primary_blind_holdout",
                     subgroup="all",
                     values=failure_deltas,
                     statistic=_mean,
@@ -1900,6 +3278,7 @@ def _derive_public_redocking_metrics(
                 _metric(
                     engine_id="engine_v2",
                     metric_id="runtime_seconds_paired_median_delta",
+                    analysis_scope="primary_blind_holdout",
                     subgroup="all",
                     values=runtime_deltas,
                     statistic=_median,
@@ -1914,14 +3293,14 @@ def _derive_public_redocking_metrics(
                     top_k,
                     active_policy.rmsd_threshold_angstrom,
                 )
-                for case_id in active_cohort.case_ids
+                for case_id in metric_case_ids
             ]
             baseline_values = [
                 row_map[(baseline, case_id)].recovery(
                     top_k,
                     active_policy.rmsd_threshold_angstrom,
                 )
-                for case_id in active_cohort.case_ids
+                for case_id in metric_case_ids
             ]
             deltas = [
                 engine - external
@@ -1935,6 +3314,7 @@ def _derive_public_redocking_metrics(
                 _metric(
                     engine_id="engine_v2",
                     metric_id=f"top{top_k}_rmsd_success_rate_paired_delta",
+                    analysis_scope="primary_blind_holdout",
                     subgroup="all",
                     values=deltas,
                     statistic=_mean,
@@ -1947,14 +3327,14 @@ def _derive_public_redocking_metrics(
                     top_k,
                     active_policy.rmsd_threshold_angstrom,
                 )
-                for case_id in active_cohort.case_ids
+                for case_id in metric_case_ids
             ]
             baseline_valid_values = [
                 row_map[(baseline, case_id)].valid_recovery(
                     top_k,
                     active_policy.rmsd_threshold_angstrom,
                 )
-                for case_id in active_cohort.case_ids
+                for case_id in metric_case_ids
             ]
             valid_deltas = [
                 engine - external
@@ -1968,6 +3348,7 @@ def _derive_public_redocking_metrics(
                 _metric(
                     engine_id="engine_v2",
                     metric_id=(f"top{top_k}_valid_pose_success_rate_paired_delta"),
+                    analysis_scope="primary_blind_holdout",
                     subgroup="all",
                     values=valid_deltas,
                     statistic=_mean,
@@ -1976,14 +3357,31 @@ def _derive_public_redocking_metrics(
                 )
             )
 
+    metrics.extend(
+        _derive_scope_all_metrics(
+            row_map,
+            policy=active_policy,
+            analysis_scope="engineering_smoke",
+            case_ids=PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
+        )
+    )
+    metrics.extend(
+        _derive_scope_all_metrics(
+            row_map,
+            policy=active_policy,
+            analysis_scope="supplementary_descriptive",
+            case_ids=active_cohort.case_ids,
+        )
+    )
     return tuple(metrics)
 
 
 def build_public_redocking_benchmark_report(
     profiles: Sequence[PublicRedockingCaseProfile],
     engine_identities: Sequence[PublicRedockingEngineIdentity],
-    rows: Sequence[PublicRedockingCaseResult],
+    executions: Sequence[VerifiedPublicRedockingCaseExecution],
     *,
+    materializations: Sequence[VerifiedCaseMaterialization],
     cohort: FrozenPublicRedockingCohort | None = None,
     policy: PublicRedockingEvaluationPolicy | None = None,
 ) -> PublicRedockingBenchmarkReport:
@@ -1992,36 +3390,52 @@ def build_public_redocking_benchmark_report(
     active_cohort = frozen_public_redocking_cohort() if cohort is None else cohort
     active_policy = PublicRedockingEvaluationPolicy() if policy is None else policy
     profile_rows = tuple(profiles)
+    materialization_rows = tuple(materializations)
+    if any(
+        type(row) is not VerifiedCaseMaterialization for row in materialization_rows
+    ):
+        raise TypeError("materializations must be VerifiedCaseMaterialization rows")
     identity_rows = tuple(engine_identities)
-    result_rows = tuple(rows)
-    metrics = _derive_public_redocking_metrics(
-        profile_rows,
-        identity_rows,
-        result_rows,
-        cohort=active_cohort,
-        policy=active_policy,
-    )
+    execution_rows = tuple(executions)
+    if any(
+        type(execution) is not VerifiedPublicRedockingCaseExecution
+        for execution in execution_rows
+    ):
+        raise TypeError(
+            "executions must be VerifiedPublicRedockingCaseExecution receipts"
+        )
+    tuple(execution.receipt_sha256 for execution in execution_rows)
     return PublicRedockingBenchmarkReport(
         cohort=active_cohort,
         policy=active_policy,
         profiles=profile_rows,
+        materializations=materialization_rows,
         engine_identities=identity_rows,
-        rows=result_rows,
-        metrics=tuple(metrics),
+        executions=execution_rows,
+        metrics=(),
     )
 
 
 __all__ = [
     "FROZEN_PUBLIC_REDOCKING_CASE_IDS",
     "MAX_PUBLIC_REDOCKING_BOOTSTRAP_SAMPLES",
+    "PUBLIC_REDOCKING_ANALYSIS_SCOPES",
     "PUBLIC_REDOCKING_ARCHIVE_SHA256",
+    "PUBLIC_REDOCKING_CASE_SEED_BASE",
+    "PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID",
     "PUBLIC_REDOCKING_COHORT_COUNT",
     "PUBLIC_REDOCKING_COHORT_ID",
+    "PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS",
+    "PUBLIC_REDOCKING_MATERIALIZATION_RECEIPTS_SHA256",
+    "PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256",
+    "PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID",
+    "PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS",
     "PUBLIC_REDOCKING_PRIMARY_ENGINES",
     "PUBLIC_REDOCKING_PROFILE_METHOD_ID",
     "PUBLIC_REDOCKING_PROFILES_SHA256",
     "PUBLIC_REDOCKING_REPORT_SCHEMA_ID",
     "PUBLIC_REDOCKING_ROTOR_SUBGROUPS",
+    "PUBLIC_REDOCKING_RUNNER_ID",
     "PUBLIC_REDOCKING_SIZE_SUBGROUPS",
     "PUBLIC_REDOCKING_SOURCE_IDS_SHA256",
     "PUBLIC_REDOCKING_TOP_KS",
@@ -2033,7 +3447,12 @@ __all__ = [
     "PublicRedockingEngineIdentity",
     "PublicRedockingEvaluationPolicy",
     "PublicRedockingMetricEstimate",
+    "VerifiedCaseMaterialization",
+    "VerifiedPublicRedockingCaseExecution",
+    "VerifiedPublicRedockingArchive",
     "build_public_redocking_benchmark_report",
+    "frozen_public_redocking_case_seed",
+    "frozen_public_redocking_materialization_receipt_sha256",
     "frozen_public_redocking_cohort",
     "frozen_public_redocking_profiles",
     "verify_public_redocking_source_identifiers",

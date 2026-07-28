@@ -25,6 +25,24 @@ Selection is performed before results by sorting
 lowest 300 keys. The final case list is stored in source and protected by its
 own SHA-256.
 
+The evidence interpretation is partitioned before the primary execution:
+
+- `5SAK_ZRY` and `5SB2_1K2`, which were already exercised while engineering
+  this runner, are the two-case engineering smoke subset;
+- the remaining 298 selected cases are the designated primary holdout
+  (`primary_blind_holdout` in the machine-readable schema);
+- all 300 selected cases are reported only as a supplementary descriptive
+  scope.
+
+The eight source cases not selected by the SHA-256 rule and the two observed
+smoke cases are suitable for integration/development work. Tuning scorer
+weights, charge preparation, or candidate budgets must not use the remaining
+298 cases. The report labels every metric with one of
+`primary_blind_holdout`, `engineering_smoke`, or
+`supplementary_descriptive`; primary metrics cannot include the two observed
+cases. The code enforces this partition, but it cannot independently attest
+that an operator has never inspected or tuned against the designated 298 cases.
+
 ## Comparable-input and output policy
 
 Every engine must provide exactly one ordered row for every frozen case:
@@ -46,6 +64,57 @@ smaller candidate budget.
 
 The engines share the frozen receptor, starting conformer, crystal-ligand
 pocket source, case seed, one enforced CPU, and five retained output poses.
+The frozen, report-validated case seed is
+`2026072700 + frozen_case_index`. Public report construction parses `--seed`
+from all three retained commands and requires all three values to equal that
+case's verified materialization receipt.
+
+The complete archive is SHA-256 verified through one opened file descriptor.
+For every case it yields a `VerifiedCaseMaterialization` value binding the exact
+archive members and SHA-256 values for `protein.pdb`, `ligands.sdf`,
+`ligand.sdf`, and `ligand_start_conf.sdf`. Each value must match the
+archive-derived, frozen 300-case receipt manifest and its aggregate SHA-256.
+Row reconstruction must supply these values in frozen case order; arbitrary
+dictionaries, canonical receipt identities that differ from the manifest, and
+agreeing substituted hashes from all three engines are rejected. The Python
+type is a validated value object, not an authentication authority, and its
+object-creation provenance is not authenticated.
+
+Result rows have a separate fail-closed boundary. The public report builder
+does not accept `PublicRedockingCaseResult` values or dictionaries. The runner
+must seal each fresh result as an exact
+`VerifiedPublicRedockingCaseExecution` receipt. That receipt binds the complete
+success or typed-failure row, runtime, five evaluator outcomes and pose hashes
+when successful, the case materialization receipt, implementation, evaluation
+pipeline, execution environment, command, policy, and disabled cache-read
+state. Report construction rechecks every receipt, requires one environment
+identity, and cross-checks its implementation, evaluator, and materialization
+identities against the report. Replacing a raw row or mutating a sealed row is
+therefore rejected before metrics are derived. This in-process typed boundary
+prevents unsupported public-API reconstruction; it is not a signature or an
+independent execution attestation against a malicious writer running with the
+same Python/process authority.
+
+The runner writes each case into an owner-only directory and makes the four
+inputs read-only (`0500` directory, `0400` files). It opens all four exactly
+once with `O_NOFOLLOW` and checks path/inode/hash identity. Engine V2 and RDKit
+read those descriptors directly. PoseBusters receives RDKit molecules decoded
+from the pinned SDF/PDB bytes with the exact 0.3.1 redock loading policy.
+Engine V2 pose serialization is reopened once with `O_NOFOLLOW`; the exact
+pinned bytes from that read are used both for the five pose hashes and for
+PoseBusters evaluation. The evaluator never reopens the pose pathname, so a
+directory-entry replacement cannot cross-wire hashes from one payload with
+RMSD/validity from another.
+GNINA/Open Babel requires `.pdb`/`.sdf` suffixes to select a format, so each
+external launch receives suffix-bearing, read-only hard links to the same
+pinned inodes through an inherited private-directory descriptor. The alias
+directory and every link are revalidated around each launch; a Linux inotify
+watch makes any alias entry, input inode, write, or attribute mutation
+fail closed, including swap-and-restore. Logical canonical paths remain in
+retained commands. Descriptor and pathname identity are checked again before
+persisting a row and before exact-file cleanup. A pathname swap cannot select
+different input bytes for a consumer.
+
 Their exact pocket geometry is not equal: Engine V2 uses a sphere derived from
 the crystal ligand, while Vina and GNINA use the corresponding ligand-derived
 axis-aligned autobox. Their internal search effort is also not equal: Engine V2
@@ -60,15 +129,48 @@ Runtime covers each engine invocation through ranked-pose serialization and
 stops before the shared PoseBusters evaluator. Torch intra-op and inter-op
 threads are both fixed to one for Engine V2, and both external modes receive
 `--cpu 1`. The external timeout is part of the policy, engine identity, and
-per-case cache receipt; changing it invalidates cached external rows. Runtime
+per-case row receipt; changing it produces a different receipt. Runtime
 deltas remain descriptive because the search regions and algorithms differ.
 They are not process-boundary comparable: each external case includes fresh
 process startup and model loading, while Engine V2 reuses one imported Python
 process. The report therefore records `runtime_boundary_comparable: false`.
-Timed cache receipts also bind a SHA-256-only execution-environment identity
-covering the boot session, OS/kernel, machine architecture, Python, Torch, and
-logical CPU count. Moving or rebooting the run invalidates timed cache rows
-instead of mixing runtime samples across environments.
+Row receipts also include a SHA-256-only execution-environment identity
+covering the boot session, OS/kernel, machine architecture, Python executable,
+Torch, logical CPU count, CPU affinity/model, selected runtime-variable hashes,
+and loaded shared-file identities. A missing boot-session ID is never replaced
+with a hostname.
+More strongly, the current runner never reads row JSON back as a cache: an
+adjacent self-hash cannot authenticate runtime or evaluator outcomes. Every
+invocation therefore produces fresh timed rows, whether or not a boot ID is
+available.
+
+The operator-supplied GNINA executable is copied into a private `0700`
+directory under the output root, using its SHA-256 as the staged filename. The
+runner opens that non-writable file once and launches both version probes and
+engine processes through Linux `/proc/self/fd/<fd>` with the descriptor
+inherited explicitly. Retained commands continue to identify the logical
+SHA-256-named staged path. The path and open descriptor must retain the same
+device/inode identity, non-writable mode, and SHA-256 before and after every
+external-engine launch and immediately before report materialization. A
+pathname swap therefore cannot select another inode for launch; persistent or
+verification-boundary-visible path, inode, mode, or hash changes abort the
+evidence run. Transient same-inode mutation by root or a malicious process with
+the same UID is outside this local POSIX threat model.
+
+The output root and every managed descendant are opened component by component
+with `O_DIRECTORY | O_NOFOLLOW`; the output root is owner-only `0700`.
+Descriptor-anchored atomic writes cannot traverse a symlink ancestor. External
+pose output is created through an inherited pose-directory descriptor, and
+temporary external-input aliases are removed by exact directory-FD operations.
+At the start of every invocation, an existing canonical
+`public-redocking-report.json` is atomically renamed to a unique retained stale
+artifact before any preflight can fail; the canonical name stays absent until
+a new all-300 run succeeds. Existing Engine V2 pose output is quarantined the
+same way before a fresh case attempt, so a failure row cannot coexist with an
+old canonical success pose.
+Input cleanup unlinks only the four expected filenames before removing an
+already verified empty case directory. Unexpected entries abort cleanup.
+
 The exact Torch build must be one of the repository's pinned 2.6.0,
 2.6.0+cpu, or 2.6.0+rocm6.1 build identifiers and is retained in every Engine
 V2 row and engine identity.
@@ -112,11 +214,20 @@ its chemistry-aware rotor policy remain separate execution outcomes; an
 unsupported macrocycle must become a failure row rather than being removed from
 the denominator.
 
+Missing Engine V2 proposals and incomplete five-pose serialization raise the
+typed `IncompleteRankedPoseSet` case failure. The evidence code is selected
+from the exception class, not from mutable error-message substrings. Frozen
+report failure codes also include `engine_v2_input_unsupported`, which the
+runner emits for typed PDB/SDF/Unicode input-parse failures.
+
 The report binds exact engine version, full Engine V2 Python source-closure or
 external binary SHA-256, command, CPU/timeout policy, cohort fingerprint, policy
-fingerprint, all 900 engine/case rows, profiles, and metric rows. Evaluator or
+fingerprint, all 300 verified materialization receipts, all 900 engine/case
+execution receipts and their derived rows, profiles, and metric rows. Evaluator or
 artifact-I/O failures abort the run instead of being counted as engine
-failures. Report construction independently rejects row-level CPU, Torch
+failures; this includes atomic pose writes, output pinning, regular-file checks,
+and serialized-pose round-trip checks. Report construction independently rejects
+row-level CPU, Torch
 thread, exact Torch build, timeout, or engine-mode command fields that
 contradict the report policy and engine identity. Case-specific receptor,
 ligand, and pocket/autobox path basenames are tied to the retained case ID.
@@ -130,39 +241,68 @@ fresh output.
 ## Local execution
 
 The evaluator is frozen to NumPy 1.26.4, pandas 2.3.3, PyYAML 6.0.3, RDKit
-2022.09.5, and PoseBusters 0.3.1. All five installed distribution versions are
-verified before case execution and included in the evaluation-pipeline
-identity. Install the older RDKit distribution first and install PoseBusters
-without dependency resolution so pip does not replace it with a newer `rdkit`
-distribution:
+2022.09.5, and PoseBusters 0.3.1. All five installed distribution versions and
+the aggregate SHA-256 over every installed-file record are verified before case
+execution and included in the evaluation-pipeline identity. Install the older
+RDKit distribution first and install PoseBusters without dependency resolution
+so pip does not replace it with a newer `rdkit` distribution:
 
 ```bash
-python -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 \
+python3 -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 \
   rdkit-pypi==2022.9.5
-python -m pip install --no-deps posebusters==0.3.1
+python3 -m pip install --no-deps posebusters==0.3.1
 ```
 
 Run against operator-supplied source artifacts and a local GNINA executable:
 
 ```bash
-python tools/run_engine_v2_public_redocking_300.py \
+python3 tools/run_engine_v2_public_redocking_300.py \
   --archive /path/to/posebusters_paper_data.zip \
   --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
   --gnina /path/to/gnina \
   --output-root .betelgeuze/public-redocking-300
 ```
 
-`--limit` creates only a non-claimable partial summary. A complete run creates
-all 900 rows and `public-redocking-report.json`. Per-case receipts make a run
-resumable while rejecting changed input bytes, commands, implementation hashes,
-or source identities.
+Use the two already observed cases for engineering smoke:
+
+```bash
+python3 tools/run_engine_v2_public_redocking_300.py \
+  --archive /path/to/posebusters_paper_data.zip \
+  --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
+  --gnina /path/to/gnina \
+  --output-root .betelgeuze/public-redocking-300 \
+  --case-subset engineering-smoke
+```
+
+After all tuning is frozen, the default `--case-subset all` run executes all
+300 cases once and creates all 900 rows plus
+`public-redocking-report.json`. Its primary
+metrics use only the 298 holdout cases; its 300-case metrics are explicitly
+supplementary descriptive. `--case-subset primary-blind-holdout` and `--limit`
+create only non-claimable partial summaries and cannot later be promoted by
+cache reuse. Every partial-summary filename includes a digest of the exact
+ordered case selection, so equal-length slices cannot overwrite one another.
+Per-case receipts reject changed input bytes, materialization
+receipts, seeds, commands, implementation hashes, evaluator/environment
+identities, result outcomes, or source identities. Partial summaries retain
+both the derived rows and their sealed execution receipts.
+
+The SHA-256 stored beside a local row detects corruption and binds the declared
+content to its local execution identities, but it is not a signature: a
+malicious writer with the same filesystem authority can replace both a row and
+its checksum. The runner therefore never accepts it for cache reuse. Likewise,
+report fingerprints and validated Python values provide content consistency,
+not independent provenance attestation. Claim-bearing use still requires
+controlled execution, retained artifacts, and independent review; the generated
+report remains `claim_safe: false`.
 
 ## Current boundary
 
 No raw structure, prepared input, external-engine output, Engine V2 output, or
 benchmark result is committed by this change. A constructed report records
-`benchmark_executed: true` because all 900 failure-complete rows exist, while it
-continues to state:
+`benchmark_executed: true` because all 900 schema-valid, failure-complete rows
+exist. This field is not an authenticated process-execution attestation. The
+report continues to state:
 
 ```text
 scientifically_validated: false
@@ -172,6 +312,5 @@ claim_safe: false
 ```
 
 Actual execution is local under the frozen policy. The runner verifies and
-materializes the archive itself, retains per-case command/input/result receipts,
-and supports resumable partial runs. A completed report still requires
-scientific review before any claim.
+materializes the archive itself and retains per-case command/input/result
+receipts. A completed report still requires scientific review before any claim.
