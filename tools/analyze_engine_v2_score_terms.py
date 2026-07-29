@@ -20,7 +20,7 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
 )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
 TERM_NAMES = (
     "typed_vdw",
     "electrostatics",

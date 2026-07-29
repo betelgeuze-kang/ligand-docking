@@ -35,23 +35,13 @@ Selection is performed before results by sorting
 lowest 300 keys. The final case list is stored in source and protected by its
 own SHA-256.
 
-The evidence interpretation is partitioned before the primary execution:
-
-- `5SAK_ZRY` and `5SB2_1K2`, which were already exercised while engineering
-  this runner, are the two-case engineering smoke subset;
-- the remaining 298 selected cases are the designated primary holdout
-  (`primary_blind_holdout` in the machine-readable schema);
-- all 300 selected cases are reported only as a supplementary descriptive
-  scope.
-
-The eight source cases not selected by the SHA-256 rule and the two observed
-smoke cases are suitable for integration/development work. Tuning scorer
-weights, charge preparation, or candidate budgets must not use the remaining
-298 cases. The report labels every metric with one of
-`primary_blind_holdout`, `engineering_smoke`, or
-`supplementary_descriptive`; primary metrics cannot include the two observed
-cases. The code enforces this partition, but it cannot independently attest
-that an operator has never inspected or tuned against the designated 298 cases.
+All historical 300 selected cases are now contaminated development data. The
+legacy `primary_blind_holdout` scope remains in old receipts only so the runner
+can reject it explicitly; it is not a claimable partition. `5SAK_ZRY` and
+`5SB2_1K2` remain labeled engineering smoke, and the other historical cases may
+be used only for non-claimable development diagnostics. The disjoint frozen
+128-case complement is the sole `fresh_internal_blind_holdout` and must not be
+opened until Stage 0 admission succeeds.
 
 ## Comparable-input and output policy
 
@@ -140,9 +130,9 @@ slots in proposal-index order. Every successful candidate binds its proposal
 mode, proposal and final-coordinate fingerprints, Scorer v1 scalar, score-term
 receipt, H-bond count, canonical pose artifact, symmetry-aware RMSD, and
 PoseBusters geometric/chemical validity. It also retains the exact ordered
-PoseBusters check IDs that failed and the translation-only refinement receipt,
-including initial/final clash penalty, accepted steps, original validity, and
-total translation. Failed slots retain their proposal mode when placement
+PoseBusters check IDs that failed and the interaction-aware rigid-translation
+refinement receipt, including initial/final clash penalty, accepted steps,
+original validity, and total translation. Failed slots retain their proposal mode when placement
 reached that point.
 Failed slots retain a search error and remain in the denominator. The
 score-ranked first five candidate diagnostics must reproduce the published
@@ -154,7 +144,10 @@ and caps each available guided mode at eight slots. This is a deterministic
 development policy, not a learned selector. Report and development-analysis
 rows separate allocation, native-like recovery, validity, exact duplicates,
 oracle contribution, score distribution, refinement response, and failed
-PoseBusters checks by proposal mode.
+PoseBusters checks by proposal mode. Repeated donor/acceptor or charge cycles
+may use the explicit `multi_anchor_hotspot` mode, which fits two or three
+bounded polar, charge, or hydrophobic constraints while preserving the 24-slot
+uniform floor. This mode is provisional and has no automatic promotion path.
 
 Runtime covers each engine invocation through ranked-pose serialization and
 stops before the shared PoseBusters evaluator. Torch intra-op and inter-op

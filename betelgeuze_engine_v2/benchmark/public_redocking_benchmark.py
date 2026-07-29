@@ -26,8 +26,8 @@ PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohor
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.6.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.6.0"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.7.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.7.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
@@ -35,7 +35,7 @@ PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_execution/1.1.0"
 )
 PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.3.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.4.0"
 )
 _SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0"
@@ -50,7 +50,7 @@ PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
     "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
 )
 PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.2.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.3.0"
 )
 PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "donor_acceptor_hotspot",
@@ -58,6 +58,7 @@ PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "hydrophobic_patch",
     "aromatic_plane",
     "shape_complementarity",
+    "multi_anchor_hotspot",
     "uniform_fallback",
 )
 PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS = (

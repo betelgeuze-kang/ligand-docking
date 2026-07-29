@@ -19,6 +19,7 @@ from betelgeuze_engine_v2 import (  # noqa: E402
 )
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     GUIDED_MODES,
+    MULTI_ANCHOR_MODE,
     UNIFORM_FALLBACK_MODE,
     DockingAuthorityError,
     DockingBudget,
@@ -340,6 +341,75 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
             assert first[index].fingerprint_sha256 != (
                 baseline[index].fingerprint_sha256
             )
+
+
+def test_repeated_interaction_cycles_add_bounded_multi_anchor_candidates() -> None:
+    authority, receptor, ligand = _authority()
+    context = build_guided_placement_context(authority, receptor, ligand)
+    budget = replace(_budget(), candidate_count=64, top_k=5)
+
+    proposals, receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+    )
+    repeated, repeated_receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+    )
+
+    multi_indices = tuple(
+        index
+        for index, mode in enumerate(receipt.proposal_modes)
+        if mode == MULTI_ANCHOR_MODE
+    )
+    assert len(multi_indices) == 8
+    assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 24
+    assert receipt.receipt_sha256 == repeated_receipt.receipt_sha256
+    assert tuple(row.fingerprint_sha256 for row in proposals) == tuple(
+        row.fingerprint_sha256 for row in repeated
+    )
+    for index in multi_indices:
+        ligand_indices = receipt.ligand_anchor_atom_indices[index]
+        receptor_indices = receipt.receptor_anchor_atom_indices[index]
+        assert 2 <= len(ligand_indices) <= 3
+        assert len(ligand_indices) == len(receptor_indices)
+        assert receipt.requested_anchor_distance_angstroms[index] is not None
+        assert receipt.observed_anchor_distance_angstroms[index] is not None
+        guidance_row = receipt.to_dict()["proposal_guidance_rows"][index]
+        assert guidance_row["anchor_pairing"] == "positionally_aligned"
+        assert guidance_row["anchor_distance_aggregation"] == (
+            "per_pair_arithmetic_mean"
+        )
+        assert guidance_row["anchor_pairs"] == [
+            {
+                "ligand_atom_index": ligand_index,
+                "receptor_atom_index": receptor_index,
+            }
+            for ligand_index, receptor_index in zip(
+                ligand_indices, receptor_indices
+            )
+        ]
+        paired_observed = sum(
+            float(
+                torch.linalg.vector_norm(
+                    proposals[index].coordinates[ligand_index]
+                    - receptor.coordinates[0, receptor_index]
+                ).item()
+            )
+            for ligand_index, receptor_index in zip(
+                ligand_indices, receptor_indices
+            )
+        ) / len(ligand_indices)
+        assert receipt.observed_anchor_distance_angstroms[index] == pytest.approx(
+            paired_observed,
+            abs=1.0e-12,
+        )
 
 
 def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:

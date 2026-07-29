@@ -13,9 +13,9 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
 
 ## Completed locally
 
-- PR #211 diagnostic contract is present on the dedicated
-  `codex/m1-diagnostic-contract` worktree at `3935a1fa`, including the rc4
-  follow-up that excludes diagnostic-ledger time.
+- PR #211 diagnostic contract and its local rc5 follow-ups are present on the
+  dedicated `codex/m1-diagnostic-contract` worktree, including the change that
+  excludes diagnostic-ledger time.
 - The rc5 Python/Rust dual-backend implementation is present in the same
   worktree. The Rust backend is explicit and fail-closed, candidate-local
   native failures retain typed codes, and the holdout runner refuses any
@@ -29,6 +29,20 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   Na/Mg/Ca/Co/Zn/Fe vdW proxy lane converts six previously untyped preparation
   failures into scored cases without claiming metal coordination; ligand
   metals remain unsupported.
+- Interaction-aware rigid refinement v2 evaluates all candidates, applies
+  deterministic backtracking, and bounds total translation at 2.25 Å. On
+  three targeted non-holdout cases it raised valid candidates from 4 to 12 and
+  eligible candidates from 46 to 67 without losing an oracle event. On the two
+  historical oracle cases it improved the oracle from 1.96 to 1.58 Å and
+  from 1.55 to 0.91 Å while raising valid candidates from zero to three and
+  six, respectively.
+- A bounded two/three-constraint `multi_anchor_hotspot` proposal mode is
+  implemented for repeated guided cycles while retaining exactly 24 uniform
+  slots. Targeted checks preserved the observed oracle cases, but the mode
+  itself produced no 2 Å candidate, so it remains unpromoted.
+- Solo self-review pass records now have a fail-closed generator that requires
+  one clean commit/evidence identity and enforces at least 24 hours between
+  pass 1 and pass 2 without claiming reviewer independence.
 - Separate CPython 3.10, 3.11, and 3.12 native wheels were built in the pinned
   manylinux 2.28 x86_64 image. Two isolated CPython 3.10 builds were
   byte-identical. The 64-candidate synthetic qualification fixture measured
@@ -67,7 +81,7 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   passed the Engine V2 architecture guard, compiled all changed Python entry
   points, and passed `git diff --check`.
 - The final Python rc5 wheel was built twice with identical SHA-256
-  `cf31136bf401f57ee086c9da9acc94111a1f7f7d772efb499dfa198e77a12cd6`;
+  `2ec932023df7497bf06bbb7e7a207912242613e14c367d91db293d513c9a2c6c`;
   a local clean-install import with the previously qualified CPython 3.10
   native wheel succeeded.
 - Repository orchestration verifier: `./scripts/ai-verify.sh` passed from the
@@ -77,7 +91,7 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
 
 1. **PR integration:** GitHub PR #211 is still `open`; it is not merged into
    `main`. Merge remains a human-owned external repository action.
-2. **Scientific development gates:** a homogeneous, non-smoke 32-case
+2. **Scientific development gates:** the last homogeneous, non-smoke 32-case
    historical-development slice binds the seven proposed acceptance values and
    Vina/GNINA margins. Twenty-nine cases reached scoring and the three failures
    are typed unsupported large-ring systems. Preparation unsupported and case
@@ -86,7 +100,10 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    0.49375 floor and invalid Top-1 is 0.79310 against a 0.20 ceiling, so both
    fail. Conditional Top-1 selection failure is exactly 0.50 against a 0.50
    ceiling and Top-5 selection failure is 0.0 against a 0.20 ceiling. Fresh 128
-   execution remains blocked by proposal and validity gates.
+   execution remains blocked by proposal and validity gates. That report binds
+   the pre-v2 implementation and therefore remains diagnostic history rather
+   than current-source admission evidence; the final current source still
+   needs one homogeneous development rerun.
 3. **Proposal/scorer diagnosis:** 1,856 successful candidate rows across the
    29 scored cases retain canonical binary64 values for all eight terms. Only
    uniform fallback produced 2 Å candidates: 2/1,168, contributing both oracle
@@ -99,18 +116,18 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    penalty in 1,819/1,856 candidates, yet `minimum_distance_to_protein` failed
    1,837 times and `volume_overlap_with_protein` failed 1,727 times. Internal
    clash failed 515 times and internal energy failed 562 times. The
-   translation-only v1 objective therefore does not close PoseBusters validity;
-   rigid-rotation experiments remained reverted. An interaction- and
-   internal-geometry-aware refinement track is required before this gate can
-   close.
-5. **Full-suite self-review:** a solo operational draft dispositions the 49
+   translation-only v1 objective therefore does not close PoseBusters validity.
+   Interaction-aware v2 improves targeted validity but does not close the gate;
+   internal-geometry and rotational refinement remain unimplemented, and the
+   current source has not passed a homogeneous development validity gate.
+5. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier
-   boundaries. It cannot become final evidence until the current source is a
-   clean frozen commit and a new self-review pass binds it.
+   boundaries. It must be regenerated after the final current-source wheel and
+   clean commit exist, then bound by the self-review pass generator.
 6. **Exact operator environment:** Python/Torch/RDKit/PoseBusters, GNINA,
    host, native extension, native wheel, Rust identity, and the reproducible
-   base wheel are selected together in the operational draft. The environment
+   base wheel are selected together by the operational builder. The environment
    is not frozen for execution until it is rebound to the clean source commit.
 7. **Solo governance receipt:** the two self-review passes, separated by at
    least 24 hours, are not yet complete. This blocks internal execution but is

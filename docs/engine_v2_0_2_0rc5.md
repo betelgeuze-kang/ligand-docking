@@ -16,9 +16,10 @@ The first rc5 non-smoke development diagnostic identified explicit unsupported
 metal-element and large-ring lanes, severe receptor clash/pose-validity failure,
 and Top-1 rather than Top-5 selection regret. The runner now retains typed
 preparation failure codes, internal validity eligibility, and all nine scorer
-term values per candidate. A bounded rigid-translation receptor-clash refiner
-is present as an unvalidated development implementation; it is not promoted and
-does not change the requirement that fresh-holdout gates pass before execution.
+term values per candidate. A bounded interaction-aware rigid-translation v2
+refiner and bounded multi-anchor proposal lane are present as unvalidated
+development implementations; neither is promoted and neither changes the
+requirement that fresh-holdout gates pass before execution.
 
 ## Supported environment
 
@@ -50,7 +51,7 @@ Native target:       Linux x86_64 CPU
   workflow.
 - Two isolated CPython 3.10 native builds and two isolated base-wheel builds
   were byte-identical. The current-source base wheel SHA-256 is
-  `2d04fafe896405bbe530cbeee48c3b5f076a816c961457485c6025425d67bd87`;
+  `2ec932023df7497bf06bbb7e7a207912242613e14c367d91db293d513c9a2c6c`;
   the CPython 3.10 manylinux native wheel SHA-256 is
   `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`.
 - The focused 64-candidate fixture preserves exact count/rank/Top-5 structure
@@ -59,10 +60,12 @@ Native target:       Linux x86_64 CPU
 - Rust unit tests, `cargo check`, and `clippy -D warnings` pass. Native SBOM
   generation binds the extension, Cargo.lock, and Cargo dependency graph.
 
-These are implementation and packaging checks only. A 12-case non-smoke
-development slice is bound as non-claimable threshold evidence, but its
-proposal, validity, and Top-1 gates fail. Stage 0 admission therefore remains
-blocked; public review remains a later public/product promotion requirement.
+These are implementation and packaging checks only. The latest homogeneous
+32-case historical-development evidence still fails proposal and validity
+gates and predates the interaction-aware v2 source. Targeted current-source
+checks are encouraging but insufficient for admission. Stage 0 therefore
+remains blocked; public review remains a later public/product promotion
+requirement.
 
 ## Promotion boundary
 
