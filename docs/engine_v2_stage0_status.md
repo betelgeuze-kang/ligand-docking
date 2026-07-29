@@ -42,7 +42,11 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   itself produced no 2 Å candidate, so it remains unpromoted.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
-  pass 1 and pass 2 without claiming reviewer independence.
+  pass 1 and pass 2 without claiming reviewer independence. A separate
+  internal-only policy assembler verifies that hash chain, requires all seven
+  development gates to pass, rebinds source/environment/suite/CI artifacts,
+  and creates the policy and solo attestation with exclusive mode-0600 writes.
+  It emits nothing when pass 2 or any scientific gate is incomplete.
 - Separate CPython 3.10, 3.11, and 3.12 native wheels were built in the pinned
   manylinux 2.28 x86_64 image. Two isolated CPython 3.10 builds were
   byte-identical. The 64-candidate synthetic qualification fixture measured
