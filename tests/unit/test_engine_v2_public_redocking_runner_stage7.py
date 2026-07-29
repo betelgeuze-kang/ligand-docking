@@ -124,7 +124,9 @@ def _engine_outcome(
                 PublicRedockingEngineV2CandidateDiagnostic(
                     proposal_index=index,
                     status="success",
+                    proposal_mode="uniform_fallback",
                     proposal_fingerprint_sha256=f"{index + 1:064x}",
+                    coordinate_fingerprint_sha256=f"{index + 193:064x}",
                     score=float(index),
                     rmsd_angstrom=float(index + 1),
                     geometric_valid=True,
@@ -690,6 +692,8 @@ def test_posebusters_decodes_pinned_bytes_as_rdkit_molecules(
         {column: (1.0 if column == "rmsd" else True) for column in columns}
         for _ in range(5)
     ]
+    rows[0][runner.CHEMICAL_COLUMNS[0]] = False
+    rows[1][runner.GEOMETRIC_COLUMNS[0]] = False
 
     class FakeColumn:
         def __init__(self, values):
@@ -722,12 +726,18 @@ def test_posebusters_decodes_pinned_bytes_as_rdkit_molecules(
 
     monkeypatch.setattr(runner, "_load_posebusters", lambda: FakePoseBusters)
 
-    runner._posebusters_outcomes(
+    rmsds, geometric, chemical, failed_checks = runner._posebusters_outcomes(
         sdf_record * 5,
         native_payload=sdf_record,
         receptor_payload=receptor_payload,
     )
 
+    assert rmsds == (1.0,) * 5
+    assert chemical == (False, True, True, True, True)
+    assert geometric == (True, False, True, True, True)
+    assert failed_checks[0] == (runner.CHEMICAL_COLUMNS[0],)
+    assert failed_checks[1] == (runner.GEOMETRIC_COLUMNS[0],)
+    assert failed_checks[2:] == ((), (), ())
     assert observed["init"] == {"config": "redock", "top_n": 5}
     assert observed["bust"] == {"full_report": True}
     assert len(observed["predicted"]) == 5
@@ -1499,6 +1509,7 @@ def test_external_success_runtime_excludes_shared_evaluator(
             (1.0, 2.0, 3.0, 4.0, 5.0),
             (True,) * 5,
             (True,) * 5,
+            ((),) * 5,
         ),
     )
 
@@ -1606,6 +1617,7 @@ def test_external_launch_executes_open_descriptor_during_path_swap_restore(
             (1.0, 2.0, 3.0, 4.0, 5.0),
             (True,) * 5,
             (True,) * 5,
+            ((),) * 5,
         ),
     )
 
@@ -1676,6 +1688,7 @@ def test_external_launch_uses_pinned_input_and_output_descriptors(
                 (1.0, 2.0, 3.0, 4.0, 5.0),
                 (True,) * 5,
                 (True,) * 5,
+                ((),) * 5,
             ),
         )
         row, retained_command = runner._external_result(
@@ -1981,7 +1994,9 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     paths["seed"].write_bytes(b"fixture seed\n")
     paths["native"].write_bytes(b"fixture native\n")
 
-    atoms = tuple(SimpleNamespace(partial_charge_e=0.0) for _ in range(2))
+    atoms = tuple(
+        SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2)
+    )
     system = SimpleNamespace(
         atom_count=2,
         atoms=atoms,
@@ -2029,7 +2044,7 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     )
     monkeypatch.setattr(
         runner,
-        "ReceptorClashReliefRefiner",
+        "InteractionAwareRigidRefinerV2",
         lambda *args, **kwargs: object(),
     )
 
@@ -2069,7 +2084,9 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
     paths["seed"].write_bytes(b"fixture seed\n")
     paths["native"].write_bytes(b"fixture native\n")
 
-    atoms = tuple(SimpleNamespace(partial_charge_e=0.0) for _ in range(2))
+    atoms = tuple(
+        SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2)
+    )
     system = SimpleNamespace(
         atom_count=2,
         atoms=atoms,
@@ -2115,42 +2132,66 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
         "build_guided_placement_context",
         lambda *args, **kwargs: object(),
     )
-    monkeypatch.setattr(
-        runner,
-        "ReceptorClashReliefRefiner",
-        lambda *args, **kwargs: object(),
-    )
-
     search_rows = tuple(
         SimpleNamespace(
             proposal_index=index,
+            proposal_fingerprint_sha256=f"{index + 257:064x}",
             status="success",
             proposal=SimpleNamespace(
                 coordinates=torch.full((2, 3), float(index)),
                 fingerprint_sha256=f"{index + 1:064x}",
-                ),
-                score=float(index),
-                error_code="",
-                selection_eligible=True,
+                coordinate_fingerprint_sha256=f"{index + 129:064x}",
+            ),
+            score=float(index),
+            error_code="",
+            selection_eligible=True,
         )
         for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    refiner = SimpleNamespace(
+        receipts={
+            f"{index + 257:064x}": {
+                "receipt_sha256": f"{index + 321:064x}",
+                "initial_penalty_binary64_hex": float(index + 1).hex(),
+                "final_penalty_binary64_hex": float(index).hex(),
+                "accepted_steps": 1,
+                "accepted_rotation_steps": 1,
+                "original_pose_valid": False,
+                "total_translation_binary64_hex": [
+                    0.1.hex(),
+                    0.0.hex(),
+                    0.0.hex(),
+                ],
+                "total_rotation_vector_binary64_hex": [
+                    0.1.hex(),
+                    0.0.hex(),
+                    0.0.hex(),
+                ],
+            }
+            for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+        }
+    )
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareRigidRefinerV2",
+        lambda *args, **kwargs: refiner,
     )
     term_rows = tuple(
         SimpleNamespace(
             proposal_index=index,
-                terms=SimpleNamespace(
-                    receipt_sha256=f"{index + 65:064x}",
-                    hbond_count=0,
-                    typed_vdw=0.0,
-                    electrostatics=0.0,
-                    directional_hbond=0.0,
-                    hydrophobic_contact=0.0,
-                    desolvation_proxy=0.0,
-                    torsion_energy=0.0,
-                    ligand_strain=0.0,
-                    weak_pocket_prior=0.0,
-                    total_score=0.0,
-                ),
+            terms=SimpleNamespace(
+                receipt_sha256=f"{index + 65:064x}",
+                hbond_count=0,
+                typed_vdw=0.0,
+                electrostatics=0.0,
+                directional_hbond=0.0,
+                hydrophobic_contact=0.0,
+                desolvation_proxy=0.0,
+                torsion_energy=0.0,
+                ligand_strain=0.0,
+                weak_pocket_prior=0.0,
+                total_score=0.0,
+            ),
         )
         for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
     )
@@ -2158,7 +2199,11 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
     result = SimpleNamespace(
         rows=term_rows,
         guided_search_result=SimpleNamespace(
-            authenticated_search_result=SimpleNamespace(search_result=search)
+            guided_receipt=SimpleNamespace(
+                proposal_modes=("uniform_fallback",)
+                * runner.ENGINE_V2_CANDIDATE_COUNT
+            ),
+            authenticated_search_result=SimpleNamespace(search_result=search),
         ),
     )
     monkeypatch.setattr(
@@ -2182,6 +2227,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
             tuple(float(index) for index in range(len(records))),
             (True,) * len(records),
             (True,) * len(records),
+            ((),) * len(records),
         ),
     )
 
@@ -2261,6 +2307,7 @@ def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
             (1.0, 2.0, 3.0, 4.0, 5.0),
             (True,) * 5,
             (True,) * 5,
+            ((),) * 5,
         )
 
     monkeypatch.setattr(runner, "_write_engine_v2_poses", write_then_swap)

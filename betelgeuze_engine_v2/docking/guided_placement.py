@@ -46,7 +46,7 @@ from .proposals import DockingBudget, DockingProposal
 GUIDED_PLACEMENT_CONTEXT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_context/1.0.0"
 )
-GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.0.0"
+GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.1.0"
 GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_receipt/1.0.0"
 )
@@ -54,7 +54,7 @@ GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_search_result/1.0.0"
 )
 GUIDED_PLACEMENT_POLICY_ID = (
-    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.0.0"
+    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.1.0"
 )
 GUIDED_FEATURE_POLICY_ID = "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
 GUIDED_MODES = (
@@ -684,6 +684,8 @@ class GuidedPlacementContext:
 @dataclass(frozen=True, slots=True)
 class GuidedPlacementPolicy:
     guided_fraction: float = 0.75
+    minimum_uniform_fraction: float = 0.375
+    maximum_guided_candidates_per_mode: int = 8
     donor_acceptor_distance_angstrom: float = 2.9
     charge_anchor_distance_angstrom: float = 3.5
     hydrophobic_distance_angstrom: float = 3.8
@@ -698,6 +700,24 @@ class GuidedPlacementPolicy:
         if not math.isfinite(fraction) or not 0.0 < fraction <= 1.0:
             raise DockingAuthorityError("guided_fraction must be in (0,1]")
         object.__setattr__(self, "guided_fraction", fraction)
+        minimum_uniform_fraction = float(self.minimum_uniform_fraction)
+        if (
+            not math.isfinite(minimum_uniform_fraction)
+            or not 0.0 < minimum_uniform_fraction < 1.0
+        ):
+            raise DockingAuthorityError(
+                "minimum_uniform_fraction must be in (0,1)"
+            )
+        if (
+            type(self.maximum_guided_candidates_per_mode) is not int
+            or not 1 <= self.maximum_guided_candidates_per_mode <= 64
+        ):
+            raise DockingAuthorityError(
+                "maximum_guided_candidates_per_mode must be in [1,64]"
+            )
+        object.__setattr__(
+            self, "minimum_uniform_fraction", minimum_uniform_fraction
+        )
         for name in (
             "donor_acceptor_distance_angstrom",
             "charge_anchor_distance_angstrom",
@@ -716,6 +736,13 @@ class GuidedPlacementPolicy:
             "policy_id": self.policy_id,
             "guided_modes": list(GUIDED_MODES),
             "guided_fraction_binary64_hex": self.guided_fraction.hex(),
+            "allocation_strategy": "available_mode_capped_with_uniform_floor",
+            "minimum_uniform_fraction_binary64_hex": (
+                self.minimum_uniform_fraction.hex()
+            ),
+            "maximum_guided_candidates_per_mode": (
+                self.maximum_guided_candidates_per_mode
+            ),
             "donor_acceptor_distance_angstrom_binary64_hex": self.donor_acceptor_distance_angstrom.hex(),
             "charge_anchor_distance_angstrom_binary64_hex": self.charge_anchor_distance_angstrom.hex(),
             "hydrophobic_distance_angstrom_binary64_hex": self.hydrophobic_distance_angstrom.hex(),
@@ -1390,8 +1417,24 @@ def generate_guided_docking_proposals(
     )
     modes = _available_modes(context)
     if modes:
-        guided_count = int(
-            math.floor(budget.candidate_count * selected_policy.guided_fraction)
+        fraction_cap = int(
+            math.floor(
+                budget.candidate_count * selected_policy.guided_fraction
+            )
+        )
+        mode_cap = (
+            len(modes) * selected_policy.maximum_guided_candidates_per_mode
+        )
+        uniform_floor = int(
+            math.ceil(
+                budget.candidate_count
+                * selected_policy.minimum_uniform_fraction
+            )
+        )
+        guided_count = min(
+            fraction_cap,
+            mode_cap,
+            budget.candidate_count - uniform_floor,
         )
         guided_count = max(1, guided_count)
         if budget.candidate_count >= 2:

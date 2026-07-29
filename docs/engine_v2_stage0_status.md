@@ -20,6 +20,15 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   worktree. The Rust backend is explicit and fail-closed, candidate-local
   native failures retain typed codes, and the holdout runner refuses any
   backend other than `rust_cpu_required`.
+- Candidate diagnostics now bind proposal mode, final-coordinate identity,
+  exact failed PoseBusters checks, and translation-refinement receipts. The
+  development analyzer reports allocation, recovery, validity, duplication,
+  score, refinement, and failure decomposition by proposal mode.
+- The frozen development policy retains a 37.5% uniform floor and caps each
+  available guided mode at eight candidates. A narrowly labeled receptor-only
+  Na/Mg/Ca/Co/Zn/Fe vdW proxy lane converts six previously untyped preparation
+  failures into scored cases without claiming metal coordination; ligand
+  metals remain unsupported.
 - Separate CPython 3.10, 3.11, and 3.12 native wheels were built in the pinned
   manylinux 2.28 x86_64 image. Two isolated CPython 3.10 builds were
   byte-identical. The 64-candidate synthetic qualification fixture measured
@@ -54,6 +63,13 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   specialized. Specialized workflows are not hidden or treated as approved.
 - Focused verification: `144 passed`, with seven inotify host-capability tests
   excluded after separate reproduction and classification.
+- The current diagnostic/ion/allocation slice added nine focused passing tests,
+  passed the Engine V2 architecture guard, compiled all changed Python entry
+  points, and passed `git diff --check`.
+- The final Python rc5 wheel was built twice with identical SHA-256
+  `cf31136bf401f57ee086c9da9acc94111a1f7f7d772efb499dfa198e77a12cd6`;
+  a local clean-install import with the previously qualified CPython 3.10
+  native wheel succeeded.
 - Repository orchestration verifier: `./scripts/ai-verify.sh` passed from the
   main worktree that carries it.
 
@@ -61,46 +77,49 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
 
 1. **PR integration:** GitHub PR #211 is still `open`; it is not merged into
    `main`. Merge remains a human-owned external repository action.
-2. **Scientific development gates:** a result-independent 12-case, non-smoke
-   historical-development slice now binds the seven proposed acceptance values
-   and Vina/GNINA margins. Ten cases reached scoring and two retained typed
-   preparation failures. Preparation unsupported and case failure are both
-   0.167 and conditional 64-slot coverage is 1.0, so those axes pass their
-   proposed 0.20/0.90 gates. Proposal oracle is 0.30 against a 0.317 floor,
-   invalid Top-1 is 0.80 against a 0.20 ceiling, and conditional Top-1 selection
-   failure is 0.667 against a 0.50 ceiling. Conditional Top-5 selection failure
-   is 0.0 and passes its 0.20 ceiling. Fresh 128 execution remains blocked by
-   proposal, validity, and fine-ranking gates.
-3. **Scorer term diagnosis:** 640 candidate rows across the ten scored cases
-   retain canonical binary64 values for all eight weighted terms. `typed_vdw`
-   dominates absolute scale and its removal changes Top-1 in 10/10 cases, but
-   also removes every observed Top-5 recovery; it must not be weakened from
-   this ablation alone. The development analysis is non-claimable and contains
-   no fresh-holdout result. A non-negative constrained calibration candidate
-   reduced pairwise violation only from 0.325 to 0.317 and left leave-one-oracle-
-   case-out Top-1 at 1/3, so automatic scorer promotion remains false.
-4. **Refinement diagnosis:** among the 50 retained development Top-5 poses,
-   `minimum_distance_to_protein` failed 43 times and
-   `volume_overlap_with_protein` failed 29 times; internal clash and internal
-   energy each failed 10 times. Increasing translation bounds and adding
-   bounded rigid rotation did not produce a valid pose in the diagnostic case
-   and worsened chemical validity, so both experiments were reverted. The
-   translation-only v1 refiner remains a baseline; a torsion/internal-geometry-
-   aware v2 optimizer is required before this gate can close.
-5. **Full-suite self-review:** the 49 conservative `actual_regression` rows
-   need disposition, and official Engine-required/legacy/product/local-evidence
-   tier definitions must be dispositioned. The unreproduced PR-body 216th failure
-   also needs an explicit solo-review disposition as non-authoritative or its original JUnit
-   must be recovered and classified.
-6. **Exact operator environment:** final Python, Torch, RDKit, PoseBusters,
-   GNINA binary SHA-256, CPU host, installed native extension SHA-256, native
-   wheel SHA-256, and Rust build identity are not yet selected together.
+2. **Scientific development gates:** a homogeneous, non-smoke 32-case
+   historical-development slice binds the seven proposed acceptance values and
+   Vina/GNINA margins. Twenty-nine cases reached scoring and the three failures
+   are typed unsupported large-ring systems. Preparation unsupported and case
+   failure are both 0.09375 against a 0.14375 ceiling, and conditional 64-slot
+   coverage is 1.0 against a 0.90 floor. Proposal oracle is 0.06897 against a
+   0.49375 floor and invalid Top-1 is 0.79310 against a 0.20 ceiling, so both
+   fail. Conditional Top-1 selection failure is exactly 0.50 against a 0.50
+   ceiling and Top-5 selection failure is 0.0 against a 0.20 ceiling. Fresh 128
+   execution remains blocked by proposal and validity gates.
+3. **Proposal/scorer diagnosis:** 1,856 successful candidate rows across the
+   29 scored cases retain canonical binary64 values for all eight terms. Only
+   uniform fallback produced 2 Å candidates: 2/1,168, contributing both oracle
+   successes. No guided mode produced a 2 Å candidate. The adaptive allocation
+   improved the paired common-case oracle event count from one to two and mean
+   oracle RMSD by 0.20 Å, but it remains far below promotion level. Automatic
+   proposal or scorer promotion remains false, and the report contains no
+   fresh-holdout result.
+4. **Refinement/validity diagnosis:** refinement reduced its declared clash
+   penalty in 1,819/1,856 candidates, yet `minimum_distance_to_protein` failed
+   1,837 times and `volume_overlap_with_protein` failed 1,727 times. Internal
+   clash failed 515 times and internal energy failed 562 times. The
+   translation-only v1 objective therefore does not close PoseBusters validity;
+   rigid-rotation experiments remained reverted. An interaction- and
+   internal-geometry-aware refinement track is required before this gate can
+   close.
+5. **Full-suite self-review:** a solo operational draft dispositions the 49
+   conservative `actual_regression` rows as pre-existing unresolved behavior
+   debt and freezes the Engine-required/legacy/product/local-evidence tier
+   boundaries. It cannot become final evidence until the current source is a
+   clean frozen commit and a new self-review pass binds it.
+6. **Exact operator environment:** Python/Torch/RDKit/PoseBusters, GNINA,
+   host, native extension, native wheel, Rust identity, and the reproducible
+   base wheel are selected together in the operational draft. The environment
+   is not frozen for execution until it is rebound to the clean source commit.
 7. **Solo governance receipt:** the two self-review passes, separated by at
    least 24 hours, are not yet complete. This blocks internal execution but is
    satisfiable by the sole developer without claiming independence.
-8. **Legal/license self-review:** exact benchmark-file attribution/retention and
-   GNINA binary/model conditions still need a recorded self-review. Genuine
-   external review remains a later prerequisite for public claims.
+8. **Legal/license self-review:** the prior internal review keeps benchmark
+   redistribution off and treats GNINA as an internal external-binary
+   invocation with redistribution forbidden. It must be rebound in the new
+   solo pass; genuine external review remains a later prerequisite for public
+   claims.
 9. **Issue/CI administration:** GitHub Issue #199 remains `open`. Its recorded
    Cut B reconstruction reduced 13 historical per-round/per-surface workflows
    to three authoritative workflows, and Cuts C/D were reconstructed as

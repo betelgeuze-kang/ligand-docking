@@ -82,6 +82,12 @@ _EPSILON_BY_ELEMENT = MappingProxyType(
         "Cl": 0.15,
         "Br": 0.18,
         "I": 0.22,
+        "Na": 0.03,
+        "Mg": 0.06,
+        "Ca": 0.08,
+        "Co": 0.15,
+        "Zn": 0.12,
+        "Fe": 0.15,
     }
 )
 
@@ -680,7 +686,7 @@ class ScorerV1Context:
             raise ScorerV1Error("scorer v1 ligand context dimensions are invalid")
         if any(
             re.fullmatch(
-                r"(?:H|C|N|O|F|P|S|Cl|Br|I):(?:aromatic|aliphatic):(?:positive|negative|neutral)",
+                r"(?:H|C|N|O|F|P|S|Cl|Br|I|Na|Mg|Ca|Co|Zn|Fe):(?:aromatic|aliphatic):(?:positive|negative|neutral)",
                 value,
             )
             is None

@@ -69,8 +69,8 @@ from betelgeuze_engine_v2.docking import (
     DockingSearchError,
     DockingScope,
     ElementAwareValidityError,
+    InteractionAwareRigidRefinerV2,
     PocketDefinition,
-    ReceptorClashReliefRefiner,
     ScorerBackend,
     ScorerBackendOptions,
     ScorerV1Error,
@@ -124,8 +124,8 @@ ENGINE_V2_CPU_POLICY = {
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
     "torch_version": str(torch.__version__),
-    "interaction_refiner": "receptor_clash_relief_v1",
-    "interaction_refinement_steps": 10,
+    "interaction_refiner": "interaction_aware_rigid_v2",
+    "interaction_refinement_steps": 20,
 }
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
@@ -153,32 +153,8 @@ _INOTIFY_FILE_MUTATION_MASK = (
     | 0x00000004  # IN_ATTRIB
     | 0x00000008  # IN_CLOSE_WRITE
 )
-CHEMICAL_COLUMNS = (
-    "sanitization",
-    "inchi_convertible",
-    "all_atoms_connected",
-    "molecular_formula",
-    "molecular_bonds",
-    "double_bond_stereochemistry",
-    "tetrahedral_chirality",
-    "bond_lengths",
-    "bond_angles",
-    "internal_steric_clash",
-    "aromatic_ring_flatness",
-    "double_bond_flatness",
-    "internal_energy",
-)
-GEOMETRIC_COLUMNS = (
-    "protein-ligand_maximum_distance",
-    "minimum_distance_to_protein",
-    "minimum_distance_to_organic_cofactors",
-    "minimum_distance_to_inorganic_cofactors",
-    "minimum_distance_to_waters",
-    "volume_overlap_with_protein",
-    "volume_overlap_with_organic_cofactors",
-    "volume_overlap_with_inorganic_cofactors",
-    "volume_overlap_with_waters",
-)
+CHEMICAL_COLUMNS = benchmark_contract.PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS
+GEOMETRIC_COLUMNS = benchmark_contract.PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS
 
 
 class PublicRedockingRunnerError(RuntimeError):
@@ -1707,7 +1683,12 @@ def _posebusters_outcomes(
     native_payload: bytes,
     receptor_payload: bytes,
     expected_pose_count: int = 5,
-) -> tuple[tuple[float, ...], tuple[bool, ...], tuple[bool, ...]]:
+) -> tuple[
+    tuple[float, ...],
+    tuple[bool, ...],
+    tuple[bool, ...],
+    tuple[tuple[str, ...], ...],
+]:
     PoseBusters = _load_posebusters()
     predicted, native, receptor = _posebusters_molecules(
         output_payload=output_payload,
@@ -1752,7 +1733,15 @@ def _posebusters_outcomes(
         all(tuple(required_boolean(index, column) for column in GEOMETRIC_COLUMNS))
         for index in range(expected_pose_count)
     )
-    return rmsds, geometric, chemical
+    failed_checks = tuple(
+        tuple(
+            column
+            for column in (*CHEMICAL_COLUMNS, *GEOMETRIC_COLUMNS)
+            if not required_boolean(index, column)
+        )
+        for index in range(expected_pose_count)
+    )
+    return rmsds, geometric, chemical, failed_checks
 
 
 def _verified_case_execution(
@@ -2251,12 +2240,12 @@ def _engine_v2_pose_coordinates(
             backend_options=ScorerBackendOptions(thread_count=1),
         )
         context = build_guided_placement_context(authority, receptor, ligand)
-        refiner = ReceptorClashReliefRefiner(
+        refiner = InteractionAwareRigidRefinerV2(
             authority,
             receptor,
             ligand,
             implementation_source_sha256=_sha256_bytes(
-                b"engine-v2-receptor-clash-relief-refiner-v1"
+                b"engine-v2-interaction-aware-rigid-refiner-v2"
             ),
         )
     except UnsupportedVdwElementError as exc:
@@ -2282,7 +2271,7 @@ def _engine_v2_pose_coordinates(
         candidate_count=ENGINE_V2_CANDIDATE_COUNT,
         top_k=5,
         max_torsions=32,
-        max_refinement_steps=10,
+        max_refinement_steps=20,
         translation_radius_angstrom=min(4.0, radius),
         seed=seed,
     )
@@ -2299,6 +2288,10 @@ def _engine_v2_pose_coordinates(
         "receptor_acceptor_count": len(scorer.context.receptor_acceptors),
         "ligand_donor_count": len(scorer.context.ligand_donors),
         "ligand_acceptor_count": len(scorer.context.ligand_acceptors),
+        "receptor_ion_proxy_count": sum(
+            atom.element.upper() in {"NA", "MG", "CA", "CO", "ZN", "FE"}
+            for atom in receptor.atoms
+        ),
     }
 
     def search_failure_diagnostics(
@@ -2368,7 +2361,7 @@ def _engine_v2_pose_coordinates(
     )
     diagnostic_evaluation_started = time.perf_counter()
     evaluated_by_index: dict[
-        int, tuple[float, bool, bool, str]
+        int, tuple[float, bool, bool, tuple[str, ...], str]
     ] = {}
     if successful_rows:
         records = _serialize_pose_records(
@@ -2376,7 +2369,7 @@ def _engine_v2_pose_coordinates(
             tuple(row.proposal.coordinates for row in successful_rows),
             case_id=case_id,
         )
-        rmsds, geometric, chemical = _posebusters_outcomes(
+        rmsds, geometric, chemical, failed_checks = _posebusters_outcomes(
             b"".join(records),
             native_payload=native_bytes,
             receptor_payload=receptor_bytes,
@@ -2387,13 +2380,15 @@ def _engine_v2_pose_coordinates(
                 rmsd,
                 geometric_valid,
                 chemical_valid,
+                candidate_failed_checks,
                 _sha256_bytes(record),
             )
-            for row, rmsd, geometric_valid, chemical_valid, record in zip(
+            for row, rmsd, geometric_valid, chemical_valid, candidate_failed_checks, record in zip(
                 successful_rows,
                 rmsds,
                 geometric,
                 chemical,
+                failed_checks,
                 records,
                 strict=True,
             )
@@ -2406,15 +2401,29 @@ def _engine_v2_pose_coordinates(
                 raise PublicRedockingRunnerError(
                     "successful Engine V2 candidate lacks retained score terms"
                 )
-            rmsd, geometric_valid, chemical_valid, artifact_sha256 = (
+            rmsd, geometric_valid, chemical_valid, failed_check_ids, artifact_sha256 = (
                 evaluated_by_index[row.proposal_index]
             )
+            proposal_mode = result.guided_search_result.guided_receipt.proposal_modes[
+                row.proposal_index
+            ]
+            refinement_receipt = refiner.receipts.get(
+                row.proposal_fingerprint_sha256
+            )
+            if refinement_receipt is None:
+                raise PublicRedockingRunnerError(
+                    "successful Engine V2 candidate lacks refinement receipt"
+                )
             candidate_rows.append(
                 PublicRedockingEngineV2CandidateDiagnostic(
                     proposal_index=row.proposal_index,
                     status="success",
+                    proposal_mode=proposal_mode,
                     proposal_fingerprint_sha256=(
                         row.proposal.fingerprint_sha256
+                    ),
+                    coordinate_fingerprint_sha256=(
+                        row.proposal.coordinate_fingerprint_sha256
                     ),
                     score=float(row.score),
                     rmsd_angstrom=rmsd,
@@ -2424,6 +2433,34 @@ def _engine_v2_pose_coordinates(
                     score_terms_receipt_sha256=terms.receipt_sha256,
                     hbond_count=terms.hbond_count,
                     selection_eligible=row.selection_eligible,
+                    posebusters_failed_check_ids=failed_check_ids,
+                    refinement_receipt_sha256=str(
+                        refinement_receipt["receipt_sha256"]
+                    ),
+                    refinement_initial_penalty_binary64_hex=str(
+                        refinement_receipt["initial_penalty_binary64_hex"]
+                    ),
+                    refinement_final_penalty_binary64_hex=str(
+                        refinement_receipt["final_penalty_binary64_hex"]
+                    ),
+                    refinement_accepted_steps=int(
+                        refinement_receipt["accepted_steps"]
+                    ),
+                    refinement_accepted_rotation_steps=0,
+                    refinement_original_pose_valid=bool(
+                        refinement_receipt["original_pose_valid"]
+                    ),
+                    refinement_total_translation_binary64_hex=tuple(
+                        str(value)
+                        for value in refinement_receipt[
+                            "total_translation_binary64_hex"
+                        ]
+                    ),
+                    refinement_total_rotation_vector_binary64_hex=(
+                        0.0.hex(),
+                        0.0.hex(),
+                        0.0.hex(),
+                    ),
                     score_term_binary64_hex={
                         name: float(getattr(terms, name)).hex()
                         for name in (
@@ -2445,6 +2482,11 @@ def _engine_v2_pose_coordinates(
                 PublicRedockingEngineV2CandidateDiagnostic(
                     proposal_index=row.proposal_index,
                     status="failure",
+                    proposal_mode=(
+                        result.guided_search_result.guided_receipt.proposal_modes[
+                            row.proposal_index
+                        ]
+                    ),
                     error_code=str(row.error_code or "candidate_failed"),
                 )
             )
@@ -2587,7 +2629,7 @@ def _engine_v2_result(
         0.0,
         time.perf_counter() - started - diagnostic_evaluation_seconds,
     )
-    rmsds, geometric, chemical = _posebusters_outcomes(
+    rmsds, geometric, chemical, _ = _posebusters_outcomes(
         pose_payload,
         native_payload=paths["native"].read_bytes(),
         receptor_payload=paths["receptor"].read_bytes(),
@@ -2783,7 +2825,7 @@ def _external_result(
                 command,
             )
         artifacts = tuple(_sha256_bytes(record) for record in records)
-        rmsds, geometric, chemical = _posebusters_outcomes(
+        rmsds, geometric, chemical, _ = _posebusters_outcomes(
             output_payload,
             native_payload=paths["native"].read_bytes(),
             receptor_payload=paths["receptor"].read_bytes(),

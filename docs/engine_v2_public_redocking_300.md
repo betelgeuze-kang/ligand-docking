@@ -137,12 +137,24 @@ these explicit settings, not equal-region or equal-compute performance claims.
 
 For Engine V2, the diagnostic contract retains all 64 predeclared candidate
 slots in proposal-index order. Every successful candidate binds its proposal
-fingerprint, Scorer v1 scalar, score-term receipt, H-bond count, canonical pose
-artifact, symmetry-aware RMSD, and PoseBusters geometric/chemical validity.
+mode, proposal and final-coordinate fingerprints, Scorer v1 scalar, score-term
+receipt, H-bond count, canonical pose artifact, symmetry-aware RMSD, and
+PoseBusters geometric/chemical validity. It also retains the exact ordered
+PoseBusters check IDs that failed and the translation-only refinement receipt,
+including initial/final clash penalty, accepted steps, original validity, and
+total translation. Failed slots retain their proposal mode when placement
+reached that point.
 Failed slots retain a search error and remain in the denominator. The
 score-ranked first five candidate diagnostics must reproduce the published
 five-pose result row exactly; a separately substituted diagnostic or result row
 is rejected even if it is resealed as a fresh execution receipt.
+
+The guided allocator keeps at least 37.5% of the 64 slots for uniform fallback
+and caps each available guided mode at eight slots. This is a deterministic
+development policy, not a learned selector. Report and development-analysis
+rows separate allocation, native-like recovery, validity, exact duplicates,
+oracle contribution, score distribution, refinement response, and failed
+PoseBusters checks by proposal mode.
 
 Runtime covers each engine invocation through ranked-pose serialization and
 stops before the shared PoseBusters evaluator. Torch intra-op and inter-op
@@ -260,6 +272,12 @@ one complementary ligand-donor/receptor-acceptor or
 ligand-acceptor/receptor-donor pair in the fixed Scorer v1 context. It is a
 feature-availability diagnostic, not evidence that a native interaction is
 correctly reproduced.
+
+Receptor Na, Mg, Ca, Co, Zn, and Fe atoms may enter a narrowly declared
+non-coordination vdW proxy lane so their presence does not become an untyped
+preparation failure. The diagnostics count proxy ions and state explicitly
+that coordination is not modeled. Ligand metals remain unsupported and fail
+closed into a separate applicability lane.
 
 Missing Engine V2 proposals and incomplete five-pose serialization raise the
 typed `IncompleteRankedPoseSet` case failure. The evidence code is selected

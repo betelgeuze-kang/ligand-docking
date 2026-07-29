@@ -327,6 +327,40 @@ def test_batch_capacity_and_missing_required_native_receipt_fail_closed() -> Non
         )
 
 
+def test_receptor_ion_proxy_is_accepted_by_scorer_context() -> None:
+    ligand = _ligand()
+    receptor = _receptor()
+    atoms = list(receptor.atoms)
+    atoms[0] = replace(
+        atoms[0],
+        name="ZN",
+        element="Zn",
+        atomic_number=30,
+        partial_charge_e=-0.4,
+    )
+    receptor = replace(receptor, atoms=tuple(atoms))
+    pocket = PocketDefinition(
+        scope=DockingScope.KNOWN_POCKET,
+        method_id="scorer-v1-ion-proxy-sphere",
+        method_version="1.0.0",
+        coordinate_frame_id="prepared-receptor-frame-v1",
+        center=torch.zeros(3, dtype=torch.float64),
+        radius_angstrom=10.0,
+        source_artifact_sha256="c" * 64,
+        implementation_source_sha256="d" * 64,
+    )
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        pocket,
+        receptor_margin_angstrom=4.0,
+    )
+
+    scorer = _scorer(authority, receptor, ligand)
+
+    assert any(value.startswith("Zn:") for value in scorer.context.receptor_atom_types)
+
+
 def test_rust_cpu_batch_matches_python_reference_when_installed() -> None:
     pytest.importorskip("betelgeuze_engine_v2_native")
     authority, receptor, ligand = _authority()

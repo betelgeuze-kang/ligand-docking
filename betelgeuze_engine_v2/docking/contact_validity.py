@@ -44,7 +44,7 @@ from .validity import (
 
 
 VDW_CONTACT_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_vdw_contact_policy/1.0.0"
+    "betelgeuze.engine_v2_vdw_contact_policy/1.1.0"
 )
 ELEMENT_AWARE_VALIDITY_CONTEXT_SCHEMA_ID = (
     "betelgeuze.engine_v2_element_aware_pose_validity_context/1.0.0"
@@ -53,9 +53,9 @@ ELEMENT_AWARE_AUTHORITY_SCHEMA_ID = (
     "betelgeuze.engine_v2_element_aware_docking_authority/1.0.0"
 )
 VDW_CONTACT_POLICY_ID = (
-    "betelgeuze.engine_v2_severe_overlap_vdw_baseline/1.0.0"
+    "betelgeuze.engine_v2_severe_overlap_vdw_baseline/1.1.0"
 )
-VDW_RADII_TABLE_ID = "bondi_alvarez_common_elements_subset/1.0.0"
+VDW_RADII_TABLE_ID = "bondi_alvarez_common_bioelements_subset/1.1.0"
 SPARSE_CONTACT_ALGORITHM_ID = (
     "betelgeuze.engine_v2_pocket_local_vdw_cell_map/1.0.0"
 )
@@ -77,7 +77,16 @@ _DEFAULT_VDW_RADII = {
     "CL": 1.75,
     "BR": 1.85,
     "I": 1.98,
+    "NA": 2.27,
+    "MG": 1.73,
+    "CA": 2.31,
+    "CO": 2.00,
+    "ZN": 2.01,
+    "FE": 2.00,
 }
+_RECEPTOR_ION_PROXY_ELEMENTS = frozenset(
+    {"NA", "MG", "CA", "CO", "ZN", "FE"}
+)
 
 
 class ElementAwareValidityError(PoseValidityError):
@@ -167,7 +176,7 @@ class VdwContactPolicy:
     radii_table_id: str = VDW_RADII_TABLE_ID
     sparse_algorithm_id: str = SPARSE_CONTACT_ALGORITHM_ID
     severe_overlap_scale: float = 0.55
-    cell_size_angstrom: float = 2.5
+    cell_size_angstrom: float = 3.5
     max_ligand_pair_checks: int = 250_000
     max_receptor_candidate_pairs: int = 1_000_000
     radii_angstrom: Mapping[str, float] = field(
@@ -248,6 +257,9 @@ class VdwContactPolicy:
                 for element, radius in self.radii_angstrom.items()
             },
             "unsupported_element_policy": "reject",
+            "receptor_ion_proxy_elements": sorted(_RECEPTOR_ION_PROXY_ELEMENTS),
+            "receptor_ion_proxy_role": "noncoordination_vdw_only",
+            "ligand_metal_support": False,
             "chemically_validated": False,
             "scientifically_validated": False,
             "claim_safe": False,
@@ -566,6 +578,17 @@ def build_element_aware_authenticated_known_pocket_docking_problem(
     policy = contact_policy or VdwContactPolicy()
     if not isinstance(policy, VdwContactPolicy):
         raise TypeError("contact_policy must be VdwContactPolicy")
+    ligand_metal_elements = sorted(
+        {
+            _normalized_element(atom.element)
+            for atom in ligand_system.atoms
+            if _normalized_element(atom.element) in _RECEPTOR_ION_PROXY_ELEMENTS
+        }
+    )
+    if ligand_metal_elements:
+        raise UnsupportedVdwElementError(
+            "ligand metal coordination requires a separate applicability lane"
+        )
     base = authority.validity_context
     context = ElementAwarePoseValidityContext(
         problem_fingerprint_sha256=base.problem_fingerprint_sha256,
@@ -612,6 +635,9 @@ def element_aware_authority_document(
         "supported_elements": sorted(
             authority.validity_context.contact_policy.radii_angstrom
         ),
+        "receptor_ion_proxy_elements": sorted(_RECEPTOR_ION_PROXY_ELEMENTS),
+        "receptor_ion_coordination_modeled": False,
+        "ligand_metal_support": False,
         "receptor_contact_algorithm": SPARSE_CONTACT_ALGORITHM_ID,
         "element_inference_performed": False,
         "chemically_validated": False,

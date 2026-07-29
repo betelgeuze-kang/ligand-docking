@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 
@@ -18,6 +20,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScope,
     ElementAwarePoseValidityContext,
     ElementAwareValidityError,
+    InteractionAwareRigidRefinerV2,
     UnsupportedVdwElementError,
     PocketDefinition,
     ReceptorClashReliefRefiner,
@@ -40,7 +43,7 @@ def _provenance(name: str, digest: str) -> StructureProvenance:
 
 def _ligand(*, element: str = "C") -> AllAtomSystem:
     elements = (element, "N", "C", "O")
-    atomic_numbers = {"C": 6, "N": 7, "O": 8, "XE": 54}
+    atomic_numbers = {"C": 6, "N": 7, "O": 8, "XE": 54, "ZN": 30}
     return AllAtomSystem(
         system_id="contact-ligand",
         atoms=tuple(
@@ -83,7 +86,9 @@ def _ligand(*, element: str = "C") -> AllAtomSystem:
     )
 
 
-def _receptor(*, overlapping: bool = False, many: bool = False) -> AllAtomSystem:
+def _receptor(
+    *, overlapping: bool = False, many: bool = False, element: str = "C"
+) -> AllAtomSystem:
     if overlapping:
         coordinates = [[0.0, 0.0, 0.0], [8.0, 8.0, 8.0]]
     elif many:
@@ -99,8 +104,8 @@ def _receptor(*, overlapping: bool = False, many: bool = False) -> AllAtomSystem
         Atom(
             index=index,
             name=f"R{index}",
-            element="C",
-            atomic_number=6,
+            element=element,
+            atomic_number={"C": 6, "ZN": 30}[element.upper()],
             residue_index=0,
         )
         for index in range(len(coordinates))
@@ -239,6 +244,25 @@ def test_unsupported_element_and_invalid_policy_fail_closed() -> None:
         VdwContactPolicy(cell_size_angstrom=1.0)
 
 
+def test_receptor_ion_proxy_is_narrow_and_ligand_metal_stays_unsupported() -> None:
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        _receptor(element="Zn"),
+        _ligand(),
+        _pocket(),
+    )
+    document = element_aware_authority_document(authority)
+    assert "ZN" in document["receptor_ion_proxy_elements"]
+    assert document["receptor_ion_coordination_modeled"] is False
+    assert document["ligand_metal_support"] is False
+
+    with pytest.raises(UnsupportedVdwElementError, match="separate applicability"):
+        build_element_aware_authenticated_known_pocket_docking_problem(
+            _receptor(),
+            _ligand(element="Zn"),
+            _pocket(),
+        )
+
+
 def test_receptor_clash_relief_is_bounded_and_preserves_lineage() -> None:
     receptor = _receptor(overlapping=True)
     ligand = _ligand()
@@ -264,6 +288,56 @@ def test_receptor_clash_relief_is_bounded_and_preserves_lineage() -> None:
         receipt["initial_penalty_binary64_hex"]
     )
     assert torch.linalg.vector_norm(refined.translation - proposal.translation) <= 1.5
+
+
+def test_interaction_aware_v2_refines_contact_penalty_even_if_v1_valid() -> None:
+    receptor = replace(
+        _receptor(),
+        coordinates=torch.tensor(
+            [[[-2.4, 0.0, 0.0], [8.0, 8.0, 8.0]]],
+            dtype=torch.float64,
+        ),
+    )
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposal = _baseline(authority)
+    assert authority.validity_context.evaluate(proposal).valid is True
+
+    baseline = ReceptorClashReliefRefiner(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+    )
+    v2 = InteractionAwareRigidRefinerV2(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="f" * 64,
+    )
+
+    baseline_pose = baseline.refine(proposal, max_steps=10)
+    refined = v2.refine(proposal, max_steps=10)
+    baseline_receipt = baseline.receipts[proposal.fingerprint_sha256]
+    receipt = v2.receipts[proposal.fingerprint_sha256]
+
+    assert baseline_receipt["accepted_steps"] == 0
+    assert torch.equal(baseline_pose.coordinates, proposal.coordinates)
+    assert receipt["original_pose_valid"] is True
+    assert receipt["accepted_steps"] >= 1
+    assert float.fromhex(receipt["initial_penalty_binary64_hex"]) > 0.0
+    assert float.fromhex(receipt["final_penalty_binary64_hex"]) == 0.0
+    shift = torch.tensor(
+        [float.fromhex(value) for value in receipt["total_translation_binary64_hex"]],
+        dtype=torch.float64,
+    )
+    assert torch.linalg.vector_norm(shift) <= 3.0
+    assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
+    assert refined.refiner_id == v2.refiner_id
 
 
 def test_element_aware_ligand_pair_capacity_is_enforced() -> None:

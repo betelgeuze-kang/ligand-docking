@@ -6,6 +6,7 @@ inputs, launch Engine V2 or external binaries, or claim docking accuracy.
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
 import hashlib
 import json
@@ -25,8 +26,8 @@ PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohor
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.5.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.2.0"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.6.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.5.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
@@ -34,7 +35,7 @@ PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_execution/1.1.0"
 )
 PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.2.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.3.0"
 )
 _SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0"
@@ -49,7 +50,41 @@ PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
     "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
 )
 PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.1.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.2.0"
+)
+PUBLIC_REDOCKING_PROPOSAL_MODES = (
+    "donor_acceptor_hotspot",
+    "charge_anchor",
+    "hydrophobic_patch",
+    "aromatic_plane",
+    "shape_complementarity",
+    "uniform_fallback",
+)
+PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS = (
+    "sanitization",
+    "inchi_convertible",
+    "all_atoms_connected",
+    "molecular_formula",
+    "molecular_bonds",
+    "double_bond_stereochemistry",
+    "tetrahedral_chirality",
+    "bond_lengths",
+    "bond_angles",
+    "internal_steric_clash",
+    "aromatic_ring_flatness",
+    "double_bond_flatness",
+    "internal_energy",
+)
+PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS = (
+    "protein-ligand_maximum_distance",
+    "minimum_distance_to_protein",
+    "minimum_distance_to_organic_cofactors",
+    "minimum_distance_to_inorganic_cofactors",
+    "minimum_distance_to_waters",
+    "volume_overlap_with_protein",
+    "volume_overlap_with_organic_cofactors",
+    "volume_overlap_with_inorganic_cofactors",
+    "volume_overlap_with_waters",
 )
 PUBLIC_REDOCKING_COHORT_ID = "posebusters-journal-subset-sha256-300"
 PUBLIC_REDOCKING_COHORT_COUNT = 300
@@ -2496,7 +2531,9 @@ class PublicRedockingEngineV2CandidateDiagnostic:
 
     proposal_index: int
     status: str
+    proposal_mode: str = ""
     proposal_fingerprint_sha256: str = ""
+    coordinate_fingerprint_sha256: str = ""
     score: float | None = None
     rmsd_angstrom: float | None = None
     geometric_valid: bool | None = None
@@ -2505,6 +2542,15 @@ class PublicRedockingEngineV2CandidateDiagnostic:
     score_terms_receipt_sha256: str = ""
     hbond_count: int | None = None
     selection_eligible: bool | None = None
+    posebusters_failed_check_ids: tuple[str, ...] = ()
+    refinement_receipt_sha256: str = ""
+    refinement_initial_penalty_binary64_hex: str = ""
+    refinement_final_penalty_binary64_hex: str = ""
+    refinement_accepted_steps: int | None = None
+    refinement_accepted_rotation_steps: int | None = None
+    refinement_original_pose_valid: bool | None = None
+    refinement_total_translation_binary64_hex: tuple[str, ...] = ()
+    refinement_total_rotation_vector_binary64_hex: tuple[str, ...] = ()
     score_term_binary64_hex: Mapping[str, str] = field(default_factory=dict)
     error_code: str = ""
     schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
@@ -2529,11 +2575,38 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                 "Engine V2 candidate status must be success or failure"
             )
         error_code = str(self.error_code or "").strip()
+        proposal_mode = str(self.proposal_mode or "").strip()
+        failed_checks = tuple(
+            str(value or "").strip()
+            for value in self.posebusters_failed_check_ids
+        )
+        allowed_checks = (
+            *PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS,
+            *PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS,
+        )
+        if (
+            failed_checks
+            != tuple(
+                check for check in allowed_checks if check in set(failed_checks)
+            )
+            or len(failed_checks) != len(set(failed_checks))
+        ):
+            raise PublicRedockingBenchmarkError(
+                "candidate PoseBusters failed checks are invalid"
+            )
         score_terms = dict(self.score_term_binary64_hex)
         if status == "success":
+            if proposal_mode not in PUBLIC_REDOCKING_PROPOSAL_MODES:
+                raise PublicRedockingBenchmarkError(
+                    "successful candidate proposal mode is invalid"
+                )
             proposal_sha256 = _digest(
                 self.proposal_fingerprint_sha256,
                 name="proposal_fingerprint_sha256",
+            )
+            coordinate_sha256 = _digest(
+                self.coordinate_fingerprint_sha256,
+                name="coordinate_fingerprint_sha256",
             )
             pose_sha256 = _digest(
                 self.pose_artifact_sha256,
@@ -2556,6 +2629,16 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                 or self.hbond_count < 0
                 or type(self.selection_eligible) is not bool
                 or set(score_terms) != set(_SCORER_TERM_NAMES)
+                or self.geometric_valid
+                != (not bool(
+                    set(failed_checks)
+                    & set(PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS)
+                ))
+                or self.chemical_valid
+                != (not bool(
+                    set(failed_checks)
+                    & set(PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS)
+                ))
             ):
                 raise PublicRedockingBenchmarkError(
                     "successful Engine V2 candidate diagnostics are incomplete"
@@ -2586,12 +2669,87 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                     "successful Engine V2 candidate cannot contain error_code"
                 )
             object.__setattr__(self, "proposal_fingerprint_sha256", proposal_sha256)
+            object.__setattr__(
+                self, "coordinate_fingerprint_sha256", coordinate_sha256
+            )
             object.__setattr__(self, "pose_artifact_sha256", pose_sha256)
             object.__setattr__(self, "score_terms_receipt_sha256", terms_sha256)
             object.__setattr__(self, "score", score)
             object.__setattr__(self, "rmsd_angstrom", rmsd)
+            refinement_fields_present = bool(
+                self.refinement_receipt_sha256
+                or self.refinement_initial_penalty_binary64_hex
+                or self.refinement_final_penalty_binary64_hex
+                or self.refinement_accepted_steps is not None
+                or self.refinement_accepted_rotation_steps is not None
+                or self.refinement_original_pose_valid is not None
+                or self.refinement_total_translation_binary64_hex
+                or self.refinement_total_rotation_vector_binary64_hex
+            )
+            if refinement_fields_present:
+                refinement_sha256 = _digest(
+                    self.refinement_receipt_sha256,
+                    name="refinement_receipt_sha256",
+                )
+                try:
+                    initial_penalty = float.fromhex(
+                        self.refinement_initial_penalty_binary64_hex
+                    )
+                    final_penalty = float.fromhex(
+                        self.refinement_final_penalty_binary64_hex
+                    )
+                    translation = tuple(
+                        float.fromhex(value)
+                        for value in self.refinement_total_translation_binary64_hex
+                    )
+                    rotation = tuple(
+                        float.fromhex(value)
+                        for value in self.refinement_total_rotation_vector_binary64_hex
+                    )
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise PublicRedockingBenchmarkError(
+                        "candidate refinement diagnostics are invalid"
+                    ) from exc
+                if (
+                    not math.isfinite(initial_penalty)
+                    or not math.isfinite(final_penalty)
+                    or initial_penalty < 0.0
+                    or final_penalty < 0.0
+                    or initial_penalty.hex()
+                    != self.refinement_initial_penalty_binary64_hex
+                    or final_penalty.hex()
+                    != self.refinement_final_penalty_binary64_hex
+                    or type(self.refinement_accepted_steps) is not int
+                    or self.refinement_accepted_steps < 0
+                    or type(self.refinement_accepted_rotation_steps) is not int
+                    or not 0
+                    <= self.refinement_accepted_rotation_steps
+                    <= self.refinement_accepted_steps
+                    or type(self.refinement_original_pose_valid) is not bool
+                    or len(translation) != 3
+                    or len(rotation) != 3
+                    or any(
+                        not math.isfinite(value)
+                        or value.hex()
+                        != self.refinement_total_translation_binary64_hex[index]
+                        for index, value in enumerate(translation)
+                    )
+                    or any(
+                        not math.isfinite(value)
+                        or value.hex()
+                        != self.refinement_total_rotation_vector_binary64_hex[index]
+                        for index, value in enumerate(rotation)
+                    )
+                ):
+                    raise PublicRedockingBenchmarkError(
+                        "candidate refinement diagnostics are incomplete"
+                    )
+                object.__setattr__(
+                    self, "refinement_receipt_sha256", refinement_sha256
+                )
         elif (
             self.proposal_fingerprint_sha256
+            or self.coordinate_fingerprint_sha256
             or self.score is not None
             or self.rmsd_angstrom is not None
             or self.geometric_valid is not None
@@ -2601,12 +2759,37 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             or self.hbond_count is not None
             or self.selection_eligible is not None
             or score_terms
+            or failed_checks
+            or self.refinement_receipt_sha256
+            or self.refinement_initial_penalty_binary64_hex
+            or self.refinement_final_penalty_binary64_hex
+            or self.refinement_accepted_steps is not None
+            or self.refinement_accepted_rotation_steps is not None
+            or self.refinement_original_pose_valid is not None
+            or self.refinement_total_translation_binary64_hex
+            or self.refinement_total_rotation_vector_binary64_hex
             or not error_code
         ):
             raise PublicRedockingBenchmarkError(
-                "failed Engine V2 candidate requires only error_code"
+                "failed Engine V2 candidate requires error_code and optional mode"
+            )
+        elif proposal_mode and proposal_mode not in PUBLIC_REDOCKING_PROPOSAL_MODES:
+            raise PublicRedockingBenchmarkError(
+                "failed candidate proposal mode is invalid"
             )
         object.__setattr__(self, "status", status)
+        object.__setattr__(self, "proposal_mode", proposal_mode)
+        object.__setattr__(self, "posebusters_failed_check_ids", failed_checks)
+        object.__setattr__(
+            self,
+            "refinement_total_translation_binary64_hex",
+            tuple(self.refinement_total_translation_binary64_hex),
+        )
+        object.__setattr__(
+            self,
+            "refinement_total_rotation_vector_binary64_hex",
+            tuple(self.refinement_total_rotation_vector_binary64_hex),
+        )
         object.__setattr__(self, "error_code", error_code)
         object.__setattr__(
             self,
@@ -2625,7 +2808,9 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "schema_id": self.schema_id,
             "proposal_index": self.proposal_index,
             "status": self.status,
+            "proposal_mode": self.proposal_mode,
             "proposal_fingerprint_sha256": self.proposal_fingerprint_sha256,
+            "coordinate_fingerprint_sha256": self.coordinate_fingerprint_sha256,
             "score": self.score,
             "rmsd_angstrom": self.rmsd_angstrom,
             "geometric_valid": self.geometric_valid,
@@ -2634,6 +2819,25 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "score_terms_receipt_sha256": self.score_terms_receipt_sha256,
             "hbond_count": self.hbond_count,
             "selection_eligible": self.selection_eligible,
+            "posebusters_failed_check_ids": list(self.posebusters_failed_check_ids),
+            "refinement_receipt_sha256": self.refinement_receipt_sha256,
+            "refinement_initial_penalty_binary64_hex": (
+                self.refinement_initial_penalty_binary64_hex
+            ),
+            "refinement_final_penalty_binary64_hex": (
+                self.refinement_final_penalty_binary64_hex
+            ),
+            "refinement_accepted_steps": self.refinement_accepted_steps,
+            "refinement_accepted_rotation_steps": (
+                self.refinement_accepted_rotation_steps
+            ),
+            "refinement_original_pose_valid": self.refinement_original_pose_valid,
+            "refinement_total_translation_binary64_hex": list(
+                self.refinement_total_translation_binary64_hex
+            ),
+            "refinement_total_rotation_vector_binary64_hex": list(
+                self.refinement_total_rotation_vector_binary64_hex
+            ),
             "score_term_binary64_hex": dict(self.score_term_binary64_hex),
             "error_code": self.error_code,
         }
@@ -2736,6 +2940,7 @@ class PublicRedockingEngineV2Diagnostics:
     receptor_acceptor_count: int
     ligand_donor_count: int
     ligand_acceptor_count: int
+    receptor_ion_proxy_count: int = 0
     candidates: tuple[PublicRedockingEngineV2CandidateDiagnostic, ...] = ()
     scorer_backend_receipt: Mapping[str, object] | None = None
     preparation_failure_code: str = ""
@@ -2768,6 +2973,7 @@ class PublicRedockingEngineV2Diagnostics:
                 "receptor_acceptor_count",
                 "ligand_donor_count",
                 "ligand_acceptor_count",
+                "receptor_ion_proxy_count",
             )
         )
         if any(type(value) is not int or value < 0 for value in counts):
@@ -2800,6 +3006,7 @@ class PublicRedockingEngineV2Diagnostics:
             if (
                 self.receptor_atom_count < 1
                 or self.ligand_atom_count < 1
+                or self.receptor_ion_proxy_count > self.receptor_atom_count
                 or self.receptor_partial_charge_count != self.receptor_atom_count
                 or self.ligand_partial_charge_count != self.ligand_atom_count
                 or failure_code
@@ -2900,6 +3107,10 @@ class PublicRedockingEngineV2Diagnostics:
             "receptor_acceptor_count": self.receptor_acceptor_count,
             "ligand_donor_count": self.ligand_donor_count,
             "ligand_acceptor_count": self.ligand_acceptor_count,
+            "receptor_ion_proxy_count": self.receptor_ion_proxy_count,
+            "receptor_ion_proxy_used": self.receptor_ion_proxy_count > 0,
+            "receptor_ion_coordination_modeled": False,
+            "ligand_metal_support": False,
             "charge_coverage_complete": self.charge_coverage_complete,
             "hbond_feature_covered": self.hbond_feature_covered,
             "candidate_budget": self.candidate_budget,
@@ -3832,6 +4043,9 @@ def _derive_engine_v2_diagnostic_metrics(
     hbond_feature_coverage = [
         float(value.hbond_feature_covered) for value in diagnostics
     ]
+    receptor_ion_proxy_usage = [
+        float(value.receptor_ion_proxy_count > 0) for value in diagnostics
+    ]
     candidate_generation_coverage = [
         len(successful(value)) / PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
         for value in diagnostics
@@ -3921,6 +4135,7 @@ def _derive_engine_v2_diagnostic_metrics(
             ("preparation_success_rate", preparation),
             ("complete_partial_charge_coverage_rate", charge_coverage),
             ("hbond_feature_coverage_rate", hbond_feature_coverage),
+            ("receptor_ion_proxy_usage_rate", receptor_ion_proxy_usage),
             (
                 "candidate_generation_coverage_rate",
                 candidate_generation_coverage,
@@ -3975,6 +4190,124 @@ def _derive_engine_v2_diagnostic_metrics(
                     subgroup=subgroup,
                     values=per_case_medians,
                     statistic=_median,
+                    policy=policy,
+                )
+            )
+    for mode in PUBLIC_REDOCKING_PROPOSAL_MODES:
+        mode_subgroup = f"{subgroup}:proposal_mode={mode}"
+        allocation_values: list[float] = []
+        native_like_values: list[float] = []
+        valid_values: list[float] = []
+        duplicate_values: list[float] = []
+        oracle_contribution_values: list[float] = []
+        refinement_reduction_values: list[float] = []
+        for value in diagnostics:
+            allocated = tuple(
+                candidate
+                for candidate in value.candidates
+                if candidate.proposal_mode == mode
+            )
+            allocation_values.append(len(allocated) / value.candidate_budget)
+            mode_success = tuple(
+                candidate
+                for candidate in allocated
+                if candidate.status == "success"
+            )
+            if not mode_success:
+                continue
+            native_like_values.append(
+                sum(
+                    float(candidate.rmsd_angstrom) <= threshold
+                    for candidate in mode_success
+                )
+                / len(mode_success)
+            )
+            valid_values.append(
+                sum(
+                    candidate.geometric_valid and candidate.chemical_valid
+                    for candidate in mode_success
+                )
+                / len(mode_success)
+            )
+            coordinate_counts = Counter(
+                candidate.coordinate_fingerprint_sha256
+                for candidate in mode_success
+            )
+            duplicate_values.append(
+                sum(
+                    coordinate_counts[candidate.coordinate_fingerprint_sha256] > 1
+                    for candidate in mode_success
+                )
+                / len(mode_success)
+            )
+            oracle_contribution_values.append(
+                float(
+                    any(
+                        float(candidate.rmsd_angstrom) <= threshold
+                        for candidate in mode_success
+                    )
+                )
+            )
+            refinement_rows = tuple(
+                candidate
+                for candidate in mode_success
+                if candidate.refinement_receipt_sha256
+            )
+            if refinement_rows:
+                refinement_reduction_values.append(
+                    sum(
+                        float.fromhex(
+                            candidate.refinement_final_penalty_binary64_hex
+                        )
+                        < float.fromhex(
+                            candidate.refinement_initial_penalty_binary64_hex
+                        )
+                        for candidate in refinement_rows
+                    )
+                    / len(refinement_rows)
+                )
+        for metric_id, values in (
+            ("proposal_mode_allocation_rate", allocation_values),
+            ("proposal_mode_native_like_candidate_rate", native_like_values),
+            ("proposal_mode_valid_candidate_rate", valid_values),
+            ("proposal_mode_exact_duplicate_candidate_rate", duplicate_values),
+            ("proposal_mode_oracle_contribution_rate", oracle_contribution_values),
+            ("proposal_mode_refinement_penalty_reduction_rate", refinement_reduction_values),
+        ):
+            if values:
+                metrics.append(
+                    _metric(
+                        engine_id="engine_v2",
+                        metric_id=metric_id,
+                        analysis_scope=analysis_scope,
+                        subgroup=mode_subgroup,
+                        values=values,
+                        statistic=_mean,
+                        policy=policy,
+                    )
+                )
+    for check_id in (
+        *PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS,
+        *PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS,
+    ):
+        failure_rates = [
+            sum(
+                check_id in candidate.posebusters_failed_check_ids
+                for candidate in successful(value)
+            )
+            / len(successful(value))
+            for value in diagnostics
+            if successful(value)
+        ]
+        if failure_rates:
+            metrics.append(
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id=f"posebusters_{check_id}_failure_rate",
+                    analysis_scope=analysis_scope,
+                    subgroup=subgroup,
+                    values=failure_rates,
+                    statistic=_mean,
                     policy=policy,
                 )
             )
@@ -4550,6 +4883,9 @@ __all__ = [
     "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT",
     "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID",
     "PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID",
+    "PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS",
+    "PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS",
+    "PUBLIC_REDOCKING_PROPOSAL_MODES",
     "PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS",
     "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID",
     "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256",

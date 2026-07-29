@@ -101,7 +101,9 @@ def test_candidate_score_terms_accept_json_key_order_and_recanonicalize() -> Non
     candidate = PublicRedockingEngineV2CandidateDiagnostic(
         proposal_index=0,
         status="success",
+        proposal_mode="uniform_fallback",
         proposal_fingerprint_sha256="1" * 64,
+        coordinate_fingerprint_sha256="4" * 64,
         score=0.0,
         rmsd_angstrom=0.0,
         geometric_valid=True,
@@ -398,8 +400,12 @@ def _success(
                     PublicRedockingEngineV2CandidateDiagnostic(
                         proposal_index=index,
                         status="success",
+                        proposal_mode="uniform_fallback",
                         proposal_fingerprint_sha256=hashlib.sha256(
                             f"{case_id}:proposal:{index}".encode("ascii")
+                        ).hexdigest(),
+                        coordinate_fingerprint_sha256=hashlib.sha256(
+                            f"{case_id}:coordinates:{index}".encode("ascii")
                         ).hexdigest(),
                         score=float(index),
                         rmsd_angstrom=rmsds[index],
@@ -411,6 +417,14 @@ def _success(
                         ).hexdigest(),
                         hbond_count=int(index == 0),
                         selection_eligible=True,
+                        posebusters_failed_check_ids=(
+                            ()
+                            if geometric[index] and chemical[index]
+                            else (
+                                "internal_steric_clash",
+                                "minimum_distance_to_protein",
+                            )
+                        ),
                         score_term_binary64_hex=_zero_score_terms(),
                     )
                     if index < 5

@@ -13,10 +13,17 @@ def _result(case_id: str) -> dict[str, object]:
             {
                 "proposal_index": index,
                 "status": "success",
+                "proposal_mode": (
+                    "uniform_fallback" if index >= 48 else "donor_acceptor_hotspot"
+                ),
+                "coordinate_fingerprint_sha256": f"{index + 1:064x}",
                 "score": terms["total_score"],
                 "rmsd_angstrom": 1.0 if index == 1 else 3.0,
                 "geometric_valid": index != 0,
                 "chemical_valid": True,
+                "posebusters_failed_check_ids": (
+                    ["minimum_distance_to_protein"] if index == 0 else []
+                ),
                 "score_term_binary64_hex": {
                     name: value.hex() for name, value in terms.items()
                 },
@@ -47,3 +54,9 @@ def test_score_term_analysis_is_nonclaimable_and_detects_ablation() -> None:
     assert report["term_summary"]["weak_pocket_prior"][
         "removed_top1_changed_case_count"
     ] == 0
+    assert report["proposal_mode_summary"]["donor_acceptor_hotspot"][
+        "oracle_contribution_case_count"
+    ] == 1
+    assert report["candidate_diagnostic_summary"][
+        "posebusters_failed_check_counts"
+    ] == {"minimum_distance_to_protein": 1}

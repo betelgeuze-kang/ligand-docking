@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import math
@@ -15,10 +16,11 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
     FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
+    PUBLIC_REDOCKING_PROPOSAL_MODES,
 )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.0.0"
+SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.1.0"
 TERM_NAMES = (
     "typed_vdw",
     "electrostatics",
@@ -223,6 +225,29 @@ def analyze_results(
         }
         for name in TERM_NAMES
     }
+    mode_rows: dict[str, dict[str, object]] = {
+        mode: {
+            "candidate_count": 0,
+            "native_like_candidate_count": 0,
+            "valid_candidate_count": 0,
+            "duplicate_candidate_count": 0,
+            "execution_failure_count": 0,
+            "oracle_contribution_case_count": 0,
+            "best_oracle_case_count": 0,
+            "scores": [],
+            "failed_check_counts": Counter(),
+            "refinement_attempt_count": 0,
+            "refinement_penalty_reduced_count": 0,
+            "refinement_translated_count": 0,
+            "refinement_rotated_count": 0,
+        }
+        for mode in PUBLIC_REDOCKING_PROPOSAL_MODES
+    }
+    failed_check_counts: Counter[str] = Counter()
+    refinement_attempt_count = 0
+    refinement_penalty_reduced_count = 0
+    refinement_translated_count = 0
+    refinement_rotated_count = 0
     for result in results:
         if result.get("engine_id") != "engine_v2":
             raise ValueError("score-term analysis requires Engine V2 results")
@@ -247,6 +272,16 @@ def analyze_results(
         raw_candidates = diagnostics.get("candidates")
         if not isinstance(raw_candidates, list) or len(raw_candidates) != 64:
             raise ValueError("fixed 64-slot candidate diagnostics are missing")
+        for candidate in raw_candidates:
+            if not isinstance(candidate, Mapping) or candidate.get("status") != "failure":
+                continue
+            mode = str(candidate.get("proposal_mode", ""))
+            if mode:
+                if mode not in mode_rows:
+                    raise ValueError("failed candidate proposal mode is unsupported")
+                mode_rows[mode]["execution_failure_count"] = (
+                    int(mode_rows[mode]["execution_failure_count"]) + 1
+                )
         candidates = [
             candidate
             for candidate in raw_candidates
@@ -254,6 +289,99 @@ def analyze_results(
         ]
         if not candidates:
             raise ValueError("development case has no successful scored candidates")
+        coordinate_counts = Counter(
+            str(candidate.get("coordinate_fingerprint_sha256", ""))
+            for candidate in candidates
+        )
+        case_oracle_modes: set[str] = set()
+        best_oracle_candidate = min(
+            candidates,
+            key=lambda candidate: (
+                float(candidate["rmsd_angstrom"]),
+                int(candidate["proposal_index"]),
+            ),
+        )
+        for candidate in candidates:
+            mode = str(candidate.get("proposal_mode", ""))
+            if mode not in mode_rows:
+                raise ValueError("candidate proposal mode is missing or unsupported")
+            coordinate_sha256 = str(
+                candidate.get("coordinate_fingerprint_sha256", "")
+            )
+            if len(coordinate_sha256) != 64:
+                raise ValueError("candidate coordinate fingerprint is missing")
+            accumulator = mode_rows[mode]
+            accumulator["candidate_count"] = int(accumulator["candidate_count"]) + 1
+            rmsd = float(candidate["rmsd_angstrom"])
+            if rmsd <= 2.0:
+                accumulator["native_like_candidate_count"] = (
+                    int(accumulator["native_like_candidate_count"]) + 1
+                )
+                case_oracle_modes.add(mode)
+            if (
+                candidate.get("geometric_valid") is True
+                and candidate.get("chemical_valid") is True
+            ):
+                accumulator["valid_candidate_count"] = (
+                    int(accumulator["valid_candidate_count"]) + 1
+                )
+            if coordinate_counts[coordinate_sha256] > 1:
+                accumulator["duplicate_candidate_count"] = (
+                    int(accumulator["duplicate_candidate_count"]) + 1
+                )
+            scores = accumulator["scores"]
+            if not isinstance(scores, list):
+                raise AssertionError("mode score accumulator is invalid")
+            scores.append(float(candidate["score"]))
+            raw_failed_checks = candidate.get("posebusters_failed_check_ids", [])
+            if not isinstance(raw_failed_checks, list):
+                raise ValueError("candidate PoseBusters failed checks are invalid")
+            mode_failures = accumulator["failed_check_counts"]
+            if not isinstance(mode_failures, Counter):
+                raise AssertionError("mode failure accumulator is invalid")
+            for check_id in raw_failed_checks:
+                check = str(check_id)
+                failed_check_counts[check] += 1
+                mode_failures[check] += 1
+            receipt_sha256 = str(candidate.get("refinement_receipt_sha256", ""))
+            if receipt_sha256:
+                initial = float.fromhex(
+                    str(candidate["refinement_initial_penalty_binary64_hex"])
+                )
+                final = float.fromhex(
+                    str(candidate["refinement_final_penalty_binary64_hex"])
+                )
+                accepted_steps = int(candidate["refinement_accepted_steps"])
+                refinement_attempt_count += 1
+                accumulator["refinement_attempt_count"] = (
+                    int(accumulator["refinement_attempt_count"]) + 1
+                )
+                if final < initial:
+                    refinement_penalty_reduced_count += 1
+                    accumulator["refinement_penalty_reduced_count"] = (
+                        int(accumulator["refinement_penalty_reduced_count"]) + 1
+                    )
+                if accepted_steps > 0:
+                    refinement_translated_count += 1
+                    accumulator["refinement_translated_count"] = (
+                        int(accumulator["refinement_translated_count"]) + 1
+                    )
+                accepted_rotation_steps = int(
+                    candidate.get("refinement_accepted_rotation_steps", 0)
+                )
+                if accepted_rotation_steps > 0:
+                    refinement_rotated_count += 1
+                    accumulator["refinement_rotated_count"] = (
+                        int(accumulator["refinement_rotated_count"]) + 1
+                    )
+        for mode in case_oracle_modes:
+            mode_rows[mode]["oracle_contribution_case_count"] = (
+                int(mode_rows[mode]["oracle_contribution_case_count"]) + 1
+            )
+        best_mode = str(best_oracle_candidate["proposal_mode"])
+        mode_rows[best_mode]["best_oracle_case_count"] = (
+            int(mode_rows[best_mode]["best_oracle_case_count"]) + 1
+        )
         terms = {
             int(candidate["proposal_index"]): _candidate_terms(candidate)
             for candidate in candidates
@@ -355,6 +483,60 @@ def analyze_results(
             ),
         }
 
+    proposal_mode_summary: dict[str, object] = {}
+    for mode, accumulator in mode_rows.items():
+        candidate_count = int(accumulator["candidate_count"])
+        scores = accumulator["scores"]
+        mode_failures = accumulator["failed_check_counts"]
+        if not isinstance(scores, list) or not isinstance(mode_failures, Counter):
+            raise AssertionError("proposal mode accumulator is invalid")
+        proposal_mode_summary[mode] = {
+            "candidate_count": candidate_count,
+            "native_like_candidate_count": int(
+                accumulator["native_like_candidate_count"]
+            ),
+            "native_like_candidate_rate": (
+                int(accumulator["native_like_candidate_count"]) / candidate_count
+                if candidate_count
+                else None
+            ),
+            "valid_candidate_count": int(accumulator["valid_candidate_count"]),
+            "valid_candidate_rate": (
+                int(accumulator["valid_candidate_count"]) / candidate_count
+                if candidate_count
+                else None
+            ),
+            "duplicate_candidate_count": int(
+                accumulator["duplicate_candidate_count"]
+            ),
+            "execution_failure_count": int(
+                accumulator["execution_failure_count"]
+            ),
+            "duplicate_candidate_rate": (
+                int(accumulator["duplicate_candidate_count"]) / candidate_count
+                if candidate_count
+                else None
+            ),
+            "oracle_contribution_case_count": int(
+                accumulator["oracle_contribution_case_count"]
+            ),
+            "best_oracle_case_count": int(accumulator["best_oracle_case_count"]),
+            "median_score": statistics.median(scores) if scores else None,
+            "failed_check_counts": dict(sorted(mode_failures.items())),
+            "refinement_attempt_count": int(
+                accumulator["refinement_attempt_count"]
+            ),
+            "refinement_penalty_reduced_count": int(
+                accumulator["refinement_penalty_reduced_count"]
+            ),
+            "refinement_translated_count": int(
+                accumulator["refinement_translated_count"]
+            ),
+            "refinement_rotated_count": int(
+                accumulator["refinement_rotated_count"]
+            ),
+        }
+
     oracle_calibration_cases = [
         (case_id, rows)
         for case_id, rows in calibration_cases
@@ -430,6 +612,18 @@ def analyze_results(
             bool(case.get("oracle_2a_recovery")) for case in cases
         ),
         "term_summary": term_summary,
+        "proposal_mode_summary": proposal_mode_summary,
+        "candidate_diagnostic_summary": {
+            "posebusters_failed_check_counts": dict(
+                sorted(failed_check_counts.items())
+            ),
+            "refinement_attempt_count": refinement_attempt_count,
+            "refinement_penalty_reduced_count": (
+                refinement_penalty_reduced_count
+            ),
+            "refinement_translated_count": refinement_translated_count,
+            "refinement_rotated_count": refinement_rotated_count,
+        },
         "constrained_calibration_candidate": {
             "feature_source": "scorer_v1_weighted_terms",
             "multiplier_constraint": "non_negative_grid_no_sign_reversal",

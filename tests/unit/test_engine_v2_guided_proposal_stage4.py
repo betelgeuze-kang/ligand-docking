@@ -295,7 +295,12 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
         row.fingerprint_sha256 for row in second
     )
     assert set(GUIDED_MODES).issubset(receipt.proposal_modes)
-    assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) >= 1
+    guided_count = sum(
+        mode != UNIFORM_FALLBACK_MODE for mode in receipt.proposal_modes
+    )
+    assert guided_count == 5
+    assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 3
+    assert all(receipt.proposal_modes.count(mode) <= 8 for mode in GUIDED_MODES)
     assert receipt.to_dict()["uniform_random_placement_retained_as_fallback"]
     assert receipt.to_dict()["scientifically_validated"] is False
     assert context.ligand_hydrophobic_patches
