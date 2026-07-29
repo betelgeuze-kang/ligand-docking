@@ -20,7 +20,9 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScope,
     ElementAwarePoseValidityContext,
     ElementAwareValidityError,
+    InteractionAwareRigidConfigV3,
     InteractionAwareRigidRefinerV2,
+    InteractionAwareRigidRefinerV3,
     UnsupportedVdwElementError,
     PocketDefinition,
     ReceptorClashReliefRefiner,
@@ -338,6 +340,58 @@ def test_interaction_aware_v2_refines_contact_penalty_even_if_v1_valid() -> None
     assert torch.linalg.vector_norm(shift) <= 2.25
     assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
     assert refined.refiner_id == v2.refiner_id
+
+
+def test_interaction_aware_v3_records_rotation_and_enforces_pocket_guard() -> None:
+    receptor = replace(
+        _receptor(),
+        coordinates=torch.tensor(
+            [[[4.1, 0.5, 0.2], [8.0, 8.0, 8.0]]],
+            dtype=torch.float64,
+        ),
+    )
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposal = _baseline(authority)
+    config = InteractionAwareRigidConfigV3(
+        maximum_step_angstrom=0.009375,
+        minimum_step_angstrom=0.009375,
+        maximum_total_translation_angstrom=0.009375,
+        maximum_total_rotation_radians=0.25,
+    )
+    refiner = InteractionAwareRigidRefinerV3(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="1" * 64,
+        config=config,
+    )
+
+    refined = refiner.refine(proposal, max_steps=10)
+    receipt = refiner.receipts[proposal.fingerprint_sha256]
+
+    assert receipt["schema_id"].endswith("/3.0.0")
+    assert receipt["accepted_rotation_steps"] >= 1
+    rotation = torch.tensor(
+        [
+            float.fromhex(value)
+            for value in receipt["total_rotation_vector_binary64_hex"]
+        ],
+        dtype=torch.float64,
+    )
+    assert torch.linalg.vector_norm(rotation) > 0.0
+    assert float.fromhex(
+        receipt["total_rotation_path_radians_binary64_hex"]
+    ) <= config.maximum_total_rotation_radians
+    assert float.fromhex(
+        receipt["final_centroid_offset_angstrom_binary64_hex"]
+    ) <= config.maximum_centroid_offset_angstrom
+    assert refined.refiner_id == refiner.refiner_id
+    assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
 
 
 def test_element_aware_ligand_pair_capacity_is_enforced() -> None:

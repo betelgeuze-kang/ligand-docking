@@ -20,6 +20,7 @@ from betelgeuze_engine_v2 import (  # noqa: E402
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     GUIDED_MODES,
     MULTI_ANCHOR_MODE,
+    POCKET_CENTER_BASELINE_MODE,
     UNIFORM_FALLBACK_MODE,
     DockingAuthorityError,
     DockingBudget,
@@ -28,6 +29,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     GuidedPlacementPolicy,
     GuidedPlacementSearchResult,
     PocketDefinition,
+    PocketPlacementPolicy,
     ScoreDirection,
     build_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
@@ -295,11 +297,19 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
     assert tuple(row.fingerprint_sha256 for row in first) == tuple(
         row.fingerprint_sha256 for row in second
     )
-    assert set(GUIDED_MODES).issubset(receipt.proposal_modes)
-    guided_count = sum(
-        mode != UNIFORM_FALLBACK_MODE for mode in receipt.proposal_modes
+    assert set(receipt.proposal_modes).issubset(
+        {
+            *GUIDED_MODES,
+            MULTI_ANCHOR_MODE,
+            POCKET_CENTER_BASELINE_MODE,
+            UNIFORM_FALLBACK_MODE,
+        }
     )
-    assert guided_count == 5
+    guided_count = sum(
+        mode in GUIDED_MODES for mode in receipt.proposal_modes
+    )
+    assert guided_count == 4
+    assert receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE) == 1
     assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 3
     assert all(receipt.proposal_modes.count(mode) <= 8 for mode in GUIDED_MODES)
     assert receipt.to_dict()["uniform_random_placement_retained_as_fallback"]
@@ -329,7 +339,7 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
             1.0,
             abs=1.0e-10,
         )
-        if mode == UNIFORM_FALLBACK_MODE:
+        if mode in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}:
             assert first[index].fingerprint_sha256 == (
                 baseline[index].fingerprint_sha256
             )
@@ -368,8 +378,13 @@ def test_repeated_interaction_cycles_add_bounded_multi_anchor_candidates() -> No
         for index, mode in enumerate(receipt.proposal_modes)
         if mode == MULTI_ANCHOR_MODE
     )
-    assert len(multi_indices) == 8
+    assert len(multi_indices) == 6
+    assert receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE) == 8
     assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 24
+    assert sum(
+        mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
+        for mode in receipt.proposal_modes
+    ) == 32
     assert receipt.receipt_sha256 == repeated_receipt.receipt_sha256
     assert tuple(row.fingerprint_sha256 for row in proposals) == tuple(
         row.fingerprint_sha256 for row in repeated
@@ -412,8 +427,58 @@ def test_repeated_interaction_cycles_add_bounded_multi_anchor_candidates() -> No
         )
 
 
+def test_centered_quota_consumes_guided_capacity_before_uniform_fallback() -> None:
+    authority, receptor, ligand = _authority()
+    context = build_guided_placement_context(authority, receptor, ligand)
+    budget = replace(_budget(), candidate_count=64, top_k=5)
+    policy = GuidedPlacementPolicy(maximum_guided_candidates_per_mode=4)
+
+    proposals, receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        policy=policy,
+    )
+    single_center_policy = replace(policy, centered_candidate_count=1)
+    single_center_proposals, single_center_receipt = (
+        generate_guided_docking_proposals(
+            authority,
+            budget,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            policy=single_center_policy,
+        )
+    )
+    baseline, _ = generate_pocket_centered_docking_proposals(
+        authority,
+        budget,
+        policy=PocketPlacementPolicy(
+            centered_candidate_count=policy.centered_candidate_count
+        ),
+    )
+
+    assert receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE) == 8
+    assert sum(
+        mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
+        for mode in receipt.proposal_modes
+    ) == 12
+    assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 44
+    assert receipt.proposal_modes[20:] == (UNIFORM_FALLBACK_MODE,) * 44
+    assert tuple(row.fingerprint_sha256 for row in proposals[20:]) == tuple(
+        row.fingerprint_sha256 for row in baseline[20:]
+    )
+    assert receipt.proposal_modes[8:] == single_center_receipt.proposal_modes[8:]
+    assert tuple(row.fingerprint_sha256 for row in proposals[8:]) == tuple(
+        row.fingerprint_sha256 for row in single_center_proposals[8:]
+    )
+
+
 def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:
     authority, receptor, ligand = _authority()
+    budget = replace(_budget(), candidate_count=24)
     context = build_guided_placement_context(
         authority,
         receptor,
@@ -422,7 +487,7 @@ def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:
     policy = GuidedPlacementPolicy()
     proposals, receipt = generate_guided_docking_proposals(
         authority,
-        _budget(),
+        budget,
         context,
         receptor_system=receptor,
         ligand_system=ligand,
@@ -745,7 +810,10 @@ def test_degenerate_ligand_shape_and_aromatic_frames_use_uniform_fallback() -> N
 
     assert context.ligand_shape_frame_available is False
     assert context.ligand_aromatic_systems == ()
-    assert receipt.proposal_modes == (UNIFORM_FALLBACK_MODE,) * 8
+    assert receipt.proposal_modes == (
+        POCKET_CENTER_BASELINE_MODE,
+        *(UNIFORM_FALLBACK_MODE,) * 7,
+    )
     assert tuple(row.fingerprint_sha256 for row in guided) == tuple(
         row.fingerprint_sha256 for row in baseline
     )
@@ -850,7 +918,8 @@ def test_sampled_degenerate_shape_frame_falls_back_per_candidate(
 ) -> None:
     authority, receptor, ligand = _authority()
     context = build_guided_placement_context(authority, receptor, ligand)
-    baseline, _ = generate_pocket_centered_docking_proposals(authority, _budget())
+    budget = replace(_budget(), candidate_count=16)
+    baseline, _ = generate_pocket_centered_docking_proposals(authority, budget)
 
     def unavailable_shape(*args, **kwargs):
         raise guided_module._GuidanceUnavailable("sampled shape frame is degenerate")
@@ -858,12 +927,20 @@ def test_sampled_degenerate_shape_frame_falls_back_per_candidate(
     monkeypatch.setattr(guided_module, "_principal_rotation", unavailable_shape)
     proposals, receipt = generate_guided_docking_proposals(
         authority,
-        _budget(),
+        budget,
         context,
         receptor_system=receptor,
         ligand_system=ligand,
     )
-    shape_index = GUIDED_MODES.index("shape_complementarity")
+    shape_index = next(
+        index
+        for index in range(
+            receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE),
+            len(receipt.proposal_modes),
+        )
+        if index % len(GUIDED_MODES)
+        == GUIDED_MODES.index("shape_complementarity")
+    )
     assert receipt.proposal_modes[shape_index] == UNIFORM_FALLBACK_MODE
     assert proposals[shape_index].fingerprint_sha256 == (
         baseline[shape_index].fingerprint_sha256

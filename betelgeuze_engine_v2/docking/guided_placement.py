@@ -36,8 +36,10 @@ from .placement import (
     _PROPOSAL_OVERRIDE,
     _ProposalOverride,
     _budget_sha256,
+    _centered_candidate_count,
     _counter_uniform,
     _stable_candidate_id,
+    PocketPlacementPolicy,
     generate_pocket_centered_docking_proposals,
 )
 from .proposals import DockingBudget, DockingProposal
@@ -46,15 +48,15 @@ from .proposals import DockingBudget, DockingProposal
 GUIDED_PLACEMENT_CONTEXT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_context/1.0.0"
 )
-GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.2.0"
+GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.3.0"
 GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_guided_placement_receipt/1.1.0"
+    "betelgeuze.engine_v2_guided_placement_receipt/1.2.0"
 )
 GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_search_result/1.0.0"
 )
 GUIDED_PLACEMENT_POLICY_ID = (
-    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.2.0"
+    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.3.0"
 )
 GUIDED_FEATURE_POLICY_ID = "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
 GUIDED_MODES = (
@@ -65,6 +67,7 @@ GUIDED_MODES = (
     "shape_complementarity",
 )
 MULTI_ANCHOR_MODE = "multi_anchor_hotspot"
+POCKET_CENTER_BASELINE_MODE = "pocket_center_baseline"
 UNIFORM_FALLBACK_MODE = "uniform_fallback"
 MAX_GUIDED_FEATURE_ATOMS = 2_048
 MAX_GUIDED_AROMATIC_SYSTEMS = 128
@@ -687,6 +690,7 @@ class GuidedPlacementContext:
 class GuidedPlacementPolicy:
     guided_fraction: float = 0.75
     minimum_uniform_fraction: float = 0.375
+    centered_candidate_count: int = 8
     maximum_guided_candidates_per_mode: int = 8
     donor_acceptor_distance_angstrom: float = 2.9
     charge_anchor_distance_angstrom: float = 3.5
@@ -721,6 +725,13 @@ class GuidedPlacementPolicy:
                 "maximum_guided_candidates_per_mode must be in [1,64]"
             )
         if (
+            type(self.centered_candidate_count) is not int
+            or not 1 <= self.centered_candidate_count <= 64
+        ):
+            raise DockingAuthorityError(
+                "centered_candidate_count must be in [1,64]"
+            )
+        if (
             type(self.multi_anchor_max_points) is not int
             or not 2 <= self.multi_anchor_max_points <= 3
         ):
@@ -748,9 +759,15 @@ class GuidedPlacementPolicy:
             "policy_id": self.policy_id,
             "guided_modes": list(GUIDED_MODES),
             "guided_fraction_binary64_hex": self.guided_fraction.hex(),
-            "allocation_strategy": "available_mode_capped_with_uniform_floor",
+            "allocation_strategy": (
+                "centered_quota_within_guided_cap_and_uniform_floor"
+            ),
             "minimum_uniform_fraction_binary64_hex": (
                 self.minimum_uniform_fraction.hex()
+            ),
+            "centered_candidate_count": self.centered_candidate_count,
+            "centered_candidate_policy": (
+                "preserve_before_guided_replacement"
             ),
             "maximum_guided_candidates_per_mode": (
                 self.maximum_guided_candidates_per_mode
@@ -1607,7 +1624,11 @@ class GuidedPlacementReceipt:
             for value in self.proposal_fingerprint_sha256s
         )
         modes = tuple(str(value) for value in self.proposal_modes)
-        allowed = set(GUIDED_MODES) | {MULTI_ANCHOR_MODE, UNIFORM_FALLBACK_MODE}
+        allowed = set(GUIDED_MODES) | {
+            MULTI_ANCHOR_MODE,
+            POCKET_CENTER_BASELINE_MODE,
+            UNIFORM_FALLBACK_MODE,
+        }
         if (
             not fingerprints
             or len(fingerprints) != len(modes)
@@ -1665,7 +1686,7 @@ class GuidedPlacementReceipt:
                 or receptor_row != tuple(sorted(set(receptor_row)))
             ):
                 raise DockingAuthorityError("guided anchor atom indices are invalid")
-            if mode == UNIFORM_FALLBACK_MODE:
+            if mode in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}:
                 if (
                     ligand_row
                     or receptor_row
@@ -1673,7 +1694,7 @@ class GuidedPlacementReceipt:
                     or observed is not None
                 ):
                     raise DockingAuthorityError(
-                        "uniform fallback cannot declare guided anchors"
+                        "baseline placement cannot declare guided anchors"
                     )
             elif (
                 not ligand_row
@@ -1764,7 +1785,12 @@ class GuidedPlacementReceipt:
                 )
             ],
             "guided_proposal_count": sum(
-                mode != UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
+                mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
+                for mode in self.proposal_modes
+            ),
+            "pocket_center_baseline_count": sum(
+                mode == POCKET_CENTER_BASELINE_MODE
+                for mode in self.proposal_modes
             ),
             "uniform_fallback_count": sum(
                 mode == UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
@@ -1829,9 +1855,17 @@ def generate_guided_docking_proposals(
             "guided context does not match its authenticated derivation"
         )
     selected_policy.fingerprint_sha256
+    placement_policy = PocketPlacementPolicy(
+        centered_candidate_count=selected_policy.centered_candidate_count
+    )
     baseline, _ = generate_pocket_centered_docking_proposals(
         authenticated_problem,
         budget,
+        policy=placement_policy,
+    )
+    centered_count = _centered_candidate_count(
+        budget.candidate_count,
+        selected_policy.centered_candidate_count,
     )
     modes = _available_modes(context)
     if modes:
@@ -1849,20 +1883,19 @@ def generate_guided_docking_proposals(
                 * selected_policy.minimum_uniform_fraction
             )
         )
-        guided_count = min(
+        structured_count = min(
             fraction_cap,
             mode_cap,
-            budget.candidate_count - uniform_floor,
+            max(0, budget.candidate_count - uniform_floor),
         )
-        guided_count = max(1, guided_count)
-        if budget.candidate_count >= 2:
-            guided_count = min(budget.candidate_count - 1, guided_count)
+        guided_count = max(0, structured_count - centered_count)
     else:
         guided_count = 0
     from . import proposals as proposal_module
 
     proposals = list(baseline)
     proposal_modes = [UNIFORM_FALLBACK_MODE] * len(proposals)
+    proposal_modes[:centered_count] = [POCKET_CENTER_BASELINE_MODE] * centered_count
     ligand_anchor_rows: list[tuple[int, ...]] = [()] * len(proposals)
     receptor_anchor_rows: list[tuple[int, ...]] = [()] * len(proposals)
     requested_anchor_distances: list[float | None] = [None] * len(proposals)
@@ -1872,7 +1905,8 @@ def generate_guided_docking_proposals(
         dtype=search_space.local_offsets.dtype
     )
     multi_anchor_count = 0
-    for proposal_index in range(guided_count):
+    for guided_slot_index in range(guided_count):
+        proposal_index = centered_count + guided_slot_index
         base_mode = modes[proposal_index % len(modes)]
         cycle_index = proposal_index // len(modes)
         mode = base_mode
@@ -2121,6 +2155,7 @@ __all__ = [
     "MAX_GUIDED_RECEPTOR_BONDS_SCANNED",
     "MAX_MULTI_ANCHOR_MATCHES_PER_LANE",
     "MULTI_ANCHOR_MODE",
+    "POCKET_CENTER_BASELINE_MODE",
     "UNIFORM_FALLBACK_MODE",
     "GuidedPlacementContext",
     "GuidedPlacementPolicy",

@@ -37,9 +37,21 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   from 1.55 to 0.91 Å while raising valid candidates from zero to three and
   six, respectively.
 - A bounded two/three-constraint `multi_anchor_hotspot` proposal mode is
-  implemented for repeated guided cycles while retaining exactly 24 uniform
-  slots. Targeted checks preserved the observed oracle cases, but the mode
-  itself produced no 2 Å candidate, so it remains unpromoted.
+  implemented for repeated guided cycles while retaining the frozen 37.5%
+  uniform floor. The final 32-case development run allocated 84 multi-anchor
+  candidates with no 2 Å or valid candidate, so the mode remains unpromoted.
+- A `pocket_center_baseline` lane reserves eight of the former guided slots
+  without consuming the random-uniform pool. Proposal mode and PRNG scheduling
+  remain keyed to the absolute proposal index, so the retained indices are
+  reproducible. Across the final 29 scored development cases, 232 centered
+  candidates produced three native-like and 12 valid poses, including one
+  incremental oracle case and one incremental valid-pose case. The lane is
+  development-only and does not authorize a holdout run or product claim.
+- Bounded translation/rotation refinement v3 is implemented as an explicit
+  experimental lane with a hard pocket guard and typed rotation receipt. It
+  was not promoted: a conservative targeted comparison regressed 6YT6 Top-1
+  from about 4.06 to 5.99 A without a validity gain. The public development
+  runner therefore continues to use translation-only refinement v2.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -79,15 +91,18 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   `ci-engine-v2-main` workflow; no additional workflow was created.
 - The CI inventory exposes 43 Engine V2 workflows: three authoritative and 40
   specialized. Specialized workflows are not hidden or treated as approved.
-- Focused verification: `144 passed`, with seven inotify host-capability tests
-  excluded after separate reproduction and classification.
-- The current diagnostic/ion/allocation slice added nine focused passing tests,
-  passed the Engine V2 architecture guard, compiled all changed Python entry
-  points, and passed `git diff --check`.
-- The final Python rc5 wheel was built twice with identical SHA-256
-  `2ec932023df7497bf06bbb7e7a207912242613e14c367d91db293d513c9a2c6c`;
-  a local clean-install import with the previously qualified CPython 3.10
-  native wheel succeeded.
+- Focused verification for the current placement/refinement/report slice is
+  `131 passed`, with seven inotify host-capability tests deselected only after
+  separate reproduction showed the Codex Electron process consuming the
+  per-user watch limit. The Engine V2 architecture guard passed, all changed
+  Python entry points compiled, and `git diff --check` passed.
+- The current Python rc5 wheel was built twice byte-identically with SHA-256
+  `1aede96be7709a8e57006c2f24957d43db3b7c56ee001b9f645b74180d3d8752`.
+  Its five changed package files match the source byte-for-byte, and a new
+  isolated install with the qualified native wheel
+  `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`
+  imported from site-packages successfully. The wheel/SBOM must still be
+  rebound to the final clean commit before solo Stage 0 evidence is final.
 - Repository orchestration verifier: `./scripts/ai-verify.sh` passed from the
   main worktree that carries it.
 
@@ -106,32 +121,54 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    ceiling and Top-5 selection failure is 0.0 against a 0.20 ceiling. Fresh 128
    execution remains blocked by proposal and validity gates. That report binds
    the pre-v2 implementation and therefore remains diagnostic history. A
-   current-source non-claimable track-decision slice now contains nine total
-   cases, eight scored cases, and 512 candidate rows under one implementation
+   earlier current-source non-claimable track-decision slice contained nine
+   total cases, eight scored cases, and 512 candidate rows under one implementation
    hash. Preparation unsupported and case failure are both 0.1111 against a
    0.20 ceiling; coverage is 1.0 against 0.90. Proposal oracle is 0.25 against
    a 0.4556 floor and invalid Top-1 is 0.625 against a 0.20 ceiling, so Stage 0
-   still fails. Conditional Top-1 selection failure is 0.50 against 0.50 and
-   Top-5 selection failure is 0.0 against 0.20.
+   still fails. The final homogeneous current-source 32-case run contains 29
+   scored cases and the same three typed unsupported large-ring failures.
+   Preparation unsupported and case failure are 0.09375 against a 0.14375
+   ceiling, and candidate coverage is 1.0 against a 0.90 floor. Proposal
+   oracle recovery improved to 0.13793 but remains below the 0.49375 floor;
+   invalid Top-1 is 0.72414 against a 0.20 ceiling. Conditional Top-1
+   selection failure is 0.75 against a 0.50 ceiling and Top-5 selection
+   failure is 0.25 against a 0.20 ceiling. The development-analysis SHA-256
+   is `d1210012ae31c7c377e9eb6a01bc151279c0eca2f15bdf72d9e06e24d85d277d`
+   and threshold-evidence SHA-256 is
+   `0eae5d03c88164468feaa3b80beb49211246ccc770585f8b4c647b278e225a9a`.
 3. **Proposal/scorer diagnosis:** 1,856 successful candidate rows across the
-   29 scored cases retain canonical binary64 values for all eight terms. Only
-   uniform fallback produced 2 Å candidates: 2/1,168, contributing both oracle
-   successes. No guided mode produced a 2 Å candidate. The adaptive allocation
-   improved the paired common-case oracle event count from one to two and mean
-   oracle RMSD by 0.20 Å, but it remains far below promotion level. Automatic
-   proposal or scorer promotion remains false, and the report contains no
-   fresh-holdout result. In the current-source slice, all native-like candidates
-   still came from uniform fallback. The multi-anchor lane produced 28
-   candidates with zero native-like and zero valid candidates, so it is retained
-   only as an explicit unpromoted development lane.
+   29 scored cases retain canonical binary64 values for all eight terms.
+   Uniform fallback contributed four native-like and 32 valid candidates from
+   1,168 proposals. The centered lane contributed three native-like and 12
+   valid candidates from 232 proposals; it added the 6Z0R oracle independently
+   and one independent valid-pose case. Multi-anchor contributed zero
+   native-like and zero valid candidates from 84 proposals. Across the 29
+   paired historical cases, oracle events improved from two to four, mean
+   oracle RMSD from 3.233 to 2.961 A, median oracle RMSD from 3.170 to 2.749 A,
+   and mean Top-1 RMSD from 5.119 to 4.929 A. The four oracle cases still yield
+   only one Top-1 and three Top-5 recoveries. Constrained term calibration has
+   only four oracle cases versus the frozen minimum of 20 and leave-one-oracle-
+   case-out recovery is one Top-1 and two Top-5 cases, so automatic scorer or
+   proposal promotion remains false. The report contains no fresh-holdout
+   result.
 4. **Refinement/validity diagnosis:** refinement reduced its declared clash
-   penalty in 1,819/1,856 candidates, yet `minimum_distance_to_protein` failed
-   1,837 times and `volume_overlap_with_protein` failed 1,727 times. Internal
-   clash failed 515 times and internal energy failed 562 times. The
-   translation-only v1 objective therefore does not close PoseBusters validity.
-   Interaction-aware v2 improves targeted validity but does not close the gate;
-   internal-geometry and rotational refinement remain unimplemented, and the
-   current source has not passed a homogeneous development validity gate.
+   penalty and translated all 1,856 candidates, yet
+   `minimum_distance_to_protein` failed 1,793 times and
+   `volume_overlap_with_protein` failed 1,612 times. Internal clash failed 515
+   times and internal energy failed 562 times. Interaction-aware v2 therefore
+   improves targeted validity but does not close the gate. Rotation v3 is now
+   implemented experimentally, but its targeted rank regression blocks default
+   use; internal geometry and interaction-aware torsion remain unresolved. The
+   current homogeneous development run fails the 0.20 invalid-Top-1 ceiling.
+   A post-run confusion audit found only nine cases with any PoseBusters-valid
+   candidate; the existing scorer already selected a valid Top-1 in eight of
+   them, with 6Z4N the only validity-selection miss. Sixty-seven candidates had
+   zero final v2 clash penalty, of which 44 were PoseBusters-valid and 23 still
+   failed another check. A zero-penalty-only rerank covers only 13 cases and
+   leaves the valid-Top-1 count at eight. The next validity slice must therefore
+   generate or refine valid candidates rather than relabel, filter, or abstain
+   around the existing pool.
 5. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier

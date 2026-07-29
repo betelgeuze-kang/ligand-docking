@@ -10,10 +10,10 @@ therefore retains all existing component binding, mutation protection, validity,
 failure-complete accounting, score ordering, and top-k diversity semantics.
 
 Rigid rotations use Shoemake's three-uniform construction for the Haar measure
-on SO(3). Proposal centroids are sampled uniformly by volume inside a sphere
-centered on the authenticated pocket.  The zero-index baseline uses zero
-torsions, identity rotation, and places the ligand centroid exactly at the
-pocket center.
+on SO(3). A bounded center ensemble preserves multiple rotations/conformers at
+the authenticated pocket center; remaining centroids are sampled uniformly by
+volume inside the pocket sphere. The zero-index baseline retains zero torsions
+and identity rotation.
 
 The policy is a deterministic software contract, not a scientifically validated
 pose generator or pocket model.
@@ -48,16 +48,16 @@ from .proposals import (
 
 
 POCKET_PLACEMENT_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_pocket_placement_policy/1.0.0"
+    "betelgeuze.engine_v2_pocket_placement_policy/1.1.0"
 )
 POCKET_PLACEMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_pocket_placement_receipt/1.0.0"
+    "betelgeuze.engine_v2_pocket_placement_receipt/1.1.0"
 )
 POCKET_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_pocket_placement_search_result/1.0.0"
 )
 POCKET_PLACEMENT_POLICY_ID = (
-    "betelgeuze.engine_v2_authenticated_pocket_placement/1.0.0"
+    "betelgeuze.engine_v2_authenticated_pocket_placement/1.1.0"
 )
 HAAR_ROTATION_SAMPLER_ID = (
     "shoemake_three_uniform_unit_quaternion/1.0.0"
@@ -71,6 +71,7 @@ MAX_POCKET_PLACEMENT_PROPOSALS = 4_096
 MAX_POCKET_TRANSLATION_RADIUS_ANGSTROM = 100.0
 _ROTATION_TOLERANCE = 1.0e-10
 _CENTROID_TOLERANCE_ANGSTROM = 1.0e-10
+CENTERED_CANDIDATE_FRACTION = 0.125
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -273,6 +274,16 @@ def _uniform_spherical_offset(
     )
 
 
+def _centered_candidate_count(
+    candidate_count: int,
+    configured_maximum: int,
+) -> int:
+    return min(
+        configured_maximum,
+        max(1, int(math.ceil(candidate_count * CENTERED_CANDIDATE_FRACTION))),
+    )
+
+
 def _torsion_angles(
     search_space: TorsionSearchSpace,
     *,
@@ -308,6 +319,7 @@ class PocketPlacementPolicy:
     centroid_policy_id: str = CENTROID_POLICY_ID
     prng_id: str = COUNTER_PRNG_ID
     baseline_at_pocket_center: bool = True
+    centered_candidate_count: int = 1
     metadata: Mapping[str, object] = field(default_factory=dict)
     _fingerprint_sha256: str = field(init=False, repr=False)
 
@@ -328,6 +340,13 @@ class PocketPlacementPolicy:
             raise DockingAuthorityError(
                 "the frozen placement baseline must be pocket-centered"
             )
+        if (
+            type(self.centered_candidate_count) is not int
+            or not 1 <= self.centered_candidate_count <= 64
+        ):
+            raise DockingAuthorityError(
+                "centered_candidate_count must be in [1,64]"
+            )
         metadata = _freeze_json(dict(self.metadata))
         object.__setattr__(self, "metadata", metadata)
         object.__setattr__(
@@ -345,6 +364,10 @@ class PocketPlacementPolicy:
             "centroid_policy_id": self.centroid_policy_id,
             "prng_id": self.prng_id,
             "baseline_at_pocket_center": self.baseline_at_pocket_center,
+            "centered_candidate_count": self.centered_candidate_count,
+            "centered_candidate_allocation": (
+                "lowest_indices_min_configured_and_ceil_one_eighth_budget"
+            ),
             "metadata": _thaw_json(self.metadata),
             "scientifically_validated": False,
             "claim_safe": False,
@@ -625,6 +648,10 @@ def generate_pocket_centered_docking_proposals(
 
     proposals: list[DockingProposal] = []
     centroid_offsets: list[float] = []
+    centered_count = _centered_candidate_count(
+        budget.candidate_count,
+        placement_policy.centered_candidate_count,
+    )
     for proposal_index in range(budget.candidate_count):
         angles = _torsion_angles(
             search_space,
@@ -645,11 +672,15 @@ def generate_pocket_centered_docking_proposals(
             proposal_index=proposal_index,
             dtype=conformer.dtype,
         )
-        offset = _uniform_spherical_offset(
-            seed=budget.seed,
-            proposal_index=proposal_index,
-            radius_angstrom=budget.translation_radius_angstrom,
-            dtype=conformer.dtype,
+        offset = (
+            torch.zeros(3, dtype=conformer.dtype)
+            if proposal_index < centered_count
+            else _uniform_spherical_offset(
+                seed=budget.seed,
+                proposal_index=proposal_index,
+                radius_angstrom=budget.translation_radius_angstrom,
+                dtype=conformer.dtype,
+            )
         )
         target_centroid = authenticated_problem.pocket.center.to(
             dtype=conformer.dtype
