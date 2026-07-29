@@ -171,6 +171,12 @@ def component_contract_fingerprint(
             getattr(component, "validated_for_docking_ranking", False)
         )
         payload["score_descriptor"] = scorer_descriptor(component).to_dict()
+        backend_receipt_sha256 = getattr(component, "backend_receipt_sha256", "")
+        if backend_receipt_sha256:
+            payload["backend_receipt_sha256"] = _require_digest(
+                backend_receipt_sha256,
+                name="scorer backend_receipt_sha256",
+            )
     return _canonical_sha256(payload)
 
 

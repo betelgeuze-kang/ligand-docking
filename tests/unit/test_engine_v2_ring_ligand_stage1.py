@@ -21,6 +21,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingAuthorityError,
     DockingBudget,
     DockingProblemIdentity,
+    UnsupportedLargeRingSystemError,
     derive_authoritative_torsion_search_space,
     generate_bounded_docking_proposals,
 )
@@ -191,14 +192,14 @@ def test_generated_proposals_preserve_all_ring_pair_distances() -> None:
 
 def test_macrocycle_lane_is_explicitly_unsupported() -> None:
     assert AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS == 12
-    with pytest.raises(DockingAuthorityError, match="conservatively rejects"):
+    with pytest.raises(UnsupportedLargeRingSystemError, match="conservatively rejects"):
         derive_authoritative_torsion_search_space(
             _simple_ring(AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS)
         )
 
 
 def test_chord_cannot_hide_an_unsupported_large_ring_system() -> None:
-    with pytest.raises(DockingAuthorityError, match="conservatively rejects"):
+    with pytest.raises(UnsupportedLargeRingSystemError, match="conservatively rejects"):
         derive_authoritative_torsion_search_space(
             _chorded_ring(AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS)
         )

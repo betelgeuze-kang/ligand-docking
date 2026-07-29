@@ -1,0 +1,19 @@
+[build-system]
+requires = ["maturin==1.11.5"]
+build-backend = "maturin"
+
+[project]
+name = "betelgeuze-engine-v2-native"
+version = "0.2.0rc5"
+requires-python = ">=3.10,<3.13"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "Operating System :: POSIX :: Linux",
+]
+
+[tool.maturin]
+bindings = "pyo3"
+module-name = "betelgeuze_engine_v2_native"
+strip = true

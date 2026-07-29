@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_an_public_redocking_diagnostic_contract_rc4
+v2_ao_native_cpu_scorer_contract_rc5
 ```
 
 The current `main` branch contains:

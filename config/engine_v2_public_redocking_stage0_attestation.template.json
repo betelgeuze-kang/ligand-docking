@@ -1,0 +1,33 @@
+{
+  "schema_id": "betelgeuze.engine_v2_stage0_solo_attestation/1.0.0",
+  "review_subject_sha256": "COMPUTE_FROM_FILLED_POLICY_BEFORE_ATTACHING_ATTESTATION",
+  "developer_id": "OPERATOR_FILL",
+  "blind_operator_id": "OPERATOR_FILL_SAME_PERSON",
+  "independent_review_complete": false,
+  "external_review_required_before_public_claim": true,
+  "self_review_decisions": {
+    "ci_authority_self_review_completed": false,
+    "contract_self_review_completed": false,
+    "full_suite_classification_self_review_completed": false,
+    "historical_216_3_reconciliation_self_review_completed": false,
+    "legal_and_license_self_review_completed": false,
+    "native_parity_gate_verified": false,
+    "operator_runbook_self_review_completed": false,
+    "primary_holdout_unopened_confirmed": false,
+    "run_once_no_tuning_policy_accepted": false,
+    "scientific_boundary_self_review_completed": false,
+    "source_freeze_verified": false,
+    "suite_boundaries_self_review_completed": false,
+    "thresholds_frozen_before_execution_confirmed": false
+  },
+  "compensating_controls": {
+    "automated_policy_verifier_required": true,
+    "clean_frozen_commit_required": true,
+    "external_review_required_before_public_claim": true,
+    "immutable_artifact_manifest_required": true,
+    "post_result_retuning_forbidden": true,
+    "two_pass_self_review_required": true,
+    "review_pass_minimum_separation_hours": 24
+  },
+  "attested_at_utc": "OPERATOR_FILL_UTC_TIMESTAMP"
+}

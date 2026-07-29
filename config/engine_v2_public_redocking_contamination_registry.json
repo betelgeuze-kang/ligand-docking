@@ -1,0 +1,23 @@
+{
+  "contaminated_development_case_count": 300,
+  "contaminated_development_case_ids_sha256": "110c9ccc37255c39df3dae5b0213e4cf158cccfaf30071cb5ec9eb8e269ef349",
+  "coverage_verified_before_metric_values_inspected": true,
+  "discovered_at_utc": "2026-07-29T00:00:00Z",
+  "external_independent_validation_still_required_for_public_claim": true,
+  "fresh_internal_blind_candidate_count": 128,
+  "fresh_internal_blind_case_ids_sha256": "ecc91c660896245f62ad8b583cfa4f45e50038cf513c384f6bdb56d406278248",
+  "fresh_result_values_inspected": false,
+  "fresh_selection_rule": "sorted_posebusters_428_archive_case_ids_minus_historical_300",
+  "historical_300_claim_role": "development_and_diagnostic_only",
+  "old_298_holdout_claim_invalidated": true,
+  "reclassification_reason": "complete 300-case 900-row report existed before numeric Stage 0 freeze",
+  "registry_sha256": "89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31",
+  "result_values_inspected_after_reclassification": true,
+  "result_values_inspected_before_reclassification": false,
+  "schema_id": "betelgeuze.engine_v2_public_redocking_contamination_registry/1.1.0",
+  "source_archive_sha256": "495a8f432ee5612c0dfa3cc582829f112bfca3c29dddc2db2c3a8dc7609e721c",
+  "source_report_execution_receipt_count": 900,
+  "source_report_fingerprint_sha256": "15bf65a63a3d2aad28fab0a6a6ed8960351919af234532b90578e067376d3e76",
+  "source_report_id": "20260729T014226-KST-08c8a5ed",
+  "source_report_sha256": "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
+}

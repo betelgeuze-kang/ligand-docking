@@ -18,7 +18,9 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScope,
     ElementAwarePoseValidityContext,
     ElementAwareValidityError,
+    UnsupportedVdwElementError,
     PocketDefinition,
+    ReceptorClashReliefRefiner,
     VdwContactPolicy,
     build_element_aware_authenticated_known_pocket_docking_problem,
     element_aware_authority_document,
@@ -227,7 +229,7 @@ def test_sparse_receptor_candidates_are_less_than_full_cartesian_pairs() -> None
 
 
 def test_unsupported_element_and_invalid_policy_fail_closed() -> None:
-    with pytest.raises(ElementAwareValidityError, match="unsupported vdW element"):
+    with pytest.raises(UnsupportedVdwElementError, match="unsupported vdW element"):
         build_element_aware_authenticated_known_pocket_docking_problem(
             _receptor(),
             _ligand(element="XE"),
@@ -235,6 +237,33 @@ def test_unsupported_element_and_invalid_policy_fail_closed() -> None:
         )
     with pytest.raises(ElementAwareValidityError, match="cell_size_angstrom"):
         VdwContactPolicy(cell_size_angstrom=1.0)
+
+
+def test_receptor_clash_relief_is_bounded_and_preserves_lineage() -> None:
+    receptor = _receptor(overlapping=True)
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposal = _baseline(authority)
+    refiner = ReceptorClashReliefRefiner(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+    )
+
+    refined = refiner.refine(proposal, max_steps=10)
+    receipt = refiner.receipts[proposal.fingerprint_sha256]
+
+    assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
+    assert refined.refiner_id == refiner.refiner_id
+    assert float.fromhex(receipt["final_penalty_binary64_hex"]) < float.fromhex(
+        receipt["initial_penalty_binary64_hex"]
+    )
+    assert torch.linalg.vector_norm(refined.translation - proposal.translation) <= 1.5
 
 
 def test_element_aware_ligand_pair_capacity_is_enforced() -> None:

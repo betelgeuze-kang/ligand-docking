@@ -123,6 +123,10 @@ class DockingAuthorityError(ValueError):
     """Authoritative docking input construction failed closed."""
 
 
+class UnsupportedLargeRingSystemError(DockingAuthorityError):
+    """The rigid-ring lane cannot represent a macrocycle-sized ring system."""
+
+
 class DockingScope(str, Enum):
     KNOWN_POCKET = "known_pocket_docking"
     REDOCKING = "known_reference_pocket_redocking"
@@ -1062,7 +1066,7 @@ def _derive_ring_topology(
         maximum_ring_system_atom_count
         >= AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS
     ):
-        raise DockingAuthorityError(
+        raise UnsupportedLargeRingSystemError(
             "authoritative torsion derivation conservatively rejects ring "
             "systems with "
             f"{AUTHENTICATED_DOCKING_MACROCYCLE_MIN_RING_ATOMS} or more atoms"
@@ -1593,6 +1597,7 @@ __all__ = [
     "AuthenticatedDockingProblem",
     "AuthenticatedDockingSearchResult",
     "DockingAuthorityError",
+    "UnsupportedLargeRingSystemError",
     "DockingScope",
     "PocketDefinition",
     "RING_SYSTEM_POLICY_ID",

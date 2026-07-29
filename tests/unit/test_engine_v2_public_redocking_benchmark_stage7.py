@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from functools import lru_cache
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from betelgeuze_engine_v2.benchmark import (
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
     PUBLIC_REDOCKING_CASE_SEED_BASE,
     PUBLIC_REDOCKING_COHORT_COUNT,
+    PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
     PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_PRIMARY_ENGINES,
@@ -31,6 +33,7 @@ from betelgeuze_engine_v2.benchmark import (
     frozen_public_redocking_case_seed,
     frozen_public_redocking_cohort,
     frozen_public_redocking_profiles,
+    require_public_redocking_contamination_registry,
     verify_public_redocking_source_identifiers,
 )
 
@@ -48,6 +51,69 @@ _EXCLUDED_SOURCE_IDS = (
 
 
 _RUN_ROOT = Path("/tmp/betelgeuze-public-redocking-unit-run")
+
+
+def _python_backend_receipt() -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
+        "backend": "python_reference",
+        "backend_version": "1.0.0",
+        "implementation_source_sha256": "e" * 64,
+        "options_fingerprint_sha256": "f" * 64,
+        "extension_sha256": "",
+        "cargo_lock_sha256": "",
+        "rustc_version": "",
+        "target_triple": "",
+        "build_flags": [],
+        "implicit_fallback_allowed": False,
+    }
+    payload["receipt_sha256"] = hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest()
+    return payload
+
+
+def _zero_score_terms() -> dict[str, str]:
+    return {
+        name: 0.0.hex()
+        for name in (
+            "typed_vdw",
+            "electrostatics",
+            "directional_hbond",
+            "hydrophobic_contact",
+            "desolvation_proxy",
+            "torsion_energy",
+            "ligand_strain",
+            "weak_pocket_prior",
+            "total_score",
+        )
+    }
+
+
+def test_candidate_score_terms_accept_json_key_order_and_recanonicalize() -> None:
+    score_terms = dict(reversed(tuple(_zero_score_terms().items())))
+    candidate = PublicRedockingEngineV2CandidateDiagnostic(
+        proposal_index=0,
+        status="success",
+        proposal_fingerprint_sha256="1" * 64,
+        score=0.0,
+        rmsd_angstrom=0.0,
+        geometric_valid=True,
+        chemical_valid=True,
+        pose_artifact_sha256="2" * 64,
+        score_terms_receipt_sha256="3" * 64,
+        hbond_count=0,
+        selection_eligible=True,
+        score_term_binary64_hex=score_terms,
+    )
+
+    assert tuple(candidate.score_term_binary64_hex) == tuple(_zero_score_terms())
 
 
 def _source_identifier_bytes() -> bytes:
@@ -231,6 +297,8 @@ def _input_fields(
     execution_policy = (
         (
             "cpu_count=1",
+            'scorer_backend="python_reference"',
+            "scorer_thread_count=1",
             "torch_interop_threads=1",
             "torch_intraop_threads=1",
             'torch_version="2.6.0"',
@@ -316,6 +384,7 @@ def _success(
     if engine_id == "engine_v2":
         diagnostics = PublicRedockingEngineV2Diagnostics(
             preparation_status="success",
+            scorer_backend_receipt=_python_backend_receipt(),
             receptor_atom_count=2,
             ligand_atom_count=1,
             receptor_partial_charge_count=2,
@@ -341,6 +410,8 @@ def _success(
                             f"{case_id}:terms:{index}".encode("ascii")
                         ).hexdigest(),
                         hbond_count=int(index == 0),
+                        selection_eligible=True,
+                        score_term_binary64_hex=_zero_score_terms(),
                     )
                     if index < 5
                     else PublicRedockingEngineV2CandidateDiagnostic(
@@ -486,9 +557,24 @@ def test_frozen_cohort_binds_exact_300_cases_and_public_source() -> None:
         PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
     )
     assert document["analysis_partitions"]["primary_blind_holdout"]["case_count"] == 298
+    assert document["analysis_partitions"]["contaminated_development"]["case_count"] == 300
     assert document["raw_structure_data_bundled"] is False
     assert document["benchmark_executed"] is False
     assert document["claim_safe"] is False
+
+
+def test_contamination_registry_invalidates_old_298_claim_before_values() -> None:
+    path = Path("config/engine_v2_public_redocking_contamination_registry.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    registry = require_public_redocking_contamination_registry(payload)
+
+    assert registry["registry_sha256"] == (
+        PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256
+    )
+    assert registry["contaminated_development_case_count"] == 300
+    assert registry["fresh_internal_blind_candidate_count"] == 128
+    assert registry["result_values_inspected_before_reclassification"] is False
+    assert registry["old_298_holdout_claim_invalidated"] is True
 
 
 def test_published_308_identifier_document_reproduces_selection() -> None:
@@ -643,6 +729,7 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
     assert report.to_dict()["bootstrap_confidence_intervals"] is True
     assert report.to_dict()["engineering_smoke_case_count"] == 2
     assert report.to_dict()["primary_blind_holdout_case_count"] == 298
+    assert report.to_dict()["contaminated_development_case_count"] == 300
     assert report.to_dict()["supplementary_descriptive_case_count"] == 300
     assert report.to_dict()["primary_metrics_exclude_engineering_smoke"] is True
     assert _metric(
@@ -708,7 +795,11 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
             subgroup="size_small_1_20",
             analysis_scope="primary_blind_holdout",
         ).case_count
-        == 116
+        == sum(
+            profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+            and profile.size_subgroup == "size_small_1_20"
+            for profile in _profiles()
+        )
     )
     assert (
         _metric(
@@ -718,7 +809,11 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
             subgroup="rotor_flexible_5_plus",
             analysis_scope="primary_blind_holdout",
         ).case_count
-        == 156
+        == sum(
+            profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+            and profile.rotor_subgroup == "rotor_flexible_5_plus"
+            for profile in _profiles()
+        )
     )
     ring_case_count = sum(
         profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
@@ -1118,6 +1213,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
     boolean_policy = (
         "cpu_count=true",
+        'scorer_backend="python_reference"',
+        "scorer_thread_count=1",
         "torch_interop_threads=1",
         "torch_intraop_threads=1",
         'torch_version="2.6.0"',
@@ -1141,6 +1238,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
     engine_v2_policy = (
         "cpu_count=1",
+        'scorer_backend="python_reference"',
+        "scorer_thread_count=1",
         "torch_interop_threads=1",
         "torch_intraop_threads=1",
         'torch_version="2.7.0+cpu"',
@@ -1161,6 +1260,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
     allowed_but_mismatched_policy = (
         "cpu_count=1",
+        'scorer_backend="python_reference"',
+        "scorer_thread_count=1",
         "torch_interop_threads=1",
         "torch_intraop_threads=1",
         'torch_version="2.6.0+cpu"',
@@ -1400,6 +1501,31 @@ def test_report_rejects_engine_v2_candidate_diagnostic_substitution() -> None:
             tuple(rows),
             policy=_policy(),
         )
+
+
+def test_engine_v2_diagnostics_bind_complete_backend_receipt() -> None:
+    row = _success(
+        FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
+        "engine_v2",
+        top1=1.0,
+        top2=2.0,
+        top3=3.0,
+        runtime=1.0,
+    )
+    diagnostics = row.engine_v2_diagnostics
+    assert diagnostics is not None
+    serialized = diagnostics.to_dict()["scorer_backend_receipt"]
+    assert isinstance(serialized, dict)
+    assert serialized["backend"] == "python_reference"
+    assert serialized["implicit_fallback_allowed"] is False
+
+    substituted = dict(serialized)
+    substituted["backend_version"] = "changed-after-scoring"
+    with pytest.raises(
+        PublicRedockingBenchmarkError,
+        match="backend receipt hash mismatch",
+    ):
+        replace(diagnostics, scorer_backend_receipt=substituted)
 
 
 def test_missing_case_or_engine_row_cannot_drop_the_denominator() -> None:

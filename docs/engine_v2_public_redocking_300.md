@@ -1,5 +1,15 @@
 # Engine V2 public redocking 300-case contract
 
+> Historical-status correction (2026-07-29): a complete 300-case, 900-row
+> report predating the numeric Stage 0 freeze was found and hash-verified.
+> Consequently, all 300 cases in this document are development/diagnostic data
+> and the former 298-case `primary_blind_holdout` designation is invalidated.
+> The runner rejects that historical subset. The result-blind replacement is
+> the 128-case complement frozen in
+> `config/engine_v2_fresh_redocking_holdout_manifest.json`; it may be used only
+> as `fresh-internal-blind-holdout` under solo-development Stage 0 controls.
+> It remains internal/provisional until genuine external review exists.
+
 ## Scope
 
 This is a frozen, offline evaluation contract plus a local execution tool. The
@@ -290,6 +300,67 @@ python3 -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 \
 python3 -m pip install --no-deps posebusters==0.3.1
 ```
 
+The primary holdout cannot be run from the protocol file alone. First copy
+`config/engine_v2_public_redocking_stage0_threshold_evidence.template.json`
+and fill it from an exact-contract public development run that contains neither
+the two smoke cases nor any of the 298 holdout cases. The verifier cross-checks
+all seven proposed threshold values and both paired-baseline margins against
+that artifact; a generic literature note or unrelated file hash cannot satisfy
+the gate. Then copy
+`config/engine_v2_public_redocking_stage0_freeze.template.json`, bind the
+evidence path/SHA-256, and fill the remaining fields. Print the SHA-only host
+snapshot:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --print-host-environment-json
+```
+
+Copy this OS/kernel/CPU-affinity/model/Python-executable/runtime-variable
+snapshot into `environment_freeze.host`; runtime-variable values are never
+printed. Before attaching the independent attestation, compute the exact
+review-subject hash:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --print-review-subject-sha256
+```
+
+The independent reviewer fills
+`config/engine_v2_public_redocking_stage0_attestation.template.json` with that
+hash, distinct author/reviewer/operator identities, every required decision, and a
+UTC timestamp. Hash the completed attestation, write its path and SHA-256 into
+the policy, then compute the policy's canonical self-hash:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --print-computed-policy-sha256
+```
+
+After writing that value to `policy_sha256`, verify the complete freeze against
+the exact repository source and GNINA binary:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --output-root .betelgeuze/public-redocking-300 \
+  --gnina /path/to/gnina
+```
+
+The verifier is deliberately fail-closed. It requires all seven metric axes,
+paired Vina/GNINA non-inferiority margins and CI rules, descriptive-only
+runtime treatment, diagnostic branch rules, non-smoke/non-holdout provenance
+artifacts, source hashes, exact Python/Torch/RDKit/PoseBusters/GNINA identity,
+900 engine rows, 19,200 candidate slots, row-level classification of the
+reproduced full-suite outcomes, explicit reconciliation of the declared
+`216 failed / 3 errors` aggregate, distinct author/reviewer/operator roles,
+legal/license review, and an independent attestation artifact. An unreproduced
+declared row may never be synthesized to make the counts match. The template is
+not runnable evidence and must remain blocked while any value is unknown.
+
 Run against operator-supplied source artifacts and a local GNINA executable:
 
 ```bash
@@ -297,6 +368,7 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --archive /path/to/posebusters_paper_data.zip \
   --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
   --gnina /path/to/gnina \
+  --stage0-policy /path/to/stage0-freeze.json \
   --output-root .betelgeuze/public-redocking-300
 ```
 
@@ -311,8 +383,12 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --case-subset engineering-smoke
 ```
 
-After all tuning is frozen, the default `--case-subset all` run executes all
-300 cases once and creates all 900 rows plus
+Engineering smoke is the only subset exempt from Stage 0 admission. Any
+selection containing even one primary case requires `--stage0-policy`; the
+policy is verified before output creation and again before report or partial
+summary materialization. After all tuning and Stage 0 decisions are frozen,
+the default `--case-subset all` run executes all 300 cases once and creates all
+900 rows plus
 `public-redocking-report.json`. Its primary
 metrics use only the 298 holdout cases; its 300-case metrics are explicitly
 supplementary descriptive. `--case-subset primary-blind-holdout` and `--limit`

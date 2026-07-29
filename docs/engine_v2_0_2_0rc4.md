@@ -47,10 +47,17 @@ is retained as diagnostic evidence and excluded from the engine runtime
 boundary. Local self-hashes detect mutation but are not independent
 attestations.
 
-The first 298-case execution is for diagnostic failure decomposition. Its
-results must not become a tuning set. Numeric acceptance thresholds for the
-later frozen benchmark rerun remain a separate protocol decision made before
-that later untouched-holdout execution.
+The first 298-case execution is for diagnostic failure decomposition, and its
+results must not become a tuning set. Before that first execution, Stage 0 must
+freeze numeric acceptance thresholds, paired-baseline CI interpretation,
+diagnostic branch rules, source hashes, the exact runtime, artifact retention,
+full-suite classification, and independent reviewer/operator attestations.
+Threshold provenance must use an exact-contract public development corpus and
+Vina/GNINA development-baseline evidence; published literature may justify the
+method but cannot substitute for the bound development artifact. The evidence
+must exclude the two engineering-smoke cases and the 298 primary cases. An
+unfrozen field blocks the holdout runner before it creates or quarantines any
+output.
 
 ## Promotion boundary
 

@@ -21,6 +21,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScope,
     PocketDefinition,
     ScorerV1Config,
+    ScorerBackend,
+    ScorerBackendOptions,
     ScorerV1Error,
     build_guided_placement_context,
     build_element_aware_authenticated_known_pocket_docking_problem,
@@ -175,10 +177,10 @@ def _scorer(authority, receptor, ligand, config=None):
 
 
 class _OneFailureScorer(ChemistryPoseScorerV1):
-    def score(self, proposal):
+    def _score_terms_python(self, proposal):
         if proposal.proposal_index == 0:
             raise ScorerV1Error("intentional bounded scorer failure")
-        return super().score(proposal)
+        return super()._score_terms_python(proposal)
 
 
 def _isolated_config(**selected_weights) -> ScorerV1Config:
@@ -275,6 +277,202 @@ def test_all_eight_terms_are_deterministic_exact_and_auditable() -> None:
     assert document["free_energy_estimate"] is False
     assert document["claim_safe"] is False
     assert len(scorer.context.fingerprint_sha256) == 64
+
+
+def test_python_reference_batch_matches_single_and_binds_backend_receipt() -> None:
+    authority, receptor, ligand = _authority()
+    scorer = _scorer(authority, receptor, ligand)
+    first = _interaction_proposal(authority, ligand)
+    second = first.with_refined_coordinates(
+        first.coordinates + torch.tensor([0.25, 0.0, 0.0], dtype=torch.float64),
+        refiner_id="scorer-v1-batch-fixture",
+        refiner_version="1.0.0",
+    )
+
+    batch = scorer.score_terms_batch((first, second))
+
+    assert scorer.backend is ScorerBackend.PYTHON_REFERENCE
+    assert len(batch) == 2
+    assert batch[0].receipt_sha256 == scorer.score_terms(first).receipt_sha256
+    assert batch[1].receipt_sha256 == scorer.score_terms(second).receipt_sha256
+    assert all(
+        row.backend_receipt_sha256 == scorer.backend_receipt_sha256
+        for row in batch
+    )
+    assert scorer.qualification_document()["backend_receipt"]["backend"] == (
+        "python_reference"
+    )
+
+
+def test_batch_capacity_and_missing_required_native_receipt_fail_closed() -> None:
+    authority, receptor, ligand = _authority()
+    scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+        backend_options=ScorerBackendOptions(max_batch_size=1),
+    )
+    proposal = _interaction_proposal(authority, ligand)
+    with pytest.raises(ScorerV1Error, match="batch capacity"):
+        scorer.score_terms_batch((proposal, proposal))
+
+    with pytest.raises(ScorerV1Error, match=r"C\+\+/HIP scorer backend"):
+        ChemistryPoseScorerV1(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="e" * 64,
+            backend=ScorerBackend.CPP_HIP_REQUIRED,
+        )
+
+
+def test_rust_cpu_batch_matches_python_reference_when_installed() -> None:
+    pytest.importorskip("betelgeuze_engine_v2_native")
+    authority, receptor, ligand = _authority()
+    python_scorer = _scorer(authority, receptor, ligand)
+    rust_scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+        backend=ScorerBackend.RUST_CPU_REQUIRED,
+        backend_options=ScorerBackendOptions(thread_count=2),
+    )
+    first = _interaction_proposal(authority, ligand)
+    second = first.with_refined_coordinates(
+        first.coordinates + torch.tensor([0.25, 0.0, 0.0], dtype=torch.float64),
+        refiner_id="scorer-v1-native-batch-fixture",
+        refiner_version="1.0.0",
+    )
+
+    reference = python_scorer.score_terms_batch((first, second))
+    observed = rust_scorer.score_terms_batch((first, second))
+
+    assert rust_scorer.backend_receipt.extension_sha256
+    assert rust_scorer.backend_receipt.cargo_lock_sha256
+    for expected, actual in zip(reference, observed, strict=True):
+        assert actual.receptor_candidate_pair_count == (
+            expected.receptor_candidate_pair_count
+        )
+        assert actual.ligand_pair_count == expected.ligand_pair_count
+        assert actual.hbond_count == expected.hbond_count
+        assert actual.hydrophobic_contact_count == (
+            expected.hydrophobic_contact_count
+        )
+        assert actual.buried_polar_count == expected.buried_polar_count
+        for name in (
+            "typed_vdw",
+            "electrostatics",
+            "directional_hbond",
+            "hydrophobic_contact",
+            "desolvation_proxy",
+            "torsion_energy",
+            "ligand_strain",
+            "weak_pocket_prior",
+            "total_score",
+        ):
+            assert float(getattr(actual, name)) == pytest.approx(
+                float(getattr(expected, name)), rel=1.0e-12, abs=1.0e-12
+            )
+
+
+def test_rust_cpu_preserves_candidate_local_typed_failure() -> None:
+    pytest.importorskip("betelgeuze_engine_v2_native")
+    authority, receptor, ligand = _authority(_rotor_ligand())
+    scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+        backend=ScorerBackend.RUST_CPU_REQUIRED,
+        backend_options=ScorerBackendOptions(thread_count=2),
+    )
+    valid = _interaction_proposal(authority, ligand)
+    assert scorer._rotor_quads
+    degenerate_coordinates = valid.coordinates.clone()
+    for offset, atom_index in enumerate(scorer._rotor_quads[0]):
+        degenerate_coordinates[atom_index] = torch.tensor(
+            [float(offset), 0.0, 0.0], dtype=torch.float64
+        )
+    degenerate = valid.with_refined_coordinates(
+        degenerate_coordinates,
+        refiner_id="scorer-v1-degenerate-native-fixture",
+        refiner_version="1.0.0",
+    )
+
+    outcomes = scorer.score_batch((valid, degenerate))
+
+    assert outcomes[0].error is None
+    assert outcomes[0].evidence is not None
+    assert outcomes[1].score is None
+    assert outcomes[1].error is not None
+    assert getattr(outcomes[1].error, "public_error_code") == (
+        "scorer_v1_native_degenerate_rotor_geometry"
+    )
+
+
+def test_rust_cpu_64_candidate_rank_and_top5_match_reference() -> None:
+    pytest.importorskip("betelgeuze_engine_v2_native")
+    authority, receptor, ligand = _authority()
+    python_scorer = _scorer(authority, receptor, ligand)
+    rust_scorer = ChemistryPoseScorerV1(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+        backend=ScorerBackend.RUST_CPU_REQUIRED,
+        backend_options=ScorerBackendOptions(thread_count=2),
+    )
+    budget = DockingBudget(
+        candidate_count=64,
+        top_k=5,
+        max_torsions=1,
+        translation_radius_angstrom=2.0,
+        seed=1241,
+    )
+    guided_context = build_guided_placement_context(authority, receptor, ligand)
+
+    reference = run_authenticated_scorer_v1_guided_search(
+        authority,
+        budget,
+        python_scorer,
+        guided_context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+    )
+    observed = run_authenticated_scorer_v1_guided_search(
+        authority,
+        budget,
+        rust_scorer,
+        guided_context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+    )
+
+    assert len(reference.rows) == len(observed.rows) == 64
+    reference_top = (
+        reference.guided_search_result.authenticated_search_result.search_result.top_rows
+    )
+    observed_top = (
+        observed.guided_search_result.authenticated_search_result.search_result.top_rows
+    )
+    assert [row.candidate_id for row in reference_top] == [
+        row.candidate_id for row in observed_top
+    ]
+    for expected, actual in zip(reference.rows, observed.rows, strict=True):
+        assert expected.search_status == actual.search_status
+        assert expected.error_code == actual.error_code
+        if expected.score is None:
+            assert actual.score is None
+        else:
+            assert actual.score == pytest.approx(
+                expected.score,
+                rel=1.0e-12,
+                abs=1.0e-12,
+            )
 
 
 def test_electrostatics_responds_to_opposite_charge_distance() -> None:

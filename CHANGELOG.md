@@ -6,7 +6,27 @@ scientific claim from a package version.
 
 ## Unreleased
 
-No changes yet.
+- Invalidated the former 298-case blind designation after discovering and
+  hash-verifying a pre-freeze complete 300-case/900-row report. All historical
+  300 cases are now development/diagnostic-only.
+- Froze the result-uninspected 128-case archive complement, including exact
+  input hashes, seeds, ligand profiles, and a self-hashed manifest.
+- Added fail-closed `fresh-internal-blind-holdout` execution, explicit rejection
+  of the historical subset, and a solo-development Stage 0 governance mode.
+  Solo evidence is internal/provisional; external review remains required for
+  public claims and product promotion.
+
+## 0.2.0rc5 — Native CPU batch scorer release candidate
+
+### Changed
+
+- Added an explicit Python-reference/Rust-CPU backend contract without changing
+  the eight Scorer v1 terms, weights, candidate denominator, or score identity.
+- Added one-pass 64-candidate batch scoring, backend-bound term receipts, and a
+  separate fail-closed `betelgeuze-engine-v2-native` PyO3 wheel.
+- Kept the Rust backend non-claim-bearing until development-corpus parity,
+  performance qualification, Stage 0 refreeze, and independent review. This
+  does not establish docking accuracy, scientific validity, or product readiness.
 
 ## 0.2.0rc4 — Public redocking diagnostic-contract release candidate
 

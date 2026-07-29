@@ -6,10 +6,22 @@ on:
     paths:
       - "betelgeuze_engine_v2/**"
       - "packaging/engine-v2/**"
+      - "rust_engine_v2/**"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tools/build_engine_v2_wheel.py"
+      - "tools/build_engine_v2_native_wheel.py"
+      - "tools/build_engine_v2_sbom.py"
       - "tools/check_engine_v2_architecture.py"
+      - "tools/run_engine_v2_public_redocking_300.py"
+      - "tools/verify_engine_v2_public_redocking_stage0.py"
+      - "tools/classify_engine_v2_stage0_full_suite.py"
+      - "tools/reconcile_engine_v2_stage0_full_suites.py"
+      - "tools/audit_engine_v2_ci_authority.py"
+      - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
+      - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
+      - "tests/unit/test_audit_engine_v2_ci_authority.py"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
@@ -40,10 +52,22 @@ on:
     paths:
       - "betelgeuze_engine_v2/**"
       - "packaging/engine-v2/**"
+      - "rust_engine_v2/**"
       - "config/independent_engine_v2_capabilities.yaml"
       - "tools/build_engine_v2_wheel.py"
+      - "tools/build_engine_v2_native_wheel.py"
+      - "tools/build_engine_v2_sbom.py"
       - "tools/check_engine_v2_architecture.py"
+      - "tools/run_engine_v2_public_redocking_300.py"
+      - "tools/verify_engine_v2_public_redocking_stage0.py"
+      - "tools/classify_engine_v2_stage0_full_suite.py"
+      - "tools/reconcile_engine_v2_stage0_full_suites.py"
+      - "tools/audit_engine_v2_ci_authority.py"
+      - "config/engine_v2_public_redocking_stage0_*.json"
       - "tests/unit/test_engine_v2_*.py"
+      - "tests/unit/test_classify_engine_v2_stage0_full_suite.py"
+      - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
+      - "tests/unit/test_audit_engine_v2_ci_authority.py"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
@@ -101,6 +125,7 @@ jobs:
           sparse-checkout: |
             betelgeuze_engine_v2
             packaging/engine-v2
+            rust_engine_v2
             core/__init__.py
             core/ai_correction.py
             core/config.py
@@ -112,7 +137,21 @@ jobs:
             config/settings.yaml
             config/independent_engine_v2_capabilities.yaml
             tools/build_engine_v2_wheel.py
+            tools/build_engine_v2_native_wheel.py
+            tools/build_engine_v2_sbom.py
             tools/check_engine_v2_architecture.py
+            tools/run_engine_v2_public_redocking_300.py
+            tools/verify_engine_v2_public_redocking_stage0.py
+            tools/classify_engine_v2_stage0_full_suite.py
+            tools/reconcile_engine_v2_stage0_full_suites.py
+            tools/audit_engine_v2_ci_authority.py
+            config/engine_v2_public_redocking_stage0_freeze.template.json
+            config/engine_v2_public_redocking_stage0_attestation.template.json
+            config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
+            tests/unit/test_engine_v2_blind_stage0.py
+            tests/unit/test_classify_engine_v2_stage0_full_suite.py
+            tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
+            tests/unit/test_audit_engine_v2_ci_authority.py
             tests/unit/test_engine_v2_contracts_molecular.py
             tests/unit/test_engine_v2_mmcif_syntax.py
             tests/unit/test_engine_v2_mmcif_semantics.py
@@ -232,7 +271,15 @@ jobs:
 
       - name: Compile and enforce architecture boundaries
         run: |
-          python -m compileall -q betelgeuze_engine_v2 tools/build_engine_v2_wheel.py tools/check_engine_v2_architecture.py
+          python -m compileall -q \
+            betelgeuze_engine_v2 \
+            tools/build_engine_v2_wheel.py \
+            tools/check_engine_v2_architecture.py \
+            tools/run_engine_v2_public_redocking_300.py \
+            tools/verify_engine_v2_public_redocking_stage0.py \
+            tools/classify_engine_v2_stage0_full_suite.py \
+            tools/reconcile_engine_v2_stage0_full_suites.py \
+            tools/audit_engine_v2_ci_authority.py
           python tools/check_engine_v2_architecture.py
 
       - name: Run complete focused Engine v2 CPU suite
@@ -309,7 +356,12 @@ jobs:
             tests/unit/test_engine_v2_reference_minimization_validation_protocol.py \
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
-            tests/unit/test_engine_v2_external_baseline.py > engine-v2-main.log 2>&1
+            tests/unit/test_engine_v2_external_baseline.py \
+            tests/unit/test_engine_v2_blind_stage0.py \
+            tests/unit/test_classify_engine_v2_stage0_full_suite.py \
+            tests/unit/test_reconcile_engine_v2_stage0_full_suites.py \
+            tests/unit/test_audit_engine_v2_ci_authority.py \
+            > engine-v2-main.log 2>&1
           status=$?
           cat engine-v2-main.log
           exit "$status"
@@ -446,7 +498,7 @@ jobs:
           assert importlib.util.find_spec("api") is None
           assert importlib.util.find_spec("core") is None
           assert importlib.util.find_spec("train") is None
-          assert capability_snapshot()["implementation_stage"] == "v2_an_public_redocking_diagnostic_contract_rc4"
+          assert capability_snapshot()["implementation_stage"] == "v2_ao_native_cpu_scorer_contract_rc5"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
               FROZEN_REFERENCE_MINIMIZATION_VALIDATION_AUTHORIZATION_CONTRACT_SHA256

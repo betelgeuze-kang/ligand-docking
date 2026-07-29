@@ -27,10 +27,22 @@ import uuid
 import torch
 
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract
+from betelgeuze_engine_v2.benchmark.blind_stage0 import (
+    Stage0AdmissionError,
+    VerifiedStage0Admission,
+    verify_stage0_admission,
+)
+from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (
+    FRESH_REDOCKING_HOLDOUT_SEED_BASE,
+    FrozenFreshRedockingCase,
+    VerifiedFreshRedockingArchive,
+    load_fresh_redocking_holdout_manifest,
+)
 from betelgeuze_engine_v2.benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
     PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS,
     PUBLIC_REDOCKING_CASE_SEED_BASE,
+    PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
     PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
@@ -58,7 +70,12 @@ from betelgeuze_engine_v2.docking import (
     DockingScope,
     ElementAwareValidityError,
     PocketDefinition,
+    ReceptorClashReliefRefiner,
+    ScorerBackend,
+    ScorerBackendOptions,
     ScorerV1Error,
+    UnsupportedLargeRingSystemError,
+    UnsupportedVdwElementError,
     build_element_aware_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
     run_authenticated_scorer_v1_guided_search,
@@ -107,6 +124,8 @@ ENGINE_V2_CPU_POLICY = {
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
     "torch_version": str(torch.__version__),
+    "interaction_refiner": "receptor_clash_relief_v1",
+    "interaction_refinement_steps": 10,
 }
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
@@ -1837,7 +1856,19 @@ def _engine_source_sha256(
 ) -> str:
     package_root = repo_root / "betelgeuze_engine_v2"
     active_runner = Path(__file__).resolve() if runner_path is None else runner_path
-    paths = tuple(sorted(package_root.rglob("*.py"))) + (active_runner,)
+    native_paths = tuple(
+        repo_root / relative_path
+        for relative_path in (
+            "rust_engine_v2/Cargo.toml",
+            "rust_engine_v2/Cargo.lock",
+            "rust_engine_v2/build.rs",
+            "rust_engine_v2/pyproject.toml",
+            "rust_engine_v2/src/lib.rs",
+        )
+    )
+    paths = tuple(sorted(package_root.rglob("*.py"))) + native_paths + (
+        active_runner,
+    )
     if not paths or any(not path.is_file() for path in paths):
         raise PublicRedockingRunnerError(
             "Engine V2 implementation source closure is incomplete"
@@ -2088,6 +2119,7 @@ def _engine_v2_command(
     *,
     output: Path,
     seed: int,
+    scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
 ) -> tuple[str, ...]:
     return (
         RUNNER_ID,
@@ -2104,6 +2136,8 @@ def _engine_v2_command(
         str(ENGINE_V2_CANDIDATE_COUNT),
         "--cpu",
         "1",
+        "--scorer-backend",
+        scorer_backend.value,
         "--seed",
         str(seed),
         "--out",
@@ -2133,6 +2167,7 @@ def _engine_v2_pose_coordinates(
     paths: dict[str, Path],
     *,
     seed: int,
+    scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
 ) -> EngineV2PoseSearchOutcome:
     try:
         receptor_bytes = paths["receptor"].read_bytes()
@@ -2212,8 +2247,28 @@ def _engine_v2_pose_coordinates(
             implementation_source_sha256=_sha256_bytes(
                 b"engine-v2-public-redocking-scorer-v1"
             ),
+            backend=scorer_backend,
+            backend_options=ScorerBackendOptions(thread_count=1),
         )
         context = build_guided_placement_context(authority, receptor, ligand)
+        refiner = ReceptorClashReliefRefiner(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256=_sha256_bytes(
+                b"engine-v2-receptor-clash-relief-refiner-v1"
+            ),
+        )
+    except UnsupportedVdwElementError as exc:
+        raise EngineV2PreparationFailure(
+            "unsupported_vdw_element",
+            "Engine V2 validity/scoring tables do not cover an observed element",
+        ) from exc
+    except UnsupportedLargeRingSystemError as exc:
+        raise EngineV2PreparationFailure(
+            "unsupported_large_ring_system",
+            "Engine V2 rigid-ring lane does not support this ring system",
+        ) from exc
     except (
         DockingAuthorityError,
         ElementAwareValidityError,
@@ -2227,7 +2282,7 @@ def _engine_v2_pose_coordinates(
         candidate_count=ENGINE_V2_CANDIDATE_COUNT,
         top_k=5,
         max_torsions=32,
-        max_refinement_steps=0,
+        max_refinement_steps=10,
         translation_radius_angstrom=min(4.0, radius),
         seed=seed,
     )
@@ -2252,6 +2307,7 @@ def _engine_v2_pose_coordinates(
         return PublicRedockingEngineV2Diagnostics(
             preparation_status="success",
             **preparation_counts,
+            scorer_backend_receipt=scorer.backend_receipt.to_dict(),
             candidates=tuple(
                 PublicRedockingEngineV2CandidateDiagnostic(
                     proposal_index=index,
@@ -2270,6 +2326,7 @@ def _engine_v2_pose_coordinates(
             context,
             receptor_system=receptor,
             ligand_system=ligand,
+            refiner=refiner,
             diversity_rmsd_angstrom=0.0,
         )
     except (
@@ -2366,6 +2423,21 @@ def _engine_v2_pose_coordinates(
                     pose_artifact_sha256=artifact_sha256,
                     score_terms_receipt_sha256=terms.receipt_sha256,
                     hbond_count=terms.hbond_count,
+                    selection_eligible=row.selection_eligible,
+                    score_term_binary64_hex={
+                        name: float(getattr(terms, name)).hex()
+                        for name in (
+                            "typed_vdw",
+                            "electrostatics",
+                            "directional_hbond",
+                            "hydrophobic_contact",
+                            "desolvation_proxy",
+                            "torsion_energy",
+                            "ligand_strain",
+                            "weak_pocket_prior",
+                            "total_score",
+                        )
+                    },
                 )
             )
         else:
@@ -2388,6 +2460,7 @@ def _engine_v2_pose_coordinates(
     diagnostics = PublicRedockingEngineV2Diagnostics(
         preparation_status="success",
         **preparation_counts,
+        scorer_backend_receipt=scorer.backend_receipt.to_dict(),
         candidates=tuple(candidate_rows),
         diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
     )
@@ -2421,6 +2494,7 @@ def _engine_v2_result(
     input_sha256s: dict[str, str],
     output: Path,
     seed: int,
+    scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
 ) -> PublicRedockingCaseResult:
     _quarantine_managed_regular_file(
         output,
@@ -2433,12 +2507,24 @@ def _engine_v2_result(
         paths if logical_paths is None else logical_paths,
         output=output,
         seed=seed,
+        scorer_backend=scorer_backend,
     )
-    execution_policy = _execution_policy_tokens(ENGINE_V2_CPU_POLICY)
+    execution_policy = _execution_policy_tokens(
+        {
+            **ENGINE_V2_CPU_POLICY,
+            "scorer_backend": scorer_backend.value,
+            "scorer_thread_count": 1,
+        }
+    )
     diagnostics: PublicRedockingEngineV2Diagnostics | None = None
     diagnostic_evaluation_seconds = 0.0
     try:
-        outcome = _engine_v2_pose_coordinates(case_id, paths, seed=seed)
+        outcome = _engine_v2_pose_coordinates(
+            case_id,
+            paths,
+            seed=seed,
+            scorer_backend=scorer_backend,
+        )
         if type(outcome) is not EngineV2PoseSearchOutcome:
             raise PublicRedockingRunnerError(
                 "Engine V2 search did not return typed diagnostics"
@@ -2749,11 +2835,34 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--bootstrap-samples", type=int, default=2_000)
     parser.add_argument(
         "--case-subset",
-        choices=("all", "engineering-smoke", "primary-blind-holdout"),
+        choices=(
+            "all",
+            "engineering-smoke",
+            "contaminated-development",
+            "primary-blind-holdout",
+            "fresh-internal-blind-holdout",
+        ),
         default="all",
     )
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--stage0-policy",
+        type=Path,
+        help=(
+            "required frozen Stage 0 admission policy for any execution that "
+            "contains a fresh-internal-blind-holdout case"
+        ),
+    )
+    parser.add_argument(
+        "--engine-v2-scorer-backend",
+        choices=tuple(backend.value for backend in ScorerBackend),
+        default=ScorerBackend.PYTHON_REFERENCE.value,
+        help=(
+            "explicit scorer backend; fresh holdout execution requires "
+            "rust_cpu_required and never falls back"
+        ),
+    )
     return parser
 
 
@@ -2775,11 +2884,18 @@ def _case_ids_from_arguments(arguments: argparse.Namespace) -> tuple[str, ...]:
             raise PublicRedockingRunnerError(
                 "explicit case subsets cannot be combined with start-index or limit"
             )
-        return (
-            PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
-            if arguments.case_subset == "engineering-smoke"
-            else PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
-        )
+        if arguments.case_subset == "engineering-smoke":
+            return PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
+        if arguments.case_subset == "contaminated-development":
+            return PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+        if arguments.case_subset == "primary-blind-holdout":
+            raise PublicRedockingRunnerError(
+                "historical 298-case holdout is invalidated and cannot execute"
+            )
+        return load_fresh_redocking_holdout_manifest(
+            Path(__file__).resolve().parents[1]
+            / "config/engine_v2_fresh_redocking_holdout_manifest.json"
+        ).case_ids
     if not 0 <= arguments.start_index < len(all_case_ids):
         raise PublicRedockingRunnerError("start-index is outside the cohort")
     end_index = len(all_case_ids)
@@ -2801,6 +2917,123 @@ def _partial_summary_filename(
         f"partial-summary-{case_subset}-{len(case_ids):03d}-"
         f"{selection_sha256[:16]}.json"
     )
+
+
+def _fresh_internal_report(
+    *,
+    case_ids: Sequence[str],
+    profiles: Sequence[PublicRedockingCaseProfile],
+    materializations: Sequence[FrozenFreshRedockingCase],
+    rows_by_engine: Mapping[str, Sequence[PublicRedockingCaseResult]],
+    executions_by_engine: Mapping[
+        str, Sequence[VerifiedPublicRedockingCaseExecution]
+    ],
+    identities: Sequence[PublicRedockingEngineIdentity],
+    policy: PublicRedockingEvaluationPolicy,
+    stage0_receipt: VerifiedStage0Admission,
+    manifest_sha256: str,
+) -> dict[str, object]:
+    """Build a claim-safe internal report without reusing the invalidated 300 schema."""
+
+    expected_ids = tuple(case_ids)
+    if len(expected_ids) != 128 or tuple(profile.case_id for profile in profiles) != (
+        expected_ids
+    ):
+        raise PublicRedockingRunnerError("fresh report case denominator is incomplete")
+    row_map = {
+        (row.engine_id, row.case_id): row
+        for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        for row in rows_by_engine[engine_id]
+    }
+    expected_keys = {
+        (engine_id, case_id)
+        for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        for case_id in expected_ids
+    }
+    if set(row_map) != expected_keys:
+        raise PublicRedockingRunnerError("fresh report engine ledger is incomplete")
+    primary_metrics = benchmark_contract._derive_scope_all_metrics(
+        row_map,
+        policy=policy,
+        analysis_scope="fresh_internal_blind_holdout",
+        case_ids=expected_ids,
+    )
+    subgroup_results: list[dict[str, object]] = []
+    for attribute in ("size_subgroup", "rotor_subgroup", "ring_subgroup"):
+        for subgroup in sorted({getattr(profile, attribute) for profile in profiles}):
+            subgroup_ids = tuple(
+                profile.case_id
+                for profile in profiles
+                if getattr(profile, attribute) == subgroup
+            )
+            engine_values: dict[str, object] = {}
+            for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES:
+                selected = [row_map[(engine_id, case_id)] for case_id in subgroup_ids]
+                engine_values[engine_id] = {
+                    "failure_rate": sum(row.status == "failure" for row in selected)
+                    / len(selected),
+                    "top1_2a_recovery_rate": sum(
+                        row.recovery(1, policy.rmsd_threshold_angstrom)
+                        for row in selected
+                    )
+                    / len(selected),
+                    "top5_2a_recovery_rate": sum(
+                        row.recovery(5, policy.rmsd_threshold_angstrom)
+                        for row in selected
+                    )
+                    / len(selected),
+                    "top5_valid_pose_recovery_rate": sum(
+                        row.valid_recovery(5, policy.rmsd_threshold_angstrom)
+                        for row in selected
+                    )
+                    / len(selected),
+                }
+            subgroup_results.append(
+                {
+                    "subgroup": subgroup,
+                    "case_count": len(subgroup_ids),
+                    "case_ids_sha256": _sha256_bytes(_canonical_bytes(list(subgroup_ids))),
+                    "engines": engine_values,
+                }
+            )
+    report: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_fresh_redocking_internal_report/1.0.0",
+        "runner_id": "betelgeuze.engine_v2_fresh_redocking_128_runner/1.0.0",
+        "analysis_scope": "fresh_internal_blind_holdout",
+        "case_count": len(expected_ids),
+        "engine_case_row_count": len(row_map),
+        "fresh_holdout_manifest_sha256": manifest_sha256,
+        "stage0_admission": {
+            "policy_sha256": stage0_receipt.policy_sha256,
+            "source_freeze_sha256": stage0_receipt.source_freeze_sha256,
+            "governance_mode": stage0_receipt.governance_mode,
+            "independent_review_complete": stage0_receipt.independent_review_complete,
+        },
+        "policy": policy.to_dict(),
+        "profiles": [profile.to_dict() for profile in profiles],
+        "materializations": [row.to_dict() for row in materializations],
+        "engine_identities": [identity.to_dict() for identity in identities],
+        "metrics": [metric.to_dict() for metric in primary_metrics],
+        "subgroup_results": subgroup_results,
+        "rows": [
+            row.to_dict()
+            for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+            for row in rows_by_engine[engine_id]
+        ],
+        "execution_receipts": [
+            row.to_dict()
+            for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+            for row in executions_by_engine[engine_id]
+        ],
+        "internal_provisional_only": True,
+        "scientifically_validated": False,
+        "public_claim_eligible": False,
+        "product_promotion_eligible": False,
+        "external_independent_review_required_before_public_claim": True,
+        "claim_safe": False,
+    }
+    report["fingerprint_sha256"] = _sha256_bytes(_canonical_bytes(report))
+    return report
 
 
 def _report_engine_identities(
@@ -2877,15 +3110,78 @@ def main(argv: Sequence[str] | None = None) -> int:
     source_identifiers = arguments.source_identifiers.resolve()
     source_binary = arguments.gnina.resolve()
     output_root = Path(os.path.abspath(arguments.output_root))
+    fresh_run = arguments.case_subset == "fresh-internal-blind-holdout"
+    fresh_holdout = (
+        load_fresh_redocking_holdout_manifest(
+            repo_root / "config/engine_v2_fresh_redocking_holdout_manifest.json"
+        )
+        if fresh_run
+        else None
+    )
+    all_case_ids = (
+        fresh_holdout.case_ids
+        if fresh_holdout is not None
+        else FROZEN_PUBLIC_REDOCKING_CASE_IDS
+    )
+    case_ids = _case_ids_from_arguments(arguments)
+    requires_stage0 = fresh_run
+    scorer_backend = ScorerBackend(arguments.engine_v2_scorer_backend)
+    stage0_receipt: VerifiedStage0Admission | None = None
+    stage0_policy_path: Path | None = None
+    if requires_stage0:
+        if arguments.stage0_policy is None:
+            raise Stage0AdmissionError(("stage0_policy_required_before_holdout",))
+        if scorer_backend is not ScorerBackend.RUST_CPU_REQUIRED:
+            raise Stage0AdmissionError(("rust_cpu_required_for_fresh_holdout",))
+        stage0_policy_path = arguments.stage0_policy.resolve()
+        stage0_receipt = verify_stage0_admission(
+            stage0_policy_path,
+            repo_root=repo_root,
+            gnina_path=source_binary,
+            output_root=output_root,
+        )
+
+    def reverify_stage0() -> None:
+        if stage0_receipt is None or stage0_policy_path is None:
+            return
+        current = verify_stage0_admission(
+            stage0_policy_path,
+            repo_root=repo_root,
+            gnina_path=source_binary,
+            output_root=output_root,
+        )
+        if current != stage0_receipt:
+            raise Stage0AdmissionError(("stage0_admission_changed_during_run",))
+
     output_root_descriptor = _owned_directory_descriptor(
         output_root,
         create=True,
         exact_mode=0o700,
     )
     os.close(output_root_descriptor)
+    if stage0_receipt is not None:
+        _atomic_json(
+            output_root / "stage0-admission-receipt.json",
+            {
+                "admitted": True,
+                "operator_id": stage0_receipt.operator_id,
+                "policy_sha256": stage0_receipt.policy_sha256,
+                "reviewer_id": stage0_receipt.reviewer_id,
+                "governance_mode": stage0_receipt.governance_mode,
+                "independent_review_complete": (
+                    stage0_receipt.independent_review_complete
+                ),
+                "source_freeze_sha256": stage0_receipt.source_freeze_sha256,
+            },
+        )
     _quarantine_managed_regular_file(
         output_root / "public-redocking-report.json",
         label="prior public redocking report",
+        required_mode=0o600,
+    )
+    _quarantine_managed_regular_file(
+        output_root / "fresh-redocking-internal-report.json",
+        label="prior fresh internal redocking report",
         required_mode=0o600,
     )
     if not source_identifiers.is_file():
@@ -2902,12 +3198,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     _load_posebusters()
     evaluator_versions = _evaluator_environment_versions()
     _configure_engine_v2_cpu()
-    if (
-        type(arguments.seed) is not int
-        or arguments.seed != PUBLIC_REDOCKING_CASE_SEED_BASE
-    ):
+    expected_seed_base = (
+        FRESH_REDOCKING_HOLDOUT_SEED_BASE
+        if fresh_run
+        else PUBLIC_REDOCKING_CASE_SEED_BASE
+    )
+    if type(arguments.seed) is not int or arguments.seed != expected_seed_base:
         raise PublicRedockingRunnerError(
-            "seed must equal the frozen public redocking case-seed base"
+            f"seed must equal the frozen case-seed base {expected_seed_base}"
         )
     evaluation_policy = _evaluation_policy_from_arguments(arguments)
     binary_version = _binary_version(pinned_binary)
@@ -2918,22 +3216,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         evaluator_versions=evaluator_versions,
     )
     execution_environment = _execution_environment_identity()
-    all_case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS
-    case_ids = _case_ids_from_arguments(arguments)
     partial_run = tuple(case_ids) != all_case_ids
 
     profiles: list[PublicRedockingCaseProfile] = []
-    materializations: list[VerifiedCaseMaterialization] = []
-    frozen_profiles = {
-        profile.case_id: profile for profile in frozen_public_redocking_profiles()
-    }
+    materializations: list[VerifiedCaseMaterialization | FrozenFreshRedockingCase] = []
+    if fresh_holdout is None:
+        frozen_profiles = {
+            profile.case_id: profile for profile in frozen_public_redocking_profiles()
+        }
+    else:
+        frozen_profiles = {
+            case.case_id: PublicRedockingCaseProfile(
+                case_id=case.case_id,
+                heavy_atom_count=int(case.profile["heavy_atom_count"]),
+                rotor_count=int(case.profile["rotatable_bond_count_strict"]),
+                ring_count=int(case.profile["ring_count"]),
+                ligand_artifact_sha256=case.artifact_sha256s["native"],
+            )
+            for case in fresh_holdout.cases
+        }
     rows_by_engine: dict[str, list[PublicRedockingCaseResult]] = {
         engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
     }
     executions_by_engine: dict[
         str, list[VerifiedPublicRedockingCaseExecution]
     ] = {engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES}
-    with VerifiedPublicRedockingArchive.open(archive_path) as archive:
+    archive_context = (
+        VerifiedFreshRedockingArchive.open(
+            archive_path,
+            repo_root / "config/engine_v2_fresh_redocking_holdout_manifest.json",
+        )
+        if fresh_run
+        else VerifiedPublicRedockingArchive.open(archive_path)
+    )
+    with archive_context as archive:
         for case_id in case_ids:
             index = all_case_ids.index(case_id)
             paths, materialization = _materialize_case_inputs(
@@ -2948,7 +3264,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             inputs = materialization.input_artifact_sha256s_by_role
             _require_case_input_identity(paths, inputs)
-            case_seed = frozen_public_redocking_case_seed(case_id)
+            case_seed = (
+                fresh_holdout.case(case_id).seed
+                if fresh_holdout is not None
+                else frozen_public_redocking_case_seed(case_id)
+            )
             print(f"[{index + 1}/{len(all_case_ids)}] {case_id}", flush=True)
             with PinnedCaseInputs(paths, inputs) as pinned_inputs:
                 execution_paths = pinned_inputs.execution_paths
@@ -2967,6 +3287,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     paths,
                     output=engine_output,
                     seed=case_seed,
+                    scorer_backend=scorer_backend,
                 )
                 engine_receipt = (
                     output_root / "receipts" / "engine_v2" / f"{case_id}.json"
@@ -2979,12 +3300,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                         input_sha256s=inputs,
                         output=engine_output,
                         seed=case_seed,
+                        scorer_backend=scorer_backend,
                     )
                 pinned_inputs.verify()
                 engine_execution = _verified_case_execution(
                     engine_row,
                     command=engine_command,
-                    execution_policy=ENGINE_V2_CPU_POLICY,
+                    execution_policy={
+                        **ENGINE_V2_CPU_POLICY,
+                        "scorer_backend": scorer_backend.value,
+                        "scorer_thread_count": 1,
+                    },
                     input_sha256s=inputs,
                     materialization_receipt_sha256=(materialization.receipt_sha256),
                     implementation_sha256=engine_source_sha256,
@@ -3041,6 +3367,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _remove_materialized_case_inputs(paths, inputs)
 
     if partial_run:
+        reverify_stage0()
         _verify_external_binary(pinned_binary)
         if tuple(case_ids) == PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS:
             analysis_scope = "engineering_smoke"
@@ -3079,6 +3406,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         pinned_binary.close()
         return 0
 
+    reverify_stage0()
     _verify_external_binary(pinned_binary)
     identities = _report_engine_identities(
         binary=pinned_binary.path,
@@ -3093,6 +3421,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
         for execution in executions_by_engine[engine_id]
     )
+    if fresh_run:
+        if stage0_receipt is None or fresh_holdout is None:
+            raise Stage0AdmissionError(("fresh_holdout_stage0_receipt_missing",))
+        if any(type(row) is not FrozenFreshRedockingCase for row in materializations):
+            raise PublicRedockingRunnerError(
+                "fresh report materialization authority is incomplete"
+            )
+        fresh_report = _fresh_internal_report(
+            case_ids=case_ids,
+            profiles=profiles,
+            materializations=materializations,  # type: ignore[arg-type]
+            rows_by_engine=rows_by_engine,
+            executions_by_engine=executions_by_engine,
+            identities=identities,
+            policy=evaluation_policy,
+            stage0_receipt=stage0_receipt,
+            manifest_sha256=fresh_holdout.manifest_sha256,
+        )
+        _verify_external_binary(pinned_binary)
+        _atomic_json(
+            output_root / "fresh-redocking-internal-report.json",
+            fresh_report,
+        )
+        print(fresh_report["fingerprint_sha256"])
+        pinned_binary.close()
+        return 0
     report = build_public_redocking_benchmark_report(
         tuple(profiles),
         identities,

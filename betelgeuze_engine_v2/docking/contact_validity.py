@@ -84,6 +84,10 @@ class ElementAwareValidityError(PoseValidityError):
     """Element-aware contact validity failed closed."""
 
 
+class UnsupportedVdwElementError(ElementAwareValidityError):
+    """The frozen validity table does not cover an observed element."""
+
+
 def _canonical_bytes(value: object) -> bytes:
     try:
         return json.dumps(
@@ -263,7 +267,7 @@ class VdwContactPolicy:
         try:
             return float(self.radii_angstrom[symbol])
         except KeyError as exc:
-            raise ElementAwareValidityError(
+            raise UnsupportedVdwElementError(
                 f"unsupported vdW element {symbol!r}"
             ) from exc
 
@@ -631,6 +635,7 @@ __all__ = [
     "VDW_RADII_TABLE_ID",
     "ElementAwarePoseValidityContext",
     "ElementAwareValidityError",
+    "UnsupportedVdwElementError",
     "VdwContactPolicy",
     "build_element_aware_authenticated_known_pocket_docking_problem",
     "element_aware_authority_document",

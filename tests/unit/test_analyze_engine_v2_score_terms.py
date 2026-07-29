@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+from tools.analyze_engine_v2_score_terms import TERM_NAMES, analyze_results
+
+
+def _result(case_id: str) -> dict[str, object]:
+    candidates = []
+    for index in range(64):
+        terms = {name: 0.0 for name in TERM_NAMES}
+        terms["weak_pocket_prior"] = float(index)
+        terms["total_score"] = sum(terms.values())
+        candidates.append(
+            {
+                "proposal_index": index,
+                "status": "success",
+                "score": terms["total_score"],
+                "rmsd_angstrom": 1.0 if index == 1 else 3.0,
+                "geometric_valid": index != 0,
+                "chemical_valid": True,
+                "score_term_binary64_hex": {
+                    name: value.hex() for name, value in terms.items()
+                },
+            }
+        )
+    return {
+        "case_id": case_id,
+        "engine_id": "engine_v2",
+        "status": "success",
+        "engine_v2_diagnostics": {
+            "ligand_atom_count": 12,
+            "candidates": candidates,
+        },
+    }
+
+
+def test_score_term_analysis_is_nonclaimable_and_detects_ablation() -> None:
+    report = analyze_results(
+        [_result("5SD5_HWI")],
+        source_receipts_sha256={"receipt.json": "1" * 64},
+    )
+
+    assert report["claimable"] is False
+    assert report["contains_fresh_internal_blind_holdout"] is False
+    assert report["sufficient_for_track_decision"] is False
+    assert report["oracle_2a_recovery_case_count"] == 1
+    assert report["full_top1_recovery_case_count"] == 0
+    assert report["term_summary"]["weak_pocket_prior"][
+        "removed_top1_changed_case_count"
+    ] == 0

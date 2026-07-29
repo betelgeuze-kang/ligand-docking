@@ -22,7 +22,7 @@ and candidate budgets remain fixed. This is not evidence of measured end-to-end
 Current implementation stage:
 
 ```text
-v2_an_public_redocking_diagnostic_contract_rc4
+v2_ao_native_cpu_scorer_contract_rc5
 ```
 
 Implemented and GitHub-hosted CPU tested:

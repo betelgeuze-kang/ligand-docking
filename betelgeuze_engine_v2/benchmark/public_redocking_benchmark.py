@@ -16,16 +16,17 @@ import random
 import re
 import stat
 import statistics
-from typing import Callable, Sequence
+from types import MappingProxyType
+from typing import Callable, Mapping, Sequence
 import zipfile
 
 
-PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohort/1.2.0"
+PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohort/1.3.0"
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.2.0"
+    "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.3.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.0.0"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.5.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.2.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
@@ -33,10 +34,22 @@ PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_execution/1.1.0"
 )
 PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.0.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.2.0"
+)
+_SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0"
+)
+PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_contamination_registry/1.1.0"
+)
+PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256 = (
+    "89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31"
+)
+PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
+    "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
 )
 PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.0.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.1.0"
 )
 PUBLIC_REDOCKING_COHORT_ID = "posebusters-journal-subset-sha256-300"
 PUBLIC_REDOCKING_COHORT_COUNT = 300
@@ -103,10 +116,14 @@ _PUBLIC_REDOCKING_ENGINE_V2_PREPARATION_FAILURE_CODES = {
     "docking_context_preparation_failed",
     "input_parse_unsupported",
     "partial_charge_assignment_failed",
+    "unsupported_large_ring_system",
+    "unsupported_vdw_element",
     "unclassified_engine_v2_case_failure",
 }
 PUBLIC_REDOCKING_ANALYSIS_SCOPES = (
     "primary_blind_holdout",
+    "fresh_internal_blind_holdout",
+    "contaminated_development",
     "engineering_smoke",
     "supplementary_descriptive",
 )
@@ -147,6 +164,17 @@ _CASE_ARTIFACT_ROLES = (
 )
 _VERIFIED_ARCHIVE_AUTHORITY = object()
 _VERIFIED_EXECUTION_AUTHORITY = object()
+_SCORER_TERM_NAMES = (
+    "typed_vdw",
+    "electrostatics",
+    "directional_hbond",
+    "hydrophobic_contact",
+    "desolvation_proxy",
+    "torsion_energy",
+    "ligand_strain",
+    "weak_pocket_prior",
+    "total_score",
+)
 
 
 class PublicRedockingBenchmarkError(ValueError):
@@ -756,11 +784,222 @@ PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS = (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
     FROZEN_PUBLIC_REDOCKING_CASE_IDS[1],
 )
+PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS = (
+    FROZEN_PUBLIC_REDOCKING_CASE_IDS
+)
 PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS = tuple(
     case_id
     for case_id in FROZEN_PUBLIC_REDOCKING_CASE_IDS
     if case_id not in PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
 )
+FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS = tuple(
+    """
+5S8I_2LY
+6VS3_R6V
+6W59_SZD
+6X8D_ARA
+6XAF_GDP
+6XUM_30L
+6Y7L_QMG
+6YDY_K73
+6Z5Z_BDF
+6ZR8_QOZ
+6ZT2_QPK
+6ZX3_QRZ
+6ZXQ_IMO
+7AA0_R6B
+7AMC_73B
+7AS1_21G
+7AVI_S2Q
+7B0E_C2E
+7BA0_T5H
+7BHX_TO5
+7BJ6_TVK
+7BLA_WCS
+7BLG_GAL
+7C6P_SQH
+7D0P_1VU
+7D8Q_GZF
+7D9L_GSF
+7DIN_MPO
+7E2S_BLA
+7EN7_J79
+7JGW_V9S
+7JNB_A2G
+7JR8_VH7
+7JUD_MMA
+7K41_VUA
+7KFO_IAC
+7KLX_WOV
+7KP6_WTP
+7KQU_YOF
+7L6D_BMF
+7L81_UD4
+7LB3_XXS
+7LZQ_YJV
+7M41_YQG
+7MAE_XUS
+7MEU_MGP
+7MRH_ZMJ
+7MS7_ZQ1
+7MZS_GLA
+7NA4_1I9
+7NB4_U6Q
+7NLK_UHK
+7NML_I7B
+7NR6_UO8
+7NTG_F6R
+7OCB_V88
+7ODX_DGP
+7OEO_V9Z
+7OKC_VFE
+7OKF_VH5
+7OLT_58J
+7OMJ_GCP
+7ORW_7WA
+7OU8_1XI
+7P2W_4QR
+7P4J_5JK
+7P4V_DAT
+7P85_5ZG
+7PA4_C
+7Q19_DSM
+7QK0_EBL
+7QSW_CAP
+7REE_4LY
+7RH8_UTP
+7RPZ_6IC
+7RUI_7QZ
+7RWO_7WN
+7S45_ACO
+7S9H_7PP
+7SED_8VD
+7SGV_L30
+7SNE_9XR
+7SSM_B7L
+7T0U_E3I
+7T2I_E9F
+7T3F_EM0
+7T9O_GEI
+7TWC_CXS
+7TXP_0FX
+7UEY_N0R
+7UF2_5SP
+7UJ4_OQ4
+7UMV_NUU
+7UP3_NZ0
+7USH_82V
+7V14_ORU
+7V8Z_5YH
+7VBU_6I4
+7VJT_7IJ
+7VYJ_CA0
+7W6F_8I6
+7WN5_JGL
+7XEK_9YX
+7XIJ_EJ3
+7ZDY_6MJ
+7ZXZ_K9R
+7ZYS_KNR
+7ZZB_KGX
+8ACL_LQL
+8AEU_M0L
+8AIJ_M9I
+8AJX_FUM
+8BN6_R53
+8BPL_CP
+8BRO_R7E
+8C5D_GTB
+8C7Y_TXV
+8CGC_LMR
+8CI0_8EL
+8DW5_FQ7
+8DZT_G4P
+8E77_ULP
+8EAD_UY0
+8ERS_WQO
+8FLN_Y7W
+8FV9_80J
+8G43_ZU6
+8H0M_2EH
+""".strip().splitlines()
+)
+PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256 = (
+    "ecc91c660896245f62ad8b583cfa4f45e50038cf513c384f6bdb56d406278248"
+)
+
+
+def require_public_redocking_contamination_registry(
+    payload: object,
+) -> Mapping[str, object]:
+    """Validate the result-blind reclassification of pre-freeze executions."""
+
+    if not isinstance(payload, Mapping):
+        raise PublicRedockingBenchmarkError(
+            "contamination registry must be a mapping"
+        )
+    registry = dict(payload)
+    observed_self_hash = registry.pop("registry_sha256", None)
+    if observed_self_hash != _sha256(registry):
+        raise PublicRedockingBenchmarkError(
+            "contamination registry self-hash mismatch"
+        )
+    if observed_self_hash != PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256:
+        raise PublicRedockingBenchmarkError(
+            "contamination registry identity drifted"
+        )
+    registry["registry_sha256"] = observed_self_hash
+    if registry.get("schema_id") != (
+        PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID
+    ):
+        raise PublicRedockingBenchmarkError(
+            "contamination registry schema is unsupported"
+        )
+    if registry.get("contaminated_development_case_count") != 300:
+        raise PublicRedockingBenchmarkError(
+            "contaminated development denominator drifted"
+        )
+    if registry.get("contaminated_development_case_ids_sha256") != _sha256(
+        list(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+    ):
+        raise PublicRedockingBenchmarkError(
+            "contaminated development cases drifted"
+        )
+    if registry.get("fresh_internal_blind_candidate_count") != 128:
+        raise PublicRedockingBenchmarkError(
+            "fresh internal blind denominator drifted"
+        )
+    if registry.get("fresh_internal_blind_case_ids_sha256") != (
+        PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256
+    ):
+        raise PublicRedockingBenchmarkError(
+            "fresh internal blind case identity drifted"
+        )
+    if registry.get("source_report_execution_receipt_count") != 900:
+        raise PublicRedockingBenchmarkError("historical receipt count drifted")
+    if registry.get("source_report_sha256") != PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256:
+        raise PublicRedockingBenchmarkError("historical report identity drifted")
+    if registry.get("coverage_verified_before_metric_values_inspected") is not True:
+        raise PublicRedockingBenchmarkError(
+            "historical coverage was not verified before metrics were inspected"
+        )
+    if registry.get("result_values_inspected_before_reclassification") is not False:
+        raise PublicRedockingBenchmarkError(
+            "contamination reclassification was not result-blind"
+        )
+    if registry.get("old_298_holdout_claim_invalidated") is not True:
+        raise PublicRedockingBenchmarkError(
+            "obsolete 298-case claim was not invalidated"
+        )
+    if registry.get("fresh_result_values_inspected") is not False:
+        raise PublicRedockingBenchmarkError(
+            "fresh internal blind result values were inspected"
+        )
+    if registry.get("external_independent_validation_still_required_for_public_claim") is not True:
+        raise PublicRedockingBenchmarkError(
+            "external public-claim review boundary is missing"
+        )
+    return MappingProxyType(registry)
 
 
 def frozen_public_redocking_case_seed(case_id: str) -> int:
@@ -1471,6 +1710,7 @@ class FrozenPublicRedockingCohort:
             raise PublicRedockingBenchmarkError("frozen redocking case IDs drifted")
         if (
             len(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS) != 2
+            or PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS != case_ids
             or len(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS) != 298
             or set(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS)
             & set(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS)
@@ -1485,7 +1725,7 @@ class FrozenPublicRedockingCohort:
             != case_ids
         ):
             raise PublicRedockingBenchmarkError(
-                "redocking smoke and primary holdout partitions drifted"
+                "redocking historical smoke and primary partitions drifted"
             )
         object.__setattr__(self, "case_ids", case_ids)
 
@@ -1518,6 +1758,13 @@ class FrozenPublicRedockingCohort:
                 "selected_ids_sha256": PUBLIC_REDOCKING_SELECTED_IDS_SHA256,
                 "selected_before_results": True,
             },
+            "contamination_registry": {
+                "schema_id": PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID,
+                "registry_sha256": PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256,
+                "historical_report_sha256": PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256,
+                "old_298_holdout_claim_invalidated": True,
+                "reclassification_was_result_blind": True,
+            },
             "case_seed_policy": {
                 "derivation": "base_plus_frozen_case_index",
                 "base_seed": PUBLIC_REDOCKING_CASE_SEED_BASE,
@@ -1542,8 +1789,19 @@ class FrozenPublicRedockingCohort:
                 "primary_blind_holdout": {
                     "case_count": len(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS),
                     "case_ids": list(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS),
-                    "excludes_observed_smoke_cases": True,
-                    "claim_role": "primary_blind_holdout",
+                    "historical_designation_invalidated": True,
+                    "claim_role": "historical_nonclaimable_partition",
+                },
+                "contaminated_development": {
+                    "case_count": len(
+                        PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+                    ),
+                    "case_ids": list(
+                        PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+                    ),
+                    "observed_before_stage0_numeric_freeze": True,
+                    "contains_all_300_cases": True,
+                    "claim_role": "development_and_threshold_derivation_only",
                 },
                 "supplementary_descriptive": {
                     "case_count": len(self.case_ids),
@@ -2043,7 +2301,10 @@ class PublicRedockingEvaluationPolicy:
             "same_ranked_pose_count_required": True,
             "same_search_effort_required": False,
             "failure_denominator": "all_cases_in_each_analysis_scope",
-            "primary_failure_denominator": "298_blind_holdout_cases",
+            "historical_primary_failure_denominator": (
+                "298_cases_invalidated_nonclaimable"
+            ),
+            "fresh_internal_failure_denominator": "128_untouched_cases",
             "engineering_smoke_failure_denominator": "2_observed_smoke_cases",
             "supplementary_failure_denominator": "all_300_frozen_cases",
             "missing_candidate_policy": "case_failure",
@@ -2243,6 +2504,8 @@ class PublicRedockingEngineV2CandidateDiagnostic:
     pose_artifact_sha256: str = ""
     score_terms_receipt_sha256: str = ""
     hbond_count: int | None = None
+    selection_eligible: bool | None = None
+    score_term_binary64_hex: Mapping[str, str] = field(default_factory=dict)
     error_code: str = ""
     schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
 
@@ -2266,6 +2529,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                 "Engine V2 candidate status must be success or failure"
             )
         error_code = str(self.error_code or "").strip()
+        score_terms = dict(self.score_term_binary64_hex)
         if status == "success":
             proposal_sha256 = _digest(
                 self.proposal_fingerprint_sha256,
@@ -2290,9 +2554,32 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                 or type(self.chemical_valid) is not bool
                 or type(self.hbond_count) is not int
                 or self.hbond_count < 0
+                or type(self.selection_eligible) is not bool
+                or set(score_terms) != set(_SCORER_TERM_NAMES)
             ):
                 raise PublicRedockingBenchmarkError(
                     "successful Engine V2 candidate diagnostics are incomplete"
+                )
+            try:
+                decoded_terms = {
+                    name: float.fromhex(score_terms[name])
+                    for name in _SCORER_TERM_NAMES
+                }
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise PublicRedockingBenchmarkError(
+                    "successful candidate score terms are invalid"
+                ) from exc
+            if any(
+                not math.isfinite(value) or value.hex() != score_terms[name]
+                for name, value in decoded_terms.items()
+            ) or not math.isclose(
+                decoded_terms["total_score"],
+                sum(decoded_terms[name] for name in _SCORER_TERM_NAMES[:-1]),
+                rel_tol=0.0,
+                abs_tol=1.0e-12,
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "successful candidate score terms are inconsistent"
                 )
             if error_code:
                 raise PublicRedockingBenchmarkError(
@@ -2312,6 +2599,8 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             or self.pose_artifact_sha256
             or self.score_terms_receipt_sha256
             or self.hbond_count is not None
+            or self.selection_eligible is not None
+            or score_terms
             or not error_code
         ):
             raise PublicRedockingBenchmarkError(
@@ -2319,6 +2608,17 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             )
         object.__setattr__(self, "status", status)
         object.__setattr__(self, "error_code", error_code)
+        object.__setattr__(
+            self,
+            "score_term_binary64_hex",
+            MappingProxyType(
+                {
+                    name: score_terms[name]
+                    for name in _SCORER_TERM_NAMES
+                    if name in score_terms
+                }
+            ),
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -2333,8 +2633,94 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "pose_artifact_sha256": self.pose_artifact_sha256,
             "score_terms_receipt_sha256": self.score_terms_receipt_sha256,
             "hbond_count": self.hbond_count,
+            "selection_eligible": self.selection_eligible,
+            "score_term_binary64_hex": dict(self.score_term_binary64_hex),
             "error_code": self.error_code,
         }
+
+
+def _validated_scorer_backend_receipt(
+    value: Mapping[str, object] | None,
+) -> Mapping[str, object] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise TypeError("scorer backend receipt must be a mapping")
+    payload = dict(value)
+    required = {
+        "schema_id",
+        "backend",
+        "backend_version",
+        "implementation_source_sha256",
+        "options_fingerprint_sha256",
+        "extension_sha256",
+        "cargo_lock_sha256",
+        "rustc_version",
+        "target_triple",
+        "build_flags",
+        "implicit_fallback_allowed",
+        "receipt_sha256",
+    }
+    if set(payload) != required:
+        raise PublicRedockingBenchmarkError(
+            "scorer backend receipt fields are incomplete"
+        )
+    if payload["schema_id"] != _SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID:
+        raise PublicRedockingBenchmarkError(
+            "scorer backend receipt schema is unsupported"
+        )
+    backend = str(payload["backend"] or "").strip()
+    if backend not in {"python_reference", "rust_cpu_required"}:
+        raise PublicRedockingBenchmarkError("scorer backend is unsupported")
+    if not str(payload["backend_version"] or "").strip():
+        raise PublicRedockingBenchmarkError("scorer backend version is missing")
+    for field_name in (
+        "implementation_source_sha256",
+        "options_fingerprint_sha256",
+        "receipt_sha256",
+    ):
+        _digest(payload[field_name], name=field_name)
+    flags = payload["build_flags"]
+    if (
+        not isinstance(flags, (list, tuple))
+        or any(not isinstance(flag, str) or not flag.strip() for flag in flags)
+        or len(flags) != len(set(flags))
+    ):
+        raise PublicRedockingBenchmarkError(
+            "scorer backend build flags are invalid"
+        )
+    native_fields = (
+        "extension_sha256",
+        "cargo_lock_sha256",
+        "rustc_version",
+        "target_triple",
+    )
+    if backend == "rust_cpu_required":
+        _digest(payload["extension_sha256"], name="extension_sha256")
+        _digest(payload["cargo_lock_sha256"], name="cargo_lock_sha256")
+        if any(not str(payload[name] or "").strip() for name in native_fields[2:]):
+            raise PublicRedockingBenchmarkError(
+                "Rust scorer backend build identity is incomplete"
+            )
+        if not flags:
+            raise PublicRedockingBenchmarkError(
+                "Rust scorer backend build flags are missing"
+            )
+    elif any(payload[name] not in ("", None) for name in native_fields) or flags:
+        raise PublicRedockingBenchmarkError(
+            "Python scorer backend cannot claim native build identity"
+        )
+    if payload["implicit_fallback_allowed"] is not False:
+        raise PublicRedockingBenchmarkError(
+            "scorer backend receipt permits implicit fallback"
+        )
+    receipt_sha256 = payload.pop("receipt_sha256")
+    payload["build_flags"] = list(flags)
+    if receipt_sha256 != _sha256(payload):
+        raise PublicRedockingBenchmarkError("scorer backend receipt hash mismatch")
+    payload["receipt_sha256"] = receipt_sha256
+    payload["build_flags"] = tuple(flags)
+    return MappingProxyType(payload)
 
 
 @dataclass(frozen=True, slots=True)
@@ -2351,6 +2737,7 @@ class PublicRedockingEngineV2Diagnostics:
     ligand_donor_count: int
     ligand_acceptor_count: int
     candidates: tuple[PublicRedockingEngineV2CandidateDiagnostic, ...] = ()
+    scorer_backend_receipt: Mapping[str, object] | None = None
     preparation_failure_code: str = ""
     diagnostic_evaluation_seconds: float = 0.0
     candidate_budget: int = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
@@ -2388,6 +2775,9 @@ class PublicRedockingEngineV2Diagnostics:
                 "Engine V2 preparation counts must be non-negative integers"
             )
         candidates = tuple(self.candidates)
+        backend_receipt = _validated_scorer_backend_receipt(
+            self.scorer_backend_receipt
+        )
         failure_code = str(self.preparation_failure_code or "").strip()
         diagnostic_evaluation_seconds = _finite(
             self.diagnostic_evaluation_seconds,
@@ -2398,6 +2788,7 @@ class PublicRedockingEngineV2Diagnostics:
             if (
                 any(counts)
                 or candidates
+                or backend_receipt is not None
                 or failure_code
                 not in _PUBLIC_REDOCKING_ENGINE_V2_PREPARATION_FAILURE_CODES
                 or diagnostic_evaluation_seconds != 0.0
@@ -2413,6 +2804,7 @@ class PublicRedockingEngineV2Diagnostics:
                 or self.ligand_partial_charge_count != self.ligand_atom_count
                 or failure_code
                 or len(candidates) != self.candidate_budget
+                or backend_receipt is None
                 or tuple(row.proposal_index for row in candidates)
                 != tuple(range(self.candidate_budget))
             ):
@@ -2443,6 +2835,7 @@ class PublicRedockingEngineV2Diagnostics:
             diagnostic_evaluation_seconds,
         )
         object.__setattr__(self, "candidates", candidates)
+        object.__setattr__(self, "scorer_backend_receipt", backend_receipt)
 
     @property
     def charge_coverage_complete(self) -> bool:
@@ -2510,6 +2903,16 @@ class PublicRedockingEngineV2Diagnostics:
             "charge_coverage_complete": self.charge_coverage_complete,
             "hbond_feature_covered": self.hbond_feature_covered,
             "candidate_budget": self.candidate_budget,
+            "scorer_backend_receipt": (
+                None
+                if self.scorer_backend_receipt is None
+                else {
+                    **dict(self.scorer_backend_receipt),
+                    "build_flags": list(
+                        self.scorer_backend_receipt["build_flags"]
+                    ),
+                }
+            ),
             "candidate_success_count": len(self.successful_candidates),
             "candidate_failure_count": (
                 self.candidate_budget - len(self.successful_candidates)
@@ -2703,6 +3106,22 @@ def _validate_engine_v2_result_diagnostics(
         raise PublicRedockingBenchmarkError(
             "every Engine V2 result must retain typed diagnostics"
         )
+    execution_policy = _execution_policy_mapping(row.execution_policy)
+    scorer_backend = execution_policy.get("scorer_backend")
+    if scorer_backend not in {"python_reference", "rust_cpu_required"}:
+        raise PublicRedockingBenchmarkError(
+            "Engine V2 scorer backend policy is unsupported"
+        )
+    if execution_policy.get("scorer_thread_count") != 1:
+        raise PublicRedockingBenchmarkError(
+            "Engine V2 scorer thread count must equal one"
+        )
+    if diagnostics.preparation_status == "success":
+        receipt = diagnostics.scorer_backend_receipt
+        if receipt is None or receipt["backend"] != scorer_backend:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 scorer backend receipt contradicts execution policy"
+            )
     if row.status == "failure":
         if (
             row.failure_code == "engine_v2_input_unsupported"
@@ -3136,6 +3555,8 @@ class PublicRedockingBenchmarkReport:
         engine_v2_policy = _execution_policy_mapping(next(iter(engine_v2_policies)))
         required_engine_v2_policy = {
             "cpu_count",
+            "scorer_backend",
+            "scorer_thread_count",
             "torch_intraop_threads",
             "torch_interop_threads",
             "torch_version",
@@ -3146,6 +3567,7 @@ class PublicRedockingBenchmarkReport:
             )
         for field_name in (
             "cpu_count",
+            "scorer_thread_count",
             "torch_intraop_threads",
             "torch_interop_threads",
         ):
@@ -3158,6 +3580,9 @@ class PublicRedockingBenchmarkReport:
             engine_v2_policy.get("cpu_count") != self.policy.cpu_count
             or engine_v2_policy.get("torch_intraop_threads") != 1
             or engine_v2_policy.get("torch_interop_threads") != 1
+            or engine_v2_policy.get("scorer_thread_count") != 1
+            or engine_v2_policy.get("scorer_backend")
+            not in {"python_reference", "rust_cpu_required"}
             or type(torch_version) is not str
             or torch_version not in PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS
         ):
@@ -3331,6 +3756,12 @@ class PublicRedockingBenchmarkReport:
             "engineering_smoke_case_ids": list(
                 PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
             ),
+            "contaminated_development_case_count": len(
+                PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+            ),
+            "contaminated_development_case_ids_sha256": _sha256(
+                list(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+            ),
             "primary_blind_holdout_case_count": len(
                 PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
             ),
@@ -3339,7 +3770,12 @@ class PublicRedockingBenchmarkReport:
             ),
             "supplementary_descriptive_case_count": len(self.cohort.case_ids),
             "primary_metrics_exclude_engineering_smoke": True,
+            "primary_metrics_exclude_contaminated_development": False,
+            "historical_298_holdout_claim_invalidated": True,
+            "historical_300_development_only": True,
             "all_300_metrics_are_supplementary_descriptive": True,
+            "internal_provisional_evidence_only": True,
+            "external_independent_review_complete": False,
             "full_failure_denominator_retained": True,
             "policy": self.policy.to_dict(),
             "same_ranked_pose_count": True,
@@ -3517,6 +3953,27 @@ def _derive_engine_v2_diagnostic_metrics(
                     analysis_scope=analysis_scope,
                     subgroup=subgroup,
                     values=values,
+                    statistic=_median,
+                    policy=policy,
+                )
+            )
+    for term_name in _SCORER_TERM_NAMES:
+        per_case_medians = [
+            statistics.median(
+                float.fromhex(candidate.score_term_binary64_hex[term_name])
+                for candidate in successful(value)
+            )
+            for value in diagnostics
+            if successful(value)
+        ]
+        if per_case_medians:
+            metrics.append(
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id=f"candidate_term_{term_name}_median",
+                    analysis_scope=analysis_scope,
+                    subgroup=subgroup,
+                    values=per_case_medians,
                     statistic=_median,
                     policy=policy,
                 )
@@ -4017,6 +4474,14 @@ def _derive_public_redocking_metrics(
         _derive_scope_all_metrics(
             row_map,
             policy=active_policy,
+            analysis_scope="contaminated_development",
+            case_ids=PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
+        )
+    )
+    metrics.extend(
+        _derive_scope_all_metrics(
+            row_map,
+            policy=active_policy,
             analysis_scope="engineering_smoke",
             case_ids=PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
         )
@@ -4074,6 +4539,7 @@ def build_public_redocking_benchmark_report(
 
 __all__ = [
     "FROZEN_PUBLIC_REDOCKING_CASE_IDS",
+    "FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS",
     "MAX_PUBLIC_REDOCKING_BOOTSTRAP_SAMPLES",
     "PUBLIC_REDOCKING_ANALYSIS_SCOPES",
     "PUBLIC_REDOCKING_ARCHIVE_SHA256",
@@ -4084,7 +4550,12 @@ __all__ = [
     "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT",
     "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID",
     "PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID",
+    "PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS",
+    "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID",
+    "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256",
     "PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS",
+    "PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256",
+    "PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256",
     "PUBLIC_REDOCKING_MATERIALIZATION_RECEIPTS_SHA256",
     "PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256",
     "PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID",
@@ -4119,5 +4590,6 @@ __all__ = [
     "frozen_public_redocking_materialization_receipt_sha256",
     "frozen_public_redocking_cohort",
     "frozen_public_redocking_profiles",
+    "require_public_redocking_contamination_registry",
     "verify_public_redocking_source_identifiers",
 ]

@@ -25,7 +25,7 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
     metadata = tomllib.loads(
         Path("packaging/engine-v2/pyproject.toml").read_text(encoding="utf-8")
     )
-    assert DISTRIBUTION_VERSION == "0.2.0rc4"
+    assert DISTRIBUTION_VERSION == "0.2.0rc5"
     assert VERSION_TAXONOMY.distribution_version == DISTRIBUTION_VERSION
     assert ENGINE_API_VERSION == "2.0.0"
     assert ALL_ATOM_SCHEMA_VERSION == "2.0.0"
@@ -69,8 +69,8 @@ def test_static_analysis_configuration_is_scoped_to_independent_contracts() -> N
 
 def test_release_candidate_documents_preserve_non_promotion_boundary() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
-    release = Path("docs/engine_v2_0_2_0rc4.md").read_text(encoding="utf-8")
-    assert "0.2.0rc4" in changelog
+    release = Path("docs/engine_v2_0_2_0rc5.md").read_text(encoding="utf-8")
+    assert "0.2.0rc5" in changelog
     assert "does not establish" in changelog
     for flag in (
         "claim_safe",

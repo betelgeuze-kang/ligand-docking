@@ -60,7 +60,7 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
     assert loaded == capability_snapshot()
     assert loaded["schema_version"] == CAPABILITY_SCHEMA_VERSION == 4
     assert loaded["implementation_stage"] == IMPLEMENTATION_STAGE
-    assert len(loaded["capabilities"]) == 44
+    assert len(loaded["capabilities"]) == 45
 
     rows = loaded["capabilities"]
     assert all(row["implemented"] is True for row in rows.values())

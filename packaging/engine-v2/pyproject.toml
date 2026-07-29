@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "betelgeuze-engine-v2"
-version = "0.2.0rc4"
+version = "0.2.0rc5"
 description = "Fail-closed independent molecular Engine v2 reference contracts and CPU primitives."
 requires-python = ">=3.10,<3.13"
 dependencies = [
@@ -12,6 +12,7 @@ dependencies = [
   "numpy>=1.26,<3",
   "torch==2.6.0",
 ]
+
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3",
@@ -20,6 +21,11 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
   "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+native-cpu = [
+  "betelgeuze-engine-v2-native==0.2.0rc5; platform_system == 'Linux' and platform_machine == 'x86_64'",
 ]
 
 [project.scripts]

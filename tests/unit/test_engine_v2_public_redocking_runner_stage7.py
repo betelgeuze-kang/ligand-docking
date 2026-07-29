@@ -19,7 +19,6 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
-    PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PublicRedockingCaseProfile,
     PublicRedockingCaseResult,
     PublicRedockingEngineV2CandidateDiagnostic,
@@ -38,6 +37,49 @@ _SPEC = importlib.util.spec_from_file_location(
 assert _SPEC is not None and _SPEC.loader is not None
 runner = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(runner)
+
+
+def _python_backend_receipt() -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
+        "backend": "python_reference",
+        "backend_version": "1.0.0",
+        "implementation_source_sha256": "e" * 64,
+        "options_fingerprint_sha256": "f" * 64,
+        "extension_sha256": "",
+        "cargo_lock_sha256": "",
+        "rustc_version": "",
+        "target_triple": "",
+        "build_flags": [],
+        "implicit_fallback_allowed": False,
+    }
+    payload["receipt_sha256"] = runner._sha256_bytes(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    )
+    return payload
+
+
+def _zero_score_terms() -> dict[str, str]:
+    return {
+        name: 0.0.hex()
+        for name in (
+            "typed_vdw",
+            "electrostatics",
+            "directional_hbond",
+            "hydrophobic_contact",
+            "desolvation_proxy",
+            "torsion_energy",
+            "ligand_strain",
+            "weak_pocket_prior",
+            "total_score",
+        )
+    }
 
 
 def _ligand(path: Path):
@@ -68,6 +110,7 @@ def _engine_outcome(
 ) -> runner.EngineV2PoseSearchOutcome:
     diagnostics = PublicRedockingEngineV2Diagnostics(
         preparation_status="success",
+        scorer_backend_receipt=_python_backend_receipt(),
         receptor_atom_count=1,
         ligand_atom_count=1,
         receptor_partial_charge_count=1,
@@ -89,6 +132,8 @@ def _engine_outcome(
                     pose_artifact_sha256=f"{index + 65:064x}",
                     score_terms_receipt_sha256=f"{index + 129:064x}",
                     hbond_count=1,
+                    selection_eligible=True,
+                    score_term_binary64_hex=_zero_score_terms(),
                 )
                 if index < 5
                 else PublicRedockingEngineV2CandidateDiagnostic(
@@ -701,7 +746,7 @@ def test_offline_benchmark_exports_five_score_ranked_proposals_even_if_invalid()
                 proposal=proposal,
                 score=score,
                 proposal_index=index,
-                selection_eligible=False,
+                selection_eligible=index != 0,
             )
             for index, (proposal, score) in enumerate(
                 zip(proposals, scores, strict=True)
@@ -720,6 +765,24 @@ def test_offline_benchmark_exports_five_score_ranked_proposals_even_if_invalid()
     )
 
 
+def test_offline_benchmark_requires_five_successful_score_rows():
+    search = SimpleNamespace(
+        rows=tuple(
+            SimpleNamespace(
+                status="success",
+                proposal=object(),
+                score=float(index),
+                proposal_index=index,
+                selection_eligible=False,
+            )
+            for index in range(4)
+        )
+    )
+
+    with pytest.raises(runner.IncompleteRankedPoseSet):
+        runner._benchmark_ranked_proposals(search)
+
+
 def test_incomplete_ranked_pose_set_uses_typed_failure_code() -> None:
     search = SimpleNamespace(
         rows=tuple(
@@ -728,6 +791,7 @@ def test_incomplete_ranked_pose_set_uses_typed_failure_code() -> None:
                 proposal=object(),
                 score=float(index),
                 proposal_index=index,
+                selection_eligible=True,
             )
             for index in range(4)
         )
@@ -1072,7 +1136,7 @@ def test_checksum_success_receipt_is_never_reused_as_cache(
     )
 
 
-def test_engine_source_identity_hashes_the_full_python_package(
+def test_engine_source_identity_hashes_python_and_native_source_closure(
     tmp_path: Path,
 ) -> None:
     dependency = tmp_path / "betelgeuze_engine_v2" / "docking" / "contact_validity.py"
@@ -1081,6 +1145,16 @@ def test_engine_source_identity_hashes_the_full_python_package(
     runner_path = tmp_path / "tools" / "runner.py"
     runner_path.parent.mkdir()
     runner_path.write_text("RUNNER = 1\n", encoding="ascii")
+    for relative_path in (
+        "rust_engine_v2/Cargo.toml",
+        "rust_engine_v2/Cargo.lock",
+        "rust_engine_v2/build.rs",
+        "rust_engine_v2/pyproject.toml",
+        "rust_engine_v2/src/lib.rs",
+    ):
+        path = tmp_path / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# {relative_path}\n", encoding="ascii")
     first = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
 
     dependency.write_text("VALUE = 2\n", encoding="ascii")
@@ -1173,9 +1247,27 @@ def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
             limit=0,
         )
     )
-    primary = runner._case_ids_from_arguments(
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="historical 298-case holdout is invalidated",
+    ):
+        runner._case_ids_from_arguments(
+            SimpleNamespace(
+                case_subset="primary-blind-holdout",
+                start_index=0,
+                limit=0,
+            )
+        )
+    fresh = runner._case_ids_from_arguments(
         SimpleNamespace(
-            case_subset="primary-blind-holdout",
+            case_subset="fresh-internal-blind-holdout",
+            start_index=0,
+            limit=0,
+        )
+    )
+    development = runner._case_ids_from_arguments(
+        SimpleNamespace(
+            case_subset="contaminated-development",
             start_index=0,
             limit=0,
         )
@@ -1185,11 +1277,12 @@ def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
     )
 
     assert smoke == PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
-    assert primary == PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
     assert len(smoke) == 2
-    assert len(primary) == 298
+    assert len(fresh) == 128
+    assert development == runner.PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+    assert len(development) == 300
     assert supplementary == FROZEN_PUBLIC_REDOCKING_CASE_IDS
-    assert not set(smoke) & set(primary)
+    assert not set(development) & set(fresh)
 
     with pytest.raises(
         runner.PublicRedockingRunnerError,
@@ -1705,6 +1798,8 @@ def test_runner_rejects_prior_full_report_symlink(
                 str(tmp_path / "missing-gnina"),
                 "--output-root",
                 str(output_root),
+                "--case-subset",
+                "engineering-smoke",
             )
         )
 
@@ -1893,6 +1988,7 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
         coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
     )
     scorer = SimpleNamespace(
+        backend_receipt=SimpleNamespace(to_dict=_python_backend_receipt),
         context=SimpleNamespace(
             receptor_donors=(0,),
             receptor_acceptors=(1,),
@@ -1929,6 +2025,11 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     monkeypatch.setattr(
         runner,
         "build_guided_placement_context",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "ReceptorClashReliefRefiner",
         lambda *args, **kwargs: object(),
     )
 
@@ -1975,6 +2076,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
         coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
     )
     scorer = SimpleNamespace(
+        backend_receipt=SimpleNamespace(to_dict=_python_backend_receipt),
         context=SimpleNamespace(
             receptor_donors=(0,),
             receptor_acceptors=(1,),
@@ -2013,6 +2115,11 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
         "build_guided_placement_context",
         lambda *args, **kwargs: object(),
     )
+    monkeypatch.setattr(
+        runner,
+        "ReceptorClashReliefRefiner",
+        lambda *args, **kwargs: object(),
+    )
 
     search_rows = tuple(
         SimpleNamespace(
@@ -2021,19 +2128,29 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
             proposal=SimpleNamespace(
                 coordinates=torch.full((2, 3), float(index)),
                 fingerprint_sha256=f"{index + 1:064x}",
-            ),
-            score=float(index),
-            error_code="",
+                ),
+                score=float(index),
+                error_code="",
+                selection_eligible=True,
         )
         for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
     )
     term_rows = tuple(
         SimpleNamespace(
             proposal_index=index,
-            terms=SimpleNamespace(
-                receipt_sha256=f"{index + 65:064x}",
-                hbond_count=0,
-            ),
+                terms=SimpleNamespace(
+                    receipt_sha256=f"{index + 65:064x}",
+                    hbond_count=0,
+                    typed_vdw=0.0,
+                    electrostatics=0.0,
+                    directional_hbond=0.0,
+                    hydrophobic_contact=0.0,
+                    desolvation_proxy=0.0,
+                    torsion_energy=0.0,
+                    ligand_strain=0.0,
+                    weak_pocket_prior=0.0,
+                    total_score=0.0,
+                ),
         )
         for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
     )
