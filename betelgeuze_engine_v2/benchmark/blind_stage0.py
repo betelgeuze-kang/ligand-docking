@@ -1039,6 +1039,182 @@ _SOLO_REQUIRED_BOOLEAN_CONTROLS = {
     "post_result_retuning_forbidden",
     "two_pass_self_review_required",
 }
+_SOLO_REVIEW_SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.2.0"
+_SOLO_OPERATIONAL_SCHEMA_ID = (
+    "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0"
+)
+
+
+def _self_hash_matches(payload: Mapping[str, Any], field: str) -> bool:
+    projection = dict(payload)
+    observed = projection.pop(field, None)
+    return observed == hashlib.sha256(_canonical_bytes(projection)).hexdigest()
+
+
+def _validate_solo_review_artifacts(
+    payload: Mapping[str, Any],
+    governance: Mapping[str, Any],
+    *,
+    repo_root: Path,
+    developer: str,
+    decisions: Mapping[str, Any],
+    blockers: list[str],
+) -> tuple[list[Any], Mapping[str, Any]]:
+    rows = governance.get("solo_review_passes")
+    if not isinstance(rows, list) or len(rows) != 2:
+        blockers.append("solo_review_pass_artifacts_incomplete")
+        rows = []
+    reviews: list[Mapping[str, Any]] = []
+    source_commit = _text(_mapping(payload.get("source_freeze")).get("git_head_sha"))
+    for expected_pass in (1, 2):
+        row = _mapping(rows[expected_pass - 1] if len(rows) == 2 else None)
+        prefix = f"solo_review_pass_{expected_pass}"
+        if row.get("review_pass") != expected_pass:
+            blockers.append(f"{prefix}_index_mismatch")
+        _validate_bound_artifact(
+            row,
+            repo_root=repo_root,
+            path_field="path",
+            sha_field="file_sha256",
+            blocker_prefix=prefix,
+            blockers=blockers,
+        )
+        path = _resolve_repo_file(repo_root, row.get("path"))
+        review = _read_json_object(path)
+        projection = dict(review)
+        receipt_sha256 = projection.pop("receipt_sha256", None)
+        if receipt_sha256 != hashlib.sha256(_canonical_bytes(projection)).hexdigest():
+            blockers.append(f"{prefix}_self_hash_invalid")
+        if row.get("receipt_sha256") != receipt_sha256:
+            blockers.append(f"{prefix}_receipt_hash_mismatch")
+        if review.get("schema_id") != _SOLO_REVIEW_SCHEMA_ID:
+            blockers.append(f"{prefix}_schema_invalid")
+        if review.get("review_pass") != expected_pass:
+            blockers.append(f"{prefix}_payload_index_mismatch")
+        if review.get("developer_id") != developer:
+            blockers.append(f"{prefix}_developer_mismatch")
+        if review.get("source_freeze_commit_sha") != source_commit:
+            blockers.append(f"{prefix}_source_commit_mismatch")
+        if review.get("source_worktree_clean") is not True:
+            blockers.append(f"{prefix}_source_not_clean")
+        if review.get("fresh_internal_blind_holdout_executed") is not False:
+            blockers.append(f"{prefix}_holdout_already_opened")
+        if _mapping(review.get("self_review_decisions")) != decisions:
+            blockers.append(f"{prefix}_decisions_mismatch")
+        gate_results = _mapping(review.get("development_gate_results"))
+        if set(gate_results) != set(_REQUIRED_THRESHOLDS) or any(
+            gate_results.get(name) != "pass" for name in _REQUIRED_THRESHOLDS
+        ):
+            blockers.append(f"{prefix}_development_gates_not_passed")
+        if row.get("reviewed_at_utc") != review.get("reviewed_at_utc"):
+            blockers.append(f"{prefix}_timestamp_mismatch")
+        reviews.append(review)
+
+    reviewed_evidence = _mapping(governance.get("reviewed_evidence"))
+    if len(reviews) == 2:
+        first_evidence = _mapping(reviews[0].get("reviewed_evidence"))
+        second_evidence = _mapping(reviews[1].get("reviewed_evidence"))
+        if not first_evidence or first_evidence != second_evidence:
+            blockers.append("solo_review_pass_evidence_mismatch")
+        if reviewed_evidence != second_evidence:
+            blockers.append("solo_governance_reviewed_evidence_mismatch")
+        expected_previous = {
+            "path": _mapping(rows[0]).get("path") if len(rows) == 2 else None,
+            "file_sha256": (
+                _mapping(rows[0]).get("file_sha256") if len(rows) == 2 else None
+            ),
+            "receipt_sha256": reviews[0].get("receipt_sha256"),
+            "reviewed_at_utc": reviews[0].get("reviewed_at_utc"),
+        }
+        if _mapping(reviews[1].get("previous_review_pass")) != expected_previous:
+            blockers.append("solo_review_previous_pass_chain_mismatch")
+        first_timestamp = _utc_datetime(reviews[0].get("reviewed_at_utc"))
+        second_timestamp = _utc_datetime(reviews[1].get("reviewed_at_utc"))
+        if (
+            first_timestamp is None
+            or second_timestamp is None
+            or (second_timestamp - first_timestamp).total_seconds() < 24 * 3600
+        ):
+            blockers.append("solo_review_artifacts_not_time_separated")
+        if (
+            reviews[0].get("reviewed_at_utc")
+            != governance.get("first_self_reviewed_at_utc")
+            or reviews[1].get("reviewed_at_utc")
+            != governance.get("second_self_reviewed_at_utc")
+        ):
+            blockers.append("solo_review_artifact_governance_timestamp_mismatch")
+
+    artifact_specs = (
+        (
+            "operational_evidence_path",
+            "operational_evidence_file_sha256",
+            "operational_evidence",
+            True,
+        ),
+        (
+            "scorer_term_development_report_path",
+            "scorer_term_development_report_file_sha256",
+            "development_report",
+            False,
+        ),
+        (
+            "threshold_evidence_path",
+            "threshold_evidence_file_sha256",
+            "threshold_evidence",
+            True,
+        ),
+        ("base_wheel_path", "base_wheel_sha256", "base_wheel", False),
+        (
+            "native_wheel_path",
+            "native_cp310_wheel_sha256",
+            "native_wheel",
+            False,
+        ),
+    )
+    for path_field, hash_field, label, required in artifact_specs:
+        present = path_field in reviewed_evidence or hash_field in reviewed_evidence
+        if required and not present:
+            blockers.append(f"solo_reviewed_{label}_missing")
+        if not present:
+            continue
+        _validate_bound_artifact(
+            reviewed_evidence,
+            repo_root=repo_root,
+            path_field=path_field,
+            sha_field=hash_field,
+            blocker_prefix=f"solo_reviewed_{label}",
+            blockers=blockers,
+        )
+
+    operational_path = _resolve_repo_file(
+        repo_root, reviewed_evidence.get("operational_evidence_path")
+    )
+    operational = _read_json_object(operational_path)
+    if operational.get("schema_id") != _SOLO_OPERATIONAL_SCHEMA_ID:
+        blockers.append("solo_reviewed_operational_evidence_schema_invalid")
+    if not _self_hash_matches(operational, "receipt_sha256"):
+        blockers.append("solo_reviewed_operational_evidence_self_hash_invalid")
+    if reviewed_evidence.get(
+        "operational_evidence_receipt_sha256"
+    ) != operational.get("receipt_sha256"):
+        blockers.append("solo_reviewed_operational_evidence_receipt_mismatch")
+    if operational.get("developer_id") != developer:
+        blockers.append("solo_reviewed_operational_evidence_developer_mismatch")
+
+    threshold_path = _resolve_repo_file(
+        repo_root, reviewed_evidence.get("threshold_evidence_path")
+    )
+    threshold = _read_json_object(threshold_path)
+    if threshold.get("schema_id") != _THRESHOLD_EVIDENCE_SCHEMA_ID:
+        blockers.append("solo_reviewed_threshold_evidence_schema_invalid")
+    if not _self_hash_matches(threshold, "evidence_sha256"):
+        blockers.append("solo_reviewed_threshold_evidence_self_hash_invalid")
+    if reviewed_evidence.get("threshold_evidence_sha256") != threshold.get(
+        "evidence_sha256"
+    ):
+        blockers.append("solo_reviewed_threshold_evidence_receipt_mismatch")
+
+    return rows, reviewed_evidence
 
 
 def _validate_solo_governance(
@@ -1095,6 +1271,15 @@ def _validate_solo_governance(
     elif not first_review <= second_review <= frozen_at:
         blockers.append("solo_review_timestamp_order_invalid")
 
+    review_passes, reviewed_evidence = _validate_solo_review_artifacts(
+        payload,
+        governance,
+        repo_root=repo_root,
+        developer=developer,
+        decisions=decisions,
+        blockers=blockers,
+    )
+
     if not _is_sha256(governance.get("solo_attestation_sha256")):
         blockers.append("solo_attestation_missing")
     _validate_bound_artifact(
@@ -1125,6 +1310,10 @@ def _validate_solo_governance(
         blockers.append("solo_attestation_decisions_mismatch")
     if _mapping(attestation.get("compensating_controls")) != controls:
         blockers.append("solo_attestation_controls_mismatch")
+    if attestation.get("solo_review_passes") != review_passes:
+        blockers.append("solo_attestation_review_passes_mismatch")
+    if _mapping(attestation.get("reviewed_evidence")) != reviewed_evidence:
+        blockers.append("solo_attestation_reviewed_evidence_mismatch")
     if attestation.get("independent_review_complete") is not False:
         blockers.append("solo_attestation_independence_claim_invalid")
     if attestation.get("external_review_required_before_public_claim") is not True:

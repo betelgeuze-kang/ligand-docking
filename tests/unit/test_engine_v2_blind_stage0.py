@@ -542,10 +542,99 @@ def _as_solo_policy(
     assert isinstance(source_freeze, dict)
     source_freeze["integration_state"] = "frozen_dedicated_branch_commit"
     source_freeze["unmerged_execution_is_internal_only"] = True
+    developer_id = "solo-developer"
+    threshold_path = repo_root / "threshold-evidence.json"
+    threshold = json.loads(threshold_path.read_text(encoding="utf-8"))
+    threshold["evidence_sha256"] = _canonical_sha256(threshold)
+    threshold_path.write_text(json.dumps(threshold, sort_keys=True), encoding="utf-8")
+    thresholds = payload["acceptance_thresholds"]
+    assert isinstance(thresholds, dict)
+    for row in thresholds.values():
+        assert isinstance(row, dict)
+        provenance = row["provenance"]
+        assert isinstance(provenance, dict)
+        provenance["evidence_sha256"] = _sha256(threshold_path)
+    baseline = payload["baseline_comparison"]
+    assert isinstance(baseline, dict)
+    baseline_provenance = baseline["provenance"]
+    assert isinstance(baseline_provenance, dict)
+    baseline_provenance["evidence_sha256"] = _sha256(threshold_path)
+    operational_path = repo_root / "solo-operational.json"
+    operational = {
+        "schema_id": "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0",
+        "developer_id": developer_id,
+    }
+    operational["receipt_sha256"] = _canonical_sha256(operational)
+    operational_path.write_text(
+        json.dumps(operational, sort_keys=True), encoding="utf-8"
+    )
+    reviewed_evidence = {
+        "operational_evidence_path": operational_path.name,
+        "operational_evidence_file_sha256": _sha256(operational_path),
+        "operational_evidence_receipt_sha256": operational["receipt_sha256"],
+        "threshold_evidence_path": threshold_path.name,
+        "threshold_evidence_file_sha256": _sha256(threshold_path),
+        "threshold_evidence_sha256": threshold["evidence_sha256"],
+    }
+    git_head = source_freeze["git_head_sha"]
+    pass1_path = repo_root / "solo-self-review-pass-1.json"
+    pass2_path = repo_root / "solo-self-review-pass-2.json"
+    pass1: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.2.0",
+        "review_pass": 1,
+        "developer_id": developer_id,
+        "reviewed_at_utc": "2026-07-27T00:00:00Z",
+        "source_freeze_commit_sha": git_head,
+        "source_worktree_clean": True,
+        "reviewed_evidence": reviewed_evidence,
+        "development_gate_results": {
+            name: "pass"
+            for name in (
+                "preparation_input_unsupported_rate",
+                "candidate_generation_coverage",
+                "proposal_oracle_2a_recovery",
+                "top1_selection_failure_given_oracle",
+                "top5_selection_failure_given_oracle",
+                "invalid_top1_pose_rate",
+                "case_level_failure_rate",
+            )
+        },
+        "fresh_internal_blind_holdout_executed": False,
+        "self_review_decisions": decisions,
+    }
+    pass1["receipt_sha256"] = _canonical_sha256(pass1)
+    pass1_path.write_text(json.dumps(pass1, sort_keys=True), encoding="utf-8")
+    pass2: dict[str, object] = {
+        **pass1,
+        "review_pass": 2,
+        "reviewed_at_utc": "2026-07-28T00:00:00Z",
+        "previous_review_pass": {
+            "path": pass1_path.name,
+            "file_sha256": _sha256(pass1_path),
+            "receipt_sha256": pass1["receipt_sha256"],
+            "reviewed_at_utc": pass1["reviewed_at_utc"],
+        },
+    }
+    pass2.pop("receipt_sha256")
+    pass2["receipt_sha256"] = _canonical_sha256(pass2)
+    pass2_path.write_text(json.dumps(pass2, sort_keys=True), encoding="utf-8")
+    review_passes = [
+        {
+            "review_pass": review_pass,
+            "path": path.name,
+            "file_sha256": _sha256(path),
+            "receipt_sha256": review["receipt_sha256"],
+            "reviewed_at_utc": review["reviewed_at_utc"],
+        }
+        for review_pass, path, review in (
+            (1, pass1_path, pass1),
+            (2, pass2_path, pass2),
+        )
+    ]
     governance: dict[str, object] = {
         "governance_mode": "solo_developer_controlled",
-        "developer_id": "solo-developer",
-        "blind_operator_id": "solo-developer",
+        "developer_id": developer_id,
+        "blind_operator_id": developer_id,
         "independent_reviewer_id": "",
         "independent_review_complete": False,
         "execution_scope": "internal_provisional_evidence_only",
@@ -554,6 +643,8 @@ def _as_solo_policy(
         "product_execution_enabled": False,
         "self_review_decisions": decisions,
         "compensating_controls": controls,
+        "solo_review_passes": review_passes,
+        "reviewed_evidence": reviewed_evidence,
         "first_self_reviewed_at_utc": "2026-07-27T00:00:00Z",
         "second_self_reviewed_at_utc": "2026-07-28T00:00:00Z",
         "frozen_at_utc": "2026-07-29T00:00:00Z",
@@ -570,6 +661,8 @@ def _as_solo_policy(
         "external_review_required_before_public_claim": True,
         "self_review_decisions": decisions,
         "compensating_controls": controls,
+        "solo_review_passes": review_passes,
+        "reviewed_evidence": reviewed_evidence,
         "attested_at_utc": "2026-07-29T00:00:01Z",
     }
     attestation_path = repo_root / "solo-attestation.json"
@@ -630,6 +723,34 @@ def test_stage0_admits_solo_developer_internal_only_policy(
     assert receipt.reviewer_id == "solo-developer"
     assert receipt.operator_id == "solo-developer"
     assert receipt.independent_review_complete is False
+
+
+def test_stage0_rejects_mutated_solo_review_pass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    policy_path = tmp_path / "policy.json"
+    payload = _as_solo_policy(_policy(tmp_path, gnina), tmp_path)
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    _write_policy(policy_path, payload)
+    pass2_path = tmp_path / "solo-self-review-pass-2.json"
+    pass2 = json.loads(pass2_path.read_text(encoding="utf-8"))
+    pass2["reviewed_at_utc"] = "2026-07-28T00:00:01Z"
+    pass2_path.write_text(json.dumps(pass2, sort_keys=True), encoding="utf-8")
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "solo_review_pass_2_artifact_hash_mismatch" in raised.value.blockers
 
 
 def test_stage0_rejects_failed_development_threshold_gate(
