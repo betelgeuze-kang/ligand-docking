@@ -489,6 +489,22 @@ def build_policy(
         "two_pass_self_review_required": True,
         "review_pass_minimum_separation_hours": 24,
     }
+    review_pass_bindings = [
+        {
+            "review_pass": review_pass,
+            "path": str(path.relative_to(repo_root)),
+            "file_sha256": _sha256_path(path),
+            "receipt_sha256": payload["receipt_sha256"],
+            "reviewed_at_utc": payload["reviewed_at_utc"],
+        }
+        for review_pass, path, payload in (
+            (1, pass1_path, pass1),
+            (2, pass2_path, pass2),
+        )
+    ]
+    reviewed_evidence = pass2.get("reviewed_evidence")
+    if not isinstance(reviewed_evidence, Mapping):
+        raise ValueError("solo reviewed evidence is missing")
     governance.update(
         {
             "governance_mode": "solo_developer_controlled",
@@ -502,6 +518,8 @@ def build_policy(
             "product_execution_enabled": False,
             "self_review_decisions": dict(decisions),
             "compensating_controls": controls,
+            "solo_review_passes": review_pass_bindings,
+            "reviewed_evidence": dict(reviewed_evidence),
             "first_self_reviewed_at_utc": pass1["reviewed_at_utc"],
             "second_self_reviewed_at_utc": pass2["reviewed_at_utc"],
             "frozen_at_utc": frozen_at_utc,
@@ -519,6 +537,8 @@ def build_policy(
         "external_review_required_before_public_claim": True,
         "self_review_decisions": dict(decisions),
         "compensating_controls": controls,
+        "solo_review_passes": review_pass_bindings,
+        "reviewed_evidence": dict(reviewed_evidence),
         "attested_at_utc": frozen_at_utc,
     }
     attestation_bytes = _canonical_bytes(attestation) + b"\n"
