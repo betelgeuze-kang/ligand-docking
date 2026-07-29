@@ -101,9 +101,14 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    fail. Conditional Top-1 selection failure is exactly 0.50 against a 0.50
    ceiling and Top-5 selection failure is 0.0 against a 0.20 ceiling. Fresh 128
    execution remains blocked by proposal and validity gates. That report binds
-   the pre-v2 implementation and therefore remains diagnostic history rather
-   than current-source admission evidence; the final current source still
-   needs one homogeneous development rerun.
+   the pre-v2 implementation and therefore remains diagnostic history. A
+   current-source non-claimable track-decision slice now contains nine total
+   cases, eight scored cases, and 512 candidate rows under one implementation
+   hash. Preparation unsupported and case failure are both 0.1111 against a
+   0.20 ceiling; coverage is 1.0 against 0.90. Proposal oracle is 0.25 against
+   a 0.4556 floor and invalid Top-1 is 0.625 against a 0.20 ceiling, so Stage 0
+   still fails. Conditional Top-1 selection failure is 0.50 against 0.50 and
+   Top-5 selection failure is 0.0 against 0.20.
 3. **Proposal/scorer diagnosis:** 1,856 successful candidate rows across the
    29 scored cases retain canonical binary64 values for all eight terms. Only
    uniform fallback produced 2 Å candidates: 2/1,168, contributing both oracle
@@ -111,7 +116,10 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    improved the paired common-case oracle event count from one to two and mean
    oracle RMSD by 0.20 Å, but it remains far below promotion level. Automatic
    proposal or scorer promotion remains false, and the report contains no
-   fresh-holdout result.
+   fresh-holdout result. In the current-source slice, all native-like candidates
+   still came from uniform fallback. The multi-anchor lane produced 28
+   candidates with zero native-like and zero valid candidates, so it is retained
+   only as an explicit unpromoted development lane.
 4. **Refinement/validity diagnosis:** refinement reduced its declared clash
    penalty in 1,819/1,856 candidates, yet `minimum_distance_to_protein` failed
    1,837 times and `volume_overlap_with_protein` failed 1,727 times. Internal
@@ -145,6 +153,11 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    The 40 specialized workflows also require an explicit reviewer disposition;
    the attestation has a separate CI-authority approval decision.
    No external issue, PR, required-check, or workflow state was mutated here.
+10. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
+    unavailable backend. C++/HIP shadow work, Rust RMSD/clustering extraction,
+    the native candidate executor, and bounded native parser are not admitted
+    while current proposal and validity gates fail. Product shadow routing
+    remains disabled.
 
 ## Exit condition
 

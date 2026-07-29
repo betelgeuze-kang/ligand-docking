@@ -157,28 +157,39 @@ def _verify_development_source_binding(
     threshold_sources = threshold.get("source_reports_sha256")
     if not isinstance(threshold_sources, Mapping) or not threshold_sources:
         raise ValueError("threshold source receipt map is missing")
-    threshold_engine_hashes: dict[str, str] = {}
+    threshold_hashes: dict[str, dict[str, str]] = {
+        "engine_v2": {},
+        "vina": {},
+        "gnina": {},
+    }
     for raw_path, expected_hash in threshold_sources.items():
         path = _repo_file(repo_root, raw_path)
         if _sha256_path(path) != expected_hash:
             raise ValueError("threshold source receipt hash changed")
         receipt = _read_json(path)
+        _verify_self_hash(receipt, "receipt_sha256")
         result = receipt.get("result")
         if not isinstance(result, Mapping):
             raise ValueError("threshold source receipt has no result")
-        if result.get("engine_id") != "engine_v2":
-            continue
-        if (
-            receipt.get("implementation_sha256") != implementation_sha256
-            or receipt.get("runner_id") != runner_id
-        ):
+        engine_id = str(result.get("engine_id", ""))
+        if engine_id not in threshold_hashes:
+            raise ValueError("threshold source receipt engine identity is invalid")
+        if receipt.get("runner_id") != runner_id:
+            raise ValueError("threshold receipt runner identity is cross-wired")
+        if engine_id == "engine_v2" and receipt.get(
+            "implementation_sha256"
+        ) != implementation_sha256:
             raise ValueError("threshold receipt is not current-source evidence")
         case_id = str(result.get("case_id", ""))
-        if not case_id or case_id in threshold_engine_hashes:
-            raise ValueError("threshold Engine V2 case identity is invalid")
-        threshold_engine_hashes[case_id] = str(expected_hash)
-    if threshold_engine_hashes != development_case_hashes:
+        engine_hashes = threshold_hashes[engine_id]
+        if not case_id or case_id in engine_hashes:
+            raise ValueError("threshold engine/case identity is invalid")
+        engine_hashes[case_id] = str(expected_hash)
+    if threshold_hashes["engine_v2"] != development_case_hashes:
         raise ValueError("threshold and development Engine V2 receipts differ")
+    expected_case_ids = set(case_ids)
+    if any(set(rows) != expected_case_ids for rows in threshold_hashes.values()):
+        raise ValueError("threshold evidence is not a complete three-engine case set")
     if (
         threshold.get("case_count") != len(case_ids)
         or threshold.get("case_ids_sha256") != _sha256_value(case_ids)
@@ -256,6 +267,13 @@ def build_review(
         raise ValueError("solo self-review requires a clean worktree")
     if development.get("contains_fresh_internal_blind_holdout") is not False:
         raise ValueError("development analysis contains the fresh holdout")
+    if development.get("sufficient_for_track_decision") is not True:
+        raise ValueError("development analysis is insufficient for a track decision")
+    if (
+        type(development.get("scored_case_count")) is not int
+        or int(development["scored_case_count"]) < 8
+    ):
+        raise ValueError("development analysis requires at least eight scored cases")
     for field in (
         "contains_engineering_smoke",
         "contains_primary_holdout",
@@ -301,9 +319,11 @@ def build_review(
         "native_cp310_wheel_sha256": expected_native,
     }
     first_reviewed = reviewed
+    previous_review_pass: dict[str, object] | None = None
     if review_pass == 2:
         if previous_pass_path is None:
             raise ValueError("review pass 2 requires --previous-pass")
+        previous_pass_path = _repo_file(repo_root, previous_pass_path)
         previous = _read_json(previous_pass_path)
         _verify_self_hash(previous, "receipt_sha256")
         if (
@@ -320,6 +340,12 @@ def build_review(
         )
         if reviewed - first_reviewed < timedelta(hours=24):
             raise ValueError("solo review passes must be separated by at least 24 hours")
+        previous_review_pass = {
+            "path": str(previous_pass_path.relative_to(repo_root)),
+            "file_sha256": _sha256_path(previous_pass_path),
+            "receipt_sha256": previous["receipt_sha256"],
+            "reviewed_at_utc": previous["reviewed_at_utc"],
+        }
     elif previous_pass_path is not None:
         raise ValueError("review pass 1 cannot bind a previous pass")
 
@@ -354,6 +380,7 @@ def build_review(
         "developer_id": developer_id,
         "source_freeze_commit_sha": head,
         "source_worktree_clean": True,
+        "previous_review_pass": previous_review_pass,
         "reviewed_evidence": reviewed_evidence,
         "development_gate_results": gate_results,
         "self_review_decisions": {name: True for name in SELF_REVIEW_DECISIONS},
@@ -375,6 +402,26 @@ def build_review(
             "gnina_internal_benchmark_invocation_only": True,
             "gnina_binary_redistribution_allowed": False,
             "gnina_external_gpl_compliance_review_required": True,
+        },
+        "local_track_disposition": {
+            "interaction_aware_refinement_v2": "implemented_unpromoted",
+            "multi_anchor_proposal": (
+                "implemented_unpromoted_no_native_like_or_valid_candidate_in_"
+                "current_development_evidence"
+            ),
+            "cpp_hip_backend": (
+                "not_admitted_current_source_development_gates_failed"
+            ),
+            "rust_symmetry_aware_rmsd_and_clustering": (
+                "deferred_not_on_current_scientific_critical_path"
+            ),
+            "deterministic_candidate_executor": (
+                "deferred_until_proposal_and_validity_gates_pass"
+            ),
+            "bounded_native_parser": (
+                "deferred_not_a_current_performance_or_science_blocker"
+            ),
+            "product_shadow_route": "not_enabled",
         },
         "open_blockers": blockers,
         "notes": [

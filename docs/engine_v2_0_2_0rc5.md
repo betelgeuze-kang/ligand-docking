@@ -62,10 +62,11 @@ Native target:       Linux x86_64 CPU
 
 These are implementation and packaging checks only. The latest homogeneous
 32-case historical-development evidence still fails proposal and validity
-gates and predates the interaction-aware v2 source. Targeted current-source
-checks are encouraging but insufficient for admission. Stage 0 therefore
-remains blocked; public review remains a later public/product promotion
-requirement.
+gates and predates the interaction-aware v2 source. A current-source
+track-decision slice with nine total/eight scored cases also fails proposal
+oracle (0.25 versus a 0.4556 floor) and invalid Top-1 (0.625 versus a 0.20
+ceiling). Stage 0 therefore remains blocked; public review remains a later
+public/product promotion requirement.
 
 ## Promotion boundary
 
