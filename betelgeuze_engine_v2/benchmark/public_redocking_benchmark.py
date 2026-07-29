@@ -27,7 +27,7 @@ PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
 PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.6.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.5.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.6.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )

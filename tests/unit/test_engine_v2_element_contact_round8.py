@@ -335,7 +335,7 @@ def test_interaction_aware_v2_refines_contact_penalty_even_if_v1_valid() -> None
         [float.fromhex(value) for value in receipt["total_translation_binary64_hex"]],
         dtype=torch.float64,
     )
-    assert torch.linalg.vector_norm(shift) <= 3.0
+    assert torch.linalg.vector_norm(shift) <= 2.25
     assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
     assert refined.refiner_id == v2.refiner_id
 
