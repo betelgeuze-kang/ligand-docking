@@ -632,6 +632,48 @@ def test_stage0_admits_solo_developer_internal_only_policy(
     assert receipt.independent_review_complete is False
 
 
+def test_stage0_rejects_failed_development_threshold_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    policy_path = tmp_path / "policy.json"
+    payload = _policy(tmp_path, gnina)
+    threshold_path = tmp_path / "threshold-evidence.json"
+    threshold_evidence = json.loads(threshold_path.read_text(encoding="utf-8"))
+    threshold_evidence["metrics"]["proposal_oracle_2a_recovery"][
+        "observed_estimate"
+    ] = 0.0
+    threshold_evidence.pop("evidence_sha256", None)
+    threshold_evidence["evidence_sha256"] = _canonical_sha256(
+        threshold_evidence
+    )
+    threshold_path.write_text(
+        json.dumps(threshold_evidence, sort_keys=True), encoding="utf-8"
+    )
+    for row in payload["acceptance_thresholds"].values():
+        row["provenance"]["evidence_sha256"] = _sha256(threshold_path)
+    payload["baseline_comparison"]["provenance"]["evidence_sha256"] = _sha256(
+        threshold_path
+    )
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(
+        Stage0AdmissionError,
+        match="threshold_development_gate_failed:proposal_oracle_2a_recovery",
+    ):
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+
 def test_stage0_rejects_unfrozen_threshold_and_self_hash(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

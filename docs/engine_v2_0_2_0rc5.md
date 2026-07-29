@@ -50,7 +50,7 @@ Native target:       Linux x86_64 CPU
   workflow.
 - Two isolated CPython 3.10 native builds and two isolated base-wheel builds
   were byte-identical. The current-source base wheel SHA-256 is
-  `1308b70a51b7ab1b4c54a2c6f33b51e4edec8779ad4a2644f03913bc67ee8926`;
+  `2d04fafe896405bbe530cbeee48c3b5f076a816c961457485c6025425d67bd87`;
   the CPython 3.10 manylinux native wheel SHA-256 is
   `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`.
 - The focused 64-candidate fixture preserves exact count/rank/Top-5 structure

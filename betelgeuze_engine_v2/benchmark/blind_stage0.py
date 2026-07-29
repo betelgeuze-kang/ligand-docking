@@ -385,8 +385,18 @@ def _validate_threshold_evidence(
         blockers.append(f"threshold_evidence_operator_mismatch:{metric}")
     if metric_row.get("proposed_threshold") != value:
         blockers.append(f"threshold_evidence_value_mismatch:{metric}")
-    if type(metric_row.get("observed_estimate")) not in (int, float):
+    observed_estimate = metric_row.get("observed_estimate")
+    if type(observed_estimate) not in (int, float):
         blockers.append(f"threshold_evidence_estimate_missing:{metric}")
+    elif type(value) in (int, float):
+        observed = float(observed_estimate)
+        threshold = float(value)
+        if (
+            operator == "min" and observed + 1.0e-15 < threshold
+        ) or (
+            operator == "max" and observed - 1.0e-15 > threshold
+        ):
+            blockers.append(f"threshold_development_gate_failed:{metric}")
     if not _text(metric_row.get("derivation_rule")):
         blockers.append(f"threshold_evidence_derivation_missing:{metric}")
     denominator_policy = _mapping(evidence.get("metric_denominator_policy"))
