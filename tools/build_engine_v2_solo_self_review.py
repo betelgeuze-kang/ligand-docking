@@ -12,7 +12,7 @@ import subprocess
 from typing import Mapping, Sequence
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_self_review_pass/1.2.0"
 OPERATIONAL_SCHEMA_ID = (
     "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0"
 )
@@ -62,6 +62,10 @@ def _sha256_path(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _sha256_value(value: object) -> str:
+    return hashlib.sha256(_canonical_bytes(value)).hexdigest()
+
+
 def _read_json(path: Path) -> dict[str, object]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -94,6 +98,93 @@ def _git(repo_root: Path, *arguments: str) -> str:
         text=True,
     )
     return result.stdout.strip()
+
+
+def _repo_file(repo_root: Path, value: object) -> Path:
+    raw = Path(str(value or ""))
+    resolved = (raw if raw.is_absolute() else repo_root / raw).resolve()
+    try:
+        resolved.relative_to(repo_root.resolve())
+    except ValueError as exc:
+        raise ValueError("development receipt path escapes the repository") from exc
+    if not resolved.is_file():
+        raise ValueError(f"development receipt is missing: {resolved}")
+    return resolved
+
+
+def _verify_development_source_binding(
+    *,
+    repo_root: Path,
+    operational: Mapping[str, object],
+    development: Mapping[str, object],
+    threshold: Mapping[str, object],
+) -> tuple[str, str]:
+    source_state = operational.get("source_state")
+    if not isinstance(source_state, Mapping):
+        raise ValueError("operational source state is missing")
+    implementation_sha256 = str(
+        source_state.get("engine_implementation_sha256", "")
+    )
+    runner_id = str(source_state.get("runner_id", ""))
+    if len(implementation_sha256) != 64 or not runner_id:
+        raise ValueError("operational engine source identity is incomplete")
+
+    development_sources = development.get("source_receipts_sha256")
+    if not isinstance(development_sources, Mapping) or not development_sources:
+        raise ValueError("development source receipt map is missing")
+    development_case_hashes: dict[str, str] = {}
+    for raw_path, expected_hash in development_sources.items():
+        path = _repo_file(repo_root, raw_path)
+        if _sha256_path(path) != expected_hash:
+            raise ValueError("development source receipt hash changed")
+        receipt = _read_json(path)
+        result = receipt.get("result")
+        if not isinstance(result, Mapping) or result.get("engine_id") != "engine_v2":
+            raise ValueError("development analysis includes a non-Engine-V2 receipt")
+        if (
+            receipt.get("implementation_sha256") != implementation_sha256
+            or receipt.get("runner_id") != runner_id
+        ):
+            raise ValueError("development receipt is not current-source evidence")
+        case_id = str(result.get("case_id", ""))
+        if not case_id or case_id in development_case_hashes:
+            raise ValueError("development receipt case identity is invalid")
+        development_case_hashes[case_id] = str(expected_hash)
+    case_ids = sorted(development_case_hashes)
+    if development.get("case_ids") != case_ids:
+        raise ValueError("development analysis case identities are cross-wired")
+
+    threshold_sources = threshold.get("source_reports_sha256")
+    if not isinstance(threshold_sources, Mapping) or not threshold_sources:
+        raise ValueError("threshold source receipt map is missing")
+    threshold_engine_hashes: dict[str, str] = {}
+    for raw_path, expected_hash in threshold_sources.items():
+        path = _repo_file(repo_root, raw_path)
+        if _sha256_path(path) != expected_hash:
+            raise ValueError("threshold source receipt hash changed")
+        receipt = _read_json(path)
+        result = receipt.get("result")
+        if not isinstance(result, Mapping):
+            raise ValueError("threshold source receipt has no result")
+        if result.get("engine_id") != "engine_v2":
+            continue
+        if (
+            receipt.get("implementation_sha256") != implementation_sha256
+            or receipt.get("runner_id") != runner_id
+        ):
+            raise ValueError("threshold receipt is not current-source evidence")
+        case_id = str(result.get("case_id", ""))
+        if not case_id or case_id in threshold_engine_hashes:
+            raise ValueError("threshold Engine V2 case identity is invalid")
+        threshold_engine_hashes[case_id] = str(expected_hash)
+    if threshold_engine_hashes != development_case_hashes:
+        raise ValueError("threshold and development Engine V2 receipts differ")
+    if (
+        threshold.get("case_count") != len(case_ids)
+        or threshold.get("case_ids_sha256") != _sha256_value(case_ids)
+    ):
+        raise ValueError("threshold case identity does not match development evidence")
+    return implementation_sha256, runner_id
 
 
 def _gate_results(threshold: Mapping[str, object]) -> dict[str, str]:
@@ -172,6 +263,12 @@ def build_review(
     ):
         if threshold.get(field) is not False:
             raise ValueError(f"threshold evidence leak boundary is invalid: {field}")
+    implementation_sha256, runner_id = _verify_development_source_binding(
+        repo_root=repo_root,
+        operational=operational,
+        development=development,
+        threshold=threshold,
+    )
     operator_environment = operational.get("operator_environment")
     if not isinstance(operator_environment, Mapping):
         raise ValueError("operator environment is missing")
@@ -186,6 +283,8 @@ def build_review(
         "operational_evidence_path": str(operational_path.relative_to(repo_root)),
         "operational_evidence_file_sha256": _sha256_path(operational_path),
         "operational_evidence_receipt_sha256": operational["receipt_sha256"],
+        "engine_implementation_sha256": implementation_sha256,
+        "runner_id": runner_id,
         "scorer_term_development_report_path": str(
             development_path.relative_to(repo_root)
         ),

@@ -18,6 +18,10 @@ from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     current_stage0_host_environment,
     current_stage0_native_backend,
 )
+from tools.run_engine_v2_public_redocking_300 import (
+    RUNNER_ID,
+    _engine_source_sha256,
+)
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_stage0_solo_operational_evidence/1.0.0"
@@ -121,6 +125,8 @@ def build_packet(
         "source_state": {
             "git_head_sha": head,
             "origin_main_sha": origin_main,
+            "engine_implementation_sha256": _engine_source_sha256(repo_root),
+            "runner_id": RUNNER_ID,
             "dedicated_branch_internal_only": head != origin_main,
             "worktree_clean": dirty == "",
             "worktree_status_sha256": hashlib.sha256(dirty.encode("utf-8")).hexdigest(),
