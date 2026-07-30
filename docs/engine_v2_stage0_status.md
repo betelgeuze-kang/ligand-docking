@@ -69,6 +69,29 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   0.00424/0.13676/0.01500 A versus V4. Oracle and Top-1/Top-5 recovery counts
   stayed 6/1/3. Evidence SHA-256 is
   `1895e818b8e90261051b77359e3b7491fc49a8b0604b5bf5e130aca3a4a28224`.
+- V7 layers bounded rotations of authority-proven rotor subtrees after V6 and
+  records receptor-plus-internal quartic-overlap moves in nested self-hashed
+  receipts. Selecting every improving variant was rejected because mean
+  Top-1/Top-5 RMSD regressed by 0.24398/0.20853 A. The frozen development
+  hybrid selects only variants whose final receptor penalty is in `[2.0,4.0)`;
+  the runtime rule uses no RMSD, PoseBusters result, validity label, or native
+  pose and restores exact V6 coordinates outside the window.
+- The V7 hybrid historical-development ledger raises exact valid candidates
+  from 73 to 76, cases with any valid candidate from 13 to 14, and reduces
+  invalid Top-1 from 65.52% to 62.07%. Mean oracle RMSD is unchanged while
+  mean Top-1/Top-5 RMSD improves by 0.00785/0.00079 A; recovery counts remain
+  6/1/3. Final-code execution of the six affected cases reproduced all seven
+  selected indices and 384 candidate outcomes with zero strict mismatches.
+  Monotonic selection-window pruning reduced torsion-trial evaluations from
+  3,185 to 2,822 with identical outcomes. Generic penalties now compare source
+  to final coordinates under one V7 objective, and accepted rotation counts
+  include selected torsion steps while retaining rigid/torsion sub-counts. The
+  unpruned full probe search runtime was
+  descriptively 1.446x V6, so this remains a bounded validity improvement rather
+  than a speed claim. Focused refinement/runner/benchmark/Stage 0 verification
+  is `148 passed, 7 deselected`; lint, py_compile, diff-check, and orchestration
+  smoke also pass. Evidence self-hash is
+  `9c89ac550cfc8259cdb236ee9970242c4b06a6d720295078b106b7b9a4ee27e5`.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -125,10 +148,10 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
 
 ## Blocking inputs
 
-1. **Scientific development gates:** the latest V6 historical-development
+1. **Scientific development gates:** the latest V7 hybrid historical-development
    slice contains 29 scored cases, 1,856 candidates, and the same three typed
    unsupported large-ring preparation failures. Proposal-oracle recovery is
-   6/29 (0.20690) against a 0.49375 floor; invalid Top-1 is 0.65517 against a
+   6/29 (0.20690) against a 0.49375 floor; invalid Top-1 is 0.62069 against a
    0.20 ceiling. Conditional Top-1 and Top-5 selection failure are 0.83333 and
    0.50 against 0.50 and 0.20 ceilings. All four gates remain blocked, so fresh
    128-case execution and promotion remain prohibited. This execution was
@@ -138,9 +161,9 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    canonical binary64 values for all eight terms. The six oracle cases still
    yield only one Top-1 and three Top-5 recoveries, so the scorer-selection
    bottleneck remains. The report contains no fresh-holdout result.
-3. **Refinement/validity diagnosis:** V6 increases exact valid candidates and
-   valid-case coverage without regressing V4 aggregate RMSD, but only 13/29
-   cases contain any valid candidate and invalid Top-1 remains 65.52%. Further
+3. **Refinement/validity diagnosis:** V7 increases exact valid candidates and
+   valid-case coverage without regressing V6 aggregate RMSD, but only 14/29
+   cases contain any valid candidate and invalid Top-1 remains 62.07%. Further
    validity work must generate valid candidates in uncovered cases rather than
    relabel, filter, or abstain around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49

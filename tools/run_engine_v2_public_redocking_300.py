@@ -70,7 +70,7 @@ from betelgeuze_engine_v2.docking import (
     DockingScope,
     ElementAwareValidityError,
     GuidedPlacementPolicy,
-    InteractionAwareRigidHybridClearanceEnsembleRefinerV6,
+    InteractionAwareTorsionContactEnsembleRefinerV7,
     PocketDefinition,
     ScorerBackend,
     ScorerBackendOptions,
@@ -126,8 +126,8 @@ ENGINE_V2_CPU_POLICY = {
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
     "torch_version": str(torch.__version__),
-    "interaction_refiner": "interaction_aware_rigid_v6_hybrid_clearance_ensemble",
-    "interaction_refinement_steps": 20,
+    "interaction_refiner": "interaction_aware_torsion_contact_v7_ensemble",
+    "interaction_refinement_steps": 24,
 }
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
@@ -2228,7 +2228,9 @@ def _engine_v2_pose_coordinates(
         candidate_count=ENGINE_V2_CANDIDATE_COUNT,
         top_k=5,
         max_torsions=32,
-        max_refinement_steps=20,
+        max_refinement_steps=ENGINE_V2_CPU_POLICY[
+            "interaction_refinement_steps"
+        ],
         translation_radius_angstrom=min(4.0, radius),
         seed=seed,
     )
@@ -2258,12 +2260,12 @@ def _engine_v2_pose_coordinates(
             budget,
             guided_policy,
         )
-        refiner = InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
+        refiner = InteractionAwareTorsionContactEnsembleRefinerV7(
             authority,
             receptor,
             ligand,
             implementation_source_sha256=_sha256_bytes(
-                b"engine-v2-interaction-aware-rigid-hybrid-ensemble-refiner-v6"
+                b"engine-v2-interaction-aware-torsion-contact-ensemble-refiner-v7"
             ),
             v3_proposal_indices=v3_proposal_indices,
         )
