@@ -92,6 +92,12 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   is `148 passed, 7 deselected`; lint, py_compile, diff-check, and orchestration
   smoke also pass. Evidence self-hash is
   `9c89ac550cfc8259cdb236ee9970242c4b06a6d720295078b106b7b9a4ee27e5`.
+- The Stage 0 source-freeze contract names one V7 algorithm profile and binds
+  runner `2.13.0`, candidate schema `1.6.0`, the complete binary64 V7 config,
+  its `5e8b61d2...75337` fingerprint, and the result-independent `[2.0,4.0)`
+  selection window. The torsion refiner is required in the source manifest,
+  and the report validator consumes the same runner policy fields so an actual
+  V7 report does not contradict its frozen execution policy.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -141,8 +147,9 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   Its five changed package files match the source byte-for-byte, and a new
   isolated install with the qualified native wheel
   `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`
-  imported from site-packages successfully. The wheel/SBOM must still be
-  rebound to the final clean commit before solo Stage 0 evidence is final.
+  imported from site-packages successfully. That wheel predates the V7 source
+  freeze reconciliation; the base wheel and SBOM must be regenerated and bound
+  to the final exact `main` commit before solo Stage 0 evidence is final.
 - Repository orchestration verifier: `./scripts/ai-verify.sh` passed from the
   main worktree that carries it.
 

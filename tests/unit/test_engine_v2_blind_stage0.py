@@ -12,11 +12,14 @@ import pytest
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     STAGE0_DIAGNOSTIC_CONTRACT_ID,
     STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA,
+    STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
     STAGE0_PROTOCOL_ID,
+    STAGE0_REQUIRED_SOURCE_FREEZE_PATHS,
     Stage0AdmissionError,
     compute_stage0_policy_sha256,
     compute_stage0_review_subject_sha256,
     current_stage0_host_environment,
+    stage0_engine_v2_algorithm_profile,
     verify_stage0_admission,
 )
 from tools import run_engine_v2_public_redocking_300 as runner
@@ -50,40 +53,7 @@ def _canonical_sha256(payload: object) -> str:
 
 
 def _policy(repo_root: Path, gnina: Path) -> dict[str, object]:
-    source_paths = (
-        "tools/run_engine_v2_public_redocking_300.py",
-        "tools/freeze_engine_v2_fresh_holdout.py",
-        "tools/derive_engine_v2_stage0_threshold_evidence.py",
-        "tools/analyze_engine_v2_score_terms.py",
-        "tools/verify_engine_v2_public_redocking_stage0.py",
-        "tools/classify_engine_v2_stage0_full_suite.py",
-        "tools/reconcile_engine_v2_stage0_full_suites.py",
-        "tools/audit_engine_v2_ci_authority.py",
-        "betelgeuze_engine_v2/benchmark/blind_stage0.py",
-        "betelgeuze_engine_v2/benchmark/fresh_redocking_holdout.py",
-        "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
-        "config/engine_v2_public_redocking_contamination_registry.json",
-        "config/engine_v2_fresh_redocking_holdout_manifest.json",
-        "betelgeuze_engine_v2/docking/__init__.py",
-        "betelgeuze_engine_v2/docking/authority.py",
-        "betelgeuze_engine_v2/docking/conformers.py",
-        "betelgeuze_engine_v2/docking/contact_validity.py",
-        "betelgeuze_engine_v2/docking/energy_refinement.py",
-        "betelgeuze_engine_v2/docking/guided_placement.py",
-        "betelgeuze_engine_v2/docking/interaction_refinement.py",
-        "betelgeuze_engine_v2/docking/proposals.py",
-        "betelgeuze_engine_v2/docking/scorer_v1.py",
-        "betelgeuze_engine_v2/docking/scoring.py",
-        "betelgeuze_engine_v2/docking/search.py",
-        "packaging/engine-v2/pyproject.toml",
-        "tools/build_engine_v2_native_wheel.py",
-        "tools/build_engine_v2_sbom.py",
-        "rust_engine_v2/Cargo.toml",
-        "rust_engine_v2/Cargo.lock",
-        "rust_engine_v2/build.rs",
-        "rust_engine_v2/pyproject.toml",
-        "rust_engine_v2/src/lib.rs",
-    )
+    source_paths = tuple(sorted(STAGE0_REQUIRED_SOURCE_FREEZE_PATHS))
     for relative_path in source_paths:
         source = repo_root / relative_path
         source.parent.mkdir(parents=True, exist_ok=True)
@@ -234,9 +204,9 @@ def _policy(repo_root: Path, gnina: Path) -> dict[str, object]:
                 "operator": operator,
                 "value": value,
                 "analysis_scope": "fresh_internal_blind_holdout",
-                "denominator": threshold_evidence_payload[
-                    "metric_denominator_policy"
-                ][metric],
+                "denominator": threshold_evidence_payload["metric_denominator_policy"][
+                    metric
+                ],
                 "provenance": dict(provenance),
             }
             for metric, (operator, value) in thresholds.items()
@@ -270,10 +240,9 @@ def _policy(repo_root: Path, gnina: Path) -> dict[str, object]:
         },
         "holdout_reuse_policy": "never_use_fresh_128_for_tuning",
         "source_freeze": {
+            "algorithm_profile": stage0_engine_v2_algorithm_profile(),
             "diagnostic_contract_pr_number": 211,
-            "diagnostic_contract_review_head_sha": (
-                STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA
-            ),
+            "diagnostic_contract_review_head_sha": (STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA),
             "git_head_sha": git_head,
             "origin_main_sha": git_head,
             "candidate_budget": 64,
@@ -437,9 +406,7 @@ def _policy(repo_root: Path, gnina: Path) -> dict[str, object]:
     suite_policy["classification_receipt_sha256"] = _sha256(suite_receipt)
 
     reconciliation_payload = {
-        "schema_id": (
-            "betelgeuze.engine_v2_stage0_full_suite_reconciliation/1.0.0"
-        ),
+        "schema_id": ("betelgeuze.engine_v2_stage0_full_suite_reconciliation/1.0.0"),
         "declared_pr_counts": {"failed": 216, "errors": 3},
         "historical_source_commit_sha": STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA,
         "historical_junit_sha256": "6" * 64,
@@ -453,15 +420,11 @@ def _policy(repo_root: Path, gnina: Path) -> dict[str, object]:
         "only_current_rows": [],
         "review_required": True,
     }
-    reconciliation_payload["receipt_sha256"] = _canonical_sha256(
-        reconciliation_payload
-    )
+    reconciliation_payload["receipt_sha256"] = _canonical_sha256(reconciliation_payload)
     reconciliation_receipt.write_text(
         json.dumps(reconciliation_payload, sort_keys=True), encoding="utf-8"
     )
-    suite_policy["reconciliation_receipt_sha256"] = _sha256(
-        reconciliation_receipt
-    )
+    suite_policy["reconciliation_receipt_sha256"] = _sha256(reconciliation_receipt)
 
     attestation_payload = {
         "schema_id": "betelgeuze.engine_v2_stage0_independent_attestation/1.0.0",
@@ -511,9 +474,7 @@ def _native_snapshot(payload: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _as_solo_policy(
-    payload: dict[str, object], repo_root: Path
-) -> dict[str, object]:
+def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, object]:
     decisions = {
         "ci_authority_self_review_completed": True,
         "contract_self_review_completed": True,
@@ -699,6 +660,26 @@ def test_stage0_admits_only_complete_frozen_policy(
     assert receipt.operator_id == "operator-c"
 
 
+def test_stage0_template_binds_exact_v7_profile_and_source_manifest() -> None:
+    template = json.loads(
+        Path("config/engine_v2_public_redocking_stage0_freeze.template.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    source_freeze = template["source_freeze"]
+    assert source_freeze["algorithm_profile"] == stage0_engine_v2_algorithm_profile()
+    assert source_freeze["algorithm_profile"]["profile_id"] == (
+        STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID
+    )
+    assert {
+        row["path"] for row in source_freeze["files"]
+    } == STAGE0_REQUIRED_SOURCE_FREEZE_PATHS
+    assert (
+        "betelgeuze_engine_v2/docking/torsion_contact_refinement.py"
+        in STAGE0_REQUIRED_SOURCE_FREEZE_PATHS
+    )
+
+
 def test_stage0_admits_solo_developer_internal_only_policy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -766,9 +747,7 @@ def test_stage0_rejects_failed_development_threshold_gate(
         "observed_estimate"
     ] = 0.0
     threshold_evidence.pop("evidence_sha256", None)
-    threshold_evidence["evidence_sha256"] = _canonical_sha256(
-        threshold_evidence
-    )
+    threshold_evidence["evidence_sha256"] = _canonical_sha256(threshold_evidence)
     threshold_path.write_text(
         json.dumps(threshold_evidence, sort_keys=True), encoding="utf-8"
     )
@@ -857,16 +836,88 @@ def test_stage0_rejects_frozen_source_mutation(
     )
 
 
+def test_stage0_rejects_missing_v7_source_manifest_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    policy_path = tmp_path / "policy.json"
+    payload = _policy(tmp_path, gnina)
+    source_freeze = payload["source_freeze"]
+    assert isinstance(source_freeze, dict)
+    files = source_freeze["files"]
+    assert isinstance(files, list)
+    source_freeze["files"] = [
+        row
+        for row in files
+        if row["path"] != "betelgeuze_engine_v2/docking/torsion_contact_refinement.py"
+    ]
+    payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "source_freeze_path_set_incomplete" in raised.value.blockers
+
+
+def test_stage0_rejects_algorithm_profile_identity_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    policy_path = tmp_path / "policy.json"
+    payload = _policy(tmp_path, gnina)
+    source_freeze = payload["source_freeze"]
+    assert isinstance(source_freeze, dict)
+    algorithm_profile = source_freeze["algorithm_profile"]
+    assert isinstance(algorithm_profile, dict)
+    algorithm_profile["runner_id"] = (
+        "betelgeuze.engine_v2_public_redocking_300_runner/2.12.0"
+    )
+    payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
+    monkeypatch.setattr(
+        "betelgeuze_engine_v2.benchmark.blind_stage0.current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert "source_runner_id_not_2_13_0" in raised.value.blockers
+    assert "source_algorithm_profile_mismatch" in raised.value.blockers
+
+
 def test_holdout_runner_requires_stage0_before_output_creation(tmp_path: Path) -> None:
     output_root = tmp_path / "output"
     with pytest.raises(Stage0AdmissionError) as raised:
         runner.main(
             [
-                "--archive", str(tmp_path / "missing.tar.gz"),
-                "--source-identifiers", str(tmp_path / "missing.pdf"),
-                "--gnina", str(tmp_path / "missing-gnina"),
-                "--output-root", str(output_root),
-                "--case-subset", "fresh-internal-blind-holdout",
+                "--archive",
+                str(tmp_path / "missing.tar.gz"),
+                "--source-identifiers",
+                str(tmp_path / "missing.pdf"),
+                "--gnina",
+                str(tmp_path / "missing-gnina"),
+                "--output-root",
+                str(output_root),
+                "--case-subset",
+                "fresh-internal-blind-holdout",
             ]
         )
 

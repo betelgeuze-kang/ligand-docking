@@ -17,6 +17,21 @@ import subprocess
 import sys
 from typing import Any, Mapping
 
+from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
+    INTERACTION_AWARE_TORSION_CONTACT_CONFIG_V7_SCHEMA_ID,
+    INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_ID,
+    INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION,
+    InteractionAwareTorsionContactConfigV7,
+)
+
+from .public_redocking_benchmark import (
+    PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
+    PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256,
+    PUBLIC_REDOCKING_RUNNER_ID,
+)
+
 
 STAGE0_SCHEMA_VERSION = 1
 STAGE0_PROTOCOL_ID = "engine_v2_fresh_redocking_128_stage0_v1"
@@ -29,6 +44,7 @@ STAGE0_TOTAL_CASE_COUNT = 428
 STAGE0_ENGINE_ROW_COUNT = 384
 STAGE0_CANDIDATE_DIAGNOSTIC_SLOT_COUNT = 8_192
 STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA = "3935a1fa8f0a8f82c78f50c416db46a87abd319e"
+STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID = PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID
 
 _REQUIRED_THRESHOLDS = {
     "preparation_input_unsupported_rate": "max",
@@ -62,9 +78,7 @@ _REQUIRED_BRANCHES = {
 _ALLOWED_PROVENANCE_BASES = {
     "public_development_corpus",
 }
-_THRESHOLD_EVIDENCE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0"
-)
+_THRESHOLD_EVIDENCE_SCHEMA_ID = "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0"
 _REQUIRED_SUITE_CATEGORIES = {
     "actual_regression",
     "fixture_dependent",
@@ -73,40 +87,44 @@ _REQUIRED_SUITE_CATEGORIES = {
     "legacy_deterministic",
     "product_fixture_dependent",
 }
-_REQUIRED_SOURCE_FREEZE_PATHS = {
-    "tools/run_engine_v2_public_redocking_300.py",
-    "tools/freeze_engine_v2_fresh_holdout.py",
-    "tools/derive_engine_v2_stage0_threshold_evidence.py",
-    "tools/analyze_engine_v2_score_terms.py",
-    "tools/verify_engine_v2_public_redocking_stage0.py",
-    "tools/classify_engine_v2_stage0_full_suite.py",
-    "tools/reconcile_engine_v2_stage0_full_suites.py",
-    "tools/audit_engine_v2_ci_authority.py",
-    "betelgeuze_engine_v2/benchmark/blind_stage0.py",
-    "betelgeuze_engine_v2/benchmark/fresh_redocking_holdout.py",
-    "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
-    "config/engine_v2_public_redocking_contamination_registry.json",
-    "config/engine_v2_fresh_redocking_holdout_manifest.json",
-    "betelgeuze_engine_v2/docking/__init__.py",
-    "betelgeuze_engine_v2/docking/authority.py",
-    "betelgeuze_engine_v2/docking/conformers.py",
-    "betelgeuze_engine_v2/docking/contact_validity.py",
-    "betelgeuze_engine_v2/docking/energy_refinement.py",
-    "betelgeuze_engine_v2/docking/guided_placement.py",
-    "betelgeuze_engine_v2/docking/interaction_refinement.py",
-    "betelgeuze_engine_v2/docking/proposals.py",
-    "betelgeuze_engine_v2/docking/scorer_v1.py",
-    "betelgeuze_engine_v2/docking/scoring.py",
-    "betelgeuze_engine_v2/docking/search.py",
-    "packaging/engine-v2/pyproject.toml",
-    "tools/build_engine_v2_native_wheel.py",
-    "tools/build_engine_v2_sbom.py",
-    "rust_engine_v2/Cargo.toml",
-    "rust_engine_v2/Cargo.lock",
-    "rust_engine_v2/build.rs",
-    "rust_engine_v2/pyproject.toml",
-    "rust_engine_v2/src/lib.rs",
-}
+STAGE0_REQUIRED_SOURCE_FREEZE_PATHS = frozenset(
+    {
+        "tools/run_engine_v2_public_redocking_300.py",
+        "tools/freeze_engine_v2_fresh_holdout.py",
+        "tools/derive_engine_v2_stage0_threshold_evidence.py",
+        "tools/analyze_engine_v2_score_terms.py",
+        "tools/verify_engine_v2_public_redocking_stage0.py",
+        "tools/classify_engine_v2_stage0_full_suite.py",
+        "tools/reconcile_engine_v2_stage0_full_suites.py",
+        "tools/audit_engine_v2_ci_authority.py",
+        "betelgeuze_engine_v2/benchmark/blind_stage0.py",
+        "betelgeuze_engine_v2/benchmark/fresh_redocking_holdout.py",
+        "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
+        "config/engine_v2_public_redocking_contamination_registry.json",
+        "config/engine_v2_fresh_redocking_holdout_manifest.json",
+        "betelgeuze_engine_v2/docking/__init__.py",
+        "betelgeuze_engine_v2/docking/authority.py",
+        "betelgeuze_engine_v2/docking/conformers.py",
+        "betelgeuze_engine_v2/docking/contact_validity.py",
+        "betelgeuze_engine_v2/docking/energy_refinement.py",
+        "betelgeuze_engine_v2/docking/guided_placement.py",
+        "betelgeuze_engine_v2/docking/interaction_refinement.py",
+        "betelgeuze_engine_v2/docking/proposals.py",
+        "betelgeuze_engine_v2/docking/scorer_v1.py",
+        "betelgeuze_engine_v2/docking/scoring.py",
+        "betelgeuze_engine_v2/docking/search.py",
+        "betelgeuze_engine_v2/docking/torsion_contact_refinement.py",
+        "packaging/engine-v2/pyproject.toml",
+        "tools/build_engine_v2_native_wheel.py",
+        "tools/build_engine_v2_sbom.py",
+        "rust_engine_v2/Cargo.toml",
+        "rust_engine_v2/Cargo.lock",
+        "rust_engine_v2/build.rs",
+        "rust_engine_v2/pyproject.toml",
+        "rust_engine_v2/src/lib.rs",
+    }
+)
+_REQUIRED_SOURCE_FREEZE_PATHS = STAGE0_REQUIRED_SOURCE_FREEZE_PATHS
 _RUNTIME_ENVIRONMENT_KEYS = (
     "CUDA_VISIBLE_DEVICES",
     "HIP_VISIBLE_DEVICES",
@@ -221,6 +239,41 @@ def _text(value: object) -> str:
 def _is_sha256(value: object) -> bool:
     text = _text(value)
     return len(text) == 64 and all(char in "0123456789abcdef" for char in text)
+
+
+def stage0_engine_v2_algorithm_profile() -> dict[str, object]:
+    """Return the one exact V7 algorithm profile admitted by Stage 0."""
+
+    config = InteractionAwareTorsionContactConfigV7()
+    if config.fingerprint_sha256 != PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256:
+        raise Stage0AdmissionError(("stage0_v7_config_fingerprint_drift",))
+    return {
+        "schema_id": ("betelgeuze.engine_v2_public_redocking_algorithm_profile/1.0.0"),
+        "profile_id": STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+        "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
+        "candidate_schema_id": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+        "candidate_budget": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
+        "active_refiner": {
+            "refiner_id": INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_ID,
+            "refiner_version": INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION,
+            "config_schema_id": INTERACTION_AWARE_TORSION_CONTACT_CONFIG_V7_SCHEMA_ID,
+            "config_sha256": PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256,
+            "config": config.to_dict(),
+        },
+        "selection_window": {
+            "metric": "final_receptor_quartic_overlap_penalty",
+            "interval": "[2.0,4.0)",
+            "minimum_binary64_hex": (
+                config.minimum_selected_final_receptor_penalty.hex()
+            ),
+            "maximum_binary64_hex": (
+                config.maximum_selected_final_receptor_penalty.hex()
+            ),
+            "minimum_inclusive": True,
+            "maximum_exclusive": True,
+            "result_independent": True,
+        },
+    }
 
 
 def _mapping(value: object) -> Mapping[str, Any]:
@@ -391,9 +444,7 @@ def _validate_threshold_evidence(
     elif type(value) in (int, float):
         observed = float(observed_estimate)
         threshold = float(value)
-        if (
-            operator == "min" and observed + 1.0e-15 < threshold
-        ) or (
+        if (operator == "min" and observed + 1.0e-15 < threshold) or (
             operator == "max" and observed - 1.0e-15 > threshold
         ):
             blockers.append(f"threshold_development_gate_failed:{metric}")
@@ -535,6 +586,19 @@ def _validate_source_freeze(
     payload: Mapping[str, Any], repo_root: Path, blockers: list[str]
 ) -> str:
     source_freeze = _mapping(payload.get("source_freeze"))
+    algorithm_profile = _mapping(source_freeze.get("algorithm_profile"))
+    expected_algorithm_profile = stage0_engine_v2_algorithm_profile()
+    if algorithm_profile.get("profile_id") != STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID:
+        blockers.append("source_algorithm_profile_id_not_v7")
+    if algorithm_profile.get("runner_id") != PUBLIC_REDOCKING_RUNNER_ID:
+        blockers.append("source_runner_id_not_2_13_0")
+    if (
+        algorithm_profile.get("candidate_schema_id")
+        != PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+    ):
+        blockers.append("source_candidate_schema_not_1_6_0")
+    if algorithm_profile != expected_algorithm_profile:
+        blockers.append("source_algorithm_profile_mismatch")
     if source_freeze.get("candidate_budget") != 64:
         blockers.append("candidate_budget_not_frozen")
     if source_freeze.get("retained_pose_count") != 5:
@@ -581,9 +645,8 @@ def _validate_source_freeze(
         blockers.append("source_freeze_files_missing")
         return ""
     declared_paths = {_text(_mapping(item).get("path")) for item in files}
-    if (
-        declared_paths != _REQUIRED_SOURCE_FREEZE_PATHS
-        or len(files) != len(_REQUIRED_SOURCE_FREEZE_PATHS)
+    if declared_paths != _REQUIRED_SOURCE_FREEZE_PATHS or len(files) != len(
+        _REQUIRED_SOURCE_FREEZE_PATHS
     ):
         blockers.append("source_freeze_path_set_incomplete")
     status_code, dirty_source_rows = _git(
@@ -795,9 +858,10 @@ def _validate_artifacts_and_suite(
         "betelgeuze.engine_v2_stage0_full_suite_classification/1.0.0"
     ):
         blockers.append("full_suite_classification_schema_invalid")
-    if receipt_self_hash != hashlib.sha256(
-        _canonical_bytes(receipt_without_hash)
-    ).hexdigest():
+    if (
+        receipt_self_hash
+        != hashlib.sha256(_canonical_bytes(receipt_without_hash)).hexdigest()
+    ):
         blockers.append("full_suite_classification_self_hash_invalid")
     if _mapping(receipt.get("historical_pr_run")) != historical:
         blockers.append("full_suite_historical_receipt_mismatch")
@@ -856,18 +920,13 @@ def _validate_artifacts_and_suite(
             for category in _REQUIRED_SUITE_CATEGORIES
         } != dict(counts):
             blockers.append("full_suite_receipt_row_category_counts_mismatch")
-        if row_kinds != Counter(
-            {"failure": current_failed, "error": current_errors}
-        ):
+        if row_kinds != Counter({"failure": current_failed, "error": current_errors}):
             blockers.append("full_suite_receipt_row_kind_counts_mismatch")
     if not _is_sha256(receipt.get("source_junit_sha256")):
         blockers.append("full_suite_receipt_junit_hash_invalid")
     if _mapping(receipt.get("historical_delta")) != {"failed": -1, "errors": 0}:
         blockers.append("full_suite_receipt_historical_delta_mismatch")
-    if (
-        receipt.get("recommended_execution_boundary")
-        != suite.get("execution_boundary")
-    ):
+    if receipt.get("recommended_execution_boundary") != suite.get("execution_boundary"):
         blockers.append("full_suite_boundary_receipt_mismatch")
 
     historical_reproduction = _mapping(suite.get("historical_reproduction"))
@@ -899,9 +958,10 @@ def _validate_artifacts_and_suite(
         "betelgeuze.engine_v2_stage0_full_suite_reconciliation/1.0.0"
     ):
         blockers.append("historical_full_suite_reconciliation_schema_invalid")
-    if reconciliation_self_hash != hashlib.sha256(
-        _canonical_bytes(reconciliation_without_hash)
-    ).hexdigest():
+    if (
+        reconciliation_self_hash
+        != hashlib.sha256(_canonical_bytes(reconciliation_without_hash)).hexdigest()
+    ):
         blockers.append("historical_full_suite_reconciliation_self_hash_invalid")
     if _mapping(reconciliation.get("declared_pr_counts")) != historical:
         blockers.append("historical_full_suite_declared_counts_mismatch")
@@ -1136,11 +1196,10 @@ def _validate_solo_review_artifacts(
             or (second_timestamp - first_timestamp).total_seconds() < 24 * 3600
         ):
             blockers.append("solo_review_artifacts_not_time_separated")
-        if (
-            reviews[0].get("reviewed_at_utc")
-            != governance.get("first_self_reviewed_at_utc")
-            or reviews[1].get("reviewed_at_utc")
-            != governance.get("second_self_reviewed_at_utc")
+        if reviews[0].get("reviewed_at_utc") != governance.get(
+            "first_self_reviewed_at_utc"
+        ) or reviews[1].get("reviewed_at_utc") != governance.get(
+            "second_self_reviewed_at_utc"
         ):
             blockers.append("solo_review_artifact_governance_timestamp_mismatch")
 
@@ -1194,9 +1253,9 @@ def _validate_solo_review_artifacts(
         blockers.append("solo_reviewed_operational_evidence_schema_invalid")
     if not _self_hash_matches(operational, "receipt_sha256"):
         blockers.append("solo_reviewed_operational_evidence_self_hash_invalid")
-    if reviewed_evidence.get(
-        "operational_evidence_receipt_sha256"
-    ) != operational.get("receipt_sha256"):
+    if reviewed_evidence.get("operational_evidence_receipt_sha256") != operational.get(
+        "receipt_sha256"
+    ):
         blockers.append("solo_reviewed_operational_evidence_receipt_mismatch")
     if operational.get("developer_id") != developer:
         blockers.append("solo_reviewed_operational_evidence_developer_mismatch")
@@ -1368,9 +1427,10 @@ def _validate_ci_authority(
         "betelgeuze.engine_v2_ci_authority_inventory/1.0.0"
     ):
         blockers.append("ci_inventory_schema_invalid")
-    if receipt_self_hash != hashlib.sha256(
-        _canonical_bytes(receipt_without_hash)
-    ).hexdigest():
+    if (
+        receipt_self_hash
+        != hashlib.sha256(_canonical_bytes(receipt_without_hash)).hexdigest()
+    ):
         blockers.append("ci_inventory_self_hash_invalid")
     workflow_root = repo_root / ".github/workflows"
     current_workflows = tuple(
@@ -1474,7 +1534,9 @@ def verify_stage0_admission(
 __all__ = [
     "STAGE0_DIAGNOSTIC_CONTRACT_ID",
     "STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA",
+    "STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID",
     "STAGE0_PROTOCOL_ID",
+    "STAGE0_REQUIRED_SOURCE_FREEZE_PATHS",
     "STAGE0_SCHEMA_VERSION",
     "Stage0AdmissionError",
     "VerifiedStage0Admission",
@@ -1482,5 +1544,6 @@ __all__ = [
     "compute_stage0_review_subject_sha256",
     "current_stage0_host_environment",
     "current_stage0_native_backend",
+    "stage0_engine_v2_algorithm_profile",
     "verify_stage0_admission",
 ]

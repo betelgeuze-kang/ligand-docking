@@ -28,8 +28,10 @@ import torch
 
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
+    STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
     Stage0AdmissionError,
     VerifiedStage0Admission,
+    stage0_engine_v2_algorithm_profile,
     verify_stage0_admission,
 )
 from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (
@@ -45,6 +47,10 @@ from betelgeuze_engine_v2.benchmark import (
     PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
+    PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256,
+    PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS,
     PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_PRIMARY_ENGINES,
     PUBLIC_REDOCKING_RUNNER_ID,
@@ -121,13 +127,20 @@ RECEPTOR_CHARGE_METHOD_ID = (
 )
 LIGAND_CHARGE_METHOD_ID = "rdkit_gasteiger_12_iter_conserved/2022.09.5"
 ENGINE_V2_CANDIDATE_COUNT = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+ENGINE_V2_ALGORITHM_PROFILE = stage0_engine_v2_algorithm_profile()
 ENGINE_V2_CPU_POLICY = {
+    "algorithm_profile_id": STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+    "candidate_schema_id": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
     "cpu_count": 1,
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
     "torch_version": str(torch.__version__),
-    "interaction_refiner": "interaction_aware_torsion_contact_v7_ensemble",
-    "interaction_refinement_steps": 24,
+    "interaction_refiner": PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID,
+    "interaction_refiner_config_sha256": (
+        PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256
+    ),
+    "interaction_refinement_steps": PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS,
+    "runner_id": RUNNER_ID,
 }
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
@@ -227,9 +240,7 @@ class EngineV2PoseSearchOutcome:
     ) -> None:
         self.ranked_coordinates = tuple(ranked_coordinates)
         self.diagnostics = diagnostics
-        self.diagnostic_evaluation_seconds = float(
-            diagnostic_evaluation_seconds
-        )
+        self.diagnostic_evaluation_seconds = float(diagnostic_evaluation_seconds)
 
 
 class ExecutionEnvironmentIdentity:
@@ -1129,10 +1140,7 @@ def _quarantine_managed_regular_file(
             return None
         if (
             not stat.S_ISREG(source_status.st_mode)
-            or (
-                hasattr(os, "geteuid")
-                and source_status.st_uid != os.geteuid()
-            )
+            or (hasattr(os, "geteuid") and source_status.st_uid != os.geteuid())
             or (
                 required_mode is not None
                 and stat.S_IMODE(source_status.st_mode) != required_mode
@@ -1665,9 +1673,8 @@ def _posebusters_molecules(
         raise PublicRedockingRunnerError(
             "PoseBusters inputs could not be decoded from pinned bytes"
         ) from exc
-    if (
-        len(predicted) != expected_pose_count
-        or any(molecule is None for molecule in predicted)
+    if len(predicted) != expected_pose_count or any(
+        molecule is None for molecule in predicted
     ):
         raise PublicRedockingRunnerError(
             "PoseBusters could not decode the expected predicted molecules"
@@ -1857,9 +1864,7 @@ def _engine_source_sha256(
             "rust_engine_v2/src/lib.rs",
         )
     )
-    paths = tuple(sorted(package_root.rglob("*.py"))) + native_paths + (
-        active_runner,
-    )
+    paths = tuple(sorted(package_root.rglob("*.py"))) + native_paths + (active_runner,)
     if not paths or any(not path.is_file() for path in paths):
         raise PublicRedockingRunnerError(
             "Engine V2 implementation source closure is incomplete"
@@ -2228,9 +2233,7 @@ def _engine_v2_pose_coordinates(
         candidate_count=ENGINE_V2_CANDIDATE_COUNT,
         top_k=5,
         max_torsions=32,
-        max_refinement_steps=ENGINE_V2_CPU_POLICY[
-            "interaction_refinement_steps"
-        ],
+        max_refinement_steps=ENGINE_V2_CPU_POLICY["interaction_refinement_steps"],
         translation_radius_angstrom=min(4.0, radius),
         seed=seed,
     )
@@ -2355,9 +2358,7 @@ def _engine_v2_pose_coordinates(
     ):
         raise EngineV2SearchCaseFailure(
             "Engine V2 search did not retain the fixed candidate denominator",
-            diagnostics=search_failure_diagnostics(
-                "candidate_denominator_incomplete"
-            ),
+            diagnostics=search_failure_diagnostics("candidate_denominator_incomplete"),
         )
     term_rows = {row.proposal_index: row for row in result.rows}
     successful_rows = tuple(
@@ -2374,9 +2375,7 @@ def _engine_v2_pose_coordinates(
         )
     )
     diagnostic_evaluation_started = time.perf_counter()
-    evaluated_by_index: dict[
-        int, tuple[float, bool, bool, tuple[str, ...], str]
-    ] = {}
+    evaluated_by_index: dict[int, tuple[float, bool, bool, tuple[str, ...], str]] = {}
     if successful_rows:
         records = _serialize_pose_records(
             paths["seed"],
@@ -2421,13 +2420,10 @@ def _engine_v2_pose_coordinates(
             proposal_mode = result.guided_search_result.guided_receipt.proposal_modes[
                 row.proposal_index
             ]
-            ensemble_source_proposal_index = (
-                result.guided_search_result.guided_receipt
-                .ensemble_source_proposal_indices[row.proposal_index]
-            )
-            refinement_receipt = refiner.receipts.get(
-                row.proposal_fingerprint_sha256
-            )
+            ensemble_source_proposal_index = result.guided_search_result.guided_receipt.ensemble_source_proposal_indices[
+                row.proposal_index
+            ]
+            refinement_receipt = refiner.receipts.get(row.proposal_fingerprint_sha256)
             if refinement_receipt is None:
                 raise PublicRedockingRunnerError(
                     "successful Engine V2 candidate lacks refinement receipt"
@@ -2437,12 +2433,8 @@ def _engine_v2_pose_coordinates(
                     proposal_index=row.proposal_index,
                     status="success",
                     proposal_mode=proposal_mode,
-                    ensemble_source_proposal_index=(
-                        ensemble_source_proposal_index
-                    ),
-                    proposal_fingerprint_sha256=(
-                        row.proposal.fingerprint_sha256
-                    ),
+                    ensemble_source_proposal_index=(ensemble_source_proposal_index),
+                    proposal_fingerprint_sha256=(row.proposal.fingerprint_sha256),
                     coordinate_fingerprint_sha256=(
                         row.proposal.coordinate_fingerprint_sha256
                     ),
@@ -2455,18 +2447,14 @@ def _engine_v2_pose_coordinates(
                     hbond_count=terms.hbond_count,
                     selection_eligible=row.selection_eligible,
                     posebusters_failed_check_ids=failed_check_ids,
-                    refinement_receipt_sha256=str(
-                        refinement_receipt["receipt_sha256"]
-                    ),
+                    refinement_receipt_sha256=str(refinement_receipt["receipt_sha256"]),
                     refinement_initial_penalty_binary64_hex=str(
                         refinement_receipt["initial_penalty_binary64_hex"]
                     ),
                     refinement_final_penalty_binary64_hex=str(
                         refinement_receipt["final_penalty_binary64_hex"]
                     ),
-                    refinement_accepted_steps=int(
-                        refinement_receipt["accepted_steps"]
-                    ),
+                    refinement_accepted_steps=int(refinement_receipt["accepted_steps"]),
                     refinement_accepted_rotation_steps=int(
                         refinement_receipt.get("accepted_rotation_steps", 0)
                     ),
@@ -2483,7 +2471,7 @@ def _engine_v2_pose_coordinates(
                         str(value)
                         for value in refinement_receipt.get(
                             "total_rotation_vector_binary64_hex",
-                            (0.0.hex(), 0.0.hex(), 0.0.hex()),
+                            ((0.0).hex(), (0.0).hex(), (0.0).hex()),
                         )
                     ),
                     refinement_receipt_payload=(
@@ -2518,8 +2506,9 @@ def _engine_v2_pose_coordinates(
                         ]
                     ),
                     ensemble_source_proposal_index=(
-                        result.guided_search_result.guided_receipt
-                        .ensemble_source_proposal_indices[row.proposal_index]
+                        result.guided_search_result.guided_receipt.ensemble_source_proposal_indices[
+                            row.proposal_index
+                        ]
                     ),
                     error_code=str(row.error_code or "candidate_failed"),
                 )
@@ -2530,9 +2519,7 @@ def _engine_v2_pose_coordinates(
         proposals = _benchmark_ranked_proposals(search)
     except IncompleteRankedPoseSet as exc:
         ranking_failure = exc
-    diagnostic_evaluation_seconds = (
-        time.perf_counter() - diagnostic_evaluation_started
-    )
+    diagnostic_evaluation_seconds = time.perf_counter() - diagnostic_evaluation_started
     diagnostics = PublicRedockingEngineV2Diagnostics(
         preparation_status="success",
         **preparation_counts,
@@ -2649,9 +2636,7 @@ def _engine_v2_result(
             status="failure",
             runtime_seconds=max(
                 0.0,
-                time.perf_counter()
-                - started
-                - diagnostic_evaluation_seconds,
+                time.perf_counter() - started - diagnostic_evaluation_seconds,
             ),
             **_result_input_fields(input_sha256s),
             execution_command=command,
@@ -2986,9 +2971,7 @@ def _partial_summary_filename(
     case_subset: str,
     case_ids: Sequence[str],
 ) -> str:
-    selection_sha256 = hashlib.sha256(
-        _canonical_bytes(list(case_ids))
-    ).hexdigest()
+    selection_sha256 = hashlib.sha256(_canonical_bytes(list(case_ids))).hexdigest()
     return (
         f"partial-summary-{case_subset}-{len(case_ids):03d}-"
         f"{selection_sha256[:16]}.json"
@@ -3001,9 +2984,7 @@ def _fresh_internal_report(
     profiles: Sequence[PublicRedockingCaseProfile],
     materializations: Sequence[FrozenFreshRedockingCase],
     rows_by_engine: Mapping[str, Sequence[PublicRedockingCaseResult]],
-    executions_by_engine: Mapping[
-        str, Sequence[VerifiedPublicRedockingCaseExecution]
-    ],
+    executions_by_engine: Mapping[str, Sequence[VerifiedPublicRedockingCaseExecution]],
     identities: Sequence[PublicRedockingEngineIdentity],
     policy: PublicRedockingEvaluationPolicy,
     stage0_receipt: VerifiedStage0Admission,
@@ -3068,7 +3049,9 @@ def _fresh_internal_report(
                 {
                     "subgroup": subgroup,
                     "case_count": len(subgroup_ids),
-                    "case_ids_sha256": _sha256_bytes(_canonical_bytes(list(subgroup_ids))),
+                    "case_ids_sha256": _sha256_bytes(
+                        _canonical_bytes(list(subgroup_ids))
+                    ),
                     "engines": engine_values,
                 }
             )
@@ -3314,9 +3297,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     rows_by_engine: dict[str, list[PublicRedockingCaseResult]] = {
         engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
     }
-    executions_by_engine: dict[
-        str, list[VerifiedPublicRedockingCaseExecution]
-    ] = {engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES}
+    executions_by_engine: dict[str, list[VerifiedPublicRedockingCaseExecution]] = {
+        engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+    }
     archive_context = (
         VerifiedFreshRedockingArchive.open(
             archive_path,
@@ -3425,9 +3408,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             arguments.timeout_seconds
                         ),
                         input_sha256s=inputs,
-                        materialization_receipt_sha256=(
-                            materialization.receipt_sha256
-                        ),
+                        materialization_receipt_sha256=(materialization.receipt_sha256),
                         implementation_sha256=pinned_binary.sha256,
                         evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
                         execution_environment_sha256=(execution_environment.sha256),
@@ -3475,8 +3456,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "claim_safe": False,
         }
         _atomic_json(
-            output_root
-            / _partial_summary_filename(arguments.case_subset, case_ids),
+            output_root / _partial_summary_filename(arguments.case_subset, case_ids),
             summary,
         )
         pinned_binary.close()
