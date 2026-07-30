@@ -153,14 +153,16 @@ The canonical capability state is:
   separate reproduction showed the Codex Electron process consuming the
   per-user watch limit. The Engine V2 architecture guard passed, all changed
   Python entry points compiled, and `git diff --check` passed.
-- At exact `main` commit
-  `2b98bc93481347ec0736efa7da1d632a28050101`, the reconciled V7 Python rc5
-  wheel was built twice byte-identically with SHA-256
+- Phase 0-A evidence at exact `main` commit
+  `2b98bc93481347ec0736efa7da1d632a28050101` contains two byte-identical V7
+  Python rc5 wheel builds with SHA-256
   `e8637d971d92e6990689d0e164f08a860b50f3cfd0ed9472f86deb8cc8379679`.
   Its SPDX SBOM SHA-256 is
   `624838d774b61094f5d5866bbc221436bdb139f92500c3412a9608473943d73e`,
-  and the SBOM records that exact wheel checksum. The full operator environment
-  and native artifact set still require final Stage 0 binding.
+  and the SBOM records that exact wheel checksum. The Phase 0-B capability
+  package change postdates those artifacts, so they are historical evidence,
+  not the final Stage 0 base wheel/SBOM. Both must be rebuilt and rebound at the
+  exact post-merge `main` commit together with the operator/native environment.
 - Repository orchestration verifier: `./scripts/ai-verify.sh` passed from the
   main worktree that carries it.
 

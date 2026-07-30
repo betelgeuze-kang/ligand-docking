@@ -411,6 +411,15 @@ claims remain false. Historical partial summaries created with `--limit`
 remain non-claimable and cannot later be promoted by cache reuse. Every
 partial-summary filename includes a digest of the exact
 ordered case selection, so equal-length slices cannot overwrite one another.
+
+For backward report-schema compatibility, historical 300-case reports and
+partial summaries may still serialize `primary_blind_holdout` or
+`primary_blind_holdout_partial` as an `analysis_scope`. Those are legacy field
+values only: every such artifact is contaminated development evidence, remains
+`claim_safe=false` (and partial summaries remain
+`primary_claim_eligible=false`), and cannot authorize or identify a blind run.
+Fresh-128 reports use only `fresh_internal_blind_holdout`.
+
 Per-case receipts reject changed input bytes, materialization
 receipts, seeds, commands, implementation hashes, evaluator/environment
 identities, result outcomes, or source identities. Partial summaries retain

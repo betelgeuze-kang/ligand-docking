@@ -54,12 +54,15 @@ Native target:       Linux x86_64 CPU
 - CPython 3.10, 3.11, and 3.12 wheels build with the pinned
   `manylinux_2_28_x86_64` image digest recorded in the authoritative release
   workflow.
-- Two isolated CPython 3.10 native builds were byte-identical. At exact `main`
-  commit `2b98bc93481347ec0736efa7da1d632a28050101`, two isolated reconciled V7
-  base-wheel builds were also byte-identical with SHA-256
+- Two isolated CPython 3.10 native builds were byte-identical. Phase 0-A
+  evidence at exact `main` commit
+  `2b98bc93481347ec0736efa7da1d632a28050101` also contains two byte-identical
+  V7 base-wheel builds with SHA-256
   `e8637d971d92e6990689d0e164f08a860b50f3cfd0ed9472f86deb8cc8379679`;
   the matching SPDX SBOM SHA-256 is
   `624838d774b61094f5d5866bbc221436bdb139f92500c3412a9608473943d73e`.
+  The Phase 0-B capability package change postdates those artifacts, so the
+  final base wheel and SBOM must be rebuilt at the exact post-merge `main`.
   The previously qualified CPython 3.10 manylinux native wheel SHA-256 is
   `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`.
 - The focused 64-candidate fixture preserves exact count/rank/Top-5 structure

@@ -514,6 +514,10 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         in public_protocol["blockers"]
     )
     assert "fresh_128_stage0_admission_blocked" in public_protocol["blockers"]
+    assert (
+        "fresh_128_numeric_acceptance_thresholds_not_frozen"
+        in public_protocol["blockers"]
+    )
     assert "primary_298_case_blind_holdout_not_executed" not in (
         public_protocol["blockers"]
     )

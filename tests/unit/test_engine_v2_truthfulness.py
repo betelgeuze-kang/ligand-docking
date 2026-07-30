@@ -133,6 +133,10 @@ def test_public_redocking_runner_is_wired_without_benchmark_promotion() -> None:
         in row["current_blockers"]
     )
     assert "fresh_128_stage0_admission_blocked" in row["current_blockers"]
+    assert (
+        "fresh_128_numeric_acceptance_thresholds_not_frozen"
+        in row["current_blockers"]
+    )
     assert "primary_298_case_blind_holdout_not_executed" not in row[
         "current_blockers"
     ]

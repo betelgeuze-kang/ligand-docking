@@ -1009,6 +1009,7 @@ capabilities:
       - historical_300_case_report_is_contaminated_development_evidence
       - fresh_128_internal_provisional_blind_holdout_not_executed
       - fresh_128_stage0_admission_blocked
+      - fresh_128_numeric_acceptance_thresholds_not_frozen
       - public_holdout_results_missing
       - independent_attestation_missing
       - legal_compliance_determination_not_made
