@@ -12,14 +12,19 @@ the internal provisional holdout and remains unopened until parity, performance,
 and solo-development Stage 0 controls are complete. External review remains
 mandatory only for public claims and product promotion.
 
+Canonical Stage 0 state: historical 300 cases are contaminated development;
+the fresh 128-case internal provisional blind holdout has not been executed;
+the active refiner is V7; product promotion and public claims are false.
+
 The first rc5 non-smoke development diagnostic identified explicit unsupported
 metal-element and large-ring lanes, severe receptor clash/pose-validity failure,
 and Top-1 rather than Top-5 selection regret. The runner now retains typed
 preparation failure codes, internal validity eligibility, and all nine scorer
-term values per candidate. A bounded interaction-aware rigid-translation v2
-refiner and bounded multi-anchor proposal lane are present as unvalidated
-development implementations; neither is promoted and neither changes the
-requirement that fresh-holdout gates pass before execution.
+term values per candidate. The active
+`interaction_aware_torsion_contact_v7_ensemble` refiner and bounded multi-anchor
+proposal lane are unvalidated development implementations; neither is promoted
+and neither changes the requirement that fresh-holdout gates pass before
+execution.
 
 ## Supported environment
 
@@ -49,10 +54,13 @@ Native target:       Linux x86_64 CPU
 - CPython 3.10, 3.11, and 3.12 wheels build with the pinned
   `manylinux_2_28_x86_64` image digest recorded in the authoritative release
   workflow.
-- Two isolated CPython 3.10 native builds and two isolated base-wheel builds
-  were byte-identical. The current-source base wheel SHA-256 is
-  `2ec932023df7497bf06bbb7e7a207912242613e14c367d91db293d513c9a2c6c`;
-  the CPython 3.10 manylinux native wheel SHA-256 is
+- Two isolated CPython 3.10 native builds were byte-identical. At exact `main`
+  commit `2b98bc93481347ec0736efa7da1d632a28050101`, two isolated reconciled V7
+  base-wheel builds were also byte-identical with SHA-256
+  `e8637d971d92e6990689d0e164f08a860b50f3cfd0ed9472f86deb8cc8379679`;
+  the matching SPDX SBOM SHA-256 is
+  `624838d774b61094f5d5866bbc221436bdb139f92500c3412a9608473943d73e`.
+  The previously qualified CPython 3.10 manylinux native wheel SHA-256 is
   `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`.
 - The focused 64-candidate fixture preserves exact count/rank/Top-5 structure
   and `1e-12` score-term tolerance while measuring 12.2x scorer-only median
@@ -60,13 +68,11 @@ Native target:       Linux x86_64 CPU
 - Rust unit tests, `cargo check`, and `clippy -D warnings` pass. Native SBOM
   generation binds the extension, Cargo.lock, and Cargo dependency graph.
 
-These are implementation and packaging checks only. The latest homogeneous
-32-case historical-development evidence still fails proposal and validity
-gates and predates the interaction-aware v2 source. A current-source
-track-decision slice with nine total/eight scored cases also fails proposal
-oracle (0.25 versus a 0.4556 floor) and invalid Top-1 (0.625 versus a 0.20
-ceiling). Stage 0 therefore remains blocked; public review remains a later
-public/product promotion requirement.
+These are implementation and packaging checks only. Current V7 historical
+development evidence still fails proposal, validity, and selection gates.
+The fresh 128-case internal provisional blind holdout remains unexecuted, so
+Stage 0 remains blocked; public review remains a later public/product promotion
+requirement.
 
 ## Promotion boundary
 

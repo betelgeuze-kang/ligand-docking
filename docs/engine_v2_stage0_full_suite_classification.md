@@ -3,7 +3,8 @@
 ## Reproduction snapshot
 
 The PR #211 worktree full suite was reproduced locally on 2026-07-29 without
-executing the 298-case holdout:
+executing the fresh 128-case internal provisional blind holdout. The former
+298-case designation is invalidated:
 
 ```text
 6574 passed

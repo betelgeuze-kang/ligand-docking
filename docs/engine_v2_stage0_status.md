@@ -11,6 +11,17 @@ member identities before its result values were inspected. The runner requires
 a complete Stage 0 policy for that fresh internal holdout and rejects the old
 298-case subset.
 
+The canonical capability state is:
+
+| Field | Value |
+| --- | --- |
+| Historical 300 | contaminated development |
+| Fresh 128 | internal provisional blind |
+| Fresh 128 executed | false |
+| Active refiner | V7 |
+| Product promotion | false |
+| Public claim | false |
+
 ## Completed locally
 
 - PR #211 diagnostic contract and its rc5 follow-ups were squash-merged to
@@ -142,14 +153,14 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   separate reproduction showed the Codex Electron process consuming the
   per-user watch limit. The Engine V2 architecture guard passed, all changed
   Python entry points compiled, and `git diff --check` passed.
-- The current Python rc5 wheel was built twice byte-identically with SHA-256
-  `1aede96be7709a8e57006c2f24957d43db3b7c56ee001b9f645b74180d3d8752`.
-  Its five changed package files match the source byte-for-byte, and a new
-  isolated install with the qualified native wheel
-  `32bf80c045fda198a0c52d70d85b4b24587f3ff746c9b580e7e2b3d46549bafa`
-  imported from site-packages successfully. That wheel predates the V7 source
-  freeze reconciliation; the base wheel and SBOM must be regenerated and bound
-  to the final exact `main` commit before solo Stage 0 evidence is final.
+- At exact `main` commit
+  `2b98bc93481347ec0736efa7da1d632a28050101`, the reconciled V7 Python rc5
+  wheel was built twice byte-identically with SHA-256
+  `e8637d971d92e6990689d0e164f08a860b50f3cfd0ed9472f86deb8cc8379679`.
+  Its SPDX SBOM SHA-256 is
+  `624838d774b61094f5d5866bbc221436bdb139f92500c3412a9608473943d73e`,
+  and the SBOM records that exact wheel checksum. The full operator environment
+  and native artifact set still require final Stage 0 binding.
 - Repository orchestration verifier: `./scripts/ai-verify.sh` passed from the
   main worktree that carries it.
 

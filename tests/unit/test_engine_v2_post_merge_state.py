@@ -494,9 +494,9 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
 
     public_protocol = rows[PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert public_protocol["current_state"] == (
-        "frozen_300_case_public_redocking_runner_with_298_case_"
-        "primary_blind_holdout_and_sealed_64_candidate_"
-        "diagnostic_execution_receipts_without_committed_results"
+        "historical_300_case_contaminated_development_with_fresh_"
+        "128_case_internal_provisional_blind_unexecuted_and_"
+        "active_v7_refiner"
     )
     assert public_protocol["internal_reference_execution_enabled"] is True
     assert "symmetry_mapping_materializer_not_implemented" not in (
@@ -506,16 +506,18 @@ def test_capability_yaml_matches_executable_v2_schema_v4_snapshot() -> None:
         public_protocol["blockers"]
     )
     assert (
-        "engineering_smoke_is_not_primary_holdout_evidence"
+        "historical_300_case_report_is_contaminated_development_evidence"
         in public_protocol["blockers"]
     )
-    assert "primary_298_case_blind_holdout_not_executed" in (
+    assert (
+        "fresh_128_internal_provisional_blind_holdout_not_executed"
+        in public_protocol["blockers"]
+    )
+    assert "fresh_128_stage0_admission_blocked" in public_protocol["blockers"]
+    assert "primary_298_case_blind_holdout_not_executed" not in (
         public_protocol["blockers"]
     )
-    assert "complete_300_case_descriptive_report_missing" in (
-        public_protocol["blockers"]
-    )
-    assert "numeric_acceptance_thresholds_not_frozen" in (
+    assert "complete_300_case_descriptive_report_missing" not in (
         public_protocol["blockers"]
     )
 
@@ -756,6 +758,33 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
     assert "reference_minimization_validation_runner" in policy
     assert "reference_minimization_validation_result_writer" in policy
     assert "Independent Engine v2 reviewer" in entrypoints
+
+
+def test_stage0_capability_docs_share_fresh_holdout_state() -> None:
+    documents = tuple(
+        " ".join(Path(path).read_text(encoding="utf-8").lower().split())
+        for path in (
+            "README.md",
+            "docs/engine_v2_status.md",
+            "docs/engine_v2_stage0_status.md",
+            "docs/engine_v2_truthfulness.md",
+            "docs/engine_v2_0_2_0rc5.md",
+            "docs/engine_v2_public_redocking_300.md",
+        )
+    )
+
+    for document in documents:
+        assert "300" in document
+        assert "contaminated development" in document
+        assert "fresh 128" in document
+        assert "v7" in document
+        assert "product promotion" in document
+        assert "public claim" in document
+        assert (
+            "not been executed" in document
+            or "have not been executed" in document
+            or "fresh 128 executed | false" in document
+        )
 
 
 def test_readmes_describe_conditional_complexity_and_v2_quick_start() -> None:

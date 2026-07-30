@@ -311,13 +311,13 @@ python3 -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 \
 python3 -m pip install --no-deps posebusters==0.3.1
 ```
 
-The primary holdout cannot be run from the protocol file alone. First copy
+The fresh 128-case internal provisional blind holdout cannot be run from the
+protocol file alone. First copy
 `config/engine_v2_public_redocking_stage0_threshold_evidence.template.json`
-and fill it from an exact-contract public development run that contains neither
-the two smoke cases nor any of the 298 holdout cases. The verifier cross-checks
-all seven proposed threshold values and both paired-baseline margins against
-that artifact; a generic literature note or unrelated file hash cannot satisfy
-the gate. Then copy
+and fill it from exact-contract contaminated development evidence. The verifier
+cross-checks all seven proposed threshold values and both paired-baseline
+margins against that artifact; a generic literature note or unrelated file hash
+cannot satisfy the gate. Then copy
 `config/engine_v2_public_redocking_stage0_freeze.template.json`, bind the
 evidence path/SHA-256, and fill the remaining fields. Print the SHA-only host
 snapshot:
@@ -330,8 +330,12 @@ python3 tools/verify_engine_v2_public_redocking_stage0.py \
 
 Copy this OS/kernel/CPU-affinity/model/Python-executable/runtime-variable
 snapshot into `environment_freeze.host`; runtime-variable values are never
-printed. Before attaching the independent attestation, compute the exact
-review-subject hash:
+printed. Stage 0 supports two governance branches: a genuinely independent
+three-role attestation, or the internal-only `solo_developer_controlled` path
+with two immutable self-review passes separated by at least 24 hours. The solo
+path is the current internal execution route and cannot support public claims
+or product promotion. Before attaching a three-role attestation, compute the
+exact review-subject hash:
 
 ```bash
 python3 tools/verify_engine_v2_public_redocking_stage0.py \
@@ -339,11 +343,12 @@ python3 tools/verify_engine_v2_public_redocking_stage0.py \
   --print-review-subject-sha256
 ```
 
-The independent reviewer fills
-`config/engine_v2_public_redocking_stage0_attestation.template.json` with that
-hash, distinct author/reviewer/operator identities, every required decision, and a
-UTC timestamp. Hash the completed attestation, write its path and SHA-256 into
-the policy, then compute the policy's canonical self-hash:
+For independent governance, the reviewer supplies that hash, distinct
+author/reviewer/operator identities, every required decision, and a UTC
+timestamp in an independent attestation. For solo governance, use the
+fail-closed solo evidence, self-review, and policy builders; they bind both
+time-separated passes and emit the internal-only attestation without claiming
+reviewer independence. Then compute or verify the policy's canonical self-hash:
 
 ```bash
 python3 tools/verify_engine_v2_public_redocking_stage0.py \
@@ -367,10 +372,11 @@ runtime treatment, diagnostic branch rules, non-smoke/non-holdout provenance
 artifacts, source hashes, exact Python/Torch/RDKit/PoseBusters/GNINA identity,
 900 engine rows, 19,200 candidate slots, row-level classification of the
 reproduced full-suite outcomes, explicit reconciliation of the declared
-`216 failed / 3 errors` aggregate, distinct author/reviewer/operator roles,
-legal/license review, and an independent attestation artifact. An unreproduced
-declared row may never be synthesized to make the counts match. The template is
-not runnable evidence and must remain blocked while any value is unknown.
+`216 failed / 3 errors` aggregate, legal/license review, and either distinct
+author/reviewer/operator roles with an independent attestation or the bounded
+two-pass solo governance contract. An unreproduced declared row may never be
+synthesized to make the counts match. The template is not runnable evidence and
+must remain blocked while any value is unknown.
 
 Run against operator-supplied source artifacts and a local GNINA executable:
 
@@ -394,17 +400,16 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --case-subset engineering-smoke
 ```
 
-Engineering smoke is the only subset exempt from Stage 0 admission. Any
-selection containing even one primary case requires `--stage0-policy`; the
-policy is verified before output creation and again before report or partial
-summary materialization. After all tuning and Stage 0 decisions are frozen,
-the default `--case-subset all` run executes all 300 cases once and creates all
-900 rows plus
-`public-redocking-report.json`. Its primary
-metrics use only the 298 holdout cases; its 300-case metrics are explicitly
-supplementary descriptive. `--case-subset primary-blind-holdout` and `--limit`
-create only non-claimable partial summaries and cannot later be promoted by
-cache reuse. Every partial-summary filename includes a digest of the exact
+Historical `engineering-smoke`, `contaminated-development`, and `all` subsets
+are development-only and cannot be promoted. The runner rejects
+`--case-subset primary-blind-holdout`. The only blind execution scope is
+`--case-subset fresh-internal-blind-holdout`; it requires `--stage0-policy` and
+`--engine-v2-scorer-backend rust_cpu_required`. The policy is verified before
+output creation and again before report materialization. The fresh 128 has not
+been executed, and the active refiner is V7. Product promotion and public
+claims remain false. Historical partial summaries created with `--limit`
+remain non-claimable and cannot later be promoted by cache reuse. Every
+partial-summary filename includes a digest of the exact
 ordered case selection, so equal-length slices cannot overwrite one another.
 Per-case receipts reject changed input bytes, materialization
 receipts, seeds, commands, implementation hashes, evaluator/environment
@@ -425,8 +430,10 @@ report remains `claim_safe: false`.
 No raw structure, prepared input, external-engine output, Engine V2 output, or
 benchmark result is committed by this change. A constructed report records
 `benchmark_executed: true` because all 900 schema-valid, failure-complete rows
-exist. This field is not an authenticated process-execution attestation. The
-report continues to state:
+exist for the historical contaminated 300-case development cohort. It does not
+mean that the fresh 128-case internal provisional blind holdout was executed;
+that state remains false. This field is not an authenticated process-execution
+attestation. The report continues to state:
 
 ```text
 scientifically_validated: false

@@ -143,13 +143,15 @@ The current `main` branch contains:
   bundled, no network fetch or benchmark execution is implemented or authorized,
   no result document exists, and the four fixtures do not establish statistical
   representativeness or PoseBusters Benchmark equivalence;
-- a separate frozen 300-case public redocking evaluation contract selected by
-  a result-independent SHA-256 rule from the published PoseBusters 308-case
-  journal subset. The two cases observed during runner engineering are an
-  explicit engineering-smoke subset, the remaining 298 cases are the designated
-  primary holdout (`primary_blind_holdout` in the schema), and all-300 metrics
-  are supplementary descriptive only. The code enforces this partition but
-  does not independently attest the operator's prior-observation history. It
+- a historical frozen 300-case public redocking evaluation contract selected
+  by a result-independent SHA-256 rule from the published PoseBusters 308-case
+  journal subset. A complete report existed before numeric Stage 0 freeze, so
+  all 300 cases are contaminated development data and the former 298-case
+  primary-holdout designation is invalid. The legacy scope is retained only
+  for fail-closed rejection. A disjoint fresh 128-case complement is the
+  internal provisional blind holdout; it has not been executed. Its active
+  refiner is V7, and Stage 0 admission, product promotion, and public claims
+  remain false. The contract
   binds the external Zenodo archive and identifier-document
   bytes, requires one failure-complete five-pose row for each of Engine V2,
   Vina, and GNINA, and defines bootstrap-CI Top-1/3/5 RMSD and valid-pose

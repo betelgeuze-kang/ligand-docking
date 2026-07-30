@@ -53,13 +53,14 @@ minimization validation process entrypoints are implemented and wired.  It does
 independent result review exists.
 
 The frozen four-case public redocking cohort has a result-free reference-ligand
-matcher and bounded heavy-atom symmetry materializer.  A separate 300-case
-contract now freezes a result-independent subset of the published PoseBusters
-308-case journal list. Its two already observed cases are engineering smoke,
-the remaining 298 cases are the designated primary holdout
-(`primary_blind_holdout` in the schema), and all-300 metrics are supplementary
-descriptive. The partition is code-enforced, but an operator's
-prior-observation history is not independently attested. It defines
+matcher and bounded heavy-atom symmetry materializer. A historical 300-case
+contract freezes a result-independent subset of the published PoseBusters
+308-case journal list, but a complete report existed before numeric Stage 0
+freeze. All 300 cases are therefore contaminated development data and the
+former 298-case primary-holdout designation is invalid. The disjoint fresh
+128-case complement is the internal provisional blind holdout and has not been
+executed. The active refiner is V7; product promotion and public claims remain
+false. The contract defines
 failure-complete Engine V2/Vina/GNINA
 Top-1/3/5, validity, runtime, subgroup, paired-delta, and bootstrap-CI reporting.
 Its local runner may execute only against operator-supplied, hash-verified
