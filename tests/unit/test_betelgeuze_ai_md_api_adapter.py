@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 from pathlib import Path
+
+import pytest
 
 from betelgeuze_ai_md.contracts import (
     TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
@@ -12,6 +16,10 @@ from betelgeuze_ai_md.contracts import (
 )
 from betelgeuze_ai_md.contracts.api_adapter import build_api_evidence_bundle, write_api_evidence_bundle
 from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
+from betelgeuze_engine.product.implementation_provenance import (
+    build_implementation_source_manifest,
+)
+from betelgeuze_product.pocketmd_lite_contract import PocketMdAdmissionPolicy
 
 
 def _manifest(result_file: Path) -> dict:
@@ -80,11 +88,24 @@ def test_build_api_evidence_bundle_is_review_only_even_with_structured_result(tm
         },
     }
     result_file.write_text(json.dumps(result_payload, sort_keys=True) + "\n", encoding="utf-8")
+    implementation = build_implementation_source_manifest()
+    result_manifest = {
+        **_manifest(result_file),
+        "execution_request_sha256": "i" * 64,
+        "runner_metadata": {
+            "runner_kind": "ligand_topk_delivery",
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation[
+                "manifest_sha256"
+            ],
+            "effective_runner_config": {"topk_global": 10},
+        },
+    }
 
     bundle = build_api_evidence_bundle(
         job_id="job_api_contract",
         request={"target_name": "ADRB2", "runner_profile_id": "smoke"},
-        result_manifest=_manifest(result_file),
+        result_manifest=result_manifest,
         result_payload=result_payload,
         runner_execution={
             "runner_script": "tools/run_ligand_topk_delivery.py",
@@ -99,7 +120,9 @@ def test_build_api_evidence_bundle_is_review_only_even_with_structured_result(tm
     assert bundle.failure_flags == ["delivery_bundle_validation_not_attached"]
     assert bundle.source_hashes["input_hash"] == "i" * 64
     assert bundle.source_hashes["model_hash"] == "m" * 64
-    assert bundle.source_hashes["executable_hash"] == "e" * 64
+    assert bundle.source_hashes["executable_hash"] == implementation[
+        "manifest_sha256"
+    ]
     assert bundle.backmapped_poses[0].pose_id == "pose_001"
     assert bundle.backmapped_poses[0].chemical_validity_summary["status"] == "pass"
     assert bundle.backmapped_poses[0].chemical_validity_summary["check_id"] == "onsps_4bead_backmap"
@@ -235,6 +258,7 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
         score_column="binding_score_composite_v7",
         score_direction="ascending",
     ).to_dict()
+    implementation = build_implementation_source_manifest()
 
     bundle = maybe_write_runner_native_evidence_bundle(
         bundle_file,
@@ -242,9 +266,15 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
         result_file=result_file,
         result_payload=result_payload,
         runner_script="tools/run_ligand_backmapping_scoring.py",
+        runner_script_sha256=implementation["manifest_sha256"],
         runner_metadata={
-            "runner_kind": "unit",
+            "runner_kind": "ligand_backmapping_scoring",
             "selection_score_authority": selection_score_authority,
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation[
+                "manifest_sha256"
+            ],
+            "effective_runner_config": {"score_only": False},
         },
     )
 
@@ -273,7 +303,7 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
     )
 
 
-def test_api_config_hash_binds_selection_score_authority(tmp_path: Path) -> None:
+def test_api_config_hash_binds_selection_and_pocketmd_policies(tmp_path: Path) -> None:
     result_file = tmp_path / "runner_result.json"
     result_file.write_text("{}\n", encoding="utf-8")
     manifest_without = _manifest(result_file)
@@ -286,6 +316,13 @@ def test_api_config_hash_binds_selection_score_authority(tmp_path: Path) -> None
             ).to_dict()
         },
     }
+    manifest_with_pocketmd = {
+        **manifest_with,
+        "runner_metadata": {
+            **manifest_with["runner_metadata"],
+            "pocketmd_admission_policy": PocketMdAdmissionPolicy.create().to_dict(),
+        },
+    }
     kwargs = {
         "job_id": "job_authority_hash",
         "request": {"target_name": "ADRB2", "runner_profile_id": "smoke"},
@@ -296,8 +333,259 @@ def test_api_config_hash_binds_selection_score_authority(tmp_path: Path) -> None
 
     without = build_api_evidence_bundle(result_manifest=manifest_without, **kwargs)
     with_authority = build_api_evidence_bundle(result_manifest=manifest_with, **kwargs)
+    with_pocketmd = build_api_evidence_bundle(
+        result_manifest=manifest_with_pocketmd,
+        **kwargs,
+    )
+    implementation = build_implementation_source_manifest()
+    manifest_with_implementation = {
+        **manifest_with_pocketmd,
+        "runner_metadata": {
+            **manifest_with_pocketmd["runner_metadata"],
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation[
+                "manifest_sha256"
+            ],
+        },
+    }
+    with_implementation = build_api_evidence_bundle(
+        result_manifest=manifest_with_implementation,
+        **kwargs,
+    )
 
     assert without.source_hashes["config_hash"] != with_authority.source_hashes["config_hash"]
+    assert with_authority.source_hashes["config_hash"] != with_pocketmd.source_hashes["config_hash"]
+    assert with_pocketmd.source_hashes["config_hash"] != with_implementation.source_hashes["config_hash"]
+    assert with_implementation.source_hashes["executable_hash"] == implementation[
+        "manifest_sha256"
+    ]
+
+    tampered = copy.deepcopy(manifest_with_implementation)
+    tampered["runner_metadata"]["implementation_source_manifest"]["files"][0][
+        "sha256"
+    ] = "0" * 64
+    with pytest.raises(ValueError, match="manifest_sha256 mismatch"):
+        build_api_evidence_bundle(result_manifest=tampered, **kwargs)
+
+    stale_but_internally_consistent = copy.deepcopy(
+        manifest_with_implementation
+    )
+    stale_manifest = stale_but_internally_consistent["runner_metadata"][
+        "implementation_source_manifest"
+    ]
+    stale_manifest["files"][0]["sha256"] = "0" * 64
+    unsigned = {
+        key: stale_manifest[key]
+        for key in ("schema_version", "algorithm", "files")
+    }
+    stale_manifest["manifest_sha256"] = hashlib.sha256(
+        json.dumps(
+            unsigned,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    stale_but_internally_consistent["runner_metadata"][
+        "implementation_fingerprint_sha256"
+    ] = stale_manifest["manifest_sha256"]
+    with pytest.raises(ValueError, match="does not match current source tree"):
+        build_api_evidence_bundle(
+            result_manifest=stale_but_internally_consistent,
+            **kwargs,
+        )
+
+
+def test_api_config_hash_binds_effective_runner_config(tmp_path: Path) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    implementation = build_implementation_source_manifest()
+    base_manifest = {
+        **_manifest(result_file),
+        "runner_metadata": {
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation[
+                "manifest_sha256"
+            ],
+            "effective_runner_config": {"topk_global": 8},
+        },
+    }
+    kwargs = {
+        "job_id": "job_effective_config_hash",
+        "request": {"target_name": "ADRB2"},
+        "result_payload": {},
+        "runner_execution": {},
+        "status_payload": {"status": "completed"},
+    }
+
+    first = build_api_evidence_bundle(
+        result_manifest=base_manifest,
+        **kwargs,
+    )
+    changed_manifest = copy.deepcopy(base_manifest)
+    changed_manifest["runner_metadata"]["effective_runner_config"][
+        "topk_global"
+    ] = 16
+    changed = build_api_evidence_bundle(
+        result_manifest=changed_manifest,
+        **kwargs,
+    )
+
+    assert first.source_hashes["config_hash"] != changed.source_hashes[
+        "config_hash"
+    ]
+
+
+def test_native_runner_rejects_thin_shim_hash_without_full_manifest(
+    tmp_path: Path,
+) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    result_manifest = {
+        **_manifest(result_file),
+        "runner_metadata": {
+            "runner_kind": "ligand_topk_delivery",
+            "effective_runner_config": {"topk_global": 8},
+        },
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="native runner implementation manifest is required",
+    ):
+        build_api_evidence_bundle(
+            job_id="job_shim_only",
+            request={"target_name": "ADRB2"},
+            result_manifest=result_manifest,
+            result_payload={},
+            runner_execution={
+                "runner_script": "tools/run_ligand_topk_delivery.py",
+                "profile_readiness": {"runner_script_sha256": "e" * 64},
+            },
+            status_payload={"status": "completed"},
+        )
+
+
+def test_native_runner_rejects_same_basename_noncanonical_executable(
+    tmp_path: Path,
+) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    spoof_runner = tmp_path / "run_ligand_topk_delivery.py"
+    spoof_runner.write_text(
+        'raise RuntimeError("arbitrary executable")\n',
+        encoding="utf-8",
+    )
+    implementation = build_implementation_source_manifest()
+    result_manifest = {
+        **_manifest(result_file),
+        "runner_metadata": {
+            "runner_kind": "ligand_topk_delivery",
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation[
+                "manifest_sha256"
+            ],
+            "effective_runner_config": {"topk_global": 8},
+        },
+    }
+
+    with pytest.raises(ValueError, match="executable path mismatch"):
+        build_api_evidence_bundle(
+            job_id="job_spoofed_native_runner",
+            request={"target_name": "ADRB2"},
+            result_manifest=result_manifest,
+            result_payload={},
+            runner_execution={"runner_script": str(spoof_runner)},
+            status_payload={"status": "completed"},
+        )
+
+
+def test_htvs_runtime_config_is_local_content_bound(tmp_path: Path) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    config_path = Path("config/ligand_engine_production.json").resolve()
+    resolved_config = json.loads(config_path.read_text(encoding="utf-8"))
+    source_sha256 = hashlib.sha256(config_path.read_bytes()).hexdigest()
+    resolved_config_sha256 = hashlib.sha256(
+        json.dumps(
+            resolved_config,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    implementation = build_implementation_source_manifest()
+    result_manifest = {
+        **_manifest(result_file),
+        "runner_metadata": {
+            "runner_kind": "ligand_htvs_pipeline",
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation[
+                "manifest_sha256"
+            ],
+            "effective_runner_config": {"run_scope": "smoke"},
+            "engine_refinement_config": {
+                "schema_version": "ligand_engine_runtime_config_v1",
+                "requested_path": "config/ligand_engine_production.json",
+                "resolved_path": str(config_path),
+                "source_sha256": source_sha256,
+                "resolved_config": resolved_config,
+                "resolved_config_sha256": resolved_config_sha256,
+            },
+        },
+    }
+    kwargs = {
+        "job_id": "job_htvs_config",
+        "request": {"target_name": "ADRB2"},
+        "result_payload": {},
+        "runner_execution": {
+            "runner_script": "tools/run_ligand_htvs_pipeline.py"
+        },
+        "status_payload": {"status": "completed"},
+    }
+
+    bundle = build_api_evidence_bundle(
+        result_manifest=result_manifest,
+        **kwargs,
+    )
+    assert bundle.source_hashes["config_hash"]
+
+    tampered = copy.deepcopy(result_manifest)
+    tampered["runner_metadata"]["engine_refinement_config"][
+        "source_sha256"
+    ] = "0" * 64
+    with pytest.raises(
+        ValueError,
+        match="engine configuration source hash mismatch",
+    ):
+        build_api_evidence_bundle(
+            result_manifest=tampered,
+            **kwargs,
+        )
+
+    fabricated_resolution = copy.deepcopy(result_manifest)
+    fabricated_config = fabricated_resolution["runner_metadata"][
+        "engine_refinement_config"
+    ]["resolved_config"]
+    fabricated_config["stage3b"]["pocketmd_max_per_job"] = 999
+    fabricated_resolution["runner_metadata"]["engine_refinement_config"][
+        "resolved_config_sha256"
+    ] = hashlib.sha256(
+        json.dumps(
+            fabricated_config,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).hexdigest()
+    with pytest.raises(
+        ValueError,
+        match="engine configuration content mismatch",
+    ):
+        build_api_evidence_bundle(
+            result_manifest=fabricated_resolution,
+            **kwargs,
+        )
 
 
 def test_maybe_write_runner_native_evidence_bundle_requires_result_file(tmp_path: Path) -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,9 @@ from betelgeuze_ai_md.contracts.serialization import sha256_payload
 from betelgeuze_ai_md.contracts.verdict_schema import Verdict
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
 def _text(value: Any) -> str:
     return str(value or "").strip()
 
@@ -44,6 +48,14 @@ def _read_json_object(path_like: str | Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _result_payload(result_file: str) -> dict[str, Any]:
@@ -85,7 +97,189 @@ def _source_hashes(
 ) -> dict[str, str]:
     readiness = _as_dict(runner_execution.get("profile_readiness"))
     runner_metadata = _as_dict(result_manifest.get("runner_metadata"))
+    result_status = _text(result_manifest.get("status"))
+    failed_stage = _text(
+        result_payload.get("failed_stage")
+        or _summary(result_payload).get("failed_stage")
+    )
+    allow_startup_provenance = bool(
+        result_status == "failed"
+        and failed_stage == "implementation_source_drift"
+    )
+    runner_kind = _text(runner_metadata.get("runner_kind"))
+    runner_script = _text(runner_execution.get("runner_script"))
+    native_runner_scripts = {
+        "tools/run_ligand_htvs_pipeline.py": "ligand_htvs_pipeline",
+        "tools/run_ligand_backmapping_scoring.py": "ligand_backmapping_scoring",
+        "tools/run_ligand_topk_delivery.py": "ligand_topk_delivery",
+    }
+    native_script_by_kind = {
+        kind: relative_path
+        for relative_path, kind in native_runner_scripts.items()
+    }
+    basename_kind = next(
+        (
+            kind
+            for relative_path, kind in native_runner_scripts.items()
+            if Path(relative_path).name == Path(runner_script).name
+        ),
+        "",
+    )
+    declared_native_kind = (
+        runner_kind if runner_kind in native_script_by_kind else ""
+    )
+    candidate_native_kind = basename_kind or declared_native_kind
+    expected_native_relative = (
+        native_script_by_kind.get(candidate_native_kind, "")
+    )
+    if candidate_native_kind:
+        if not runner_script:
+            raise ValueError("native runner executable path is required")
+        resolved_runner_script = (
+            Path(runner_script)
+            if Path(runner_script).is_absolute()
+            else _REPO_ROOT / runner_script
+        ).resolve()
+        canonical_runner_script = (
+            _REPO_ROOT / expected_native_relative
+        ).resolve()
+        if resolved_runner_script != canonical_runner_script:
+            raise ValueError("native runner executable path mismatch")
+    native_runner_kind = candidate_native_kind
+    if native_runner_kind and runner_kind != native_runner_kind:
+        raise ValueError("native runner metadata kind mismatch")
     selection_score_authority = _as_dict(runner_metadata.get("selection_score_authority"))
+    pocketmd_admission_policy = _as_dict(runner_metadata.get("pocketmd_admission_policy"))
+    implementation_source_manifest = _as_dict(
+        runner_metadata.get("implementation_source_manifest")
+    )
+    implementation_fingerprint = ""
+    if implementation_source_manifest:
+        from betelgeuze_engine.product.implementation_provenance import (
+            validate_implementation_source_manifest,
+        )
+
+        implementation_source_manifest = validate_implementation_source_manifest(
+            implementation_source_manifest,
+            require_current=not allow_startup_provenance,
+        )
+        implementation_fingerprint = str(
+            implementation_source_manifest["manifest_sha256"]
+        )
+        if (
+            _text(runner_metadata.get("implementation_fingerprint_sha256"))
+            != implementation_fingerprint
+        ):
+            raise ValueError("implementation fingerprint metadata mismatch")
+        if native_runner_kind:
+            source_hashes = {
+                str(item.get("path") or ""): str(item.get("sha256") or "")
+                for item in implementation_source_manifest["files"]
+            }
+            canonical_runner_path = _REPO_ROOT / expected_native_relative
+            recorded_runner_sha256 = source_hashes.get(
+                expected_native_relative,
+                "",
+            )
+            if not recorded_runner_sha256:
+                raise ValueError("native runner executable is absent from manifest")
+            if (
+                not allow_startup_provenance
+                and recorded_runner_sha256
+                != _sha256_file(canonical_runner_path)
+            ):
+                raise ValueError("native runner executable content mismatch")
+    elif native_runner_kind:
+        raise ValueError("native runner implementation manifest is required")
+
+    effective_runner_config = _as_dict(
+        runner_metadata.get("effective_runner_config")
+    )
+    if native_runner_kind and not effective_runner_config:
+        raise ValueError("native runner effective configuration is required")
+    engine_refinement_config = _as_dict(
+        runner_metadata.get("engine_refinement_config")
+    )
+    if native_runner_kind == "ligand_htvs_pipeline":
+        if not engine_refinement_config:
+            raise ValueError("HTVS resolved engine configuration is required")
+        if (
+            engine_refinement_config.get("schema_version")
+            != "ligand_engine_runtime_config_v1"
+        ):
+            raise ValueError("HTVS resolved engine configuration is invalid")
+        source_kind = _text(
+            engine_refinement_config.get("source_kind") or "file"
+        )
+        if source_kind == "resolution_error":
+            if result_status != "failed" or not _text(
+                engine_refinement_config.get("error")
+            ):
+                raise ValueError("HTVS configuration failure evidence is invalid")
+        elif source_kind in {"file", "builtin_defaults"}:
+            resolved_config = _as_dict(
+                engine_refinement_config.get("resolved_config")
+            )
+            if not resolved_config:
+                raise ValueError("HTVS resolved engine configuration is invalid")
+            if _text(
+                engine_refinement_config.get("resolved_config_sha256")
+            ) != sha256_payload(resolved_config):
+                raise ValueError("HTVS resolved engine configuration hash mismatch")
+            from tools.product.engine_refinement_config import (
+                builtin_engine_refinement_config,
+                load_engine_refinement_config,
+            )
+
+            if source_kind == "file":
+                resolved_path = Path(
+                    _text(engine_refinement_config.get("resolved_path"))
+                )
+                source_sha256 = _text(
+                    engine_refinement_config.get("source_sha256")
+                )
+                if len(source_sha256) != 64 or any(
+                    character not in "0123456789abcdef"
+                    for character in source_sha256
+                ):
+                    raise ValueError(
+                        "HTVS engine configuration source hash is invalid"
+                    )
+                if allow_startup_provenance:
+                    current_resolved_config = resolved_config
+                else:
+                    if not resolved_path.is_file():
+                        raise ValueError(
+                            "HTVS resolved engine configuration is invalid"
+                        )
+                    if source_sha256 != _sha256_file(resolved_path):
+                        raise ValueError(
+                            "HTVS engine configuration source hash mismatch"
+                        )
+                    try:
+                        current_resolved_config = load_engine_refinement_config(
+                            resolved_path
+                        )
+                    except (FileNotFoundError, ValueError) as exc:
+                        raise ValueError(
+                            "HTVS resolved engine configuration cannot be reproduced"
+                        ) from exc
+            else:
+                if _text(engine_refinement_config.get("source_sha256")):
+                    raise ValueError(
+                        "HTVS built-in configuration source hash must be empty"
+                    )
+                current_resolved_config = (
+                    resolved_config
+                    if allow_startup_provenance
+                    else builtin_engine_refinement_config()
+                )
+            if current_resolved_config != resolved_config:
+                raise ValueError(
+                    "HTVS resolved engine configuration content mismatch"
+                )
+        else:
+            raise ValueError("HTVS engine configuration source kind is invalid")
     runner_script_sha256 = _text(readiness.get("runner_script_sha256"))
     request_hash = _text(result_manifest.get("execution_request_sha256")) or sha256_payload(request)
     result_hash = _text(result_manifest.get("result_file_sha256"))
@@ -108,11 +302,20 @@ def _source_hashes(
     }
     if selection_score_authority:
         config_payload["selection_score_authority"] = selection_score_authority
+    if pocketmd_admission_policy:
+        config_payload["pocketmd_admission_policy"] = pocketmd_admission_policy
+    if implementation_source_manifest:
+        config_payload["implementation_source_manifest"] = implementation_source_manifest
+    if effective_runner_config:
+        config_payload["effective_runner_config"] = effective_runner_config
+    if engine_refinement_config:
+        config_payload["engine_refinement_config"] = engine_refinement_config
     return {
         "input_hash": request_hash,
         "config_hash": sha256_payload(config_payload),
         "model_hash": model_hash,
-        "executable_hash": runner_script_sha256
+        "executable_hash": implementation_fingerprint
+        or runner_script_sha256
         or sha256_payload(
             {
                 "runner_execution": runner_execution.get("runner_script", ""),

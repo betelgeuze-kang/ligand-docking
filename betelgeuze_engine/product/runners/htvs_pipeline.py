@@ -6,6 +6,7 @@ import argparse
 import atexit
 import datetime as dt
 import fcntl
+import hashlib
 import json
 import math
 import os
@@ -25,6 +26,10 @@ from betelgeuze_engine.product.selection_score_authority import (
     SelectionScoreAuthority,
     authority_from_summary_payload,
 )
+from betelgeuze_engine.product.implementation_provenance import (
+    build_implementation_source_manifest,
+    validate_implementation_source_manifest,
+)
 from tools.product.engine_refinement_config import (
     load_engine_refinement_config,
     stage2_defaults,
@@ -41,6 +46,26 @@ try:
     from tools.update_closeout_latest import write_closeout as _write_closeout_latest
 except Exception:  # pragma: no cover
     _write_closeout_latest = None
+
+
+class _ExplicitArgumentParser(argparse.ArgumentParser):
+    """Record CLI destinations so config defaults cannot overwrite explicit choices."""
+
+    def parse_args(
+        self,
+        args: Optional[Sequence[str]] = None,
+        namespace: Optional[argparse.Namespace] = None,
+    ) -> argparse.Namespace:
+        raw_args = list(sys.argv[1:] if args is None else args)
+        parsed = super().parse_args(raw_args, namespace)
+        explicit: set[str] = set()
+        for token in raw_args:
+            option = token.split("=", 1)[0]
+            action = self._option_string_actions.get(option)
+            if action is not None:
+                explicit.add(str(action.dest))
+        setattr(parsed, "_explicit_cli_dests", frozenset(explicit))
+        return parsed
 
 
 def run_tier_beta_vertical_slice_compat(payload: dict[str, Any]) -> Any:
@@ -73,6 +98,29 @@ def _run_cmd(cmd: List[str]) -> Dict[str, Any]:
 
 def _ensure_parent(path: str) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+
+
+def _sha256_file(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _effective_runner_config(args: argparse.Namespace) -> Dict[str, Any]:
+    """Return the JSON-safe public argparse state that controlled this run."""
+    out: Dict[str, Any] = {}
+    for key, value in sorted(vars(args).items()):
+        if str(key).startswith("_"):
+            continue
+        try:
+            out[str(key)] = json.loads(
+                json.dumps(value, sort_keys=True, ensure_ascii=False)
+            )
+        except (TypeError, ValueError):
+            out[str(key)] = str(value)
+    return out
 
 
 def _acquire_instance_lock(lock_path: str) -> Dict[str, Any]:
@@ -829,6 +877,31 @@ def _physics_refinement_telemetry(summary_json: str) -> Dict[str, Any]:
         "mode": str(payload.get("refinement_mode", "") or ""),
         "backend": str(payload.get("refinement_backend", "") or ""),
         "score_col_used": str(payload.get("score_col_used", "") or ""),
+        "selection_score_authority": (
+            dict(payload.get("selection_score_authority", {}))
+            if isinstance(payload.get("selection_score_authority"), dict)
+            else {}
+        ),
+        "pocketmd_admission_policy": (
+            dict(payload.get("pocketmd_admission_policy", {}))
+            if isinstance(payload.get("pocketmd_admission_policy"), dict)
+            else {}
+        ),
+        "implementation_source_manifest": (
+            dict(payload.get("implementation_source_manifest", {}))
+            if isinstance(payload.get("implementation_source_manifest"), dict)
+            else {}
+        ),
+        "implementation_fingerprint_sha256": str(
+            payload.get("implementation_fingerprint_sha256", "") or ""
+        ),
+        "pocketmd_admission_reason_counts": (
+            dict(payload.get("admission_reason_counts", {}))
+            if isinstance(payload.get("admission_reason_counts"), dict)
+            else {}
+        ),
+        "pocketmd_admission_cost_used": payload.get("admission_cost_used"),
+        "pocketmd_admission_cost_remaining": payload.get("admission_cost_remaining"),
         "base_proxy_col_used": str(payload.get("base_proxy_col_used", "") or ""),
         "refined_energy_col": str(payload.get("refined_energy_col", "") or ""),
         "refined_rank_col": str(payload.get("refined_rank_col", "") or ""),
@@ -854,6 +927,16 @@ def _physics_refinement_markdown_lines(
     info = dict(physics_refinement) if isinstance(physics_refinement, dict) else {}
     if not info:
         return []
+    authority = (
+        info.get("selection_score_authority", {})
+        if isinstance(info.get("selection_score_authority"), dict)
+        else {}
+    )
+    admission_policy = (
+        info.get("pocketmd_admission_policy", {})
+        if isinstance(info.get("pocketmd_admission_policy"), dict)
+        else {}
+    )
     lines = [
         heading,
         "",
@@ -863,6 +946,11 @@ def _physics_refinement_markdown_lines(
         f"- physics_refinement_mode: `{str(info.get('refinement_mode', '') or '')}`",
         f"- physics_refinement_backend: `{str(info.get('refinement_backend', '') or '')}`",
         f"- physics_refinement_score_col_used: `{str(info.get('score_col_used', '') or '')}`",
+        f"- selection_score_policy_sha256: `{str(authority.get('policy_sha256', '') or '')}`",
+        f"- pocketmd_admission_policy_sha256: `{str(admission_policy.get('policy_sha256', '') or '')}`",
+        f"- implementation_fingerprint_sha256: `{str(info.get('implementation_fingerprint_sha256', '') or '')}`",
+        f"- pocketmd_admission_cost_used: {info.get('pocketmd_admission_cost_used')}",
+        f"- pocketmd_admission_cost_remaining: {info.get('pocketmd_admission_cost_remaining')}",
         f"- physics_refinement_base_proxy_col_used: `{str(info.get('base_proxy_col_used', '') or '')}`",
         f"- physics_refinement_refined_energy_col: `{str(info.get('refined_energy_col', '') or '')}`",
         f"- physics_refinement_refined_rank_col: `{str(info.get('refined_rank_col', '') or '')}`",
@@ -1306,7 +1394,105 @@ def _attach_service_result(payload: Dict[str, Any], args: argparse.Namespace) ->
 
 
 def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
-    out = _attach_service_result(payload, args)
+    out = dict(payload) if isinstance(payload, dict) else {}
+    captured_implementation_manifest = getattr(
+        args,
+        "_implementation_source_manifest",
+        {},
+    )
+    implementation_provenance_error = ""
+    if (
+        isinstance(captured_implementation_manifest, dict)
+        and captured_implementation_manifest
+    ):
+        try:
+            implementation_manifest = validate_implementation_source_manifest(
+                captured_implementation_manifest,
+                require_current=False,
+            )
+        except (TypeError, ValueError) as exc:
+            implementation_manifest = build_implementation_source_manifest()
+            implementation_provenance_error = (
+                f"invalid startup implementation manifest: {exc}"
+            )
+        else:
+            try:
+                current_implementation_manifest = (
+                    build_implementation_source_manifest()
+                )
+            except (OSError, TypeError, ValueError) as exc:
+                implementation_provenance_error = (
+                    "implementation source tree cannot be revalidated after "
+                    f"pipeline execution: {exc}"
+                )
+            else:
+                if current_implementation_manifest != implementation_manifest:
+                    implementation_provenance_error = (
+                        "implementation source tree changed after pipeline startup"
+                    )
+    else:
+        # Compatibility for direct finalizer callers; real pipeline runs capture
+        # this snapshot before any stage executes.
+        implementation_manifest = build_implementation_source_manifest()
+    implementation_fingerprint = str(
+        implementation_manifest["manifest_sha256"]
+    )
+    out["implementation_source_manifest"] = implementation_manifest
+    out["implementation_fingerprint_sha256"] = implementation_fingerprint
+    if implementation_provenance_error:
+        out["pass"] = False
+        prior_failed_stage = str(out.get("failed_stage") or "").strip()
+        if prior_failed_stage and prior_failed_stage != "implementation_source_drift":
+            out["prior_failed_stage"] = prior_failed_stage
+        out["failed_stage"] = "implementation_source_drift"
+        out["implementation_provenance_error"] = (
+            implementation_provenance_error
+        )
+    engine_config_provenance = getattr(
+        args, "_engine_refinement_config_provenance", {}
+    )
+    if isinstance(engine_config_provenance, dict) and engine_config_provenance:
+        out.setdefault(
+            "engine_refinement_config", dict(engine_config_provenance)
+        )
+    physics_refinement_for_check = out.get("physics_refinement")
+    if isinstance(physics_refinement_for_check, dict) and (
+        physics_refinement_for_check.get("enabled") is True
+    ):
+        provenance_error = ""
+        try:
+            child_manifest = validate_implementation_source_manifest(
+                physics_refinement_for_check.get(
+                    "implementation_source_manifest", {}
+                ),
+                require_current=False,
+            )
+            child_fingerprint = str(
+                physics_refinement_for_check.get(
+                    "implementation_fingerprint_sha256", ""
+                )
+                or ""
+            )
+            if child_manifest != implementation_manifest:
+                provenance_error = (
+                    "physics refinement implementation manifest mismatch"
+                )
+            elif child_fingerprint != implementation_fingerprint:
+                provenance_error = (
+                    "physics refinement implementation fingerprint mismatch"
+                )
+        except (TypeError, ValueError) as exc:
+            provenance_error = (
+                f"invalid physics refinement implementation manifest: {exc}"
+            )
+        if provenance_error:
+            out["pass"] = False
+            if not str(out.get("failed_stage") or "").strip():
+                out["failed_stage"] = "stage3b_implementation_provenance"
+            physics_refinement_for_check["implementation_provenance_error"] = (
+                provenance_error
+            )
+    out = _attach_service_result(out, args)
     runtime_selection_score_authority = getattr(args, "_selection_score_authority", {})
     if (
         not isinstance(out.get("selection_score_authority"), dict)
@@ -1324,16 +1510,33 @@ def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse
         runner_metadata: Dict[str, Any] = {
             "runner_kind": "ligand_htvs_pipeline",
             "out_prefix": out_prefix,
+            "implementation_source_manifest": implementation_manifest,
+            "implementation_fingerprint_sha256": implementation_fingerprint,
+            "effective_runner_config": _effective_runner_config(args),
         }
+        if isinstance(engine_config_provenance, dict) and engine_config_provenance:
+            runner_metadata["engine_refinement_config"] = dict(
+                engine_config_provenance
+            )
+        elif isinstance(out.get("engine_refinement_config"), dict):
+            runner_metadata["engine_refinement_config"] = dict(
+                out["engine_refinement_config"]
+            )
         selection_score_authority = out.get("selection_score_authority")
         if isinstance(selection_score_authority, dict):
             runner_metadata["selection_score_authority"] = selection_score_authority
+        physics_refinement = out.get("physics_refinement")
+        if isinstance(physics_refinement, dict):
+            pocketmd_admission_policy = physics_refinement.get("pocketmd_admission_policy")
+            if isinstance(pocketmd_admission_policy, dict) and pocketmd_admission_policy:
+                runner_metadata["pocketmd_admission_policy"] = pocketmd_admission_policy
         maybe_write_runner_native_evidence_bundle(
             evidence_bundle_path,
             request_json_path=str(getattr(args, "docking_request_json", "") or ""),
             result_file=summary_json,
             status="completed" if bool(out.get("pass", out.get("ok", False))) else "failed",
             runner_script="tools/run_ligand_htvs_pipeline.py",
+            runner_script_sha256=implementation_fingerprint,
             result_payload=out,
             runner_metadata=runner_metadata,
         )
@@ -1494,6 +1697,7 @@ def _clone_gate_summary(template: Dict[str, Any], enabled: bool) -> Dict[str, An
 
 
 def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
+    setattr(args, "_pipeline_preset_dests", frozenset())
     preset_path = str(getattr(args, "pipeline_preset_json", "") or "").strip()
     if not preset_path or (not os.path.exists(preset_path)):
         return {"applied": False, "reason": "preset_missing"}
@@ -1520,6 +1724,7 @@ def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
         "run_physics_refinement": "run_physics_refinement",
         "physics_refinement_mode": "physics_refinement_mode",
         "physics_refinement_backend": "physics_refinement_backend",
+        "physics_refinement_base_proxy_col": "physics_refinement_base_proxy_col",
         "physics_refinement_refined_energy_col": "physics_refinement_refined_energy_col",
         "traj_cross_docking_pose_seed": "traj_cross_docking_pose_seed",
         "traj_multi_start_count": "traj_multi_start_count",
@@ -1561,6 +1766,7 @@ def _apply_pipeline_preset_json(args: argparse.Namespace) -> Dict[str, Any]:
             if src in gate:
                 setattr(args, dst, gate[src])
                 applied_keys.append(dst)
+    setattr(args, "_pipeline_preset_dests", frozenset(applied_keys))
     return {"applied": True, "preset_path": preset_path, "applied_keys": applied_keys}
 
 
@@ -1570,16 +1776,22 @@ def _apply_engine_refinement_defaults(args: argparse.Namespace, engine_cfg: Dict
     s3 = stage3_defaults(engine_cfg)
     s3b = stage3b_defaults(engine_cfg)
     applied_keys: List[str] = []
+    protected_keys = set(getattr(args, "_explicit_cli_dests", ())) | set(
+        getattr(args, "_pipeline_preset_dests", ())
+    )
+
+    def apply_mapping(section: Dict[str, Any], mapping: Dict[str, str]) -> None:
+        for src, dst in mapping.items():
+            if src in section and dst not in protected_keys:
+                setattr(args, dst, section[src])
+                applied_keys.append(dst)
 
     s2_mapping = {
         "multi_start_count": "traj_multi_start_count",
         "pocket_protein_max_atoms": "traj_pocket_protein_max_atoms",
         "cross_docking_pose_seed": "traj_cross_docking_pose_seed",
     }
-    for src, dst in s2_mapping.items():
-        if src in s2:
-            setattr(args, dst, s2[src])
-            applied_keys.append(dst)
+    apply_mapping(s2, s2_mapping)
 
     s3_mapping = {
         "ligand_model_default": "stage3_ligand_model",
@@ -1589,34 +1801,36 @@ def _apply_engine_refinement_defaults(args: argparse.Namespace, engine_cfg: Dict
         "two_pass_scoring": "stage3_two_pass_scoring",
         "two_pass_topk_pct": "stage3_two_pass_topk_pct",
     }
-    for src, dst in s3_mapping.items():
-        if src in s3:
-            setattr(args, dst, s3[src])
-            applied_keys.append(dst)
+    apply_mapping(s3, s3_mapping)
 
     s3b_mapping = {
         "run_physics_refinement": "run_physics_refinement",
         "physics_refinement_mode": "physics_refinement_mode",
         "physics_refinement_backend": "physics_refinement_backend",
+        "physics_refinement_base_proxy_col": "physics_refinement_base_proxy_col",
         "physics_refinement_refined_energy_col": "physics_refinement_refined_energy_col",
+        "physics_refinement_topk_global": "physics_refinement_topk_global",
+        "physics_refinement_topk_per_target": "physics_refinement_topk_per_target",
+        "physics_refinement_selection_mode": "physics_refinement_selection_mode",
         "physics_refinement_use_refined_scores_downstream": "physics_refinement_use_refined_scores_downstream",
         "physics_refinement_use_refined_proxy_for_calibration": "physics_refinement_use_refined_proxy_for_calibration",
+        "pocketmd_eligible_families": "pocketmd_eligible_families",
+        "pocketmd_rank_threshold_pct": "pocketmd_rank_threshold_pct",
+        "pocketmd_max_per_target": "pocketmd_max_per_target",
+        "pocketmd_max_per_job": "pocketmd_max_per_job",
+        "pocketmd_cost_budget": "pocketmd_cost_budget",
+        "pocketmd_unit_cost": "pocketmd_unit_cost",
+        "pocketmd_cost_unit": "pocketmd_cost_unit",
+        "pocketmd_cost_col": "pocketmd_cost_col",
+        "pocketmd_family_col": "pocketmd_family_col",
     }
-    for src, dst in s3b_mapping.items():
-        if src in s3b:
-            setattr(args, dst, s3b[src])
-            applied_keys.append(dst)
+    apply_mapping(s3b, s3b_mapping)
 
-    if bool(s3.get("refine_tier_cascade")) and str(getattr(args, "physics_refinement_refined_energy_col", "")).strip():
-        refined_col = str(getattr(args, "physics_refinement_refined_energy_col", "")).strip()
-        if refined_col and str(getattr(args, "calibration_proxy_col", "")).strip() in {
-            "",
-            "binding_energy_mmpbsa_kcal_mol_proxy",
-        }:
-            setattr(args, "calibration_proxy_col", refined_col)
-            applied_keys.append("calibration_proxy_col")
-
-    return {"applied": bool(applied_keys), "applied_keys": applied_keys}
+    return {
+        "applied": bool(applied_keys),
+        "applied_keys": applied_keys,
+        "protected_keys": sorted(protected_keys),
+    }
 
 
 def _strict_gate_from_operational(op_gate: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
@@ -1713,12 +1927,81 @@ def _strict_gate_from_operational(op_gate: Dict[str, Any], args: argparse.Namesp
 
 def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     setattr(args, "_selection_score_authority", {})
+    setattr(
+        args,
+        "_implementation_source_manifest",
+        build_implementation_source_manifest(),
+    )
     date_tag = str(args.date_tag).strip() or dt.date.today().isoformat()
     out_prefix = str(args.out_prefix).strip() or f"runs/ligand_htvs_pipeline_{date_tag}"
     _ensure_parent(f"{out_prefix}_summary.json")
     preset_meta = _apply_pipeline_preset_json(args)
-    engine_cfg = load_engine_refinement_config(str(getattr(args, "engine_refinement_config", "") or "") or None)
+    engine_config_request = str(
+        getattr(args, "engine_refinement_config", "") or ""
+    ).strip()
+    try:
+        engine_cfg = load_engine_refinement_config(engine_config_request or None)
+    except (FileNotFoundError, ValueError) as exc:
+        return _finalize_and_write(
+            out_prefix,
+            {
+                "pass": False,
+                "failed_stage": "engine_refinement_config",
+                "run_scope": str(args.run_scope),
+                "generated_at_local": dt.datetime.now().isoformat(timespec="seconds"),
+                "engine_refinement_config": {
+                    "schema_version": "ligand_engine_runtime_config_v1",
+                    "source_kind": "resolution_error",
+                    "requested_path": engine_config_request,
+                    "error": str(exc),
+                },
+                "pipeline_preset_meta": preset_meta,
+                "artifacts": {"summary_json": f"{out_prefix}_summary.json"},
+            },
+            args,
+        )
+    resolved_engine_config_path = (
+        Path(engine_config_request).resolve()
+        if engine_config_request
+        else ROOT / "config" / "ligand_engine_production.json"
+    )
+    engine_config_source_is_file = resolved_engine_config_path.is_file()
+    engine_config_provenance: Dict[str, Any] = {
+        "schema_version": "ligand_engine_runtime_config_v1",
+        "source_kind": (
+            "file" if engine_config_source_is_file else "builtin_defaults"
+        ),
+        "requested_path": (
+            engine_config_request or "config/ligand_engine_production.json"
+        ),
+        "resolved_path": str(resolved_engine_config_path),
+        "source_sha256": (
+            _sha256_file(resolved_engine_config_path)
+            if engine_config_source_is_file
+            else ""
+        ),
+        "resolved_config": engine_cfg,
+        "resolved_config_sha256": hashlib.sha256(
+            json.dumps(
+                engine_cfg,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest(),
+    }
+    setattr(
+        args,
+        "_engine_refinement_config_provenance",
+        engine_config_provenance,
+    )
     engine_defaults_meta = _apply_engine_refinement_defaults(args, engine_cfg)
+    engine_defaults_meta["config_path"] = (
+        engine_config_request or "config/ligand_engine_production.json"
+    )
+    engine_config_provenance["defaults_application"] = dict(
+        engine_defaults_meta
+    )
     s2_defaults = stage2_defaults(engine_cfg)
     s3_defaults = stage3_defaults(engine_cfg)
     resume_stage3_only = bool(getattr(args, "resume_stage3_only", False))
@@ -2666,7 +2949,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     stage3_summary_payload = _read_json_if_exists(stage3_summary_json)
     try:
         stage3_selection_score_authority = SelectionScoreAuthority.from_mapping(
-            authority_from_summary_payload(stage3_summary_payload)
+            authority_from_summary_payload(stage3_summary_payload),
+            require_current=True,
         ).to_dict()
         setattr(args, "_selection_score_authority", stage3_selection_score_authority)
     except ValueError as exc:
@@ -2735,20 +3019,46 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             "tools/run_ligand_physics_refinement.py",
             "--scores-csv",
             stage3_scores_csv,
+            "--selection-authority-summary-json",
+            stage3_summary_json,
             "--score-col",
             str(getattr(args, "physics_refinement_score_col", "")),
             "--base-proxy-col",
-            str(args.calibration_proxy_col),
+            str(
+                getattr(
+                    args,
+                    "physics_refinement_base_proxy_col",
+                    "binding_energy_mmpbsa_kcal_mol_proxy",
+                )
+            ),
             "--target-col",
             "target",
             "--ligand-col",
             "ligand_id",
+            "--family-col",
+            str(getattr(args, "pocketmd_family_col", "family")),
             "--topk-global",
             str(int(max(0, int(getattr(args, "physics_refinement_topk_global", 0))))),
             "--topk-per-target",
             str(int(max(0, int(getattr(args, "physics_refinement_topk_per_target", 0))))),
             "--selection-mode",
             str(getattr(args, "physics_refinement_selection_mode", "union")),
+            "--admission-eligible-families",
+            str(getattr(args, "pocketmd_eligible_families", "gpcr,kinase,ion_channel")),
+            "--admission-rank-threshold-pct",
+            str(float(getattr(args, "pocketmd_rank_threshold_pct", 0.05))),
+            "--admission-max-per-target",
+            str(int(getattr(args, "pocketmd_max_per_target", 8))),
+            "--admission-max-per-job",
+            str(int(getattr(args, "pocketmd_max_per_job", 32))),
+            "--admission-cost-budget",
+            str(float(getattr(args, "pocketmd_cost_budget", 32.0))),
+            "--admission-unit-cost",
+            str(float(getattr(args, "pocketmd_unit_cost", 1.0))),
+            "--admission-cost-unit",
+            str(getattr(args, "pocketmd_cost_unit", "normalized_refinement_unit")),
+            "--admission-cost-col",
+            str(getattr(args, "pocketmd_cost_col", "")),
             "--refinement-mode",
             str(getattr(args, "physics_refinement_mode", "explicit_water_surrogate")),
             "--backend",
@@ -2810,6 +3120,38 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         ),
         "score_col_requested": str(getattr(args, "physics_refinement_score_col", "")),
         "score_col_used": str(physics_refinement_summary.get("score_col_used", "") or ""),
+        "selection_score_authority": (
+            dict(physics_refinement_summary.get("selection_score_authority", {}))
+            if isinstance(physics_refinement_summary.get("selection_score_authority"), dict)
+            else {}
+        ),
+        "pocketmd_admission_policy": (
+            dict(physics_refinement_summary.get("pocketmd_admission_policy", {}))
+            if isinstance(physics_refinement_summary.get("pocketmd_admission_policy"), dict)
+            else {}
+        ),
+        "implementation_source_manifest": (
+            dict(physics_refinement_summary.get("implementation_source_manifest", {}))
+            if isinstance(
+                physics_refinement_summary.get("implementation_source_manifest"),
+                dict,
+            )
+            else {}
+        ),
+        "implementation_fingerprint_sha256": str(
+            physics_refinement_summary.get("implementation_fingerprint_sha256", "")
+            or ""
+        ),
+        "pocketmd_admission_reason_counts": (
+            dict(physics_refinement_summary.get("admission_reason_counts", {}))
+            if isinstance(physics_refinement_summary.get("admission_reason_counts"), dict)
+            else {}
+        ),
+        "pocketmd_admission_cost_used": physics_refinement_summary.get("admission_cost_used"),
+        "pocketmd_admission_cost_remaining": physics_refinement_summary.get("admission_cost_remaining"),
+        "pocketmd_upstream_topk_selected_count": int(
+            physics_refinement_summary.get("upstream_topk_selected_count", 0) or 0
+        ),
         "base_proxy_col_used": str(physics_refinement_summary.get("base_proxy_col_used", "") or str(args.calibration_proxy_col)),
         "refined_energy_col": str(
             physics_refinement_summary.get(
@@ -4136,11 +4478,12 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
 
 def build_parser() -> argparse.ArgumentParser:
     stamp = dt.date.today().isoformat()
-    p = argparse.ArgumentParser(
+    p = _ExplicitArgumentParser(
         description=(
             "Run ligand HTVS pipeline "
             "(mapping -> residual/meta -> trajectory/scoring -> optional physics refinement -> calibration -> ranking -> gate)."
-        )
+        ),
+        allow_abbrev=False,
     )
     p.add_argument("--date-tag", type=str, default="")
     p.add_argument("--run-scope", type=str, default="smoke", choices=["smoke", "full", "smoke_then_full"])
@@ -4385,11 +4728,36 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--stage3-score-reference-stats-json", type=str, default="")
     p.add_argument("--run-physics-refinement", action=argparse.BooleanOptionalAction, default=False)
     p.add_argument("--physics-refinement-mode", type=str, default="explicit_water_surrogate")
-    p.add_argument("--physics-refinement-backend", type=str, default="deterministic_surrogate_wrapper_v1")
+    p.add_argument(
+        "--physics-refinement-backend",
+        type=str,
+        default="deterministic_surrogate_wrapper_v1",
+        choices=[
+            "deterministic_surrogate_wrapper_v1",
+            "internal_gb_sa",
+            "internal_gb_sa_v1",
+            "internal_full_stack",
+            "internal_full_stack_v1",
+        ],
+    )
     p.add_argument("--physics-refinement-score-col", type=str, default="")
+    p.add_argument(
+        "--physics-refinement-base-proxy-col",
+        type=str,
+        default="binding_energy_mmpbsa_kcal_mol_proxy",
+    )
     p.add_argument("--physics-refinement-topk-global", type=int, default=32)
-    p.add_argument("--physics-refinement-topk-per-target", type=int, default=0)
+    p.add_argument("--physics-refinement-topk-per-target", type=int, default=8)
     p.add_argument("--physics-refinement-selection-mode", type=str, default="union", choices=["union", "intersection"])
+    p.add_argument("--pocketmd-eligible-families", type=str, default="gpcr,kinase,ion_channel")
+    p.add_argument("--pocketmd-rank-threshold-pct", type=float, default=0.05)
+    p.add_argument("--pocketmd-max-per-target", type=int, default=8)
+    p.add_argument("--pocketmd-max-per-job", type=int, default=32)
+    p.add_argument("--pocketmd-cost-budget", type=float, default=32.0)
+    p.add_argument("--pocketmd-unit-cost", type=float, default=1.0)
+    p.add_argument("--pocketmd-cost-unit", type=str, default="normalized_refinement_unit")
+    p.add_argument("--pocketmd-cost-col", type=str, default="")
+    p.add_argument("--pocketmd-family-col", type=str, default="family")
     p.add_argument("--physics-refinement-use-refined-scores-downstream", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--physics-refinement-use-refined-proxy-for-calibration", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument(

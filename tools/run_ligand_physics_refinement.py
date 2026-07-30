@@ -4,40 +4,103 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional
 
 import numpy as np
 import pandas as pd
 
 from core.mm_gbsa import mm_gbsa_refinement_delta
-
-
-_SCORE_PRIORITY: Sequence[str] = (
-    "binding_score_composite_v7_residual_active",
-    "binding_score_composite_v7",
-    "binding_score_composite_v6",
-    "binding_score_composite_v5",
-    "binding_score_composite_v4",
-    "binding_score_composite_v3",
-    "binding_score_composite_v2",
-    "binding_energy_explicit_water_recheck_kcal_mol_proxy",
-    "binding_energy_mmpbsa_kcal_mol_proxy",
-    "binding_energy_proxy",
+from betelgeuze_engine.product.selection_score_authority import (
+    load_authority_summary,
+    resolve_selection_score_authority,
 )
+from betelgeuze_engine.product.pocketmd_admission_authority import (
+    derive_pocketmd_admission_batch,
+    validate_pocketmd_admission_batch,
+)
+from betelgeuze_engine.product.implementation_provenance import (
+    build_implementation_source_manifest,
+)
+from betelgeuze_product.pocketmd_lite_contract import (
+    PocketMdAdmissionPolicy,
+)
+
+
+_FIXED_REFINEMENT_OUTPUT_COLUMNS = frozenset(
+    {
+        "__pocketmd_source_index",
+        "pocketmd_upstream_topk_selected",
+        "pocketmd_authority_rank_global",
+        "pocketmd_authority_rank_pct",
+        "pocketmd_admitted",
+        "pocketmd_admission_reason",
+        "pocketmd_admission_reason_codes",
+        "pocketmd_admission_estimated_cost",
+        "pocketmd_admission_cumulative_cost_before",
+        "pocketmd_admission_cumulative_cost_after",
+        "pocketmd_admission_cost_unit",
+        "pocketmd_admission_policy_sha256",
+        "selection_score_authority_schema_version",
+        "selection_score_policy_sha256",
+        "physics_refinement_selected",
+        "physics_refinement_shortlist_tier",
+        "physics_refinement_lane_mode",
+        "physics_refinement_backend",
+        "physics_refinement_input_score_col",
+        "physics_refinement_input_score",
+        "physics_refinement_delta_kcal_mol",
+        "physics_refinement_distance_penalty",
+        "physics_refinement_contact_penalty",
+        "physics_refinement_stability_penalty",
+        "physics_refinement_uncertainty_penalty",
+        "physics_refinement_support_bonus",
+        "physics_refinement_low_frame_penalty",
+        "physics_refinement_confidence",
+        "physics_refinement_decision_bucket",
+        "physics_refinement_shortlist_rank_global",
+        "physics_refinement_shortlist_rank_target",
+    }
+)
+_REFINEMENT_BACKEND_ALIASES = {
+    "deterministic_surrogate_wrapper_v1": "deterministic_surrogate_wrapper_v1",
+    "internal_gb_sa": "internal_gb_sa_v1",
+    "internal_gb_sa_v1": "internal_gb_sa_v1",
+    "internal_full_stack": "internal_full_stack_v1",
+    "internal_full_stack_v1": "internal_full_stack_v1",
+}
+
+
+def normalize_refinement_backend(value: Any) -> str:
+    requested = str(value or "").strip().lower()
+    normalized = _REFINEMENT_BACKEND_ALIASES.get(requested)
+    if normalized is None:
+        raise ValueError(
+            f"unsupported refinement backend: {requested or '<empty>'}"
+        )
+    return normalized
 
 
 def _ensure_parent(path: str) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
 
 
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _has_usable_numeric(df: pd.DataFrame, col: str) -> bool:
     name = str(col or "").strip()
     if (not name) or (name not in df.columns):
         return False
-    vals = pd.to_numeric(df[name], errors="coerce")
-    return bool(vals.notna().any())
+    vals = pd.to_numeric(df[name], errors="coerce").to_numpy(dtype=float)
+    return bool(np.isfinite(vals).any())
 
 
 def _safe_optional_float(value: Any) -> Optional[float]:
@@ -62,19 +125,43 @@ def _text(value: Any) -> str:
     return "" if text.lower() in {"", "nan", "none", "null"} else text
 
 
-def _resolve_score_col(df: pd.DataFrame, requested: str) -> str:
-    req = str(requested or "").strip()
-    if _has_usable_numeric(df, req):
-        return req
-    for cand in _SCORE_PRIORITY:
-        if _has_usable_numeric(df, cand):
-            return str(cand)
-    raise ValueError("no usable numeric score column found for refinement shortlist")
+def _identity_scalar(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, float):
+        return value if np.isfinite(value) else None
+    if isinstance(value, (str, int, bool)):
+        return value
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return str(value)
+
+
+def _row_identity_sha256(row: Mapping[str, Any]) -> str:
+    payload = {
+        "columns": [str(column) for column in row],
+        "values": [_identity_scalar(value) for value in row.values()],
+    }
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _numeric_series(df: pd.DataFrame, col: str, default: float = 0.0) -> pd.Series:
     if str(col or "").strip() and col in df.columns:
-        vals = pd.to_numeric(df[col], errors="coerce")
+        vals = pd.to_numeric(df[col], errors="coerce").replace(
+            [np.inf, -np.inf], np.nan
+        )
     else:
         vals = pd.Series(np.nan, index=df.index, dtype=float)
     if vals.notna().any():
@@ -86,62 +173,12 @@ def _numeric_series(df: pd.DataFrame, col: str, default: float = 0.0) -> pd.Seri
     return vals.fillna(fill).astype(float)
 
 
-def _ranked_index(
-    df: pd.DataFrame,
-    *,
-    score_col: str,
-    lower_better: bool,
-    topk: int,
-) -> List[int]:
-    k = int(max(0, int(topk)))
-    if k <= 0:
-        return []
-    tmp = df.copy()
-    tmp["_score_sort"] = pd.to_numeric(tmp[score_col], errors="coerce")
-    tmp = tmp.sort_values("_score_sort", ascending=bool(lower_better), na_position="last")
-    return [int(i) for i in tmp.head(k).index.tolist()]
-
-
-def _shortlist_index(
-    df: pd.DataFrame,
-    *,
-    score_col: str,
-    target_col: str,
-    lower_better: bool,
-    topk_global: int,
-    topk_per_target: int,
-    selection_mode: str,
-    warnings: List[str],
-) -> List[int]:
-    global_idx = _ranked_index(df, score_col=score_col, lower_better=lower_better, topk=topk_global)
-    target_idx: List[int] = []
-    per_target = int(max(0, int(topk_per_target)))
-    if per_target > 0:
-        if target_col not in df.columns:
-            warnings.append(
-                f"topk_per_target requested but target column is missing: {target_col}; falling back to global shortlist only."
-            )
-        else:
-            tmp = df.copy()
-            tmp["_score_sort"] = pd.to_numeric(tmp[score_col], errors="coerce")
-            tmp = tmp.sort_values([target_col, "_score_sort"], ascending=[True, bool(lower_better)], na_position="last")
-            target_idx = [
-                int(i)
-                for _, part in tmp.groupby(target_col, sort=False, dropna=False)
-                for i in part.head(per_target).index.tolist()
-            ]
-    global_set = set(global_idx)
-    target_set = set(target_idx)
-    if global_set and target_set:
-        if str(selection_mode).strip().lower() == "intersection":
-            selected = global_set & target_set
-        else:
-            selected = global_set | target_set
-    elif global_set:
-        selected = global_set
+def _parse_families(value: Any) -> tuple[str, ...]:
+    if isinstance(value, (list, tuple)):
+        raw = [str(item) for item in value]
     else:
-        selected = target_set
-    return sorted(int(i) for i in selected)
+        raw = str(value or "").split(",")
+    return tuple(sorted({item.strip().lower().replace("-", "_") for item in raw if item.strip()}))
 
 
 def _decision_bucket(delta: pd.Series, confidence: pd.Series) -> pd.Series:
@@ -161,37 +198,167 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
 
     generated_at = dt.datetime.now().isoformat(timespec="seconds")
     warnings: List[str] = []
-    lower_better = bool(getattr(args, "lower_better", True))
+    backend_requested = str(getattr(args, "backend", "") or "").strip()
+    backend = normalize_refinement_backend(backend_requested)
+    implementation_manifest = build_implementation_source_manifest()
+    implementation_fingerprint = str(
+        implementation_manifest["manifest_sha256"]
+    )
     selection_mode = str(getattr(args, "selection_mode", "union") or "union").strip().lower()
     if selection_mode not in {"union", "intersection"}:
         raise ValueError("--selection-mode must be union|intersection")
 
-    score_col = _resolve_score_col(df, str(args.score_col))
+    authority_summary_json = str(
+        getattr(args, "selection_authority_summary_json", "") or ""
+    ).strip()
+    if not authority_summary_json:
+        raise ValueError("--selection-authority-summary-json is required")
+    declared_authority = load_authority_summary(authority_summary_json)
+    selection_score_authority = resolve_selection_score_authority(
+        df,
+        declared_authority=declared_authority,
+        requested_score_column=str(getattr(args, "score_col", "") or ""),
+    )
+    score_col = selection_score_authority.score_column
+    lower_better = selection_score_authority.score_direction == "ascending"
     target_col = str(getattr(args, "target_col", "target") or "target")
     ligand_col = str(getattr(args, "ligand_col", "ligand_id") or "ligand_id")
-    base_proxy_col = str(getattr(args, "base_proxy_col", "binding_energy_mmpbsa_kcal_mol_proxy") or "")
-    if not _has_usable_numeric(df, base_proxy_col):
-        base_proxy_col = "binding_energy_mmpbsa_kcal_mol_proxy" if _has_usable_numeric(df, "binding_energy_mmpbsa_kcal_mol_proxy") else score_col
-    refined_energy_col = str(getattr(args, "refined_energy_col", "binding_energy_explicit_water_recheck_kcal_mol_proxy") or "binding_energy_explicit_water_recheck_kcal_mol_proxy")
-    refined_rank_col = str(getattr(args, "refined_rank_col", "binding_score_stronger_physics_v1") or "binding_score_stronger_physics_v1")
-    selected_idx = _shortlist_index(
-        df,
-        score_col=score_col,
-        target_col=target_col,
-        lower_better=lower_better,
+    family_col = str(getattr(args, "family_col", "family") or "family")
+    cost_col = str(getattr(args, "admission_cost_col", "") or "").strip()
+    if target_col not in df.columns:
+        raise ValueError(f"PocketMD admission requires target column: {target_col}")
+    if cost_col and cost_col not in df.columns:
+        raise ValueError(f"PocketMD admission cost column missing: {cost_col}")
+    if family_col not in df.columns:
+        warnings.append(
+            f"PocketMD family column missing: {family_col}; all admissions fail closed."
+        )
+    base_proxy_col = str(
+        getattr(
+            args,
+            "base_proxy_col",
+            "binding_energy_mmpbsa_kcal_mol_proxy",
+        )
+        or ""
+    )
+
+    admission_policy = PocketMdAdmissionPolicy.create(
+        eligible_families=_parse_families(
+            getattr(args, "admission_eligible_families", "gpcr,kinase,ion_channel")
+        ),
+        rank_threshold_pct=float(getattr(args, "admission_rank_threshold_pct", 0.05)),
+        max_per_target=int(getattr(args, "admission_max_per_target", 8)),
+        max_per_job=int(getattr(args, "admission_max_per_job", 32)),
+        cost_budget=float(getattr(args, "admission_cost_budget", 32.0)),
+        unit_cost=float(getattr(args, "admission_unit_cost", 1.0)),
+        cost_unit=str(
+            getattr(args, "admission_cost_unit", "normalized_refinement_unit")
+            or "normalized_refinement_unit"
+        ),
+        selection_policy_sha256=selection_score_authority.policy_sha256,
+        selection_authority_schema_version=selection_score_authority.schema_version,
         topk_global=int(getattr(args, "topk_global", 0)),
         topk_per_target=int(getattr(args, "topk_per_target", 0)),
         selection_mode=selection_mode,
-        warnings=warnings,
+        target_column=target_col,
+        family_column=family_col,
+        cost_column=cost_col,
+        base_proxy_column=base_proxy_col,
     )
+
+    if not _has_usable_numeric(df, base_proxy_col):
+        raise ValueError(f"base proxy column is missing or non-numeric: {base_proxy_col}")
+    base_proxy_numeric = pd.to_numeric(df[base_proxy_col], errors="coerce").replace(
+        [np.inf, -np.inf], np.nan
+    )
+    refined_energy_col = str(getattr(args, "refined_energy_col", "binding_energy_explicit_water_recheck_kcal_mol_proxy") or "binding_energy_explicit_water_recheck_kcal_mol_proxy")
+    refined_rank_col = str(getattr(args, "refined_rank_col", "binding_score_stronger_physics_v1") or "binding_score_stronger_physics_v1")
+    existing_reserved = sorted(_FIXED_REFINEMENT_OUTPUT_COLUMNS & set(df.columns))
+    if existing_reserved:
+        raise ValueError(
+            f"input contains reserved refinement output columns: {existing_reserved}"
+        )
+    if refined_energy_col == refined_rank_col:
+        raise ValueError("refined energy and rank columns must be distinct")
+    for output_column in (refined_energy_col, refined_rank_col):
+        if not output_column or output_column.startswith("__"):
+            raise ValueError(f"invalid refinement output column: {output_column!r}")
+        if output_column in _FIXED_REFINEMENT_OUTPUT_COLUMNS:
+            raise ValueError(
+                f"refinement output column conflicts with reserved output: {output_column}"
+            )
+        if output_column in df.columns:
+            raise ValueError(
+                f"refinement output column would overwrite input evidence: {output_column}"
+            )
+
+    admission_entry_id_col = "__pocketmd_admission_entry_id"
+    if admission_entry_id_col in df.columns:
+        raise ValueError(
+            f"reserved PocketMD admission entry column already exists: {admission_entry_id_col}"
+        )
+    admission_population = df.assign(
+        **{
+            admission_entry_id_col: [
+                f"{index}:{_text(row.get(target_col))}:{_row_identity_sha256(row)}"
+                for index, row in enumerate(df.to_dict(orient="records"))
+            ]
+        }
+    )
+    admission_batch = derive_pocketmd_admission_batch(
+        admission_population,
+        authority=selection_score_authority,
+        policy=admission_policy,
+        entry_id_column=admission_entry_id_col,
+    )
+    validated_admission = validate_pocketmd_admission_batch(
+        admission_batch,
+        admission_population,
+    )
+    admission_decisions: Dict[int, Dict[str, Any]] = {
+        int(record["source_index"]): dict(record["decision"])
+        for record in validated_admission["records"]
+    }
+    selected_idx = sorted(
+        source_index
+        for source_index, decision in admission_decisions.items()
+        if decision["admitted"]
+    )
+    admitted_count = len(selected_idx)
+    cumulative_admitted_cost = max(
+        (
+            float(decision.get("cumulative_cost_after") or 0.0)
+            for decision in admission_decisions.values()
+        ),
+        default=0.0,
+    )
+    upstream_selected_indices = {
+        source_index
+        for source_index, decision in admission_decisions.items()
+        if decision.get("upstream_topk_selected") is True
+    }
+    target_admitted_counts: Dict[str, int] = {}
+    for decision in admission_decisions.values():
+        if decision["admitted"]:
+            target_id = str(decision.get("target") or "")
+            target_admitted_counts[target_id] = (
+                target_admitted_counts.get(target_id, 0) + 1
+            )
+
     selected_mask = pd.Series(False, index=df.index, dtype=bool)
     if selected_idx:
         selected_mask.loc[selected_idx] = True
     else:
-        warnings.append("shortlist is empty; refinement columns were emitted as carry-through aliases of the proxy score.")
+        warnings.append(
+            "PocketMD admission selected no rows; refinement columns are carry-through aliases."
+        )
 
     out = df.copy()
+    proxy_energy_export = base_proxy_numeric.astype(float)
     proxy_energy = _numeric_series(out, base_proxy_col, default=0.0)
+    input_score_export = pd.to_numeric(out[score_col], errors="coerce").replace(
+        [np.inf, -np.inf], np.nan
+    )
     input_score = _numeric_series(out, score_col, default=float(proxy_energy.median()))
     mean_min_distance = _numeric_series(out, "mean_min_distance_A", default=4.0)
     contact_fraction = _numeric_series(out, "contact_fraction", default=0.10).clip(lower=0.0, upper=1.0)
@@ -235,12 +402,15 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
             + 0.08 * contact_penalty
         )
     ).clip(lower=0.05, upper=0.99)
-    backend = str(args.backend).strip().lower()
-    if backend in {"internal_gb_sa_v1", "internal_gb_sa", "internal_full_stack", "internal_full_stack_v1"}:
-        full_stack = backend in {"internal_full_stack", "internal_full_stack_v1"}
+    if backend in {"internal_gb_sa_v1", "internal_full_stack_v1"}:
+        full_stack = backend == "internal_full_stack_v1"
         gb_rows: list[float] = []
         gb_conf: list[float] = []
         for idx in out.index:
+            if not bool(selected_mask.loc[idx]):
+                gb_rows.append(0.0)
+                gb_conf.append(0.0)
+                continue
             row_proxy = float(proxy_energy.loc[idx])
             adj = mm_gbsa_refinement_delta(
                 base_proxy_kcal=row_proxy,
@@ -256,18 +426,14 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
                 escalation = 1.0 + 0.25 * max(0.0, float(mean_min_distance.loc[idx]) - 2.6)
                 delta_val *= escalation
                 conf_val = float(min(0.99, conf_val * 1.05))
-            if bool(selected_mask.loc[idx]):
-                gb_rows.append(delta_val)
-                gb_conf.append(conf_val)
-            else:
-                gb_rows.append(0.0)
-                gb_conf.append(0.0)
+            gb_rows.append(delta_val)
+            gb_conf.append(conf_val)
         recheck_delta = pd.Series(gb_rows, index=out.index, dtype=float)
         confidence = pd.Series(gb_conf, index=out.index, dtype=float)
-    refined_energy = proxy_energy.copy()
+    refined_energy = proxy_energy_export.copy()
     refined_energy.loc[selected_mask] = (proxy_energy + recheck_delta).loc[selected_mask]
 
-    refined_rank = proxy_energy.copy()
+    refined_rank = proxy_energy_export.copy()
     refined_rank.loc[selected_mask] = (
         refined_energy
         + 0.20 * uncertainty_penalty
@@ -296,12 +462,39 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
             confidence.loc[selected_mask],
         )
 
+    decision_rows = [admission_decisions[int(index)] for index in out.index]
+    out["pocketmd_upstream_topk_selected"] = [
+        int(bool(row["upstream_topk_selected"])) for row in decision_rows
+    ]
+    out["pocketmd_authority_rank_global"] = [
+        row.get("authority_rank_global") for row in decision_rows
+    ]
+    out["pocketmd_authority_rank_pct"] = [row.get("rank_pct") for row in decision_rows]
+    out["pocketmd_admitted"] = [int(bool(row["admitted"])) for row in decision_rows]
+    out["pocketmd_admission_reason"] = [str(row["primary_reason"]) for row in decision_rows]
+    out["pocketmd_admission_reason_codes"] = [
+        json.dumps(row["reason_codes"], separators=(",", ":"), ensure_ascii=False)
+        for row in decision_rows
+    ]
+    out["pocketmd_admission_estimated_cost"] = [row.get("estimated_cost") for row in decision_rows]
+    out["pocketmd_admission_cumulative_cost_before"] = [
+        row.get("cumulative_cost_before") for row in decision_rows
+    ]
+    out["pocketmd_admission_cumulative_cost_after"] = [
+        row.get("cumulative_cost_after") for row in decision_rows
+    ]
+    out["pocketmd_admission_cost_unit"] = admission_policy.cost_unit
+    out["pocketmd_admission_policy_sha256"] = admission_policy.policy_sha256
+    out["selection_score_authority_schema_version"] = (
+        selection_score_authority.schema_version
+    )
+    out["selection_score_policy_sha256"] = selection_score_authority.policy_sha256
     out["physics_refinement_selected"] = selected_mask.astype(int)
     out["physics_refinement_shortlist_tier"] = np.where(selected_mask, "selected", "carrythrough")
     out["physics_refinement_lane_mode"] = str(args.refinement_mode)
-    out["physics_refinement_backend"] = str(args.backend)
+    out["physics_refinement_backend"] = backend
     out["physics_refinement_input_score_col"] = score_col
-    out["physics_refinement_input_score"] = input_score
+    out["physics_refinement_input_score"] = input_score_export
     out[refined_energy_col] = refined_energy
     out[refined_rank_col] = refined_rank
     out["physics_refinement_delta_kcal_mol"] = np.where(selected_mask, recheck_delta, 0.0)
@@ -353,6 +546,10 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
             "physics_refinement_delta_kcal_mol",
             "physics_refinement_confidence",
             "physics_refinement_decision_bucket",
+            "pocketmd_authority_rank_global",
+            "pocketmd_authority_rank_pct",
+            "pocketmd_admission_estimated_cost",
+            "pocketmd_admission_reason",
         ]
         if c in shortlist_df.columns
     ]
@@ -360,15 +557,33 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
         selected_preview = shortlist_df[preview_cols].head(20).to_dict(orient="records")
 
     selected_count = int(selected_mask.sum())
+    if selected_count != admitted_count:
+        raise RuntimeError("PocketMD admission count mismatch")
+    admission_reason_counts: Dict[str, int] = {}
+    for decision in admission_decisions.values():
+        if not decision["admitted"]:
+            for reason in decision["reason_codes"]:
+                admission_reason_counts[reason] = admission_reason_counts.get(reason, 0) + 1
     summary = {
         "generated_at_local": generated_at,
         "pass": True,
         "refinement_enabled": True,
-        "refinement_schema_version": "ligand_physics_refinement_v1",
+        "refinement_schema_version": "ligand_physics_refinement_v2",
         "refinement_mode": str(args.refinement_mode),
-        "refinement_backend": str(args.backend),
+        "refinement_backend": backend,
+        "refinement_backend_requested": backend_requested,
         "scores_csv_in": scores_csv,
+        "scores_csv_in_sha256": _sha256_file(scores_csv),
         "scores_csv_out": out_csv,
+        "scores_csv_out_sha256": _sha256_file(out_csv),
+        "selection_authority_summary_json": authority_summary_json,
+        "selection_authority_summary_sha256": _sha256_file(
+            authority_summary_json
+        ),
+        "selection_score_authority": selection_score_authority.to_dict(),
+        "pocketmd_admission_policy": admission_policy.to_dict(),
+        "implementation_source_manifest": implementation_manifest,
+        "implementation_fingerprint_sha256": implementation_fingerprint,
         "score_col_used": score_col,
         "base_proxy_col_used": base_proxy_col,
         "refined_energy_col": refined_energy_col,
@@ -382,6 +597,21 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
         "selected_fraction": float(selected_count / max(len(out), 1)),
         "selected_target_count": int(len(selected_target_counts)),
         "selected_target_counts": selected_target_counts,
+        "upstream_topk_selected_count": int(len(upstream_selected_indices)),
+        "authority_score_eligible_count": int(
+            validated_admission["authority_eligible_count"]
+        ),
+        "authority_score_ineligible_count": int(
+            len(df) - validated_admission["authority_eligible_count"]
+        ),
+        "admission_population_sha256": validated_admission[
+            "population_sha256"
+        ],
+        "admission_cost_used": float(cumulative_admitted_cost),
+        "admission_cost_remaining": float(
+            admission_policy.cost_budget - cumulative_admitted_cost
+        ),
+        "admission_reason_counts": admission_reason_counts,
         "selected_decision_bucket_counts": (
             {
                 _text(k): int(v)
@@ -403,6 +633,7 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
             "out_json": out_json,
             "out_md": out_md,
             "shortlist_csv": out_shortlist_csv,
+            "shortlist_csv_sha256": _sha256_file(out_shortlist_csv),
             "shortlist_json": out_shortlist_json,
         },
         "warnings": warnings,
@@ -413,6 +644,10 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
         "refinement_mode": summary["refinement_mode"],
         "refinement_backend": summary["refinement_backend"],
         "score_col_used": score_col,
+        "selection_score_authority": selection_score_authority.to_dict(),
+        "pocketmd_admission_policy": admission_policy.to_dict(),
+        "implementation_source_manifest": implementation_manifest,
+        "implementation_fingerprint_sha256": implementation_fingerprint,
         "refined_energy_col": refined_energy_col,
         "refined_rank_col": refined_rank_col,
         "selected_count": selected_count,
@@ -436,6 +671,9 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
         f"- refinement_mode: `{summary['refinement_mode']}`",
         f"- refinement_backend: `{summary['refinement_backend']}`",
         f"- score_col_used: `{summary['score_col_used']}`",
+        f"- selection_score_policy_sha256: `{selection_score_authority.policy_sha256}`",
+        f"- pocketmd_admission_policy_sha256: `{admission_policy.policy_sha256}`",
+        f"- implementation_fingerprint_sha256: `{implementation_fingerprint}`",
         f"- base_proxy_col_used: `{summary['base_proxy_col_used']}`",
         f"- refined_energy_col: `{summary['refined_energy_col']}`",
         f"- refined_rank_col: `{summary['refined_rank_col']}`",
@@ -445,6 +683,8 @@ def run_refinement(args: argparse.Namespace) -> Dict[str, Any]:
         f"- topk_global_requested: {summary['topk_global_requested']}",
         f"- topk_per_target_requested: {summary['topk_per_target_requested']}",
         f"- selection_mode: `{summary['selection_mode']}`",
+        f"- admission_cost_used: {summary['admission_cost_used']} {admission_policy.cost_unit}",
+        f"- admission_cost_remaining: {summary['admission_cost_remaining']} {admission_policy.cost_unit}",
         f"- shortlist_csv: `{out_shortlist_csv}`",
         f"- shortlist_json: `{out_shortlist_json}`",
     ]
@@ -480,16 +720,26 @@ def build_parser() -> argparse.ArgumentParser:
         )
     )
     p.add_argument("--scores-csv", type=str, required=True)
+    p.add_argument("--selection-authority-summary-json", type=str, required=True)
     p.add_argument("--score-col", type=str, default="")
     p.add_argument("--base-proxy-col", type=str, default="binding_energy_mmpbsa_kcal_mol_proxy")
     p.add_argument("--target-col", type=str, default="target")
     p.add_argument("--ligand-col", type=str, default="ligand_id")
+    p.add_argument("--family-col", type=str, default="family")
     p.add_argument("--topk-global", type=int, default=32)
-    p.add_argument("--topk-per-target", type=int, default=0)
+    p.add_argument("--topk-per-target", type=int, default=8)
     p.add_argument("--selection-mode", type=str, default="union", choices=["union", "intersection"])
-    p.add_argument("--lower-better", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--admission-eligible-families", type=str, default="gpcr,kinase,ion_channel")
+    p.add_argument("--admission-rank-threshold-pct", type=float, default=0.05)
+    p.add_argument("--admission-max-per-target", type=int, default=8)
+    p.add_argument("--admission-max-per-job", type=int, default=32)
+    p.add_argument("--admission-cost-budget", type=float, default=32.0)
+    p.add_argument("--admission-unit-cost", type=float, default=1.0)
+    p.add_argument("--admission-cost-unit", type=str, default="normalized_refinement_unit")
+    p.add_argument("--admission-cost-col", type=str, default="")
     p.add_argument("--refinement-mode", type=str, default="explicit_water_surrogate")
     p.add_argument("--backend", type=str, default="deterministic_surrogate_wrapper_v1",
+                   choices=sorted(_REFINEMENT_BACKEND_ALIASES),
                    help="Refinement backend: deterministic_surrogate_wrapper_v1 | internal_gb_sa_v1 | internal_full_stack_v1")
     p.add_argument(
         "--refined-energy-col",

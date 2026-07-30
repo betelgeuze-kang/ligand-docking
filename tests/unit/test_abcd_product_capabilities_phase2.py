@@ -504,16 +504,29 @@ def test_external_metric_adapter_falls_back_to_proxy():
 
 
 def test_physics_refinement_full_stack_backend(tmp_path: Path):
+    from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
     from tools.run_ligand_physics_refinement import build_parser, run_refinement
 
     scores = tmp_path / "stage3.csv"
     scores.write_text(
-        "target,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,binding_score_composite_v7,mean_min_distance_A,contact_fraction,stability_score\n"
+        "target,family,ligand_id,binding_energy_mmpbsa_kcal_mol_proxy,binding_score_composite_v7,mean_min_distance_A,contact_fraction,stability_score\n"
         + "\n".join(
-            f"ADRB2,lig{i},{-6.0 + 0.01 * i},{-7.0 + 0.01 * i},{3.0 + 0.02 * i},0.3,0.2"
+            f"ADRB2,gpcr,lig{i},{-6.0 + 0.01 * i},{-7.0 + 0.01 * i},{3.0 + 0.02 * i},0.3,0.2"
             for i in range(20)
         )
         + "\n",
+        encoding="utf-8",
+    )
+    authority_summary = tmp_path / "stage3_summary.json"
+    authority_summary.write_text(
+        json.dumps(
+            {
+                "selection_score_authority": SelectionScoreAuthority.create(
+                    score_column="binding_score_composite_v7",
+                    score_direction="ascending",
+                ).to_dict()
+            }
+        ),
         encoding="utf-8",
     )
     out_csv = tmp_path / "out.csv"
@@ -521,12 +534,16 @@ def test_physics_refinement_full_stack_backend(tmp_path: Path):
         [
             "--scores-csv",
             str(scores),
+            "--selection-authority-summary-json",
+            str(authority_summary),
             "--score-col",
             "binding_score_composite_v7",
             "--backend",
             "internal_full_stack_v1",
             "--topk-global",
             "8",
+            "--admission-rank-threshold-pct",
+            "1.0",
             "--out-csv",
             str(out_csv),
         ]

@@ -8,6 +8,8 @@ import pytest
 
 from betelgeuze_engine.product.runners.topk_delivery import _select_topk
 from betelgeuze_engine.product.selection_score_authority import (
+    LEGACY_SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION,
+    SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION,
     SelectionScoreAuthority,
     SelectionScoreAuthorityError,
     load_authority_summary,
@@ -15,6 +17,17 @@ from betelgeuze_engine.product.selection_score_authority import (
     resolve_selection_score_authority,
     topk_eligible_frame,
 )
+
+
+_LEGACY_V1_AUTHORITY = {
+    "score_column": "binding_score_composite_v7",
+    "score_version": "v7",
+    "score_direction": "ascending",
+    "residual_mode": "base",
+    "source_stage": "stage3_backmapping_scoring",
+    "fallback_used": False,
+    "policy_sha256": "e2858aea7dee99c09a2d7e31ea3db6d6e302c3b6c6ee14f418ebd2109d4a3a00",
+}
 
 
 def _opposite_v7_v3_frame() -> pd.DataFrame:
@@ -153,6 +166,98 @@ def test_direction_ties_and_primary_nan_follow_one_policy() -> None:
         descending,
     )
     assert quality_ranked["ligand_id"].tolist() == ["high", "low"]
+
+
+def test_primary_infinities_are_sorted_last_and_ineligible() -> None:
+    scores = pd.DataFrame(
+        [
+            {"ligand_id": "positive_inf", "binding_score_composite_v7": float("inf")},
+            {"ligand_id": "finite", "binding_score_composite_v7": -1.0},
+            {"ligand_id": "negative_inf", "binding_score_composite_v7": float("-inf")},
+        ]
+    )
+    authority = resolve_selection_score_authority(scores)
+    ranked = rank_selection_frame(scores, authority)
+    eligible = topk_eligible_frame(ranked, authority)
+
+    assert ranked.iloc[0]["ligand_id"] == "finite"
+    assert eligible["ligand_id"].tolist() == ["finite"]
+    with pytest.raises(SelectionScoreAuthorityError, match="no finite numeric values"):
+        resolve_selection_score_authority(
+            pd.DataFrame(
+                {
+                    "binding_score_composite_v7": [
+                        float("inf"),
+                        float("-inf"),
+                    ]
+                }
+            )
+        )
+
+    tie_breakers = pd.DataFrame(
+        [
+            {
+                "ligand_id": "positive_inf_proxy",
+                "binding_score_composite_v7": -1.0,
+                "binding_energy_mmpbsa_kcal_mol_proxy": float("inf"),
+            },
+            {
+                "ligand_id": "finite_proxy",
+                "binding_score_composite_v7": -1.0,
+                "binding_energy_mmpbsa_kcal_mol_proxy": -2.0,
+            },
+            {
+                "ligand_id": "negative_inf_proxy",
+                "binding_score_composite_v7": -1.0,
+                "binding_energy_mmpbsa_kcal_mol_proxy": float("-inf"),
+            },
+        ]
+    )
+    tie_authority = resolve_selection_score_authority(tie_breakers)
+    tie_ranked = rank_selection_frame(tie_breakers, tie_authority)
+    assert tie_ranked.iloc[0]["ligand_id"] == "finite_proxy"
+
+
+def test_legacy_v1_authority_is_verifiable_but_cannot_rank() -> None:
+    legacy = SelectionScoreAuthority.from_mapping(_LEGACY_V1_AUTHORITY)
+
+    assert legacy.schema_version == LEGACY_SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION
+    assert legacy.to_dict() == _LEGACY_V1_AUTHORITY
+    with pytest.raises(SelectionScoreAuthorityError, match="verification-only"):
+        SelectionScoreAuthority.from_mapping(
+            _LEGACY_V1_AUTHORITY,
+            require_current=True,
+        )
+    with pytest.raises(SelectionScoreAuthorityError, match="verification-only"):
+        resolve_selection_score_authority(
+            _opposite_v7_v3_frame(),
+            declared_authority=_LEGACY_V1_AUTHORITY,
+        )
+    with pytest.raises(SelectionScoreAuthorityError, match="verification-only"):
+        rank_selection_frame(_opposite_v7_v3_frame(), legacy)
+
+    tampered = {**_LEGACY_V1_AUTHORITY, "source_stage": "tampered"}
+    with pytest.raises(SelectionScoreAuthorityError, match="policy_sha256 mismatch"):
+        SelectionScoreAuthority.from_mapping(tampered)
+
+
+def test_new_authority_is_explicit_v2_and_schema_hash_bound() -> None:
+    authority = resolve_selection_score_authority(_opposite_v7_v3_frame())
+    payload = authority.to_dict()
+
+    assert payload["schema_version"] == SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION
+    assert payload["policy_sha256"] != _LEGACY_V1_AUTHORITY["policy_sha256"]
+    assert SelectionScoreAuthority.from_mapping(
+        payload,
+        require_current=True,
+    ).to_dict() == payload
+    without_schema = {key: value for key, value in payload.items() if key != "schema_version"}
+    with pytest.raises(SelectionScoreAuthorityError, match="policy_sha256 mismatch"):
+        SelectionScoreAuthority.from_mapping(without_schema)
+    with pytest.raises(SelectionScoreAuthorityError, match="policy_sha256 mismatch"):
+        SelectionScoreAuthority(
+            **{**vars(authority), "policy_sha256": "0" * 64}
+        )
 
 
 def test_policy_hash_is_deterministic_and_rejects_tampering(tmp_path) -> None:

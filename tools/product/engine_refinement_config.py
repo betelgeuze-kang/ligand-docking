@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -32,30 +33,64 @@ _BUILTIN_DEFAULTS: dict[str, Any] = {
         "run_physics_refinement": True,
         "physics_refinement_mode": "implicit_gb_sa_v1",
         "physics_refinement_backend": "internal_gb_sa_v1",
+        "physics_refinement_base_proxy_col": "binding_energy_mmpbsa_kcal_mol_proxy",
         "physics_refinement_refined_energy_col": "deltaG_mm_gbsa_kcal_mol",
+        "physics_refinement_topk_global": 32,
+        "physics_refinement_topk_per_target": 8,
+        "physics_refinement_selection_mode": "union",
         "physics_refinement_use_refined_scores_downstream": True,
         "physics_refinement_use_refined_proxy_for_calibration": True,
+        "pocketmd_eligible_families": "gpcr,kinase,ion_channel",
+        "pocketmd_rank_threshold_pct": 0.05,
+        "pocketmd_max_per_target": 8,
+        "pocketmd_max_per_job": 32,
+        "pocketmd_cost_budget": 32.0,
+        "pocketmd_unit_cost": 1.0,
+        "pocketmd_cost_unit": "normalized_refinement_unit",
+        "pocketmd_cost_col": "",
+        "pocketmd_family_col": "family",
     },
 }
 
 
+def builtin_engine_refinement_config() -> dict[str, Any]:
+    """Return an isolated copy of the deterministic built-in fallback."""
+
+    return copy.deepcopy(_BUILTIN_DEFAULTS)
+
+
 def load_engine_refinement_config(path: str | Path | None = None) -> dict[str, Any]:
-    config_path = Path(path) if path else DEFAULT_CONFIG_PATH
-    payload: dict[str, Any] = dict(_BUILTIN_DEFAULTS)
-    if config_path.exists():
-        try:
-            loaded = json.loads(config_path.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                for key in ("stage2", "stage3", "stage3b"):
-                    section = loaded.get(key, {})
-                    if isinstance(section, dict):
-                        payload.setdefault(key, {})
-                        payload[key].update(section)
-                for key in ("version", "description", "claim_boundary"):
-                    if key in loaded:
-                        payload[key] = loaded[key]
-        except (OSError, json.JSONDecodeError):
-            pass
+    explicit_path = bool(str(path or "").strip())
+    config_path = Path(path) if explicit_path else DEFAULT_CONFIG_PATH
+    payload = builtin_engine_refinement_config()
+    if not config_path.exists():
+        if explicit_path:
+            raise FileNotFoundError(
+                f"engine refinement config not found: {config_path}"
+            )
+        return payload
+    try:
+        loaded = json.loads(config_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(
+            f"engine refinement config unreadable: {config_path}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"engine refinement config is invalid JSON: {config_path}"
+        ) from exc
+    if not isinstance(loaded, dict):
+        raise ValueError("engine refinement config must be a JSON object")
+    for key in ("stage2", "stage3", "stage3b"):
+        if key not in loaded:
+            continue
+        section = loaded[key]
+        if not isinstance(section, dict):
+            raise ValueError(f"engine refinement config section must be an object: {key}")
+        payload[key].update(section)
+    for key in ("version", "description", "claim_boundary"):
+        if key in loaded:
+            payload[key] = loaded[key]
     return payload
 
 

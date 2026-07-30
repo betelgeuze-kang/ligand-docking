@@ -8,16 +8,18 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
+import numpy as np
 import pandas as pd
 
 
-SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION = "selection_score_authority_v1"
+LEGACY_SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION = "selection_score_authority_v1"
+SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION = "selection_score_authority_v2"
 DEFAULT_SELECTION_SCORE_COLUMN = "binding_score_composite_v7"
 DEFAULT_SELECTION_SOURCE_STAGE = "stage3_backmapping_scoring"
 SELECTION_SCORE_DIRECTIONS = frozenset({"ascending", "descending"})
 SELECTION_RESIDUAL_MODES = frozenset({"base", "apply"})
 
-_AUTHORITY_FIELDS = frozenset(
+_AUTHORITY_V1_FIELDS = frozenset(
     {
         "score_column",
         "score_version",
@@ -28,6 +30,7 @@ _AUTHORITY_FIELDS = frozenset(
         "policy_sha256",
     }
 )
+_AUTHORITY_V2_FIELDS = _AUTHORITY_V1_FIELDS | {"schema_version"}
 _COMPATIBILITY_SCORE_COLUMNS: tuple[str, ...] = (
     "binding_score_composite_v3",
     "binding_score_composite_v2",
@@ -47,11 +50,24 @@ _IDENTITY_TIE_BREAKERS: tuple[str, ...] = (
     "replicate_id",
     "seed",
 )
-_RANKING_POLICY = {
+_RANKING_POLICY_V1 = {
     "numeric_tie_breakers": [list(item) for item in _NUMERIC_TIE_BREAKERS],
     "identity_tie_breakers": list(_IDENTITY_TIE_BREAKERS),
     "nan_policy": "primary_score_nan_sorted_last_and_ineligible_for_topk",
     "final_tie_breaker": "stable_input_order",
+}
+_RANKING_POLICY_V2 = {
+    "numeric_tie_breakers": [list(item) for item in _NUMERIC_TIE_BREAKERS],
+    "identity_tie_breakers": list(_IDENTITY_TIE_BREAKERS),
+    "nonfinite_policy": {
+        "numeric_sort_values": "nan_posinf_neginf_treated_as_missing_and_sorted_last",
+        "primary_score_topk_eligible": False,
+    },
+    "final_tie_breaker": "stable_input_order",
+}
+_RANKING_POLICIES = {
+    LEGACY_SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION: _RANKING_POLICY_V1,
+    SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION: _RANKING_POLICY_V2,
 }
 
 
@@ -85,6 +101,7 @@ def infer_score_direction(score_column: str) -> str | None:
 
 def _policy_payload(
     *,
+    schema_version: str,
     score_column: str,
     score_version: str,
     score_direction: str,
@@ -93,7 +110,7 @@ def _policy_payload(
     fallback_used: bool,
 ) -> dict[str, Any]:
     return {
-        "schema_version": SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "authority": {
             "score_column": score_column,
             "score_version": score_version,
@@ -102,7 +119,7 @@ def _policy_payload(
             "source_stage": source_stage,
             "fallback_used": fallback_used,
         },
-        "ranking_policy": _RANKING_POLICY,
+        "ranking_policy": _RANKING_POLICIES[schema_version],
     }
 
 
@@ -112,6 +129,7 @@ def _policy_sha256(**kwargs: Any) -> str:
 
 @dataclass(frozen=True)
 class SelectionScoreAuthority:
+    schema_version: str
     score_column: str
     score_version: str
     score_direction: str
@@ -119,6 +137,13 @@ class SelectionScoreAuthority:
     source_stage: str
     fallback_used: bool
     policy_sha256: str
+
+    def __post_init__(self) -> None:
+        self._validate_semantics()
+        if self.policy_sha256 != _policy_sha256(**self._unsigned_mapping()):
+            raise SelectionScoreAuthorityError(
+                "selection score authority policy_sha256 mismatch"
+            )
 
     @classmethod
     def create(
@@ -135,6 +160,7 @@ class SelectionScoreAuthority:
         version = _score_version(column)
         residual_mode = _residual_mode(column)
         values = {
+            "schema_version": SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION,
             "score_column": column,
             "score_version": version,
             "score_direction": direction,
@@ -143,16 +169,30 @@ class SelectionScoreAuthority:
             "fallback_used": bool(fallback_used),
         }
         authority = cls(**values, policy_sha256=_policy_sha256(**values))
-        authority._validate_semantics()
         return authority
 
     @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "SelectionScoreAuthority":
+    def from_mapping(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        require_current: bool = False,
+    ) -> "SelectionScoreAuthority":
         if not isinstance(payload, Mapping):
             raise SelectionScoreAuthorityError("selection score authority must be a mapping")
         keys = frozenset(str(key) for key in payload)
-        missing = sorted(_AUTHORITY_FIELDS - keys)
-        extra = sorted(keys - _AUTHORITY_FIELDS)
+        if "schema_version" in keys:
+            schema_version = str(payload.get("schema_version") or "").strip()
+            if schema_version != SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION:
+                raise SelectionScoreAuthorityError(
+                    f"unsupported explicit selection score authority schema: {schema_version}"
+                )
+            expected_fields = _AUTHORITY_V2_FIELDS
+        else:
+            schema_version = LEGACY_SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION
+            expected_fields = _AUTHORITY_V1_FIELDS
+        missing = sorted(expected_fields - keys)
+        extra = sorted(keys - expected_fields)
         if missing or extra:
             raise SelectionScoreAuthorityError(
                 f"selection score authority fields mismatch: missing={missing}, extra={extra}"
@@ -160,6 +200,7 @@ class SelectionScoreAuthority:
         if type(payload.get("fallback_used")) is not bool:
             raise SelectionScoreAuthorityError("selection score authority fallback_used must be boolean")
         authority = cls(
+            schema_version=schema_version,
             score_column=str(payload.get("score_column") or "").strip(),
             score_version=str(payload.get("score_version") or "").strip(),
             score_direction=str(payload.get("score_direction") or "").strip().lower(),
@@ -168,14 +209,15 @@ class SelectionScoreAuthority:
             fallback_used=payload["fallback_used"],
             policy_sha256=str(payload.get("policy_sha256") or "").strip().lower(),
         )
-        authority._validate_semantics()
-        expected = _policy_sha256(**authority._unsigned_mapping())
-        if authority.policy_sha256 != expected:
-            raise SelectionScoreAuthorityError("selection score authority policy_sha256 mismatch")
+        if require_current and authority.schema_version != SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION:
+            raise SelectionScoreAuthorityError(
+                "selection score authority v1 is verification-only; regenerate a v2 authority"
+            )
         return authority
 
     def _unsigned_mapping(self) -> dict[str, Any]:
         return {
+            "schema_version": self.schema_version,
             "score_column": self.score_column,
             "score_version": self.score_version,
             "score_direction": self.score_direction,
@@ -185,6 +227,30 @@ class SelectionScoreAuthority:
         }
 
     def _validate_semantics(self) -> None:
+        if type(self.schema_version) is not str:
+            raise SelectionScoreAuthorityError(
+                "selection score authority schema_version must be a string"
+            )
+        if self.schema_version not in _RANKING_POLICIES:
+            raise SelectionScoreAuthorityError(
+                f"unsupported selection score authority schema: {self.schema_version}"
+            )
+        text_fields = {
+            "score_column": self.score_column,
+            "score_version": self.score_version,
+            "score_direction": self.score_direction,
+            "residual_mode": self.residual_mode,
+            "source_stage": self.source_stage,
+            "policy_sha256": self.policy_sha256,
+        }
+        if any(type(value) is not str for value in text_fields.values()):
+            raise SelectionScoreAuthorityError(
+                "selection score authority text fields must be strings"
+            )
+        if type(self.fallback_used) is not bool:
+            raise SelectionScoreAuthorityError(
+                "selection score authority fallback_used must be boolean"
+            )
         if not self.score_column:
             raise SelectionScoreAuthorityError("selection score authority score_column is required")
         if not self.source_stage:
@@ -210,26 +276,34 @@ class SelectionScoreAuthority:
             raise SelectionScoreAuthorityError("selection score authority policy_sha256 must be lowercase sha256")
 
     def to_dict(self) -> dict[str, Any]:
-        return {**self._unsigned_mapping(), "policy_sha256": self.policy_sha256}
+        unsigned = self._unsigned_mapping()
+        if self.schema_version == LEGACY_SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION:
+            unsigned.pop("schema_version")
+        return {**unsigned, "policy_sha256": self.policy_sha256}
 
 
 def _usable_numeric(df: pd.DataFrame, column: str) -> bool:
     if column not in df.columns:
         return False
-    return bool(pd.to_numeric(df[column], errors="coerce").notna().any())
+    values = pd.to_numeric(df[column], errors="coerce").to_numpy(dtype=float)
+    return bool(np.isfinite(values).any())
 
 
 def validate_authority_for_frame(
     df: pd.DataFrame,
     authority: SelectionScoreAuthority,
 ) -> None:
+    if authority.schema_version != SELECTION_SCORE_AUTHORITY_SCHEMA_VERSION:
+        raise SelectionScoreAuthorityError(
+            "selection score authority v1 is verification-only; regenerate a v2 authority"
+        )
     if authority.score_column not in df.columns:
         raise SelectionScoreAuthorityError(
             f"authorized score column missing: {authority.score_column}"
         )
     if not _usable_numeric(df, authority.score_column):
         raise SelectionScoreAuthorityError(
-            f"authorized score column has no numeric values: {authority.score_column}"
+            f"authorized score column has no finite numeric values: {authority.score_column}"
         )
 
 
@@ -246,7 +320,10 @@ def resolve_selection_score_authority(
     requested_column = str(requested_score_column or "").strip()
     requested_direction = str(requested_score_direction or "").strip().lower()
     if declared_authority is not None:
-        authority = SelectionScoreAuthority.from_mapping(declared_authority)
+        authority = SelectionScoreAuthority.from_mapping(
+            declared_authority,
+            require_current=True,
+        )
         if requested_column and requested_column != authority.score_column:
             raise SelectionScoreAuthorityError(
                 "requested score column does not match declared selection score authority"
@@ -286,9 +363,13 @@ def resolve_selection_score_authority(
     fallback_used = False
     if not _usable_numeric(df, column):
         if requested_column:
-            raise SelectionScoreAuthorityError(f"requested score column is missing or non-numeric: {column}")
+            raise SelectionScoreAuthorityError(
+                f"requested score column is missing or has no finite numeric values: {column}"
+            )
         if not allow_compatibility_fallback:
-            raise SelectionScoreAuthorityError(f"canonical score column is missing or non-numeric: {column}")
+            raise SelectionScoreAuthorityError(
+                f"canonical score column is missing or has no finite numeric values: {column}"
+            )
         for candidate in _COMPATIBILITY_SCORE_COLUMNS:
             if _usable_numeric(df, candidate):
                 column = candidate
@@ -344,7 +425,9 @@ def rank_selection_frame(
         1 for column in _IDENTITY_TIE_BREAKERS if column in df.columns
     )]
     for column in numeric_columns:
-        out[column] = pd.to_numeric(out[column], errors="coerce")
+        out[column] = pd.to_numeric(out[column], errors="coerce").replace(
+            [np.inf, -np.inf], np.nan
+        )
 
     sort_columns = list(numeric_columns)
     ascending = list(metadata["ascending"][: len(numeric_columns)])
@@ -375,7 +458,12 @@ def topk_eligible_frame(
     authority: SelectionScoreAuthority,
 ) -> pd.DataFrame:
     validate_authority_for_frame(ranked_df, authority)
-    eligible = pd.to_numeric(ranked_df[authority.score_column], errors="coerce").notna()
+    numeric = pd.to_numeric(ranked_df[authority.score_column], errors="coerce")
+    eligible = pd.Series(
+        np.isfinite(numeric.to_numpy(dtype=float)),
+        index=ranked_df.index,
+        dtype=bool,
+    )
     return ranked_df.loc[eligible].reset_index(drop=True).copy()
 
 

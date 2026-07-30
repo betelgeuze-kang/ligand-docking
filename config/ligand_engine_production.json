@@ -22,9 +22,22 @@
     "run_physics_refinement": true,
     "physics_refinement_mode": "implicit_gb_sa_v1",
     "physics_refinement_backend": "internal_gb_sa_v1",
+    "physics_refinement_base_proxy_col": "binding_energy_mmpbsa_kcal_mol_proxy",
     "physics_refinement_refined_energy_col": "deltaG_mm_gbsa_kcal_mol",
+    "physics_refinement_topk_global": 32,
+    "physics_refinement_topk_per_target": 8,
+    "physics_refinement_selection_mode": "union",
     "physics_refinement_use_refined_scores_downstream": true,
-    "physics_refinement_use_refined_proxy_for_calibration": true
+    "physics_refinement_use_refined_proxy_for_calibration": true,
+    "pocketmd_eligible_families": "gpcr,kinase,ion_channel",
+    "pocketmd_rank_threshold_pct": 0.05,
+    "pocketmd_max_per_target": 8,
+    "pocketmd_max_per_job": 32,
+    "pocketmd_cost_budget": 32.0,
+    "pocketmd_unit_cost": 1.0,
+    "pocketmd_cost_unit": "normalized_refinement_unit",
+    "pocketmd_cost_col": "",
+    "pocketmd_family_col": "family"
   },
   "claim_boundary": "restricted_local_delivery_proxy_refinement_only"
 }

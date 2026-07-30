@@ -19,6 +19,9 @@ from betelgeuze_engine.product.selection_score_authority import (
     resolve_selection_score_authority,
     topk_eligible_frame,
 )
+from betelgeuze_engine.product.implementation_provenance import (
+    build_implementation_source_manifest,
+)
 
 TOPK_SELECTION_MODES = {"union", "global_only", "per_target_only"}
 TOPK_DELIVERY_CLAIM_METADATA_SCHEMA_VERSION = "topk_delivery_claim_metadata_v1"
@@ -341,18 +344,33 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
     if evidence_bundle_path:
         from betelgeuze_ai_md.contracts.runner_evidence_bundle import maybe_write_runner_native_evidence_bundle
 
+        implementation_manifest = build_implementation_source_manifest()
+        implementation_fingerprint = str(
+            implementation_manifest["manifest_sha256"]
+        )
+        effective_runner_config = {
+            str(key): json.loads(
+                json.dumps(value, sort_keys=True, ensure_ascii=False)
+            )
+            for key, value in sorted(vars(args).items())
+            if not str(key).startswith("_")
+        }
         maybe_write_runner_native_evidence_bundle(
             evidence_bundle_path,
             request_json_path=str(getattr(args, "docking_request_json", "") or ""),
             result_file=out_json,
             status="completed" if bool(payload.get("ok")) else "failed",
             runner_script="tools/run_ligand_topk_delivery.py",
+            runner_script_sha256=implementation_fingerprint,
             result_payload=payload,
             runner_metadata={
                 "runner_kind": "ligand_topk_delivery",
                 "claim_metadata_schema_version": claim_metadata["claim_metadata_schema_version"],
                 "claim_safe": bool(claim_metadata["claim_safe"]),
                 "selection_score_authority": selection_score_authority.to_dict(),
+                "implementation_source_manifest": implementation_manifest,
+                "implementation_fingerprint_sha256": implementation_fingerprint,
+                "effective_runner_config": effective_runner_config,
             },
         )
 
