@@ -129,6 +129,7 @@ from .guided_placement import (  # noqa: E402
     MULTI_ANCHOR_MODE,
     POCKET_CENTER_BASELINE_MODE,
     UNIFORM_FALLBACK_MODE,
+    UNIFORM_V3_ENSEMBLE_MODE,
     GuidedPlacementContext,
     GuidedPlacementPolicy,
     GuidedPlacementReceipt,
@@ -136,6 +137,7 @@ from .guided_placement import (  # noqa: E402
     build_guided_placement_context,
     generate_guided_docking_proposals,
     run_authenticated_guided_placement_search,
+    uniform_v3_ensemble_proposal_indices,
 )
 
 from .contact_validity import (  # noqa: E402
@@ -239,6 +241,9 @@ from .interaction_refinement import (  # noqa: E402
     CLASH_RELIEF_REFINER_VERSION,
     INTERACTION_AWARE_RIGID_CONFIG_V2_SCHEMA_ID,
     INTERACTION_AWARE_RIGID_CONFIG_V3_SCHEMA_ID,
+    INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID,
+    INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID,
+    INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION,
     INTERACTION_AWARE_RIGID_REFINER_V2_ID,
     INTERACTION_AWARE_RIGID_REFINER_V2_VERSION,
     INTERACTION_AWARE_RIGID_REFINER_V3_ID,
@@ -249,6 +254,7 @@ from .interaction_refinement import (  # noqa: E402
     InteractionAwareRigidConfigV3,
     InteractionAwareRigidRefinerV2,
     InteractionAwareRigidRefinerV3,
+    InteractionAwareRigidEnsembleRefinerV4,
     ReceptorClashReliefRefiner,
 )
 
@@ -348,6 +354,9 @@ __all__ = [
     "CLASH_RELIEF_REFINER_VERSION",
     "INTERACTION_AWARE_RIGID_CONFIG_V2_SCHEMA_ID",
     "INTERACTION_AWARE_RIGID_CONFIG_V3_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION",
     "INTERACTION_AWARE_RIGID_REFINER_V2_ID",
     "INTERACTION_AWARE_RIGID_REFINER_V2_VERSION",
     "INTERACTION_AWARE_RIGID_REFINER_V3_ID",
@@ -358,6 +367,7 @@ __all__ = [
     "InteractionAwareRigidConfigV3",
     "InteractionAwareRigidRefinerV2",
     "InteractionAwareRigidRefinerV3",
+    "InteractionAwareRigidEnsembleRefinerV4",
     "ConformerPreparationConfig",
     "ConformerPreparationError",
     "DockingAuthorityError",
@@ -426,6 +436,7 @@ __all__ = [
     "TorsionSearchSpace",
     "TorsionSearchSpaceDerivationReceipt",
     "UNIFORM_FALLBACK_MODE",
+    "UNIFORM_V3_ENSEMBLE_MODE",
     "UNCALIBRATED_INTERNAL_DOCKING_SCORE",
     "VdwContactPolicy",
     "authenticated_docking_derivation_policy_document",
@@ -448,6 +459,7 @@ __all__ = [
     "run_authenticated_bounded_docking_search",
     "run_authenticated_energy_refined_scorer_v1_guided_search",
     "run_authenticated_guided_placement_search",
+    "uniform_v3_ensemble_proposal_indices",
     "run_authenticated_interpretable_pocket_search",
     "run_authenticated_pocket_placement_search",
     "run_authenticated_scorer_v1_guided_search",

@@ -18,9 +18,11 @@ from betelgeuze_engine_v2 import (  # noqa: E402
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingBudget,
     DockingScope,
+    ClashReliefRefinementError,
     ElementAwarePoseValidityContext,
     ElementAwareValidityError,
     InteractionAwareRigidConfigV3,
+    InteractionAwareRigidEnsembleRefinerV4,
     InteractionAwareRigidRefinerV2,
     InteractionAwareRigidRefinerV3,
     UnsupportedVdwElementError,
@@ -392,6 +394,106 @@ def test_interaction_aware_v3_records_rotation_and_enforces_pocket_guard() -> No
     ) <= config.maximum_centroid_offset_angstrom
     assert refined.refiner_id == refiner.refiner_id
     assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
+
+
+def test_interaction_aware_v4_routes_only_receipt_bound_variants_to_v3() -> None:
+    receptor = replace(
+        _receptor(),
+        coordinates=torch.tensor(
+            [[[4.1, 0.5, 0.2], [8.0, 8.0, 8.0]]],
+            dtype=torch.float64,
+        ),
+    )
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposals = generate_bounded_docking_proposals(
+        authority.search_space,
+        DockingBudget(
+            candidate_count=2,
+            top_k=1,
+            max_torsions=1,
+            translation_radius_angstrom=0.0,
+            seed=97,
+        ),
+        problem=authority.problem,
+    )
+    implementation_sha256 = "7" * 64
+    expected_v2_refiner = InteractionAwareRigidRefinerV2(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256=implementation_sha256,
+    )
+    expected_v3_refiner = InteractionAwareRigidRefinerV3(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256=implementation_sha256,
+    )
+    expected_v2 = expected_v2_refiner.refine(proposals[0], max_steps=10)
+    expected_v3 = expected_v3_refiner.refine(proposals[1], max_steps=10)
+    ensemble = InteractionAwareRigidEnsembleRefinerV4(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256=implementation_sha256,
+        v3_proposal_indices=(1,),
+    )
+
+    observed_v2 = ensemble.refine(proposals[0], max_steps=10)
+    observed_v3 = ensemble.refine(proposals[1], max_steps=10)
+    v2_receipt = ensemble.receipts[proposals[0].fingerprint_sha256]
+    v3_receipt = ensemble.receipts[proposals[1].fingerprint_sha256]
+
+    assert torch.equal(observed_v2.coordinates, expected_v2.coordinates)
+    assert torch.equal(observed_v3.coordinates, expected_v3.coordinates)
+    assert observed_v2.refiner_id == ensemble.refiner_id
+    assert observed_v3.refiner_id == ensemble.refiner_id
+    assert v2_receipt["lane"] == "translation_v2"
+    assert v3_receipt["lane"] == "translation_rotation_v3"
+    assert v2_receipt["nested_refiner_id"] == expected_v2_refiner.refiner_id
+    assert v3_receipt["nested_refiner_id"] == expected_v3_refiner.refiner_id
+    assert v2_receipt["nested_receipt_sha256"] == expected_v2_refiner.receipts[
+        proposals[0].fingerprint_sha256
+    ]["receipt_sha256"]
+    assert v3_receipt["nested_receipt_sha256"] == expected_v3_refiner.receipts[
+        proposals[1].fingerprint_sha256
+    ]["receipt_sha256"]
+    assert v2_receipt["accepted_rotation_steps"] == 0
+    assert v3_receipt["accepted_rotation_steps"] == expected_v3_refiner.receipts[
+        proposals[1].fingerprint_sha256
+    ]["accepted_rotation_steps"]
+    assert v2_receipt["source_lane_retained"] is True
+    assert v3_receipt["source_lane_retained"] is True
+
+
+@pytest.mark.parametrize(
+    "indices",
+    ((1, 1), (1, 0), (True,), (128,)),
+)
+def test_interaction_aware_v4_rejects_ambiguous_lane_indices(
+    indices: tuple[int, ...],
+) -> None:
+    receptor = _receptor()
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+
+    with pytest.raises(ClashReliefRefinementError, match="proposal indices"):
+        InteractionAwareRigidEnsembleRefinerV4(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="8" * 64,
+            v3_proposal_indices=indices,
+        )
 
 
 def test_element_aware_ligand_pair_capacity_is_enforced() -> None:

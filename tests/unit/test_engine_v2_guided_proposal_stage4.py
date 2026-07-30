@@ -22,6 +22,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     MULTI_ANCHOR_MODE,
     POCKET_CENTER_BASELINE_MODE,
     UNIFORM_FALLBACK_MODE,
+    UNIFORM_V3_ENSEMBLE_MODE,
     DockingAuthorityError,
     DockingBudget,
     DockingScoreDescriptor,
@@ -36,6 +37,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     generate_guided_docking_proposals,
     generate_pocket_centered_docking_proposals,
     run_authenticated_guided_placement_search,
+    uniform_v3_ensemble_proposal_indices,
 )
 from betelgeuze_engine_v2.docking.guided_placement import (  # noqa: E402
     _adjacency,
@@ -474,6 +476,108 @@ def test_centered_quota_consumes_guided_capacity_before_uniform_fallback() -> No
     assert tuple(row.fingerprint_sha256 for row in proposals[8:]) == tuple(
         row.fingerprint_sha256 for row in single_center_proposals[8:]
     )
+
+
+def test_uniform_v3_ensemble_preserves_v2_sources_and_binds_lineage() -> None:
+    authority, receptor, ligand = _authority()
+    context = build_guided_placement_context(authority, receptor, ligand)
+    budget = replace(_budget(), candidate_count=64, top_k=5)
+    policy = GuidedPlacementPolicy(
+        maximum_guided_candidates_per_mode=4,
+        uniform_v3_ensemble_enabled=True,
+    )
+
+    proposals, receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        policy=policy,
+    )
+    baseline, _ = generate_pocket_centered_docking_proposals(
+        authority,
+        budget,
+        policy=PocketPlacementPolicy(
+            centered_candidate_count=policy.centered_candidate_count
+        ),
+    )
+    target_indices = uniform_v3_ensemble_proposal_indices(
+        context,
+        budget,
+        policy,
+    )
+    source_indices = tuple(
+        receipt.ensemble_source_proposal_indices[index]
+        for index in target_indices
+    )
+
+    assert target_indices == tuple(range(8, 20))
+    assert tuple(
+        index
+        for index, mode in enumerate(receipt.proposal_modes)
+        if mode == UNIFORM_V3_ENSEMBLE_MODE
+    ) == target_indices
+    assert all(source is not None for source in source_indices)
+    assert len(set(source_indices)) == len(source_indices)
+    assert source_indices[0] == 20
+    assert source_indices[-1] == 63
+    assert tuple(row.fingerprint_sha256 for row in proposals[:8]) == tuple(
+        row.fingerprint_sha256 for row in baseline[:8]
+    )
+    assert tuple(row.fingerprint_sha256 for row in proposals[20:]) == tuple(
+        row.fingerprint_sha256 for row in baseline[20:]
+    )
+    for target_index, source_index in zip(
+        target_indices,
+        source_indices,
+        strict=True,
+    ):
+        assert source_index is not None
+        assert receipt.proposal_modes[source_index] == UNIFORM_FALLBACK_MODE
+        assert torch.equal(
+            proposals[target_index].coordinates,
+            baseline[source_index].coordinates,
+        )
+        assert torch.equal(
+            proposals[target_index].torsion_angles,
+            baseline[source_index].torsion_angles,
+        )
+        assert torch.equal(
+            proposals[target_index].rotation,
+            baseline[source_index].rotation,
+        )
+        assert torch.equal(
+            proposals[target_index].translation,
+            baseline[source_index].translation,
+        )
+        assert (
+            proposals[target_index].coordinate_fingerprint_sha256
+            == baseline[source_index].coordinate_fingerprint_sha256
+        )
+        assert (
+            proposals[target_index].fingerprint_sha256
+            != baseline[source_index].fingerprint_sha256
+        )
+
+    duplicate_sources = list(receipt.ensemble_source_proposal_indices)
+    duplicate_sources[target_indices[1]] = source_indices[0]
+    with pytest.raises(
+        DockingAuthorityError,
+        match="sources must be one-to-one",
+    ):
+        replace(
+            receipt,
+            ensemble_source_proposal_indices=tuple(duplicate_sources),
+        )
+
+    non_integer_sources = list(receipt.ensemble_source_proposal_indices)
+    non_integer_sources[target_indices[0]] = True
+    with pytest.raises(DockingAuthorityError, match="exact integers"):
+        replace(
+            receipt,
+            ensemble_source_proposal_indices=tuple(non_integer_sources),
+        )
 
 
 def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:

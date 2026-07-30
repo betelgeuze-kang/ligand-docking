@@ -118,6 +118,34 @@ def test_candidate_score_terms_accept_json_key_order_and_recanonicalize() -> Non
     assert tuple(candidate.score_term_binary64_hex) == tuple(_zero_score_terms())
 
 
+def test_candidate_uniform_v3_ensemble_requires_exact_source_lineage() -> None:
+    candidate = PublicRedockingEngineV2CandidateDiagnostic(
+        proposal_index=0,
+        status="success",
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=1,
+        proposal_fingerprint_sha256="1" * 64,
+        coordinate_fingerprint_sha256="4" * 64,
+        score=0.0,
+        rmsd_angstrom=0.0,
+        geometric_valid=True,
+        chemical_valid=True,
+        pose_artifact_sha256="2" * 64,
+        score_terms_receipt_sha256="3" * 64,
+        hbond_count=0,
+        selection_eligible=True,
+        score_term_binary64_hex=_zero_score_terms(),
+    )
+
+    assert candidate.to_dict()["ensemble_source_proposal_index"] == 1
+    with pytest.raises(PublicRedockingBenchmarkError, match="source index"):
+        replace(candidate, ensemble_source_proposal_index=0)
+    with pytest.raises(PublicRedockingBenchmarkError, match="source index"):
+        replace(candidate, ensemble_source_proposal_index=None)
+    with pytest.raises(PublicRedockingBenchmarkError, match="non-ensemble"):
+        replace(candidate, proposal_mode="uniform_fallback")
+
+
 def _source_identifier_bytes() -> bytes:
     source_ids = sorted((*FROZEN_PUBLIC_REDOCKING_CASE_IDS, *_EXCLUDED_SOURCE_IDS))
     return ("\n".join(source_ids) + "\n").encode("ascii")
@@ -1515,6 +1543,44 @@ def test_report_rejects_engine_v2_candidate_diagnostic_substitution() -> None:
             tuple(rows),
             policy=_policy(),
         )
+
+
+def test_engine_v2_diagnostics_validate_uniform_v3_ensemble_lineage() -> None:
+    row = _success(
+        FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
+        "engine_v2",
+        top1=1.0,
+        top2=2.0,
+        top3=3.0,
+        runtime=1.0,
+    )
+    diagnostics = row.engine_v2_diagnostics
+    assert diagnostics is not None
+    candidates = list(diagnostics.candidates)
+    candidates[0] = replace(
+        candidates[0],
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=1,
+    )
+    validated = replace(diagnostics, candidates=tuple(candidates))
+    assert validated.candidates[0].ensemble_source_proposal_index == 1
+
+    candidates[2] = replace(
+        candidates[2],
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=1,
+    )
+    with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
+        replace(diagnostics, candidates=tuple(candidates))
+
+    invalid_source = list(diagnostics.candidates)
+    invalid_source[0] = replace(
+        invalid_source[0],
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=5,
+    )
+    with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
+        replace(diagnostics, candidates=tuple(invalid_source))
 
 
 def test_engine_v2_diagnostics_bind_complete_backend_receipt() -> None:

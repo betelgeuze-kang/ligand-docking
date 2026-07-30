@@ -48,15 +48,15 @@ from .proposals import DockingBudget, DockingProposal
 GUIDED_PLACEMENT_CONTEXT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_context/1.0.0"
 )
-GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.3.0"
+GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.4.0"
 GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_guided_placement_receipt/1.2.0"
+    "betelgeuze.engine_v2_guided_placement_receipt/1.3.0"
 )
 GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_search_result/1.0.0"
 )
 GUIDED_PLACEMENT_POLICY_ID = (
-    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.3.0"
+    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.4.0"
 )
 GUIDED_FEATURE_POLICY_ID = "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
 GUIDED_MODES = (
@@ -69,6 +69,7 @@ GUIDED_MODES = (
 MULTI_ANCHOR_MODE = "multi_anchor_hotspot"
 POCKET_CENTER_BASELINE_MODE = "pocket_center_baseline"
 UNIFORM_FALLBACK_MODE = "uniform_fallback"
+UNIFORM_V3_ENSEMBLE_MODE = "uniform_v3_rigid_ensemble"
 MAX_GUIDED_FEATURE_ATOMS = 2_048
 MAX_GUIDED_AROMATIC_SYSTEMS = 128
 MAX_GUIDED_RECEPTOR_BONDS_SCANNED = 1_000_000
@@ -699,6 +700,7 @@ class GuidedPlacementPolicy:
     multi_anchor_max_points: int = 3
     multi_anchor_min_separation_angstrom: float = 1.0
     multi_anchor_max_distance_mismatch_angstrom: float = 2.5
+    uniform_v3_ensemble_enabled: bool = False
     policy_id: str = GUIDED_PLACEMENT_POLICY_ID
     _fingerprint_sha256: str = field(init=False, repr=False)
 
@@ -736,6 +738,10 @@ class GuidedPlacementPolicy:
             or not 2 <= self.multi_anchor_max_points <= 3
         ):
             raise DockingAuthorityError("multi_anchor_max_points must be in [2,3]")
+        if type(self.uniform_v3_ensemble_enabled) is not bool:
+            raise DockingAuthorityError(
+                "uniform_v3_ensemble_enabled must be boolean"
+            )
         object.__setattr__(
             self, "minimum_uniform_fraction", minimum_uniform_fraction
         )
@@ -787,6 +793,12 @@ class GuidedPlacementPolicy:
             "multi_anchor_allocation": (
                 "odd_repeated_donor_or_charge_cycles_capped_at_eight"
             ),
+            "uniform_v3_ensemble_enabled": self.uniform_v3_ensemble_enabled,
+            "uniform_v3_ensemble_mode": UNIFORM_V3_ENSEMBLE_MODE,
+            "uniform_v3_ensemble_source_selection": (
+                "rounded_even_spacing_across_retained_uniform_indices"
+            ),
+            "uniform_v3_ensemble_originals_retained": True,
             "uniform_random_placement_retained_as_fallback": True,
             "scientifically_validated": False,
             "claim_safe": False,
@@ -942,6 +954,85 @@ def _multi_anchor_available(context: GuidedPlacementContext) -> bool:
             ligand_indices.update(ligand[ligand_kind])
             receptor_indices.update(row[0] for row in receptor[receptor_kind])
     return len(ligand_indices) >= 2 and len(receptor_indices) >= 2
+
+
+def _guided_allocation(
+    context: GuidedPlacementContext,
+    budget: DockingBudget,
+    policy: GuidedPlacementPolicy,
+) -> tuple[int, int, tuple[str, ...]]:
+    centered_count = _centered_candidate_count(
+        budget.candidate_count,
+        policy.centered_candidate_count,
+    )
+    modes = _available_modes(context)
+    if not modes:
+        return centered_count, 0, modes
+    fraction_cap = int(math.floor(budget.candidate_count * policy.guided_fraction))
+    mode_cap = len(modes) * policy.maximum_guided_candidates_per_mode
+    uniform_floor = int(
+        math.ceil(budget.candidate_count * policy.minimum_uniform_fraction)
+    )
+    structured_count = min(
+        fraction_cap,
+        mode_cap,
+        max(0, budget.candidate_count - uniform_floor),
+    )
+    guided_count = max(0, structured_count - centered_count)
+    if policy.uniform_v3_ensemble_enabled:
+        # Each V3 variant retains one distinct uniform V2 source in the same
+        # denominator.  This cap proves that source selection cannot consume
+        # or duplicate the source lane.
+        guided_count = min(
+            guided_count,
+            max(0, (budget.candidate_count - centered_count) // 2),
+        )
+    return centered_count, guided_count, modes
+
+
+def uniform_v3_ensemble_proposal_indices(
+    context: GuidedPlacementContext,
+    budget: DockingBudget,
+    policy: GuidedPlacementPolicy,
+) -> tuple[int, ...]:
+    """Return the receipt-bound proposal indices assigned to the V3 lane."""
+
+    if not isinstance(context, GuidedPlacementContext):
+        raise TypeError("context must be GuidedPlacementContext")
+    if not isinstance(budget, DockingBudget):
+        raise TypeError("budget must be DockingBudget")
+    if not isinstance(policy, GuidedPlacementPolicy):
+        raise TypeError("policy must be GuidedPlacementPolicy")
+    policy.fingerprint_sha256
+    if not policy.uniform_v3_ensemble_enabled:
+        return ()
+    centered_count, guided_count, _ = _guided_allocation(context, budget, policy)
+    return tuple(range(centered_count, centered_count + guided_count))
+
+
+def _evenly_spaced_uniform_sources(
+    source_indices: Sequence[int],
+    target_count: int,
+) -> tuple[int, ...]:
+    sources = tuple(int(value) for value in source_indices)
+    if target_count == 0:
+        return ()
+    if target_count < 0 or len(sources) < target_count:
+        raise DockingAuthorityError(
+            "uniform V3 ensemble lacks distinct retained source proposals"
+        )
+    if target_count == 1:
+        return (sources[0],)
+    positions = tuple(
+        round(index * (len(sources) - 1) / (target_count - 1))
+        for index in range(target_count)
+    )
+    selected = tuple(sources[position] for position in positions)
+    if len(set(selected)) != len(selected):
+        raise DockingAuthorityError(
+            "uniform V3 ensemble source spacing is not one-to-one"
+        )
+    return selected
 
 
 def _pick_index(length: int, *, seed: int, proposal_index: int, domain: str) -> int:
@@ -1609,6 +1700,7 @@ class GuidedPlacementReceipt:
     requested_anchor_distance_angstroms: tuple[float | None, ...]
     observed_anchor_distance_angstroms: tuple[float | None, ...]
     feature_counts: Mapping[str, int]
+    ensemble_source_proposal_indices: tuple[int | None, ...] = ()
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -1628,6 +1720,7 @@ class GuidedPlacementReceipt:
             MULTI_ANCHOR_MODE,
             POCKET_CENTER_BASELINE_MODE,
             UNIFORM_FALLBACK_MODE,
+            UNIFORM_V3_ENSEMBLE_MODE,
         }
         if (
             not fingerprints
@@ -1652,6 +1745,18 @@ class GuidedPlacementReceipt:
             for value in self.observed_anchor_distance_angstroms
         )
         row_count = len(fingerprints)
+        ensemble_sources = (
+            tuple(None for _ in range(row_count))
+            if not self.ensemble_source_proposal_indices
+            else tuple(self.ensemble_source_proposal_indices)
+        )
+        if any(
+            value is not None and type(value) is not int
+            for value in ensemble_sources
+        ):
+            raise DockingAuthorityError(
+                "uniform V3 ensemble source indices must be exact integers"
+            )
         if any(
             len(rows) != row_count
             for rows in (
@@ -1659,16 +1764,26 @@ class GuidedPlacementReceipt:
                 receptor_anchors,
                 requested_distances,
                 observed_distances,
+                ensemble_sources,
             )
         ):
             raise DockingAuthorityError("guided anchor rows are incomplete")
-        for mode, ligand_row, receptor_row, requested, observed in zip(
+        for index, (
+            mode,
+            ligand_row,
+            receptor_row,
+            requested,
+            observed,
+            ensemble_source,
+        ) in enumerate(zip(
             modes,
             ligand_anchors,
             receptor_anchors,
             requested_distances,
             observed_distances,
-        ):
+            ensemble_sources,
+            strict=True,
+        )):
             if any(index < 0 for index in (*ligand_row, *receptor_row)):
                 raise DockingAuthorityError("guided anchor atom indices are invalid")
             if mode == MULTI_ANCHOR_MODE:
@@ -1686,7 +1801,11 @@ class GuidedPlacementReceipt:
                 or receptor_row != tuple(sorted(set(receptor_row)))
             ):
                 raise DockingAuthorityError("guided anchor atom indices are invalid")
-            if mode in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}:
+            if mode in {
+                POCKET_CENTER_BASELINE_MODE,
+                UNIFORM_FALLBACK_MODE,
+                UNIFORM_V3_ENSEMBLE_MODE,
+            }:
                 if (
                     ligand_row
                     or receptor_row
@@ -1706,6 +1825,27 @@ class GuidedPlacementReceipt:
                 or observed < 0.0
             ):
                 raise DockingAuthorityError("guided anchor distances are invalid")
+            if mode == UNIFORM_V3_ENSEMBLE_MODE:
+                if (
+                    ensemble_source is None
+                    or not 0 <= ensemble_source < row_count
+                    or ensemble_source == index
+                    or modes[ensemble_source] != UNIFORM_FALLBACK_MODE
+                ):
+                    raise DockingAuthorityError(
+                        "uniform V3 ensemble source index is invalid"
+                    )
+            elif ensemble_source is not None:
+                raise DockingAuthorityError(
+                    "non-ensemble proposal cannot declare an ensemble source"
+                )
+        retained_sources = tuple(
+            value for value in ensemble_sources if value is not None
+        )
+        if len(retained_sources) != len(set(retained_sources)):
+            raise DockingAuthorityError(
+                "uniform V3 ensemble sources must be one-to-one"
+            )
         counts = {str(name): int(value) for name, value in self.feature_counts.items()}
         if any(value < 0 for value in counts.values()):
             raise DockingAuthorityError("guided feature counts are invalid")
@@ -1718,6 +1858,11 @@ class GuidedPlacementReceipt:
         )
         object.__setattr__(
             self, "observed_anchor_distance_angstroms", observed_distances
+        )
+        object.__setattr__(
+            self,
+            "ensemble_source_proposal_indices",
+            ensemble_sources,
         )
         object.__setattr__(self, "feature_counts", MappingProxyType(counts))
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
@@ -1767,6 +1912,7 @@ class GuidedPlacementReceipt:
                     "observed_anchor_distance_angstrom_binary64_hex": (
                         None if observed is None else observed.hex()
                     ),
+                    "ensemble_source_proposal_index": ensemble_source,
                 }
                 for index, (
                     mode,
@@ -1774,6 +1920,7 @@ class GuidedPlacementReceipt:
                     receptor_atoms,
                     requested,
                     observed,
+                    ensemble_source,
                 ) in enumerate(
                     zip(
                         self.proposal_modes,
@@ -1781,6 +1928,8 @@ class GuidedPlacementReceipt:
                         self.receptor_anchor_atom_indices,
                         self.requested_anchor_distance_angstroms,
                         self.observed_anchor_distance_angstroms,
+                        self.ensemble_source_proposal_indices,
+                        strict=True,
                     )
                 )
             ],
@@ -1794,6 +1943,10 @@ class GuidedPlacementReceipt:
             ),
             "uniform_fallback_count": sum(
                 mode == UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
+            ),
+            "uniform_v3_ensemble_count": sum(
+                mode == UNIFORM_V3_ENSEMBLE_MODE
+                for mode in self.proposal_modes
             ),
             "uniform_random_placement_retained_as_fallback": True,
             "feature_counts": dict(self.feature_counts),
@@ -1863,34 +2016,11 @@ def generate_guided_docking_proposals(
         budget,
         policy=placement_policy,
     )
-    centered_count = _centered_candidate_count(
-        budget.candidate_count,
-        selected_policy.centered_candidate_count,
+    centered_count, guided_count, modes = _guided_allocation(
+        context,
+        budget,
+        selected_policy,
     )
-    modes = _available_modes(context)
-    if modes:
-        fraction_cap = int(
-            math.floor(
-                budget.candidate_count * selected_policy.guided_fraction
-            )
-        )
-        mode_cap = (
-            len(modes) * selected_policy.maximum_guided_candidates_per_mode
-        )
-        uniform_floor = int(
-            math.ceil(
-                budget.candidate_count
-                * selected_policy.minimum_uniform_fraction
-            )
-        )
-        structured_count = min(
-            fraction_cap,
-            mode_cap,
-            max(0, budget.candidate_count - uniform_floor),
-        )
-        guided_count = max(0, structured_count - centered_count)
-    else:
-        guided_count = 0
     from . import proposals as proposal_module
 
     proposals = list(baseline)
@@ -1900,12 +2030,72 @@ def generate_guided_docking_proposals(
     receptor_anchor_rows: list[tuple[int, ...]] = [()] * len(proposals)
     requested_anchor_distances: list[float | None] = [None] * len(proposals)
     observed_anchor_distances: list[float | None] = [None] * len(proposals)
+    ensemble_source_indices: list[int | None] = [None] * len(proposals)
     search_space = authenticated_problem.search_space
     pocket_center = authenticated_problem.pocket.center.to(
         dtype=search_space.local_offsets.dtype
     )
     multi_anchor_count = 0
-    for guided_slot_index in range(guided_count):
+    guided_transform_count = guided_count
+    if selected_policy.uniform_v3_ensemble_enabled and guided_count:
+        target_indices = tuple(
+            range(centered_count, centered_count + guided_count)
+        )
+        uniform_source_indices = tuple(
+            range(centered_count + guided_count, len(baseline))
+        )
+        selected_sources = _evenly_spaced_uniform_sources(
+            uniform_source_indices,
+            guided_count,
+        )
+        for proposal_index, source_index in zip(
+            target_indices,
+            selected_sources,
+            strict=True,
+        ):
+            target = baseline[proposal_index]
+            source = baseline[source_index]
+            fingerprint = proposal_module._proposal_fingerprint(
+                proposal_index=proposal_index,
+                seed=budget.seed,
+                torsion_angles=source.torsion_angles,
+                rotation=source.rotation,
+                translation=source.translation,
+                problem_fingerprint_sha256=(
+                    authenticated_problem.problem.fingerprint_sha256
+                ),
+                search_space_fingerprint_sha256=(
+                    search_space.fingerprint_sha256
+                ),
+                coordinate_fingerprint_sha256=(
+                    source.coordinate_fingerprint_sha256
+                ),
+            )
+            variant = DockingProposal(
+                candidate_id=target.candidate_id,
+                coordinates=source.coordinates,
+                torsion_angles=source.torsion_angles,
+                rotation=source.rotation,
+                translation=source.translation,
+                proposal_index=proposal_index,
+                seed=budget.seed,
+                fingerprint_sha256=fingerprint,
+                problem_fingerprint_sha256=(
+                    authenticated_problem.problem.fingerprint_sha256
+                ),
+                search_space_fingerprint_sha256=(
+                    search_space.fingerprint_sha256
+                ),
+                coordinate_fingerprint_sha256=(
+                    source.coordinate_fingerprint_sha256
+                ),
+            )
+            variant.assert_integrity()
+            proposals[proposal_index] = variant
+            proposal_modes[proposal_index] = UNIFORM_V3_ENSEMBLE_MODE
+            ensemble_source_indices[proposal_index] = source_index
+        guided_transform_count = 0
+    for guided_slot_index in range(guided_transform_count):
         proposal_index = centered_count + guided_slot_index
         base_mode = modes[proposal_index % len(modes)]
         cycle_index = proposal_index // len(modes)
@@ -2031,6 +2221,7 @@ def generate_guided_docking_proposals(
         requested_anchor_distance_angstroms=tuple(requested_anchor_distances),
         observed_anchor_distance_angstroms=tuple(observed_anchor_distances),
         feature_counts=context.feature_counts(),
+        ensemble_source_proposal_indices=tuple(ensemble_source_indices),
     )
     return result, receipt
 
@@ -2157,6 +2348,7 @@ __all__ = [
     "MULTI_ANCHOR_MODE",
     "POCKET_CENTER_BASELINE_MODE",
     "UNIFORM_FALLBACK_MODE",
+    "UNIFORM_V3_ENSEMBLE_MODE",
     "GuidedPlacementContext",
     "GuidedPlacementPolicy",
     "GuidedPlacementReceipt",
@@ -2164,4 +2356,5 @@ __all__ = [
     "build_guided_placement_context",
     "generate_guided_docking_proposals",
     "run_authenticated_guided_placement_search",
+    "uniform_v3_ensemble_proposal_indices",
 ]

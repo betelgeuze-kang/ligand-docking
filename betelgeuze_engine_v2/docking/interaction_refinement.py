@@ -38,6 +38,13 @@ INTERACTION_AWARE_RIGID_REFINER_V3_VERSION = "3.0.0"
 INTERACTION_AWARE_RIGID_CONFIG_V3_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_rigid_refiner_config/3.0.0"
 )
+INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_refiner"
+)
+INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION = "4.0.0"
+INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_receipt/4.0.0"
+)
 
 
 class ClashReliefRefinementError(DockingAuthorityError):
@@ -1072,12 +1079,179 @@ class InteractionAwareRigidRefinerV3(ReceptorClashReliefRefiner):
         return refined
 
 
+class InteractionAwareRigidEnsembleRefinerV4:
+    """Preserve V2 originals while applying V3 only to receipt-bound variants."""
+
+    refiner_id = INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID
+    refiner_version = INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION
+
+    def __init__(
+        self,
+        authority: AuthenticatedDockingProblem,
+        receptor_system: AllAtomSystem,
+        ligand_system: AllAtomSystem,
+        *,
+        implementation_source_sha256: str,
+        v3_proposal_indices: tuple[int, ...],
+        v2_config: InteractionAwareRigidConfigV2 | None = None,
+        v3_config: InteractionAwareRigidConfigV3 | None = None,
+        radii_policy: VdwContactPolicy | None = None,
+    ) -> None:
+        indices = tuple(v3_proposal_indices)
+        if any(
+            type(index) is not int or not 0 <= index <= 127
+            for index in indices
+        ) or len(indices) != len(set(indices)):
+            raise ClashReliefRefinementError(
+                "V3 ensemble proposal indices must be unique integers in [0,127]"
+            )
+        if indices != tuple(sorted(indices)):
+            raise ClashReliefRefinementError(
+                "V3 ensemble proposal indices must be sorted"
+            )
+        self._v2 = InteractionAwareRigidRefinerV2(
+            authority,
+            receptor_system,
+            ligand_system,
+            implementation_source_sha256=implementation_source_sha256,
+            config=v2_config,
+            radii_policy=radii_policy,
+        )
+        self._v3 = InteractionAwareRigidRefinerV3(
+            authority,
+            receptor_system,
+            ligand_system,
+            implementation_source_sha256=implementation_source_sha256,
+            config=v3_config,
+            radii_policy=radii_policy,
+        )
+        self._v3_proposal_indices = indices
+        self._v3_proposal_index_set = frozenset(indices)
+        self._implementation_source_sha256 = implementation_source_sha256
+        self._component_config_fingerprint_sha256 = _sha256(
+            {
+                "schema_id": (
+                    "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_config/4.0.0"
+                ),
+                "v2_component_config_sha256": self._v2.config_fingerprint_sha256,
+                "v3_component_config_sha256": self._v3.config_fingerprint_sha256,
+                "v3_proposal_indices": list(indices),
+                "source_lane_retained": True,
+                "scientifically_validated": False,
+            }
+        )
+        self._receipts: dict[str, Mapping[str, object]] = {}
+
+    @property
+    def problem_fingerprint_sha256(self) -> str:
+        observed = self._v2.problem_fingerprint_sha256
+        if observed != self._v3.problem_fingerprint_sha256:
+            raise ClashReliefRefinementError("ensemble refiner is cross-wired")
+        return observed
+
+    @property
+    def config_fingerprint_sha256(self) -> str:
+        return self._component_config_fingerprint_sha256
+
+    @property
+    def implementation_source_sha256(self) -> str:
+        if (
+            self._v2.implementation_source_sha256
+            != self._implementation_source_sha256
+            or self._v3.implementation_source_sha256
+            != self._implementation_source_sha256
+        ):
+            raise ClashReliefRefinementError(
+                "ensemble refiner implementation identity changed"
+            )
+        return self._implementation_source_sha256
+
+    @property
+    def v3_proposal_indices(self) -> tuple[int, ...]:
+        return self._v3_proposal_indices
+
+    @property
+    def receipts(self) -> Mapping[str, Mapping[str, object]]:
+        return MappingProxyType(dict(self._receipts))
+
+    def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
+        proposal.assert_integrity()
+        if proposal.fingerprint_sha256 in self._receipts:
+            raise ClashReliefRefinementError("proposal was already refined")
+        use_v3 = proposal.proposal_index in self._v3_proposal_index_set
+        lane = "translation_rotation_v3" if use_v3 else "translation_v2"
+        nested_refiner = self._v3 if use_v3 else self._v2
+        nested = nested_refiner.refine(proposal, max_steps=max_steps)
+        nested_receipt = nested_refiner.receipts[proposal.fingerprint_sha256]
+        zero_rotation = [0.0.hex(), 0.0.hex(), 0.0.hex()]
+        receipt: dict[str, object] = {
+            "schema_id": INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID,
+            "source_proposal_sha256": proposal.fingerprint_sha256,
+            "config_sha256": self.config_fingerprint_sha256,
+            "lane": lane,
+            "v3_proposal_indices": list(self._v3_proposal_indices),
+            "nested_refiner_id": nested_refiner.refiner_id,
+            "nested_refiner_version": nested_refiner.refiner_version,
+            "nested_receipt_sha256": nested_receipt["receipt_sha256"],
+            "initial_penalty_binary64_hex": nested_receipt[
+                "initial_penalty_binary64_hex"
+            ],
+            "final_penalty_binary64_hex": nested_receipt[
+                "final_penalty_binary64_hex"
+            ],
+            "accepted_steps": nested_receipt["accepted_steps"],
+            "accepted_translation_steps": nested_receipt.get(
+                "accepted_translation_steps",
+                nested_receipt["accepted_steps"],
+            ),
+            "accepted_rotation_steps": nested_receipt.get(
+                "accepted_rotation_steps",
+                0,
+            ),
+            "line_search_evaluation_count": nested_receipt.get(
+                "line_search_evaluation_count",
+                0,
+            ),
+            "fallback_direction_step_count": nested_receipt.get(
+                "fallback_direction_step_count",
+                0,
+            ),
+            "original_pose_valid": nested_receipt["original_pose_valid"],
+            "total_translation_binary64_hex": nested_receipt[
+                "total_translation_binary64_hex"
+            ],
+            "total_rotation_vector_binary64_hex": nested_receipt.get(
+                "total_rotation_vector_binary64_hex",
+                zero_rotation,
+            ),
+            "pre_coordinates_sha256": nested_receipt["pre_coordinates_sha256"],
+            "post_coordinates_sha256": nested_receipt["post_coordinates_sha256"],
+            "ranking_score_reused_as_physical_energy": False,
+            "source_lane_retained": True,
+            "scientifically_validated": False,
+        }
+        receipt_sha256 = _sha256(receipt)
+        receipt["receipt_sha256"] = receipt_sha256
+        refined = proposal.with_refined_coordinates(
+            nested.coordinates,
+            refiner_id=self.refiner_id,
+            refiner_version=self.refiner_version,
+            refinement_receipt_sha256=receipt_sha256,
+            torsion_angles=nested.torsion_angles,
+        )
+        self._receipts[proposal.fingerprint_sha256] = MappingProxyType(receipt)
+        return refined
+
+
 __all__ = [
     "CLASH_RELIEF_CONFIG_SCHEMA_ID",
     "CLASH_RELIEF_REFINER_ID",
     "CLASH_RELIEF_REFINER_VERSION",
     "INTERACTION_AWARE_RIGID_CONFIG_V2_SCHEMA_ID",
     "INTERACTION_AWARE_RIGID_CONFIG_V3_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION",
     "INTERACTION_AWARE_RIGID_REFINER_V2_ID",
     "INTERACTION_AWARE_RIGID_REFINER_V2_VERSION",
     "INTERACTION_AWARE_RIGID_REFINER_V3_ID",
@@ -1088,5 +1262,6 @@ __all__ = [
     "InteractionAwareRigidConfigV3",
     "InteractionAwareRigidRefinerV2",
     "InteractionAwareRigidRefinerV3",
+    "InteractionAwareRigidEnsembleRefinerV4",
     "ReceptorClashReliefRefiner",
 ]

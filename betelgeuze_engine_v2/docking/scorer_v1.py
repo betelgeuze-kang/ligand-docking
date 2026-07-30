@@ -32,6 +32,7 @@ from .authority import AuthenticatedDockingProblem, DockingAuthorityError
 from .contact_validity import ElementAwarePoseValidityContext
 from .guided_placement import (
     GuidedPlacementContext,
+    GuidedPlacementPolicy,
     GuidedPlacementSearchResult,
     run_authenticated_guided_placement_search,
 )
@@ -1992,6 +1993,7 @@ def run_authenticated_scorer_v1_guided_search(
     receptor_system: AllAtomSystem,
     ligand_system: AllAtomSystem,
     refiner=None,
+    guided_policy: GuidedPlacementPolicy | None = None,
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
@@ -2010,6 +2012,7 @@ def run_authenticated_scorer_v1_guided_search(
         receptor_system=receptor_system,
         ligand_system=ligand_system,
         refiner=refiner,
+        policy=guided_policy,
         diversity_rmsd_angstrom=diversity_rmsd_angstrom,
         diversity_metric=diversity_metric,
         symmetry_permutations=symmetry_permutations,

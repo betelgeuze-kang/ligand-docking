@@ -2044,7 +2044,12 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     )
     monkeypatch.setattr(
         runner,
-        "InteractionAwareRigidRefinerV2",
+        "uniform_v3_ensemble_proposal_indices",
+        lambda *args, **kwargs: (),
+    )
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareRigidEnsembleRefinerV4",
         lambda *args, **kwargs: object(),
     )
 
@@ -2173,7 +2178,12 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
     )
     monkeypatch.setattr(
         runner,
-        "InteractionAwareRigidRefinerV2",
+        "uniform_v3_ensemble_proposal_indices",
+        lambda *args, **kwargs: (),
+    )
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareRigidEnsembleRefinerV4",
         lambda *args, **kwargs: refiner,
     )
     term_rows = tuple(
@@ -2201,7 +2211,9 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
         guided_search_result=SimpleNamespace(
             guided_receipt=SimpleNamespace(
                 proposal_modes=("uniform_fallback",)
-                * runner.ENGINE_V2_CANDIDATE_COUNT
+                * runner.ENGINE_V2_CANDIDATE_COUNT,
+                ensemble_source_proposal_indices=(None,)
+                * runner.ENGINE_V2_CANDIDATE_COUNT,
             ),
             authenticated_search_result=SimpleNamespace(search_result=search),
         ),

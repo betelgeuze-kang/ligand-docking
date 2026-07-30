@@ -69,7 +69,8 @@ from betelgeuze_engine_v2.docking import (
     DockingSearchError,
     DockingScope,
     ElementAwareValidityError,
-    InteractionAwareRigidRefinerV2,
+    GuidedPlacementPolicy,
+    InteractionAwareRigidEnsembleRefinerV4,
     PocketDefinition,
     ScorerBackend,
     ScorerBackendOptions,
@@ -79,6 +80,7 @@ from betelgeuze_engine_v2.docking import (
     build_element_aware_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
     run_authenticated_scorer_v1_guided_search,
+    uniform_v3_ensemble_proposal_indices,
 )
 from betelgeuze_engine_v2.io import (
     PDBParseError,
@@ -124,7 +126,7 @@ ENGINE_V2_CPU_POLICY = {
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
     "torch_version": str(torch.__version__),
-    "interaction_refiner": "interaction_aware_rigid_v2",
+    "interaction_refiner": "interaction_aware_rigid_v4_v2_v3_ensemble",
     "interaction_refinement_steps": 20,
 }
 _CASE_FILE_SUFFIXES = (
@@ -2222,6 +2224,14 @@ def _engine_v2_pose_coordinates(
             b"posebusters-crystal-redocking-sphere/1.0.0"
         ),
     )
+    budget = DockingBudget(
+        candidate_count=ENGINE_V2_CANDIDATE_COUNT,
+        top_k=5,
+        max_torsions=32,
+        max_refinement_steps=20,
+        translation_radius_angstrom=min(4.0, radius),
+        seed=seed,
+    )
     try:
         authority = build_element_aware_authenticated_known_pocket_docking_problem(
             receptor,
@@ -2240,13 +2250,22 @@ def _engine_v2_pose_coordinates(
             backend_options=ScorerBackendOptions(thread_count=1),
         )
         context = build_guided_placement_context(authority, receptor, ligand)
-        refiner = InteractionAwareRigidRefinerV2(
+        guided_policy = GuidedPlacementPolicy(
+            uniform_v3_ensemble_enabled=True,
+        )
+        v3_proposal_indices = uniform_v3_ensemble_proposal_indices(
+            context,
+            budget,
+            guided_policy,
+        )
+        refiner = InteractionAwareRigidEnsembleRefinerV4(
             authority,
             receptor,
             ligand,
             implementation_source_sha256=_sha256_bytes(
-                b"engine-v2-interaction-aware-rigid-refiner-v2"
+                b"engine-v2-interaction-aware-rigid-ensemble-refiner-v4"
             ),
+            v3_proposal_indices=v3_proposal_indices,
         )
     except UnsupportedVdwElementError as exc:
         raise EngineV2PreparationFailure(
@@ -2267,14 +2286,6 @@ def _engine_v2_pose_coordinates(
             "docking_context_preparation_failed",
             "Engine V2 docking-context preparation failed",
         ) from exc
-    budget = DockingBudget(
-        candidate_count=ENGINE_V2_CANDIDATE_COUNT,
-        top_k=5,
-        max_torsions=32,
-        max_refinement_steps=20,
-        translation_radius_angstrom=min(4.0, radius),
-        seed=seed,
-    )
     preparation_counts = {
         "receptor_atom_count": receptor.atom_count,
         "ligand_atom_count": ligand.atom_count,
@@ -2320,6 +2331,7 @@ def _engine_v2_pose_coordinates(
             receptor_system=receptor,
             ligand_system=ligand,
             refiner=refiner,
+            guided_policy=guided_policy,
             diversity_rmsd_angstrom=0.0,
         )
     except (
@@ -2407,6 +2419,10 @@ def _engine_v2_pose_coordinates(
             proposal_mode = result.guided_search_result.guided_receipt.proposal_modes[
                 row.proposal_index
             ]
+            ensemble_source_proposal_index = (
+                result.guided_search_result.guided_receipt
+                .ensemble_source_proposal_indices[row.proposal_index]
+            )
             refinement_receipt = refiner.receipts.get(
                 row.proposal_fingerprint_sha256
             )
@@ -2419,6 +2435,9 @@ def _engine_v2_pose_coordinates(
                     proposal_index=row.proposal_index,
                     status="success",
                     proposal_mode=proposal_mode,
+                    ensemble_source_proposal_index=(
+                        ensemble_source_proposal_index
+                    ),
                     proposal_fingerprint_sha256=(
                         row.proposal.fingerprint_sha256
                     ),
@@ -2446,7 +2465,9 @@ def _engine_v2_pose_coordinates(
                     refinement_accepted_steps=int(
                         refinement_receipt["accepted_steps"]
                     ),
-                    refinement_accepted_rotation_steps=0,
+                    refinement_accepted_rotation_steps=int(
+                        refinement_receipt.get("accepted_rotation_steps", 0)
+                    ),
                     refinement_original_pose_valid=bool(
                         refinement_receipt["original_pose_valid"]
                     ),
@@ -2456,10 +2477,12 @@ def _engine_v2_pose_coordinates(
                             "total_translation_binary64_hex"
                         ]
                     ),
-                    refinement_total_rotation_vector_binary64_hex=(
-                        0.0.hex(),
-                        0.0.hex(),
-                        0.0.hex(),
+                    refinement_total_rotation_vector_binary64_hex=tuple(
+                        str(value)
+                        for value in refinement_receipt.get(
+                            "total_rotation_vector_binary64_hex",
+                            (0.0.hex(), 0.0.hex(), 0.0.hex()),
+                        )
                     ),
                     score_term_binary64_hex={
                         name: float(getattr(terms, name)).hex()
@@ -2486,6 +2509,10 @@ def _engine_v2_pose_coordinates(
                         result.guided_search_result.guided_receipt.proposal_modes[
                             row.proposal_index
                         ]
+                    ),
+                    ensemble_source_proposal_index=(
+                        result.guided_search_result.guided_receipt
+                        .ensemble_source_proposal_indices[row.proposal_index]
                     ),
                     error_code=str(row.error_code or "candidate_failed"),
                 )

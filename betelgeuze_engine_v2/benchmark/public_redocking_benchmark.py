@@ -26,8 +26,8 @@ PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohor
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.8.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.8.0"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.9.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.9.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
@@ -50,7 +50,7 @@ PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
     "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
 )
 PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.4.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.5.0"
 )
 PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "donor_acceptor_hotspot",
@@ -61,6 +61,7 @@ PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "multi_anchor_hotspot",
     "pocket_center_baseline",
     "uniform_fallback",
+    "uniform_v3_rigid_ensemble",
 )
 PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS = (
     "sanitization",
@@ -2534,6 +2535,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
     proposal_index: int
     status: str
     proposal_mode: str = ""
+    ensemble_source_proposal_index: int | None = None
     proposal_fingerprint_sha256: str = ""
     coordinate_fingerprint_sha256: str = ""
     score: float | None = None
@@ -2578,6 +2580,22 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             )
         error_code = str(self.error_code or "").strip()
         proposal_mode = str(self.proposal_mode or "").strip()
+        ensemble_source = self.ensemble_source_proposal_index
+        if proposal_mode == "uniform_v3_rigid_ensemble":
+            if (
+                type(ensemble_source) is not int
+                or not 0
+                <= ensemble_source
+                < PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+                or ensemble_source == self.proposal_index
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "uniform V3 ensemble candidate source index is invalid"
+                )
+        elif ensemble_source is not None:
+            raise PublicRedockingBenchmarkError(
+                "non-ensemble candidate cannot declare an ensemble source"
+            )
         failed_checks = tuple(
             str(value or "").strip()
             for value in self.posebusters_failed_check_ids
@@ -2811,6 +2829,9 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "proposal_index": self.proposal_index,
             "status": self.status,
             "proposal_mode": self.proposal_mode,
+            "ensemble_source_proposal_index": (
+                self.ensemble_source_proposal_index
+            ),
             "proposal_fingerprint_sha256": self.proposal_fingerprint_sha256,
             "coordinate_fingerprint_sha256": self.coordinate_fingerprint_sha256,
             "score": self.score,
@@ -3036,6 +3057,22 @@ class PublicRedockingEngineV2Diagnostics:
             raise TypeError(
                 "Engine V2 candidates must be typed candidate diagnostics"
             )
+        if status == "success":
+            ensemble_sources = tuple(
+                row.ensemble_source_proposal_index
+                for row in candidates
+                if row.ensemble_source_proposal_index is not None
+            )
+            if (
+                len(ensemble_sources) != len(set(ensemble_sources))
+                or any(
+                    candidates[source_index].proposal_mode != "uniform_fallback"
+                    for source_index in ensemble_sources
+                )
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "uniform V3 ensemble candidate lineage is invalid"
+                )
         object.__setattr__(self, "preparation_status", status)
         object.__setattr__(self, "preparation_failure_code", failure_code)
         object.__setattr__(
