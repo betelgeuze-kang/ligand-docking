@@ -13,11 +13,11 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
 
 ## Completed locally
 
-- PR #211 diagnostic contract and its local rc5 follow-ups are present on the
-  dedicated `codex/m1-diagnostic-contract` worktree, including the change that
+- PR #211 diagnostic contract and its rc5 follow-ups were squash-merged to
+  `main` as `6cd5c26d397de4189ee82c50a24503426a1721da`, including the change that
   excludes diagnostic-ledger time.
-- The rc5 Python/Rust dual-backend implementation is present in the same
-  worktree. The Rust backend is explicit and fail-closed, candidate-local
+- The rc5 Python/Rust dual-backend implementation is present in the merged
+  source. The Rust backend is explicit and fail-closed, candidate-local
   native failures retain typed codes, and the holdout runner refuses any
   backend other than `rust_cpu_required`.
 - Candidate diagnostics now bind proposal mode, final-coordinate identity,
@@ -47,11 +47,26 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   candidates produced three native-like and 12 valid poses, including one
   incremental oracle case and one incremental valid-pose case. The lane is
   development-only and does not authorize a holdout run or product claim.
-- Bounded translation/rotation refinement v3 is implemented as an explicit
-  experimental lane with a hard pocket guard and typed rotation receipt. It
-  was not promoted: a conservative targeted comparison regressed 6YT6 Top-1
-  from about 4.06 to 5.99 A without a validity gain. The public development
-  runner therefore continues to use translation-only refinement v2.
+- Bounded translation/rotation refinement v3 is implemented with a hard pocket
+  guard and typed rotation receipt. The V4 ensemble runner applies it only to
+  receipt-bound variants while preserving their translation-only V2 sources.
+  On the historical 32-case development slice this raised proposal-oracle 2 A
+  recovery from 4/29 to 6/29 and exact valid candidates from 52 to 62 without
+  reducing Top-1 or Top-5 recovery.
+- The broad V5 clearance probe raised exact valid candidates to 77 and reduced
+  invalid Top-1 from 72.41% to 65.52%, but regressed mean best-of-Top5 RMSD from
+  3.51088 A to 3.56945 A and was not promoted. V6 instead selects expanded
+  clearance only for a source-duplicate V3 variant or a receipt-bound near-clear
+  variant at or below `2^-12` whose penalty strictly improves. The policy uses
+  no RMSD or PoseBusters result at runtime and retains the V2 source lane.
+- The full V6 historical-development execution reproduced the receipt-only
+  policy for all 1,856 candidates with zero scientific-field mismatches. It
+  selected 85 clearance variants, raised exact valid candidates from 62 to 72,
+  raised cases with any valid candidate from 9 to 13, reduced invalid Top-1
+  from 72.41% to 65.52%, and improved mean oracle/Top-1/Top-5 RMSD by
+  0.00309/0.01320/0.01064 A versus V4. Oracle and Top-1/Top-5 recovery counts
+  stayed 6/1/3. Evidence SHA-256 is
+  `b600031ce593860365f51d99d1bc6d90d307e670f9ad041086c3e4f5adaf70aa`.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -108,85 +123,42 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
 
 ## Blocking inputs
 
-1. **PR integration:** GitHub PR #211 is still `open`; it is not merged into
-   `main`. Merge remains a human-owned external repository action.
-2. **Scientific development gates:** the last homogeneous, non-smoke 32-case
-   historical-development slice binds the seven proposed acceptance values and
-   Vina/GNINA margins. Twenty-nine cases reached scoring and the three failures
-   are typed unsupported large-ring systems. Preparation unsupported and case
-   failure are both 0.09375 against a 0.14375 ceiling, and conditional 64-slot
-   coverage is 1.0 against a 0.90 floor. Proposal oracle is 0.06897 against a
-   0.49375 floor and invalid Top-1 is 0.79310 against a 0.20 ceiling, so both
-   fail. Conditional Top-1 selection failure is exactly 0.50 against a 0.50
-   ceiling and Top-5 selection failure is 0.0 against a 0.20 ceiling. Fresh 128
-   execution remains blocked by proposal and validity gates. That report binds
-   the pre-v2 implementation and therefore remains diagnostic history. A
-   earlier current-source non-claimable track-decision slice contained nine
-   total cases, eight scored cases, and 512 candidate rows under one implementation
-   hash. Preparation unsupported and case failure are both 0.1111 against a
-   0.20 ceiling; coverage is 1.0 against 0.90. Proposal oracle is 0.25 against
-   a 0.4556 floor and invalid Top-1 is 0.625 against a 0.20 ceiling, so Stage 0
-   still fails. The final homogeneous current-source 32-case run contains 29
-   scored cases and the same three typed unsupported large-ring failures.
-   Preparation unsupported and case failure are 0.09375 against a 0.14375
-   ceiling, and candidate coverage is 1.0 against a 0.90 floor. Proposal
-   oracle recovery improved to 0.13793 but remains below the 0.49375 floor;
-   invalid Top-1 is 0.72414 against a 0.20 ceiling. Conditional Top-1
-   selection failure is 0.75 against a 0.50 ceiling and Top-5 selection
-   failure is 0.25 against a 0.20 ceiling. The development-analysis SHA-256
-   is `d1210012ae31c7c377e9eb6a01bc151279c0eca2f15bdf72d9e06e24d85d277d`
-   and threshold-evidence SHA-256 is
-   `0eae5d03c88164468feaa3b80beb49211246ccc770585f8b4c647b278e225a9a`.
-3. **Proposal/scorer diagnosis:** 1,856 successful candidate rows across the
-   29 scored cases retain canonical binary64 values for all eight terms.
-   Uniform fallback contributed four native-like and 32 valid candidates from
-   1,168 proposals. The centered lane contributed three native-like and 12
-   valid candidates from 232 proposals; it added the 6Z0R oracle independently
-   and one independent valid-pose case. Multi-anchor contributed zero
-   native-like and zero valid candidates from 84 proposals. Across the 29
-   paired historical cases, oracle events improved from two to four, mean
-   oracle RMSD from 3.233 to 2.961 A, median oracle RMSD from 3.170 to 2.749 A,
-   and mean Top-1 RMSD from 5.119 to 4.929 A. The four oracle cases still yield
-   only one Top-1 and three Top-5 recoveries. Constrained term calibration has
-   only four oracle cases versus the frozen minimum of 20 and leave-one-oracle-
-   case-out recovery is one Top-1 and two Top-5 cases, so automatic scorer or
-   proposal promotion remains false. The report contains no fresh-holdout
-   result.
-4. **Refinement/validity diagnosis:** refinement reduced its declared clash
-   penalty and translated all 1,856 candidates, yet
-   `minimum_distance_to_protein` failed 1,793 times and
-   `volume_overlap_with_protein` failed 1,612 times. Internal clash failed 515
-   times and internal energy failed 562 times. Interaction-aware v2 therefore
-   improves targeted validity but does not close the gate. Rotation v3 is now
-   implemented experimentally, but its targeted rank regression blocks default
-   use; internal geometry and interaction-aware torsion remain unresolved. The
-   current homogeneous development run fails the 0.20 invalid-Top-1 ceiling.
-   A post-run confusion audit found only nine cases with any PoseBusters-valid
-   candidate; the existing scorer already selected a valid Top-1 in eight of
-   them, with 6Z4N the only validity-selection miss. Sixty-seven candidates had
-   zero final v2 clash penalty, of which 44 were PoseBusters-valid and 23 still
-   failed another check. A zero-penalty-only rerank covers only 13 cases and
-   leaves the valid-Top-1 count at eight. The next validity slice must therefore
-   generate or refine valid candidates rather than relabel, filter, or abstain
-   around the existing pool.
-5. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
+1. **Scientific development gates:** the latest V6 historical-development
+   slice contains 29 scored cases, 1,856 candidates, and the same three typed
+   unsupported large-ring preparation failures. Proposal-oracle recovery is
+   6/29 (0.20690) against a 0.49375 floor; invalid Top-1 is 0.65517 against a
+   0.20 ceiling. Conditional Top-1 and Top-5 selection failure are 0.83333 and
+   0.50 against 0.50 and 0.20 ceilings. All four gates remain blocked, so fresh
+   128-case execution and promotion remain prohibited. This execution was
+   Engine-V2-only because the host inotify watch limit was exhausted; it does
+   not claim a new Vina/GNINA comparison or invariance result.
+2. **Proposal/scorer diagnosis:** all 1,856 successful candidate rows retain
+   canonical binary64 values for all eight terms. The six oracle cases still
+   yield only one Top-1 and three Top-5 recoveries, so the scorer-selection
+   bottleneck remains. The report contains no fresh-holdout result.
+3. **Refinement/validity diagnosis:** V6 increases exact valid candidates and
+   valid-case coverage without regressing V4 aggregate RMSD, but only 13/29
+   cases contain any valid candidate and invalid Top-1 remains 65.52%. Further
+   validity work must generate valid candidates in uncovered cases rather than
+   relabel, filter, or abstain around the current pool.
+4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier
    boundaries. It must be regenerated after the final current-source wheel and
    clean commit exist, then bound by the self-review pass generator.
-6. **Exact operator environment:** Python/Torch/RDKit/PoseBusters, GNINA,
+5. **Exact operator environment:** Python/Torch/RDKit/PoseBusters, GNINA,
    host, native extension, native wheel, Rust identity, and the reproducible
    base wheel are selected together by the operational builder. The environment
    is not frozen for execution until it is rebound to the clean source commit.
-7. **Solo governance receipt:** the two self-review passes, separated by at
+6. **Solo governance receipt:** the two self-review passes, separated by at
    least 24 hours, are not yet complete. This blocks internal execution but is
    satisfiable by the sole developer without claiming independence.
-8. **Legal/license self-review:** the prior internal review keeps benchmark
+7. **Legal/license self-review:** the prior internal review keeps benchmark
    redistribution off and treats GNINA as an internal external-binary
    invocation with redistribution forbidden. It must be rebound in the new
    solo pass; genuine external review remains a later prerequisite for public
    claims.
-9. **Issue/CI administration:** GitHub Issue #199 remains `open`. Its recorded
+8. **Issue/CI administration:** GitHub Issue #199 remains `open`. Its recorded
    Cut B reconstruction reduced 13 historical per-round/per-surface workflows
    to three authoritative workflows, and Cuts C/D were reconstructed as
    dependent drafts. The Issue exit condition is not satisfied because the
@@ -194,7 +166,7 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
    The 40 specialized workflows also require an explicit reviewer disposition;
    the attestation has a separate CI-authority approval decision.
    No external issue, PR, required-check, or workflow state was mutated here.
-10. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
+9. **Later native tracks:** `cpp_hip_required` remains an explicit fail-closed
     unavailable backend. C++/HIP shadow work, Rust RMSD/clustering extraction,
     the native candidate executor, and bounded native parser are not admitted
     while current proposal and validity gates fail. Product shadow routing

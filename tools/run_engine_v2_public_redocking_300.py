@@ -70,7 +70,7 @@ from betelgeuze_engine_v2.docking import (
     DockingScope,
     ElementAwareValidityError,
     GuidedPlacementPolicy,
-    InteractionAwareRigidEnsembleRefinerV4,
+    InteractionAwareRigidHybridClearanceEnsembleRefinerV6,
     PocketDefinition,
     ScorerBackend,
     ScorerBackendOptions,
@@ -2258,12 +2258,12 @@ def _engine_v2_pose_coordinates(
             budget,
             guided_policy,
         )
-        refiner = InteractionAwareRigidEnsembleRefinerV4(
+        refiner = InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
             authority,
             receptor,
             ligand,
             implementation_source_sha256=_sha256_bytes(
-                b"engine-v2-interaction-aware-rigid-ensemble-refiner-v4"
+                b"engine-v2-interaction-aware-rigid-hybrid-ensemble-refiner-v6"
             ),
             v3_proposal_indices=v3_proposal_indices,
         )

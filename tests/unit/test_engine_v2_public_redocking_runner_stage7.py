@@ -2063,7 +2063,7 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     )
     monkeypatch.setattr(
         runner,
-        "InteractionAwareRigidEnsembleRefinerV4",
+        "InteractionAwareRigidHybridClearanceEnsembleRefinerV6",
         lambda *args, **kwargs: object(),
     )
 
@@ -2197,7 +2197,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
     )
     monkeypatch.setattr(
         runner,
-        "InteractionAwareRigidEnsembleRefinerV4",
+        "InteractionAwareRigidHybridClearanceEnsembleRefinerV6",
         lambda *args, **kwargs: refiner,
     )
     term_rows = tuple(
