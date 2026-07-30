@@ -60,3 +60,32 @@ def test_score_term_analysis_is_nonclaimable_and_detects_ablation() -> None:
     assert report["candidate_diagnostic_summary"][
         "posebusters_failed_check_counts"
     ] == {"minimum_distance_to_protein": 1}
+
+
+def test_score_term_analysis_retains_typed_incomplete_pose_failure() -> None:
+    result = _result("5SD5_HWI")
+    result["status"] = "failure"
+    result["failure_code"] = "engine_v2_pose_count_incomplete"
+    diagnostics = result["engine_v2_diagnostics"]
+    assert isinstance(diagnostics, dict)
+    diagnostics["preparation_status"] = "success"
+    candidates = diagnostics["candidates"]
+    assert isinstance(candidates, list)
+    for candidate in candidates[4:]:
+        candidate.clear()
+        candidate.update({"status": "failure"})
+
+    report = analyze_results(
+        [result, _result("5SIS_JSM")],
+        source_receipts_sha256={"receipt.json": "1" * 64},
+    )
+
+    assert report["scored_case_count"] == 1
+    assert report["preparation_excluded_case_count"] == 0
+    assert report["candidate_count"] == 68
+    assert report["cases"][0] == {
+        "case_id": "5SD5_HWI",
+        "scorer_analysis_status": "excluded_execution_failure",
+        "execution_failure_code": "engine_v2_pose_count_incomplete",
+        "candidate_success_count": 4,
+    }

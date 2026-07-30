@@ -9,6 +9,7 @@ import subprocess
 
 import pytest
 
+import betelgeuze_engine_v2.benchmark.blind_stage0 as blind_stage0_contract
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     STAGE0_DIAGNOSTIC_CONTRACT_ID,
@@ -79,6 +80,56 @@ def _write_canonical_json(path: Path, payload: object) -> None:
     path.write_bytes(_canonical_bytes(payload) + b"\n")
 
 
+def _fixture_threshold_contract() -> tuple[
+    dict[str, tuple[str, float]], dict[str, object]
+]:
+    thresholds = {
+        "preparation_input_unsupported_rate": ("max", 0.10),
+        "candidate_generation_coverage": ("min", 0.95),
+        "proposal_oracle_2a_recovery": ("min", 0.50),
+        "top1_selection_failure_given_oracle": ("max", 0.35),
+        "top5_selection_failure_given_oracle": ("max", 0.20),
+        "invalid_top1_pose_rate": ("max", 0.10),
+        "case_level_failure_rate": ("max", 0.15),
+    }
+    payload: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0",
+        "corpus_id": "public-development-test-corpus",
+        "case_count": 40,
+        "case_ids_sha256": "5" * 64,
+        "contains_engineering_smoke": False,
+        "contains_primary_holdout": False,
+        "contains_fresh_internal_blind_holdout": False,
+        "diagnostic_contract_id": STAGE0_DIAGNOSTIC_CONTRACT_ID,
+        "sample_size_justification": "test fixture with reviewed development cases",
+        "metrics": {
+            metric: {
+                "operator": operator,
+                "observed_estimate": value,
+                "proposed_threshold": value,
+                "derivation_rule": "reviewed development estimate",
+            }
+            for metric, (operator, value) in thresholds.items()
+        },
+        "paired_baseline_engines": ["vina", "gnina"],
+        "baseline_noninferiority_margins": {
+            "top1_2a_recovery_delta": -0.05,
+            "top5_2a_recovery_delta": -0.05,
+        },
+        "metric_denominator_policy": {
+            "preparation_input_unsupported_rate": "all_cases",
+            "candidate_generation_coverage": "preparation_success_cases",
+            "proposal_oracle_2a_recovery": "preparation_success_cases",
+            "top1_selection_failure_given_oracle": "proposal_oracle_success_cases",
+            "top5_selection_failure_given_oracle": "proposal_oracle_success_cases",
+            "invalid_top1_pose_rate": "preparation_success_cases",
+            "case_level_failure_rate": "all_cases",
+        },
+    }
+    payload["evidence_sha256"] = _canonical_sha256(payload)
+    return thresholds, payload
+
+
 def _python_backend_receipt() -> dict[str, object]:
     payload: dict[str, object] = {
         "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
@@ -120,7 +171,6 @@ def _development_materialization(case_id: str) -> VerifiedCaseMaterialization:
         for profile in frozen_public_redocking_profiles()
         if profile.case_id == case_id
     )
-
     def digest(role: str) -> str:
         return hashlib.sha256(f"{case_id}:{role}".encode("ascii")).hexdigest()
 
@@ -143,6 +193,18 @@ def _development_materialization(case_id: str) -> VerifiedCaseMaterialization:
         ),
         verification_authority=benchmark_contract._VERIFIED_ARCHIVE_AUTHORITY,
     )
+
+
+def _development_run_root(repo_root: Path) -> Path:
+    return repo_root / ".betelgeuze/stage0-development/v7-fixture"
+
+
+def _development_report_path(repo_root: Path) -> Path:
+    return _development_run_root(repo_root) / "development-report.json"
+
+
+def _development_receipt_path(repo_root: Path, case_id: str) -> Path:
+    return _development_run_root(repo_root) / "receipts/engine_v2" / f"{case_id}.json"
 
 
 def _development_result(
@@ -237,11 +299,17 @@ def _policy(
     gnina: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> dict[str, object]:
+    thresholds, threshold_evidence_payload = _fixture_threshold_contract()
+    threshold_relative_path = (
+        blind_stage0_contract.STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH
+    )
     source_paths = tuple(sorted(STAGE0_REQUIRED_SOURCE_FREEZE_PATHS))
     for relative_path in source_paths:
         source = repo_root / relative_path
         source.parent.mkdir(parents=True, exist_ok=True)
-        if relative_path in {
+        if relative_path == threshold_relative_path:
+            _write_canonical_json(source, threshold_evidence_payload)
+        elif relative_path in {
             "config/engine_v2_public_redocking_contamination_registry.json",
             "config/engine_v2_fresh_redocking_holdout_manifest.json",
             "tools/analyze_engine_v2_score_terms.py",
@@ -294,8 +362,19 @@ def _policy(
         ),
         check=True,
     )
-    threshold_evidence = repo_root / "threshold-evidence.json"
-    development_report = repo_root / "development-report.json"
+    threshold_evidence = repo_root / threshold_relative_path
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "STAGE0_FROZEN_THRESHOLD_EVIDENCE_FILE_SHA256",
+        _sha256(threshold_evidence),
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "STAGE0_FROZEN_THRESHOLD_EVIDENCE_SHA256",
+        threshold_evidence_payload["evidence_sha256"],
+    )
+    development_run_root = _development_run_root(repo_root)
+    development_report = _development_report_path(repo_root)
     suite_receipt = repo_root / "suite-classification.json"
     reconciliation_receipt = repo_root / "suite-reconciliation.json"
     attestation = repo_root / "independent-attestation.json"
@@ -310,10 +389,15 @@ def _policy(
         "\n".join(
             (
                 "name: test",
+                "tools/__init__.py",
+                "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
+                "tests/unit/test_analyze_engine_v2_score_terms.py",
                 "tests/unit/test_engine_v2_blind_stage0.py",
+                "tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py",
                 "tests/unit/test_classify_engine_v2_stage0_full_suite.py",
                 "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py",
                 "tools/verify_engine_v2_public_redocking_stage0.py",
+                "tools/build_engine_v2_stage0_development_gate_ledger.py",
                 "tools/classify_engine_v2_stage0_full_suite.py",
                 "tools/reconcile_engine_v2_stage0_full_suites.py",
             )
@@ -324,52 +408,6 @@ def _policy(
     specialized.write_text("name: specialized\n", encoding="utf-8")
     ci_receipt.write_text(
         json.dumps(build_inventory(repo_root), sort_keys=True), encoding="utf-8"
-    )
-    thresholds = {
-        "preparation_input_unsupported_rate": ("max", 0.10),
-        "candidate_generation_coverage": ("min", 0.95),
-        "proposal_oracle_2a_recovery": ("min", 0.50),
-        "top1_selection_failure_given_oracle": ("max", 0.35),
-        "top5_selection_failure_given_oracle": ("max", 0.20),
-        "invalid_top1_pose_rate": ("max", 0.10),
-        "case_level_failure_rate": ("max", 0.15),
-    }
-    threshold_evidence_payload = {
-        "schema_id": "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0",
-        "corpus_id": "public-development-test-corpus",
-        "case_count": 40,
-        "case_ids_sha256": "5" * 64,
-        "contains_engineering_smoke": False,
-        "contains_primary_holdout": False,
-        "contains_fresh_internal_blind_holdout": False,
-        "diagnostic_contract_id": STAGE0_DIAGNOSTIC_CONTRACT_ID,
-        "sample_size_justification": "test fixture with reviewed development cases",
-        "metrics": {
-            metric: {
-                "operator": operator,
-                "observed_estimate": value,
-                "proposed_threshold": value,
-                "derivation_rule": "reviewed development estimate",
-            }
-            for metric, (operator, value) in thresholds.items()
-        },
-        "paired_baseline_engines": ["vina", "gnina"],
-        "baseline_noninferiority_margins": {
-            "top1_2a_recovery_delta": -0.05,
-            "top5_2a_recovery_delta": -0.05,
-        },
-        "metric_denominator_policy": {
-            "preparation_input_unsupported_rate": "all_cases",
-            "candidate_generation_coverage": "preparation_success_cases",
-            "proposal_oracle_2a_recovery": "preparation_success_cases",
-            "top1_selection_failure_given_oracle": "proposal_oracle_success_cases",
-            "top5_selection_failure_given_oracle": "proposal_oracle_success_cases",
-            "invalid_top1_pose_rate": "preparation_success_cases",
-            "case_level_failure_rate": "all_cases",
-        },
-    }
-    threshold_evidence.write_text(
-        json.dumps(threshold_evidence_payload, sort_keys=True), encoding="utf-8"
     )
     development_case_ids = [
         case_id
@@ -387,11 +425,11 @@ def _policy(
             materialization.receipt_sha256,
         )
         materialization_path = (
-            repo_root / "receipts/materializations" / f"{case_id}.json"
+            development_run_root / "receipts/materializations" / f"{case_id}.json"
         )
         materialization_path.parent.mkdir(parents=True, exist_ok=True)
         _write_canonical_json(materialization_path, materialization.to_dict())
-        result = _development_result(repo_root, case_id, materialization)
+        result = _development_result(development_run_root, case_id, materialization)
         execution = VerifiedPublicRedockingCaseExecution._from_fresh_execution(
             result=result,
             materialization_receipt_sha256=materialization.receipt_sha256,
@@ -400,7 +438,7 @@ def _policy(
             execution_environment_sha256="8" * 64,
             verification_authority=benchmark_contract._VERIFIED_EXECUTION_AUTHORITY,
         )
-        receipt_path = repo_root / "receipts/engine_v2" / f"{case_id}.json"
+        receipt_path = _development_receipt_path(repo_root, case_id)
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         _write_canonical_json(receipt_path, execution.to_dict())
         source_receipts_sha256[receipt_path.relative_to(repo_root).as_posix()] = (
@@ -418,7 +456,7 @@ def _policy(
     )
     _write_canonical_json(development_report, development_report_payload)
     development_provenance = stage0_execution_profile_development_provenance(
-        development_report_path=development_report.name,
+        development_report_path=development_report.relative_to(repo_root).as_posix(),
         development_report_file_sha256=_sha256(development_report),
         development_report_sha256=str(
             development_report_payload["report_sha256"]
@@ -429,7 +467,7 @@ def _policy(
     )
     provenance = {
         "basis": "public_development_corpus",
-        "evidence_path": threshold_evidence.name,
+        "evidence_path": threshold_evidence.relative_to(repo_root).as_posix(),
         "evidence_sha256": _sha256(threshold_evidence),
         "excluded_sources": ["engineering_smoke", "fresh_internal_blind_holdout"],
     }
@@ -736,6 +774,25 @@ def _rebind_development_profile(
     payload["policy_sha256"] = compute_stage0_policy_sha256(payload)
 
 
+def _reseal_development_receipt(
+    *,
+    repo_root: Path,
+    payload: dict[str, object],
+    development_path: Path,
+    development: dict[str, object],
+    receipt_path: Path,
+    receipt: dict[str, object],
+) -> None:
+    receipt.pop("receipt_sha256", None)
+    receipt["receipt_sha256"] = _canonical_sha256(receipt)
+    _write_canonical_json(receipt_path, receipt)
+    relative_path = receipt_path.relative_to(repo_root).as_posix()
+    source_receipts = development["source_receipts_sha256"]
+    assert isinstance(source_receipts, dict)
+    source_receipts[relative_path] = _sha256(receipt_path)
+    _rebind_development_profile(payload, development_path, development)
+
+
 def _native_snapshot(payload: dict[str, object]) -> dict[str, object]:
     environment = payload["environment_freeze"]
     assert isinstance(environment, dict)
@@ -778,10 +835,13 @@ def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, ob
     source_freeze["integration_state"] = "frozen_dedicated_branch_commit"
     source_freeze["unmerged_execution_is_internal_only"] = True
     developer_id = "solo-developer"
-    threshold_path = repo_root / "threshold-evidence.json"
+    threshold_path = (
+        repo_root / blind_stage0_contract.STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH
+    )
     threshold = json.loads(threshold_path.read_text(encoding="utf-8"))
-    threshold["evidence_sha256"] = _canonical_sha256(threshold)
-    threshold_path.write_text(json.dumps(threshold, sort_keys=True), encoding="utf-8")
+    assert threshold["evidence_sha256"] == _canonical_sha256(
+        {key: value for key, value in threshold.items() if key != "evidence_sha256"}
+    )
     thresholds = payload["acceptance_thresholds"]
     assert isinstance(thresholds, dict)
     for row in thresholds.values():
@@ -807,7 +867,7 @@ def _as_solo_policy(payload: dict[str, object], repo_root: Path) -> dict[str, ob
         "operational_evidence_path": operational_path.name,
         "operational_evidence_file_sha256": _sha256(operational_path),
         "operational_evidence_receipt_sha256": operational["receipt_sha256"],
-        "threshold_evidence_path": threshold_path.name,
+        "threshold_evidence_path": threshold_path.relative_to(repo_root).as_posix(),
         "threshold_evidence_file_sha256": _sha256(threshold_path),
         "threshold_evidence_sha256": threshold["evidence_sha256"],
     }
@@ -1026,7 +1086,9 @@ def test_stage0_rejects_failed_development_threshold_gate(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    threshold_path = tmp_path / "threshold-evidence.json"
+    threshold_path = (
+        tmp_path / blind_stage0_contract.STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH
+    )
     threshold_evidence = json.loads(threshold_path.read_text(encoding="utf-8"))
     threshold_evidence["metrics"]["proposal_oracle_2a_recovery"][
         "observed_estimate"
@@ -1230,13 +1292,15 @@ def test_stage0_rejects_fresh_case_in_rebound_development_report(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     original_case_id = str(development["case_ids"][0])
     fresh_case_id = FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS[0]
-    original_receipt_relative = f"receipts/engine_v2/{original_case_id}.json"
-    fresh_receipt_relative = f"receipts/engine_v2/{fresh_case_id}.json"
-    fresh_receipt_path = tmp_path / fresh_receipt_relative
+    original_receipt_relative = _development_receipt_path(
+        tmp_path, original_case_id
+    ).relative_to(tmp_path).as_posix()
+    fresh_receipt_path = _development_receipt_path(tmp_path, fresh_case_id)
+    fresh_receipt_relative = fresh_receipt_path.relative_to(tmp_path).as_posix()
     source_receipts = dict(development["source_receipts_sha256"])
     source_receipts.pop(original_receipt_relative)
     source_receipts[fresh_receipt_relative] = "a" * 64
@@ -1281,7 +1345,7 @@ def test_stage0_rejects_self_hashed_development_report_without_source_receipts(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     development.pop("source_receipts_sha256")
     _rebind_development_profile(payload, development_path, development)
@@ -1315,11 +1379,11 @@ def test_stage0_rejects_resealed_cross_wired_development_receipts(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     first_case_id, second_case_id = development["case_ids"][:2]
     receipt_paths = {
-        case_id: tmp_path / "receipts/engine_v2" / f"{case_id}.json"
+        case_id: _development_receipt_path(tmp_path, case_id)
         for case_id in (first_case_id, second_case_id)
     }
     receipts = {
@@ -1366,10 +1430,10 @@ def test_stage0_rejects_resealed_skeletal_development_receipt(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     case_id = development["case_ids"][0]
-    receipt_path = tmp_path / "receipts/engine_v2" / f"{case_id}.json"
+    receipt_path = _development_receipt_path(tmp_path, case_id)
     skeletal_receipt: dict[str, object] = {
         "schema_id": benchmark_contract.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID,
         "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
@@ -1408,10 +1472,10 @@ def test_stage0_rejects_resealed_truncated_development_command(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     case_id = development["case_ids"][0]
-    receipt_path = tmp_path / "receipts/engine_v2" / f"{case_id}.json"
+    receipt_path = _development_receipt_path(tmp_path, case_id)
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     truncated_command = [PUBLIC_REDOCKING_RUNNER_ID, "engine_v2", "--case-id"]
     receipt["command"] = truncated_command
@@ -1442,6 +1506,114 @@ def test_stage0_rejects_resealed_truncated_development_command(
     ) in raised.value.blockers
 
 
+def test_stage0_rejects_resealed_external_path_and_extra_command_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    policy_path = tmp_path / "policy.json"
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    development_path = _development_report_path(tmp_path)
+    development = json.loads(development_path.read_text(encoding="utf-8"))
+    case_id = development["case_ids"][0]
+    receipt_path = _development_receipt_path(tmp_path, case_id)
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    command = list(receipt["command"])
+    command[command.index("--receptor") + 1] = (
+        f"/attacker/inputs/{case_id}/{case_id}_protein.pdb"
+    )
+    command.extend(("--unreviewed-mode", "fresh"))
+    receipt["command"] = command
+    receipt["result"]["execution_command"] = command
+    _reseal_development_receipt(
+        repo_root=tmp_path,
+        payload=payload,
+        development_path=development_path,
+        development=development,
+        receipt_path=receipt_path,
+        receipt=receipt,
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert (
+        "execution_profile_development_source_receipts_invalid:"
+        "development_source_receipt_command_invalid"
+    ) in raised.value.blockers
+
+
+@pytest.mark.parametrize(
+    "policy_mutation",
+    (
+        {
+            "interaction_refiner": "forged-refiner",
+            "fresh_execution_authorized": True,
+        },
+        {"cpu_count": True, "scorer_thread_count": 1.0},
+    ),
+    ids=("extra-and-forged", "json-type-confusion"),
+)
+def test_stage0_rejects_resealed_extra_or_forged_execution_policy(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    policy_mutation: dict[str, object],
+) -> None:
+    gnina = tmp_path / "gnina"
+    gnina.write_bytes(b"gnina-test-binary")
+    policy_path = tmp_path / "policy.json"
+    payload = _policy(tmp_path, gnina, monkeypatch)
+    development_path = _development_report_path(tmp_path)
+    development = json.loads(development_path.read_text(encoding="utf-8"))
+    case_id = development["case_ids"][0]
+    receipt_path = _development_receipt_path(tmp_path, case_id)
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    execution_policy = dict(receipt["execution_policy"])
+    execution_policy.update(policy_mutation)
+    receipt["execution_policy"] = execution_policy
+    receipt["result"]["execution_policy"] = list(
+        runner._execution_policy_tokens(execution_policy)
+    )
+    _reseal_development_receipt(
+        repo_root=tmp_path,
+        payload=payload,
+        development_path=development_path,
+        development=development,
+        receipt_path=receipt_path,
+        receipt=receipt,
+    )
+    monkeypatch.setattr(
+        blind_stage0_contract,
+        "current_stage0_native_backend",
+        lambda: _native_snapshot(payload),
+    )
+    _write_policy(policy_path, payload)
+
+    with pytest.raises(Stage0AdmissionError) as raised:
+        verify_stage0_admission(
+            policy_path,
+            repo_root=tmp_path,
+            gnina_path=gnina,
+            output_root=tmp_path / ".betelgeuze/fresh-redocking-128",
+        )
+
+    assert (
+        "execution_profile_development_source_receipts_invalid:"
+        "development_source_receipt_policy_invalid"
+    ) in raised.value.blockers
+
+
 def test_stage0_rejects_resealed_development_input_materialization_mismatch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1449,10 +1621,10 @@ def test_stage0_rejects_resealed_development_input_materialization_mismatch(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     case_id = development["case_ids"][0]
-    receipt_path = tmp_path / "receipts/engine_v2" / f"{case_id}.json"
+    receipt_path = _development_receipt_path(tmp_path, case_id)
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     receipt["input_sha256s"]["receptor"] = "9" * 64
     receipt["result"]["receptor_artifact_sha256"] = "9" * 64
@@ -1489,7 +1661,7 @@ def test_stage0_rejects_resealed_analyzer_report_drift(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     development["candidate_count"] = int(development["candidate_count"]) + 1
     _rebind_development_profile(payload, development_path, development)
@@ -1520,10 +1692,10 @@ def test_stage0_rejects_resealed_extra_development_receipt_field(
     gnina.write_bytes(b"gnina-test-binary")
     policy_path = tmp_path / "policy.json"
     payload = _policy(tmp_path, gnina, monkeypatch)
-    development_path = tmp_path / "development-report.json"
+    development_path = _development_report_path(tmp_path)
     development = json.loads(development_path.read_text(encoding="utf-8"))
     case_id = development["case_ids"][0]
-    receipt_path = tmp_path / "receipts/engine_v2" / f"{case_id}.json"
+    receipt_path = _development_receipt_path(tmp_path, case_id)
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     receipt["unexpected"] = True
     receipt.pop("receipt_sha256")

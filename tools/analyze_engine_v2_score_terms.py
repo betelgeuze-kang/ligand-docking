@@ -255,17 +255,40 @@ def analyze_results(
         if not isinstance(diagnostics, Mapping):
             raise ValueError("Engine V2 diagnostics are missing")
         if result.get("status") != "success":
-            if diagnostics.get("preparation_status") != "failure":
-                raise ValueError("failed result has no typed preparation failure")
-            failure_code = str(diagnostics.get("preparation_failure_code", ""))
-            if not failure_code:
-                raise ValueError("failed result has no preparation failure code")
+            if diagnostics.get("preparation_status") == "failure":
+                failure_code = str(diagnostics.get("preparation_failure_code", ""))
+                if not failure_code:
+                    raise ValueError("failed result has no preparation failure code")
+                cases.append(
+                    {
+                        "case_id": result["case_id"],
+                        "scorer_analysis_status": "excluded_preparation_failure",
+                        "preparation_failure_code": failure_code,
+                        "candidate_success_count": 0,
+                    }
+                )
+                continue
+            raw_candidates = diagnostics.get("candidates")
+            if (
+                result.get("failure_code") != "engine_v2_pose_count_incomplete"
+                or diagnostics.get("preparation_status") != "success"
+                or not isinstance(raw_candidates, list)
+                or len(raw_candidates) != 64
+            ):
+                raise ValueError("failed result has no supported typed failure")
+            candidate_success_count = sum(
+                isinstance(candidate, Mapping)
+                and candidate.get("status") == "success"
+                for candidate in raw_candidates
+            )
+            if candidate_success_count >= 5:
+                raise ValueError("incomplete pose failure has five scored candidates")
             cases.append(
                 {
                     "case_id": result["case_id"],
-                    "scorer_analysis_status": "excluded_preparation_failure",
-                    "preparation_failure_code": failure_code,
-                    "candidate_success_count": 0,
+                    "scorer_analysis_status": "excluded_execution_failure",
+                    "execution_failure_code": result["failure_code"],
+                    "candidate_success_count": candidate_success_count,
                 }
             )
             continue

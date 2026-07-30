@@ -121,6 +121,18 @@ The canonical capability state is:
   requires the complete report to match. The profile SHA-256 is carried by
   admission, all 384 case-execution receipts, and the final internal report;
   incomplete or mixed receipt ledgers fail closed.
+- A compact development-gate ledger builder now consumes that authenticated
+  Scorer-v1 report and its typed results, re-evaluates all seven gates against
+  the tracked 12-case threshold authority at
+  `config/engine_v2_public_redocking_stage0_threshold_evidence.json`, whose
+  frozen inner SHA-256 is
+  `8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3`.
+  It records exact numerators, denominators, per-case observed blockers,
+  PoseBusters failure counts, and proposal/refiner lineage digests. It does not
+  duplicate candidate payloads, cannot authorize runtime or fresh execution,
+  and labels unproven conformer/orientation causes
+  `unresolved_requires_coordinate_replay`. A current-source V7 report and
+  receipt bundle still must be rematerialized before a real ledger is frozen.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -183,12 +195,19 @@ The canonical capability state is:
 1. **Scientific development gates:** the latest V7 hybrid historical-development
    slice contains 29 scored cases, 1,856 candidates, and the same three typed
    unsupported large-ring preparation failures. Proposal-oracle recovery is
-   6/29 (0.20690) against a 0.49375 floor; invalid Top-1 is 0.62069 against a
-   0.20 ceiling. Conditional Top-1 and Top-5 selection failure are 0.83333 and
-   0.50 against 0.50 and 0.20 ceilings. All four gates remain blocked, so fresh
-   128-case execution and promotion remain prohibited. This execution was
+   6/29 (0.20690). The tracked 12-case machine authority freezes a
+   `0.31666666666666665` floor, while the prior `0.49375` narrative was not
+   rebound to that artifact. This authority/narrative mismatch remains a
+   blocker until reviewed replacement evidence and policy bindings are frozen;
+   neither value may be silently substituted. Invalid Top-1 is 0.62069 against
+   a 0.20 ceiling. Conditional Top-1 and Top-5 selection failure are 0.83333
+   and 0.50 against 0.50 and 0.20 ceilings. All four gates remain blocked, so
+   fresh 128-case execution and promotion remain prohibited. This execution was
    Engine-V2-only because the host inotify watch limit was exhausted; it does
-   not claim a new Vina/GNINA comparison or invariance result.
+   not claim a new Vina/GNINA comparison or invariance result. The compact
+   ledger contract is implemented, but these V7 observations must be
+   rematerialized from current-source receipts before becoming its frozen
+   machine-readable input.
 2. **Proposal/scorer diagnosis:** all 1,856 successful candidate rows retain
    canonical binary64 values for all eight terms. The six oracle cases still
    yield only one Top-1 and three Top-5 recoveries, so the scorer-selection

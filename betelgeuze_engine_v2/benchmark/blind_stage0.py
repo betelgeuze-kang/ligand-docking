@@ -16,6 +16,7 @@ import runpy
 import shutil
 import subprocess
 import sys
+from types import MappingProxyType
 from typing import Any, Mapping
 
 from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
@@ -32,7 +33,9 @@ from .public_redocking_benchmark import (
     PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID,
     PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256,
+    PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS,
     PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
     PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256,
     PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES,
@@ -77,8 +80,17 @@ STAGE0_DEVELOPMENT_ANALYSIS_SCHEMA_ID = (
     "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
 )
 STAGE0_DEVELOPMENT_MINIMUM_SCORED_CASE_COUNT = 8
+STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH = (
+    "config/engine_v2_public_redocking_stage0_threshold_evidence.json"
+)
+STAGE0_FROZEN_THRESHOLD_EVIDENCE_FILE_SHA256 = (
+    "0000dd236ab980ecf04e7c02cb73fb556c8a78190bb7f8aa9bec1cf08f9e807a"
+)
+STAGE0_FROZEN_THRESHOLD_EVIDENCE_SHA256 = (
+    "8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3"
+)
 
-_REQUIRED_THRESHOLDS = {
+STAGE0_DEVELOPMENT_GATE_OPERATORS: Mapping[str, str] = MappingProxyType({
     "preparation_input_unsupported_rate": "max",
     "candidate_generation_coverage": "min",
     "proposal_oracle_2a_recovery": "min",
@@ -86,8 +98,8 @@ _REQUIRED_THRESHOLDS = {
     "top5_selection_failure_given_oracle": "max",
     "invalid_top1_pose_rate": "max",
     "case_level_failure_rate": "max",
-}
-_REQUIRED_THRESHOLD_DENOMINATORS = {
+})
+STAGE0_DEVELOPMENT_GATE_DENOMINATORS: Mapping[str, str] = MappingProxyType({
     "preparation_input_unsupported_rate": "all_cases",
     "candidate_generation_coverage": "preparation_success_cases",
     "proposal_oracle_2a_recovery": "preparation_success_cases",
@@ -95,7 +107,9 @@ _REQUIRED_THRESHOLD_DENOMINATORS = {
     "top5_selection_failure_given_oracle": "proposal_oracle_success_cases",
     "invalid_top1_pose_rate": "preparation_success_cases",
     "case_level_failure_rate": "all_cases",
-}
+})
+_REQUIRED_THRESHOLDS = STAGE0_DEVELOPMENT_GATE_OPERATORS
+_REQUIRED_THRESHOLD_DENOMINATORS = STAGE0_DEVELOPMENT_GATE_DENOMINATORS
 _REQUIRED_BRANCHES = {
     "preparation_coverage_low": "preparation_track",
     "proposal_oracle_low": "proposal_track",
@@ -125,6 +139,7 @@ STAGE0_REQUIRED_SOURCE_FREEZE_PATHS = frozenset(
         "tools/freeze_engine_v2_fresh_holdout.py",
         "tools/derive_engine_v2_stage0_threshold_evidence.py",
         "tools/analyze_engine_v2_score_terms.py",
+        "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/verify_engine_v2_public_redocking_stage0.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
@@ -134,6 +149,7 @@ STAGE0_REQUIRED_SOURCE_FREEZE_PATHS = frozenset(
         "betelgeuze_engine_v2/benchmark/public_redocking_benchmark.py",
         "config/engine_v2_public_redocking_contamination_registry.json",
         "config/engine_v2_fresh_redocking_holdout_manifest.json",
+        STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH,
         "betelgeuze_engine_v2/docking/__init__.py",
         "betelgeuze_engine_v2/docking/authority.py",
         "betelgeuze_engine_v2/docking/conformers.py",
@@ -381,6 +397,73 @@ def stage0_engine_v2_algorithm_profile() -> dict[str, object]:
             "result_independent": True,
         },
     }
+
+
+def stage0_development_execution_policy(scorer_backend: str) -> dict[str, object]:
+    """Return the exact current-source policy required for development receipts."""
+
+    if scorer_backend not in {"python_reference", "rust_cpu_required"}:
+        raise ValueError("development_scorer_backend_invalid")
+    torch_module = importlib.import_module("torch")
+    torch_version = str(getattr(torch_module, "__version__", "")).strip()
+    if not torch_version:
+        raise ValueError("development_torch_version_invalid")
+    return {
+        "algorithm_profile_id": STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+        "candidate_schema_id": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+        "cpu_count": 1,
+        "interaction_refiner": PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID,
+        "interaction_refiner_config_sha256": (
+            PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256
+        ),
+        "interaction_refinement_steps": PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS,
+        "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
+        "scorer_backend": scorer_backend,
+        "scorer_thread_count": 1,
+        "torch_interop_threads": 1,
+        "torch_intraop_threads": 1,
+        "torch_version": torch_version,
+    }
+
+
+def _stage0_development_execution_command(
+    execution_receipt_path: Path,
+    *,
+    case_id: str,
+    scorer_backend: str,
+) -> tuple[str, ...]:
+    """Reconstruct the only current-source development command for a receipt."""
+
+    if (
+        execution_receipt_path.name != f"{case_id}.json"
+        or execution_receipt_path.parent.name != "engine_v2"
+        or execution_receipt_path.parent.parent.name != "receipts"
+    ):
+        raise ValueError("development_source_receipt_path_cross_wired")
+    output_root = execution_receipt_path.parents[2]
+    input_root = output_root / "inputs" / case_id
+    return (
+        PUBLIC_REDOCKING_RUNNER_ID,
+        "engine_v2",
+        "--case-id",
+        case_id,
+        "--receptor",
+        str(input_root / f"{case_id}_protein.pdb"),
+        "--ligand",
+        str(input_root / f"{case_id}_ligand_start_conf.sdf"),
+        "--pocket-source",
+        str(input_root / f"{case_id}_ligand.sdf"),
+        "--candidate-count",
+        str(PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT),
+        "--cpu",
+        "1",
+        "--scorer-backend",
+        scorer_backend,
+        "--seed",
+        str(frozen_public_redocking_case_seed(case_id)),
+        "--out",
+        str(output_root / "poses" / "engine_v2" / f"{case_id}.sdf"),
+    )
 
 
 def stage0_fresh_execution_runtime_arguments() -> dict[str, object]:
@@ -763,12 +846,12 @@ def _development_materialization_binding(
     )
 
 
-def stage0_development_source_receipt_binding(
+def stage0_authenticated_development_evidence(
     development_report: Mapping[str, Any],
     *,
     repo_root: Path,
-) -> dict[str, object]:
-    """Authenticate the development report against exact current-source receipts."""
+) -> tuple[dict[str, object], tuple[PublicRedockingCaseResult, ...]]:
+    """Authenticate a development report and return its exact typed results."""
 
     if development_report.get("schema_id") != STAGE0_DEVELOPMENT_ANALYSIS_SCHEMA_ID:
         raise ValueError("development_report_schema_invalid")
@@ -796,12 +879,7 @@ def stage0_development_source_receipt_binding(
 
     current_implementation_sha256 = stage0_engine_implementation_sha256(repo_root)
     receipt_case_ids: set[str] = set()
-    receipt_results: list[dict[str, object]] = []
-    required_execution_policy = {
-        "algorithm_profile_id": STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
-        "candidate_schema_id": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
-        "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
-    }
+    receipt_results: list[PublicRedockingCaseResult] = []
     required_receipt_fields = {
         "schema_id",
         "runner_id",
@@ -848,56 +926,43 @@ def stage0_development_source_receipt_binding(
             or case_id not in case_ids
         ):
             raise ValueError("development_source_receipt_case_invalid")
+        relative_receipt_path = Path(relative_path)
+        run_root_parts = relative_receipt_path.parts[:-3]
+        if (
+            relative_receipt_path.is_absolute()
+            or relative_receipt_path.as_posix() != relative_path
+            or any(part in {"", ".", ".."} for part in relative_receipt_path.parts)
+            or len(run_root_parts) < 2
+            or run_root_parts[0] != ".betelgeuze"
+            or relative_receipt_path.parts[-3:]
+            != ("receipts", "engine_v2", f"{case_id}.json")
+            or path != repo_root.resolve() / relative_receipt_path
+        ):
+            raise ValueError("development_source_receipt_path_cross_wired")
         command = list(typed_result.execution_command)
         execution_policy = _execution_policy_mapping(
             typed_result.execution_policy
         )
-        required_command_options = (
-            "--case-id",
-            "--receptor",
-            "--ligand",
-            "--pocket-source",
-            "--candidate-count",
-            "--cpu",
-            "--scorer-backend",
-            "--seed",
-            "--out",
-        )
+        scorer_backend = execution_policy.get("scorer_backend")
+        if not isinstance(scorer_backend, str):
+            raise ValueError("development_source_receipt_policy_invalid")
         try:
-            required_command_values = {
-                option: command[command.index(option) + 1]
-                for option in required_command_options
-                if command.count(option) == 1
-            }
-        except (IndexError, ValueError) as exc:
-            raise ValueError("development_source_receipt_command_invalid") from exc
-        if (
-            set(required_command_values)
-            != set(required_command_options)
-            or command[:2] != [PUBLIC_REDOCKING_RUNNER_ID, "engine_v2"]
-            or required_command_values["--case-id"] != case_id
-            or Path(required_command_values["--receptor"]).name
-            != f"{case_id}_protein.pdb"
-            or Path(required_command_values["--ligand"]).name
-            != f"{case_id}_ligand_start_conf.sdf"
-            or Path(required_command_values["--pocket-source"]).name
-            != f"{case_id}_ligand.sdf"
-            or required_command_values["--candidate-count"]
-            != str(PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT)
-            or required_command_values["--cpu"] != "1"
-            or required_command_values["--scorer-backend"]
-            != execution_policy.get("scorer_backend")
-            or required_command_values["--seed"]
-            != str(frozen_public_redocking_case_seed(case_id))
-            or Path(required_command_values["--out"]).name != f"{case_id}.sdf"
-            or Path(required_command_values["--out"]).parent.name != "engine_v2"
-        ):
-            raise ValueError("development_source_receipt_command_invalid")
-        if any(
-            execution_policy.get(name) != expected
-            for name, expected in required_execution_policy.items()
+            expected_execution_policy = stage0_development_execution_policy(
+                scorer_backend
+            )
+        except ValueError as exc:
+            raise ValueError("development_source_receipt_policy_invalid") from exc
+        if _canonical_bytes(execution_policy) != _canonical_bytes(
+            expected_execution_policy
         ):
             raise ValueError("development_source_receipt_policy_invalid")
+        expected_command = _stage0_development_execution_command(
+            path,
+            case_id=case_id,
+            scorer_backend=scorer_backend,
+        )
+        if command != list(expected_command):
+            raise ValueError("development_source_receipt_command_invalid")
         expected_inputs, materialization_receipt_sha256 = (
             _development_materialization_binding(path, case_id=case_id)
         )
@@ -914,7 +979,8 @@ def stage0_development_source_receipt_binding(
             or receipt.get("source_ids_sha256")
             != PUBLIC_REDOCKING_SOURCE_IDS_SHA256
             or receipt.get("command") != command
-            or _mapping(receipt.get("execution_policy")) != execution_policy
+            or _canonical_bytes(_mapping(receipt.get("execution_policy")))
+            != _canonical_bytes(execution_policy)
             or _mapping(receipt.get("input_sha256s")) != expected_inputs
             or result_inputs != expected_inputs
             or receipt.get("materialization_receipt_sha256")
@@ -928,14 +994,14 @@ def stage0_development_source_receipt_binding(
         ):
             raise ValueError("development_source_receipt_identity_invalid")
         receipt_case_ids.add(case_id)
-        receipt_results.append(typed_result.to_dict())
+        receipt_results.append(typed_result)
 
     if sorted(receipt_case_ids) != case_ids:
         raise ValueError("development_source_receipt_cases_cross_wired")
     try:
         recomputed_report = stage0_recompute_development_report(
             repo_root=repo_root,
-            results=receipt_results,
+            results=[result.to_dict() for result in receipt_results],
             source_receipts_sha256=source_receipts,
         )
     except (OSError, TypeError, ValueError) as exc:
@@ -948,7 +1014,7 @@ def stage0_development_source_receipt_binding(
         or development_report.get("sufficient_for_track_decision") is not True
     ):
         raise ValueError("development_source_receipt_counts_invalid")
-    return {
+    binding: dict[str, object] = {
         "development_engine_implementation_sha256": (
             current_implementation_sha256
         ),
@@ -958,6 +1024,21 @@ def stage0_development_source_receipt_binding(
             _canonical_bytes(dict(sorted(source_receipts.items())))
         ).hexdigest(),
     }
+    return binding, tuple(sorted(receipt_results, key=lambda result: result.case_id))
+
+
+def stage0_development_source_receipt_binding(
+    development_report: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, object]:
+    """Authenticate the development report against exact current-source receipts."""
+
+    binding, _ = stage0_authenticated_development_evidence(
+        development_report,
+        repo_root=repo_root,
+    )
+    return binding
 
 
 def _git(repo_root: Path, *arguments: str) -> tuple[int, str]:
@@ -1002,6 +1083,19 @@ def _validate_threshold_evidence(
 ) -> None:
     evidence_path = _resolve_repo_file(repo_root, provenance.get("evidence_path"))
     evidence = _read_json_object(evidence_path)
+    evidence_projection = dict(evidence)
+    observed_evidence_sha256 = evidence_projection.pop("evidence_sha256", None)
+    try:
+        expected_evidence_sha256 = hashlib.sha256(
+            _canonical_bytes(evidence_projection)
+        ).hexdigest()
+    except (TypeError, ValueError):
+        expected_evidence_sha256 = ""
+    if (
+        observed_evidence_sha256 != STAGE0_FROZEN_THRESHOLD_EVIDENCE_SHA256
+        or observed_evidence_sha256 != expected_evidence_sha256
+    ):
+        blockers.append(f"threshold_evidence_self_hash_invalid:{metric}")
     if evidence.get("schema_id") != _THRESHOLD_EVIDENCE_SCHEMA_ID:
         blockers.append(f"threshold_evidence_schema_invalid:{metric}")
     if evidence.get("contains_engineering_smoke") is not False:
@@ -1065,6 +1159,13 @@ def _validate_thresholds(
             blockers.append(f"threshold_provenance_basis_invalid:{metric}")
         if not _is_sha256(provenance.get("evidence_sha256")):
             blockers.append(f"threshold_provenance_hash_missing:{metric}")
+        if (
+            provenance.get("evidence_path")
+            != STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH
+            or provenance.get("evidence_sha256")
+            != STAGE0_FROZEN_THRESHOLD_EVIDENCE_FILE_SHA256
+        ):
+            blockers.append(f"threshold_provenance_not_frozen:{metric}")
         _validate_bound_artifact(
             provenance,
             repo_root=repo_root,
@@ -2267,9 +2368,15 @@ def verify_stage0_admission(
 __all__ = [
     "STAGE0_DIAGNOSTIC_CONTRACT_ID",
     "STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA",
+    "STAGE0_DEVELOPMENT_ANALYSIS_SCHEMA_ID",
+    "STAGE0_DEVELOPMENT_GATE_DENOMINATORS",
+    "STAGE0_DEVELOPMENT_GATE_OPERATORS",
     "STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID",
     "STAGE0_EXECUTION_PROFILE_ID",
     "STAGE0_EXECUTION_PROFILE_SCHEMA_ID",
+    "STAGE0_FROZEN_THRESHOLD_EVIDENCE_FILE_SHA256",
+    "STAGE0_FROZEN_THRESHOLD_EVIDENCE_PATH",
+    "STAGE0_FROZEN_THRESHOLD_EVIDENCE_SHA256",
     "STAGE0_PROTOCOL_ID",
     "STAGE0_REQUIRED_SOURCE_FREEZE_PATHS",
     "STAGE0_SCHEMA_VERSION",
@@ -2280,6 +2387,7 @@ __all__ = [
     "compute_stage0_execution_profile_sha256",
     "current_stage0_host_environment",
     "current_stage0_native_backend",
+    "stage0_authenticated_development_evidence",
     "stage0_development_source_receipt_binding",
     "stage0_engine_v2_algorithm_profile",
     "stage0_engine_implementation_sha256",
