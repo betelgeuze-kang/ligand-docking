@@ -537,8 +537,8 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     NATIVE_CPU_SCORER_CAPABILITY_ID: (
         "non_holdout_development_corpus_qualification_missing",
         "independent_native_parity_review_missing",
-        "stage0_rc5_source_environment_and_wheel_freeze_incomplete",
-        "primary_298_case_blind_holdout_not_executed",
+        "stage0_exact_operator_environment_and_native_artifact_freeze_incomplete",
+        "fresh_128_internal_provisional_blind_holdout_not_executed",
         "scientific_validation_missing",
         "product_integration_not_qualified",
     ),
@@ -549,11 +549,11 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
     ),
     PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: (
         "posebusters_benchmark_equivalence_not_established",
-        "engineering_smoke_is_not_primary_holdout_evidence",
-        "primary_298_case_blind_holdout_not_executed",
-        "complete_300_case_descriptive_report_missing",
+        "historical_300_case_report_is_contaminated_development_evidence",
+        "fresh_128_internal_provisional_blind_holdout_not_executed",
+        "fresh_128_stage0_admission_blocked",
+        "fresh_128_numeric_acceptance_thresholds_not_frozen",
         "public_holdout_results_missing",
-        "numeric_acceptance_thresholds_not_frozen",
         "independent_attestation_missing",
         "legal_compliance_determination_not_made",
         "scientific_validation_missing",
@@ -935,9 +935,9 @@ def capability_snapshot() -> dict[str, Any]:
             PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID: _row(
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
                 current_state=(
-                    "frozen_300_case_public_redocking_runner_with_298_case_"
-                    "primary_blind_holdout_and_sealed_64_candidate_"
-                    "diagnostic_execution_receipts_without_committed_results"
+                    "historical_300_case_contaminated_development_with_fresh_"
+                    "128_case_internal_provisional_blind_unexecuted_and_"
+                    "active_v7_refiner"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",

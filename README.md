@@ -25,6 +25,11 @@ Current implementation stage:
 v2_ao_native_cpu_scorer_contract_rc5
 ```
 
+Current Stage 0 benchmark state: the historical 300 cases are contaminated
+development data; the disjoint fresh 128 cases are an internal provisional
+blind holdout and have not been executed. The active refiner is V7. Product
+promotion and public claims remain disabled.
+
 Implemented and GitHub-hosted CPU tested:
 
 - canonical all-atom state, validation stages, and SHA-256 identities;

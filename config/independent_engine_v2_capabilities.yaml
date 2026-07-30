@@ -968,8 +968,8 @@ capabilities:
     blockers:
       - non_holdout_development_corpus_qualification_missing
       - independent_native_parity_review_missing
-      - stage0_rc5_source_environment_and_wheel_freeze_incomplete
-      - primary_298_case_blind_holdout_not_executed
+      - stage0_exact_operator_environment_and_native_artifact_freeze_incomplete
+      - fresh_128_internal_provisional_blind_holdout_not_executed
       - scientific_validation_missing
       - product_integration_not_qualified
 
@@ -992,7 +992,7 @@ capabilities:
       - public_asymmetric_attestation_and_transparency_missing
 
   v2_frozen_public_benchmark_protocol:
-    current_state: frozen_300_case_public_redocking_runner_with_298_case_primary_blind_holdout_and_sealed_64_candidate_diagnostic_execution_receipts_without_committed_results
+    current_state: historical_300_case_contaminated_development_with_fresh_128_case_internal_provisional_blind_unexecuted_and_active_v7_refiner
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
@@ -1006,11 +1006,11 @@ capabilities:
     blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
     blockers:
       - posebusters_benchmark_equivalence_not_established
-      - engineering_smoke_is_not_primary_holdout_evidence
-      - primary_298_case_blind_holdout_not_executed
-      - complete_300_case_descriptive_report_missing
+      - historical_300_case_report_is_contaminated_development_evidence
+      - fresh_128_internal_provisional_blind_holdout_not_executed
+      - fresh_128_stage0_admission_blocked
+      - fresh_128_numeric_acceptance_thresholds_not_frozen
       - public_holdout_results_missing
-      - numeric_acceptance_thresholds_not_frozen
       - independent_attestation_missing
       - legal_compliance_determination_not_made
       - scientific_validation_missing

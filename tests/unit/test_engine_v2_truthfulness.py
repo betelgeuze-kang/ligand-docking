@@ -102,9 +102,9 @@ def test_lifecycle_snapshot_separates_wiring_from_production_evidence() -> None:
 def test_public_redocking_runner_is_wired_without_benchmark_promotion() -> None:
     base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert base["current_state"] == (
-        "frozen_300_case_public_redocking_runner_with_298_case_"
-        "primary_blind_holdout_and_sealed_64_candidate_"
-        "diagnostic_execution_receipts_without_committed_results"
+        "historical_300_case_contaminated_development_with_fresh_"
+        "128_case_internal_provisional_blind_unexecuted_and_"
+        "active_v7_refiner"
     )
     assert base["internal_reference_execution_enabled"] is True
     assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]
@@ -128,8 +128,21 @@ def test_public_redocking_runner_is_wired_without_benchmark_promotion() -> None:
     assert "reference_ligand_match_materializer_not_implemented" not in row[
         "current_blockers"
     ]
-    assert "primary_298_case_blind_holdout_not_executed" in row["current_blockers"]
-    assert "complete_300_case_descriptive_report_missing" in row["current_blockers"]
+    assert (
+        "fresh_128_internal_provisional_blind_holdout_not_executed"
+        in row["current_blockers"]
+    )
+    assert "fresh_128_stage0_admission_blocked" in row["current_blockers"]
+    assert (
+        "fresh_128_numeric_acceptance_thresholds_not_frozen"
+        in row["current_blockers"]
+    )
+    assert "primary_298_case_blind_holdout_not_executed" not in row[
+        "current_blockers"
+    ]
+    assert "complete_300_case_descriptive_report_missing" not in row[
+        "current_blockers"
+    ]
     assert "public_holdout_results_missing" in row["current_blockers"]
     assert row["benchmark_validated"] is False
     assert row["claim_safe"] is False
