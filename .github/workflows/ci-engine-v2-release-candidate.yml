@@ -316,6 +316,8 @@ jobs:
 
       - name: Verify native wheel, SBOM, and scorer parity
         shell: bash
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/engine-v2-native-verify-${{ matrix.abi }}
         run: |
           set -euo pipefail
           wheel="$(find native-dist-a -maxdepth 1 -name '*.whl' -print -quit)"
