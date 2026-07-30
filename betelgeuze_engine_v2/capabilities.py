@@ -16,7 +16,7 @@ from .engine import REFERENCE_CLAIM_BLOCKERS
 
 CAPABILITY_SCHEMA_VERSION = 4
 ENGINE_ID = "betelgeuze_independent_engine_v2"
-IMPLEMENTATION_STAGE = "v2_am_public_redocking_evidence_correctness_rc3"
+IMPLEMENTATION_STAGE = "v2_ao_native_cpu_scorer_contract_rc5"
 
 CPU_REFERENCE_CAPABILITY_ID = "v2_cpu_reference_orchestrator"
 PDB_INGEST_CAPABILITY_ID = "v2_bounded_pdb_ingest"
@@ -112,6 +112,7 @@ CPU_MINIMIZATION_VALIDATION_PROTOCOL_CAPABILITY_ID = (
     "v2_cpu_reference_minimization_validation_protocol"
 )
 DOCKING_CAPABILITY_ID = "v2_bounded_docking_scaffold"
+NATIVE_CPU_SCORER_CAPABILITY_ID = "v2_native_cpu_scorer_backend"
 BENCHMARK_CAPABILITY_ID = "v2_benchmark_failure_row_ledger"
 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID = "v2_frozen_public_benchmark_protocol"
 EXTERNAL_BASELINE_CAPABILITY_ID = "v2_external_baseline_receipts"
@@ -533,6 +534,14 @@ CAPABILITY_BLOCKERS: dict[str, tuple[str, ...]] = {
         "public_pose_validity_and_ranking_evidence_missing",
         "product_integration_not_qualified",
     ),
+    NATIVE_CPU_SCORER_CAPABILITY_ID: (
+        "non_holdout_development_corpus_qualification_missing",
+        "independent_native_parity_review_missing",
+        "stage0_rc5_source_environment_and_wheel_freeze_incomplete",
+        "primary_298_case_blind_holdout_not_executed",
+        "scientific_validation_missing",
+        "product_integration_not_qualified",
+    ),
     BENCHMARK_CAPABILITY_ID: (
         "benchmark_protocol_not_publicly_validated",
         "public_holdout_results_missing",
@@ -908,6 +917,15 @@ def capability_snapshot() -> dict[str, Any]:
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
             ),
+            NATIVE_CPU_SCORER_CAPABILITY_ID: _row(
+                NATIVE_CPU_SCORER_CAPABILITY_ID,
+                current_state=(
+                    "explicit_fail_closed_rust_cpu_batch_backend_with_"
+                    "python_reference_parity_contract"
+                ),
+                internal_execution_enabled=True,
+                blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
+            ),
             BENCHMARK_CAPABILITY_ID: _row(
                 BENCHMARK_CAPABILITY_ID,
                 current_state="failure_complete_hmac_signed_internal_ledger",
@@ -918,8 +936,8 @@ def capability_snapshot() -> dict[str, Any]:
                 PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID,
                 current_state=(
                     "frozen_300_case_public_redocking_runner_with_298_case_"
-                    "primary_blind_holdout_and_sealed_execution_receipts_"
-                    "without_committed_results"
+                    "primary_blind_holdout_and_sealed_64_candidate_"
+                    "diagnostic_execution_receipts_without_committed_results"
                 ),
                 internal_execution_enabled=True,
                 blocker_source="betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS",
@@ -1009,6 +1027,7 @@ __all__ = [
     "MMCIF_STRUCT_CONN_DECLARATIONS_CAPABILITY_ID",
     "MMCIF_SEMANTICS_CAPABILITY_ID",
     "MMCIF_ZERO_OCCUPANCY_CAPABILITY_ID",
+    "NATIVE_CPU_SCORER_CAPABILITY_ID",
     "PDB_INGEST_CAPABILITY_ID",
     "PARAMETER_SOURCE_PROVENANCE_CAPABILITY_ID",
     "PHYSICS_REGISTRY_CAPABILITY_ID",

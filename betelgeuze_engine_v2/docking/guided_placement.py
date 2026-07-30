@@ -36,8 +36,10 @@ from .placement import (
     _PROPOSAL_OVERRIDE,
     _ProposalOverride,
     _budget_sha256,
+    _centered_candidate_count,
     _counter_uniform,
     _stable_candidate_id,
+    PocketPlacementPolicy,
     generate_pocket_centered_docking_proposals,
 )
 from .proposals import DockingBudget, DockingProposal
@@ -46,15 +48,15 @@ from .proposals import DockingBudget, DockingProposal
 GUIDED_PLACEMENT_CONTEXT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_context/1.0.0"
 )
-GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.0.0"
+GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_policy/1.4.0"
 GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID = (
-    "betelgeuze.engine_v2_guided_placement_receipt/1.0.0"
+    "betelgeuze.engine_v2_guided_placement_receipt/1.3.0"
 )
 GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_search_result/1.0.0"
 )
 GUIDED_PLACEMENT_POLICY_ID = (
-    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.0.0"
+    "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.4.0"
 )
 GUIDED_FEATURE_POLICY_ID = "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
 GUIDED_MODES = (
@@ -64,10 +66,14 @@ GUIDED_MODES = (
     "aromatic_plane",
     "shape_complementarity",
 )
+MULTI_ANCHOR_MODE = "multi_anchor_hotspot"
+POCKET_CENTER_BASELINE_MODE = "pocket_center_baseline"
 UNIFORM_FALLBACK_MODE = "uniform_fallback"
+UNIFORM_V3_ENSEMBLE_MODE = "uniform_v3_rigid_ensemble"
 MAX_GUIDED_FEATURE_ATOMS = 2_048
 MAX_GUIDED_AROMATIC_SYSTEMS = 128
 MAX_GUIDED_RECEPTOR_BONDS_SCANNED = 1_000_000
+MAX_MULTI_ANCHOR_MATCHES_PER_LANE = 64
 _CENTROID_TOLERANCE_ANGSTROM = 1.0e-10
 _FEATURE_KINDS = (
     "donor",
@@ -684,10 +690,17 @@ class GuidedPlacementContext:
 @dataclass(frozen=True, slots=True)
 class GuidedPlacementPolicy:
     guided_fraction: float = 0.75
+    minimum_uniform_fraction: float = 0.375
+    centered_candidate_count: int = 8
+    maximum_guided_candidates_per_mode: int = 8
     donor_acceptor_distance_angstrom: float = 2.9
     charge_anchor_distance_angstrom: float = 3.5
     hydrophobic_distance_angstrom: float = 3.8
     aromatic_plane_distance_angstrom: float = 3.6
+    multi_anchor_max_points: int = 3
+    multi_anchor_min_separation_angstrom: float = 1.0
+    multi_anchor_max_distance_mismatch_angstrom: float = 2.5
+    uniform_v3_ensemble_enabled: bool = False
     policy_id: str = GUIDED_PLACEMENT_POLICY_ID
     _fingerprint_sha256: str = field(init=False, repr=False)
 
@@ -698,11 +711,47 @@ class GuidedPlacementPolicy:
         if not math.isfinite(fraction) or not 0.0 < fraction <= 1.0:
             raise DockingAuthorityError("guided_fraction must be in (0,1]")
         object.__setattr__(self, "guided_fraction", fraction)
+        minimum_uniform_fraction = float(self.minimum_uniform_fraction)
+        if (
+            not math.isfinite(minimum_uniform_fraction)
+            or not 0.0 < minimum_uniform_fraction < 1.0
+        ):
+            raise DockingAuthorityError(
+                "minimum_uniform_fraction must be in (0,1)"
+            )
+        if (
+            type(self.maximum_guided_candidates_per_mode) is not int
+            or not 1 <= self.maximum_guided_candidates_per_mode <= 64
+        ):
+            raise DockingAuthorityError(
+                "maximum_guided_candidates_per_mode must be in [1,64]"
+            )
+        if (
+            type(self.centered_candidate_count) is not int
+            or not 1 <= self.centered_candidate_count <= 64
+        ):
+            raise DockingAuthorityError(
+                "centered_candidate_count must be in [1,64]"
+            )
+        if (
+            type(self.multi_anchor_max_points) is not int
+            or not 2 <= self.multi_anchor_max_points <= 3
+        ):
+            raise DockingAuthorityError("multi_anchor_max_points must be in [2,3]")
+        if type(self.uniform_v3_ensemble_enabled) is not bool:
+            raise DockingAuthorityError(
+                "uniform_v3_ensemble_enabled must be boolean"
+            )
+        object.__setattr__(
+            self, "minimum_uniform_fraction", minimum_uniform_fraction
+        )
         for name in (
             "donor_acceptor_distance_angstrom",
             "charge_anchor_distance_angstrom",
             "hydrophobic_distance_angstrom",
             "aromatic_plane_distance_angstrom",
+            "multi_anchor_min_separation_angstrom",
+            "multi_anchor_max_distance_mismatch_angstrom",
         ):
             value = float(getattr(self, name))
             if not math.isfinite(value) or not 1.0 <= value <= 8.0:
@@ -716,10 +765,40 @@ class GuidedPlacementPolicy:
             "policy_id": self.policy_id,
             "guided_modes": list(GUIDED_MODES),
             "guided_fraction_binary64_hex": self.guided_fraction.hex(),
+            "allocation_strategy": (
+                "centered_quota_within_guided_cap_and_uniform_floor"
+            ),
+            "minimum_uniform_fraction_binary64_hex": (
+                self.minimum_uniform_fraction.hex()
+            ),
+            "centered_candidate_count": self.centered_candidate_count,
+            "centered_candidate_policy": (
+                "preserve_before_guided_replacement"
+            ),
+            "maximum_guided_candidates_per_mode": (
+                self.maximum_guided_candidates_per_mode
+            ),
             "donor_acceptor_distance_angstrom_binary64_hex": self.donor_acceptor_distance_angstrom.hex(),
             "charge_anchor_distance_angstrom_binary64_hex": self.charge_anchor_distance_angstrom.hex(),
             "hydrophobic_distance_angstrom_binary64_hex": self.hydrophobic_distance_angstrom.hex(),
             "aromatic_plane_distance_angstrom_binary64_hex": self.aromatic_plane_distance_angstrom.hex(),
+            "multi_anchor_mode": MULTI_ANCHOR_MODE,
+            "multi_anchor_max_points": self.multi_anchor_max_points,
+            "multi_anchor_min_separation_angstrom_binary64_hex": (
+                self.multi_anchor_min_separation_angstrom.hex()
+            ),
+            "multi_anchor_max_distance_mismatch_angstrom_binary64_hex": (
+                self.multi_anchor_max_distance_mismatch_angstrom.hex()
+            ),
+            "multi_anchor_allocation": (
+                "odd_repeated_donor_or_charge_cycles_capped_at_eight"
+            ),
+            "uniform_v3_ensemble_enabled": self.uniform_v3_ensemble_enabled,
+            "uniform_v3_ensemble_mode": UNIFORM_V3_ENSEMBLE_MODE,
+            "uniform_v3_ensemble_source_selection": (
+                "rounded_even_spacing_across_retained_uniform_indices"
+            ),
+            "uniform_v3_ensemble_originals_retained": True,
             "uniform_random_placement_retained_as_fallback": True,
             "scientifically_validated": False,
             "claim_safe": False,
@@ -859,6 +938,103 @@ def _available_modes(context: GuidedPlacementContext) -> tuple[str, ...]:
     return tuple(modes)
 
 
+def _multi_anchor_available(context: GuidedPlacementContext) -> bool:
+    ligand = context.ligand_features
+    receptor = context.receptor_feature_rows
+    ligand_indices: set[int] = set()
+    receptor_indices: set[int] = set()
+    for ligand_kind, receptor_kind in (
+        ("donor", "acceptor"),
+        ("acceptor", "donor"),
+        ("positive", "negative"),
+        ("negative", "positive"),
+        ("hydrophobic", "hydrophobic"),
+    ):
+        if ligand[ligand_kind] and receptor[receptor_kind]:
+            ligand_indices.update(ligand[ligand_kind])
+            receptor_indices.update(row[0] for row in receptor[receptor_kind])
+    return len(ligand_indices) >= 2 and len(receptor_indices) >= 2
+
+
+def _guided_allocation(
+    context: GuidedPlacementContext,
+    budget: DockingBudget,
+    policy: GuidedPlacementPolicy,
+) -> tuple[int, int, tuple[str, ...]]:
+    centered_count = _centered_candidate_count(
+        budget.candidate_count,
+        policy.centered_candidate_count,
+    )
+    modes = _available_modes(context)
+    if not modes:
+        return centered_count, 0, modes
+    fraction_cap = int(math.floor(budget.candidate_count * policy.guided_fraction))
+    mode_cap = len(modes) * policy.maximum_guided_candidates_per_mode
+    uniform_floor = int(
+        math.ceil(budget.candidate_count * policy.minimum_uniform_fraction)
+    )
+    structured_count = min(
+        fraction_cap,
+        mode_cap,
+        max(0, budget.candidate_count - uniform_floor),
+    )
+    guided_count = max(0, structured_count - centered_count)
+    if policy.uniform_v3_ensemble_enabled:
+        # Each V3 variant retains one distinct uniform V2 source in the same
+        # denominator.  This cap proves that source selection cannot consume
+        # or duplicate the source lane.
+        guided_count = min(
+            guided_count,
+            max(0, (budget.candidate_count - centered_count) // 2),
+        )
+    return centered_count, guided_count, modes
+
+
+def uniform_v3_ensemble_proposal_indices(
+    context: GuidedPlacementContext,
+    budget: DockingBudget,
+    policy: GuidedPlacementPolicy,
+) -> tuple[int, ...]:
+    """Return the receipt-bound proposal indices assigned to the V3 lane."""
+
+    if not isinstance(context, GuidedPlacementContext):
+        raise TypeError("context must be GuidedPlacementContext")
+    if not isinstance(budget, DockingBudget):
+        raise TypeError("budget must be DockingBudget")
+    if not isinstance(policy, GuidedPlacementPolicy):
+        raise TypeError("policy must be GuidedPlacementPolicy")
+    policy.fingerprint_sha256
+    if not policy.uniform_v3_ensemble_enabled:
+        return ()
+    centered_count, guided_count, _ = _guided_allocation(context, budget, policy)
+    return tuple(range(centered_count, centered_count + guided_count))
+
+
+def _evenly_spaced_uniform_sources(
+    source_indices: Sequence[int],
+    target_count: int,
+) -> tuple[int, ...]:
+    sources = tuple(int(value) for value in source_indices)
+    if target_count == 0:
+        return ()
+    if target_count < 0 or len(sources) < target_count:
+        raise DockingAuthorityError(
+            "uniform V3 ensemble lacks distinct retained source proposals"
+        )
+    if target_count == 1:
+        return (sources[0],)
+    positions = tuple(
+        round(index * (len(sources) - 1) / (target_count - 1))
+        for index in range(target_count)
+    )
+    selected = tuple(sources[position] for position in positions)
+    if len(set(selected)) != len(selected):
+        raise DockingAuthorityError(
+            "uniform V3 ensemble source spacing is not one-to-one"
+        )
+    return selected
+
+
 def _pick_index(length: int, *, seed: int, proposal_index: int, domain: str) -> int:
     if length < 1:
         raise DockingAuthorityError("guided anchor collection is empty")
@@ -927,6 +1103,338 @@ def _rotation_between(first: torch.Tensor, second: torch.Tensor) -> torch.Tensor
     return identity + sine * skew + (1.0 - cosine) * (skew @ skew)
 
 
+@dataclass(frozen=True, slots=True)
+class _MultiAnchorMatch:
+    ligand_index: int
+    receptor_index: int
+    receptor_coordinate: torch.Tensor
+    target_coordinate: torch.Tensor
+    requested_distance_angstrom: float
+    lane_index: int
+
+
+def _bounded_flat_indices(
+    length: int,
+    *,
+    seed: int,
+    proposal_index: int,
+    domain: str,
+) -> tuple[int, ...]:
+    if length <= MAX_MULTI_ANCHOR_MATCHES_PER_LANE:
+        return tuple(range(length))
+    selected: set[int] = set()
+    target = MAX_MULTI_ANCHOR_MATCHES_PER_LANE
+    for counter in range(target * 4):
+        value = _counter_uniform(
+            seed=seed,
+            proposal_index=proposal_index,
+            domain=domain,
+            counter=counter,
+        )
+        selected.add(min(length - 1, int(value * length)))
+        if len(selected) == target:
+            break
+    if len(selected) < target:
+        for index in range(length):
+            selected.add(index)
+            if len(selected) == target:
+                break
+    return tuple(sorted(selected))
+
+
+def _multi_anchor_matches(
+    *,
+    context: GuidedPlacementContext,
+    policy: GuidedPlacementPolicy,
+    pocket_center: torch.Tensor,
+    seed: int,
+    proposal_index: int,
+) -> tuple[_MultiAnchorMatch, ...]:
+    ligand = context.ligand_features
+    receptor = context.receptor_feature_rows
+    lanes = (
+        ("donor", "acceptor", policy.donor_acceptor_distance_angstrom),
+        ("acceptor", "donor", policy.donor_acceptor_distance_angstrom),
+        ("positive", "negative", policy.charge_anchor_distance_angstrom),
+        ("negative", "positive", policy.charge_anchor_distance_angstrom),
+        ("hydrophobic", "hydrophobic", policy.hydrophobic_distance_angstrom),
+    )
+    matches: list[_MultiAnchorMatch] = []
+    retained: set[tuple[int, int, float]] = set()
+    for lane_index, (ligand_kind, receptor_kind, distance) in enumerate(lanes):
+        ligand_rows = ligand[ligand_kind]
+        receptor_rows = receptor[receptor_kind]
+        if not ligand_rows or not receptor_rows:
+            continue
+        flat_count = len(ligand_rows) * len(receptor_rows)
+        for flat_index in _bounded_flat_indices(
+            flat_count,
+            seed=seed,
+            proposal_index=proposal_index,
+            domain=f"multi-anchor-lane-{lane_index}",
+        ):
+            ligand_index = ligand_rows[flat_index // len(receptor_rows)]
+            receptor_row = receptor_rows[flat_index % len(receptor_rows)]
+            identity = (ligand_index, receptor_row[0], float(distance))
+            if identity in retained:
+                continue
+            retained.add(identity)
+            receptor_coordinate = torch.tensor(
+                receptor_row[1],
+                dtype=pocket_center.dtype,
+            )
+            direction = _unit_toward_pocket(
+                receptor_coordinate,
+                pocket_center,
+                seed=seed,
+                proposal_index=proposal_index,
+            )
+            matches.append(
+                _MultiAnchorMatch(
+                    ligand_index=ligand_index,
+                    receptor_index=receptor_row[0],
+                    receptor_coordinate=receptor_coordinate,
+                    target_coordinate=(receptor_coordinate + distance * direction),
+                    requested_distance_angstrom=float(distance),
+                    lane_index=lane_index,
+                )
+            )
+    return tuple(matches)
+
+
+def _multi_anchor_rotation(
+    source: torch.Tensor,
+    target: torch.Tensor,
+    base_rotation: torch.Tensor,
+) -> torch.Tensor:
+    if len(source) >= 3:
+        source_centered = source - source.mean(dim=0)
+        target_centered = target - target.mean(dim=0)
+        covariance = source_centered.T @ target_centered
+        u, singular_values, vh = torch.linalg.svd(covariance)
+        if float(singular_values[1].item()) > 1.0e-10:
+            rotation = vh.T @ u.T
+            if float(torch.linalg.det(rotation).item()) < 0.0:
+                vh = vh.clone()
+                vh[-1] = -vh[-1]
+                rotation = vh.T @ u.T
+            return rotation
+    base_source = source @ base_rotation.T
+    source_vector = base_source[1] - base_source[0]
+    target_vector = target[1] - target[0]
+    if (
+        float(torch.linalg.vector_norm(source_vector).item()) <= 1.0e-10
+        or float(torch.linalg.vector_norm(target_vector).item()) <= 1.0e-10
+    ):
+        raise _GuidanceUnavailable("multi-anchor pair is geometrically degenerate")
+    return _rotation_between(source_vector, target_vector) @ base_rotation
+
+
+def _multi_anchor_transform(
+    *,
+    context: GuidedPlacementContext,
+    policy: GuidedPlacementPolicy,
+    conformer: torch.Tensor,
+    base_rotation: torch.Tensor,
+    pocket_center: torch.Tensor,
+    translation_radius_angstrom: float,
+    seed: int,
+    proposal_index: int,
+) -> tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    tuple[int, ...],
+    tuple[int, ...],
+    float,
+    float,
+]:
+    matches = _multi_anchor_matches(
+        context=context,
+        policy=policy,
+        pocket_center=pocket_center,
+        seed=seed,
+        proposal_index=proposal_index,
+    )
+    if len(matches) < 2:
+        raise _GuidanceUnavailable("multi-anchor chemistry is unavailable")
+    pair_candidates: list[
+        tuple[
+            tuple[float, int, int, int, int, int],
+            _MultiAnchorMatch,
+            _MultiAnchorMatch,
+        ]
+    ] = []
+    for first_index, first in enumerate(matches):
+        for second in matches[first_index + 1 :]:
+            if (
+                first.ligand_index == second.ligand_index
+                or first.receptor_index == second.receptor_index
+            ):
+                continue
+            source_distance = float(
+                torch.linalg.vector_norm(
+                    conformer[first.ligand_index]
+                    - conformer[second.ligand_index]
+                ).item()
+            )
+            target_distance = float(
+                torch.linalg.vector_norm(
+                    first.target_coordinate - second.target_coordinate
+                ).item()
+            )
+            if (
+                source_distance < policy.multi_anchor_min_separation_angstrom
+                or target_distance < policy.multi_anchor_min_separation_angstrom
+            ):
+                continue
+            mismatch = abs(source_distance - target_distance)
+            if mismatch > policy.multi_anchor_max_distance_mismatch_angstrom:
+                continue
+            pair_candidates.append(
+                (
+                    (
+                        mismatch,
+                        int(first.lane_index == second.lane_index),
+                        min(first.ligand_index, second.ligand_index),
+                        max(first.ligand_index, second.ligand_index),
+                        min(first.receptor_index, second.receptor_index),
+                        max(first.receptor_index, second.receptor_index),
+                    ),
+                    first,
+                    second,
+                )
+            )
+    if not pair_candidates:
+        raise _GuidanceUnavailable("multi-anchor geometry is incompatible")
+    pair_candidates.sort(key=lambda item: item[0])
+    pair_choice_count = min(8, len(pair_candidates))
+    pair_choice = pair_candidates[
+        _pick_index(
+            pair_choice_count,
+            seed=seed,
+            proposal_index=proposal_index,
+            domain="multi-anchor-primary-pair",
+        )
+    ]
+    selected = [pair_choice[1], pair_choice[2]]
+    while len(selected) < policy.multi_anchor_max_points:
+        candidates: list[tuple[float, int, int, int, _MultiAnchorMatch]] = []
+        selected_ligand = {row.ligand_index for row in selected}
+        selected_receptor = {row.receptor_index for row in selected}
+        selected_lanes = {row.lane_index for row in selected}
+        for row in matches:
+            if (
+                row.ligand_index in selected_ligand
+                or row.receptor_index in selected_receptor
+            ):
+                continue
+            mismatches: list[float] = []
+            compatible = True
+            for retained in selected:
+                source_distance = float(
+                    torch.linalg.vector_norm(
+                        conformer[row.ligand_index]
+                        - conformer[retained.ligand_index]
+                    ).item()
+                )
+                target_distance = float(
+                    torch.linalg.vector_norm(
+                        row.target_coordinate - retained.target_coordinate
+                    ).item()
+                )
+                if (
+                    source_distance < policy.multi_anchor_min_separation_angstrom
+                    or target_distance < policy.multi_anchor_min_separation_angstrom
+                ):
+                    compatible = False
+                    break
+                mismatches.append(abs(source_distance - target_distance))
+            if not compatible:
+                continue
+            mismatch = max(mismatches)
+            if mismatch > policy.multi_anchor_max_distance_mismatch_angstrom:
+                continue
+            candidates.append(
+                (
+                    mismatch,
+                    int(row.lane_index in selected_lanes),
+                    row.ligand_index,
+                    row.receptor_index,
+                    row,
+                )
+            )
+        if not candidates:
+            break
+        candidates.sort(key=lambda item: item[:4])
+        choice_count = min(4, len(candidates))
+        selected.append(
+            candidates[
+                _pick_index(
+                    choice_count,
+                    seed=seed,
+                    proposal_index=proposal_index,
+                    domain=f"multi-anchor-choice-{len(selected)}",
+                )
+            ][4]
+        )
+    if len(selected) < 2:
+        raise _GuidanceUnavailable("multi-anchor geometry is incompatible")
+
+    # Keep the two index vectors positionally aligned.  The ligand index is the
+    # stable ordering key; the receptor row deliberately remains in matching
+    # order instead of being sorted independently.
+    selected.sort(
+        key=lambda row: (row.ligand_index, row.receptor_index, row.lane_index)
+    )
+    ligand_indices = tuple(row.ligand_index for row in selected)
+    source = conformer[list(ligand_indices)]
+    target = torch.stack(tuple(row.target_coordinate for row in selected))
+    rotation = _multi_anchor_rotation(source, target, base_rotation)
+    identity = torch.eye(3, dtype=rotation.dtype)
+    if not torch.allclose(
+        rotation.T @ rotation,
+        identity,
+        atol=1.0e-10,
+        rtol=0.0,
+    ) or not math.isclose(
+        float(torch.linalg.det(rotation).item()),
+        1.0,
+        abs_tol=1.0e-10,
+    ):
+        raise DockingAuthorityError("multi-anchor rotation is not proper")
+    rotated = conformer @ rotation.T
+    translation = target.mean(dim=0) - rotated[list(ligand_indices)].mean(dim=0)
+    coordinates = rotated + translation
+    centroid = coordinates.mean(dim=0)
+    centroid_delta = centroid - pocket_center
+    centroid_distance = float(torch.linalg.vector_norm(centroid_delta).item())
+    if centroid_distance > translation_radius_angstrom:
+        bounded_centroid = pocket_center + centroid_delta * (
+            translation_radius_angstrom / centroid_distance
+        )
+        correction = bounded_centroid - centroid
+        coordinates = coordinates + correction
+        translation = translation + correction
+    observed_distances = tuple(
+        float(
+            torch.linalg.vector_norm(
+                coordinates[row.ligand_index] - row.receptor_coordinate
+            ).item()
+        )
+        for row in selected
+    )
+    return (
+        coordinates.contiguous(),
+        rotation.contiguous(),
+        translation.contiguous(),
+        ligand_indices,
+        tuple(row.receptor_index for row in selected),
+        sum(row.requested_distance_angstrom for row in selected) / len(selected),
+        sum(observed_distances) / len(observed_distances),
+    )
+
+
 def _principal_rotation(
     ligand_coordinates: torch.Tensor,
     receptor_axes: tuple[tuple[float, ...], ...],
@@ -982,6 +1490,17 @@ def _guided_transform(
     float,
     float,
 ]:
+    if mode == MULTI_ANCHOR_MODE:
+        return _multi_anchor_transform(
+            context=context,
+            policy=policy,
+            conformer=conformer,
+            base_rotation=base_rotation,
+            pocket_center=pocket_center,
+            translation_radius_angstrom=translation_radius_angstrom,
+            seed=seed,
+            proposal_index=proposal_index,
+        )
     ligand = context.ligand_features
     receptor = context.receptor_feature_rows
     rotation = base_rotation
@@ -1181,6 +1700,7 @@ class GuidedPlacementReceipt:
     requested_anchor_distance_angstroms: tuple[float | None, ...]
     observed_anchor_distance_angstroms: tuple[float | None, ...]
     feature_counts: Mapping[str, int]
+    ensemble_source_proposal_indices: tuple[int | None, ...] = ()
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -1196,7 +1716,12 @@ class GuidedPlacementReceipt:
             for value in self.proposal_fingerprint_sha256s
         )
         modes = tuple(str(value) for value in self.proposal_modes)
-        allowed = set(GUIDED_MODES) | {UNIFORM_FALLBACK_MODE}
+        allowed = set(GUIDED_MODES) | {
+            MULTI_ANCHOR_MODE,
+            POCKET_CENTER_BASELINE_MODE,
+            UNIFORM_FALLBACK_MODE,
+            UNIFORM_V3_ENSEMBLE_MODE,
+        }
         if (
             not fingerprints
             or len(fingerprints) != len(modes)
@@ -1220,6 +1745,18 @@ class GuidedPlacementReceipt:
             for value in self.observed_anchor_distance_angstroms
         )
         row_count = len(fingerprints)
+        ensemble_sources = (
+            tuple(None for _ in range(row_count))
+            if not self.ensemble_source_proposal_indices
+            else tuple(self.ensemble_source_proposal_indices)
+        )
+        if any(
+            value is not None and type(value) is not int
+            for value in ensemble_sources
+        ):
+            raise DockingAuthorityError(
+                "uniform V3 ensemble source indices must be exact integers"
+            )
         if any(
             len(rows) != row_count
             for rows in (
@@ -1227,23 +1764,48 @@ class GuidedPlacementReceipt:
                 receptor_anchors,
                 requested_distances,
                 observed_distances,
+                ensemble_sources,
             )
         ):
             raise DockingAuthorityError("guided anchor rows are incomplete")
-        for mode, ligand_row, receptor_row, requested, observed in zip(
+        for index, (
+            mode,
+            ligand_row,
+            receptor_row,
+            requested,
+            observed,
+            ensemble_source,
+        ) in enumerate(zip(
             modes,
             ligand_anchors,
             receptor_anchors,
             requested_distances,
             observed_distances,
-        ):
-            if (
+            ensemble_sources,
+            strict=True,
+        )):
+            if any(index < 0 for index in (*ligand_row, *receptor_row)):
+                raise DockingAuthorityError("guided anchor atom indices are invalid")
+            if mode == MULTI_ANCHOR_MODE:
+                if (
+                    not 2 <= len(ligand_row) <= 3
+                    or len(ligand_row) != len(receptor_row)
+                    or ligand_row != tuple(sorted(set(ligand_row)))
+                    or len(set(receptor_row)) != len(receptor_row)
+                ):
+                    raise DockingAuthorityError(
+                        "multi-anchor atom pairs are invalid"
+                    )
+            elif (
                 ligand_row != tuple(sorted(set(ligand_row)))
                 or receptor_row != tuple(sorted(set(receptor_row)))
-                or any(index < 0 for index in (*ligand_row, *receptor_row))
             ):
                 raise DockingAuthorityError("guided anchor atom indices are invalid")
-            if mode == UNIFORM_FALLBACK_MODE:
+            if mode in {
+                POCKET_CENTER_BASELINE_MODE,
+                UNIFORM_FALLBACK_MODE,
+                UNIFORM_V3_ENSEMBLE_MODE,
+            }:
                 if (
                     ligand_row
                     or receptor_row
@@ -1251,7 +1813,7 @@ class GuidedPlacementReceipt:
                     or observed is not None
                 ):
                     raise DockingAuthorityError(
-                        "uniform fallback cannot declare guided anchors"
+                        "baseline placement cannot declare guided anchors"
                     )
             elif (
                 not ligand_row
@@ -1263,6 +1825,27 @@ class GuidedPlacementReceipt:
                 or observed < 0.0
             ):
                 raise DockingAuthorityError("guided anchor distances are invalid")
+            if mode == UNIFORM_V3_ENSEMBLE_MODE:
+                if (
+                    ensemble_source is None
+                    or not 0 <= ensemble_source < row_count
+                    or ensemble_source == index
+                    or modes[ensemble_source] != UNIFORM_FALLBACK_MODE
+                ):
+                    raise DockingAuthorityError(
+                        "uniform V3 ensemble source index is invalid"
+                    )
+            elif ensemble_source is not None:
+                raise DockingAuthorityError(
+                    "non-ensemble proposal cannot declare an ensemble source"
+                )
+        retained_sources = tuple(
+            value for value in ensemble_sources if value is not None
+        )
+        if len(retained_sources) != len(set(retained_sources)):
+            raise DockingAuthorityError(
+                "uniform V3 ensemble sources must be one-to-one"
+            )
         counts = {str(name): int(value) for name, value in self.feature_counts.items()}
         if any(value < 0 for value in counts.values()):
             raise DockingAuthorityError("guided feature counts are invalid")
@@ -1275,6 +1858,11 @@ class GuidedPlacementReceipt:
         )
         object.__setattr__(
             self, "observed_anchor_distance_angstroms", observed_distances
+        )
+        object.__setattr__(
+            self,
+            "ensemble_source_proposal_indices",
+            ensemble_sources,
         )
         object.__setattr__(self, "feature_counts", MappingProxyType(counts))
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
@@ -1295,12 +1883,36 @@ class GuidedPlacementReceipt:
                     "mode": mode,
                     "ligand_anchor_atom_indices": list(ligand_atoms),
                     "receptor_anchor_atom_indices": list(receptor_atoms),
+                    "anchor_pairs": (
+                        [
+                            {
+                                "ligand_atom_index": ligand_index,
+                                "receptor_atom_index": receptor_index,
+                            }
+                            for ligand_index, receptor_index in zip(
+                                ligand_atoms, receptor_atoms
+                            )
+                        ]
+                        if mode == MULTI_ANCHOR_MODE
+                        else []
+                    ),
+                    "anchor_pairing": (
+                        "positionally_aligned"
+                        if mode == MULTI_ANCHOR_MODE
+                        else None
+                    ),
+                    "anchor_distance_aggregation": (
+                        "per_pair_arithmetic_mean"
+                        if mode == MULTI_ANCHOR_MODE
+                        else None
+                    ),
                     "requested_anchor_distance_angstrom_binary64_hex": (
                         None if requested is None else requested.hex()
                     ),
                     "observed_anchor_distance_angstrom_binary64_hex": (
                         None if observed is None else observed.hex()
                     ),
+                    "ensemble_source_proposal_index": ensemble_source,
                 }
                 for index, (
                     mode,
@@ -1308,6 +1920,7 @@ class GuidedPlacementReceipt:
                     receptor_atoms,
                     requested,
                     observed,
+                    ensemble_source,
                 ) in enumerate(
                     zip(
                         self.proposal_modes,
@@ -1315,14 +1928,25 @@ class GuidedPlacementReceipt:
                         self.receptor_anchor_atom_indices,
                         self.requested_anchor_distance_angstroms,
                         self.observed_anchor_distance_angstroms,
+                        self.ensemble_source_proposal_indices,
+                        strict=True,
                     )
                 )
             ],
             "guided_proposal_count": sum(
-                mode != UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
+                mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
+                for mode in self.proposal_modes
+            ),
+            "pocket_center_baseline_count": sum(
+                mode == POCKET_CENTER_BASELINE_MODE
+                for mode in self.proposal_modes
             ),
             "uniform_fallback_count": sum(
                 mode == UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
+            ),
+            "uniform_v3_ensemble_count": sum(
+                mode == UNIFORM_V3_ENSEMBLE_MODE
+                for mode in self.proposal_modes
             ),
             "uniform_random_placement_retained_as_fallback": True,
             "feature_counts": dict(self.feature_counts),
@@ -1384,34 +2008,107 @@ def generate_guided_docking_proposals(
             "guided context does not match its authenticated derivation"
         )
     selected_policy.fingerprint_sha256
+    placement_policy = PocketPlacementPolicy(
+        centered_candidate_count=selected_policy.centered_candidate_count
+    )
     baseline, _ = generate_pocket_centered_docking_proposals(
         authenticated_problem,
         budget,
+        policy=placement_policy,
     )
-    modes = _available_modes(context)
-    if modes:
-        guided_count = int(
-            math.floor(budget.candidate_count * selected_policy.guided_fraction)
-        )
-        guided_count = max(1, guided_count)
-        if budget.candidate_count >= 2:
-            guided_count = min(budget.candidate_count - 1, guided_count)
-    else:
-        guided_count = 0
+    centered_count, guided_count, modes = _guided_allocation(
+        context,
+        budget,
+        selected_policy,
+    )
     from . import proposals as proposal_module
 
     proposals = list(baseline)
     proposal_modes = [UNIFORM_FALLBACK_MODE] * len(proposals)
+    proposal_modes[:centered_count] = [POCKET_CENTER_BASELINE_MODE] * centered_count
     ligand_anchor_rows: list[tuple[int, ...]] = [()] * len(proposals)
     receptor_anchor_rows: list[tuple[int, ...]] = [()] * len(proposals)
     requested_anchor_distances: list[float | None] = [None] * len(proposals)
     observed_anchor_distances: list[float | None] = [None] * len(proposals)
+    ensemble_source_indices: list[int | None] = [None] * len(proposals)
     search_space = authenticated_problem.search_space
     pocket_center = authenticated_problem.pocket.center.to(
         dtype=search_space.local_offsets.dtype
     )
-    for proposal_index in range(guided_count):
-        mode = modes[proposal_index % len(modes)]
+    multi_anchor_count = 0
+    guided_transform_count = guided_count
+    if selected_policy.uniform_v3_ensemble_enabled and guided_count:
+        target_indices = tuple(
+            range(centered_count, centered_count + guided_count)
+        )
+        uniform_source_indices = tuple(
+            range(centered_count + guided_count, len(baseline))
+        )
+        selected_sources = _evenly_spaced_uniform_sources(
+            uniform_source_indices,
+            guided_count,
+        )
+        for proposal_index, source_index in zip(
+            target_indices,
+            selected_sources,
+            strict=True,
+        ):
+            target = baseline[proposal_index]
+            source = baseline[source_index]
+            fingerprint = proposal_module._proposal_fingerprint(
+                proposal_index=proposal_index,
+                seed=budget.seed,
+                torsion_angles=source.torsion_angles,
+                rotation=source.rotation,
+                translation=source.translation,
+                problem_fingerprint_sha256=(
+                    authenticated_problem.problem.fingerprint_sha256
+                ),
+                search_space_fingerprint_sha256=(
+                    search_space.fingerprint_sha256
+                ),
+                coordinate_fingerprint_sha256=(
+                    source.coordinate_fingerprint_sha256
+                ),
+            )
+            variant = DockingProposal(
+                candidate_id=target.candidate_id,
+                coordinates=source.coordinates,
+                torsion_angles=source.torsion_angles,
+                rotation=source.rotation,
+                translation=source.translation,
+                proposal_index=proposal_index,
+                seed=budget.seed,
+                fingerprint_sha256=fingerprint,
+                problem_fingerprint_sha256=(
+                    authenticated_problem.problem.fingerprint_sha256
+                ),
+                search_space_fingerprint_sha256=(
+                    search_space.fingerprint_sha256
+                ),
+                coordinate_fingerprint_sha256=(
+                    source.coordinate_fingerprint_sha256
+                ),
+            )
+            variant.assert_integrity()
+            proposals[proposal_index] = variant
+            proposal_modes[proposal_index] = UNIFORM_V3_ENSEMBLE_MODE
+            ensemble_source_indices[proposal_index] = source_index
+        guided_transform_count = 0
+    for guided_slot_index in range(guided_transform_count):
+        proposal_index = centered_count + guided_slot_index
+        base_mode = modes[proposal_index % len(modes)]
+        cycle_index = proposal_index // len(modes)
+        mode = base_mode
+        if (
+            base_mode in {"donor_acceptor_hotspot", "charge_anchor"}
+            and cycle_index >= 1
+            and cycle_index % 2 == 1
+            and multi_anchor_count
+            < selected_policy.maximum_guided_candidates_per_mode
+            and _multi_anchor_available(context)
+        ):
+            mode = MULTI_ANCHOR_MODE
         base = baseline[proposal_index]
         conformer = torsion_tree_forward_kinematics(
             search_space.local_offsets,
@@ -1441,7 +2138,31 @@ def generate_guided_docking_proposals(
                 proposal_index=proposal_index,
             )
         except _GuidanceUnavailable:
-            continue
+            if mode != MULTI_ANCHOR_MODE:
+                continue
+            mode = base_mode
+            try:
+                (
+                    coordinates,
+                    rotation,
+                    translation,
+                    ligand_anchor_indices,
+                    receptor_anchor_indices,
+                    requested_anchor_distance,
+                    observed_anchor_distance,
+                ) = _guided_transform(
+                    mode=mode,
+                    context=context,
+                    policy=selected_policy,
+                    conformer=conformer,
+                    base_rotation=base.rotation,
+                    pocket_center=pocket_center,
+                    translation_radius_angstrom=budget.translation_radius_angstrom,
+                    seed=budget.seed,
+                    proposal_index=proposal_index,
+                )
+            except _GuidanceUnavailable:
+                continue
         centroid_offset = float(
             torch.linalg.vector_norm(coordinates.mean(dim=0) - pocket_center).item()
         )
@@ -1482,6 +2203,7 @@ def generate_guided_docking_proposals(
         proposal.assert_integrity()
         proposals[proposal_index] = proposal
         proposal_modes[proposal_index] = mode
+        multi_anchor_count += int(mode == MULTI_ANCHOR_MODE)
         ligand_anchor_rows[proposal_index] = ligand_anchor_indices
         receptor_anchor_rows[proposal_index] = receptor_anchor_indices
         requested_anchor_distances[proposal_index] = requested_anchor_distance
@@ -1499,6 +2221,7 @@ def generate_guided_docking_proposals(
         requested_anchor_distance_angstroms=tuple(requested_anchor_distances),
         observed_anchor_distance_angstroms=tuple(observed_anchor_distances),
         feature_counts=context.feature_counts(),
+        ensemble_source_proposal_indices=tuple(ensemble_source_indices),
     )
     return result, receipt
 
@@ -1621,7 +2344,11 @@ __all__ = [
     "MAX_GUIDED_AROMATIC_SYSTEMS",
     "MAX_GUIDED_FEATURE_ATOMS",
     "MAX_GUIDED_RECEPTOR_BONDS_SCANNED",
+    "MAX_MULTI_ANCHOR_MATCHES_PER_LANE",
+    "MULTI_ANCHOR_MODE",
+    "POCKET_CENTER_BASELINE_MODE",
     "UNIFORM_FALLBACK_MODE",
+    "UNIFORM_V3_ENSEMBLE_MODE",
     "GuidedPlacementContext",
     "GuidedPlacementPolicy",
     "GuidedPlacementReceipt",
@@ -1629,4 +2356,5 @@ __all__ = [
     "build_guided_placement_context",
     "generate_guided_docking_proposals",
     "run_authenticated_guided_placement_search",
+    "uniform_v3_ensemble_proposal_indices",
 ]

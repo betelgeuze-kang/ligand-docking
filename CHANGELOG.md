@@ -6,7 +6,49 @@ scientific claim from a package version.
 
 ## Unreleased
 
-No changes yet.
+- Invalidated the former 298-case blind designation after discovering and
+  hash-verifying a pre-freeze complete 300-case/900-row report. All historical
+  300 cases are now development/diagnostic-only.
+- Froze the result-uninspected 128-case archive complement, including exact
+  input hashes, seeds, ligand profiles, and a self-hashed manifest.
+- Added fail-closed `fresh-internal-blind-holdout` execution, explicit rejection
+  of the historical subset, and a solo-development Stage 0 governance mode.
+  Solo evidence is internal/provisional; external review remains required for
+  public claims and product promotion.
+
+## 0.2.0rc5 — Native CPU batch scorer release candidate
+
+### Changed
+
+- Added an explicit Python-reference/Rust-CPU backend contract without changing
+  the eight Scorer v1 terms, weights, candidate denominator, or score identity.
+- Added one-pass 64-candidate batch scoring, backend-bound term receipts, and a
+  separate fail-closed `betelgeuze-engine-v2-native` PyO3 wheel.
+- Kept the Rust backend non-claim-bearing until development-corpus parity,
+  performance qualification, Stage 0 refreeze, and independent review. This
+  does not establish docking accuracy, scientific validity, or product readiness.
+
+## 0.2.0rc4 — Public redocking diagnostic-contract release candidate
+
+### Changed
+
+- Froze a 64-slot Engine V2 candidate ledger for each public redocking case.
+  Every successful proposal retains its score, score-term receipt, pose hash,
+  PoseBusters RMSD and validity outcomes, and H-bond count; failed slots remain
+  in the denominator with a typed search-stage outcome.
+- Added complete-denominator preparation, charge, H-bond feature,
+  candidate-generation, proposal-oracle, validity-aware oracle, scoring-regret,
+  and selection-regret metrics. The same diagnostics are reported for frozen
+  heavy-atom, rotor, and RDKit ring-count subgroups.
+- Bound the score-ranked Top-5 Engine V2 result to the exact retained candidate
+  rows and excluded all-candidate diagnostic evaluation time from the engine
+  runtime boundary.
+- Advanced the frozen cohort, policy, report, runner, execution receipt,
+  capability snapshot, and implementation-stage identities without bundling
+  the 298-case blind-holdout result.
+- Reverified the two observed cases from an empty output root as
+  engineering-only smoke. This does not establish benchmark performance,
+  scientific validity, product qualification, or customer readiness.
 
 ## 0.2.0rc3 — Public redocking evidence-correctness release candidate
 

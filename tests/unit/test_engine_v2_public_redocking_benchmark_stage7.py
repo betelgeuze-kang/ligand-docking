@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from functools import lru_cache
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from betelgeuze_engine_v2.benchmark import (
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
     PUBLIC_REDOCKING_CASE_SEED_BASE,
     PUBLIC_REDOCKING_COHORT_COUNT,
+    PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
     PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_PRIMARY_ENGINES,
@@ -21,6 +23,8 @@ from betelgeuze_engine_v2.benchmark import (
     PublicRedockingBenchmarkError,
     PublicRedockingCaseProfile,
     PublicRedockingCaseResult,
+    PublicRedockingEngineV2CandidateDiagnostic,
+    PublicRedockingEngineV2Diagnostics,
     PublicRedockingEngineIdentity,
     PublicRedockingEvaluationPolicy,
     VerifiedCaseMaterialization,
@@ -29,6 +33,7 @@ from betelgeuze_engine_v2.benchmark import (
     frozen_public_redocking_case_seed,
     frozen_public_redocking_cohort,
     frozen_public_redocking_profiles,
+    require_public_redocking_contamination_registry,
     verify_public_redocking_source_identifiers,
 )
 
@@ -46,6 +51,99 @@ _EXCLUDED_SOURCE_IDS = (
 
 
 _RUN_ROOT = Path("/tmp/betelgeuze-public-redocking-unit-run")
+
+
+def _python_backend_receipt() -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
+        "backend": "python_reference",
+        "backend_version": "1.0.0",
+        "implementation_source_sha256": "e" * 64,
+        "options_fingerprint_sha256": "f" * 64,
+        "extension_sha256": "",
+        "cargo_lock_sha256": "",
+        "rustc_version": "",
+        "target_triple": "",
+        "build_flags": [],
+        "implicit_fallback_allowed": False,
+    }
+    payload["receipt_sha256"] = hashlib.sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest()
+    return payload
+
+
+def _zero_score_terms() -> dict[str, str]:
+    return {
+        name: 0.0.hex()
+        for name in (
+            "typed_vdw",
+            "electrostatics",
+            "directional_hbond",
+            "hydrophobic_contact",
+            "desolvation_proxy",
+            "torsion_energy",
+            "ligand_strain",
+            "weak_pocket_prior",
+            "total_score",
+        )
+    }
+
+
+def test_candidate_score_terms_accept_json_key_order_and_recanonicalize() -> None:
+    score_terms = dict(reversed(tuple(_zero_score_terms().items())))
+    candidate = PublicRedockingEngineV2CandidateDiagnostic(
+        proposal_index=0,
+        status="success",
+        proposal_mode="uniform_fallback",
+        proposal_fingerprint_sha256="1" * 64,
+        coordinate_fingerprint_sha256="4" * 64,
+        score=0.0,
+        rmsd_angstrom=0.0,
+        geometric_valid=True,
+        chemical_valid=True,
+        pose_artifact_sha256="2" * 64,
+        score_terms_receipt_sha256="3" * 64,
+        hbond_count=0,
+        selection_eligible=True,
+        score_term_binary64_hex=score_terms,
+    )
+
+    assert tuple(candidate.score_term_binary64_hex) == tuple(_zero_score_terms())
+
+
+def test_candidate_uniform_v3_ensemble_requires_exact_source_lineage() -> None:
+    candidate = PublicRedockingEngineV2CandidateDiagnostic(
+        proposal_index=0,
+        status="success",
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=1,
+        proposal_fingerprint_sha256="1" * 64,
+        coordinate_fingerprint_sha256="4" * 64,
+        score=0.0,
+        rmsd_angstrom=0.0,
+        geometric_valid=True,
+        chemical_valid=True,
+        pose_artifact_sha256="2" * 64,
+        score_terms_receipt_sha256="3" * 64,
+        hbond_count=0,
+        selection_eligible=True,
+        score_term_binary64_hex=_zero_score_terms(),
+    )
+
+    assert candidate.to_dict()["ensemble_source_proposal_index"] == 1
+    with pytest.raises(PublicRedockingBenchmarkError, match="source index"):
+        replace(candidate, ensemble_source_proposal_index=0)
+    with pytest.raises(PublicRedockingBenchmarkError, match="source index"):
+        replace(candidate, ensemble_source_proposal_index=None)
+    with pytest.raises(PublicRedockingBenchmarkError, match="non-ensemble"):
+        replace(candidate, proposal_mode="uniform_fallback")
 
 
 def _source_identifier_bytes() -> bytes:
@@ -229,6 +327,8 @@ def _input_fields(
     execution_policy = (
         (
             "cpu_count=1",
+            'scorer_backend="python_reference"',
+            "scorer_thread_count=1",
             "torch_interop_threads=1",
             "torch_intraop_threads=1",
             'torch_version="2.6.0"',
@@ -306,16 +406,76 @@ def _success(
     top3: float,
     runtime: float,
 ) -> PublicRedockingCaseResult:
+    rmsds = (top1, top2, top3, 4.0, 5.0)
+    geometric = (True, True, True, False, False)
+    chemical = (True, True, True, False, False)
+    artifacts = tuple(str(index + 4) * 64 for index in range(5))
+    diagnostics = None
+    if engine_id == "engine_v2":
+        diagnostics = PublicRedockingEngineV2Diagnostics(
+            preparation_status="success",
+            scorer_backend_receipt=_python_backend_receipt(),
+            receptor_atom_count=2,
+            ligand_atom_count=1,
+            receptor_partial_charge_count=2,
+            ligand_partial_charge_count=1,
+            receptor_donor_count=1,
+            receptor_acceptor_count=1,
+            ligand_donor_count=1,
+            ligand_acceptor_count=1,
+            candidates=tuple(
+                (
+                    PublicRedockingEngineV2CandidateDiagnostic(
+                        proposal_index=index,
+                        status="success",
+                        proposal_mode="uniform_fallback",
+                        proposal_fingerprint_sha256=hashlib.sha256(
+                            f"{case_id}:proposal:{index}".encode("ascii")
+                        ).hexdigest(),
+                        coordinate_fingerprint_sha256=hashlib.sha256(
+                            f"{case_id}:coordinates:{index}".encode("ascii")
+                        ).hexdigest(),
+                        score=float(index),
+                        rmsd_angstrom=rmsds[index],
+                        geometric_valid=geometric[index],
+                        chemical_valid=chemical[index],
+                        pose_artifact_sha256=artifacts[index],
+                        score_terms_receipt_sha256=hashlib.sha256(
+                            f"{case_id}:terms:{index}".encode("ascii")
+                        ).hexdigest(),
+                        hbond_count=int(index == 0),
+                        selection_eligible=True,
+                        posebusters_failed_check_ids=(
+                            ()
+                            if geometric[index] and chemical[index]
+                            else (
+                                "internal_steric_clash",
+                                "minimum_distance_to_protein",
+                            )
+                        ),
+                        score_term_binary64_hex=_zero_score_terms(),
+                    )
+                    if index < 5
+                    else PublicRedockingEngineV2CandidateDiagnostic(
+                        proposal_index=index,
+                        status="failure",
+                        error_code="synthetic_candidate_failure",
+                    )
+                )
+                for index in range(64)
+            ),
+        )
     return PublicRedockingCaseResult(
         case_id=case_id,
         engine_id=engine_id,
         status="success",
         runtime_seconds=runtime,
         **_input_fields(case_id, engine_id),
-        rmsd_angstroms=(top1, top2, top3, 4.0, 5.0),
-        geometric_valid=(True, True, True, False, False),
-        chemical_valid=(True, True, True, False, False),
-        pose_artifact_sha256s=tuple(str(index + 4) * 64 for index in range(5)),
+        rmsd_angstroms=rmsds,
+        geometric_valid=geometric,
+        chemical_valid=chemical,
+        pose_artifact_sha256s=artifacts,
+        engine_v2_diagnostics=diagnostics,
     )
 
 
@@ -335,6 +495,24 @@ def _rows() -> tuple[PublicRedockingCaseResult, ...]:
                             "engine_v2_case_failed"
                             if engine_id == "engine_v2"
                             else "external_process_failed"
+                        ),
+                        engine_v2_diagnostics=(
+                            PublicRedockingEngineV2Diagnostics(
+                                preparation_status="failure",
+                                preparation_failure_code=(
+                                    "unclassified_engine_v2_case_failure"
+                                ),
+                                receptor_atom_count=0,
+                                ligand_atom_count=0,
+                                receptor_partial_charge_count=0,
+                                ligand_partial_charge_count=0,
+                                receptor_donor_count=0,
+                                receptor_acceptor_count=0,
+                                ligand_donor_count=0,
+                                ligand_acceptor_count=0,
+                            )
+                            if engine_id == "engine_v2"
+                            else None
                         ),
                     )
                 )
@@ -421,9 +599,24 @@ def test_frozen_cohort_binds_exact_300_cases_and_public_source() -> None:
         PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
     )
     assert document["analysis_partitions"]["primary_blind_holdout"]["case_count"] == 298
+    assert document["analysis_partitions"]["contaminated_development"]["case_count"] == 300
     assert document["raw_structure_data_bundled"] is False
     assert document["benchmark_executed"] is False
     assert document["claim_safe"] is False
+
+
+def test_contamination_registry_invalidates_old_298_claim_before_values() -> None:
+    path = Path("config/engine_v2_public_redocking_contamination_registry.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    registry = require_public_redocking_contamination_registry(payload)
+
+    assert registry["registry_sha256"] == (
+        PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256
+    )
+    assert registry["contaminated_development_case_count"] == 300
+    assert registry["fresh_internal_blind_candidate_count"] == 128
+    assert registry["result_values_inspected_before_reclassification"] is False
+    assert registry["old_298_holdout_claim_invalidated"] is True
 
 
 def test_published_308_identifier_document_reproduces_selection() -> None:
@@ -458,6 +651,11 @@ def test_frozen_profiles_bind_ligand_artifacts_and_cover_all_subgroups() -> None
         "rotor_rigid_0",
         "rotor_low_1_4",
         "rotor_flexible_5_plus",
+    }
+    assert {profile.ring_subgroup for profile in profiles} == {
+        "ring_acyclic_0",
+        "ring_single_1",
+        "ring_multi_2_plus",
     }
     assert all(len(profile.ligand_artifact_sha256) == 64 for profile in profiles)
 
@@ -564,10 +762,16 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
     assert report.to_dict()["cpu_limit_comparable"] is True
     assert report.to_dict()["policy"]["external_timeout_seconds"] == 300
     assert report.to_dict()["policy"]["cpu_count"] == 1
+    assert report.to_dict()["policy"]["engine_v2_candidate_budget"] == 64
+    assert (
+        report.to_dict()["policy"]["proposal_oracle_definition"]
+        == "minimum_posebusters_symmetry_aware_rmsd_across_all_successful_engine_v2_candidates"
+    )
     assert report.to_dict()["benchmark_executed"] is True
     assert report.to_dict()["bootstrap_confidence_intervals"] is True
     assert report.to_dict()["engineering_smoke_case_count"] == 2
     assert report.to_dict()["primary_blind_holdout_case_count"] == 298
+    assert report.to_dict()["contaminated_development_case_count"] == 300
     assert report.to_dict()["supplementary_descriptive_case_count"] == 300
     assert report.to_dict()["primary_metrics_exclude_engineering_smoke"] is True
     assert _metric(
@@ -590,6 +794,41 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
         "engine_v2",
         "top1_geometric_validity_rate",
     ).value == pytest.approx(0.9)
+    assert _metric(
+        report,
+        "engine_v2",
+        "preparation_success_rate",
+    ).value == pytest.approx(0.9)
+    assert _metric(
+        report,
+        "engine_v2",
+        "complete_partial_charge_coverage_rate",
+    ).value == pytest.approx(0.9)
+    assert _metric(
+        report,
+        "engine_v2",
+        "hbond_feature_coverage_rate",
+    ).value == pytest.approx(0.9)
+    assert _metric(
+        report,
+        "engine_v2",
+        "candidate_generation_coverage_rate",
+    ).value == pytest.approx(0.9 * 5.0 / 64.0)
+    assert _metric(
+        report,
+        "engine_v2",
+        "proposal_oracle_recovery_rate",
+    ).value == pytest.approx(0.9)
+    assert _metric(
+        report,
+        "engine_v2",
+        "top1_scoring_regret_event_rate",
+    ).value == pytest.approx(0.4)
+    assert _metric(
+        report,
+        "engine_v2",
+        "top5_selection_regret_event_rate",
+    ).value == pytest.approx(0.0)
     assert (
         _metric(
             report,
@@ -598,7 +837,11 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
             subgroup="size_small_1_20",
             analysis_scope="primary_blind_holdout",
         ).case_count
-        == 116
+        == sum(
+            profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+            and profile.size_subgroup == "size_small_1_20"
+            for profile in _profiles()
+        )
     )
     assert (
         _metric(
@@ -608,7 +851,26 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
             subgroup="rotor_flexible_5_plus",
             analysis_scope="primary_blind_holdout",
         ).case_count
-        == 156
+        == sum(
+            profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+            and profile.rotor_subgroup == "rotor_flexible_5_plus"
+            for profile in _profiles()
+        )
+    )
+    ring_case_count = sum(
+        profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+        and profile.ring_subgroup == "ring_acyclic_0"
+        for profile in _profiles()
+    )
+    assert (
+        _metric(
+            report,
+            "engine_v2",
+            "proposal_oracle_recovery_rate",
+            subgroup="ring_acyclic_0",
+            analysis_scope="primary_blind_holdout",
+        ).case_count
+        == ring_case_count
     )
     paired = _metric(
         report,
@@ -993,6 +1255,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
     boolean_policy = (
         "cpu_count=true",
+        'scorer_backend="python_reference"',
+        "scorer_thread_count=1",
         "torch_interop_threads=1",
         "torch_intraop_threads=1",
         'torch_version="2.6.0"',
@@ -1016,6 +1280,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
     engine_v2_policy = (
         "cpu_count=1",
+        'scorer_backend="python_reference"',
+        "scorer_thread_count=1",
         "torch_interop_threads=1",
         "torch_intraop_threads=1",
         'torch_version="2.7.0+cpu"',
@@ -1036,6 +1302,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
     allowed_but_mismatched_policy = (
         "cpu_count=1",
+        'scorer_backend="python_reference"',
+        "scorer_thread_count=1",
         "torch_interop_threads=1",
         "torch_intraop_threads=1",
         'torch_version="2.6.0+cpu"',
@@ -1140,7 +1408,16 @@ def test_report_rejects_non_engine_derived_failure_code() -> None:
 
 def test_report_accepts_typed_engine_v2_input_failure_code() -> None:
     rows = list(_rows())
-    rows[0] = replace(rows[0], failure_code="engine_v2_input_unsupported")
+    diagnostics = rows[0].engine_v2_diagnostics
+    assert diagnostics is not None
+    rows[0] = replace(
+        rows[0],
+        failure_code="engine_v2_input_unsupported",
+        engine_v2_diagnostics=replace(
+            diagnostics,
+            preparation_failure_code="input_parse_unsupported",
+        ),
+    )
 
     report = build_public_redocking_benchmark_report(
         _profiles(),
@@ -1150,6 +1427,22 @@ def test_report_accepts_typed_engine_v2_input_failure_code() -> None:
     )
 
     assert report.rows[0].failure_code == "engine_v2_input_unsupported"
+
+
+def test_report_rejects_engine_v2_input_failure_code_receipt_mismatch() -> None:
+    rows = list(_rows())
+    rows[0] = replace(rows[0], failure_code="engine_v2_input_unsupported")
+
+    with pytest.raises(
+        ValueError,
+        match="input failure contradicts preparation diagnostics",
+    ):
+        build_public_redocking_benchmark_report(
+            _profiles(),
+            _identities(),
+            tuple(rows),
+            policy=_policy(),
+        )
 
 
 def test_report_rejects_engine_v2_input_path_cross_wired_to_another_case() -> None:
@@ -1225,6 +1518,96 @@ def test_report_rejects_metrics_forged_independently_of_rows() -> None:
         replace(report, metrics=tuple(forged))
 
 
+def test_report_rejects_engine_v2_candidate_diagnostic_substitution() -> None:
+    rows = list(_rows())
+    original = rows[1]
+    diagnostics = original.engine_v2_diagnostics
+    assert diagnostics is not None
+    candidates = list(diagnostics.candidates)
+    candidates[0] = replace(candidates[0], rmsd_angstrom=9.0)
+    rows[1] = replace(
+        original,
+        engine_v2_diagnostics=replace(
+            diagnostics,
+            candidates=tuple(candidates),
+        ),
+    )
+
+    with pytest.raises(
+        PublicRedockingBenchmarkError,
+        match="contradicts candidate diagnostics",
+    ):
+        build_public_redocking_benchmark_report(
+            _profiles(),
+            _identities(),
+            tuple(rows),
+            policy=_policy(),
+        )
+
+
+def test_engine_v2_diagnostics_validate_uniform_v3_ensemble_lineage() -> None:
+    row = _success(
+        FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
+        "engine_v2",
+        top1=1.0,
+        top2=2.0,
+        top3=3.0,
+        runtime=1.0,
+    )
+    diagnostics = row.engine_v2_diagnostics
+    assert diagnostics is not None
+    candidates = list(diagnostics.candidates)
+    candidates[0] = replace(
+        candidates[0],
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=1,
+    )
+    validated = replace(diagnostics, candidates=tuple(candidates))
+    assert validated.candidates[0].ensemble_source_proposal_index == 1
+
+    candidates[2] = replace(
+        candidates[2],
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=1,
+    )
+    with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
+        replace(diagnostics, candidates=tuple(candidates))
+
+    invalid_source = list(diagnostics.candidates)
+    invalid_source[0] = replace(
+        invalid_source[0],
+        proposal_mode="uniform_v3_rigid_ensemble",
+        ensemble_source_proposal_index=5,
+    )
+    with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
+        replace(diagnostics, candidates=tuple(invalid_source))
+
+
+def test_engine_v2_diagnostics_bind_complete_backend_receipt() -> None:
+    row = _success(
+        FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
+        "engine_v2",
+        top1=1.0,
+        top2=2.0,
+        top3=3.0,
+        runtime=1.0,
+    )
+    diagnostics = row.engine_v2_diagnostics
+    assert diagnostics is not None
+    serialized = diagnostics.to_dict()["scorer_backend_receipt"]
+    assert isinstance(serialized, dict)
+    assert serialized["backend"] == "python_reference"
+    assert serialized["implicit_fallback_allowed"] is False
+
+    substituted = dict(serialized)
+    substituted["backend_version"] = "changed-after-scoring"
+    with pytest.raises(
+        PublicRedockingBenchmarkError,
+        match="backend receipt hash mismatch",
+    ):
+        replace(diagnostics, scorer_backend_receipt=substituted)
+
+
 def test_missing_case_or_engine_row_cannot_drop_the_denominator() -> None:
     with pytest.raises(PublicRedockingBenchmarkError, match="every engine/case"):
         build_public_redocking_benchmark_report(
@@ -1245,9 +1628,10 @@ def test_profile_order_and_identity_order_are_exact() -> None:
         )
 
 
-def test_frozen_size_and_rotor_profiles_cannot_be_rewritten() -> None:
+def test_frozen_size_rotor_and_ring_profiles_cannot_be_rewritten() -> None:
     profiles = tuple(
-        replace(profile, heavy_atom_count=10, rotor_count=0) for profile in _profiles()
+        replace(profile, heavy_atom_count=10, rotor_count=0, ring_count=0)
+        for profile in _profiles()
     )
     with pytest.raises(PublicRedockingBenchmarkError, match="source-derived"):
         build_public_redocking_benchmark_report(

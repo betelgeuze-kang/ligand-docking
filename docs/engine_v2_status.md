@@ -8,7 +8,7 @@ machine-readable source of truth.
 ## Current implementation stage
 
 ```text
-v2_am_public_redocking_evidence_correctness_rc3
+v2_ao_native_cpu_scorer_contract_rc5
 ```
 
 The current `main` branch contains:
@@ -153,8 +153,12 @@ The current `main` branch contains:
   binds the external Zenodo archive and identifier-document
   bytes, requires one failure-complete five-pose row for each of Engine V2,
   Vina, and GNINA, and defines bootstrap-CI Top-1/3/5 RMSD and valid-pose
-  success, top-pose geometric/chemical validity, runtime, ligand-size/rotor
-  subgroups, and paired baseline deltas. A local runner verifies the
+  success, top-pose geometric/chemical validity, runtime,
+  ligand-size/rotor/ring subgroups, paired baseline deltas, and typed Engine V2
+  preparation/charge/H-bond/proposal-oracle/scoring-regret decomposition. The
+  fixed 64-candidate denominator, candidate pose/evaluator outcomes, scorer
+  term receipts, and Top-5 consistency checks are sealed into each execution
+  receipt. A local runner verifies the
   source archive and identifier list, materializes only the frozen inputs,
   serializes Engine V2 poses, invokes Vina/GNINA modes, and retains exact
   receipts. It binds timeout and the full Engine V2 Python source closure,

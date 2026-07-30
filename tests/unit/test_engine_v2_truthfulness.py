@@ -49,7 +49,7 @@ def test_lifecycle_snapshot_separates_wiring_from_production_evidence() -> None:
         "claim_safe": False,
     }
     rows = snapshot["capabilities"]
-    assert len(rows) == 44
+    assert len(rows) == 45
     required_fields = {
         "current_state",
         "implemented",
@@ -103,8 +103,8 @@ def test_public_redocking_runner_is_wired_without_benchmark_promotion() -> None:
     base = capability_snapshot()["capabilities"][PUBLIC_BENCHMARK_PROTOCOL_CAPABILITY_ID]
     assert base["current_state"] == (
         "frozen_300_case_public_redocking_runner_with_298_case_"
-        "primary_blind_holdout_and_sealed_execution_receipts_"
-        "without_committed_results"
+        "primary_blind_holdout_and_sealed_64_candidate_"
+        "diagnostic_execution_receipts_without_committed_results"
     )
     assert base["internal_reference_execution_enabled"] is True
     assert "symmetry_mapping_materializer_not_implemented" not in base["blockers"]

@@ -1,0 +1,60 @@
+{
+  "schema_id": "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0",
+  "corpus_id": "OPERATOR_FILL_PUBLIC_DEVELOPMENT_CORPUS_ID",
+  "case_count": null,
+  "case_ids_sha256": "OPERATOR_FILL_SHA256",
+  "contains_engineering_smoke": false,
+  "contains_primary_holdout": false,
+  "contains_fresh_internal_blind_holdout": false,
+  "diagnostic_contract_id": "betelgeuze-engine-v2-public-redocking-diagnostics/0.2.0rc5",
+  "sample_size_justification": "OPERATOR_FILL_AND_REVIEW",
+  "metrics": {
+    "preparation_input_unsupported_rate": {
+      "operator": "max",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    },
+    "candidate_generation_coverage": {
+      "operator": "min",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    },
+    "proposal_oracle_2a_recovery": {
+      "operator": "min",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    },
+    "top1_selection_failure_given_oracle": {
+      "operator": "max",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    },
+    "top5_selection_failure_given_oracle": {
+      "operator": "max",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    },
+    "invalid_top1_pose_rate": {
+      "operator": "max",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    },
+    "case_level_failure_rate": {
+      "operator": "max",
+      "observed_estimate": null,
+      "proposed_threshold": null,
+      "derivation_rule": "OPERATOR_FILL"
+    }
+  },
+  "paired_baseline_engines": ["vina", "gnina"],
+  "baseline_noninferiority_margins": {
+    "top1_2a_recovery_delta": null,
+    "top5_2a_recovery_delta": null
+  }
+}

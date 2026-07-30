@@ -6,6 +6,7 @@ inputs, launch Engine V2 or external binaries, or claim docking accuracy.
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
 import hashlib
 import json
@@ -16,21 +17,77 @@ import random
 import re
 import stat
 import statistics
-from typing import Callable, Sequence
+from types import MappingProxyType
+from typing import Callable, Mapping, Sequence
 import zipfile
 
 
-PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohort/1.1.0"
+PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohort/1.3.0"
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.1.0"
+    "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.2.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/1.9.1"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.9.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.9.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
 PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_case_execution/1.0.0"
+    "betelgeuze.engine_v2_public_redocking_case_execution/1.1.0"
+)
+PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.4.0"
+)
+_SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0"
+)
+PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_contamination_registry/1.1.0"
+)
+PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256 = (
+    "89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31"
+)
+PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
+    "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
+)
+PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.5.0"
+)
+PUBLIC_REDOCKING_PROPOSAL_MODES = (
+    "donor_acceptor_hotspot",
+    "charge_anchor",
+    "hydrophobic_patch",
+    "aromatic_plane",
+    "shape_complementarity",
+    "multi_anchor_hotspot",
+    "pocket_center_baseline",
+    "uniform_fallback",
+    "uniform_v3_rigid_ensemble",
+)
+PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS = (
+    "sanitization",
+    "inchi_convertible",
+    "all_atoms_connected",
+    "molecular_formula",
+    "molecular_bonds",
+    "double_bond_stereochemistry",
+    "tetrahedral_chirality",
+    "bond_lengths",
+    "bond_angles",
+    "internal_steric_clash",
+    "aromatic_ring_flatness",
+    "double_bond_flatness",
+    "internal_energy",
+)
+PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS = (
+    "protein-ligand_maximum_distance",
+    "minimum_distance_to_protein",
+    "minimum_distance_to_organic_cofactors",
+    "minimum_distance_to_inorganic_cofactors",
+    "minimum_distance_to_waters",
+    "volume_overlap_with_protein",
+    "volume_overlap_with_organic_cofactors",
+    "volume_overlap_with_inorganic_cofactors",
+    "volume_overlap_with_waters",
 )
 PUBLIC_REDOCKING_COHORT_ID = "posebusters-journal-subset-sha256-300"
 PUBLIC_REDOCKING_COHORT_COUNT = 300
@@ -58,8 +115,14 @@ PUBLIC_REDOCKING_SELECTED_IDS_SHA256 = (
 PUBLIC_REDOCKING_PROFILE_METHOD_ID = (
     "rdkit-2022.09.5-lipinski-num-rotatable-bonds-strict/1.0.0"
 )
+PUBLIC_REDOCKING_RING_PROFILE_METHOD_ID = (
+    "rdkit-2022.09.5-rdmoldescriptors-calc-num-rings/1.0.0"
+)
 PUBLIC_REDOCKING_PROFILES_SHA256 = (
     "18ed3a4a50d5663a2dfb6f159ac515b15d6aebac9793831467aa2950e4710312"
+)
+PUBLIC_REDOCKING_RING_PROFILES_SHA256 = (
+    "1b860ae64314b413dc83a2d858f55650c6e593d8fa82518e3fcdd844c46b017c"
 )
 PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256 = (
     "94bb879b181ec3de581f3f098aff2bd50b9f988fd1d4eb0c3c46cc673cfd640a"
@@ -87,8 +150,18 @@ _PUBLIC_REDOCKING_FAILURE_CODES = {
         "external_pose_count_incomplete",
     },
 }
+_PUBLIC_REDOCKING_ENGINE_V2_PREPARATION_FAILURE_CODES = {
+    "docking_context_preparation_failed",
+    "input_parse_unsupported",
+    "partial_charge_assignment_failed",
+    "unsupported_large_ring_system",
+    "unsupported_vdw_element",
+    "unclassified_engine_v2_case_failure",
+}
 PUBLIC_REDOCKING_ANALYSIS_SCOPES = (
     "primary_blind_holdout",
+    "fresh_internal_blind_holdout",
+    "contaminated_development",
     "engineering_smoke",
     "supplementary_descriptive",
 )
@@ -103,6 +176,7 @@ PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES = 2_000
 PUBLIC_REDOCKING_DEFAULT_CONFIDENCE_LEVEL = 0.95
 PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SEED = 2_026_072_700
 MAX_PUBLIC_REDOCKING_BOOTSTRAP_SAMPLES = 20_000
+PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT = 64
 PUBLIC_REDOCKING_SIZE_SUBGROUPS = (
     "size_small_1_20",
     "size_medium_21_40",
@@ -112,6 +186,11 @@ PUBLIC_REDOCKING_ROTOR_SUBGROUPS = (
     "rotor_rigid_0",
     "rotor_low_1_4",
     "rotor_flexible_5_plus",
+)
+PUBLIC_REDOCKING_RING_SUBGROUPS = (
+    "ring_acyclic_0",
+    "ring_single_1",
+    "ring_multi_2_plus",
 )
 _CASE_ID_RE = re.compile(r"^[0-9][A-Z0-9]{3}_[A-Z0-9]{3}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -123,6 +202,17 @@ _CASE_ARTIFACT_ROLES = (
 )
 _VERIFIED_ARCHIVE_AUTHORITY = object()
 _VERIFIED_EXECUTION_AUTHORITY = object()
+_SCORER_TERM_NAMES = (
+    "typed_vdw",
+    "electrostatics",
+    "directional_hbond",
+    "hydrophobic_contact",
+    "desolvation_proxy",
+    "torsion_energy",
+    "ligand_strain",
+    "weak_pocket_prior",
+    "total_score",
+)
 
 
 class PublicRedockingBenchmarkError(ValueError):
@@ -732,11 +822,222 @@ PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS = (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
     FROZEN_PUBLIC_REDOCKING_CASE_IDS[1],
 )
+PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS = (
+    FROZEN_PUBLIC_REDOCKING_CASE_IDS
+)
 PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS = tuple(
     case_id
     for case_id in FROZEN_PUBLIC_REDOCKING_CASE_IDS
     if case_id not in PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
 )
+FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS = tuple(
+    """
+5S8I_2LY
+6VS3_R6V
+6W59_SZD
+6X8D_ARA
+6XAF_GDP
+6XUM_30L
+6Y7L_QMG
+6YDY_K73
+6Z5Z_BDF
+6ZR8_QOZ
+6ZT2_QPK
+6ZX3_QRZ
+6ZXQ_IMO
+7AA0_R6B
+7AMC_73B
+7AS1_21G
+7AVI_S2Q
+7B0E_C2E
+7BA0_T5H
+7BHX_TO5
+7BJ6_TVK
+7BLA_WCS
+7BLG_GAL
+7C6P_SQH
+7D0P_1VU
+7D8Q_GZF
+7D9L_GSF
+7DIN_MPO
+7E2S_BLA
+7EN7_J79
+7JGW_V9S
+7JNB_A2G
+7JR8_VH7
+7JUD_MMA
+7K41_VUA
+7KFO_IAC
+7KLX_WOV
+7KP6_WTP
+7KQU_YOF
+7L6D_BMF
+7L81_UD4
+7LB3_XXS
+7LZQ_YJV
+7M41_YQG
+7MAE_XUS
+7MEU_MGP
+7MRH_ZMJ
+7MS7_ZQ1
+7MZS_GLA
+7NA4_1I9
+7NB4_U6Q
+7NLK_UHK
+7NML_I7B
+7NR6_UO8
+7NTG_F6R
+7OCB_V88
+7ODX_DGP
+7OEO_V9Z
+7OKC_VFE
+7OKF_VH5
+7OLT_58J
+7OMJ_GCP
+7ORW_7WA
+7OU8_1XI
+7P2W_4QR
+7P4J_5JK
+7P4V_DAT
+7P85_5ZG
+7PA4_C
+7Q19_DSM
+7QK0_EBL
+7QSW_CAP
+7REE_4LY
+7RH8_UTP
+7RPZ_6IC
+7RUI_7QZ
+7RWO_7WN
+7S45_ACO
+7S9H_7PP
+7SED_8VD
+7SGV_L30
+7SNE_9XR
+7SSM_B7L
+7T0U_E3I
+7T2I_E9F
+7T3F_EM0
+7T9O_GEI
+7TWC_CXS
+7TXP_0FX
+7UEY_N0R
+7UF2_5SP
+7UJ4_OQ4
+7UMV_NUU
+7UP3_NZ0
+7USH_82V
+7V14_ORU
+7V8Z_5YH
+7VBU_6I4
+7VJT_7IJ
+7VYJ_CA0
+7W6F_8I6
+7WN5_JGL
+7XEK_9YX
+7XIJ_EJ3
+7ZDY_6MJ
+7ZXZ_K9R
+7ZYS_KNR
+7ZZB_KGX
+8ACL_LQL
+8AEU_M0L
+8AIJ_M9I
+8AJX_FUM
+8BN6_R53
+8BPL_CP
+8BRO_R7E
+8C5D_GTB
+8C7Y_TXV
+8CGC_LMR
+8CI0_8EL
+8DW5_FQ7
+8DZT_G4P
+8E77_ULP
+8EAD_UY0
+8ERS_WQO
+8FLN_Y7W
+8FV9_80J
+8G43_ZU6
+8H0M_2EH
+""".strip().splitlines()
+)
+PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256 = (
+    "ecc91c660896245f62ad8b583cfa4f45e50038cf513c384f6bdb56d406278248"
+)
+
+
+def require_public_redocking_contamination_registry(
+    payload: object,
+) -> Mapping[str, object]:
+    """Validate the result-blind reclassification of pre-freeze executions."""
+
+    if not isinstance(payload, Mapping):
+        raise PublicRedockingBenchmarkError(
+            "contamination registry must be a mapping"
+        )
+    registry = dict(payload)
+    observed_self_hash = registry.pop("registry_sha256", None)
+    if observed_self_hash != _sha256(registry):
+        raise PublicRedockingBenchmarkError(
+            "contamination registry self-hash mismatch"
+        )
+    if observed_self_hash != PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256:
+        raise PublicRedockingBenchmarkError(
+            "contamination registry identity drifted"
+        )
+    registry["registry_sha256"] = observed_self_hash
+    if registry.get("schema_id") != (
+        PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID
+    ):
+        raise PublicRedockingBenchmarkError(
+            "contamination registry schema is unsupported"
+        )
+    if registry.get("contaminated_development_case_count") != 300:
+        raise PublicRedockingBenchmarkError(
+            "contaminated development denominator drifted"
+        )
+    if registry.get("contaminated_development_case_ids_sha256") != _sha256(
+        list(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+    ):
+        raise PublicRedockingBenchmarkError(
+            "contaminated development cases drifted"
+        )
+    if registry.get("fresh_internal_blind_candidate_count") != 128:
+        raise PublicRedockingBenchmarkError(
+            "fresh internal blind denominator drifted"
+        )
+    if registry.get("fresh_internal_blind_case_ids_sha256") != (
+        PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256
+    ):
+        raise PublicRedockingBenchmarkError(
+            "fresh internal blind case identity drifted"
+        )
+    if registry.get("source_report_execution_receipt_count") != 900:
+        raise PublicRedockingBenchmarkError("historical receipt count drifted")
+    if registry.get("source_report_sha256") != PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256:
+        raise PublicRedockingBenchmarkError("historical report identity drifted")
+    if registry.get("coverage_verified_before_metric_values_inspected") is not True:
+        raise PublicRedockingBenchmarkError(
+            "historical coverage was not verified before metrics were inspected"
+        )
+    if registry.get("result_values_inspected_before_reclassification") is not False:
+        raise PublicRedockingBenchmarkError(
+            "contamination reclassification was not result-blind"
+        )
+    if registry.get("old_298_holdout_claim_invalidated") is not True:
+        raise PublicRedockingBenchmarkError(
+            "obsolete 298-case claim was not invalidated"
+        )
+    if registry.get("fresh_result_values_inspected") is not False:
+        raise PublicRedockingBenchmarkError(
+            "fresh internal blind result values were inspected"
+        )
+    if registry.get("external_independent_validation_still_required_for_public_claim") is not True:
+        raise PublicRedockingBenchmarkError(
+            "external public-claim review boundary is missing"
+        )
+    return MappingProxyType(registry)
 
 
 def frozen_public_redocking_case_seed(case_id: str) -> int:
@@ -1386,6 +1687,35 @@ _FROZEN_PROFILE_ROWS_TEXT = """
 8HO0_3ZI,22,2,b9a99a4e6ce5ad831a755b704309c1d02476ae0034378b040365f174fa1c58b5
 8SLG_G5A,27,6,ec2015f986a27af3d8a6e5b47f4693def675b0fdb0d5998e2331b897e475bb66
 """.strip()
+_FROZEN_RING_COUNTS_TEXT = (
+    "353433144342322172114004312333015330023310302111562051410113311402035625"
+    "361331121443152304103513521441234327136105334432443234361014233433523011"
+    "131233414321532232213354532434453334444713144030613123003225164365054515"
+    "534061231023031115020524335120303113201431042528321110325233320213131545"
+    "363442303243"
+)
+if len(_FROZEN_RING_COUNTS_TEXT) != PUBLIC_REDOCKING_COHORT_COUNT:
+    raise RuntimeError("frozen ring profile count is invalid")
+_FROZEN_RING_COUNT_BY_CASE = dict(
+    zip(
+        FROZEN_PUBLIC_REDOCKING_CASE_IDS,
+        (int(value) for value in _FROZEN_RING_COUNTS_TEXT),
+        strict=True,
+    )
+)
+if (
+    hashlib.sha256(
+        (
+            "\n".join(
+                f"{case_id},{_FROZEN_RING_COUNT_BY_CASE[case_id]}"
+                for case_id in FROZEN_PUBLIC_REDOCKING_CASE_IDS
+            )
+            + "\n"
+        ).encode("ascii")
+    ).hexdigest()
+    != PUBLIC_REDOCKING_RING_PROFILES_SHA256
+):
+    raise RuntimeError("frozen ring profiles are invalid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1418,6 +1748,7 @@ class FrozenPublicRedockingCohort:
             raise PublicRedockingBenchmarkError("frozen redocking case IDs drifted")
         if (
             len(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS) != 2
+            or PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS != case_ids
             or len(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS) != 298
             or set(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS)
             & set(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS)
@@ -1432,7 +1763,7 @@ class FrozenPublicRedockingCohort:
             != case_ids
         ):
             raise PublicRedockingBenchmarkError(
-                "redocking smoke and primary holdout partitions drifted"
+                "redocking historical smoke and primary partitions drifted"
             )
         object.__setattr__(self, "case_ids", case_ids)
 
@@ -1465,6 +1796,13 @@ class FrozenPublicRedockingCohort:
                 "selected_ids_sha256": PUBLIC_REDOCKING_SELECTED_IDS_SHA256,
                 "selected_before_results": True,
             },
+            "contamination_registry": {
+                "schema_id": PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID,
+                "registry_sha256": PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256,
+                "historical_report_sha256": PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256,
+                "old_298_holdout_claim_invalidated": True,
+                "reclassification_was_result_blind": True,
+            },
             "case_seed_policy": {
                 "derivation": "base_plus_frozen_case_index",
                 "base_seed": PUBLIC_REDOCKING_CASE_SEED_BASE,
@@ -1489,8 +1827,19 @@ class FrozenPublicRedockingCohort:
                 "primary_blind_holdout": {
                     "case_count": len(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS),
                     "case_ids": list(PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS),
-                    "excludes_observed_smoke_cases": True,
-                    "claim_role": "primary_blind_holdout",
+                    "historical_designation_invalidated": True,
+                    "claim_role": "historical_nonclaimable_partition",
+                },
+                "contaminated_development": {
+                    "case_count": len(
+                        PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+                    ),
+                    "case_ids": list(
+                        PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+                    ),
+                    "observed_before_stage0_numeric_freeze": True,
+                    "contains_all_300_cases": True,
+                    "claim_role": "development_and_threshold_derivation_only",
                 },
                 "supplementary_descriptive": {
                     "case_count": len(self.case_ids),
@@ -1502,7 +1851,9 @@ class FrozenPublicRedockingCohort:
             "profiles": {
                 "method_id": PUBLIC_REDOCKING_PROFILE_METHOD_ID,
                 "profiles_sha256": PUBLIC_REDOCKING_PROFILES_SHA256,
-                "heavy_atom_and_rotor_subgroups_frozen_before_results": True,
+                "ring_method_id": PUBLIC_REDOCKING_RING_PROFILE_METHOD_ID,
+                "ring_profiles_sha256": PUBLIC_REDOCKING_RING_PROFILES_SHA256,
+                "heavy_atom_rotor_and_ring_subgroups_frozen_before_results": True,
             },
             "materializations": {
                 "schema_id": PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
@@ -1988,10 +2339,45 @@ class PublicRedockingEvaluationPolicy:
             "same_ranked_pose_count_required": True,
             "same_search_effort_required": False,
             "failure_denominator": "all_cases_in_each_analysis_scope",
-            "primary_failure_denominator": "298_blind_holdout_cases",
+            "historical_primary_failure_denominator": (
+                "298_cases_invalidated_nonclaimable"
+            ),
+            "fresh_internal_failure_denominator": "128_untouched_cases",
             "engineering_smoke_failure_denominator": "2_observed_smoke_cases",
             "supplementary_failure_denominator": "all_300_frozen_cases",
             "missing_candidate_policy": "case_failure",
+            "engine_v2_candidate_budget": (
+                PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+            ),
+            "engine_v2_candidate_denominator": (
+                "all_64_predeclared_candidate_slots_per_prepared_case"
+            ),
+            "proposal_oracle_definition": (
+                "minimum_posebusters_symmetry_aware_rmsd_across_all_successful_"
+                "engine_v2_candidates"
+            ),
+            "valid_proposal_oracle_definition": (
+                "proposal_oracle_candidate_also_passes_all_geometric_and_"
+                "chemical_posebusters_checks"
+            ),
+            "top1_scoring_regret_definition": (
+                "score_rank_1_rmsd_minus_proposal_oracle_rmsd"
+            ),
+            "top5_selection_regret_definition": (
+                "best_score_ranked_top5_rmsd_minus_proposal_oracle_rmsd"
+            ),
+            "complete_partial_charge_coverage_definition": (
+                "finite_partial_charge_present_for_every_prepared_receptor_"
+                "and_ligand_atom"
+            ),
+            "hbond_feature_coverage_definition": (
+                "scorer_context_has_at_least_one_complementary_ligand_"
+                "donor_receptor_acceptor_or_ligand_acceptor_receptor_donor_pair"
+            ),
+            "candidate_diagnostic_evaluation_in_engine_runtime": False,
+            "ring_subgroup_definition": (
+                "rdkit_2022_09_5_calc_num_rings_grouped_as_0_1_or_2_plus"
+            ),
         }
 
 
@@ -2000,6 +2386,7 @@ class PublicRedockingCaseProfile:
     case_id: str
     heavy_atom_count: int
     rotor_count: int
+    ring_count: int
     ligand_artifact_sha256: str
 
     def __post_init__(self) -> None:
@@ -2012,6 +2399,8 @@ class PublicRedockingCaseProfile:
             raise PublicRedockingBenchmarkError("heavy_atom_count must be in [1,512]")
         if type(self.rotor_count) is not int or not 0 <= self.rotor_count <= 128:
             raise PublicRedockingBenchmarkError("rotor_count must be in [0,128]")
+        if type(self.ring_count) is not int or not 0 <= self.ring_count <= 128:
+            raise PublicRedockingBenchmarkError("ring_count must be in [0,128]")
         object.__setattr__(
             self,
             "ligand_artifact_sha256",
@@ -2037,15 +2426,26 @@ class PublicRedockingCaseProfile:
             return "rotor_low_1_4"
         return "rotor_flexible_5_plus"
 
+    @property
+    def ring_subgroup(self) -> str:
+        if self.ring_count == 0:
+            return "ring_acyclic_0"
+        if self.ring_count == 1:
+            return "ring_single_1"
+        return "ring_multi_2_plus"
+
     def to_dict(self) -> dict[str, object]:
         return {
             "case_id": self.case_id,
             "heavy_atom_count": self.heavy_atom_count,
             "rotor_count": self.rotor_count,
+            "ring_count": self.ring_count,
             "ligand_artifact_sha256": self.ligand_artifact_sha256,
             "profile_method_id": PUBLIC_REDOCKING_PROFILE_METHOD_ID,
+            "ring_profile_method_id": PUBLIC_REDOCKING_RING_PROFILE_METHOD_ID,
             "size_subgroup": self.size_subgroup,
             "rotor_subgroup": self.rotor_subgroup,
+            "ring_subgroup": self.ring_subgroup,
         }
 
 
@@ -2069,6 +2469,7 @@ def frozen_public_redocking_profiles() -> tuple[PublicRedockingCaseProfile, ...]
                     case_id=case_id,
                     heavy_atom_count=int(heavy_atoms),
                     rotor_count=int(rotors),
+                    ring_count=_FROZEN_RING_COUNT_BY_CASE[case_id],
                     ligand_artifact_sha256=ligand_sha256,
                 )
             )
@@ -2128,6 +2529,654 @@ class PublicRedockingEngineIdentity:
 
 
 @dataclass(frozen=True, slots=True)
+class PublicRedockingEngineV2CandidateDiagnostic:
+    """One retained row from the fixed 64-candidate Engine V2 denominator."""
+
+    proposal_index: int
+    status: str
+    proposal_mode: str = ""
+    ensemble_source_proposal_index: int | None = None
+    proposal_fingerprint_sha256: str = ""
+    coordinate_fingerprint_sha256: str = ""
+    score: float | None = None
+    rmsd_angstrom: float | None = None
+    geometric_valid: bool | None = None
+    chemical_valid: bool | None = None
+    pose_artifact_sha256: str = ""
+    score_terms_receipt_sha256: str = ""
+    hbond_count: int | None = None
+    selection_eligible: bool | None = None
+    posebusters_failed_check_ids: tuple[str, ...] = ()
+    refinement_receipt_sha256: str = ""
+    refinement_initial_penalty_binary64_hex: str = ""
+    refinement_final_penalty_binary64_hex: str = ""
+    refinement_accepted_steps: int | None = None
+    refinement_accepted_rotation_steps: int | None = None
+    refinement_original_pose_valid: bool | None = None
+    refinement_total_translation_binary64_hex: tuple[str, ...] = ()
+    refinement_total_rotation_vector_binary64_hex: tuple[str, ...] = ()
+    score_term_binary64_hex: Mapping[str, str] = field(default_factory=dict)
+    error_code: str = ""
+    schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID:
+            raise PublicRedockingBenchmarkError(
+                "unsupported Engine V2 candidate diagnostic schema"
+            )
+        if (
+            type(self.proposal_index) is not int
+            or not 0
+            <= self.proposal_index
+            < PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 candidate proposal_index is invalid"
+            )
+        status = str(self.status or "").strip().lower()
+        if status not in {"success", "failure"}:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 candidate status must be success or failure"
+            )
+        error_code = str(self.error_code or "").strip()
+        proposal_mode = str(self.proposal_mode or "").strip()
+        ensemble_source = self.ensemble_source_proposal_index
+        if proposal_mode == "uniform_v3_rigid_ensemble":
+            if (
+                type(ensemble_source) is not int
+                or not 0
+                <= ensemble_source
+                < PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+                or ensemble_source == self.proposal_index
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "uniform V3 ensemble candidate source index is invalid"
+                )
+        elif ensemble_source is not None:
+            raise PublicRedockingBenchmarkError(
+                "non-ensemble candidate cannot declare an ensemble source"
+            )
+        failed_checks = tuple(
+            str(value or "").strip()
+            for value in self.posebusters_failed_check_ids
+        )
+        allowed_checks = (
+            *PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS,
+            *PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS,
+        )
+        if (
+            failed_checks
+            != tuple(
+                check for check in allowed_checks if check in set(failed_checks)
+            )
+            or len(failed_checks) != len(set(failed_checks))
+        ):
+            raise PublicRedockingBenchmarkError(
+                "candidate PoseBusters failed checks are invalid"
+            )
+        score_terms = dict(self.score_term_binary64_hex)
+        if status == "success":
+            if proposal_mode not in PUBLIC_REDOCKING_PROPOSAL_MODES:
+                raise PublicRedockingBenchmarkError(
+                    "successful candidate proposal mode is invalid"
+                )
+            proposal_sha256 = _digest(
+                self.proposal_fingerprint_sha256,
+                name="proposal_fingerprint_sha256",
+            )
+            coordinate_sha256 = _digest(
+                self.coordinate_fingerprint_sha256,
+                name="coordinate_fingerprint_sha256",
+            )
+            pose_sha256 = _digest(
+                self.pose_artifact_sha256,
+                name="pose_artifact_sha256",
+            )
+            terms_sha256 = _digest(
+                self.score_terms_receipt_sha256,
+                name="score_terms_receipt_sha256",
+            )
+            score = _finite(self.score, name="candidate score")
+            rmsd = _finite(
+                self.rmsd_angstrom,
+                name="candidate rmsd_angstrom",
+                minimum=0.0,
+            )
+            if (
+                type(self.geometric_valid) is not bool
+                or type(self.chemical_valid) is not bool
+                or type(self.hbond_count) is not int
+                or self.hbond_count < 0
+                or type(self.selection_eligible) is not bool
+                or set(score_terms) != set(_SCORER_TERM_NAMES)
+                or self.geometric_valid
+                != (not bool(
+                    set(failed_checks)
+                    & set(PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS)
+                ))
+                or self.chemical_valid
+                != (not bool(
+                    set(failed_checks)
+                    & set(PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS)
+                ))
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "successful Engine V2 candidate diagnostics are incomplete"
+                )
+            try:
+                decoded_terms = {
+                    name: float.fromhex(score_terms[name])
+                    for name in _SCORER_TERM_NAMES
+                }
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise PublicRedockingBenchmarkError(
+                    "successful candidate score terms are invalid"
+                ) from exc
+            if any(
+                not math.isfinite(value) or value.hex() != score_terms[name]
+                for name, value in decoded_terms.items()
+            ) or not math.isclose(
+                decoded_terms["total_score"],
+                sum(decoded_terms[name] for name in _SCORER_TERM_NAMES[:-1]),
+                rel_tol=0.0,
+                abs_tol=1.0e-12,
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "successful candidate score terms are inconsistent"
+                )
+            if error_code:
+                raise PublicRedockingBenchmarkError(
+                    "successful Engine V2 candidate cannot contain error_code"
+                )
+            object.__setattr__(self, "proposal_fingerprint_sha256", proposal_sha256)
+            object.__setattr__(
+                self, "coordinate_fingerprint_sha256", coordinate_sha256
+            )
+            object.__setattr__(self, "pose_artifact_sha256", pose_sha256)
+            object.__setattr__(self, "score_terms_receipt_sha256", terms_sha256)
+            object.__setattr__(self, "score", score)
+            object.__setattr__(self, "rmsd_angstrom", rmsd)
+            refinement_fields_present = bool(
+                self.refinement_receipt_sha256
+                or self.refinement_initial_penalty_binary64_hex
+                or self.refinement_final_penalty_binary64_hex
+                or self.refinement_accepted_steps is not None
+                or self.refinement_accepted_rotation_steps is not None
+                or self.refinement_original_pose_valid is not None
+                or self.refinement_total_translation_binary64_hex
+                or self.refinement_total_rotation_vector_binary64_hex
+            )
+            if refinement_fields_present:
+                refinement_sha256 = _digest(
+                    self.refinement_receipt_sha256,
+                    name="refinement_receipt_sha256",
+                )
+                try:
+                    initial_penalty = float.fromhex(
+                        self.refinement_initial_penalty_binary64_hex
+                    )
+                    final_penalty = float.fromhex(
+                        self.refinement_final_penalty_binary64_hex
+                    )
+                    translation = tuple(
+                        float.fromhex(value)
+                        for value in self.refinement_total_translation_binary64_hex
+                    )
+                    rotation = tuple(
+                        float.fromhex(value)
+                        for value in self.refinement_total_rotation_vector_binary64_hex
+                    )
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise PublicRedockingBenchmarkError(
+                        "candidate refinement diagnostics are invalid"
+                    ) from exc
+                if (
+                    not math.isfinite(initial_penalty)
+                    or not math.isfinite(final_penalty)
+                    or initial_penalty < 0.0
+                    or final_penalty < 0.0
+                    or initial_penalty.hex()
+                    != self.refinement_initial_penalty_binary64_hex
+                    or final_penalty.hex()
+                    != self.refinement_final_penalty_binary64_hex
+                    or type(self.refinement_accepted_steps) is not int
+                    or self.refinement_accepted_steps < 0
+                    or type(self.refinement_accepted_rotation_steps) is not int
+                    or not 0
+                    <= self.refinement_accepted_rotation_steps
+                    <= self.refinement_accepted_steps
+                    or type(self.refinement_original_pose_valid) is not bool
+                    or len(translation) != 3
+                    or len(rotation) != 3
+                    or any(
+                        not math.isfinite(value)
+                        or value.hex()
+                        != self.refinement_total_translation_binary64_hex[index]
+                        for index, value in enumerate(translation)
+                    )
+                    or any(
+                        not math.isfinite(value)
+                        or value.hex()
+                        != self.refinement_total_rotation_vector_binary64_hex[index]
+                        for index, value in enumerate(rotation)
+                    )
+                ):
+                    raise PublicRedockingBenchmarkError(
+                        "candidate refinement diagnostics are incomplete"
+                    )
+                object.__setattr__(
+                    self, "refinement_receipt_sha256", refinement_sha256
+                )
+        elif (
+            self.proposal_fingerprint_sha256
+            or self.coordinate_fingerprint_sha256
+            or self.score is not None
+            or self.rmsd_angstrom is not None
+            or self.geometric_valid is not None
+            or self.chemical_valid is not None
+            or self.pose_artifact_sha256
+            or self.score_terms_receipt_sha256
+            or self.hbond_count is not None
+            or self.selection_eligible is not None
+            or score_terms
+            or failed_checks
+            or self.refinement_receipt_sha256
+            or self.refinement_initial_penalty_binary64_hex
+            or self.refinement_final_penalty_binary64_hex
+            or self.refinement_accepted_steps is not None
+            or self.refinement_accepted_rotation_steps is not None
+            or self.refinement_original_pose_valid is not None
+            or self.refinement_total_translation_binary64_hex
+            or self.refinement_total_rotation_vector_binary64_hex
+            or not error_code
+        ):
+            raise PublicRedockingBenchmarkError(
+                "failed Engine V2 candidate requires error_code and optional mode"
+            )
+        elif proposal_mode and proposal_mode not in PUBLIC_REDOCKING_PROPOSAL_MODES:
+            raise PublicRedockingBenchmarkError(
+                "failed candidate proposal mode is invalid"
+            )
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "proposal_mode", proposal_mode)
+        object.__setattr__(self, "posebusters_failed_check_ids", failed_checks)
+        object.__setattr__(
+            self,
+            "refinement_total_translation_binary64_hex",
+            tuple(self.refinement_total_translation_binary64_hex),
+        )
+        object.__setattr__(
+            self,
+            "refinement_total_rotation_vector_binary64_hex",
+            tuple(self.refinement_total_rotation_vector_binary64_hex),
+        )
+        object.__setattr__(self, "error_code", error_code)
+        object.__setattr__(
+            self,
+            "score_term_binary64_hex",
+            MappingProxyType(
+                {
+                    name: score_terms[name]
+                    for name in _SCORER_TERM_NAMES
+                    if name in score_terms
+                }
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "proposal_index": self.proposal_index,
+            "status": self.status,
+            "proposal_mode": self.proposal_mode,
+            "ensemble_source_proposal_index": (
+                self.ensemble_source_proposal_index
+            ),
+            "proposal_fingerprint_sha256": self.proposal_fingerprint_sha256,
+            "coordinate_fingerprint_sha256": self.coordinate_fingerprint_sha256,
+            "score": self.score,
+            "rmsd_angstrom": self.rmsd_angstrom,
+            "geometric_valid": self.geometric_valid,
+            "chemical_valid": self.chemical_valid,
+            "pose_artifact_sha256": self.pose_artifact_sha256,
+            "score_terms_receipt_sha256": self.score_terms_receipt_sha256,
+            "hbond_count": self.hbond_count,
+            "selection_eligible": self.selection_eligible,
+            "posebusters_failed_check_ids": list(self.posebusters_failed_check_ids),
+            "refinement_receipt_sha256": self.refinement_receipt_sha256,
+            "refinement_initial_penalty_binary64_hex": (
+                self.refinement_initial_penalty_binary64_hex
+            ),
+            "refinement_final_penalty_binary64_hex": (
+                self.refinement_final_penalty_binary64_hex
+            ),
+            "refinement_accepted_steps": self.refinement_accepted_steps,
+            "refinement_accepted_rotation_steps": (
+                self.refinement_accepted_rotation_steps
+            ),
+            "refinement_original_pose_valid": self.refinement_original_pose_valid,
+            "refinement_total_translation_binary64_hex": list(
+                self.refinement_total_translation_binary64_hex
+            ),
+            "refinement_total_rotation_vector_binary64_hex": list(
+                self.refinement_total_rotation_vector_binary64_hex
+            ),
+            "score_term_binary64_hex": dict(self.score_term_binary64_hex),
+            "error_code": self.error_code,
+        }
+
+
+def _validated_scorer_backend_receipt(
+    value: Mapping[str, object] | None,
+) -> Mapping[str, object] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise TypeError("scorer backend receipt must be a mapping")
+    payload = dict(value)
+    required = {
+        "schema_id",
+        "backend",
+        "backend_version",
+        "implementation_source_sha256",
+        "options_fingerprint_sha256",
+        "extension_sha256",
+        "cargo_lock_sha256",
+        "rustc_version",
+        "target_triple",
+        "build_flags",
+        "implicit_fallback_allowed",
+        "receipt_sha256",
+    }
+    if set(payload) != required:
+        raise PublicRedockingBenchmarkError(
+            "scorer backend receipt fields are incomplete"
+        )
+    if payload["schema_id"] != _SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID:
+        raise PublicRedockingBenchmarkError(
+            "scorer backend receipt schema is unsupported"
+        )
+    backend = str(payload["backend"] or "").strip()
+    if backend not in {"python_reference", "rust_cpu_required"}:
+        raise PublicRedockingBenchmarkError("scorer backend is unsupported")
+    if not str(payload["backend_version"] or "").strip():
+        raise PublicRedockingBenchmarkError("scorer backend version is missing")
+    for field_name in (
+        "implementation_source_sha256",
+        "options_fingerprint_sha256",
+        "receipt_sha256",
+    ):
+        _digest(payload[field_name], name=field_name)
+    flags = payload["build_flags"]
+    if (
+        not isinstance(flags, (list, tuple))
+        or any(not isinstance(flag, str) or not flag.strip() for flag in flags)
+        or len(flags) != len(set(flags))
+    ):
+        raise PublicRedockingBenchmarkError(
+            "scorer backend build flags are invalid"
+        )
+    native_fields = (
+        "extension_sha256",
+        "cargo_lock_sha256",
+        "rustc_version",
+        "target_triple",
+    )
+    if backend == "rust_cpu_required":
+        _digest(payload["extension_sha256"], name="extension_sha256")
+        _digest(payload["cargo_lock_sha256"], name="cargo_lock_sha256")
+        if any(not str(payload[name] or "").strip() for name in native_fields[2:]):
+            raise PublicRedockingBenchmarkError(
+                "Rust scorer backend build identity is incomplete"
+            )
+        if not flags:
+            raise PublicRedockingBenchmarkError(
+                "Rust scorer backend build flags are missing"
+            )
+    elif any(payload[name] not in ("", None) for name in native_fields) or flags:
+        raise PublicRedockingBenchmarkError(
+            "Python scorer backend cannot claim native build identity"
+        )
+    if payload["implicit_fallback_allowed"] is not False:
+        raise PublicRedockingBenchmarkError(
+            "scorer backend receipt permits implicit fallback"
+        )
+    receipt_sha256 = payload.pop("receipt_sha256")
+    payload["build_flags"] = list(flags)
+    if receipt_sha256 != _sha256(payload):
+        raise PublicRedockingBenchmarkError("scorer backend receipt hash mismatch")
+    payload["receipt_sha256"] = receipt_sha256
+    payload["build_flags"] = tuple(flags)
+    return MappingProxyType(payload)
+
+
+@dataclass(frozen=True, slots=True)
+class PublicRedockingEngineV2Diagnostics:
+    """Preparation, search-oracle, scoring, charge, and H-bond evidence."""
+
+    preparation_status: str
+    receptor_atom_count: int
+    ligand_atom_count: int
+    receptor_partial_charge_count: int
+    ligand_partial_charge_count: int
+    receptor_donor_count: int
+    receptor_acceptor_count: int
+    ligand_donor_count: int
+    ligand_acceptor_count: int
+    receptor_ion_proxy_count: int = 0
+    candidates: tuple[PublicRedockingEngineV2CandidateDiagnostic, ...] = ()
+    scorer_backend_receipt: Mapping[str, object] | None = None
+    preparation_failure_code: str = ""
+    diagnostic_evaluation_seconds: float = 0.0
+    candidate_budget: int = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+    schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID
+
+    def __post_init__(self) -> None:
+        if self.schema_id != PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID:
+            raise PublicRedockingBenchmarkError(
+                "unsupported Engine V2 diagnostic schema"
+            )
+        if self.candidate_budget != PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 diagnostic candidate budget must equal 64"
+            )
+        status = str(self.preparation_status or "").strip().lower()
+        if status not in {"success", "failure"}:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 preparation status must be success or failure"
+            )
+        counts = tuple(
+            getattr(self, name)
+            for name in (
+                "receptor_atom_count",
+                "ligand_atom_count",
+                "receptor_partial_charge_count",
+                "ligand_partial_charge_count",
+                "receptor_donor_count",
+                "receptor_acceptor_count",
+                "ligand_donor_count",
+                "ligand_acceptor_count",
+                "receptor_ion_proxy_count",
+            )
+        )
+        if any(type(value) is not int or value < 0 for value in counts):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 preparation counts must be non-negative integers"
+            )
+        candidates = tuple(self.candidates)
+        backend_receipt = _validated_scorer_backend_receipt(
+            self.scorer_backend_receipt
+        )
+        failure_code = str(self.preparation_failure_code or "").strip()
+        diagnostic_evaluation_seconds = _finite(
+            self.diagnostic_evaluation_seconds,
+            name="diagnostic_evaluation_seconds",
+            minimum=0.0,
+        )
+        if status == "failure":
+            if (
+                any(counts)
+                or candidates
+                or backend_receipt is not None
+                or failure_code
+                not in _PUBLIC_REDOCKING_ENGINE_V2_PREPARATION_FAILURE_CODES
+                or diagnostic_evaluation_seconds != 0.0
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "failed Engine V2 preparation cannot fabricate diagnostics"
+                )
+        else:
+            if (
+                self.receptor_atom_count < 1
+                or self.ligand_atom_count < 1
+                or self.receptor_ion_proxy_count > self.receptor_atom_count
+                or self.receptor_partial_charge_count != self.receptor_atom_count
+                or self.ligand_partial_charge_count != self.ligand_atom_count
+                or failure_code
+                or len(candidates) != self.candidate_budget
+                or backend_receipt is None
+                or tuple(row.proposal_index for row in candidates)
+                != tuple(range(self.candidate_budget))
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "successful Engine V2 preparation diagnostics are incomplete"
+                )
+            successful_fingerprints = tuple(
+                row.proposal_fingerprint_sha256
+                for row in candidates
+                if row.status == "success"
+            )
+            if len(successful_fingerprints) != len(set(successful_fingerprints)):
+                raise PublicRedockingBenchmarkError(
+                    "Engine V2 candidate proposal fingerprints must be unique"
+                )
+        if any(
+            type(row) is not PublicRedockingEngineV2CandidateDiagnostic
+            for row in candidates
+        ):
+            raise TypeError(
+                "Engine V2 candidates must be typed candidate diagnostics"
+            )
+        if status == "success":
+            ensemble_sources = tuple(
+                row.ensemble_source_proposal_index
+                for row in candidates
+                if row.ensemble_source_proposal_index is not None
+            )
+            if (
+                len(ensemble_sources) != len(set(ensemble_sources))
+                or any(
+                    candidates[source_index].proposal_mode != "uniform_fallback"
+                    for source_index in ensemble_sources
+                )
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "uniform V3 ensemble candidate lineage is invalid"
+                )
+        object.__setattr__(self, "preparation_status", status)
+        object.__setattr__(self, "preparation_failure_code", failure_code)
+        object.__setattr__(
+            self,
+            "diagnostic_evaluation_seconds",
+            diagnostic_evaluation_seconds,
+        )
+        object.__setattr__(self, "candidates", candidates)
+        object.__setattr__(self, "scorer_backend_receipt", backend_receipt)
+
+    @property
+    def charge_coverage_complete(self) -> bool:
+        return bool(
+            self.preparation_status == "success"
+            and self.receptor_partial_charge_count == self.receptor_atom_count
+            and self.ligand_partial_charge_count == self.ligand_atom_count
+        )
+
+    @property
+    def hbond_feature_covered(self) -> bool:
+        return bool(
+            self.preparation_status == "success"
+            and (
+                (
+                    self.ligand_donor_count > 0
+                    and self.receptor_acceptor_count > 0
+                )
+                or (
+                    self.ligand_acceptor_count > 0
+                    and self.receptor_donor_count > 0
+                )
+            )
+        )
+
+    @property
+    def successful_candidates(
+        self,
+    ) -> tuple[PublicRedockingEngineV2CandidateDiagnostic, ...]:
+        return tuple(row for row in self.candidates if row.status == "success")
+
+    @property
+    def score_ranked_candidates(
+        self,
+    ) -> tuple[PublicRedockingEngineV2CandidateDiagnostic, ...]:
+        return tuple(
+            sorted(
+                self.successful_candidates,
+                key=lambda row: (float(row.score), row.proposal_index),
+            )
+        )
+
+    @property
+    def proposal_oracle_rmsd_angstrom(self) -> float | None:
+        values = tuple(
+            float(row.rmsd_angstrom) for row in self.successful_candidates
+        )
+        return None if not values else min(values)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_id": self.schema_id,
+            "preparation_status": self.preparation_status,
+            "preparation_failure_code": self.preparation_failure_code,
+            "diagnostic_evaluation_seconds": self.diagnostic_evaluation_seconds,
+            "diagnostic_evaluation_excluded_from_runtime": True,
+            "receptor_atom_count": self.receptor_atom_count,
+            "ligand_atom_count": self.ligand_atom_count,
+            "receptor_partial_charge_count": self.receptor_partial_charge_count,
+            "ligand_partial_charge_count": self.ligand_partial_charge_count,
+            "receptor_donor_count": self.receptor_donor_count,
+            "receptor_acceptor_count": self.receptor_acceptor_count,
+            "ligand_donor_count": self.ligand_donor_count,
+            "ligand_acceptor_count": self.ligand_acceptor_count,
+            "receptor_ion_proxy_count": self.receptor_ion_proxy_count,
+            "receptor_ion_proxy_used": self.receptor_ion_proxy_count > 0,
+            "receptor_ion_coordination_modeled": False,
+            "ligand_metal_support": False,
+            "charge_coverage_complete": self.charge_coverage_complete,
+            "hbond_feature_covered": self.hbond_feature_covered,
+            "candidate_budget": self.candidate_budget,
+            "scorer_backend_receipt": (
+                None
+                if self.scorer_backend_receipt is None
+                else {
+                    **dict(self.scorer_backend_receipt),
+                    "build_flags": list(
+                        self.scorer_backend_receipt["build_flags"]
+                    ),
+                }
+            ),
+            "candidate_success_count": len(self.successful_candidates),
+            "candidate_failure_count": (
+                self.candidate_budget - len(self.successful_candidates)
+                if self.preparation_status == "success"
+                else 0
+            ),
+            "proposal_oracle_rmsd_angstrom": (
+                self.proposal_oracle_rmsd_angstrom
+            ),
+            "candidates": [row.to_dict() for row in self.candidates],
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class PublicRedockingCaseResult:
     """One engine/case row; failures retain runtime and the full denominator."""
 
@@ -2146,6 +3195,7 @@ class PublicRedockingCaseResult:
     chemical_valid: tuple[bool, ...] = ()
     pose_artifact_sha256s: tuple[str, ...] = ()
     failure_code: str = ""
+    engine_v2_diagnostics: PublicRedockingEngineV2Diagnostics | None = None
 
     def __post_init__(self) -> None:
         if _CASE_ID_RE.fullmatch(str(self.case_id or "")) is None:
@@ -2199,6 +3249,17 @@ class PublicRedockingCaseResult:
         if any(type(value) is not bool for value in (*geometric, *chemical)):
             raise PublicRedockingBenchmarkError("pose-validity values must be booleans")
         failure_code = str(self.failure_code or "").strip()
+        diagnostics = self.engine_v2_diagnostics
+        if diagnostics is not None and type(diagnostics) is not (
+            PublicRedockingEngineV2Diagnostics
+        ):
+            raise TypeError(
+                "engine_v2_diagnostics must be typed Engine V2 diagnostics"
+            )
+        if engine_id != "engine_v2" and diagnostics is not None:
+            raise PublicRedockingBenchmarkError(
+                "external result rows cannot contain Engine V2 diagnostics"
+            )
         if status == "success":
             if not (
                 len(rmsds)
@@ -2231,6 +3292,7 @@ class PublicRedockingCaseResult:
         object.__setattr__(self, "chemical_valid", chemical)
         object.__setattr__(self, "pose_artifact_sha256s", pose_artifacts)
         object.__setattr__(self, "failure_code", failure_code)
+        object.__setattr__(self, "engine_v2_diagnostics", diagnostics)
 
     def recovery(self, top_k: int, threshold: float) -> float:
         if self.status == "failure":
@@ -2278,7 +3340,82 @@ class PublicRedockingCaseResult:
             "chemical_valid": list(self.chemical_valid),
             "pose_artifact_sha256s": list(self.pose_artifact_sha256s),
             "failure_code": self.failure_code,
+            "engine_v2_diagnostics": (
+                None
+                if self.engine_v2_diagnostics is None
+                else self.engine_v2_diagnostics.to_dict()
+            ),
         }
+
+
+def _validate_engine_v2_result_diagnostics(
+    row: PublicRedockingCaseResult,
+) -> None:
+    diagnostics = row.engine_v2_diagnostics
+    if type(diagnostics) is not PublicRedockingEngineV2Diagnostics:
+        raise PublicRedockingBenchmarkError(
+            "every Engine V2 result must retain typed diagnostics"
+        )
+    execution_policy = _execution_policy_mapping(row.execution_policy)
+    scorer_backend = execution_policy.get("scorer_backend")
+    if scorer_backend not in {"python_reference", "rust_cpu_required"}:
+        raise PublicRedockingBenchmarkError(
+            "Engine V2 scorer backend policy is unsupported"
+        )
+    if execution_policy.get("scorer_thread_count") != 1:
+        raise PublicRedockingBenchmarkError(
+            "Engine V2 scorer thread count must equal one"
+        )
+    if diagnostics.preparation_status == "success":
+        receipt = diagnostics.scorer_backend_receipt
+        if receipt is None or receipt["backend"] != scorer_backend:
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 scorer backend receipt contradicts execution policy"
+            )
+    if row.status == "failure":
+        if (
+            row.failure_code == "engine_v2_input_unsupported"
+            and (
+                diagnostics.preparation_status != "failure"
+                or diagnostics.preparation_failure_code
+                != "input_parse_unsupported"
+            )
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 input failure contradicts preparation diagnostics"
+            )
+        if (
+            row.failure_code == "engine_v2_pose_count_incomplete"
+            and (
+                diagnostics.preparation_status != "success"
+                or len(diagnostics.successful_candidates) >= 5
+            )
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 incomplete pose failure contradicts candidate diagnostics"
+            )
+        return
+    if diagnostics.preparation_status != "success":
+        raise PublicRedockingBenchmarkError(
+            "successful Engine V2 result requires successful preparation"
+        )
+    ranked = diagnostics.score_ranked_candidates
+    if len(ranked) < 5:
+        raise PublicRedockingBenchmarkError(
+            "successful Engine V2 result requires five diagnostic candidates"
+        )
+    for index, candidate in enumerate(ranked[:5]):
+        if (
+            float(candidate.rmsd_angstrom).hex()
+            != row.rmsd_angstroms[index].hex()
+            or candidate.geometric_valid is not row.geometric_valid[index]
+            or candidate.chemical_valid is not row.chemical_valid[index]
+            or candidate.pose_artifact_sha256
+            != row.pose_artifact_sha256s[index]
+        ):
+            raise PublicRedockingBenchmarkError(
+                "Engine V2 ranked result contradicts candidate diagnostics"
+            )
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -2645,6 +3782,13 @@ class PublicRedockingBenchmarkReport:
             raise PublicRedockingBenchmarkError(
                 "failure rows must use an engine-derived frozen failure code"
             )
+        for row in rows:
+            if row.engine_id == "engine_v2":
+                _validate_engine_v2_result_diagnostics(row)
+            elif row.engine_v2_diagnostics is not None:
+                raise PublicRedockingBenchmarkError(
+                    "external rows cannot retain Engine V2 diagnostics"
+                )
         profile_map = {profile.case_id: profile for profile in profiles}
         materialization_map = {
             materialization.case_id: materialization
@@ -2661,6 +3805,8 @@ class PublicRedockingBenchmarkReport:
         engine_v2_policy = _execution_policy_mapping(next(iter(engine_v2_policies)))
         required_engine_v2_policy = {
             "cpu_count",
+            "scorer_backend",
+            "scorer_thread_count",
             "torch_intraop_threads",
             "torch_interop_threads",
             "torch_version",
@@ -2671,6 +3817,7 @@ class PublicRedockingBenchmarkReport:
             )
         for field_name in (
             "cpu_count",
+            "scorer_thread_count",
             "torch_intraop_threads",
             "torch_interop_threads",
         ):
@@ -2683,6 +3830,9 @@ class PublicRedockingBenchmarkReport:
             engine_v2_policy.get("cpu_count") != self.policy.cpu_count
             or engine_v2_policy.get("torch_intraop_threads") != 1
             or engine_v2_policy.get("torch_interop_threads") != 1
+            or engine_v2_policy.get("scorer_thread_count") != 1
+            or engine_v2_policy.get("scorer_backend")
+            not in {"python_reference", "rust_cpu_required"}
             or type(torch_version) is not str
             or torch_version not in PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS
         ):
@@ -2856,6 +4006,12 @@ class PublicRedockingBenchmarkReport:
             "engineering_smoke_case_ids": list(
                 PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
             ),
+            "contaminated_development_case_count": len(
+                PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+            ),
+            "contaminated_development_case_ids_sha256": _sha256(
+                list(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+            ),
             "primary_blind_holdout_case_count": len(
                 PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
             ),
@@ -2864,7 +4020,12 @@ class PublicRedockingBenchmarkReport:
             ),
             "supplementary_descriptive_case_count": len(self.cohort.case_ids),
             "primary_metrics_exclude_engineering_smoke": True,
+            "primary_metrics_exclude_contaminated_development": False,
+            "historical_298_holdout_claim_invalidated": True,
+            "historical_300_development_only": True,
             "all_300_metrics_are_supplementary_descriptive": True,
+            "internal_provisional_evidence_only": True,
+            "external_independent_review_complete": False,
             "full_failure_denominator_retained": True,
             "policy": self.policy.to_dict(),
             "same_ranked_pose_count": True,
@@ -2885,6 +4046,311 @@ class PublicRedockingBenchmarkReport:
 
     def to_dict(self) -> dict[str, object]:
         return {**self._projection(), "fingerprint_sha256": self.fingerprint_sha256}
+
+
+def _derive_engine_v2_diagnostic_metrics(
+    rows: Sequence[PublicRedockingCaseResult],
+    *,
+    policy: PublicRedockingEvaluationPolicy,
+    analysis_scope: str,
+    subgroup: str,
+) -> tuple[PublicRedockingMetricEstimate, ...]:
+    selected = tuple(rows)
+    diagnostics = tuple(row.engine_v2_diagnostics for row in selected)
+    if (
+        not selected
+        or any(row.engine_id != "engine_v2" for row in selected)
+        or any(type(value) is not PublicRedockingEngineV2Diagnostics for value in diagnostics)
+    ):
+        raise PublicRedockingBenchmarkError(
+            "Engine V2 diagnostic metrics require typed Engine V2 rows"
+        )
+
+    def successful(value: PublicRedockingEngineV2Diagnostics):
+        return value.successful_candidates
+
+    def ranked(value: PublicRedockingEngineV2Diagnostics):
+        return value.score_ranked_candidates
+
+    threshold = policy.rmsd_threshold_angstrom
+    preparation = [
+        float(value.preparation_status == "success") for value in diagnostics
+    ]
+    charge_coverage = [
+        float(value.charge_coverage_complete) for value in diagnostics
+    ]
+    hbond_feature_coverage = [
+        float(value.hbond_feature_covered) for value in diagnostics
+    ]
+    receptor_ion_proxy_usage = [
+        float(value.receptor_ion_proxy_count > 0) for value in diagnostics
+    ]
+    candidate_generation_coverage = [
+        len(successful(value)) / PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+        for value in diagnostics
+    ]
+    proposal_oracle_recovery = [
+        float(
+            any(
+                float(candidate.rmsd_angstrom) <= threshold
+                for candidate in successful(value)
+            )
+        )
+        for value in diagnostics
+    ]
+    valid_proposal_oracle_recovery = [
+        float(
+            any(
+                float(candidate.rmsd_angstrom) <= threshold
+                and candidate.geometric_valid
+                and candidate.chemical_valid
+                for candidate in successful(value)
+            )
+        )
+        for value in diagnostics
+    ]
+    top1_scoring_regret_events: list[float] = []
+    top5_selection_regret_events: list[float] = []
+    top1_hbond_realization: list[float] = []
+    top1_regret_angstrom: list[float] = []
+    top5_regret_angstrom: list[float] = []
+    for value in diagnostics:
+        candidates = successful(value)
+        score_ranked = ranked(value)
+        oracle = (
+            None
+            if not candidates
+            else min(float(candidate.rmsd_angstrom) for candidate in candidates)
+        )
+        top1 = (
+            None
+            if not score_ranked
+            else float(score_ranked[0].rmsd_angstrom)
+        )
+        top5 = (
+            None
+            if len(score_ranked) < 5
+            else min(
+                float(candidate.rmsd_angstrom)
+                for candidate in score_ranked[:5]
+            )
+        )
+        top1_scoring_regret_events.append(
+            float(
+                oracle is not None
+                and oracle <= threshold
+                and (top1 is None or top1 > threshold)
+            )
+        )
+        top5_selection_regret_events.append(
+            float(
+                oracle is not None
+                and oracle <= threshold
+                and (top5 is None or top5 > threshold)
+            )
+        )
+        top1_hbond_realization.append(
+            float(
+                bool(score_ranked)
+                and int(score_ranked[0].hbond_count) > 0
+            )
+        )
+        if oracle is not None and top1 is not None:
+            top1_regret_angstrom.append(top1 - oracle)
+        if oracle is not None and top5 is not None:
+            top5_regret_angstrom.append(top5 - oracle)
+
+    metrics = [
+        _metric(
+            engine_id="engine_v2",
+            metric_id=metric_id,
+            analysis_scope=analysis_scope,
+            subgroup=subgroup,
+            values=values,
+            statistic=_mean,
+            policy=policy,
+        )
+        for metric_id, values in (
+            ("preparation_success_rate", preparation),
+            ("complete_partial_charge_coverage_rate", charge_coverage),
+            ("hbond_feature_coverage_rate", hbond_feature_coverage),
+            ("receptor_ion_proxy_usage_rate", receptor_ion_proxy_usage),
+            (
+                "candidate_generation_coverage_rate",
+                candidate_generation_coverage,
+            ),
+            ("proposal_oracle_recovery_rate", proposal_oracle_recovery),
+            (
+                "valid_proposal_oracle_recovery_rate",
+                valid_proposal_oracle_recovery,
+            ),
+            (
+                "top1_scoring_regret_event_rate",
+                top1_scoring_regret_events,
+            ),
+            (
+                "top5_selection_regret_event_rate",
+                top5_selection_regret_events,
+            ),
+            ("top1_hbond_realization_rate", top1_hbond_realization),
+        )
+    ]
+    for metric_id, values in (
+        ("top1_scoring_regret_median_angstrom", top1_regret_angstrom),
+        ("top5_selection_regret_median_angstrom", top5_regret_angstrom),
+    ):
+        if values:
+            metrics.append(
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id=metric_id,
+                    analysis_scope=analysis_scope,
+                    subgroup=subgroup,
+                    values=values,
+                    statistic=_median,
+                    policy=policy,
+                )
+            )
+    for term_name in _SCORER_TERM_NAMES:
+        per_case_medians = [
+            statistics.median(
+                float.fromhex(candidate.score_term_binary64_hex[term_name])
+                for candidate in successful(value)
+            )
+            for value in diagnostics
+            if successful(value)
+        ]
+        if per_case_medians:
+            metrics.append(
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id=f"candidate_term_{term_name}_median",
+                    analysis_scope=analysis_scope,
+                    subgroup=subgroup,
+                    values=per_case_medians,
+                    statistic=_median,
+                    policy=policy,
+                )
+            )
+    for mode in PUBLIC_REDOCKING_PROPOSAL_MODES:
+        mode_subgroup = f"{subgroup}:proposal_mode={mode}"
+        allocation_values: list[float] = []
+        native_like_values: list[float] = []
+        valid_values: list[float] = []
+        duplicate_values: list[float] = []
+        oracle_contribution_values: list[float] = []
+        refinement_reduction_values: list[float] = []
+        for value in diagnostics:
+            allocated = tuple(
+                candidate
+                for candidate in value.candidates
+                if candidate.proposal_mode == mode
+            )
+            allocation_values.append(len(allocated) / value.candidate_budget)
+            mode_success = tuple(
+                candidate
+                for candidate in allocated
+                if candidate.status == "success"
+            )
+            if not mode_success:
+                continue
+            native_like_values.append(
+                sum(
+                    float(candidate.rmsd_angstrom) <= threshold
+                    for candidate in mode_success
+                )
+                / len(mode_success)
+            )
+            valid_values.append(
+                sum(
+                    candidate.geometric_valid and candidate.chemical_valid
+                    for candidate in mode_success
+                )
+                / len(mode_success)
+            )
+            coordinate_counts = Counter(
+                candidate.coordinate_fingerprint_sha256
+                for candidate in mode_success
+            )
+            duplicate_values.append(
+                sum(
+                    coordinate_counts[candidate.coordinate_fingerprint_sha256] > 1
+                    for candidate in mode_success
+                )
+                / len(mode_success)
+            )
+            oracle_contribution_values.append(
+                float(
+                    any(
+                        float(candidate.rmsd_angstrom) <= threshold
+                        for candidate in mode_success
+                    )
+                )
+            )
+            refinement_rows = tuple(
+                candidate
+                for candidate in mode_success
+                if candidate.refinement_receipt_sha256
+            )
+            if refinement_rows:
+                refinement_reduction_values.append(
+                    sum(
+                        float.fromhex(
+                            candidate.refinement_final_penalty_binary64_hex
+                        )
+                        < float.fromhex(
+                            candidate.refinement_initial_penalty_binary64_hex
+                        )
+                        for candidate in refinement_rows
+                    )
+                    / len(refinement_rows)
+                )
+        for metric_id, values in (
+            ("proposal_mode_allocation_rate", allocation_values),
+            ("proposal_mode_native_like_candidate_rate", native_like_values),
+            ("proposal_mode_valid_candidate_rate", valid_values),
+            ("proposal_mode_exact_duplicate_candidate_rate", duplicate_values),
+            ("proposal_mode_oracle_contribution_rate", oracle_contribution_values),
+            ("proposal_mode_refinement_penalty_reduction_rate", refinement_reduction_values),
+        ):
+            if values:
+                metrics.append(
+                    _metric(
+                        engine_id="engine_v2",
+                        metric_id=metric_id,
+                        analysis_scope=analysis_scope,
+                        subgroup=mode_subgroup,
+                        values=values,
+                        statistic=_mean,
+                        policy=policy,
+                    )
+                )
+    for check_id in (
+        *PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS,
+        *PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS,
+    ):
+        failure_rates = [
+            sum(
+                check_id in candidate.posebusters_failed_check_ids
+                for candidate in successful(value)
+            )
+            / len(successful(value))
+            for value in diagnostics
+            if successful(value)
+        ]
+        if failure_rates:
+            metrics.append(
+                _metric(
+                    engine_id="engine_v2",
+                    metric_id=f"posebusters_{check_id}_failure_rate",
+                    analysis_scope=analysis_scope,
+                    subgroup=subgroup,
+                    values=failure_rates,
+                    statistic=_mean,
+                    policy=policy,
+                )
+            )
+    return tuple(metrics)
 
 
 def _derive_scope_all_metrics(
@@ -2919,6 +4385,15 @@ def _derive_scope_all_metrics(
                 ),
             )
         )
+        if engine_id == "engine_v2":
+            metrics.extend(
+                _derive_engine_v2_diagnostic_metrics(
+                    selected,
+                    policy=policy,
+                    analysis_scope=analysis_scope,
+                    subgroup="all",
+                )
+            )
         for top_k in policy.top_ks:
             metrics.extend(
                 (
@@ -3104,11 +4579,12 @@ def _derive_public_redocking_metrics(
         )
     size_subgroups = {profile.size_subgroup for profile in profile_rows}
     rotor_subgroups = {profile.rotor_subgroup for profile in profile_rows}
+    ring_subgroups = {profile.ring_subgroup for profile in profile_rows}
     if size_subgroups != set(PUBLIC_REDOCKING_SIZE_SUBGROUPS) or rotor_subgroups != set(
         PUBLIC_REDOCKING_ROTOR_SUBGROUPS
-    ):
+    ) or ring_subgroups != set(PUBLIC_REDOCKING_RING_SUBGROUPS):
         raise PublicRedockingBenchmarkError(
-            "profiles must represent every frozen size and rotor subgroup"
+            "profiles must represent every frozen size, rotor, and ring subgroup"
         )
     if tuple(identity.engine_id for identity in identity_rows) != (
         PUBLIC_REDOCKING_PRIMARY_ENGINES
@@ -3130,7 +4606,7 @@ def _derive_public_redocking_metrics(
     subgroup_ids: dict[str, tuple[str, ...]] = {
         "all": metric_case_ids,
     }
-    for attribute in ("size_subgroup", "rotor_subgroup"):
+    for attribute in ("size_subgroup", "rotor_subgroup", "ring_subgroup"):
         for subgroup in sorted(
             {getattr(profile, attribute) for profile in profile_rows}
         ):
@@ -3238,6 +4714,15 @@ def _derive_public_redocking_metrics(
                     ),
                 )
             )
+            if engine_id == "engine_v2":
+                metrics.extend(
+                    _derive_engine_v2_diagnostic_metrics(
+                        selected,
+                        policy=active_policy,
+                        analysis_scope="primary_blind_holdout",
+                        subgroup=subgroup,
+                    )
+                )
 
     for baseline in ("vina", "gnina"):
         engine_failures = [
@@ -3361,6 +4846,14 @@ def _derive_public_redocking_metrics(
         _derive_scope_all_metrics(
             row_map,
             policy=active_policy,
+            analysis_scope="contaminated_development",
+            case_ids=PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
+        )
+    )
+    metrics.extend(
+        _derive_scope_all_metrics(
+            row_map,
+            policy=active_policy,
             analysis_scope="engineering_smoke",
             case_ids=PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
         )
@@ -3418,6 +4911,7 @@ def build_public_redocking_benchmark_report(
 
 __all__ = [
     "FROZEN_PUBLIC_REDOCKING_CASE_IDS",
+    "FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS",
     "MAX_PUBLIC_REDOCKING_BOOTSTRAP_SAMPLES",
     "PUBLIC_REDOCKING_ANALYSIS_SCOPES",
     "PUBLIC_REDOCKING_ARCHIVE_SHA256",
@@ -3425,7 +4919,18 @@ __all__ = [
     "PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID",
     "PUBLIC_REDOCKING_COHORT_COUNT",
     "PUBLIC_REDOCKING_COHORT_ID",
+    "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT",
+    "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID",
+    "PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID",
+    "PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS",
+    "PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS",
+    "PUBLIC_REDOCKING_PROPOSAL_MODES",
+    "PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS",
+    "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID",
+    "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256",
     "PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS",
+    "PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS_SHA256",
+    "PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256",
     "PUBLIC_REDOCKING_MATERIALIZATION_RECEIPTS_SHA256",
     "PUBLIC_REDOCKING_MATERIALIZATIONS_SHA256",
     "PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID",
@@ -3433,6 +4938,9 @@ __all__ = [
     "PUBLIC_REDOCKING_PRIMARY_ENGINES",
     "PUBLIC_REDOCKING_PROFILE_METHOD_ID",
     "PUBLIC_REDOCKING_PROFILES_SHA256",
+    "PUBLIC_REDOCKING_RING_PROFILE_METHOD_ID",
+    "PUBLIC_REDOCKING_RING_PROFILES_SHA256",
+    "PUBLIC_REDOCKING_RING_SUBGROUPS",
     "PUBLIC_REDOCKING_REPORT_SCHEMA_ID",
     "PUBLIC_REDOCKING_ROTOR_SUBGROUPS",
     "PUBLIC_REDOCKING_RUNNER_ID",
@@ -3444,6 +4952,8 @@ __all__ = [
     "PublicRedockingBenchmarkReport",
     "PublicRedockingCaseProfile",
     "PublicRedockingCaseResult",
+    "PublicRedockingEngineV2CandidateDiagnostic",
+    "PublicRedockingEngineV2Diagnostics",
     "PublicRedockingEngineIdentity",
     "PublicRedockingEvaluationPolicy",
     "PublicRedockingMetricEstimate",
@@ -3455,5 +4965,6 @@ __all__ = [
     "frozen_public_redocking_materialization_receipt_sha256",
     "frozen_public_redocking_cohort",
     "frozen_public_redocking_profiles",
+    "require_public_redocking_contamination_registry",
     "verify_public_redocking_source_identifiers",
 ]

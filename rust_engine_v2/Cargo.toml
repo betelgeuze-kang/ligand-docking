@@ -1,0 +1,24 @@
+[package]
+name = "betelgeuze-engine-v2-native"
+version = "0.2.0-rc.5"
+edition = "2021"
+rust-version = "1.93"
+
+[lib]
+name = "betelgeuze_engine_v2_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+numpy = "0.20.0"
+pyo3 = { version = "0.20.3", features = ["extension-module"] }
+rayon = "1.10.0"
+
+[build-dependencies]
+sha2 = "0.10.9"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+panic = "abort"
+strip = "symbols"

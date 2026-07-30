@@ -19,9 +19,10 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
-    PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS,
     PublicRedockingCaseProfile,
     PublicRedockingCaseResult,
+    PublicRedockingEngineV2CandidateDiagnostic,
+    PublicRedockingEngineV2Diagnostics,
     VerifiedPublicRedockingArchive,
 )
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract  # noqa: E402
@@ -36,6 +37,49 @@ _SPEC = importlib.util.spec_from_file_location(
 assert _SPEC is not None and _SPEC.loader is not None
 runner = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(runner)
+
+
+def _python_backend_receipt() -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
+        "backend": "python_reference",
+        "backend_version": "1.0.0",
+        "implementation_source_sha256": "e" * 64,
+        "options_fingerprint_sha256": "f" * 64,
+        "extension_sha256": "",
+        "cargo_lock_sha256": "",
+        "rustc_version": "",
+        "target_triple": "",
+        "build_flags": [],
+        "implicit_fallback_allowed": False,
+    }
+    payload["receipt_sha256"] = runner._sha256_bytes(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    )
+    return payload
+
+
+def _zero_score_terms() -> dict[str, str]:
+    return {
+        name: 0.0.hex()
+        for name in (
+            "typed_vdw",
+            "electrostatics",
+            "directional_hbond",
+            "hydrophobic_contact",
+            "desolvation_proxy",
+            "torsion_energy",
+            "ligand_strain",
+            "weak_pocket_prior",
+            "total_score",
+        )
+    }
 
 
 def _ligand(path: Path):
@@ -59,6 +103,54 @@ def _evaluator_input_payloads(paths: dict[str, Path]) -> None:
     paths["directory"].mkdir(parents=True, exist_ok=True)
     paths["native"].write_bytes(b"native-evaluator-fixture\n")
     paths["receptor"].write_bytes(b"receptor-evaluator-fixture\n")
+
+
+def _engine_outcome(
+    coordinates: tuple[torch.Tensor, ...],
+) -> runner.EngineV2PoseSearchOutcome:
+    diagnostics = PublicRedockingEngineV2Diagnostics(
+        preparation_status="success",
+        scorer_backend_receipt=_python_backend_receipt(),
+        receptor_atom_count=1,
+        ligand_atom_count=1,
+        receptor_partial_charge_count=1,
+        ligand_partial_charge_count=1,
+        receptor_donor_count=1,
+        receptor_acceptor_count=1,
+        ligand_donor_count=1,
+        ligand_acceptor_count=1,
+        candidates=tuple(
+            (
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=index,
+                    status="success",
+                    proposal_mode="uniform_fallback",
+                    proposal_fingerprint_sha256=f"{index + 1:064x}",
+                    coordinate_fingerprint_sha256=f"{index + 193:064x}",
+                    score=float(index),
+                    rmsd_angstrom=float(index + 1),
+                    geometric_valid=True,
+                    chemical_valid=True,
+                    pose_artifact_sha256=f"{index + 65:064x}",
+                    score_terms_receipt_sha256=f"{index + 129:064x}",
+                    hbond_count=1,
+                    selection_eligible=True,
+                    score_term_binary64_hex=_zero_score_terms(),
+                )
+                if index < 5
+                else PublicRedockingEngineV2CandidateDiagnostic(
+                    proposal_index=index,
+                    status="failure",
+                    error_code="fixture_candidate_failure",
+                )
+            )
+            for index in range(64)
+        ),
+    )
+    return runner.EngineV2PoseSearchOutcome(
+        ranked_coordinates=coordinates,
+        diagnostics=diagnostics,
+    )
 
 
 def test_materializer_reads_only_exact_frozen_case_members(
@@ -97,6 +189,7 @@ def test_materializer_reads_only_exact_frozen_case_members(
                 case_id=case_id,
                 heavy_atom_count=1,
                 rotor_count=0,
+                ring_count=0,
                 ligand_artifact_sha256=runner._sha256_bytes(expected["ligand.sdf"]),
             ),
         ),
@@ -599,6 +692,8 @@ def test_posebusters_decodes_pinned_bytes_as_rdkit_molecules(
         {column: (1.0 if column == "rmsd" else True) for column in columns}
         for _ in range(5)
     ]
+    rows[0][runner.CHEMICAL_COLUMNS[0]] = False
+    rows[1][runner.GEOMETRIC_COLUMNS[0]] = False
 
     class FakeColumn:
         def __init__(self, values):
@@ -631,12 +726,18 @@ def test_posebusters_decodes_pinned_bytes_as_rdkit_molecules(
 
     monkeypatch.setattr(runner, "_load_posebusters", lambda: FakePoseBusters)
 
-    runner._posebusters_outcomes(
+    rmsds, geometric, chemical, failed_checks = runner._posebusters_outcomes(
         sdf_record * 5,
         native_payload=sdf_record,
         receptor_payload=receptor_payload,
     )
 
+    assert rmsds == (1.0,) * 5
+    assert chemical == (False, True, True, True, True)
+    assert geometric == (True, False, True, True, True)
+    assert failed_checks[0] == (runner.CHEMICAL_COLUMNS[0],)
+    assert failed_checks[1] == (runner.GEOMETRIC_COLUMNS[0],)
+    assert failed_checks[2:] == ((), (), ())
     assert observed["init"] == {"config": "redock", "top_n": 5}
     assert observed["bust"] == {"full_report": True}
     assert len(observed["predicted"]) == 5
@@ -655,7 +756,7 @@ def test_offline_benchmark_exports_five_score_ranked_proposals_even_if_invalid()
                 proposal=proposal,
                 score=score,
                 proposal_index=index,
-                selection_eligible=False,
+                selection_eligible=index != 0,
             )
             for index, (proposal, score) in enumerate(
                 zip(proposals, scores, strict=True)
@@ -674,6 +775,24 @@ def test_offline_benchmark_exports_five_score_ranked_proposals_even_if_invalid()
     )
 
 
+def test_offline_benchmark_requires_five_successful_score_rows():
+    search = SimpleNamespace(
+        rows=tuple(
+            SimpleNamespace(
+                status="success",
+                proposal=object(),
+                score=float(index),
+                proposal_index=index,
+                selection_eligible=False,
+            )
+            for index in range(4)
+        )
+    )
+
+    with pytest.raises(runner.IncompleteRankedPoseSet):
+        runner._benchmark_ranked_proposals(search)
+
+
 def test_incomplete_ranked_pose_set_uses_typed_failure_code() -> None:
     search = SimpleNamespace(
         rows=tuple(
@@ -682,6 +801,7 @@ def test_incomplete_ranked_pose_set_uses_typed_failure_code() -> None:
                 proposal=object(),
                 score=float(index),
                 proposal_index=index,
+                selection_eligible=True,
             )
             for index in range(4)
         )
@@ -1026,7 +1146,7 @@ def test_checksum_success_receipt_is_never_reused_as_cache(
     )
 
 
-def test_engine_source_identity_hashes_the_full_python_package(
+def test_engine_source_identity_hashes_python_and_native_source_closure(
     tmp_path: Path,
 ) -> None:
     dependency = tmp_path / "betelgeuze_engine_v2" / "docking" / "contact_validity.py"
@@ -1035,6 +1155,16 @@ def test_engine_source_identity_hashes_the_full_python_package(
     runner_path = tmp_path / "tools" / "runner.py"
     runner_path.parent.mkdir()
     runner_path.write_text("RUNNER = 1\n", encoding="ascii")
+    for relative_path in (
+        "rust_engine_v2/Cargo.toml",
+        "rust_engine_v2/Cargo.lock",
+        "rust_engine_v2/build.rs",
+        "rust_engine_v2/pyproject.toml",
+        "rust_engine_v2/src/lib.rs",
+    ):
+        path = tmp_path / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# {relative_path}\n", encoding="ascii")
     first = runner._engine_source_sha256(tmp_path, runner_path=runner_path)
 
     dependency.write_text("VALUE = 2\n", encoding="ascii")
@@ -1119,7 +1249,21 @@ def test_expensive_run_policy_bounds_are_validated_at_preflight(
         runner._evaluation_policy_from_arguments(arguments)
 
 
-def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
+def test_runner_partitions_smoke_primary_and_supplementary_cases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    synthetic_fresh_case_ids = tuple(
+        f"synthetic_fresh_{index:03d}" for index in range(128)
+    )
+
+    def _synthetic_fresh_manifest(_path: Path) -> SimpleNamespace:
+        return SimpleNamespace(case_ids=synthetic_fresh_case_ids)
+
+    monkeypatch.setattr(
+        runner,
+        "load_fresh_redocking_holdout_manifest",
+        _synthetic_fresh_manifest,
+    )
     smoke = runner._case_ids_from_arguments(
         SimpleNamespace(
             case_subset="engineering-smoke",
@@ -1127,9 +1271,27 @@ def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
             limit=0,
         )
     )
-    primary = runner._case_ids_from_arguments(
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="historical 298-case holdout is invalidated",
+    ):
+        runner._case_ids_from_arguments(
+            SimpleNamespace(
+                case_subset="primary-blind-holdout",
+                start_index=0,
+                limit=0,
+            )
+        )
+    fresh = runner._case_ids_from_arguments(
         SimpleNamespace(
-            case_subset="primary-blind-holdout",
+            case_subset="fresh-internal-blind-holdout",
+            start_index=0,
+            limit=0,
+        )
+    )
+    development = runner._case_ids_from_arguments(
+        SimpleNamespace(
+            case_subset="contaminated-development",
             start_index=0,
             limit=0,
         )
@@ -1139,11 +1301,12 @@ def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
     )
 
     assert smoke == PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
-    assert primary == PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
     assert len(smoke) == 2
-    assert len(primary) == 298
+    assert fresh == synthetic_fresh_case_ids
+    assert development == runner.PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+    assert len(development) == 300
     assert supplementary == FROZEN_PUBLIC_REDOCKING_CASE_IDS
-    assert not set(smoke) & set(primary)
+    assert not set(development) & set(fresh)
 
     with pytest.raises(
         runner.PublicRedockingRunnerError,
@@ -1360,6 +1523,7 @@ def test_external_success_runtime_excludes_shared_evaluator(
             (1.0, 2.0, 3.0, 4.0, 5.0),
             (True,) * 5,
             (True,) * 5,
+            ((),) * 5,
         ),
     )
 
@@ -1467,6 +1631,7 @@ def test_external_launch_executes_open_descriptor_during_path_swap_restore(
             (1.0, 2.0, 3.0, 4.0, 5.0),
             (True,) * 5,
             (True,) * 5,
+            ((),) * 5,
         ),
     )
 
@@ -1537,6 +1702,7 @@ def test_external_launch_uses_pinned_input_and_output_descriptors(
                 (1.0, 2.0, 3.0, 4.0, 5.0),
                 (True,) * 5,
                 (True,) * 5,
+                ((),) * 5,
             ),
         )
         row, retained_command = runner._external_result(
@@ -1659,6 +1825,8 @@ def test_runner_rejects_prior_full_report_symlink(
                 str(tmp_path / "missing-gnina"),
                 "--output-root",
                 str(output_root),
+                "--case-subset",
+                "engineering-smoke",
             )
         )
 
@@ -1718,7 +1886,7 @@ def test_engine_v2_evaluator_failure_aborts_instead_of_counting_engine_failure(
     monkeypatch.setattr(
         runner,
         "_engine_v2_pose_coordinates",
-        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+        lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
     def write_engine_v2_fixture(output, *args, **kwargs):
@@ -1758,7 +1926,7 @@ def test_engine_v2_artifact_failure_aborts_instead_of_counting_engine_failure(
     monkeypatch.setattr(
         runner,
         "_engine_v2_pose_coordinates",
-        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+        lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
     def artifact_failure(*args, **kwargs):
@@ -1819,6 +1987,312 @@ def test_engine_v2_failure_quarantines_prior_success_pose(
     assert stale[0].read_bytes() == b"prior-success\n$$$$\n" * 5
 
 
+@pytest.mark.parametrize(
+    "exception_type",
+    (
+        runner.DockingAuthorityError,
+        runner.DockingSearchError,
+        runner.ElementAwareValidityError,
+        runner.ScorerV1Error,
+    ),
+)
+def test_engine_v2_search_errors_retain_preparation_diagnostics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    exception_type: type[Exception],
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+
+    atoms = tuple(
+        SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2)
+    )
+    system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    scorer = SimpleNamespace(
+        backend_receipt=SimpleNamespace(to_dict=_python_backend_receipt),
+        context=SimpleNamespace(
+            receptor_donors=(0,),
+            receptor_acceptors=(1,),
+            ligand_donors=(0,),
+            ligand_acceptors=(1,),
+        )
+    )
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
+    monkeypatch.setattr(
+        runner,
+        "parse_sdf_v2000",
+        lambda *args, **kwargs: system,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_receptor_proxy_charges",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_element_aware_authenticated_known_pocket_docking_problem",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "ChemistryPoseScorerV1",
+        lambda *args, **kwargs: scorer,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_guided_placement_context",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "uniform_v3_ensemble_proposal_indices",
+        lambda *args, **kwargs: (),
+    )
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareRigidEnsembleRefinerV4",
+        lambda *args, **kwargs: object(),
+    )
+
+    def fail_search(*args, **kwargs):
+        raise exception_type("fixture search failure")
+
+    monkeypatch.setattr(
+        runner,
+        "run_authenticated_scorer_v1_guided_search",
+        fail_search,
+    )
+
+    with pytest.raises(runner.EngineV2SearchCaseFailure) as captured:
+        runner._engine_v2_pose_coordinates(case_id, paths, seed=11)
+
+    diagnostics = captured.value.diagnostics
+    assert isinstance(captured.value.__cause__, exception_type)
+    assert diagnostics.preparation_status == "success"
+    assert diagnostics.receptor_atom_count == 2
+    assert diagnostics.ligand_atom_count == 2
+    assert len(diagnostics.candidates) == 64
+    assert all(
+        candidate.status == "failure"
+        and candidate.error_code == "search_execution_failed"
+        for candidate in diagnostics.candidates
+    )
+
+
+def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+
+    atoms = tuple(
+        SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2)
+    )
+    system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    scorer = SimpleNamespace(
+        backend_receipt=SimpleNamespace(to_dict=_python_backend_receipt),
+        context=SimpleNamespace(
+            receptor_donors=(0,),
+            receptor_acceptors=(1,),
+            ligand_donors=(0,),
+            ligand_acceptors=(1,),
+        )
+    )
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
+    monkeypatch.setattr(
+        runner,
+        "parse_sdf_v2000",
+        lambda *args, **kwargs: system,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_receptor_proxy_charges",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_element_aware_authenticated_known_pocket_docking_problem",
+        lambda *args, **kwargs: object(),
+    )
+    monkeypatch.setattr(
+        runner,
+        "ChemistryPoseScorerV1",
+        lambda *args, **kwargs: scorer,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_guided_placement_context",
+        lambda *args, **kwargs: object(),
+    )
+    search_rows = tuple(
+        SimpleNamespace(
+            proposal_index=index,
+            proposal_fingerprint_sha256=f"{index + 257:064x}",
+            status="success",
+            proposal=SimpleNamespace(
+                coordinates=torch.full((2, 3), float(index)),
+                fingerprint_sha256=f"{index + 1:064x}",
+                coordinate_fingerprint_sha256=f"{index + 129:064x}",
+            ),
+            score=float(index),
+            error_code="",
+            selection_eligible=True,
+        )
+        for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    refiner = SimpleNamespace(
+        receipts={
+            f"{index + 257:064x}": {
+                "receipt_sha256": f"{index + 321:064x}",
+                "initial_penalty_binary64_hex": float(index + 1).hex(),
+                "final_penalty_binary64_hex": float(index).hex(),
+                "accepted_steps": 1,
+                "accepted_rotation_steps": 1,
+                "original_pose_valid": False,
+                "total_translation_binary64_hex": [
+                    0.1.hex(),
+                    0.0.hex(),
+                    0.0.hex(),
+                ],
+                "total_rotation_vector_binary64_hex": [
+                    0.1.hex(),
+                    0.0.hex(),
+                    0.0.hex(),
+                ],
+            }
+            for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+        }
+    )
+    monkeypatch.setattr(
+        runner,
+        "uniform_v3_ensemble_proposal_indices",
+        lambda *args, **kwargs: (),
+    )
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareRigidEnsembleRefinerV4",
+        lambda *args, **kwargs: refiner,
+    )
+    term_rows = tuple(
+        SimpleNamespace(
+            proposal_index=index,
+            terms=SimpleNamespace(
+                receipt_sha256=f"{index + 65:064x}",
+                hbond_count=0,
+                typed_vdw=0.0,
+                electrostatics=0.0,
+                directional_hbond=0.0,
+                hydrophobic_contact=0.0,
+                desolvation_proxy=0.0,
+                torsion_energy=0.0,
+                ligand_strain=0.0,
+                weak_pocket_prior=0.0,
+                total_score=0.0,
+            ),
+        )
+        for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    search = SimpleNamespace(rows=search_rows)
+    result = SimpleNamespace(
+        rows=term_rows,
+        guided_search_result=SimpleNamespace(
+            guided_receipt=SimpleNamespace(
+                proposal_modes=("uniform_fallback",)
+                * runner.ENGINE_V2_CANDIDATE_COUNT,
+                ensemble_source_proposal_indices=(None,)
+                * runner.ENGINE_V2_CANDIDATE_COUNT,
+            ),
+            authenticated_search_result=SimpleNamespace(search_result=search),
+        ),
+    )
+    monkeypatch.setattr(
+        runner,
+        "run_authenticated_scorer_v1_guided_search",
+        lambda *args, **kwargs: result,
+    )
+    records = tuple(
+        f"candidate-{index}".encode("ascii")
+        for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
+    )
+    monkeypatch.setattr(
+        runner,
+        "_serialize_pose_records",
+        lambda *args, **kwargs: records,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_posebusters_outcomes",
+        lambda *args, **kwargs: (
+            tuple(float(index) for index in range(len(records))),
+            (True,) * len(records),
+            (True,) * len(records),
+            ((),) * len(records),
+        ),
+    )
+
+    events: list[str] = []
+    times = iter((10.0, 13.0))
+
+    def timed() -> float:
+        events.append("timer")
+        return next(times)
+
+    original_candidate_type = runner.PublicRedockingEngineV2CandidateDiagnostic
+
+    def candidate_row(**kwargs):
+        events.append(f"candidate-{kwargs['proposal_index']}")
+        return original_candidate_type(**kwargs)
+
+    original_rank = runner._benchmark_ranked_proposals
+
+    def rank(search_result):
+        events.append("rank")
+        return original_rank(search_result)
+
+    monkeypatch.setattr(runner.time, "perf_counter", timed)
+    monkeypatch.setattr(
+        runner,
+        "PublicRedockingEngineV2CandidateDiagnostic",
+        candidate_row,
+    )
+    monkeypatch.setattr(runner, "_benchmark_ranked_proposals", rank)
+
+    outcome = runner._engine_v2_pose_coordinates(case_id, paths, seed=11)
+
+    assert outcome.diagnostic_evaluation_seconds == 3.0
+    assert outcome.diagnostics.diagnostic_evaluation_seconds == 3.0
+    assert events[0] == "timer"
+    assert events[-1] == "timer"
+    assert events.index("candidate-63") < events.index("rank") < len(events) - 1
+
+
 def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1844,7 +2318,7 @@ def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     monkeypatch.setattr(
         runner,
         "_engine_v2_pose_coordinates",
-        lambda *args, **kwargs: (torch.zeros((1, 3)),) * 5,
+        lambda *args, **kwargs: _engine_outcome((torch.zeros((1, 3)),) * 5),
     )
 
     def write_then_swap(output_path, *args, **kwargs):
@@ -1859,6 +2333,7 @@ def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
             (1.0, 2.0, 3.0, 4.0, 5.0),
             (True,) * 5,
             (True,) * 5,
+            ((),) * 5,
         )
 
     monkeypatch.setattr(runner, "_write_engine_v2_poses", write_then_swap)

@@ -1,5 +1,15 @@
 # Engine V2 public redocking 300-case contract
 
+> Historical-status correction (2026-07-29): a complete 300-case, 900-row
+> report predating the numeric Stage 0 freeze was found and hash-verified.
+> Consequently, all 300 cases in this document are development/diagnostic data
+> and the former 298-case `primary_blind_holdout` designation is invalidated.
+> The runner rejects that historical subset. The result-blind replacement is
+> the 128-case complement frozen in
+> `config/engine_v2_fresh_redocking_holdout_manifest.json`; it may be used only
+> as `fresh-internal-blind-holdout` under solo-development Stage 0 controls.
+> It remains internal/provisional until genuine external review exists.
+
 ## Scope
 
 This is a frozen, offline evaluation contract plus a local execution tool. The
@@ -25,23 +35,13 @@ Selection is performed before results by sorting
 lowest 300 keys. The final case list is stored in source and protected by its
 own SHA-256.
 
-The evidence interpretation is partitioned before the primary execution:
-
-- `5SAK_ZRY` and `5SB2_1K2`, which were already exercised while engineering
-  this runner, are the two-case engineering smoke subset;
-- the remaining 298 selected cases are the designated primary holdout
-  (`primary_blind_holdout` in the machine-readable schema);
-- all 300 selected cases are reported only as a supplementary descriptive
-  scope.
-
-The eight source cases not selected by the SHA-256 rule and the two observed
-smoke cases are suitable for integration/development work. Tuning scorer
-weights, charge preparation, or candidate budgets must not use the remaining
-298 cases. The report labels every metric with one of
-`primary_blind_holdout`, `engineering_smoke`, or
-`supplementary_descriptive`; primary metrics cannot include the two observed
-cases. The code enforces this partition, but it cannot independently attest
-that an operator has never inspected or tuned against the designated 298 cases.
+All historical 300 selected cases are now contaminated development data. The
+legacy `primary_blind_holdout` scope remains in old receipts only so the runner
+can reject it explicitly; it is not a claimable partition. `5SAK_ZRY` and
+`5SB2_1K2` remain labeled engineering smoke, and the other historical cases may
+be used only for non-claimable development diagnostics. The disjoint frozen
+128-case complement is the sole `fresh_internal_blind_holdout` and must not be
+opened until Stage 0 admission succeeds.
 
 ## Comparable-input and output policy
 
@@ -125,6 +125,30 @@ external engines use their own `exhaustiveness=1` search. The report therefore r
 `search_effort_comparable` false. Paired recovery deltas are descriptive under
 these explicit settings, not equal-region or equal-compute performance claims.
 
+For Engine V2, the diagnostic contract retains all 64 predeclared candidate
+slots in proposal-index order. Every successful candidate binds its proposal
+mode, proposal and final-coordinate fingerprints, Scorer v1 scalar, score-term
+receipt, H-bond count, canonical pose artifact, symmetry-aware RMSD, and
+PoseBusters geometric/chemical validity. It also retains the exact ordered
+PoseBusters check IDs that failed and the interaction-aware rigid-translation
+refinement receipt, including initial/final clash penalty, accepted steps,
+original validity, and total translation. Failed slots retain their proposal mode when placement
+reached that point.
+Failed slots retain a search error and remain in the denominator. The
+score-ranked first five candidate diagnostics must reproduce the published
+five-pose result row exactly; a separately substituted diagnostic or result row
+is rejected even if it is resealed as a fresh execution receipt.
+
+The guided allocator keeps at least 37.5% of the 64 slots for uniform fallback
+and caps each available guided mode at eight slots. This is a deterministic
+development policy, not a learned selector. Report and development-analysis
+rows separate allocation, native-like recovery, validity, exact duplicates,
+oracle contribution, score distribution, refinement response, and failed
+PoseBusters checks by proposal mode. Repeated donor/acceptor or charge cycles
+may use the explicit `multi_anchor_hotspot` mode, which fits two or three
+bounded polar, charge, or hydrophobic constraints while preserving the 24-slot
+uniform floor. This mode is provisional and has no automatic promotion path.
+
 Runtime covers each engine invocation through ranked-pose serialization and
 stops before the shared PoseBusters evaluator. Torch intra-op and inter-op
 threads are both fixed to one for Engine V2, and both external modes receive
@@ -134,6 +158,9 @@ deltas remain descriptive because the search regions and algorithms differ.
 They are not process-boundary comparable: each external case includes fresh
 process startup and model loading, while Engine V2 reuses one imported Python
 process. The report therefore records `runtime_boundary_comparable: false`.
+The all-candidate Engine V2 diagnostic serialization and PoseBusters pass is
+timed separately and subtracted from Engine V2 runtime, so diagnostic
+instrumentation does not inflate the engine runtime row.
 Row receipts also include a SHA-256-only execution-environment identity
 covering the boot session, OS/kernel, machine architecture, Python executable,
 Torch, logical CPU count, CPU affinity/model, selected runtime-variable hashes,
@@ -203,16 +230,47 @@ for:
 - median runtime;
 - heavy-atom size subgroups: 1–20, 21–40, and 41+;
 - rotor subgroups: 0, 1–4, and 5+;
+- ring subgroups: acyclic, one ring, and two or more rings;
+- Engine V2 preparation and complete partial-charge coverage;
+- Engine V2 candidate-generation coverage across the fixed 64-slot
+  denominator;
+- Engine V2 proposal-oracle and validity-aware proposal-oracle recovery;
+- Engine V2 Top-1 scoring-regret and Top-5 selection-regret event rates and
+  median RMSD regret;
+- Engine V2 donor/acceptor feature coverage and Top-1 realized H-bond rate;
 - paired Engine V2 deltas against Vina and GNINA for recovery, valid recovery,
   failure rate, and runtime.
 
-Heavy-atom count and rotor subgroups are frozen from each source-bound ligand
-artifact using RDKit 2022.09.5 and strict
-`Lipinski.NumRotatableBonds`. The 300 profile rows and each ligand-artifact
-SHA-256 are protected by a separate aggregate SHA-256. Engine V2 admission and
-its chemistry-aware rotor policy remain separate execution outcomes; an
-unsupported macrocycle must become a failure row rather than being removed from
-the denominator.
+Heavy-atom count, rotor subgroup, and ring subgroup are frozen from each
+source-bound ligand artifact using RDKit 2022.09.5, strict
+`Lipinski.NumRotatableBonds`, and `rdMolDescriptors.CalcNumRings`. The
+heavy-atom/rotor profile rows, ligand-artifact SHA-256 values, and case-ordered
+ring counts have separate aggregate SHA-256 identities. Engine V2 admission
+and its chemistry-aware rotor policy remain separate execution outcomes; an
+unsupported macrocycle must become a failure row rather than being removed
+from the denominator.
+
+The proposal oracle is the minimum PoseBusters symmetry-aware RMSD across all
+successfully generated Engine V2 candidates. Top-1 scoring regret is
+`score-rank-1 RMSD - proposal-oracle RMSD`; Top-5 selection regret is
+`best score-ranked Top-5 RMSD - proposal-oracle RMSD`. Their event rates use
+the full case denominator and count cases where the oracle reaches 2 Å but the
+respective selected set does not. Median RMSD regret uses cases with the
+required candidate outcomes. These are failure-decomposition diagnostics, not
+performance acceptance thresholds.
+
+Complete charge coverage requires a finite explicit partial charge for every
+prepared receptor and ligand atom. H-bond feature coverage requires at least
+one complementary ligand-donor/receptor-acceptor or
+ligand-acceptor/receptor-donor pair in the fixed Scorer v1 context. It is a
+feature-availability diagnostic, not evidence that a native interaction is
+correctly reproduced.
+
+Receptor Na, Mg, Ca, Co, Zn, and Fe atoms may enter a narrowly declared
+non-coordination vdW proxy lane so their presence does not become an untyped
+preparation failure. The diagnostics count proxy ions and state explicitly
+that coordination is not modeled. Ligand metals remain unsupported and fail
+closed into a separate applicability lane.
 
 Missing Engine V2 proposals and incomplete five-pose serialization raise the
 typed `IncompleteRankedPoseSet` case failure. The evidence code is selected
@@ -253,6 +311,67 @@ python3 -m pip install numpy==1.26.4 pandas==2.3.3 PyYAML==6.0.3 \
 python3 -m pip install --no-deps posebusters==0.3.1
 ```
 
+The primary holdout cannot be run from the protocol file alone. First copy
+`config/engine_v2_public_redocking_stage0_threshold_evidence.template.json`
+and fill it from an exact-contract public development run that contains neither
+the two smoke cases nor any of the 298 holdout cases. The verifier cross-checks
+all seven proposed threshold values and both paired-baseline margins against
+that artifact; a generic literature note or unrelated file hash cannot satisfy
+the gate. Then copy
+`config/engine_v2_public_redocking_stage0_freeze.template.json`, bind the
+evidence path/SHA-256, and fill the remaining fields. Print the SHA-only host
+snapshot:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --print-host-environment-json
+```
+
+Copy this OS/kernel/CPU-affinity/model/Python-executable/runtime-variable
+snapshot into `environment_freeze.host`; runtime-variable values are never
+printed. Before attaching the independent attestation, compute the exact
+review-subject hash:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --print-review-subject-sha256
+```
+
+The independent reviewer fills
+`config/engine_v2_public_redocking_stage0_attestation.template.json` with that
+hash, distinct author/reviewer/operator identities, every required decision, and a
+UTC timestamp. Hash the completed attestation, write its path and SHA-256 into
+the policy, then compute the policy's canonical self-hash:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --print-computed-policy-sha256
+```
+
+After writing that value to `policy_sha256`, verify the complete freeze against
+the exact repository source and GNINA binary:
+
+```bash
+python3 tools/verify_engine_v2_public_redocking_stage0.py \
+  --policy /path/to/stage0-freeze.json \
+  --output-root .betelgeuze/public-redocking-300 \
+  --gnina /path/to/gnina
+```
+
+The verifier is deliberately fail-closed. It requires all seven metric axes,
+paired Vina/GNINA non-inferiority margins and CI rules, descriptive-only
+runtime treatment, diagnostic branch rules, non-smoke/non-holdout provenance
+artifacts, source hashes, exact Python/Torch/RDKit/PoseBusters/GNINA identity,
+900 engine rows, 19,200 candidate slots, row-level classification of the
+reproduced full-suite outcomes, explicit reconciliation of the declared
+`216 failed / 3 errors` aggregate, distinct author/reviewer/operator roles,
+legal/license review, and an independent attestation artifact. An unreproduced
+declared row may never be synthesized to make the counts match. The template is
+not runnable evidence and must remain blocked while any value is unknown.
+
 Run against operator-supplied source artifacts and a local GNINA executable:
 
 ```bash
@@ -260,6 +379,7 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --archive /path/to/posebusters_paper_data.zip \
   --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
   --gnina /path/to/gnina \
+  --stage0-policy /path/to/stage0-freeze.json \
   --output-root .betelgeuze/public-redocking-300
 ```
 
@@ -274,8 +394,12 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --case-subset engineering-smoke
 ```
 
-After all tuning is frozen, the default `--case-subset all` run executes all
-300 cases once and creates all 900 rows plus
+Engineering smoke is the only subset exempt from Stage 0 admission. Any
+selection containing even one primary case requires `--stage0-policy`; the
+policy is verified before output creation and again before report or partial
+summary materialization. After all tuning and Stage 0 decisions are frozen,
+the default `--case-subset all` run executes all 300 cases once and creates all
+900 rows plus
 `public-redocking-report.json`. Its primary
 metrics use only the 298 holdout cases; its 300-case metrics are explicitly
 supplementary descriptive. `--case-subset primary-blind-holdout` and `--limit`

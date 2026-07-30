@@ -1,6 +1,6 @@
 schema_version: 4
 engine_id: betelgeuze_independent_engine_v2
-implementation_stage: v2_am_public_redocking_evidence_correctness_rc3
+implementation_stage: v2_ao_native_cpu_scorer_contract_rc5
 
 claim_policy:
   customer_execution_enabled: false
@@ -952,6 +952,27 @@ capabilities:
       - public_pose_validity_and_ranking_evidence_missing
       - product_integration_not_qualified
 
+  v2_native_cpu_scorer_backend:
+    current_state: explicit_fail_closed_rust_cpu_batch_backend_with_python_reference_parity_contract
+    implemented: true
+    reference_contract_ready: true
+    internal_reference_execution_enabled: true
+    calibrated: false
+    scientifically_validated: false
+    public_evidence_ready: false
+    benchmark_validated: false
+    product_qualified: false
+    customer_execution_enabled: false
+    claim_safe: false
+    blocker_source: betelgeuze_engine_v2.capabilities.CAPABILITY_BLOCKERS
+    blockers:
+      - non_holdout_development_corpus_qualification_missing
+      - independent_native_parity_review_missing
+      - stage0_rc5_source_environment_and_wheel_freeze_incomplete
+      - primary_298_case_blind_holdout_not_executed
+      - scientific_validation_missing
+      - product_integration_not_qualified
+
   v2_benchmark_failure_row_ledger:
     current_state: failure_complete_hmac_signed_internal_ledger
     implemented: true
@@ -971,7 +992,7 @@ capabilities:
       - public_asymmetric_attestation_and_transparency_missing
 
   v2_frozen_public_benchmark_protocol:
-    current_state: frozen_300_case_public_redocking_runner_with_298_case_primary_blind_holdout_and_sealed_execution_receipts_without_committed_results
+    current_state: frozen_300_case_public_redocking_runner_with_298_case_primary_blind_holdout_and_sealed_64_candidate_diagnostic_execution_receipts_without_committed_results
     implemented: true
     reference_contract_ready: true
     internal_reference_execution_enabled: true
