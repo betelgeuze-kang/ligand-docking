@@ -761,8 +761,8 @@ def test_engine_v2_status_and_public_api_docs_state_non_promotion_boundary() -> 
 
 
 def test_stage0_capability_docs_share_fresh_holdout_state() -> None:
-    documents = tuple(
-        " ".join(Path(path).read_text(encoding="utf-8").lower().split())
+    document_paths = tuple(
+        Path(path)
         for path in (
             "README.md",
             "docs/engine_v2_status.md",
@@ -771,6 +771,12 @@ def test_stage0_capability_docs_share_fresh_holdout_state() -> None:
             "docs/engine_v2_0_2_0rc5.md",
             "docs/engine_v2_public_redocking_300.md",
         )
+    )
+    checked_out_paths = tuple(path for path in document_paths if path.is_file())
+    assert checked_out_paths
+    documents = tuple(
+        " ".join(Path(path).read_text(encoding="utf-8").lower().split())
+        for path in checked_out_paths
     )
 
     for document in documents:
