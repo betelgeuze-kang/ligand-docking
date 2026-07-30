@@ -537,22 +537,34 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         baseline_receipt = dict(
             self._v6.receipts[proposal.fingerprint_sha256]
         )
+        source_coordinates = proposal.coordinates.to(
+            dtype=torch.float64,
+            device="cpu",
+        )
+        (
+            source_receptor,
+            source_internal,
+            source_combined,
+            _source_receptor_by_atom,
+            _source_internal_by_pair,
+        ) = self._objective(source_coordinates)
         coordinates = baseline.coordinates.to(dtype=torch.float64, device="cpu")
         torsion_angles = baseline.torsion_angles.clone().to(
             dtype=torch.float64,
             device="cpu",
         )
         (
-            initial_receptor,
-            initial_internal,
-            initial_combined,
+            baseline_receptor,
+            baseline_internal,
+            baseline_combined,
             receptor_by_atom,
             internal_by_pair,
         ) = self._objective(coordinates)
-        current_receptor = initial_receptor
-        current_internal = initial_internal
-        current_combined = initial_combined
-        evaluation_count = 1
+        current_receptor = baseline_receptor
+        current_internal = baseline_internal
+        current_combined = baseline_combined
+        evaluation_count = 2
+        torsion_trial_evaluation_count = 0
         total_torsion_path = 0.0
         accepted_moves: list[dict[str, object]] = []
         baseline_steps = int(baseline_receipt["accepted_steps"])
@@ -562,7 +574,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             remaining_steps,
         )
         selection_window_reachable = bool(
-            initial_receptor
+            baseline_receptor
             + torsion_step_budget * self._config.penalty_tolerance
             >= self._config.minimum_selected_final_receptor_penalty
         )
@@ -660,6 +672,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                             candidate_internal_by_pair,
                         ) = self._objective(candidate)
                         evaluation_count += 1
+                        torsion_trial_evaluation_count += 1
                         if receptor > (
                             current_receptor + self._config.penalty_tolerance
                         ) or combined >= (
@@ -755,9 +768,9 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         else:
             final_coordinates = baseline.coordinates
             final_torsion_angles = baseline.torsion_angles
-            final_receptor = initial_receptor
-            final_internal = initial_internal
-            final_combined = initial_combined
+            final_receptor = baseline_receptor
+            final_internal = baseline_internal
+            final_combined = baseline_combined
             selected_moves = []
             selected_total_torsion_path = 0.0
         if torsion_selected:
@@ -786,7 +799,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             "v3_proposal_indices": list(self._v3_proposal_indices),
             "rotatable_child_atom_indices": list(self._rotor_indices),
             "torsion_step_budget": torsion_step_budget,
-            "selection_window_reachable_from_initial_receptor_penalty": (
+            "selection_window_reachable_from_baseline_v6_receptor_penalty": (
                 selection_window_reachable
             ),
             "torsion_evaluation_skip_reason": torsion_evaluation_skip_reason,
@@ -804,21 +817,40 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             "accepted_torsion_steps": len(selected_moves),
             "accepted_torsion_moves": selected_moves,
             "objective_evaluation_count": evaluation_count,
-            "initial_receptor_penalty_binary64_hex": initial_receptor.hex(),
+            "fixed_objective_evaluation_count": 2,
+            "torsion_trial_objective_evaluation_count": (
+                torsion_trial_evaluation_count
+            ),
+            "initial_receptor_penalty_binary64_hex": source_receptor.hex(),
+            "baseline_v6_receptor_penalty_binary64_hex": (
+                baseline_receptor.hex()
+            ),
             "optimized_receptor_penalty_binary64_hex": (
                 optimized_receptor.hex()
             ),
             "final_receptor_penalty_binary64_hex": final_receptor.hex(),
-            "initial_internal_penalty_binary64_hex": initial_internal.hex(),
+            "initial_internal_penalty_binary64_hex": source_internal.hex(),
+            "baseline_v6_internal_penalty_binary64_hex": (
+                baseline_internal.hex()
+            ),
             "optimized_internal_penalty_binary64_hex": optimized_internal.hex(),
             "final_internal_penalty_binary64_hex": final_internal.hex(),
-            "initial_combined_penalty_binary64_hex": initial_combined.hex(),
+            "initial_combined_penalty_binary64_hex": source_combined.hex(),
+            "baseline_v6_combined_penalty_binary64_hex": (
+                baseline_combined.hex()
+            ),
             "optimized_combined_penalty_binary64_hex": (
                 optimized_combined.hex()
             ),
             "final_combined_penalty_binary64_hex": final_combined.hex(),
-            "initial_penalty_binary64_hex": initial_combined.hex(),
+            "initial_penalty_binary64_hex": source_combined.hex(),
             "final_penalty_binary64_hex": final_combined.hex(),
+            "generic_penalty_scope": (
+                "source_proposal_to_final_coordinates_v7_objective"
+            ),
+            "baseline_v6_penalty_scope": (
+                "post_v6_coordinates_v7_objective"
+            ),
             "minimum_selected_final_receptor_penalty_binary64_hex": (
                 self._config.minimum_selected_final_receptor_penalty.hex()
             ),
@@ -833,14 +865,17 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 "accepted_translation_steps",
                 baseline_steps,
             ),
-            "accepted_rotation_steps": baseline_receipt.get(
-                "accepted_rotation_steps",
-                0,
+            "accepted_rigid_rotation_steps": baseline_receipt.get(
+                "accepted_rotation_steps", 0
             ),
+            "accepted_rotation_steps": (
+                int(baseline_receipt.get("accepted_rotation_steps", 0))
+                + len(selected_moves)
+            ),
+            "accepted_rotation_steps_include_torsion": True,
             "line_search_evaluation_count": (
                 int(baseline_receipt.get("line_search_evaluation_count", 0))
-                + evaluation_count
-                - 1
+                + torsion_trial_evaluation_count
             ),
             "fallback_direction_step_count": baseline_receipt.get(
                 "fallback_direction_step_count",

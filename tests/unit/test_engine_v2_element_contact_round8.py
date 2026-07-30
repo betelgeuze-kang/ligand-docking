@@ -696,6 +696,18 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert source_receipt["baseline_v6_receipt_payload"]["receipt_sha256"] == (
         source_receipt["baseline_v6_receipt_sha256"]
     )
+    assert source_receipt["initial_penalty_binary64_hex"] == (
+        source_receipt["initial_combined_penalty_binary64_hex"]
+    )
+    assert source_receipt["final_penalty_binary64_hex"] == (
+        source_receipt["final_combined_penalty_binary64_hex"]
+    )
+    assert source_receipt["accepted_rotation_steps"] == (
+        source_receipt["accepted_rigid_rotation_steps"]
+    )
+    assert source_receipt["generic_penalty_scope"] == (
+        "source_proposal_to_final_coordinates_v7_objective"
+    )
 
     assert variant_receipt["torsion_evaluated"] is True
     assert variant_receipt["torsion_variant_available"] is True
@@ -707,6 +719,10 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert variant_receipt["evaluated_torsion_steps"] == 3
     assert variant_receipt["accepted_torsion_steps"] == 3
     assert variant_receipt["accepted_steps"] <= 20
+    assert variant_receipt["accepted_rotation_steps"] == (
+        variant_receipt["accepted_rigid_rotation_steps"]
+        + variant_receipt["accepted_torsion_steps"]
+    )
     assert {
         row["rotatable_child_atom_index"]
         for row in variant_receipt["accepted_torsion_moves"]
@@ -714,13 +730,32 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert float.fromhex(
         variant_receipt["final_receptor_penalty_binary64_hex"]
     ) <= float.fromhex(
-        variant_receipt["initial_receptor_penalty_binary64_hex"]
+        variant_receipt["baseline_v6_receptor_penalty_binary64_hex"]
     )
     assert float.fromhex(
         variant_receipt["final_combined_penalty_binary64_hex"]
     ) < float.fromhex(
+        variant_receipt["baseline_v6_combined_penalty_binary64_hex"]
+    )
+    assert variant_receipt["initial_penalty_binary64_hex"] == (
         variant_receipt["initial_combined_penalty_binary64_hex"]
     )
+    assert variant_receipt["final_penalty_binary64_hex"] == (
+        variant_receipt["final_combined_penalty_binary64_hex"]
+    )
+    source_combined = refiner._objective(
+        proposals[1].coordinates.to(dtype=torch.float64, device="cpu")
+    )[2]
+    baseline_combined = refiner._objective(
+        expected_variant.coordinates.to(dtype=torch.float64, device="cpu")
+    )[2]
+    assert float.fromhex(
+        variant_receipt["initial_penalty_binary64_hex"]
+    ) == source_combined
+    assert float.fromhex(
+        variant_receipt["baseline_v6_combined_penalty_binary64_hex"]
+    ) == baseline_combined
+    assert variant_receipt["accepted_rotation_steps_include_torsion"] is True
     assert not torch.equal(
         observed_variant.coordinates,
         expected_variant.coordinates,
@@ -797,10 +832,19 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert float.fromhex(
         rejected_receipt["optimized_combined_penalty_binary64_hex"]
     ) < float.fromhex(
-        rejected_receipt["initial_combined_penalty_binary64_hex"]
+        rejected_receipt["baseline_v6_combined_penalty_binary64_hex"]
     )
     assert rejected_receipt["final_combined_penalty_binary64_hex"] == (
+        rejected_receipt["baseline_v6_combined_penalty_binary64_hex"]
+    )
+    assert rejected_receipt["initial_penalty_binary64_hex"] == (
         rejected_receipt["initial_combined_penalty_binary64_hex"]
+    )
+    assert rejected_receipt["final_penalty_binary64_hex"] == (
+        rejected_receipt["final_combined_penalty_binary64_hex"]
+    )
+    assert rejected_receipt["accepted_rotation_steps"] == (
+        rejected_receipt["accepted_rigid_rotation_steps"]
     )
     assert torch.equal(rejected_variant.coordinates, expected_variant.coordinates)
     assert torch.equal(
@@ -829,11 +873,15 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert pruned_receipt["torsion_evaluated"] is False
     assert pruned_receipt["torsion_variant_available"] is False
     assert pruned_receipt["torsion_selected"] is False
-    assert pruned_receipt["selection_window_reachable_from_initial_receptor_penalty"] is False
+    assert pruned_receipt[
+        "selection_window_reachable_from_baseline_v6_receptor_penalty"
+    ] is False
     assert pruned_receipt["torsion_evaluation_skip_reason"] == (
         "selection_window_unreachable_under_receptor_nonincrease"
     )
-    assert pruned_receipt["objective_evaluation_count"] == 1
+    assert pruned_receipt["objective_evaluation_count"] == 2
+    assert pruned_receipt["fixed_objective_evaluation_count"] == 2
+    assert pruned_receipt["torsion_trial_objective_evaluation_count"] == 0
     assert pruned_receipt["evaluated_torsion_steps"] == 0
     assert torch.equal(pruned_variant.coordinates, expected_variant.coordinates)
     assert torch.equal(

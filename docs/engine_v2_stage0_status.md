@@ -82,13 +82,16 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   mean Top-1/Top-5 RMSD improves by 0.00785/0.00079 A; recovery counts remain
   6/1/3. Final-code execution of the six affected cases reproduced all seven
   selected indices and 384 candidate outcomes with zero strict mismatches.
-  Monotonic selection-window pruning reduced objective evaluations from 3,289
-  to 2,926 with identical outcomes; the unpruned full probe search runtime was
+  Monotonic selection-window pruning reduced torsion-trial evaluations from
+  3,185 to 2,822 with identical outcomes. Generic penalties now compare source
+  to final coordinates under one V7 objective, and accepted rotation counts
+  include selected torsion steps while retaining rigid/torsion sub-counts. The
+  unpruned full probe search runtime was
   descriptively 1.446x V6, so this remains a bounded validity improvement rather
   than a speed claim. Focused refinement/runner/benchmark/Stage 0 verification
-  is `147 passed, 7 deselected`; lint, py_compile, diff-check, and orchestration
+  is `148 passed, 7 deselected`; lint, py_compile, diff-check, and orchestration
   smoke also pass. Evidence self-hash is
-  `3245b08ae800b9daa01d95f0dc0ee4f198e3595b800ff930247b9e4bd87af81a`.
+  `9c89ac550cfc8259cdb236ee9970242c4b06a6d720295078b106b7b9a4ee27e5`.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
