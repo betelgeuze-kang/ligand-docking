@@ -61,8 +61,20 @@ def test_topk_delivery_payload_includes_claim_safe_metadata(tmp_path, monkeypatc
     queue_csv = tmp_path / "queue.csv"
     pd.DataFrame(
         [
-            {"queue_id": "q1", "target": "A", "ligand_id": "L1", "binding_energy_proxy": -9.0},
-            {"queue_id": "q2", "target": "A", "ligand_id": "L2", "binding_energy_proxy": -7.0},
+            {
+                "queue_id": "q1",
+                "target": "A",
+                "ligand_id": "L1",
+                "binding_energy_proxy": -9.0,
+                "binding_score_composite_v7": -2.0,
+            },
+            {
+                "queue_id": "q2",
+                "target": "A",
+                "ligand_id": "L2",
+                "binding_energy_proxy": -7.0,
+                "binding_score_composite_v7": -1.0,
+            },
         ]
     ).to_csv(scores_csv, index=False)
     pd.DataFrame(
@@ -112,6 +124,9 @@ def test_topk_delivery_payload_includes_claim_safe_metadata(tmp_path, monkeypatc
     assert payload["blocked_reason"] == ""
     assert payload["claim_metadata"]["runner_kind"] == "ligand_topk_delivery"
     assert payload["claim_metadata"]["physical_accuracy_claim"] is False
+    assert payload["score_col"] == "binding_score_composite_v7"
+    assert payload["selection_score_authority"]["score_version"] == "v7"
+    assert payload["selection_score_authority"]["fallback_used"] is False
     assert (tmp_path / "summary.json").exists()
 
 

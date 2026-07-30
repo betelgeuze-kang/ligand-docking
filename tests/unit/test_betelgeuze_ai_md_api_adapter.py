@@ -11,6 +11,7 @@ from betelgeuze_ai_md.contracts import (
     maybe_write_runner_native_evidence_bundle,
 )
 from betelgeuze_ai_md.contracts.api_adapter import build_api_evidence_bundle, write_api_evidence_bundle
+from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
 
 
 def _manifest(result_file: Path) -> dict:
@@ -230,6 +231,10 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
     }
     result_file.write_text(json.dumps(result_payload, sort_keys=True) + "\n", encoding="utf-8")
     bundle_file = tmp_path / "evidence_bundle.json"
+    selection_score_authority = SelectionScoreAuthority.create(
+        score_column="binding_score_composite_v7",
+        score_direction="ascending",
+    ).to_dict()
 
     bundle = maybe_write_runner_native_evidence_bundle(
         bundle_file,
@@ -237,7 +242,10 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
         result_file=result_file,
         result_payload=result_payload,
         runner_script="tools/run_ligand_backmapping_scoring.py",
-        runner_metadata={"runner_kind": "unit"},
+        runner_metadata={
+            "runner_kind": "unit",
+            "selection_score_authority": selection_score_authority,
+        },
     )
 
     payload = json.loads(bundle_file.read_text(encoding="utf-8"))
@@ -252,6 +260,10 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
     assert bundle.source_hashes["model_hash"] == "m" * 64
     assert bundle.source_hashes["executable_hash"]
     assert (
+        payload["result_manifest"]["runner_metadata"]["selection_score_authority"]
+        == selection_score_authority
+    )
+    assert (
         payload["result_manifest"]["refine_element_summary"]["refine_element_model"]
         == "typed_pairwise"
     )
@@ -259,6 +271,33 @@ def test_maybe_write_runner_native_evidence_bundle_writes_valid_review_only_bund
         payload["result_manifest"]["refine_element_summary"]["refine_ligand_element_source"]
         == "rdkit_atom_elements_projected_to_model_coords"
     )
+
+
+def test_api_config_hash_binds_selection_score_authority(tmp_path: Path) -> None:
+    result_file = tmp_path / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+    manifest_without = _manifest(result_file)
+    manifest_with = {
+        **manifest_without,
+        "runner_metadata": {
+            "selection_score_authority": SelectionScoreAuthority.create(
+                score_column="binding_score_composite_v7",
+                score_direction="ascending",
+            ).to_dict()
+        },
+    }
+    kwargs = {
+        "job_id": "job_authority_hash",
+        "request": {"target_name": "ADRB2", "runner_profile_id": "smoke"},
+        "result_payload": {},
+        "runner_execution": {},
+        "status_payload": {"status": "completed"},
+    }
+
+    without = build_api_evidence_bundle(result_manifest=manifest_without, **kwargs)
+    with_authority = build_api_evidence_bundle(result_manifest=manifest_with, **kwargs)
+
+    assert without.source_hashes["config_hash"] != with_authority.source_hashes["config_hash"]
 
 
 def test_maybe_write_runner_native_evidence_bundle_requires_result_file(tmp_path: Path) -> None:

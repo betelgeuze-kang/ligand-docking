@@ -14,10 +14,12 @@
     "stage2_trajectory_generation": "HTVS_TRAJECTORY_FAILED",
     "stage2_residual_meta": "HTVS_RESIDUAL_META_FAILED",
     "stage3_backmapping_scoring": "HTVS_SCORING_FAILED",
+    "stage3_selection_score_authority": "HTVS_SELECTION_AUTHORITY_FAILED",
     "stage4_calibration": "HTVS_CALIBRATION_FAILED",
     "stage45_eval_integrity": "HTVS_EVAL_INTEGRITY_FAILED",
     "stage5_ranking_eval": "HTVS_RANKING_FAILED",
     "stage6_operational_gate": "HTVS_GATE_FAILED",
+    "stage6b_topk_delivery": "HTVS_TOPK_DELIVERY_FAILED",
     "stage7_data_contract_output": "HTVS_OUTPUT_CONTRACT_FAILED"
   },
   "retryable_stages": [

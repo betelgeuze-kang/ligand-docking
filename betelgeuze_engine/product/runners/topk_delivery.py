@@ -12,6 +12,14 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 
+from betelgeuze_engine.product.selection_score_authority import (
+    SelectionScoreAuthority,
+    load_authority_summary,
+    rank_selection_frame,
+    resolve_selection_score_authority,
+    topk_eligible_frame,
+)
+
 TOPK_SELECTION_MODES = {"union", "global_only", "per_target_only"}
 TOPK_DELIVERY_CLAIM_METADATA_SCHEMA_VERSION = "topk_delivery_claim_metadata_v1"
 
@@ -22,17 +30,20 @@ def build_topk_delivery_claim_metadata(
     selected_rows: int,
     selection_mode: str,
     delivery_runner: str = "tools/run_ligand_backmapping_scoring.py",
+    selection_fallback_used: bool = False,
 ) -> dict[str, Any]:
     blocked_reason = ""
     if not ok:
         blocked_reason = "topk_delivery_runner_failed"
     elif int(selected_rows) <= 0:
         blocked_reason = "topk_delivery_empty_selection"
+    elif bool(selection_fallback_used):
+        blocked_reason = "selection_score_compatibility_fallback_used"
     return {
         "claim_metadata_schema_version": TOPK_DELIVERY_CLAIM_METADATA_SCHEMA_VERSION,
         "runner_kind": "ligand_topk_delivery",
         "claim_scope": "topk_delivery_selection_and_handoff",
-        "claim_safe": bool(ok and int(selected_rows) > 0),
+        "claim_safe": bool(ok and int(selected_rows) > 0 and not selection_fallback_used),
         "blocked_reason": blocked_reason,
         "selected_rows": int(selected_rows),
         "selection_mode": str(selection_mode),
@@ -44,23 +55,6 @@ def build_topk_delivery_claim_metadata(
 
 def _ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
-
-
-def _pick_score_col(df: pd.DataFrame, requested: str) -> Optional[str]:
-    req = str(requested).strip()
-    if req and req in df.columns:
-        return req
-    candidates = [
-        "binding_score_composite_v3",
-        "binding_score_composite_v2",
-        "binding_energy_mmpbsa_kcal_mol_calibrated",
-        "binding_energy_mmpbsa_kcal_mol_proxy",
-        "binding_energy_proxy",
-    ]
-    for col in candidates:
-        if col in df.columns:
-            return col
-    return None
 
 
 def _normalize_selection_mode(value: Any) -> str:
@@ -90,7 +84,10 @@ def _per_target_head(work: pd.DataFrame, topk_per_target: int) -> pd.DataFrame:
     )
 
 
-def _dedupe_selected(selected: pd.DataFrame, score_col: str) -> pd.DataFrame:
+def _dedupe_selected(
+    selected: pd.DataFrame,
+    authority: SelectionScoreAuthority,
+) -> pd.DataFrame:
     if selected.empty:
         return selected.copy()
     out = selected.copy()
@@ -100,23 +97,21 @@ def _dedupe_selected(selected: pd.DataFrame, score_col: str) -> pd.DataFrame:
         out = out.drop_duplicates(subset=["target", "ligand_id"], keep="first")
     else:
         out = out.drop_duplicates(keep="first")
-    out = out.sort_values(score_col, ascending=True).reset_index(drop=True)
+    out = rank_selection_frame(out, authority)
     out["delivery_rank"] = out.index + 1
     return out
 
 
 def _select_topk(
     df: pd.DataFrame,
-    score_col: str,
+    authority: SelectionScoreAuthority,
     topk_global: int,
     topk_per_target: int,
     selection_mode: str,
 ) -> tuple[pd.DataFrame, Dict[str, Any]]:
     mode = _normalize_selection_mode(selection_mode)
-    work = df.copy()
-    work[score_col] = pd.to_numeric(work[score_col], errors="coerce")
-    work = work[work[score_col].notna()].copy()
-    work = work.sort_values(score_col, ascending=True).reset_index(drop=True)
+    ranked = rank_selection_frame(df, authority)
+    work = topk_eligible_frame(ranked, authority)
     if work.empty:
         return work, {
             "requested_mode": mode,
@@ -124,6 +119,7 @@ def _select_topk(
             "global_selected_rows": 0,
             "per_target_selected_rows": 0,
             "has_target_column": bool("target" in df.columns),
+            "ineligible_primary_score_rows": int(len(df)),
         }
 
     global_selected = work.head(int(topk_global)).copy() if int(topk_global) > 0 else work.head(0).copy()
@@ -140,13 +136,14 @@ def _select_topk(
             parts.append(per_target_selected)
         selected = pd.concat(parts, axis=0, ignore_index=True) if parts else work.head(0).copy()
 
-    selected = _dedupe_selected(selected, score_col)
+    selected = _dedupe_selected(selected, authority)
     return selected, {
         "requested_mode": mode,
         "applied_mode": mode,
         "global_selected_rows": int(len(global_selected)),
         "per_target_selected_rows": int(len(per_target_selected)),
         "has_target_column": bool("target" in work.columns),
+        "ineligible_primary_score_rows": int(len(ranked) - len(work)),
     }
 
 
@@ -201,13 +198,28 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
 
     scores_df = pd.read_csv(scores_csv)
     queue_df = pd.read_csv(queue_csv)
-    score_col = _pick_score_col(scores_df, str(args.score_col))
-    if score_col is None:
-        raise ValueError(f"no score column found in {scores_csv}")
+    authority_summary_json = str(
+        getattr(args, "selection_authority_summary_json", "") or ""
+    ).strip()
+    declared_authority = (
+        load_authority_summary(authority_summary_json)
+        if authority_summary_json
+        else None
+    )
+    selection_score_authority = resolve_selection_score_authority(
+        scores_df,
+        declared_authority=declared_authority,
+        requested_score_column=str(getattr(args, "score_col", "") or ""),
+        requested_score_direction=str(getattr(args, "score_direction", "") or ""),
+        allow_compatibility_fallback=bool(
+            getattr(args, "allow_compatibility_score_fallback", False)
+        ),
+    )
+    score_col = selection_score_authority.score_column
 
     selected_scores, selection_meta = _select_topk(
         scores_df,
-        score_col=score_col,
+        authority=selection_score_authority,
         topk_global=int(max(0, int(args.topk_global))),
         topk_per_target=int(max(0, int(args.topk_per_target))),
         selection_mode=str(args.selection_mode),
@@ -260,6 +272,7 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
         ok=bool(rec["ok"]),
         selected_rows=int(len(selected_scores)),
         selection_mode=str(selection_meta.get("applied_mode") or ""),
+        selection_fallback_used=selection_score_authority.fallback_used,
     )
 
     payload: Dict[str, Any] = {
@@ -271,6 +284,8 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
         "scores_csv": scores_csv,
         "queue_csv": queue_csv,
         "score_col": score_col,
+        "selection_score_authority": selection_score_authority.to_dict(),
+        "selection_authority_summary_json": authority_summary_json,
         "topk_global": int(args.topk_global),
         "topk_per_target": int(args.topk_per_target),
         "selection_mode_requested": selection_meta.get("requested_mode"),
@@ -279,6 +294,9 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
             "global_selected_rows": int(selection_meta.get("global_selected_rows", 0) or 0),
             "per_target_selected_rows": int(selection_meta.get("per_target_selected_rows", 0) or 0),
             "has_target_column": bool(selection_meta.get("has_target_column", False)),
+            "ineligible_primary_score_rows": int(
+                selection_meta.get("ineligible_primary_score_rows", 0) or 0
+            ),
         },
         "selected_rows": int(len(selected_scores)),
         "selected_targets": int(selected_scores["target"].nunique()) if "target" in selected_scores.columns else None,
@@ -306,6 +324,7 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
         "",
         f"- ok: {bool(payload['ok'])}",
         f"- score_col: {score_col}",
+        f"- selection_score_policy_sha256: {selection_score_authority.policy_sha256}",
         f"- selection_mode: {payload.get('selection_mode_applied')}",
         f"- selected_rows: {int(payload['selected_rows'])}",
         f"- selected_targets: {payload.get('selected_targets')}",
@@ -333,6 +352,7 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
                 "runner_kind": "ligand_topk_delivery",
                 "claim_metadata_schema_version": claim_metadata["claim_metadata_schema_version"],
                 "claim_safe": bool(claim_metadata["claim_safe"]),
+                "selection_score_authority": selection_score_authority.to_dict(),
             },
         )
 
@@ -349,6 +369,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--trajectory-glob", type=str, default="")
     p.add_argument("--out-prefix", type=str, default="runs/ligand_topk_delivery")
     p.add_argument("--score-col", type=str, default="")
+    p.add_argument("--score-direction", type=str, default="", choices=["", "ascending", "descending"])
+    p.add_argument("--selection-authority-summary-json", type=str, default="")
+    p.add_argument(
+        "--allow-compatibility-score-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
     p.add_argument("--topk-global", type=int, default=20)
     p.add_argument("--topk-per-target", type=int, default=8)
     p.add_argument("--selection-mode", type=str, default="union")
