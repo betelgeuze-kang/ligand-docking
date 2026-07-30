@@ -42,6 +42,7 @@ from api.validated_runner_runtime_qualification import (
     RECEIPT_SCHEMA_VERSION,
 )
 from betelgeuze_ai_md.contracts.api_adapter import build_api_evidence_bundle
+from betelgeuze_ai_md.contracts.serialization import parse_finite_json_float
 
 SimulationRunner = Callable[[str, dict[str, Any]], Awaitable[None]]
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -53,6 +54,10 @@ _RUNTIME_QUALIFICATION_STATUS_KEYS = (
     "validated_runner_namespace_runtime_receipt_expires_at_utc",
 )
 _RUNTIME_QUALIFICATION_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
 
 
 class JobIntegrityError(RuntimeError):
@@ -132,7 +137,11 @@ def read_status_file(status_file_path: str) -> dict[str, Any]:
         maximum_bytes=16 * 1024 * 1024,
     )
     if pinned_payload is not None:
-        payload = json.loads(pinned_payload)
+        payload = json.loads(
+            pinned_payload,
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
         if not isinstance(payload, dict):
             raise ValueError("status file root must be a JSON object")
         return payload
@@ -155,15 +164,53 @@ def read_json_object_file(file_path: str) -> dict[str, Any]:
             maximum_bytes=64 * 1024 * 1024,
         )
         if pinned_payload is not None:
-            payload = json.loads(pinned_payload)
+            payload = json.loads(
+                pinned_payload,
+                parse_constant=_reject_json_constant,
+                parse_float=parse_finite_json_float,
+            )
             return payload if isinstance(payload, dict) else {}
         if not os.path.exists(file_path):
             return {}
         with open(file_path, "r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            payload = json.load(
+                handle,
+                parse_constant=_reject_json_constant,
+                parse_float=parse_finite_json_float,
+            )
+    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _read_result_payload_for_binding(
+    result_file: str,
+    expected_sha256: str,
+) -> dict[str, Any]:
+    if _SHA256_RE.fullmatch(expected_sha256) is None:
+        raise JobIntegrityError("runner result SHA-256 binding is invalid")
+    try:
+        raw = read_current_attempt_file_bytes(
+            result_file,
+            maximum_bytes=64 * 1024 * 1024,
+        )
+        if raw is None:
+            raw = Path(result_file).read_bytes()
+    except OSError as exc:
+        raise JobIntegrityError("runner result file cannot be read for binding") from exc
+    if hashlib.sha256(raw).hexdigest() != expected_sha256:
+        raise JobIntegrityError("runner result changed during H-bond binding")
+    try:
+        payload = json.loads(
+            raw,
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+        raise JobIntegrityError("runner result is not valid JSON") from exc
+    if not isinstance(payload, dict):
+        raise JobIntegrityError("runner result JSON must be an object")
+    return payload
 
 
 def write_status_file(status_file_path: str, status_data: dict[str, Any]) -> None:
@@ -305,16 +352,17 @@ def write_job_evidence_bundle(
     execution_request_sha256: str = "",
     execution_request_transform_id: str = "",
 ) -> tuple[str, str]:
+    result_manifest = read_json_object_file(result_manifest_path)
     adopted_native = adopt_validated_runner_native_evidence_bundle(
         job_id=job_id,
         status_data=status_data,
+        result_manifest=result_manifest,
         request_sha256=request_sha256,
         execution_request_sha256=execution_request_sha256,
         execution_request_transform_id=execution_request_transform_id,
     )
     if adopted_native is not None:
         return adopted_native
-    result_manifest = read_json_object_file(result_manifest_path)
     result_payload = {}
     result_file = str(result_manifest.get("result_file", "") or status_data.get("result_file", "") or "")
     if result_file:
@@ -334,7 +382,13 @@ def write_job_evidence_bundle(
     )
     atomic_write_text_file(
         bundle_path,
-        json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
+        json.dumps(
+            bundle.to_dict(),
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
         + "\n",
     )
     return bundle_path, bundle.fingerprint()
@@ -344,6 +398,7 @@ def adopt_validated_runner_native_evidence_bundle(
     *,
     job_id: str,
     status_data: dict[str, Any],
+    result_manifest: dict[str, Any] | None = None,
     request_sha256: str = "",
     execution_request_sha256: str = "",
     execution_request_transform_id: str = "",
@@ -351,50 +406,187 @@ def adopt_validated_runner_native_evidence_bundle(
     """Adopt a validated-runner-native EvidenceBundle as the final worker bundle.
 
     Returns ``(bundle_path, fingerprint)`` when a validated native bundle is recorded
-    in the status file. Returns ``None`` when the runner did not produce or validate
-    a native bundle so the caller can fall back to the API-generated review bundle.
+    in the status file. Returns ``None`` only when no native provenance is declared;
+    malformed or inconsistent declarations fail closed.
     """
-    if str(status_data.get("evidence_bundle_source", "") or "").strip() != "validated_runner_native":
+    source = str(status_data.get("evidence_bundle_source", "") or "").strip()
+    native_fields_present = any(
+        str(status_data.get(key, "") or "").strip()
+        for key in (
+            "evidence_bundle_source",
+            "evidence_bundle",
+            "evidence_bundle_sha256",
+        )
+    )
+    if not native_fields_present:
         return None
+    if source != "validated_runner_native":
+        raise JobIntegrityError("unexpected native EvidenceBundle provenance declaration")
     bundle_path_value = str(status_data.get("evidence_bundle", "") or "").strip()
     bundle_sha_value = str(status_data.get("evidence_bundle_sha256", "") or "").strip()
     if not bundle_path_value or not bundle_sha_value:
-        return None
-    if len(bundle_sha_value) != 64:
-        return None
+        raise JobIntegrityError("declared native EvidenceBundle provenance is incomplete")
+    if _SHA256_RE.fullmatch(bundle_sha_value) is None:
+        raise JobIntegrityError("declared native EvidenceBundle fingerprint is invalid")
     bundle_path = Path(bundle_path_value)
     if not bundle_path.exists() or not bundle_path.is_file():
-        return None
+        raise JobIntegrityError("declared native EvidenceBundle file is missing")
     payload = read_json_object_file(str(bundle_path))
     if not payload:
-        return None
+        raise JobIntegrityError("declared native EvidenceBundle is not a JSON object")
     try:
         from betelgeuze_ai_md.contracts import EvidenceBundle
         from betelgeuze_ai_md.contracts.errors import ContractValidationError
 
         bundle = EvidenceBundle(**payload)
-    except (ContractValidationError, TypeError):
-        return None
+    except (ContractValidationError, TypeError) as exc:
+        raise JobIntegrityError("declared native EvidenceBundle is invalid") from exc
     if bundle.fingerprint() != bundle_sha_value:
-        return None
-    if request_sha256 or execution_request_sha256 or execution_request_transform_id:
-        enriched_payload = bundle.to_dict()
-        source_hashes = dict(enriched_payload.get("source_hashes") or {})
-        source_hashes["input_hash"] = execution_request_sha256
-        enriched_payload["source_hashes"] = source_hashes
-        enriched_payload["request_provenance"] = {
-            "admission_request_sha256": request_sha256,
-            "execution_request_sha256": execution_request_sha256,
-            "execution_request_transform_id": execution_request_transform_id,
-        }
+        raise JobIntegrityError("declared native EvidenceBundle fingerprint mismatch")
+
+    admission_hash = str(request_sha256 or "").lower()
+    execution_hash = str(execution_request_sha256 or "").lower()
+    transform_id = str(execution_request_transform_id or "").strip()
+    if _SHA256_RE.fullmatch(admission_hash) is None:
+        raise JobIntegrityError("native EvidenceBundle admission request binding is missing")
+    if _SHA256_RE.fullmatch(execution_hash) is None:
+        raise JobIntegrityError("native EvidenceBundle execution request binding is missing")
+    if transform_id != EXECUTION_REQUEST_TRANSFORM_ID:
+        raise JobIntegrityError("native EvidenceBundle request transform binding is invalid")
+    final_manifest = result_manifest if isinstance(result_manifest, dict) else {}
+    if not final_manifest:
+        raise JobIntegrityError("signed result manifest is required for native adoption")
+
+    native_manifest = bundle.result_manifest
+    expected_result_file = str(status_data.get("result_file") or "")
+    expected_result_sha256 = str(status_data.get("result_file_sha256") or "").lower()
+    result_payload = _read_result_payload_for_binding(
+        expected_result_file,
+        expected_result_sha256,
+    )
+    if bundle.bundle_id != f"api_{job_id}_evidence_bundle":
+        raise JobIntegrityError("native EvidenceBundle bundle_id binding mismatch")
+    if str(native_manifest.get("job_id") or "") != job_id:
+        raise JobIntegrityError("native EvidenceBundle job binding mismatch")
+    if str(native_manifest.get("status") or "") != "completed":
+        raise JobIntegrityError("native EvidenceBundle status binding mismatch")
+    if os.path.abspath(str(native_manifest.get("result_file") or "")) != os.path.abspath(
+        expected_result_file
+    ):
+        raise JobIntegrityError("native EvidenceBundle result path binding mismatch")
+    if (
+        str(native_manifest.get("result_file_sha256") or "").lower()
+        != expected_result_sha256
+    ):
+        raise JobIntegrityError("native EvidenceBundle result SHA-256 binding mismatch")
+    if (
+        str(
+            native_manifest.get("execution_request_sha256")
+            or native_manifest.get("request_sha256")
+            or ""
+        ).lower()
+        != execution_hash
+    ):
+        raise JobIntegrityError("native EvidenceBundle execution request mismatch")
+    if str(native_manifest.get("request_sha256") or "").lower() != execution_hash:
+        raise JobIntegrityError("native EvidenceBundle native request mismatch")
+    if str(bundle.source_hashes.get("input_hash") or "").lower() != execution_hash:
+        raise JobIntegrityError("native EvidenceBundle source input mismatch")
+    native_request_provenance = bundle.request_provenance
+    if (
+        str(
+            native_request_provenance.get("admission_request_sha256") or ""
+        ).lower()
+        != execution_hash
+    ):
+        raise JobIntegrityError("native EvidenceBundle admission provenance mismatch")
+    if (
+        str(
+            native_request_provenance.get("execution_request_sha256") or ""
+        ).lower()
+        != execution_hash
+    ):
+        raise JobIntegrityError("native EvidenceBundle execution provenance mismatch")
+    if (
+        str(
+            native_request_provenance.get("execution_request_transform_id") or ""
+        )
+        != str(native_manifest.get("execution_request_transform_id") or "")
+    ):
+        raise JobIntegrityError("native EvidenceBundle transform provenance mismatch")
+    runner_metadata = native_manifest.get("runner_metadata")
+    runner_metadata = runner_metadata if isinstance(runner_metadata, dict) else {}
+    runner_kind = str(runner_metadata.get("runner_kind") or "")
+    scoped_hbond = bundle.job_scoped_hbond_evidence
+    if runner_kind in {
+        "ligand_backmapping_scoring",
+        "ligand_htvs_pipeline",
+        "ligand_topk_delivery",
+    } and not scoped_hbond:
+        raise JobIntegrityError("native EvidenceBundle is missing scoped H-bond evidence")
+    if scoped_hbond:
+        from betelgeuze_ai_md.contracts.job_scoped_hbond import (
+            require_job_scoped_hbond_matches_result,
+        )
+
         try:
-            bundle = EvidenceBundle(**enriched_payload)
-        except (ContractValidationError, TypeError):
-            return None
+            require_job_scoped_hbond_matches_result(result_payload, scoped_hbond)
+        except ContractValidationError as exc:
+            raise JobIntegrityError(
+                "native H-bond evidence does not match the runner result"
+            ) from exc
+    if str(final_manifest.get("job_id") or "") != job_id:
+        raise JobIntegrityError("signed result manifest job binding mismatch")
+    if str(final_manifest.get("status") or "") != "completed":
+        raise JobIntegrityError("signed result manifest status binding mismatch")
+    if os.path.abspath(str(final_manifest.get("result_file") or "")) != os.path.abspath(
+        expected_result_file
+    ):
+        raise JobIntegrityError("signed result manifest file binding mismatch")
+    if str(final_manifest.get("result_file_sha256") or "").lower() != expected_result_sha256:
+        raise JobIntegrityError("signed result manifest result SHA-256 mismatch")
+    if str(final_manifest.get("request_sha256") or "").lower() != admission_hash:
+        raise JobIntegrityError("signed result manifest admission request mismatch")
+    if (
+        str(final_manifest.get("execution_request_sha256") or "").lower()
+        != execution_hash
+    ):
+        raise JobIntegrityError("signed result manifest execution request mismatch")
+    if str(final_manifest.get("execution_request_transform_id") or "") != transform_id:
+        raise JobIntegrityError("signed result manifest request transform mismatch")
+
+    enriched_payload = bundle.to_dict()
+    enriched_payload["result_manifest"] = final_manifest
+    enriched_payload["request_provenance"] = {
+        "admission_request_sha256": admission_hash,
+        "execution_request_sha256": execution_hash,
+        "execution_request_transform_id": transform_id,
+    }
+    scoped_hbond_payload = enriched_payload.get("job_scoped_hbond_evidence")
+    if isinstance(scoped_hbond_payload, dict) and scoped_hbond_payload:
+        from betelgeuze_ai_md.contracts.job_scoped_hbond import JobScopedHbondEvidence
+
+        scoped_hbond = JobScopedHbondEvidence(**scoped_hbond_payload)
+        enriched_payload["job_scoped_hbond_evidence"] = (
+            scoped_hbond.with_request_provenance(
+                admission_request_sha256=admission_hash,
+                execution_request_sha256=execution_hash,
+            ).to_dict()
+        )
+    try:
+        bundle = EvidenceBundle(**enriched_payload)
+    except (ContractValidationError, TypeError) as exc:
+        raise JobIntegrityError("native EvidenceBundle final binding is invalid") from exc
     final_path = Path(job_evidence_bundle_path(job_id))
     atomic_write_text_file(
         final_path,
-        json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
+        json.dumps(
+            bundle.to_dict(),
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
         + "\n",
     )
     return str(final_path), bundle.fingerprint()

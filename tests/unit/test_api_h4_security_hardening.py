@@ -1195,6 +1195,38 @@ def test_completed_artifacts_require_both_signed_request_bindings(
     assert getattr(rejected.value, "status_code", None) == 403
 
 
+def test_completed_artifacts_reject_relabelled_inner_bundle_manifest(
+    tmp_path: Path,
+) -> None:
+    from betelgeuze_ai_md.contracts import EvidenceBundle
+
+    record, status, root, signing_key, key_id, _ = _completed_fixture(tmp_path)
+    evidence_path = Path(record["evidence_bundle_path"])
+    payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+    payload["result_manifest"]["job_id"] = "job-replayed"
+    replayed = EvidenceBundle(**payload)
+    evidence_path.write_text(
+        json.dumps(replayed.to_dict(), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    replayed_sha256 = replayed.fingerprint()
+    record["evidence_bundle_sha256"] = replayed_sha256
+    status["evidence_bundle_sha256"] = replayed_sha256
+
+    with pytest.raises(Exception) as rejected:
+        verify_completed_result_artifacts(
+            job_id="job-artifacts",
+            record=record,
+            status_data=status,
+            result_root=root,
+            signing_key=signing_key,
+            expected_key_id=key_id,
+        )
+
+    assert getattr(rejected.value, "status_code", None) == 403
+    assert "result manifest binding mismatch" in str(rejected.value.detail)
+
+
 def _hosted_startup_settings() -> SimpleNamespace:
     return SimpleNamespace(
         product_api_auth_required=True,

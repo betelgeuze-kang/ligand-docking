@@ -93,6 +93,25 @@ def test_flatten_hbond_evidence_for_runner_emits_claim_boundary_fields():
     assert row["hbond_angle_pass_count"] >= 0
     assert isinstance(row["hbond_geometry_evaluated"], bool)
     assert isinstance(row["hbond_geometry_complete"], bool)
+    assert row["hbond_evidence"]["schema_version"] == "hbond_evidence_v1"
+    assert isinstance(row["hbond_evidence"]["donor_acceptor_pairs"], list)
+    assert len(row["hbond_evidence"]["donor_acceptor_pairs"]) == row["hbond_site_count"]
+
+
+def test_missing_hbond_geometry_emits_strict_json_null_distance() -> None:
+    row = mod._flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.zeros((0, 3), dtype=np.float32),
+        ligand_xyz=np.asarray(
+            [[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]],
+            dtype=np.float32,
+        ),
+    )
+
+    pairs = row["hbond_evidence"]["donor_acceptor_pairs"]
+    assert pairs
+    assert all(pair["nearest_distance"] is None for pair in pairs)
+    json.dumps({"topk": [row]}, allow_nan=False)
 
 
 def test_flatten_ligand_topology_for_runner_emits_product_validity_fields():

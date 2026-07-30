@@ -44,6 +44,14 @@ from api.validated_runner_runtime_qualification import (
 )
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
+from betelgeuze_ai_md.contracts.job_scoped_hbond import (
+    JobScopedHbondEvidence,
+    require_job_scoped_hbond_matches_result,
+)
+from betelgeuze_ai_md.contracts.serialization import (
+    parse_finite_json_float,
+    sha256_payload,
+)
 
 ALLOWED_RUNNER_SCRIPTS = {
     "tools/run_ligand_htvs_pipeline.py",
@@ -87,6 +95,10 @@ _SENSITIVE_ENV_NAME_PARTS = {
 }
 
 
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -103,15 +115,110 @@ def _write_status(job_id: str, payload: dict[str, Any]) -> None:
     path = _status_path(job_id)
     atomic_write_text_file(
         path,
-        json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n",
+        json.dumps(
+            payload,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n",
     )
 
 
 def _write_json_artifact(path: Path, payload: dict[str, Any]) -> None:
     atomic_write_text_file(
         path,
-        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        json.dumps(
+            payload,
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n",
     )
+
+
+def _validate_native_bundle_execution_binding(
+    bundle: EvidenceBundle,
+    *,
+    job_id: str,
+    request_payload: dict[str, Any],
+    result_file: Path,
+    result_file_sha256: str,
+    result_payload: dict[str, Any],
+) -> None:
+    expected_request_sha256 = sha256_payload(request_payload)
+    expected_result_path = Path(os.path.abspath(str(result_file)))
+    manifest = bundle.result_manifest
+    if bundle.bundle_id != f"api_{job_id}_evidence_bundle":
+        raise ContractValidationError("native EvidenceBundle bundle_id binding mismatch")
+    if str(manifest.get("job_id") or "") != job_id:
+        raise ContractValidationError("native EvidenceBundle job binding mismatch")
+    if str(manifest.get("status") or "") != "completed":
+        raise ContractValidationError("native EvidenceBundle status binding mismatch")
+    manifest_result = Path(
+        os.path.abspath(str(manifest.get("result_file") or ""))
+    )
+    if manifest_result != expected_result_path:
+        raise ContractValidationError("native EvidenceBundle result path binding mismatch")
+    if str(manifest.get("result_file_sha256") or "").lower() != result_file_sha256:
+        raise ContractValidationError("native EvidenceBundle result SHA-256 mismatch")
+    if str(manifest.get("request_sha256") or "").lower() != expected_request_sha256:
+        raise ContractValidationError("native EvidenceBundle request binding mismatch")
+    if (
+        str(
+            manifest.get("execution_request_sha256")
+            or manifest.get("request_sha256")
+            or ""
+        ).lower()
+        != expected_request_sha256
+    ):
+        raise ContractValidationError(
+            "native EvidenceBundle execution request binding mismatch"
+        )
+    if (
+        str(bundle.source_hashes.get("input_hash") or "").lower()
+        != expected_request_sha256
+    ):
+        raise ContractValidationError("native EvidenceBundle source input mismatch")
+    request_provenance = bundle.request_provenance
+    if (
+        str(request_provenance.get("admission_request_sha256") or "").lower()
+        != expected_request_sha256
+    ):
+        raise ContractValidationError(
+            "native EvidenceBundle admission provenance mismatch"
+        )
+    if (
+        str(request_provenance.get("execution_request_sha256") or "").lower()
+        != expected_request_sha256
+    ):
+        raise ContractValidationError(
+            "native EvidenceBundle execution provenance mismatch"
+        )
+    if (
+        str(request_provenance.get("execution_request_transform_id") or "")
+        != str(manifest.get("execution_request_transform_id") or "")
+    ):
+        raise ContractValidationError(
+            "native EvidenceBundle request transform provenance mismatch"
+        )
+    runner_metadata = manifest.get("runner_metadata")
+    runner_metadata = runner_metadata if isinstance(runner_metadata, dict) else {}
+    runner_kind = str(runner_metadata.get("runner_kind") or "")
+    scoped_hbond = bundle.job_scoped_hbond_evidence
+    hbond_required = runner_kind in {
+        "ligand_backmapping_scoring",
+        "ligand_htvs_pipeline",
+        "ligand_topk_delivery",
+    }
+    if hbond_required and not isinstance(scoped_hbond, JobScopedHbondEvidence):
+        raise ContractValidationError(
+            "native EvidenceBundle is missing job-scoped H-bond evidence"
+        )
+    if isinstance(scoped_hbond, JobScopedHbondEvidence):
+        require_job_scoped_hbond_matches_result(result_payload, scoped_hbond)
 
 
 def _safe_profile_id(profile_id: Any) -> str:
@@ -715,10 +822,11 @@ async def execute_validated_runner_profile(
     results_dir = _results_dir(job_id)
     results_dir.mkdir(parents=True, exist_ok=True)
     request_json_path = results_dir / "request.json"
+    runner_request_payload = sanitize_request_for_ledger(request_data)
     atomic_write_text_file(
         request_json_path,
         json.dumps(
-            sanitize_request_for_ledger(request_data),
+            runner_request_payload,
             sort_keys=True,
             ensure_ascii=False,
         )
@@ -869,6 +977,31 @@ async def execute_validated_runner_profile(
         result_file,
         results_dir=results_dir,
     )
+    result_payload: dict[str, Any] = {}
+    if result_file.suffix.lower() == ".json":
+        try:
+            pinned_result = _read_confined_result_bytes(
+                result_file,
+                results_dir=results_dir,
+                maximum_bytes=64 * 1024 * 1024,
+                label="validated runner result",
+            )
+            if hashlib.sha256(pinned_result).hexdigest() != result_file_sha256:
+                raise PermissionError(
+                    "validated runner result changed during binding verification"
+                )
+            parsed_result = json.loads(
+                pinned_result,
+                parse_constant=_reject_json_constant,
+                parse_float=parse_finite_json_float,
+            )
+        except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
+            raise PermissionError(
+                "validated runner JSON result is not valid"
+            ) from exc
+        if not isinstance(parsed_result, dict):
+            raise PermissionError("validated runner JSON result must be an object")
+        result_payload = parsed_result
 
     native_bundle_record: dict[str, str] = {}
     if has_evidence_bundle_template:
@@ -898,8 +1031,18 @@ async def execute_validated_runner_profile(
                 maximum_bytes=64 * 1024 * 1024,
                 label="validated runner native evidence bundle",
             )
-            raw_payload = json.loads(pinned_evidence)
-        except (OSError, PermissionError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raw_payload = json.loads(
+                pinned_evidence,
+                parse_constant=_reject_json_constant,
+                parse_float=parse_finite_json_float,
+            )
+        except (
+            OSError,
+            PermissionError,
+            UnicodeDecodeError,
+            ValueError,
+            json.JSONDecodeError,
+        ) as exc:
             error = (
                 f"validated_runner_native_evidence_bundle_not_json:{evidence_bundle_path_value}"
             )
@@ -939,6 +1082,14 @@ async def execute_validated_runner_profile(
             )
         try:
             bundle = EvidenceBundle(**raw_payload)
+            _validate_native_bundle_execution_binding(
+                bundle,
+                job_id=job_id,
+                request_payload=runner_request_payload,
+                result_file=result_file,
+                result_file_sha256=result_file_sha256,
+                result_payload=result_payload,
+            )
         except (ContractValidationError, TypeError) as exc:
             error = (
                 f"validated_runner_native_evidence_bundle_invalid:{exc}"

@@ -27,6 +27,11 @@ from api.validated_runner_runtime_qualification import (
 )
 from betelgeuze_ai_md.contracts import EvidenceBundle
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
+from betelgeuze_ai_md.contracts.job_scoped_hbond import (
+    JobScopedHbondEvidence,
+    require_job_scoped_hbond_matches_result,
+)
+from betelgeuze_ai_md.contracts.serialization import parse_finite_json_float
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -46,6 +51,10 @@ _ALLOWED_MEDIA_TYPES = {
     "application/zip",
     "application/octet-stream",
 }
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
 
 
 @dataclass
@@ -271,8 +280,12 @@ def _matching_sha256(status_value: object, record_value: object, *, label: str) 
 def _load_json_object(handle: BinaryIO, *, label: str) -> dict[str, Any]:
     try:
         handle.seek(0)
-        payload = json.load(handle)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        payload = json.load(
+            handle,
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
+    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError) as exc:
         raise _forbidden(f"{label} is not valid UTF-8 JSON") from exc
     if not isinstance(payload, dict):
         raise _forbidden(f"{label} root must be a JSON object")
@@ -618,6 +631,30 @@ def verify_completed_result_artifacts(
                 recorded_evidence_fingerprint,
             ):
                 raise _forbidden("evidence bundle fingerprint verification failed")
+            if evidence_bundle.bundle_id != f"api_{job_id}_evidence_bundle":
+                raise _forbidden("evidence bundle job identity mismatch")
+            if not _exact_json_value_matches(
+                evidence_bundle.result_manifest,
+                manifest,
+            ):
+                raise _forbidden("evidence bundle result manifest binding mismatch")
+            if isinstance(
+                evidence_bundle.job_scoped_hbond_evidence,
+                JobScopedHbondEvidence,
+            ):
+                result_payload = _load_json_object(
+                    result_handle,
+                    label="H-bond result binding source",
+                )
+                try:
+                    require_job_scoped_hbond_matches_result(
+                        result_payload,
+                        evidence_bundle.job_scoped_hbond_evidence,
+                    )
+                except ContractValidationError as exc:
+                    raise _forbidden(
+                        "job-scoped H-bond result binding mismatch"
+                    ) from exc
             evidence_input_hash = str(
                 evidence_bundle.source_hashes.get("input_hash", "") or ""
             ).lower()

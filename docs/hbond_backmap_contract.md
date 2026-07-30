@@ -77,8 +77,43 @@ summary with the product KPI:
   `evidence_tier = claim_safe`; render `evidence_only` rows distinctly with the
   `reason_code`.
 - Surface `claim_safe_rate` on the candidate table header as a quality signal.
-- Include the report rows in the delivery evidence bundle so reviewers can audit
-  which candidates had interpretable H-bond reconstruction.
+- Include the full evaluator payload for each ranked candidate in
+  `EvidenceBundle.job_scoped_hbond_evidence` so reviewers can audit the donor /
+  acceptor pairs, thresholds, geometry flags, and aggregate summary.
+
+## Job-scoped evidence contract
+
+`job_scoped_hbond_evidence_v1` is the only customer/job evidence envelope. Its
+scope is `job_hbond_candidate_set`, and it binds the full H-bond-evaluated
+candidate payload to:
+
+- the durable `job_id`,
+- admission and execution request SHA-256 fingerprints,
+- the exact runner result-file SHA-256,
+- the aggregate-summary hash,
+- each candidate payload hash and the canonical candidate-set hash, and
+- one canonical scope hash covering all of the above.
+
+For direct backmapping this set is the runner Top-K. For HTVS and Top-K parent
+runners it is copied into `hbond_evidence_candidates` with the child result
+hash. It is deliberately separate from `ranked_shortlist`: later physics,
+calibration, or ranking stages may change final ordering, and H-bond evidence
+must not be presented as that final shortlist.
+
+The native runner, worker adoption path, and artifact-serving path each verify
+these bindings. A mismatch is an integrity failure; evidence cannot be relabeled
+or replayed under another job. The native bundle is finalized with the same
+signed result manifest that is verified when artifacts are served.
+
+This is an intentional security cutoff. Native bundles created before this
+contract did not bind their embedded manifest to the final signed manifest and
+are not served through a compatibility bypass. Such jobs must be rerun to emit
+`job_scoped_hbond_evidence_v1`; old local files remain operator diagnostics only.
+
+The legacy `runs/hbond_backmap_report_current.json` artifact remains a local
+operator diagnostic only. It is not tenant-scoped, must not be used for a
+customer claim, delivery, or handoff, and its global API route must not return
+candidate rows.
 
 ## Out of scope
 

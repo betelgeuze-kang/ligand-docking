@@ -26,6 +26,7 @@ from betelgeuze_engine.product.selection_score_authority import (
     SelectionScoreAuthority,
     authority_from_summary_payload,
 )
+from betelgeuze_ai_md.contracts.serialization import parse_finite_json_float
 from betelgeuze_engine.product.implementation_provenance import (
     build_implementation_source_manifest,
     validate_implementation_source_manifest,
@@ -66,6 +67,10 @@ class _ExplicitArgumentParser(argparse.ArgumentParser):
                 explicit.add(str(action.dest))
         setattr(parsed, "_explicit_cli_dests", frozenset(explicit))
         return parsed
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
 
 
 def run_tier_beta_vertical_slice_compat(payload: dict[str, Any]) -> Any:
@@ -187,6 +192,46 @@ def _read_json_if_exists(path: str) -> Dict[str, Any]:
         return obj if isinstance(obj, dict) else {}
     except Exception:
         return {}
+
+
+def _read_json_with_sha256(path: str) -> tuple[Dict[str, Any], str]:
+    src = str(path).strip()
+    if not src:
+        return {}, ""
+    try:
+        with open(src, "rb") as handle:
+            raw = handle.read()
+        payload = json.loads(
+            raw,
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
+    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return {}, ""
+    return (
+        payload if isinstance(payload, dict) else {},
+        hashlib.sha256(raw).hexdigest(),
+    )
+
+
+def _stage3_hbond_evidence_fields(
+    stage3_summary: Dict[str, Any],
+    stage3_summary_json: str,
+    stage3_summary_sha256: str,
+) -> Dict[str, Any]:
+    summary = stage3_summary.get("hbond_evidence_summary")
+    topk = stage3_summary.get("topk")
+    if not isinstance(summary, dict) or not isinstance(topk, list):
+        return {}
+    return {
+        "hbond_evidence_summary": summary,
+        "hbond_evidence_candidates": topk,
+        "hbond_evidence_source": {
+            "source_kind": "htvs_stage3_backmapping_result",
+            "result_file": stage3_summary_json,
+            "result_file_sha256": stage3_summary_sha256,
+        },
+    }
 
 
 def _csv_rows_minus_header(path: str) -> int:
@@ -2946,7 +2991,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         return _finalize_and_write(out_prefix, payload, args)
 
     stage3_summary_json = f"{stage3_prefix}_summary.json"
-    stage3_summary_payload = _read_json_if_exists(stage3_summary_json)
+    stage3_summary_payload, stage3_summary_sha256 = _read_json_with_sha256(
+        stage3_summary_json
+    )
     try:
         stage3_selection_score_authority = SelectionScoreAuthority.from_mapping(
             authority_from_summary_payload(stage3_summary_payload),
@@ -4408,6 +4455,13 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             "summary_md": f"{out_prefix}_summary.md",
         },
     }
+    payload.update(
+        _stage3_hbond_evidence_fields(
+            stage3_summary_payload,
+            stage3_summary_json,
+            stage3_summary_sha256,
+        )
+    )
     contract_output = {"ok": True, "skipped": True, "errors": [], "warnings": []}
     if bool(args.enforce_data_contract):
         contract_output = _validate_data_contract_output(payload, str(args.data_contract_json))

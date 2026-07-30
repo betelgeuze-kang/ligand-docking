@@ -11,6 +11,7 @@ from betelgeuze_ai_md.contracts.claim_scope import (
 )
 from betelgeuze_ai_md.contracts.backmapping_adapter import build_backmapped_pose
 from betelgeuze_ai_md.contracts.interaction_adapter import build_interaction_report
+from betelgeuze_ai_md.contracts.job_scoped_hbond import JobScopedHbondEvidence
 from betelgeuze_ai_md.contracts.manifest import EvidenceBundle
 from betelgeuze_ai_md.contracts.output_schema import (
     AIResidualReport,
@@ -20,11 +21,18 @@ from betelgeuze_ai_md.contracts.output_schema import (
     TrajectorySummary,
     fail_closed_topology_report,
 )
-from betelgeuze_ai_md.contracts.serialization import sha256_payload
+from betelgeuze_ai_md.contracts.serialization import (
+    parse_finite_json_float,
+    sha256_payload,
+)
 from betelgeuze_ai_md.contracts.verdict_schema import Verdict
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
 
 
 def _text(value: Any) -> str:
@@ -44,8 +52,12 @@ def _read_json_object(path_like: str | Path) -> dict[str, Any]:
     if not path.exists() or not path.is_file():
         return {}
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
+    except (OSError, ValueError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
 
@@ -384,6 +396,9 @@ def _backmapped_poses(payload: dict[str, Any], result_manifest: dict[str, Any]) 
 
 
 def _interaction_report(payload: dict[str, Any]) -> InteractionReport:
+    scoped_hbond = _as_dict(payload.get("job_scoped_hbond_evidence"))
+    if scoped_hbond:
+        return JobScopedHbondEvidence(**scoped_hbond).to_interaction_report()
     raw = _as_dict(payload.get("interaction_report") or _summary(payload).get("interaction_report"))
     return build_interaction_report(raw)
 
@@ -444,13 +459,24 @@ def build_api_evidence_bundle(
     runner_execution = runner_execution if isinstance(runner_execution, dict) else {}
     status_payload = status_payload if isinstance(status_payload, dict) else {}
     status = _text(result_manifest.get("status") or status_payload.get("status"))
+    runner_metadata = _as_dict(result_manifest.get("runner_metadata"))
+    runner_kind = _text(runner_metadata.get("runner_kind"))
+    scoped_hbond = _as_dict(result_payload.get("job_scoped_hbond_evidence"))
+    if scoped_hbond:
+        JobScopedHbondEvidence(**scoped_hbond)
     failure_flags = []
     if status != "completed":
         failure_flags.append("api_job_not_completed")
     if not _as_list(result_payload.get("backmapped_poses")):
         failure_flags.append("backmapped_pose_contract_missing")
-    if not _as_dict(result_payload.get("interaction_report") or _summary(result_payload).get("interaction_report")):
+    if not scoped_hbond and not _as_dict(result_payload.get("interaction_report") or _summary(result_payload).get("interaction_report")):
         failure_flags.append("interaction_report_contract_missing")
+    if runner_kind in {
+        "ligand_backmapping_scoring",
+        "ligand_htvs_pipeline",
+        "ligand_topk_delivery",
+    } and not scoped_hbond:
+        failure_flags.append("job_scoped_hbond_evidence_missing")
     if not _as_dict(result_payload.get("topology_report") or _summary(result_payload).get("topology_report")):
         failure_flags.append("topology_report_contract_missing")
     failure_flags.append("delivery_bundle_validation_not_attached")
@@ -473,7 +499,12 @@ def build_api_evidence_bundle(
     return EvidenceBundle(
         bundle_id=f"api_{job_id}_evidence_bundle",
         project_id=_text(request.get("target_name") or request.get("target_id") or job_id),
-        ranked_shortlist=_as_list(result_payload.get("ranked_shortlist") or summary.get("ranked_shortlist")),
+        ranked_shortlist=_as_list(
+            result_payload.get("ranked_shortlist")
+            or summary.get("ranked_shortlist")
+            or result_payload.get("topk")
+            or summary.get("topk")
+        ),
         trajectory_summary=_trajectory_summary(result_payload),
         backmapped_poses=_backmapped_poses(result_payload, result_manifest),
         interaction_report=_interaction_report(result_payload),
@@ -500,6 +531,7 @@ def build_api_evidence_bundle(
                 result_manifest.get("execution_request_transform_id")
             ),
         },
+        job_scoped_hbond_evidence=scoped_hbond,
         claim_boundary=verdict.claim_boundary,
     )
 
@@ -524,5 +556,15 @@ def write_api_evidence_bundle(
     )
     path = Path(path_like)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(bundle.to_dict(), indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            bundle.to_dict(),
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     return bundle
