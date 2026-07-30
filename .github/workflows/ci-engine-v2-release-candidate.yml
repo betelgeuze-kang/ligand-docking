@@ -2,19 +2,6 @@ name: ci-engine-v2-release-candidate
 
 on:
   pull_request:
-    paths:
-      - "betelgeuze_engine_v2/**"
-      - "packaging/engine-v2/**"
-      - "rust_engine_v2/**"
-      - "tools/build_engine_v2_wheel.py"
-      - "tools/build_engine_v2_native_wheel.py"
-      - "tools/build_engine_v2_sbom.py"
-      - "tests/unit/test_engine_v2_release_candidate.py"
-      - "tests/unit/test_engine_v2_native_packaging.py"
-      - "tests/unit/test_engine_v2_scorer_v1_stage5.py"
-      - "CHANGELOG.md"
-      - "docs/engine_v2_0_2_0rc5.md"
-      - ".github/workflows/ci-engine-v2-release-candidate.yml"
   push:
     branches: ["main"]
     paths:

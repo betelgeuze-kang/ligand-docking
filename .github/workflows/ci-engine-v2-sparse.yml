@@ -3,11 +3,6 @@ name: ci-engine-v2-sparse
 
 on:
   pull_request:
-    paths:
-      - "betelgeuze_engine_v2/**"
-      - "tests/unit/test_engine_v2_contracts_molecular.py"
-      - "tests/unit/test_engine_v2_sparse_geometry_features.py"
-      - ".github/workflows/ci-engine-v2-sparse.yml"
   push:
     branches:
       - "agent/v2-b-sparse-geometry-features"

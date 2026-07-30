@@ -2,14 +2,6 @@ name: ci-engine-v2-package
 
 on:
   pull_request:
-    paths:
-      - "betelgeuze_engine_v2/**"
-      - "packaging/engine-v2/**"
-      - "tools/build_engine_v2_wheel.py"
-      - "tools/check_engine_v2_architecture.py"
-      - "tests/unit/test_engine_v2_packaging_guards.py"
-      - "docs/engine_v2_pr_overlap_matrix.md"
-      - ".github/workflows/ci-engine-v2-package.yml"
   push:
     branches: ["main"]
     paths:

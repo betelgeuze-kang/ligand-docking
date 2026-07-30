@@ -2,14 +2,6 @@ name: ci-engine-v2-orchestrator
 
 on:
   pull_request:
-    paths:
-      - "betelgeuze_engine_v2/**"
-      - "tests/unit/test_engine_v2_contracts_molecular.py"
-      - "tests/unit/test_engine_v2_sparse_geometry_features.py"
-      - "tests/unit/test_engine_v2_ai_core.py"
-      - "tests/unit/test_engine_v2_periodic_energy.py"
-      - "tests/unit/test_engine_v2_orchestrator_contract.py"
-      - ".github/workflows/ci-engine-v2-orchestrator.yml"
   push:
     branches:
       - "agent/v2-d-cpu-orchestrator"
