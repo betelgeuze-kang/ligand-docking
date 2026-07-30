@@ -319,8 +319,14 @@ cross-checks all seven proposed threshold values and both paired-baseline
 margins against that artifact; a generic literature note or unrelated file hash
 cannot satisfy the gate. Then copy
 `config/engine_v2_public_redocking_stage0_freeze.template.json`, bind the
-evidence path/SHA-256, and fill the remaining fields. Print the SHA-only host
-snapshot:
+evidence path/SHA-256, and fill the remaining fields. The solo policy builder
+constructs one self-hashed execution profile from the exact Scorer-v1
+development report and its current-source Engine V2 case receipts. Admission
+requires the exact analysis schema, at least eight scored contaminated cases,
+the complete typed 64-slot diagnostics, frozen materialization/input hashes,
+and a mechanically disjoint fresh cohort. The verifier reruns analyzer 1.2.0
+from those receipts and requires the entire report to match; a self-described
+report is rejected. Print the SHA-only host snapshot:
 
 ```bash
 python3 tools/verify_engine_v2_public_redocking_stage0.py \
@@ -404,13 +410,32 @@ Historical `engineering-smoke`, `contaminated-development`, and `all` subsets
 are development-only and cannot be promoted. The runner rejects
 `--case-subset primary-blind-holdout`. The only blind execution scope is
 `--case-subset fresh-internal-blind-holdout`; it requires `--stage0-policy` and
-`--engine-v2-scorer-backend rust_cpu_required`. The policy is verified before
-output creation and again before report materialization. The fresh 128 has not
-been executed, and the active refiner is V7. Product promotion and public
-claims remain false. Historical partial summaries created with `--limit`
-remain non-claimable and cannot later be promoted by cache reuse. Every
-partial-summary filename includes a digest of the exact
-ordered case selection, so equal-length slices cannot overwrite one another.
+the exact frozen seed, timeout, bootstrap count, and Rust CPU scorer:
+
+```bash
+python3 tools/run_engine_v2_public_redocking_300.py \
+  --archive /path/to/fresh-128-archive \
+  --source-identifiers /path/to/frozen-source-identifiers \
+  --gnina /path/to/gnina \
+  --stage0-policy /path/to/stage0-freeze.json \
+  --output-root .betelgeuze/fresh-redocking-128 \
+  --case-subset fresh-internal-blind-holdout \
+  --engine-v2-scorer-backend rust_cpu_required \
+  --seed 2026073000 \
+  --timeout-seconds 300 \
+  --bootstrap-samples 2000 \
+  --start-index 0 \
+  --limit 0
+```
+
+Argument drift is rejected before output creation. The policy is verified
+again before report materialization, and its execution-profile SHA-256 must be
+present in every case receipt and the complete 384-row internal report ledger.
+The fresh 128 has not been executed, and the active refiner is V7. Product
+promotion and public claims remain false. Historical partial summaries created
+with `--limit` remain non-claimable and cannot later be promoted by cache reuse.
+Every partial-summary filename includes a digest of the exact ordered case
+selection, so equal-length slices cannot overwrite one another.
 
 For backward report-schema compatibility, historical 300-case reports and
 partial summaries may still serialize `primary_blind_holdout` or

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 import hashlib
 from importlib import metadata
@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import runpy
 import shutil
 import subprocess
 import sys
@@ -25,12 +26,32 @@ from betelgeuze_engine_v2.docking.torsion_contact_refinement import (
 )
 
 from .public_redocking_benchmark import (
+    FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS,
+    PUBLIC_REDOCKING_ARCHIVE_SHA256,
+    PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256,
+    PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
+    PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256,
+    PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES,
+    PUBLIC_REDOCKING_DEFAULT_CONFIDENCE_LEVEL,
+    PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
+    PUBLIC_REDOCKING_RMSD_THRESHOLD_ANGSTROM,
     PUBLIC_REDOCKING_RUNNER_ID,
+    PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
+    PUBLIC_REDOCKING_TOP_KS,
+    PublicRedockingBenchmarkError,
+    PublicRedockingCaseResult,
+    PublicRedockingEngineV2CandidateDiagnostic,
+    PublicRedockingEngineV2Diagnostics,
+    _execution_policy_mapping,
+    _validate_engine_v2_result_diagnostics,
+    frozen_public_redocking_case_seed,
+    frozen_public_redocking_materialization_receipt_sha256,
 )
+from .fresh_redocking_holdout import FRESH_REDOCKING_HOLDOUT_SEED_BASE
 
 
 STAGE0_SCHEMA_VERSION = 1
@@ -45,6 +66,17 @@ STAGE0_ENGINE_ROW_COUNT = 384
 STAGE0_CANDIDATE_DIAGNOSTIC_SLOT_COUNT = 8_192
 STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA = "3935a1fa8f0a8f82c78f50c416db46a87abd319e"
 STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID = PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID
+STAGE0_EXECUTION_PROFILE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_fresh_redocking_execution_profile/1.0.0"
+)
+STAGE0_EXECUTION_PROFILE_ID = (
+    "betelgeuze.engine_v2_fresh_redocking_execution_profile_v1/1.0.0"
+)
+STAGE0_EXTERNAL_TIMEOUT_SECONDS = 300
+STAGE0_DEVELOPMENT_ANALYSIS_SCHEMA_ID = (
+    "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
+)
+STAGE0_DEVELOPMENT_MINIMUM_SCORED_CASE_COUNT = 8
 
 _REQUIRED_THRESHOLDS = {
     "preparation_input_unsupported_rate": "max",
@@ -158,6 +190,7 @@ class VerifiedStage0Admission:
 
     policy_sha256: str
     source_freeze_sha256: str
+    execution_profile_sha256: str
     reviewer_id: str
     operator_id: str
     governance_mode: str
@@ -232,6 +265,80 @@ def compute_stage0_review_subject_sha256(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(_canonical_bytes(subject)).hexdigest()
 
 
+def compute_stage0_execution_profile_sha256(payload: Mapping[str, Any]) -> str:
+    """Return the canonical self-hash for one frozen execution profile."""
+
+    unhashed = dict(payload)
+    unhashed.pop("profile_sha256", None)
+    return hashlib.sha256(_canonical_bytes(unhashed)).hexdigest()
+
+
+def stage0_engine_implementation_sha256(
+    repo_root: Path,
+    *,
+    runner_path: Path | None = None,
+) -> str:
+    """Hash the exact Engine V2 implementation closure used by receipts."""
+
+    package_root = repo_root / "betelgeuze_engine_v2"
+    active_runner = (
+        repo_root / "tools/run_engine_v2_public_redocking_300.py"
+        if runner_path is None
+        else runner_path
+    )
+    native_paths = tuple(
+        repo_root / relative_path
+        for relative_path in (
+            "rust_engine_v2/Cargo.toml",
+            "rust_engine_v2/Cargo.lock",
+            "rust_engine_v2/build.rs",
+            "rust_engine_v2/pyproject.toml",
+            "rust_engine_v2/src/lib.rs",
+        )
+    )
+    paths = tuple(sorted(package_root.rglob("*.py"))) + native_paths + (active_runner,)
+    if not paths or any(not path.is_file() for path in paths):
+        raise ValueError("engine_source_closure_incomplete")
+    projection = [
+        (path.relative_to(repo_root).as_posix(), _sha256_path(path)) for path in paths
+    ]
+    return hashlib.sha256(_canonical_bytes(projection)).hexdigest()
+
+
+def stage0_recompute_development_report(
+    *,
+    repo_root: Path,
+    results: list[Mapping[str, Any]],
+    source_receipts_sha256: Mapping[str, str],
+) -> dict[str, object]:
+    """Run the source-frozen analyzer without relying on a `tools` package."""
+
+    analyzer_path = (repo_root / "tools/analyze_engine_v2_score_terms.py").resolve()
+    try:
+        analyzer_path.relative_to(repo_root.resolve())
+    except ValueError as exc:
+        raise ValueError("development_analyzer_path_invalid") from exc
+    if not analyzer_path.is_file():
+        raise ValueError("development_analyzer_missing")
+    try:
+        namespace = runpy.run_path(
+            str(analyzer_path),
+            run_name="_stage0_analyze_engine_v2_score_terms",
+        )
+        analyze_results = namespace.get("analyze_results")
+        if not callable(analyze_results):
+            raise ValueError("development_analyzer_entrypoint_missing")
+        report = analyze_results(
+            results,
+            source_receipts_sha256=source_receipts_sha256,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        raise ValueError("development_analyzer_execution_failed") from exc
+    if not isinstance(report, dict):
+        raise ValueError("development_analyzer_result_invalid")
+    return report
+
+
 def _text(value: object) -> str:
     return value.strip() if isinstance(value, str) else ""
 
@@ -273,6 +380,152 @@ def stage0_engine_v2_algorithm_profile() -> dict[str, object]:
             "maximum_exclusive": True,
             "result_independent": True,
         },
+    }
+
+
+def stage0_fresh_execution_runtime_arguments() -> dict[str, object]:
+    """Return the exact CLI/runtime knobs admitted for the fresh holdout."""
+
+    return {
+        "bootstrap_samples": PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES,
+        "case_subset": "fresh-internal-blind-holdout",
+        "engine_v2_scorer_backend": "rust_cpu_required",
+        "external_timeout_seconds": STAGE0_EXTERNAL_TIMEOUT_SECONDS,
+        "limit": 0,
+        "seed": FRESH_REDOCKING_HOLDOUT_SEED_BASE,
+        "start_index": 0,
+    }
+
+
+def stage0_fresh_execution_profile(
+    development_provenance: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build the one development-provenanced, result-independent profile."""
+
+    algorithm_profile = stage0_engine_v2_algorithm_profile()
+    profile: dict[str, object] = {
+        "schema_id": STAGE0_EXECUTION_PROFILE_SCHEMA_ID,
+        "profile_id": STAGE0_EXECUTION_PROFILE_ID,
+        "algorithm_profile_id": STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+        "algorithm_profile_sha256": hashlib.sha256(
+            _canonical_bytes(algorithm_profile)
+        ).hexdigest(),
+        "candidate_budget": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
+        "retained_pose_count": 5,
+        "runtime_arguments": stage0_fresh_execution_runtime_arguments(),
+        "evaluation_policy": {
+            "bootstrap_samples": PUBLIC_REDOCKING_DEFAULT_BOOTSTRAP_SAMPLES,
+            "bootstrap_seed": FRESH_REDOCKING_HOLDOUT_SEED_BASE,
+            "confidence_level_binary64_hex": (
+                float(PUBLIC_REDOCKING_DEFAULT_CONFIDENCE_LEVEL).hex()
+            ),
+            "cpu_count": 1,
+            "external_timeout_seconds": STAGE0_EXTERNAL_TIMEOUT_SECONDS,
+            "ranked_pose_count": 5,
+            "rmsd_threshold_angstrom_binary64_hex": (
+                float(PUBLIC_REDOCKING_RMSD_THRESHOLD_ANGSTROM).hex()
+            ),
+            "top_ks": list(PUBLIC_REDOCKING_TOP_KS),
+        },
+        "resource_policy": {
+            "native_thread_count": 1,
+            "scorer_thread_count": 1,
+            "torch_interop_threads": 1,
+            "torch_intraop_threads": 1,
+        },
+        "development_provenance": dict(development_provenance),
+        "result_independent_runtime": True,
+    }
+    profile["profile_sha256"] = compute_stage0_execution_profile_sha256(profile)
+    return profile
+
+
+def stage0_execution_profile_development_provenance(
+    *,
+    development_report_path: str,
+    development_report_file_sha256: str,
+    development_report_sha256: str,
+    case_ids: list[str],
+    scored_case_count: int,
+    source_receipt_binding: Mapping[str, Any],
+) -> dict[str, object]:
+    """Bind reviewed historical-development evidence without opening fresh results."""
+
+    ordered_case_ids = sorted(str(case_id) for case_id in case_ids)
+    if (
+        not ordered_case_ids
+        or len(set(ordered_case_ids)) != len(ordered_case_ids)
+        or type(scored_case_count) is not int
+        or not STAGE0_DEVELOPMENT_MINIMUM_SCORED_CASE_COUNT
+        <= scored_case_count
+        <= len(ordered_case_ids)
+        or not set(ordered_case_ids).issubset(
+            PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+        )
+        or bool(
+            set(ordered_case_ids)
+            & set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS)
+        )
+    ):
+        raise ValueError("development execution-profile evidence is incomplete")
+    expected_receipt_binding = {
+        "development_engine_implementation_sha256": _text(
+            source_receipt_binding.get("development_engine_implementation_sha256")
+        ),
+        "development_runner_id": _text(
+            source_receipt_binding.get("development_runner_id")
+        ),
+        "development_source_receipt_count": source_receipt_binding.get(
+            "development_source_receipt_count"
+        ),
+        "development_source_receipts_sha256": _text(
+            source_receipt_binding.get("development_source_receipts_sha256")
+        ),
+    }
+    if (
+        dict(source_receipt_binding) != expected_receipt_binding
+        or not _is_sha256(
+            expected_receipt_binding["development_engine_implementation_sha256"]
+        )
+        or expected_receipt_binding["development_runner_id"]
+        != PUBLIC_REDOCKING_RUNNER_ID
+        or expected_receipt_binding["development_source_receipt_count"]
+        != len(ordered_case_ids)
+        or not _is_sha256(
+            expected_receipt_binding["development_source_receipts_sha256"]
+        )
+    ):
+        raise ValueError("development execution-profile receipts are incomplete")
+    return {
+        "analysis_scope": "historical_contaminated_development_only",
+        "case_count": len(ordered_case_ids),
+        "case_ids_sha256": hashlib.sha256(
+            _canonical_bytes(ordered_case_ids)
+        ).hexdigest(),
+        "contains_fresh_internal_blind_holdout": False,
+        "contaminated_development_case_count": len(
+            PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
+        ),
+        "contaminated_development_case_ids_sha256": hashlib.sha256(
+            _canonical_bytes(
+                list(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+            )
+        ).hexdigest(),
+        "contamination_registry_sha256": (
+            PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256
+        ),
+        "development_fresh_overlap_count": 0,
+        "development_report_file_sha256": development_report_file_sha256,
+        "development_report_path": development_report_path,
+        "development_report_sha256": development_report_sha256,
+        **expected_receipt_binding,
+        "fresh_internal_blind_case_count": len(
+            FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS
+        ),
+        "fresh_internal_blind_case_ids_sha256": hashlib.sha256(
+            _canonical_bytes(list(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS))
+        ).hexdigest(),
+        "scored_case_count": scored_case_count,
     }
 
 
@@ -371,6 +624,340 @@ def _resolve_repo_file(repo_root: Path, relative_path: object) -> Path | None:
     except ValueError:
         return None
     return candidate
+
+
+def _typed_development_result(value: object) -> PublicRedockingCaseResult:
+    raw_result = _mapping(value)
+    raw_diagnostics = _mapping(raw_result.get("engine_v2_diagnostics"))
+    raw_candidates = raw_diagnostics.get("candidates")
+    if not raw_result or not raw_diagnostics or not isinstance(raw_candidates, list):
+        raise ValueError("development_source_result_schema_invalid")
+    try:
+        candidate_field_names = tuple(
+            field.name
+            for field in fields(PublicRedockingEngineV2CandidateDiagnostic)
+            if field.init
+        )
+        candidates = tuple(
+            PublicRedockingEngineV2CandidateDiagnostic(
+                **{
+                    name: _mapping(raw_candidate)[name]
+                    for name in candidate_field_names
+                }
+            )
+            for raw_candidate in raw_candidates
+        )
+        if [candidate.to_dict() for candidate in candidates] != raw_candidates:
+            raise ValueError("development_source_candidate_schema_invalid")
+        diagnostic_kwargs = {
+            field.name: raw_diagnostics[field.name]
+            for field in fields(PublicRedockingEngineV2Diagnostics)
+            if field.init and field.name != "candidates"
+        }
+        typed_diagnostics = PublicRedockingEngineV2Diagnostics(
+            **diagnostic_kwargs,
+            candidates=candidates,
+        )
+        if typed_diagnostics.to_dict() != dict(raw_diagnostics):
+            raise ValueError("development_source_diagnostic_schema_invalid")
+        result_kwargs = {
+            field.name: raw_result[field.name]
+            for field in fields(PublicRedockingCaseResult)
+            if field.init and field.name != "engine_v2_diagnostics"
+        }
+        typed_result = PublicRedockingCaseResult(
+            **result_kwargs,
+            engine_v2_diagnostics=typed_diagnostics,
+        )
+        _validate_engine_v2_result_diagnostics(typed_result)
+        if typed_result.to_dict() != dict(raw_result):
+            raise ValueError("development_source_result_projection_invalid")
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+        PublicRedockingBenchmarkError,
+    ) as exc:
+        raise ValueError("development_source_result_schema_invalid") from exc
+    return typed_result
+
+
+def _development_materialization_binding(
+    execution_receipt_path: Path,
+    *,
+    case_id: str,
+) -> tuple[dict[str, str], str]:
+    if (
+        execution_receipt_path.name != f"{case_id}.json"
+        or execution_receipt_path.parent.name != "engine_v2"
+        or execution_receipt_path.parent.parent.name != "receipts"
+    ):
+        raise ValueError("development_source_receipt_path_cross_wired")
+    materialization_path = (
+        execution_receipt_path.parent.parent
+        / "materializations"
+        / f"{case_id}.json"
+    )
+    materialization = _read_json_object(materialization_path)
+    required_fields = {
+        "schema_id",
+        "case_id",
+        "frozen_case_seed",
+        "source_archive_sha256",
+        "archive_members",
+        "artifact_sha256s",
+        "hash_verified_archive",
+        "receipt_sha256",
+    }
+    if set(materialization) != required_fields:
+        raise ValueError("development_materialization_schema_invalid")
+    if materialization_path.read_bytes() != _canonical_bytes(materialization) + b"\n":
+        raise ValueError("development_materialization_not_canonical")
+    projection = dict(materialization)
+    observed_receipt_sha256 = projection.pop("receipt_sha256", None)
+    try:
+        expected_receipt_sha256 = hashlib.sha256(
+            _canonical_bytes(projection)
+        ).hexdigest()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("development_materialization_not_canonical") from exc
+    if (
+        observed_receipt_sha256 != expected_receipt_sha256
+        or observed_receipt_sha256
+        != frozen_public_redocking_materialization_receipt_sha256(case_id)
+        or materialization.get("schema_id")
+        != PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID
+        or materialization.get("case_id") != case_id
+        or materialization.get("frozen_case_seed")
+        != frozen_public_redocking_case_seed(case_id)
+        or materialization.get("source_archive_sha256")
+        != PUBLIC_REDOCKING_ARCHIVE_SHA256
+        or materialization.get("hash_verified_archive") is not True
+    ):
+        raise ValueError("development_materialization_identity_invalid")
+    artifact_filenames = (
+        "protein.pdb",
+        "ligands.sdf",
+        "ligand.sdf",
+        "ligand_start_conf.sdf",
+    )
+    expected_members = {
+        filename: f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+        for filename in artifact_filenames
+    }
+    if _mapping(materialization.get("archive_members")) != expected_members:
+        raise ValueError("development_materialization_members_cross_wired")
+    artifacts = _mapping(materialization.get("artifact_sha256s"))
+    if set(artifacts) != set(artifact_filenames) or any(
+        not _is_sha256(artifacts.get(filename)) for filename in artifact_filenames
+    ):
+        raise ValueError("development_materialization_artifacts_invalid")
+    return (
+        {
+            "receptor": _text(artifacts["protein.pdb"]),
+            "reference": _text(artifacts["ligands.sdf"]),
+            "native": _text(artifacts["ligand.sdf"]),
+            "seed": _text(artifacts["ligand_start_conf.sdf"]),
+        },
+        _text(observed_receipt_sha256),
+    )
+
+
+def stage0_development_source_receipt_binding(
+    development_report: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, object]:
+    """Authenticate the development report against exact current-source receipts."""
+
+    if development_report.get("schema_id") != STAGE0_DEVELOPMENT_ANALYSIS_SCHEMA_ID:
+        raise ValueError("development_report_schema_invalid")
+    raw_case_ids = development_report.get("case_ids")
+    if (
+        not isinstance(raw_case_ids, list)
+        or any(not isinstance(case_id, str) for case_id in raw_case_ids)
+        or raw_case_ids != sorted(set(raw_case_ids))
+    ):
+        raise ValueError("development_report_case_ids_invalid")
+    case_ids = list(raw_case_ids)
+    development_cases = set(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+    fresh_cases = set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS)
+    if not set(case_ids).issubset(development_cases) or set(case_ids) & fresh_cases:
+        raise ValueError("development_report_cohort_invalid")
+
+    raw_sources = development_report.get("source_receipts_sha256")
+    if not isinstance(raw_sources, Mapping) or not raw_sources:
+        raise ValueError("development_source_receipts_missing")
+    source_receipts: dict[str, str] = {}
+    for raw_path, raw_sha256 in raw_sources.items():
+        if not isinstance(raw_path, str) or not _is_sha256(raw_sha256):
+            raise ValueError("development_source_receipt_map_invalid")
+        source_receipts[raw_path] = _text(raw_sha256)
+
+    current_implementation_sha256 = stage0_engine_implementation_sha256(repo_root)
+    receipt_case_ids: set[str] = set()
+    receipt_results: list[dict[str, object]] = []
+    required_execution_policy = {
+        "algorithm_profile_id": STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID,
+        "candidate_schema_id": PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+        "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
+    }
+    required_receipt_fields = {
+        "schema_id",
+        "runner_id",
+        "archive_sha256",
+        "source_ids_sha256",
+        "command",
+        "execution_policy",
+        "input_sha256s",
+        "materialization_receipt_sha256",
+        "implementation_sha256",
+        "evaluation_pipeline_sha256",
+        "execution_environment_sha256",
+        "cache_read_allowed",
+        "fresh_execution",
+        "result",
+        "receipt_sha256",
+    }
+    for relative_path, expected_file_sha256 in sorted(source_receipts.items()):
+        path = _resolve_repo_file(repo_root, relative_path)
+        if path is None or not path.is_file():
+            raise ValueError("development_source_receipt_missing")
+        if _sha256_path(path) != expected_file_sha256:
+            raise ValueError("development_source_receipt_file_hash_mismatch")
+        receipt = _read_json_object(path)
+        if set(receipt) != required_receipt_fields:
+            raise ValueError("development_source_receipt_schema_invalid")
+        if path.read_bytes() != _canonical_bytes(receipt) + b"\n":
+            raise ValueError("development_source_receipt_not_canonical")
+        receipt_projection = dict(receipt)
+        observed_receipt_sha256 = receipt_projection.pop("receipt_sha256", None)
+        try:
+            expected_receipt_sha256 = hashlib.sha256(
+                _canonical_bytes(receipt_projection)
+            ).hexdigest()
+        except (TypeError, ValueError) as exc:
+            raise ValueError("development_source_receipt_not_canonical") from exc
+        if observed_receipt_sha256 != expected_receipt_sha256:
+            raise ValueError("development_source_receipt_self_hash_invalid")
+        typed_result = _typed_development_result(receipt.get("result"))
+        case_id = typed_result.case_id
+        if (
+            typed_result.engine_id != "engine_v2"
+            or case_id in receipt_case_ids
+            or case_id not in case_ids
+        ):
+            raise ValueError("development_source_receipt_case_invalid")
+        command = list(typed_result.execution_command)
+        execution_policy = _execution_policy_mapping(
+            typed_result.execution_policy
+        )
+        required_command_options = (
+            "--case-id",
+            "--receptor",
+            "--ligand",
+            "--pocket-source",
+            "--candidate-count",
+            "--cpu",
+            "--scorer-backend",
+            "--seed",
+            "--out",
+        )
+        try:
+            required_command_values = {
+                option: command[command.index(option) + 1]
+                for option in required_command_options
+                if command.count(option) == 1
+            }
+        except (IndexError, ValueError) as exc:
+            raise ValueError("development_source_receipt_command_invalid") from exc
+        if (
+            set(required_command_values)
+            != set(required_command_options)
+            or command[:2] != [PUBLIC_REDOCKING_RUNNER_ID, "engine_v2"]
+            or required_command_values["--case-id"] != case_id
+            or Path(required_command_values["--receptor"]).name
+            != f"{case_id}_protein.pdb"
+            or Path(required_command_values["--ligand"]).name
+            != f"{case_id}_ligand_start_conf.sdf"
+            or Path(required_command_values["--pocket-source"]).name
+            != f"{case_id}_ligand.sdf"
+            or required_command_values["--candidate-count"]
+            != str(PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT)
+            or required_command_values["--cpu"] != "1"
+            or required_command_values["--scorer-backend"]
+            != execution_policy.get("scorer_backend")
+            or required_command_values["--seed"]
+            != str(frozen_public_redocking_case_seed(case_id))
+            or Path(required_command_values["--out"]).name != f"{case_id}.sdf"
+            or Path(required_command_values["--out"]).parent.name != "engine_v2"
+        ):
+            raise ValueError("development_source_receipt_command_invalid")
+        if any(
+            execution_policy.get(name) != expected
+            for name, expected in required_execution_policy.items()
+        ):
+            raise ValueError("development_source_receipt_policy_invalid")
+        expected_inputs, materialization_receipt_sha256 = (
+            _development_materialization_binding(path, case_id=case_id)
+        )
+        result_inputs = {
+            "receptor": typed_result.receptor_artifact_sha256,
+            "reference": typed_result.reference_artifact_sha256,
+            "native": typed_result.native_artifact_sha256,
+            "seed": typed_result.seed_artifact_sha256,
+        }
+        if (
+            receipt.get("schema_id") != PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID
+            or receipt.get("runner_id") != PUBLIC_REDOCKING_RUNNER_ID
+            or receipt.get("archive_sha256") != PUBLIC_REDOCKING_ARCHIVE_SHA256
+            or receipt.get("source_ids_sha256")
+            != PUBLIC_REDOCKING_SOURCE_IDS_SHA256
+            or receipt.get("command") != command
+            or _mapping(receipt.get("execution_policy")) != execution_policy
+            or _mapping(receipt.get("input_sha256s")) != expected_inputs
+            or result_inputs != expected_inputs
+            or receipt.get("materialization_receipt_sha256")
+            != materialization_receipt_sha256
+            or receipt.get("implementation_sha256")
+            != current_implementation_sha256
+            or not _is_sha256(receipt.get("evaluation_pipeline_sha256"))
+            or not _is_sha256(receipt.get("execution_environment_sha256"))
+            or receipt.get("fresh_execution") is not True
+            or receipt.get("cache_read_allowed") is not False
+        ):
+            raise ValueError("development_source_receipt_identity_invalid")
+        receipt_case_ids.add(case_id)
+        receipt_results.append(typed_result.to_dict())
+
+    if sorted(receipt_case_ids) != case_ids:
+        raise ValueError("development_source_receipt_cases_cross_wired")
+    try:
+        recomputed_report = stage0_recompute_development_report(
+            repo_root=repo_root,
+            results=receipt_results,
+            source_receipts_sha256=source_receipts,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        raise ValueError("development_report_recomputation_failed") from exc
+    if dict(development_report) != recomputed_report:
+        raise ValueError("development_report_recomputation_mismatch")
+    if (
+        development_report.get("scored_case_count", 0)
+        < STAGE0_DEVELOPMENT_MINIMUM_SCORED_CASE_COUNT
+        or development_report.get("sufficient_for_track_decision") is not True
+    ):
+        raise ValueError("development_source_receipt_counts_invalid")
+    return {
+        "development_engine_implementation_sha256": (
+            current_implementation_sha256
+        ),
+        "development_runner_id": PUBLIC_REDOCKING_RUNNER_ID,
+        "development_source_receipt_count": len(source_receipts),
+        "development_source_receipts_sha256": hashlib.sha256(
+            _canonical_bytes(dict(sorted(source_receipts.items())))
+        ).hexdigest(),
+    }
 
 
 def _git(repo_root: Path, *arguments: str) -> tuple[int, str]:
@@ -582,9 +1169,142 @@ def _validate_contamination_registry(repo_root: Path, blockers: list[str]) -> No
         blockers.append(f"fresh_holdout_manifest_invalid:{type(exc).__name__}")
 
 
+def _validate_execution_profile(
+    source_freeze: Mapping[str, Any],
+    repo_root: Path,
+    blockers: list[str],
+) -> str:
+    profile = _mapping(source_freeze.get("execution_profile"))
+    observed_profile_sha256 = _text(profile.get("profile_sha256"))
+    if not _is_sha256(observed_profile_sha256):
+        blockers.append("execution_profile_sha256_invalid")
+    else:
+        try:
+            expected_profile_sha256 = compute_stage0_execution_profile_sha256(
+                profile
+            )
+        except (TypeError, ValueError):
+            blockers.append("execution_profile_not_canonical_json")
+        else:
+            if observed_profile_sha256 != expected_profile_sha256:
+                blockers.append("execution_profile_self_hash_mismatch")
+
+    provenance = _mapping(profile.get("development_provenance"))
+    report_path = _resolve_repo_file(
+        repo_root,
+        provenance.get("development_report_path"),
+    )
+    report: Mapping[str, Any] = {}
+    if report_path is None or not report_path.is_file():
+        blockers.append("execution_profile_development_report_missing")
+    else:
+        actual_file_sha256 = _sha256_path(report_path)
+        if provenance.get("development_report_file_sha256") != actual_file_sha256:
+            blockers.append("execution_profile_development_report_file_hash_mismatch")
+        report = _read_json_object(report_path)
+        try:
+            report_is_canonical = (
+                report_path.read_bytes() == _canonical_bytes(report) + b"\n"
+            )
+        except (OSError, TypeError, ValueError):
+            report_is_canonical = False
+        if not report_is_canonical:
+            blockers.append("execution_profile_development_report_not_canonical")
+        report_projection = dict(report)
+        observed_report_sha256 = report_projection.pop("report_sha256", None)
+        try:
+            expected_report_sha256 = hashlib.sha256(
+                _canonical_bytes(report_projection)
+            ).hexdigest()
+        except (TypeError, ValueError):
+            expected_report_sha256 = ""
+        if observed_report_sha256 != expected_report_sha256:
+            blockers.append("execution_profile_development_report_self_hash_invalid")
+        if provenance.get("development_report_sha256") != observed_report_sha256:
+            blockers.append("execution_profile_development_report_hash_mismatch")
+        if report.get("schema_id") != STAGE0_DEVELOPMENT_ANALYSIS_SCHEMA_ID:
+            blockers.append("execution_profile_development_report_schema_invalid")
+        if report.get("analysis_scope") != (
+            "historical_contaminated_development_only"
+        ):
+            blockers.append("execution_profile_development_scope_invalid")
+        if report.get("contains_fresh_internal_blind_holdout") is not False:
+            blockers.append("execution_profile_development_contains_fresh_holdout")
+        if report.get("claimable") is not False:
+            blockers.append("execution_profile_development_claim_boundary_invalid")
+        if report.get("sufficient_for_track_decision") is not True:
+            blockers.append("execution_profile_development_evidence_insufficient")
+
+    raw_case_ids = report.get("case_ids")
+    case_ids = (
+        [str(case_id) for case_id in raw_case_ids]
+        if isinstance(raw_case_ids, list)
+        else []
+    )
+    if not case_ids or case_ids != sorted(set(case_ids)):
+        blockers.append("execution_profile_development_case_ids_invalid")
+    development_cases = set(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+    fresh_cases = set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS)
+    if not set(case_ids).issubset(development_cases):
+        blockers.append("execution_profile_development_case_outside_corpus")
+    if set(case_ids) & fresh_cases:
+        blockers.append("execution_profile_development_fresh_overlap")
+    scored_case_count = report.get("scored_case_count")
+    if (
+        type(report.get("case_count")) is not int
+        or report.get("case_count") != len(case_ids)
+        or type(scored_case_count) is not int
+        or not STAGE0_DEVELOPMENT_MINIMUM_SCORED_CASE_COUNT
+        <= scored_case_count
+        <= len(case_ids)
+    ):
+        blockers.append("execution_profile_development_counts_invalid")
+
+    try:
+        source_receipt_binding = stage0_development_source_receipt_binding(
+            report,
+            repo_root=repo_root,
+        )
+    except (OSError, ValueError) as exc:
+        source_receipt_binding = {}
+        blockers.append(
+            "execution_profile_development_source_receipts_invalid:"
+            f"{exc}"
+        )
+
+    try:
+        expected_provenance = stage0_execution_profile_development_provenance(
+            development_report_path=_text(
+                provenance.get("development_report_path")
+            ),
+            development_report_file_sha256=_text(
+                provenance.get("development_report_file_sha256")
+            ),
+            development_report_sha256=_text(
+                provenance.get("development_report_sha256")
+            ),
+            case_ids=case_ids,
+            scored_case_count=(
+                scored_case_count if type(scored_case_count) is int else 0
+            ),
+            source_receipt_binding=source_receipt_binding,
+        )
+    except ValueError:
+        expected_provenance = {}
+    if dict(provenance) != expected_provenance:
+        blockers.append("execution_profile_development_provenance_mismatch")
+    try:
+        expected_profile = stage0_fresh_execution_profile(provenance)
+    except (TypeError, ValueError):
+        expected_profile = {}
+    if dict(profile) != expected_profile:
+        blockers.append("execution_profile_contract_mismatch")
+    return observed_profile_sha256 if _is_sha256(observed_profile_sha256) else ""
+
+
 def _validate_source_freeze(
     payload: Mapping[str, Any], repo_root: Path, blockers: list[str]
-) -> str:
+) -> tuple[str, str]:
     source_freeze = _mapping(payload.get("source_freeze"))
     algorithm_profile = _mapping(source_freeze.get("algorithm_profile"))
     expected_algorithm_profile = stage0_engine_v2_algorithm_profile()
@@ -599,6 +1319,11 @@ def _validate_source_freeze(
         blockers.append("source_candidate_schema_not_1_6_0")
     if algorithm_profile != expected_algorithm_profile:
         blockers.append("source_algorithm_profile_mismatch")
+    execution_profile_sha256 = _validate_execution_profile(
+        source_freeze,
+        repo_root,
+        blockers,
+    )
     if source_freeze.get("candidate_budget") != 64:
         blockers.append("candidate_budget_not_frozen")
     if source_freeze.get("retained_pose_count") != 5:
@@ -643,7 +1368,7 @@ def _validate_source_freeze(
     files = source_freeze.get("files")
     if not isinstance(files, list) or not files:
         blockers.append("source_freeze_files_missing")
-        return ""
+        return "", execution_profile_sha256
     declared_paths = {_text(_mapping(item).get("path")) for item in files}
     if declared_paths != _REQUIRED_SOURCE_FREEZE_PATHS or len(files) != len(
         _REQUIRED_SOURCE_FREEZE_PATHS
@@ -668,7 +1393,10 @@ def _validate_source_freeze(
         if expected != actual:
             blockers.append(f"source_freeze_hash_mismatch:{row.get('path', index)}")
         verified_rows.append({"path": str(row.get("path")), "sha256": actual})
-    return hashlib.sha256(_canonical_bytes(verified_rows)).hexdigest()
+    return (
+        hashlib.sha256(_canonical_bytes(verified_rows)).hexdigest(),
+        execution_profile_sha256,
+    )
 
 
 def _validate_environment(
@@ -1497,7 +2225,11 @@ def verify_stage0_admission(
     _validate_baselines(payload, repo_root, blockers)
     _validate_branching(payload, blockers)
     _validate_contamination_registry(repo_root, blockers)
-    source_sha256 = _validate_source_freeze(payload, repo_root, blockers)
+    source_sha256, execution_profile_sha256 = _validate_source_freeze(
+        payload,
+        repo_root,
+        blockers,
+    )
     try:
         native_backend_snapshot = current_stage0_native_backend()
     except (ImportError, OSError, Stage0AdmissionError) as exc:
@@ -1524,6 +2256,7 @@ def verify_stage0_admission(
     return VerifiedStage0Admission(
         policy_sha256=expected_policy_sha256,
         source_freeze_sha256=source_sha256,
+        execution_profile_sha256=execution_profile_sha256,
         reviewer_id=reviewer,
         operator_id=operator,
         governance_mode=governance_mode,
@@ -1535,6 +2268,8 @@ __all__ = [
     "STAGE0_DIAGNOSTIC_CONTRACT_ID",
     "STAGE0_DIAGNOSTIC_REVIEW_HEAD_SHA",
     "STAGE0_ENGINE_V2_ALGORITHM_PROFILE_ID",
+    "STAGE0_EXECUTION_PROFILE_ID",
+    "STAGE0_EXECUTION_PROFILE_SCHEMA_ID",
     "STAGE0_PROTOCOL_ID",
     "STAGE0_REQUIRED_SOURCE_FREEZE_PATHS",
     "STAGE0_SCHEMA_VERSION",
@@ -1542,8 +2277,15 @@ __all__ = [
     "VerifiedStage0Admission",
     "compute_stage0_policy_sha256",
     "compute_stage0_review_subject_sha256",
+    "compute_stage0_execution_profile_sha256",
     "current_stage0_host_environment",
     "current_stage0_native_backend",
+    "stage0_development_source_receipt_binding",
     "stage0_engine_v2_algorithm_profile",
+    "stage0_engine_implementation_sha256",
+    "stage0_execution_profile_development_provenance",
+    "stage0_fresh_execution_profile",
+    "stage0_fresh_execution_runtime_arguments",
+    "stage0_recompute_development_report",
     "verify_stage0_admission",
 ]
