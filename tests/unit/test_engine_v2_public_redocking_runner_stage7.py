@@ -1249,7 +1249,21 @@ def test_expensive_run_policy_bounds_are_validated_at_preflight(
         runner._evaluation_policy_from_arguments(arguments)
 
 
-def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
+def test_runner_partitions_smoke_primary_and_supplementary_cases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    synthetic_fresh_case_ids = tuple(
+        f"synthetic_fresh_{index:03d}" for index in range(128)
+    )
+
+    def _synthetic_fresh_manifest(_path: Path) -> SimpleNamespace:
+        return SimpleNamespace(case_ids=synthetic_fresh_case_ids)
+
+    monkeypatch.setattr(
+        runner,
+        "load_fresh_redocking_holdout_manifest",
+        _synthetic_fresh_manifest,
+    )
     smoke = runner._case_ids_from_arguments(
         SimpleNamespace(
             case_subset="engineering-smoke",
@@ -1288,7 +1302,7 @@ def test_runner_partitions_smoke_primary_and_supplementary_cases() -> None:
 
     assert smoke == PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
     assert len(smoke) == 2
-    assert len(fresh) == 128
+    assert fresh == synthetic_fresh_case_ids
     assert development == runner.PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS
     assert len(development) == 300
     assert supplementary == FROZEN_PUBLIC_REDOCKING_CASE_IDS

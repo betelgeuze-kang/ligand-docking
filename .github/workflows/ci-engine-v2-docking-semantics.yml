@@ -10,6 +10,7 @@ on:
       - "betelgeuze_engine_v2/physics/reference_forcefield.py"
       - "betelgeuze_engine_v2/physics/reference_minimization.py"
       - "betelgeuze_engine_v2/physics/reference_parameters.py"
+      - "config/engine_v2_public_redocking_contamination_registry.json"
       - "tests/unit/test_engine_v2_docking_semantics.py"
       - "tests/unit/test_engine_v2_conformer_ensemble_stage3.py"
       - "tests/unit/test_engine_v2_guided_proposal_stage4.py"
@@ -29,6 +30,7 @@ on:
       - "betelgeuze_engine_v2/physics/reference_forcefield.py"
       - "betelgeuze_engine_v2/physics/reference_minimization.py"
       - "betelgeuze_engine_v2/physics/reference_parameters.py"
+      - "config/engine_v2_public_redocking_contamination_registry.json"
       - "tests/unit/test_engine_v2_docking_semantics.py"
       - "tests/unit/test_engine_v2_conformer_ensemble_stage3.py"
       - "tests/unit/test_engine_v2_guided_proposal_stage4.py"
@@ -105,6 +107,7 @@ jobs:
           clean: true
           sparse-checkout: |
             betelgeuze_engine_v2
+            config/engine_v2_public_redocking_contamination_registry.json
             tools/check_engine_v2_architecture.py
             tests/unit/test_engine_v2_bounded_scaffolds.py
             tests/unit/test_engine_v2_input_identity.py
