@@ -32,6 +32,8 @@ from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     Stage0AdmissionError,
     VerifiedStage0Admission,
     stage0_engine_v2_algorithm_profile,
+    stage0_engine_implementation_sha256,
+    stage0_fresh_execution_runtime_arguments,
     verify_stage0_admission,
 )
 from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (
@@ -737,10 +739,22 @@ def _configure_engine_v2_cpu() -> None:
         )
 
 
-def _external_execution_policy(timeout_seconds: int) -> dict[str, object]:
+def _execution_profile_binding(profile_sha256: str) -> dict[str, object]:
+    return (
+        {"execution_profile_sha256": profile_sha256}
+        if profile_sha256
+        else {}
+    )
+
+
+def _external_execution_policy(
+    timeout_seconds: int,
+    execution_profile_sha256: str = "",
+) -> dict[str, object]:
     return {
         "cpu_count": 1,
         "timeout_seconds": timeout_seconds,
+        **_execution_profile_binding(execution_profile_sha256),
     }
 
 
@@ -1852,27 +1866,15 @@ def _engine_source_sha256(
     *,
     runner_path: Path | None = None,
 ) -> str:
-    package_root = repo_root / "betelgeuze_engine_v2"
-    active_runner = Path(__file__).resolve() if runner_path is None else runner_path
-    native_paths = tuple(
-        repo_root / relative_path
-        for relative_path in (
-            "rust_engine_v2/Cargo.toml",
-            "rust_engine_v2/Cargo.lock",
-            "rust_engine_v2/build.rs",
-            "rust_engine_v2/pyproject.toml",
-            "rust_engine_v2/src/lib.rs",
+    try:
+        return stage0_engine_implementation_sha256(
+            repo_root,
+            runner_path=(Path(__file__).resolve() if runner_path is None else runner_path),
         )
-    )
-    paths = tuple(sorted(package_root.rglob("*.py"))) + native_paths + (active_runner,)
-    if not paths or any(not path.is_file() for path in paths):
+    except (OSError, ValueError) as exc:
         raise PublicRedockingRunnerError(
             "Engine V2 implementation source closure is incomplete"
-        )
-    projection = [
-        (path.relative_to(repo_root).as_posix(), _sha256_path(path)) for path in paths
-    ]
-    return hashlib.sha256(_canonical_bytes(projection)).hexdigest()
+        ) from exc
 
 
 def _evaluation_pipeline_sha256(
@@ -2558,6 +2560,7 @@ def _engine_v2_result(
     output: Path,
     seed: int,
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
+    execution_profile_sha256: str = "",
 ) -> PublicRedockingCaseResult:
     _quarantine_managed_regular_file(
         output,
@@ -2577,6 +2580,7 @@ def _engine_v2_result(
             **ENGINE_V2_CPU_POLICY,
             "scorer_backend": scorer_backend.value,
             "scorer_thread_count": 1,
+            **_execution_profile_binding(execution_profile_sha256),
         }
     )
     diagnostics: PublicRedockingEngineV2Diagnostics | None = None
@@ -2682,6 +2686,7 @@ def _external_result(
     output: Path,
     seed: int,
     timeout_seconds: int,
+    execution_profile_sha256: str = "",
 ) -> tuple[PublicRedockingCaseResult, tuple[str, ...]]:
     _verify_external_binary(binary)
     active_external_paths = paths if external_paths is None else external_paths
@@ -2732,7 +2737,10 @@ def _external_result(
             f"/proc/self/fd/{output_directory_descriptor}/{output.name}"
         )
         execution_policy = _execution_policy_tokens(
-            _external_execution_policy(timeout_seconds)
+            _external_execution_policy(
+                timeout_seconds,
+                execution_profile_sha256,
+            )
         )
         started = time.perf_counter()
         try:
@@ -2938,6 +2946,34 @@ def _evaluation_policy_from_arguments(
     )
 
 
+def _require_stage0_execution_arguments(
+    arguments: argparse.Namespace,
+    receipt: VerifiedStage0Admission,
+) -> None:
+    expected = stage0_fresh_execution_runtime_arguments()
+    observed = {
+        "bootstrap_samples": arguments.bootstrap_samples,
+        "case_subset": arguments.case_subset,
+        "engine_v2_scorer_backend": arguments.engine_v2_scorer_backend,
+        "external_timeout_seconds": arguments.timeout_seconds,
+        "limit": arguments.limit,
+        "seed": arguments.seed,
+        "start_index": arguments.start_index,
+    }
+    blockers = [
+        f"stage0_execution_argument_mismatch:{name}"
+        for name in expected
+        if observed.get(name) != expected[name]
+    ]
+    profile_sha256 = receipt.execution_profile_sha256
+    if len(profile_sha256) != 64 or any(
+        character not in "0123456789abcdef" for character in profile_sha256
+    ):
+        blockers.append("stage0_execution_profile_sha256_invalid")
+    if blockers:
+        raise Stage0AdmissionError(tuple(blockers))
+
+
 def _case_ids_from_arguments(arguments: argparse.Namespace) -> tuple[str, ...]:
     all_case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS
     if arguments.case_subset != "all":
@@ -2978,6 +3014,65 @@ def _partial_summary_filename(
     )
 
 
+def _fresh_execution_receipt_payloads(
+    *,
+    expected_case_ids: Sequence[str],
+    row_map: Mapping[tuple[str, str], PublicRedockingCaseResult],
+    executions_by_engine: Mapping[
+        str, Sequence[VerifiedPublicRedockingCaseExecution]
+    ],
+    execution_profile_sha256: str,
+) -> list[dict[str, object]]:
+    expected_keys = {
+        (engine_id, case_id)
+        for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        for case_id in expected_case_ids
+    }
+    if set(executions_by_engine) != set(PUBLIC_REDOCKING_PRIMARY_ENGINES):
+        raise PublicRedockingRunnerError(
+            "fresh execution receipt engine ledger is cross-wired"
+        )
+    receipt_map: dict[tuple[str, str], dict[str, object]] = {}
+    for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES:
+        executions = executions_by_engine.get(engine_id, ())
+        for execution in executions:
+            payload = execution.to_dict()
+            result = payload.get("result")
+            if not isinstance(result, dict):
+                raise PublicRedockingRunnerError(
+                    "fresh execution receipt result is missing"
+                )
+            key = (str(result.get("engine_id", "")), str(result.get("case_id", "")))
+            if (
+                key[0] != engine_id
+                or key not in expected_keys
+                or key in receipt_map
+                or result != row_map[key].to_dict()
+            ):
+                raise PublicRedockingRunnerError(
+                    "fresh execution receipt ledger is cross-wired"
+                )
+            execution_policy = payload.get("execution_policy")
+            if (
+                not isinstance(execution_policy, dict)
+                or execution_policy.get("execution_profile_sha256")
+                != execution_profile_sha256
+            ):
+                raise PublicRedockingRunnerError(
+                    "fresh execution receipt profile binding is inconsistent"
+                )
+            receipt_map[key] = payload
+    if set(receipt_map) != expected_keys:
+        raise PublicRedockingRunnerError(
+            "fresh execution receipt ledger is incomplete"
+        )
+    return [
+        receipt_map[(engine_id, case_id)]
+        for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        for case_id in expected_case_ids
+    ]
+
+
 def _fresh_internal_report(
     *,
     case_ids: Sequence[str],
@@ -2997,18 +3092,25 @@ def _fresh_internal_report(
         expected_ids
     ):
         raise PublicRedockingRunnerError("fresh report case denominator is incomplete")
-    row_map = {
-        (row.engine_id, row.case_id): row
+    ordered_rows = [
+        row
         for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
         for row in rows_by_engine[engine_id]
-    }
+    ]
+    row_map = {(row.engine_id, row.case_id): row for row in ordered_rows}
     expected_keys = {
         (engine_id, case_id)
         for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
         for case_id in expected_ids
     }
-    if set(row_map) != expected_keys:
+    if len(ordered_rows) != len(expected_keys) or set(row_map) != expected_keys:
         raise PublicRedockingRunnerError("fresh report engine ledger is incomplete")
+    execution_receipts = _fresh_execution_receipt_payloads(
+        expected_case_ids=expected_ids,
+        row_map=row_map,
+        executions_by_engine=executions_by_engine,
+        execution_profile_sha256=stage0_receipt.execution_profile_sha256,
+    )
     primary_metrics = benchmark_contract._derive_scope_all_metrics(
         row_map,
         policy=policy,
@@ -3065,6 +3167,9 @@ def _fresh_internal_report(
         "stage0_admission": {
             "policy_sha256": stage0_receipt.policy_sha256,
             "source_freeze_sha256": stage0_receipt.source_freeze_sha256,
+            "execution_profile_sha256": (
+                stage0_receipt.execution_profile_sha256
+            ),
             "governance_mode": stage0_receipt.governance_mode,
             "independent_review_complete": stage0_receipt.independent_review_complete,
         },
@@ -3074,16 +3179,8 @@ def _fresh_internal_report(
         "engine_identities": [identity.to_dict() for identity in identities],
         "metrics": [metric.to_dict() for metric in primary_metrics],
         "subgroup_results": subgroup_results,
-        "rows": [
-            row.to_dict()
-            for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
-            for row in rows_by_engine[engine_id]
-        ],
-        "execution_receipts": [
-            row.to_dict()
-            for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
-            for row in executions_by_engine[engine_id]
-        ],
+        "rows": [row.to_dict() for row in ordered_rows],
+        "execution_receipts": execution_receipts,
         "internal_provisional_only": True,
         "scientifically_validated": False,
         "public_claim_eligible": False,
@@ -3199,6 +3296,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             gnina_path=source_binary,
             output_root=output_root,
         )
+        _require_stage0_execution_arguments(arguments, stage0_receipt)
+
+    execution_profile_sha256 = (
+        stage0_receipt.execution_profile_sha256
+        if stage0_receipt is not None
+        else ""
+    )
 
     def reverify_stage0() -> None:
         if stage0_receipt is None or stage0_policy_path is None:
@@ -3225,6 +3329,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "admitted": True,
                 "operator_id": stage0_receipt.operator_id,
                 "policy_sha256": stage0_receipt.policy_sha256,
+                "execution_profile_sha256": (
+                    stage0_receipt.execution_profile_sha256
+                ),
                 "reviewer_id": stage0_receipt.reviewer_id,
                 "governance_mode": stage0_receipt.governance_mode,
                 "independent_review_complete": (
@@ -3360,6 +3467,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         output=engine_output,
                         seed=case_seed,
                         scorer_backend=scorer_backend,
+                        execution_profile_sha256=execution_profile_sha256,
                     )
                 pinned_inputs.verify()
                 engine_execution = _verified_case_execution(
@@ -3369,6 +3477,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         **ENGINE_V2_CPU_POLICY,
                         "scorer_backend": scorer_backend.value,
                         "scorer_thread_count": 1,
+                        **_execution_profile_binding(execution_profile_sha256),
                     },
                     input_sha256s=inputs,
                     materialization_receipt_sha256=(materialization.receipt_sha256),
@@ -3399,13 +3508,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                             output=pose_output,
                             seed=case_seed,
                             timeout_seconds=arguments.timeout_seconds,
+                            execution_profile_sha256=execution_profile_sha256,
                         )
                     pinned_inputs.verify()
                     execution = _verified_case_execution(
                         row,
                         command=command,
                         execution_policy=_external_execution_policy(
-                            arguments.timeout_seconds
+                            arguments.timeout_seconds,
+                            execution_profile_sha256,
                         ),
                         input_sha256s=inputs,
                         materialization_receipt_sha256=(materialization.receipt_sha256),

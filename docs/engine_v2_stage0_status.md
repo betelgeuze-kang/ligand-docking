@@ -109,6 +109,18 @@ The canonical capability state is:
   selection window. The torsion refiner is required in the source manifest,
   and the report validator consumes the same runner policy fields so an actual
   V7 report does not contradict its frozen execution policy.
+- A separate self-hashed execution profile binds that algorithm profile to one
+  exact fresh-run command: the complete fresh-128 slice (`start=0`, `limit=0`),
+  seed `2026073000`, 2,000 bootstrap samples, 300-second external timeout,
+  Rust CPU scorer, one-thread resources, and five retained poses. Its
+  development provenance must use the exact
+  Scorer-v1 analysis schema, contain at least eight scored historical
+  contaminated cases, and authenticate every case to a current-source Engine
+  V2 receipt, its frozen materialization/input hashes, and 64 typed candidate
+  slots with zero fresh-case overlap. Admission reruns analyzer 1.2.0 and
+  requires the complete report to match. The profile SHA-256 is carried by
+  admission, all 384 case-execution receipts, and the final internal report;
+  incomplete or mixed receipt ledgers fail closed.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate

@@ -813,6 +813,7 @@ def test_main_integration_workflow_targets_main_and_complete_v2_suite() -> None:
     source = Path(".github/workflows/ci-engine-v2-main.yml").read_text(encoding="utf-8")
     assert 'branches: ["main"]' in source
     assert 'python-version: ["3.10", "3.11", "3.12"]' in source
+    assert "tools/analyze_engine_v2_score_terms.py" in source
     for test_file in (
         "test_engine_v2_contracts_molecular.py",
         "test_engine_v2_mmcif_syntax.py",

@@ -16,6 +16,9 @@ from typing import Mapping, Sequence
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     compute_stage0_policy_sha256,
     compute_stage0_review_subject_sha256,
+    stage0_development_source_receipt_binding,
+    stage0_execution_profile_development_provenance,
+    stage0_fresh_execution_profile,
 )
 from tools.run_engine_v2_public_redocking_300 import (
     RUNNER_ID,
@@ -305,6 +308,52 @@ def build_policy(
     source_freeze = policy.get("source_freeze")
     if not isinstance(source_freeze, dict):
         raise ValueError("source freeze template is missing")
+    reviewed_evidence = pass2.get("reviewed_evidence")
+    if not isinstance(reviewed_evidence, Mapping):
+        raise ValueError("solo reviewed development evidence is missing")
+    development_path = _repo_file(
+        repo_root,
+        reviewed_evidence.get("scorer_term_development_report_path"),
+        name="scorer-term development report",
+    )
+    development_file_sha256 = _sha256_path(development_path)
+    if development_file_sha256 != reviewed_evidence.get(
+        "scorer_term_development_report_file_sha256"
+    ):
+        raise ValueError("scorer-term development report file hash is cross-wired")
+    development = _read_json(development_path)
+    _verify_self_hash(development, "report_sha256")
+    if development.get("report_sha256") != reviewed_evidence.get(
+        "scorer_term_development_report_sha256"
+    ):
+        raise ValueError("scorer-term development report receipt is cross-wired")
+    case_ids = development.get("case_ids")
+    scored_case_count = development.get("scored_case_count")
+    if (
+        development.get("analysis_scope")
+        != "historical_contaminated_development_only"
+        or development.get("contains_fresh_internal_blind_holdout") is not False
+        or development.get("claimable") is not False
+        or development.get("sufficient_for_track_decision") is not True
+        or not isinstance(case_ids, list)
+        or any(not isinstance(case_id, str) for case_id in case_ids)
+        or type(scored_case_count) is not int
+    ):
+        raise ValueError("scorer-term development report is not profile-safe")
+    development_provenance = stage0_execution_profile_development_provenance(
+        development_report_path=str(development_path.relative_to(repo_root)),
+        development_report_file_sha256=development_file_sha256,
+        development_report_sha256=str(development["report_sha256"]),
+        case_ids=case_ids,
+        scored_case_count=scored_case_count,
+        source_receipt_binding=stage0_development_source_receipt_binding(
+            development,
+            repo_root=repo_root,
+        ),
+    )
+    source_freeze["execution_profile"] = stage0_fresh_execution_profile(
+        development_provenance
+    )
     source_freeze.update(
         {
             "git_head_sha": head,
@@ -502,9 +551,6 @@ def build_policy(
             (2, pass2_path, pass2),
         )
     ]
-    reviewed_evidence = pass2.get("reviewed_evidence")
-    if not isinstance(reviewed_evidence, Mapping):
-        raise ValueError("solo reviewed evidence is missing")
     governance.update(
         {
             "governance_mode": "solo_developer_controlled",

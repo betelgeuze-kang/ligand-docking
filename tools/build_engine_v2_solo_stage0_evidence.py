@@ -17,6 +17,7 @@ from typing import Mapping, Sequence
 from betelgeuze_engine_v2.benchmark.blind_stage0 import (
     current_stage0_host_environment,
     current_stage0_native_backend,
+    stage0_fresh_execution_runtime_arguments,
 )
 from tools.run_engine_v2_public_redocking_300 import (
     RUNNER_ID,
@@ -84,6 +85,7 @@ def build_packet(
     developer_id: str,
     reviewed_at_utc: str,
 ) -> dict[str, object]:
+    execution_arguments = stage0_fresh_execution_runtime_arguments()
     classification = _read_json(classification_path)
     reconciliation = _read_json(reconciliation_path)
     ci_inventory = _read_json(ci_inventory_path)
@@ -213,6 +215,7 @@ def build_packet(
             "quarantine_partial_outputs": True,
             "public_claims_allowed": False,
             "product_promotion_allowed": False,
+            "execution_runtime_arguments": execution_arguments,
             "command_template": [
                 "python3",
                 "tools/run_engine_v2_public_redocking_300.py",
@@ -222,6 +225,16 @@ def build_packet(
                 ".betelgeuze/stage0/frozen-solo-stage0-policy.json",
                 "--engine-v2-scorer-backend",
                 "rust_cpu_required",
+                "--seed",
+                str(execution_arguments["seed"]),
+                "--timeout-seconds",
+                str(execution_arguments["external_timeout_seconds"]),
+                "--bootstrap-samples",
+                str(execution_arguments["bootstrap_samples"]),
+                "--start-index",
+                str(execution_arguments["start_index"]),
+                "--limit",
+                str(execution_arguments["limit"]),
                 "--output-root",
                 ".betelgeuze/fresh-redocking-128",
             ],

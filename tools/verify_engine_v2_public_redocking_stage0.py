@@ -91,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(
             {
                 "admitted": True,
+                "execution_profile_sha256": receipt.execution_profile_sha256,
                 "operator_id": receipt.operator_id,
                 "policy_sha256": receipt.policy_sha256,
                 "reviewer_id": receipt.reviewer_id,
