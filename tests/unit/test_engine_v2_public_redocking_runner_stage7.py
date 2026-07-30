@@ -67,7 +67,7 @@ def _python_backend_receipt() -> dict[str, object]:
 
 def _zero_score_terms() -> dict[str, str]:
     return {
-        name: 0.0.hex()
+        name: (0.0).hex()
         for name in (
             "typed_vdw",
             "electrostatics",
@@ -1423,6 +1423,15 @@ def test_cpu_policy_configures_and_verifies_single_torch_threads(
     assert runner.ENGINE_V2_CPU_POLICY["interaction_refiner"] == (
         "interaction_aware_torsion_contact_v7_ensemble"
     )
+    assert runner.ENGINE_V2_CPU_POLICY["algorithm_profile_id"].endswith(
+        "algorithm_profile_v7/1.0.0"
+    )
+    assert runner.ENGINE_V2_CPU_POLICY["runner_id"].endswith("/2.13.0")
+    assert runner.ENGINE_V2_CPU_POLICY["candidate_schema_id"].endswith("/1.6.0")
+    assert (
+        runner.ENGINE_V2_CPU_POLICY["interaction_refiner_config_sha256"]
+        == runner.ENGINE_V2_ALGORITHM_PROFILE["active_refiner"]["config_sha256"]
+    )
 
 
 def test_cpu_policy_rejects_unfrozen_torch_build(
@@ -2011,9 +2020,7 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     paths["seed"].write_bytes(b"fixture seed\n")
     paths["native"].write_bytes(b"fixture native\n")
 
-    atoms = tuple(
-        SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2)
-    )
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2))
     system = SimpleNamespace(
         atom_count=2,
         atoms=atoms,
@@ -2026,7 +2033,7 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
             receptor_acceptors=(1,),
             ligand_donors=(0,),
             ligand_acceptors=(1,),
-        )
+        ),
     )
     monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
     monkeypatch.setattr(
@@ -2106,9 +2113,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
     paths["seed"].write_bytes(b"fixture seed\n")
     paths["native"].write_bytes(b"fixture native\n")
 
-    atoms = tuple(
-        SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2)
-    )
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2))
     system = SimpleNamespace(
         atom_count=2,
         atoms=atoms,
@@ -2121,7 +2126,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
             receptor_acceptors=(1,),
             ligand_donors=(0,),
             ligand_acceptors=(1,),
-        )
+        ),
     )
     monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
     monkeypatch.setattr(
@@ -2180,14 +2185,14 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
                 "accepted_rotation_steps": 1,
                 "original_pose_valid": False,
                 "total_translation_binary64_hex": [
-                    0.1.hex(),
-                    0.0.hex(),
-                    0.0.hex(),
+                    (0.1).hex(),
+                    (0.0).hex(),
+                    (0.0).hex(),
                 ],
                 "total_rotation_vector_binary64_hex": [
-                    0.1.hex(),
-                    0.0.hex(),
-                    0.0.hex(),
+                    (0.1).hex(),
+                    (0.0).hex(),
+                    (0.0).hex(),
                 ],
             }
             for index in range(runner.ENGINE_V2_CANDIDATE_COUNT)
@@ -2227,8 +2232,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
         rows=term_rows,
         guided_search_result=SimpleNamespace(
             guided_receipt=SimpleNamespace(
-                proposal_modes=("uniform_fallback",)
-                * runner.ENGINE_V2_CANDIDATE_COUNT,
+                proposal_modes=("uniform_fallback",) * runner.ENGINE_V2_CANDIDATE_COUNT,
                 ensemble_source_proposal_indices=(None,)
                 * runner.ENGINE_V2_CANDIDATE_COUNT,
             ),
@@ -2312,8 +2316,7 @@ def test_engine_v2_hashes_and_evaluator_use_one_pinned_pose_payload(
     payload_a = b"sealed-pose-a\n$$$$\n" * 5
     payload_b = b"swapped-path-b\n$$$$\n" * 5
     hashes_a = tuple(
-        runner._sha256_bytes(record)
-        for record in runner._split_sdf_records(payload_a)
+        runner._sha256_bytes(record) for record in runner._split_sdf_records(payload_a)
     )
     output = tmp_path / "engine-v2.sdf"
     times = iter((10.0, 12.0))

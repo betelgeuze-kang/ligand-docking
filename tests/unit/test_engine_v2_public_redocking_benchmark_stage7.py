@@ -53,6 +53,38 @@ _EXCLUDED_SOURCE_IDS = (
 _RUN_ROOT = Path("/tmp/betelgeuze-public-redocking-unit-run")
 
 
+def _engine_v2_execution_policy(**changes: object) -> tuple[str, ...]:
+    policy: dict[str, object] = {
+        "algorithm_profile_id": (
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID
+        ),
+        "candidate_schema_id": (
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+        ),
+        "cpu_count": 1,
+        "interaction_refinement_steps": (
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS
+        ),
+        "interaction_refiner": (
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID
+        ),
+        "interaction_refiner_config_sha256": (
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256
+        ),
+        "runner_id": benchmark_contract.PUBLIC_REDOCKING_RUNNER_ID,
+        "scorer_backend": "python_reference",
+        "scorer_thread_count": 1,
+        "torch_interop_threads": 1,
+        "torch_intraop_threads": 1,
+        "torch_version": "2.6.0",
+    }
+    policy.update(changes)
+    return tuple(
+        f"{key}={json.dumps(value, allow_nan=False, separators=(',', ':'))}"
+        for key, value in sorted(policy.items())
+    )
+
+
 def _python_backend_receipt() -> dict[str, object]:
     payload: dict[str, object] = {
         "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
@@ -81,7 +113,7 @@ def _python_backend_receipt() -> dict[str, object]:
 
 def _zero_score_terms() -> dict[str, str]:
     return {
-        name: 0.0.hex()
+        name: (0.0).hex()
         for name in (
             "typed_vdw",
             "electrostatics",
@@ -239,9 +271,7 @@ def _verified_executions(
                 identity_map[row.engine_id].evaluation_pipeline_sha256
             ),
             execution_environment_sha256="8" * 64,
-            verification_authority=(
-                benchmark_contract._VERIFIED_EXECUTION_AUTHORITY
-            ),
+            verification_authority=(benchmark_contract._VERIFIED_EXECUTION_AUTHORITY),
         )
         for row in rows
     )
@@ -325,14 +355,7 @@ def _input_fields(
     materialization = _materialization(case_id)
 
     execution_policy = (
-        (
-            "cpu_count=1",
-            'scorer_backend="python_reference"',
-            "scorer_thread_count=1",
-            "torch_interop_threads=1",
-            "torch_intraop_threads=1",
-            'torch_version="2.6.0"',
-        )
+        _engine_v2_execution_policy()
         if engine_id == "engine_v2"
         else ("cpu_count=1", "timeout_seconds=300")
     )
@@ -599,7 +622,9 @@ def test_frozen_cohort_binds_exact_300_cases_and_public_source() -> None:
         PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
     )
     assert document["analysis_partitions"]["primary_blind_holdout"]["case_count"] == 298
-    assert document["analysis_partitions"]["contaminated_development"]["case_count"] == 300
+    assert (
+        document["analysis_partitions"]["contaminated_development"]["case_count"] == 300
+    )
     assert document["raw_structure_data_bundled"] is False
     assert document["benchmark_executed"] is False
     assert document["claim_safe"] is False
@@ -829,33 +854,27 @@ def test_report_emits_required_metrics_subgroups_and_paired_deltas() -> None:
         "engine_v2",
         "top5_selection_regret_event_rate",
     ).value == pytest.approx(0.0)
-    assert (
-        _metric(
-            report,
-            "engine_v2",
-            "top1_rmsd_success_rate",
-            subgroup="size_small_1_20",
-            analysis_scope="primary_blind_holdout",
-        ).case_count
-        == sum(
-            profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
-            and profile.size_subgroup == "size_small_1_20"
-            for profile in _profiles()
-        )
+    assert _metric(
+        report,
+        "engine_v2",
+        "top1_rmsd_success_rate",
+        subgroup="size_small_1_20",
+        analysis_scope="primary_blind_holdout",
+    ).case_count == sum(
+        profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+        and profile.size_subgroup == "size_small_1_20"
+        for profile in _profiles()
     )
-    assert (
-        _metric(
-            report,
-            "engine_v2",
-            "top1_rmsd_success_rate",
-            subgroup="rotor_flexible_5_plus",
-            analysis_scope="primary_blind_holdout",
-        ).case_count
-        == sum(
-            profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
-            and profile.rotor_subgroup == "rotor_flexible_5_plus"
-            for profile in _profiles()
-        )
+    assert _metric(
+        report,
+        "engine_v2",
+        "top1_rmsd_success_rate",
+        subgroup="rotor_flexible_5_plus",
+        analysis_scope="primary_blind_holdout",
+    ).case_count == sum(
+        profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
+        and profile.rotor_subgroup == "rotor_flexible_5_plus"
+        for profile in _profiles()
     )
     ring_case_count = sum(
         profile.case_id in PUBLIC_REDOCKING_PRIMARY_BLIND_HOLDOUT_CASE_IDS
@@ -1103,9 +1122,7 @@ def test_report_rejects_execution_receipt_identity_drift(
     executions = list(_executions())
     original = executions[0]
     evidence = {
-        "materialization_receipt_sha256": (
-            original.materialization_receipt_sha256
-        ),
+        "materialization_receipt_sha256": (original.materialization_receipt_sha256),
         "implementation_sha256": original.implementation_sha256,
         "evaluation_pipeline_sha256": original.evaluation_pipeline_sha256,
         "execution_environment_sha256": original.execution_environment_sha256,
@@ -1253,14 +1270,7 @@ def test_report_rejects_row_execution_policy_drift() -> None:
 
 def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
     rows = list(_rows())
-    boolean_policy = (
-        "cpu_count=true",
-        'scorer_backend="python_reference"',
-        "scorer_thread_count=1",
-        "torch_interop_threads=1",
-        "torch_intraop_threads=1",
-        'torch_version="2.6.0"',
-    )
+    boolean_policy = _engine_v2_execution_policy(cpu_count=True)
     for index in range(len(FROZEN_PUBLIC_REDOCKING_CASE_IDS)):
         rows[index] = replace(
             rows[index],
@@ -1278,14 +1288,7 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
         )
 
     rows = list(_rows())
-    engine_v2_policy = (
-        "cpu_count=1",
-        'scorer_backend="python_reference"',
-        "scorer_thread_count=1",
-        "torch_interop_threads=1",
-        "torch_intraop_threads=1",
-        'torch_version="2.7.0+cpu"',
-    )
+    engine_v2_policy = _engine_v2_execution_policy(torch_version="2.7.0+cpu")
     for index in range(len(FROZEN_PUBLIC_REDOCKING_CASE_IDS)):
         rows[index] = replace(rows[index], execution_policy=engine_v2_policy)
     with pytest.raises(
@@ -1300,13 +1303,8 @@ def test_report_rejects_boolean_or_unsupported_torch_policy_values() -> None:
         )
 
     rows = list(_rows())
-    allowed_but_mismatched_policy = (
-        "cpu_count=1",
-        'scorer_backend="python_reference"',
-        "scorer_thread_count=1",
-        "torch_interop_threads=1",
-        "torch_intraop_threads=1",
-        'torch_version="2.6.0+cpu"',
+    allowed_but_mismatched_policy = _engine_v2_execution_policy(
+        torch_version="2.6.0+cpu"
     )
     for index in range(len(FROZEN_PUBLIC_REDOCKING_CASE_IDS)):
         rows[index] = replace(
