@@ -18,8 +18,9 @@ scientific claim from a package version.
 - Added a receipt-bound V6 hybrid rigid-refinement lane for historical
   development. Retained V2 source poses remain in the denominator; expanded
   clearance is selected only for a duplicate V3 variant or for a variant whose
-  final quartic overlap penalty is at most `2^-12` and strictly improves under
-  the clearance configuration. The policy uses no native-pose, PoseBusters, or
+  baseline quartic overlap penalty is at most `2^-12` and the clearance
+  configuration strictly reduces its own initial-to-final objective. The policy
+  uses no native-pose, PoseBusters, or
   RMSD value at runtime and remains non-claim-bearing while the Stage 0 gates
   are blocked.
 

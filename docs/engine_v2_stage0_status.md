@@ -57,16 +57,18 @@ a complete Stage 0 policy for that fresh internal holdout and rejects the old
   invalid Top-1 from 72.41% to 65.52%, but regressed mean best-of-Top5 RMSD from
   3.51088 A to 3.56945 A and was not promoted. V6 instead selects expanded
   clearance only for a source-duplicate V3 variant or a receipt-bound near-clear
-  variant at or below `2^-12` whose penalty strictly improves. The policy uses
+  variant at or below `2^-12` whose clearance objective strictly decreases
+  from its own initial value. The policy uses
   no RMSD or PoseBusters result at runtime and retains the V2 source lane.
 - The full V6 historical-development execution reproduced the receipt-only
-  policy for all 1,856 candidates with zero scientific-field mismatches. It
-  selected 85 clearance variants, raised exact valid candidates from 62 to 72,
+  policy for all 1,856 candidates with zero scientific-field mismatches and
+  retained self-hashed selection payloads for all 456 V3 variants. It selected
+  93 clearance variants, raised exact valid candidates from 62 to 73,
   raised cases with any valid candidate from 9 to 13, reduced invalid Top-1
   from 72.41% to 65.52%, and improved mean oracle/Top-1/Top-5 RMSD by
-  0.00309/0.01320/0.01064 A versus V4. Oracle and Top-1/Top-5 recovery counts
+  0.00424/0.13676/0.01500 A versus V4. Oracle and Top-1/Top-5 recovery counts
   stayed 6/1/3. Evidence SHA-256 is
-  `b600031ce593860365f51d99d1bc6d90d307e670f9ad041086c3e4f5adaf70aa`.
+  `1895e818b8e90261051b77359e3b7491fc49a8b0604b5bf5e130aca3a4a28224`.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate

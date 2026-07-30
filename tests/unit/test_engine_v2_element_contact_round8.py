@@ -578,6 +578,7 @@ def test_interaction_aware_v6_records_receipt_bound_hybrid_selection() -> None:
     assert variant_receipt["baseline_duplicate_of_v2_refinement"] is True
     assert variant_receipt["clearance_evaluated"] is True
     assert variant_receipt["clearance_selected"] is True
+    assert variant_receipt["clearance_initial_penalty_binary64_hex"]
     assert variant_receipt["clearance_final_penalty_binary64_hex"]
     assert len(variant_receipt["comparison_v2_receipt_sha256"]) == 64
     assert len(variant_receipt["baseline_v3_receipt_sha256"]) == 64

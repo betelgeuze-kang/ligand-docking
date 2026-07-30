@@ -126,7 +126,7 @@ ENGINE_V2_CPU_POLICY = {
     "torch_intraop_threads": 1,
     "torch_interop_threads": 1,
     "torch_version": str(torch.__version__),
-    "interaction_refiner": "interaction_aware_rigid_v4_v2_v3_ensemble",
+    "interaction_refiner": "interaction_aware_rigid_v6_hybrid_clearance_ensemble",
     "interaction_refinement_steps": 20,
 }
 _CASE_FILE_SUFFIXES = (
@@ -2483,6 +2483,11 @@ def _engine_v2_pose_coordinates(
                             "total_rotation_vector_binary64_hex",
                             (0.0.hex(), 0.0.hex(), 0.0.hex()),
                         )
+                    ),
+                    refinement_receipt_payload=(
+                        dict(refinement_receipt)
+                        if proposal_mode == "uniform_v3_rigid_ensemble"
+                        else {}
                     ),
                     score_term_binary64_hex={
                         name: float(getattr(terms, name)).hex()

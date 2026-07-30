@@ -1400,7 +1400,7 @@ class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
                     INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY.hex()
                 ),
                 "selection_policy": (
-                    "v2_duplicate_or_near_clear_strict_penalty_reduction"
+                    "v2_duplicate_or_near_clear_clearance_objective_reduction"
                 ),
                 "source_lane_retained": True,
                 "scientifically_validated": False,
@@ -1431,6 +1431,7 @@ class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
             <= INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY
         )
         clearance_receipt: Mapping[str, object] | None = None
+        clearance_initial_penalty: float | None = None
         clearance_penalty: float | None = None
         clearance_selected = False
         selected = baseline_v3
@@ -1445,11 +1446,15 @@ class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
             clearance_receipt = self._clearance_v3.receipts[
                 proposal.fingerprint_sha256
             ]
+            clearance_initial_penalty = float.fromhex(
+                str(clearance_receipt["initial_penalty_binary64_hex"])
+            )
             clearance_penalty = float.fromhex(
                 str(clearance_receipt["final_penalty_binary64_hex"])
             )
             clearance_selected = bool(
-                baseline_duplicate or clearance_penalty < baseline_penalty
+                baseline_duplicate
+                or clearance_penalty < clearance_initial_penalty
             )
             if clearance_selected:
                 selected = clearance
@@ -1458,7 +1463,7 @@ class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
                 selection_reason = (
                     "v2_duplicate_clearance_rescue"
                     if baseline_duplicate
-                    else "near_clear_strict_penalty_reduction"
+                    else "near_clear_clearance_objective_reduction"
                 )
 
         zero_rotation = [0.0.hex(), 0.0.hex(), 0.0.hex()]
@@ -1485,6 +1490,11 @@ class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
             "baseline_duplicate_of_v2_refinement": baseline_duplicate,
             "baseline_final_penalty_binary64_hex": baseline_penalty.hex(),
             "clearance_evaluated": clearance_evaluated,
+            "clearance_initial_penalty_binary64_hex": (
+                ""
+                if clearance_initial_penalty is None
+                else clearance_initial_penalty.hex()
+            ),
             "clearance_final_penalty_binary64_hex": (
                 "" if clearance_penalty is None else clearance_penalty.hex()
             ),
