@@ -19,6 +19,19 @@ def _artifact_summary(name: str) -> dict:
     return summary if isinstance(summary, dict) else {}
 
 
+def test_global_hbond_report_route_never_returns_unscoped_candidate_rows() -> None:
+    product_hbond_backmap = importlib.import_module("api.product_hbond_backmap")
+
+    payload = asyncio.run(
+        product_hbond_backmap.get_product_hbond_backmap_report()
+    )
+
+    assert payload["status"] == "job_scoped_hbond_evidence_required"
+    assert payload["legacy_global_artifact_accepted"] is False
+    assert payload["candidate_count"] == 0
+    assert payload["candidates"] == []
+
+
 def test_api_product_router_is_registered_when_fastapi_is_available() -> None:
     pytest.importorskip("fastapi")
     main = importlib.import_module("api.main")

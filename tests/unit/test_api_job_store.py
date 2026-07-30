@@ -1172,13 +1172,28 @@ def test_adopt_validated_runner_native_evidence_bundle_returns_none_without_prov
     )
 
 
-def test_adopt_validated_runner_native_evidence_bundle_returns_none_when_file_missing(
+def test_adopt_validated_runner_native_evidence_bundle_rejects_partial_declaration(
+    tmp_path: Path,
+) -> None:
+    import api.worker as worker
+
+    with pytest.raises(worker.JobIntegrityError, match="unexpected native"):
+        worker.adopt_validated_runner_native_evidence_bundle(
+            job_id="job_partial_native",
+            status_data={
+                "evidence_bundle_source": "tampered_source",
+                "evidence_bundle": str(tmp_path / "evidence_bundle.json"),
+            },
+        )
+
+
+def test_adopt_validated_runner_native_evidence_bundle_rejects_declared_missing_file(
     tmp_path: Path,
 ) -> None:
     import api.worker as worker
 
     missing_path = tmp_path / "does_not_exist.json"
-    assert (
+    with pytest.raises(worker.JobIntegrityError, match="file is missing"):
         worker.adopt_validated_runner_native_evidence_bundle(
             job_id="job_missing_file",
             status_data={
@@ -1187,7 +1202,92 @@ def test_adopt_validated_runner_native_evidence_bundle_returns_none_when_file_mi
                 "evidence_bundle_source": "validated_runner_native",
             },
         )
-        is None
+
+
+def _native_adoption_fixture(tmp_path: Path, job_id: str):
+    from api.job_store import EXECUTION_REQUEST_TRANSFORM_ID
+    from betelgeuze_ai_md.contracts import EvidenceBundle
+
+    result_file = tmp_path / "native" / job_id / "runner_result.json"
+    result_file.parent.mkdir(parents=True, exist_ok=True)
+    result_file.write_text('{"ok":true}\n', encoding="utf-8")
+    result_sha256 = hashlib.sha256(result_file.read_bytes()).hexdigest()
+    admission_sha256 = "a" * 64
+    execution_sha256 = "b" * 64
+    native_manifest = {
+        "job_id": job_id,
+        "status": "completed",
+        "request_sha256": execution_sha256,
+        "execution_request_sha256": execution_sha256,
+        "execution_request_transform_id": "identity_v1",
+        "result_file": str(result_file),
+        "result_file_sha256": result_sha256,
+    }
+    final_manifest = {
+        **native_manifest,
+        "request_sha256": admission_sha256,
+        "execution_request_transform_id": EXECUTION_REQUEST_TRANSFORM_ID,
+    }
+    bundle = EvidenceBundle(
+        bundle_id=f"api_{job_id}_evidence_bundle",
+        project_id=job_id,
+        ranked_shortlist=[],
+        trajectory_summary={"frame_count": 0},
+        backmapped_poses=[],
+        interaction_report={},
+        topology_report={
+            "status": "not_assessed",
+            "topology_fidelity": "placeholder_alanine",
+            "claim_blockers": ["topology_validity_not_assessed"],
+        },
+        ai_residual_report={
+            "residual_mode": "disabled",
+            "uncertainty": 1.0,
+            "abstained": True,
+        },
+        failure_flags=["delivery_bundle_validation_not_attached"],
+        source_hashes={
+            "input_hash": execution_sha256,
+            "config_hash": "c" * 64,
+            "model_hash": "m" * 64,
+            "executable_hash": "e" * 64,
+        },
+        viewer_assets=[],
+        wetlab_handoff_table=[],
+        verdict={
+            "claim_safe": False,
+            "verdict_label": "native_runner_review_only",
+            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
+            "topology_fidelity": "placeholder_alanine",
+            "accuracy_claim_grade": "restricted-local-delivery",
+            "failure_flags": ["delivery_bundle_validation_not_attached"],
+        },
+        result_manifest=native_manifest,
+        request_provenance={
+            "admission_request_sha256": execution_sha256,
+            "execution_request_sha256": execution_sha256,
+            "execution_request_transform_id": "identity_v1",
+        },
+    )
+    bundle_path = result_file.parent / "runner_native_bundle.json"
+    bundle_path.write_text(
+        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    status_data = {
+        "result_file": str(result_file),
+        "result_file_sha256": result_sha256,
+        "evidence_bundle": str(bundle_path),
+        "evidence_bundle_sha256": bundle.fingerprint(),
+        "evidence_bundle_source": "validated_runner_native",
+    }
+    return (
+        bundle,
+        status_data,
+        final_manifest,
+        admission_sha256,
+        execution_sha256,
+        EXECUTION_REQUEST_TRANSFORM_ID,
     )
 
 
@@ -1196,119 +1296,80 @@ def test_adopt_validated_runner_native_evidence_bundle_adopts_validated_bundle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import api.worker as worker
-    from betelgeuze_ai_md.contracts import EvidenceBundle
 
     monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
-    bundle = EvidenceBundle(
-        bundle_id="native_adopted",
-        project_id="native_adopted",
-        ranked_shortlist=[],
-        trajectory_summary={"frame_count": 0},
-        backmapped_poses=[],
-        interaction_report={},
-        topology_report={
-            "status": "not_assessed",
-            "topology_fidelity": "placeholder_alanine",
-            "claim_blockers": ["topology_validity_not_assessed"],
-        },
-        ai_residual_report={"residual_mode": "disabled", "uncertainty": 1.0, "abstained": True},
-        failure_flags=["delivery_bundle_validation_not_attached"],
-        source_hashes={
-            "input_hash": "i" * 64,
-            "config_hash": "c" * 64,
-            "model_hash": "m" * 64,
-            "executable_hash": "e" * 64,
-        },
-        viewer_assets=[],
-        wetlab_handoff_table=[],
-        verdict={
-            "claim_safe": False,
-            "verdict_label": "native_runner_review_only",
-            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
-            "topology_fidelity": "placeholder_alanine",
-            "accuracy_claim_grade": "restricted-local-delivery",
-            "failure_flags": ["delivery_bundle_validation_not_attached"],
-        },
-    )
-    bundle_path = tmp_path / "native" / "runner_native_bundle.json"
-    bundle_path.parent.mkdir(parents=True, exist_ok=True)
-    bundle_path.write_text(
-        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    assert "request_provenance" not in bundle.to_dict()
-    fingerprint = bundle.fingerprint()
+    (
+        native_bundle,
+        status_data,
+        final_manifest,
+        admission_sha256,
+        execution_sha256,
+        transform_id,
+    ) = _native_adoption_fixture(tmp_path, "job_adopt")
 
     adopted = worker.adopt_validated_runner_native_evidence_bundle(
         job_id="job_adopt",
-        status_data={
-            "evidence_bundle": str(bundle_path),
-            "evidence_bundle_sha256": fingerprint,
-            "evidence_bundle_source": "validated_runner_native",
-        },
+        status_data=status_data,
+        result_manifest=final_manifest,
+        request_sha256=admission_sha256,
+        execution_request_sha256=execution_sha256,
+        execution_request_transform_id=transform_id,
     )
 
     final_path = tmp_path / "results" / "job_adopt" / "evidence_bundle.json"
     assert adopted is not None
-    assert adopted == (str(final_path), fingerprint)
+    assert adopted[0] == str(final_path)
+    assert adopted[1] != native_bundle.fingerprint()
     assert final_path.exists()
-    assert json.loads(final_path.read_text(encoding="utf-8"))["bundle_id"] == "native_adopted"
+    payload = json.loads(final_path.read_text(encoding="utf-8"))
+    assert payload["bundle_id"] == "api_job_adopt_evidence_bundle"
+    assert payload["result_manifest"] == final_manifest
+    assert payload["request_provenance"]["admission_request_sha256"] == admission_sha256
 
 
 def test_adopt_validated_runner_native_evidence_bundle_rejects_fingerprint_mismatch(
     tmp_path: Path,
 ) -> None:
     import api.worker as worker
-    from betelgeuze_ai_md.contracts import EvidenceBundle
-
-    bundle = EvidenceBundle(
-        bundle_id="native_mismatch",
-        project_id="native_mismatch",
-        ranked_shortlist=[],
-        trajectory_summary={"frame_count": 0},
-        backmapped_poses=[],
-        interaction_report={},
-        topology_report={
-            "status": "not_assessed",
-            "topology_fidelity": "placeholder_alanine",
-            "claim_blockers": ["topology_validity_not_assessed"],
-        },
-        ai_residual_report={"residual_mode": "disabled", "uncertainty": 1.0, "abstained": True},
-        failure_flags=["delivery_bundle_validation_not_attached"],
-        source_hashes={
-            "input_hash": "i" * 64,
-            "config_hash": "c" * 64,
-            "model_hash": "m" * 64,
-            "executable_hash": "e" * 64,
-        },
-        viewer_assets=[],
-        wetlab_handoff_table=[],
-        verdict={
-            "claim_safe": False,
-            "verdict_label": "native_runner_review_only",
-            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
-            "topology_fidelity": "placeholder_alanine",
-            "accuracy_claim_grade": "restricted-local-delivery",
-            "failure_flags": ["delivery_bundle_validation_not_attached"],
-        },
+    _, status_data, final_manifest, admission, execution, transform = (
+        _native_adoption_fixture(tmp_path, "job_mismatch")
     )
-    bundle_path = tmp_path / "evidence_bundle.json"
+    status_data["evidence_bundle_sha256"] = "0" * 64
+    with pytest.raises(worker.JobIntegrityError, match="fingerprint mismatch"):
+        worker.adopt_validated_runner_native_evidence_bundle(
+            job_id="job_mismatch",
+            status_data=status_data,
+            result_manifest=final_manifest,
+            request_sha256=admission,
+            execution_request_sha256=execution,
+            execution_request_transform_id=transform,
+        )
+
+
+def test_adopt_validated_runner_native_evidence_bundle_rejects_overflow_json(
+    tmp_path: Path,
+) -> None:
+    import api.worker as worker
+
+    _, status_data, final_manifest, admission, execution, transform = (
+        _native_adoption_fixture(tmp_path, "job_nonfinite_native")
+    )
+    bundle_path = Path(status_data["evidence_bundle"])
+    raw = bundle_path.read_text(encoding="utf-8")
     bundle_path.write_text(
-        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
+        raw.replace('"ranked_shortlist": []', '"ranked_shortlist": [1e309]'),
         encoding="utf-8",
     )
 
-    assert (
+    with pytest.raises(worker.JobIntegrityError, match="not a JSON object"):
         worker.adopt_validated_runner_native_evidence_bundle(
-            job_id="job_mismatch",
-            status_data={
-                "evidence_bundle": str(bundle_path),
-                "evidence_bundle_sha256": "0" * 64,
-                "evidence_bundle_source": "validated_runner_native",
-            },
+            job_id="job_nonfinite_native",
+            status_data=status_data,
+            result_manifest=final_manifest,
+            request_sha256=admission,
+            execution_request_sha256=execution,
+            execution_request_transform_id=transform,
         )
-        is None
-    )
 
 
 def test_write_job_evidence_bundle_prefers_native_evidence_bundle(
@@ -1316,65 +1377,31 @@ def test_write_job_evidence_bundle_prefers_native_evidence_bundle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import api.worker as worker
-    from betelgeuze_ai_md.contracts import EvidenceBundle
-
     monkeypatch.setattr(worker.settings, "results_storage_path", str(tmp_path / "results"))
-    bundle = EvidenceBundle(
-        bundle_id="native_preferred",
-        project_id="native_preferred",
-        ranked_shortlist=[],
-        trajectory_summary={"frame_count": 0},
-        backmapped_poses=[],
-        interaction_report={},
-        topology_report={
-            "status": "not_assessed",
-            "topology_fidelity": "placeholder_alanine",
-            "claim_blockers": ["topology_validity_not_assessed"],
-        },
-        ai_residual_report={"residual_mode": "disabled", "uncertainty": 1.0, "abstained": True},
-        failure_flags=["delivery_bundle_validation_not_attached"],
-        source_hashes={
-            "input_hash": "i" * 64,
-            "config_hash": "c" * 64,
-            "model_hash": "m" * 64,
-            "executable_hash": "e" * 64,
-        },
-        viewer_assets=[],
-        wetlab_handoff_table=[],
-        verdict={
-            "claim_safe": False,
-            "verdict_label": "native_runner_review_only",
-            "claim_scope": "restricted_local_delivery_proxy_refinement_only",
-            "topology_fidelity": "placeholder_alanine",
-            "accuracy_claim_grade": "restricted-local-delivery",
-            "failure_flags": ["delivery_bundle_validation_not_attached"],
-        },
-    )
-    fingerprint = bundle.fingerprint()
     job_id = "job_native_preferred"
-    bundle_path = tmp_path / "native" / job_id / "runner_bundle.json"
-    bundle_path.parent.mkdir(parents=True, exist_ok=True)
-    bundle_path.write_text(
-        json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    native_bundle, status_data, final_manifest, admission, execution, transform = (
+        _native_adoption_fixture(tmp_path, job_id)
     )
+    manifest_path = tmp_path / "native" / job_id / "result_manifest.json"
+    manifest_path.write_text(json.dumps(final_manifest) + "\n", encoding="utf-8")
 
     bundle_path_returned, fingerprint_returned = worker.write_job_evidence_bundle(
         job_id=job_id,
         request_data={"target_name": "Chignolin"},
-        result_manifest_path="",
-        status_data={
-            "evidence_bundle": str(bundle_path),
-            "evidence_bundle_sha256": fingerprint,
-            "evidence_bundle_source": "validated_runner_native",
-        },
+        result_manifest_path=str(manifest_path),
+        status_data=status_data,
+        request_sha256=admission,
+        execution_request_sha256=execution,
+        execution_request_transform_id=transform,
     )
 
     final_path = tmp_path / "results" / job_id / "evidence_bundle.json"
     assert bundle_path_returned == str(final_path)
-    assert fingerprint_returned == fingerprint
+    assert fingerprint_returned != native_bundle.fingerprint()
     assert final_path.exists()
-    assert json.loads(final_path.read_text(encoding="utf-8"))["bundle_id"] == "native_preferred"
+    payload = json.loads(final_path.read_text(encoding="utf-8"))
+    assert payload["bundle_id"] == f"api_{job_id}_evidence_bundle"
+    assert payload["result_manifest"] == final_manifest
 
 
 def test_worker_rejects_execution_payload_hash_mismatch_without_retrying(

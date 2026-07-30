@@ -133,6 +133,18 @@ def _safe_optional_float(value: Any) -> Optional[float]:
         return None
 
 
+def _strict_json_safe(value: Any) -> Any:
+    if isinstance(value, np.generic):
+        return _strict_json_safe(value.item())
+    if isinstance(value, float):
+        return value if np.isfinite(value) else None
+    if isinstance(value, dict):
+        return {str(key): _strict_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_strict_json_safe(item) for item in value]
+    return value
+
+
 def _adrb2_beta_blocker_pharmacophore_match(smiles: Any) -> bool:
     if Chem is None or _ADRB2_BETA_BLOCKER_PHARMACOPHORE is None:
         return False
@@ -3719,7 +3731,37 @@ def _flatten_hbond_evidence_for_runner(
             ligand_xyz=ligand_xyz if ligand_xyz.size else None,
         )
     except Exception as exc:
+        evidence_payload = {
+            "site_count": 0,
+            "donor_site_count": 0,
+            "acceptor_site_count": 0,
+            "donor_acceptor_pairs": [],
+            "distance_pass_count": 0,
+            "angle_pass_count": 0,
+            "distance_pass_fraction": 0.0,
+            "angle_pass_fraction": 0.0,
+            "unsatisfied_donor_count": 0,
+            "unsatisfied_acceptor_count": 0,
+            "overanchoring_flag": False,
+            "missing_expected_anchor_flag": True,
+            "geometry_evaluated": False,
+            "geometry_complete": False,
+            "hbond_confidence": 0.0,
+            "delta_backmap": 0.0,
+            "delta_backmap_max": 2.5,
+            "delta_backmap_evaluated": False,
+            "delta_backmap_yellow_band": False,
+            "claim_safe": False,
+            "status": "error",
+            "schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
+            "abstention_reason": "hbond_evidence_error",
+            "blocked_reason": "hbond_evidence_error",
+            "thresholds": {},
+            "onsps_backmap_metadata": {},
+            "error": str(exc),
+        }
         return {
+            "hbond_evidence": evidence_payload,
             "hbond_evidence_schema_version": HBOND_EVIDENCE_SCHEMA_VERSION,
             "hbond_claim_metadata_schema_version": "hbond_claim_metadata_v1",
             "hbond_evidence_schema_ready": False,
@@ -3759,6 +3801,7 @@ def _flatten_hbond_evidence_for_runner(
         product_claim_promoted=False,
     )
     return {
+        "hbond_evidence": evidence.to_dict(),
         "hbond_evidence_schema_version": str(evidence.schema_version),
         "hbond_claim_metadata_schema_version": str(
             claim_metadata.get("hbond_claim_metadata_schema_version") or "hbond_claim_metadata_v1"
@@ -4877,7 +4920,12 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     result_df = _append_replicate_export_metrics(result_df, ranking_meta)
     result_csv = str(args.out_scores_csv).strip() or os.path.join(out_root, "ligand_scores.csv")
     _ensure_dir(os.path.dirname(result_csv) or ".")
-    result_df.to_csv(result_csv, index=False)
+    # Full H-bond pair evidence stays in the job-scoped EvidenceBundle.  Keep
+    # the legacy flat CSV surface stable and free of nested object literals.
+    result_df.drop(columns=["hbond_evidence"], errors="ignore").to_csv(
+        result_csv,
+        index=False,
+    )
 
     topk = topk_eligible_frame(result_df, selection_score_authority).head(
         int(max(args.topk_report, 1))
@@ -5027,10 +5075,11 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     }
     if not score_only:
         summary["artifacts"]["jobs_dir"] = jobs_root
+    summary = _strict_json_safe(summary)
     out_json = str(args.out_summary_json).strip() or os.path.join(out_root, "summary.json")
     out_md = str(args.out_summary_md).strip() or os.path.join(out_root, "summary.md")
     with open(out_json, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2, ensure_ascii=False)
+        json.dump(summary, f, indent=2, ensure_ascii=False, allow_nan=False)
     lines = [
         "# Ligand Backmapping + Scoring",
         "",
@@ -5088,7 +5137,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         bundle_zip = shutil.make_archive(archive_base, "zip", root_dir=out_root)
         summary["artifacts"]["bundle_zip"] = bundle_zip
         with open(out_json, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, ensure_ascii=False)
+            json.dump(summary, f, indent=2, ensure_ascii=False, allow_nan=False)
 
     evidence_bundle_path = str(getattr(args, "evidence_bundle", "") or "").strip()
     if evidence_bundle_path:

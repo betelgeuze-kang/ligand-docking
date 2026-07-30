@@ -19,6 +19,12 @@ from betelgeuze_ai_md.contracts.input_schema import (
     MolecularSystem,
 )
 from betelgeuze_ai_md.contracts.manifest import EvidenceBundle
+from betelgeuze_ai_md.contracts.job_scoped_hbond import (
+    JOB_SCOPED_HBOND_EVIDENCE_SCHEMA_VERSION,
+    JobScopedHbondEvidence,
+    build_job_scoped_hbond_evidence,
+    require_job_scoped_hbond_matches_result,
+)
 from betelgeuze_ai_md.contracts.output_schema import (
     AIResidualReport,
     BackmappedPose,
@@ -47,6 +53,8 @@ __all__ = [
     "GENERAL_MD_ACCURACY_CLAIM",
     "InteractionEvidence",
     "InteractionReport",
+    "JOB_SCOPED_HBOND_EVIDENCE_SCHEMA_VERSION",
+    "JobScopedHbondEvidence",
     "MolecularProject",
     "MolecularSystem",
     "PRODUCT_CLAIM_BOUNDARY_TEXT",
@@ -58,6 +66,8 @@ __all__ = [
     "build_api_evidence_bundle",
     "build_backmapped_pose",
     "build_interaction_report",
+    "build_job_scoped_hbond_evidence",
+    "require_job_scoped_hbond_matches_result",
     "build_topology_validity_report",
     "fail_closed_topology_report",
     "validate_claim_fields",

@@ -96,6 +96,43 @@ def test_resolve_heavy_artifact_paths_explicit_root(tmp_path: Path):
     assert Path(resolved["stage3_delivery_dir"]).exists()
 
 
+def test_stage3_hbond_evidence_is_embedded_with_child_result_hash(tmp_path: Path):
+    stage3_summary_path = tmp_path / "stage3_summary.json"
+    stage3_summary = {
+        "hbond_evidence_summary": {
+            "schema_version": "hbond_evidence_v1",
+            "status": "pass",
+        },
+        "topk": [
+            {
+                "queue_id": "ADRB2__lig1__rep0001",
+                "hbond_evidence": {"schema_version": "hbond_evidence_v1"},
+            }
+        ],
+    }
+    stage3_summary_path.write_text(
+        json.dumps(stage3_summary, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    fields = mod._stage3_hbond_evidence_fields(
+        stage3_summary,
+        str(stage3_summary_path),
+        hashlib.sha256(stage3_summary_path.read_bytes()).hexdigest(),
+    )
+
+    assert fields["hbond_evidence_summary"] == stage3_summary[
+        "hbond_evidence_summary"
+    ]
+    assert fields["hbond_evidence_candidates"] == stage3_summary["topk"]
+    assert fields["hbond_evidence_source"]["source_kind"] == (
+        "htvs_stage3_backmapping_result"
+    )
+    assert fields["hbond_evidence_source"]["result_file_sha256"] == hashlib.sha256(
+        stage3_summary_path.read_bytes()
+    ).hexdigest()
+
+
 def test_finalize_preserves_runtime_selection_authority_on_post_stage3_failure(
     tmp_path: Path,
     monkeypatch,

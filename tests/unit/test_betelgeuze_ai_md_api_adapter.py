@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+import numpy as np
 
 from betelgeuze_ai_md.contracts import (
     TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE,
@@ -15,6 +16,12 @@ from betelgeuze_ai_md.contracts import (
     maybe_write_runner_native_evidence_bundle,
 )
 from betelgeuze_ai_md.contracts.api_adapter import build_api_evidence_bundle, write_api_evidence_bundle
+from betelgeuze_ai_md.contracts.errors import ContractValidationError
+from betelgeuze_ai_md.contracts.job_scoped_hbond import JobScopedHbondEvidence
+from betelgeuze_ai_md.contracts.job_scoped_hbond import (
+    build_job_scoped_hbond_evidence,
+)
+from betelgeuze_ai_md.contracts.serialization import sha256_payload
 from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
 from betelgeuze_engine.product.implementation_provenance import (
     build_implementation_source_manifest,
@@ -117,7 +124,10 @@ def test_build_api_evidence_bundle_is_review_only_even_with_structured_result(tm
     assert bundle.project_id == "ADRB2"
     assert bundle.verdict.claim_safe is False
     assert bundle.verdict.verdict_label == "api_completed_evidence_review_only"
-    assert bundle.failure_flags == ["delivery_bundle_validation_not_attached"]
+    assert set(bundle.failure_flags) == {
+        "delivery_bundle_validation_not_attached",
+        "job_scoped_hbond_evidence_missing",
+    }
     assert bundle.source_hashes["input_hash"] == "i" * 64
     assert bundle.source_hashes["model_hash"] == "m" * 64
     assert bundle.source_hashes["executable_hash"] == implementation[
@@ -603,3 +613,456 @@ def test_maybe_write_runner_native_evidence_bundle_requires_result_file(tmp_path
     else:
         raise AssertionError("missing result_file should fail native EvidenceBundle emission")
     assert not bundle_file.exists()
+
+
+def test_native_bundle_rejects_request_job_id_conflicting_with_attempt_path(
+    tmp_path: Path,
+) -> None:
+    attempt_dir = tmp_path / "job_attempt_owner" / ".attempts" / "attempt-000001-test"
+    attempt_dir.mkdir(parents=True)
+    request_file = attempt_dir / "request.json"
+    request = {"job_id": "job_foreign", "target_name": "ADRB2"}
+    request_file.write_text(json.dumps(request) + "\n", encoding="utf-8")
+    result_file = attempt_dir / "runner_result.json"
+    result_file.write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="active attempt path"):
+        maybe_write_runner_native_evidence_bundle(
+            attempt_dir / "evidence_bundle.json",
+            request_json_path=request_file,
+            request=request,
+            result_file=result_file,
+        )
+
+
+def test_backmapping_native_bundle_binds_full_hbond_evidence_to_durable_job(
+    tmp_path: Path,
+) -> None:
+    job_id = "job_hbond_scoped"
+    attempt_dir = tmp_path / job_id / ".attempts" / "attempt-000001-test"
+    attempt_dir.mkdir(parents=True)
+    request_file = attempt_dir / "request.json"
+    request = {
+        "target_name": "ADRB2",
+        "runner_profile_id": "backmapping_scoring.production",
+    }
+    request_file.write_text(
+        json.dumps(request, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    from betelgeuze_engine.product.runners.backmapping_scoring import (
+        _flatten_hbond_evidence_for_runner,
+    )
+
+    hbond_evidence = _flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.asarray(
+            [[0.0, 0.0, 3.0], [1.6, 0.0, 3.0]],
+            dtype=np.float32,
+        ),
+        ligand_xyz=np.asarray(
+            [[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]],
+            dtype=np.float32,
+        ),
+    )["hbond_evidence"]
+    result_payload = {
+        "hbond_evidence_summary": {
+            "schema_version": "hbond_evidence_v1",
+            "status": "pass",
+            "evaluated_row_count": 1,
+        },
+        "topk": [
+            {
+                "queue_id": "ADRB2__lig1__rep0001",
+                "target": "ADRB2",
+                "ligand_id": "lig1",
+                "ligand_smiles": "CCO",
+                "hbond_evidence": hbond_evidence,
+            }
+        ],
+    }
+    result_file = attempt_dir / "runner_result.json"
+    result_file.write_text(
+        json.dumps(result_payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    implementation = build_implementation_source_manifest()
+    bundle_file = attempt_dir / "evidence_bundle.json"
+
+    bundle = maybe_write_runner_native_evidence_bundle(
+        bundle_file,
+        request_json_path=request_file,
+        request=request,
+        result_file=result_file,
+        result_payload={
+            **result_payload,
+            "topk": [{**result_payload["topk"][0], "queue_id": "foreign_job_row"}],
+        },
+        runner_script="tools/run_ligand_backmapping_scoring.py",
+        runner_metadata={
+            "runner_kind": "ligand_backmapping_scoring",
+            "selection_score_authority": SelectionScoreAuthority.create(
+                score_column="binding_score_composite_v7",
+                score_direction="ascending",
+            ).to_dict(),
+            "implementation_source_manifest": implementation,
+            "implementation_fingerprint_sha256": implementation["manifest_sha256"],
+            "effective_runner_config": {"score_only": True},
+        },
+    )
+
+    assert bundle is not None
+    payload = bundle.to_dict()
+    scoped = payload["job_scoped_hbond_evidence"]
+    request_sha256 = sha256_payload(request)
+    assert bundle.bundle_id == f"api_{job_id}_evidence_bundle"
+    assert bundle.result_manifest["job_id"] == job_id
+    assert scoped["job_id"] == job_id
+    assert scoped["admission_request_sha256"] == request_sha256
+    assert scoped["execution_request_sha256"] == request_sha256
+    assert scoped["result_file_sha256"] == bundle.result_manifest["result_file_sha256"]
+    assert scoped["candidates"][0]["candidate_id"] == "ADRB2__lig1__rep0001"
+    assert scoped["candidates"][0]["hbond_evidence"]["donor_acceptor_pairs"][0][
+        "nearest_distance"
+    ] > 0.0
+    assert len(bundle.interaction_report.interactions) == hbond_evidence["site_count"]
+    assert "interaction_report_contract_missing" not in bundle.failure_flags
+    assert "job_scoped_hbond_evidence_missing" not in bundle.failure_flags
+
+    replayed = JobScopedHbondEvidence.create(
+        job_id="job_hbond_replay",
+        admission_request_sha256=request_sha256,
+        execution_request_sha256=request_sha256,
+        result_file_sha256=scoped["result_file_sha256"],
+        aggregate_summary=scoped["aggregate_summary"],
+        candidates=scoped["candidates"],
+    )
+    replay_payload = copy.deepcopy(payload)
+    replay_payload["bundle_id"] = "api_job_hbond_replay_evidence_bundle"
+    replay_payload["job_scoped_hbond_evidence"] = replayed.to_dict()
+    with pytest.raises(ContractValidationError, match="manifest job binding mismatch"):
+        EvidenceBundle(**replay_payload)
+
+    foreign_candidates = copy.deepcopy(scoped["candidates"])
+    foreign_candidates[0]["target"] = "FOREIGN"
+    unsigned_foreign = {
+        key: value
+        for key, value in foreign_candidates[0].items()
+        if key != "candidate_evidence_sha256"
+    }
+    foreign_candidates[0]["candidate_evidence_sha256"] = sha256_payload(
+        unsigned_foreign
+    )
+    foreign_scoped = JobScopedHbondEvidence.create(
+        job_id=job_id,
+        admission_request_sha256=request_sha256,
+        execution_request_sha256=request_sha256,
+        result_file_sha256=scoped["result_file_sha256"],
+        aggregate_summary=scoped["aggregate_summary"],
+        candidates=foreign_candidates,
+    )
+    foreign_payload = copy.deepcopy(payload)
+    foreign_payload["job_scoped_hbond_evidence"] = foreign_scoped.to_dict()
+    foreign_bundle = EvidenceBundle(**foreign_payload)
+    from api.validated_runner import _validate_native_bundle_execution_binding
+
+    with pytest.raises(
+        ContractValidationError,
+        match="does not match the bound result payload",
+    ):
+        _validate_native_bundle_execution_binding(
+            foreign_bundle,
+            job_id=job_id,
+            request_payload=request,
+            result_file=result_file,
+            result_file_sha256=scoped["result_file_sha256"],
+            result_payload=result_payload,
+        )
+
+
+def test_job_scoped_hbond_rejects_claim_safe_without_distance_support() -> None:
+    from betelgeuze_engine.product.runners.backmapping_scoring import (
+        _flatten_hbond_evidence_for_runner,
+    )
+
+    evidence = _flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.asarray(
+            [[0.0, 0.0, 3.0], [1.6, 0.0, 3.0]],
+            dtype=np.float32,
+        ),
+        ligand_xyz=np.asarray(
+            [[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]],
+            dtype=np.float32,
+        ),
+    )["hbond_evidence"]
+    evidence["distance_pass_count"] = 0
+    for pair in evidence["donor_acceptor_pairs"]:
+        pair["distance_pass"] = False
+    payload = {
+        "hbond_evidence_summary": {
+            "schema_version": "hbond_evidence_v1",
+            "status": "pass",
+        },
+        "topk": [
+            {
+                "queue_id": "q1",
+                "target": "ADRB2",
+                "ligand_id": "lig1",
+                "ligand_smiles": "CCO",
+                "hbond_evidence": evidence,
+            }
+        ],
+    }
+
+    with pytest.raises(
+        ContractValidationError,
+        match="distance pass fraction contradicts pairs",
+    ):
+        build_job_scoped_hbond_evidence(
+            payload,
+            job_id="job_contradictory",
+            admission_request_sha256="a" * 64,
+            execution_request_sha256="b" * 64,
+            result_file_sha256="c" * 64,
+        )
+
+
+def test_job_scoped_hbond_accepts_review_evidence_with_missing_ligand_geometry() -> None:
+    from betelgeuze_engine.product.runners.backmapping_scoring import (
+        _flatten_hbond_evidence_for_runner,
+    )
+
+    evidence = _flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.asarray([[0.0, 0.0, 3.0]], dtype=np.float32),
+        ligand_xyz=np.zeros((0, 3), dtype=np.float32),
+    )["hbond_evidence"]
+    assert evidence["geometry_evaluated"] is False
+    assert evidence["missing_expected_anchor_flag"] is True
+    scoped = build_job_scoped_hbond_evidence(
+        {
+            "hbond_evidence_summary": {
+                "schema_version": "hbond_evidence_v1",
+                "status": "review",
+            },
+            "topk": [
+                {
+                    "queue_id": "q_missing_geometry",
+                    "target": "ADRB2",
+                    "ligand_id": "lig1",
+                    "ligand_smiles": "CCO",
+                    "hbond_evidence": evidence,
+                }
+            ],
+        },
+        job_id="job_missing_geometry",
+        admission_request_sha256="a" * 64,
+        execution_request_sha256="b" * 64,
+        result_file_sha256="c" * 64,
+    )
+
+    assert scoped is not None
+    assert scoped.candidates[0]["hbond_evidence"][
+        "missing_expected_anchor_flag"
+    ] is True
+
+
+@pytest.mark.parametrize(
+    ("mutate", "error"),
+    [
+        (
+            lambda evidence: evidence["onsps_backmap_metadata"].update(
+                {"claim_safe": False, "blocked_reason": "forced_review"}
+            ),
+            "claim-safe invariants",
+        ),
+        (
+            lambda evidence: evidence.update(
+                {
+                    "delta_backmap": evidence["delta_backmap_max"] + 0.1,
+                    "delta_backmap_evaluated": True,
+                    "delta_backmap_yellow_band": False,
+                }
+            ),
+            "delta yellow-band flag contradicts thresholds",
+        ),
+        (
+            lambda evidence: evidence["thresholds"].update(
+                {"claim_safe_confidence_min": 0.1}
+            ),
+            "claim-safe threshold is non-canonical",
+        ),
+    ],
+)
+def test_job_scoped_hbond_rejects_tampered_claim_safe_metadata(
+    mutate,
+    error: str,
+) -> None:
+    from betelgeuze_engine.product.runners.backmapping_scoring import (
+        _flatten_hbond_evidence_for_runner,
+    )
+
+    evidence = _flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.asarray(
+            [[0.0, 0.0, 3.0], [1.6, 0.0, 3.0]],
+            dtype=np.float32,
+        ),
+        ligand_xyz=np.asarray(
+            [[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]],
+            dtype=np.float32,
+        ),
+    )["hbond_evidence"]
+    assert evidence["claim_safe"] is True
+    mutate(evidence)
+    payload = {
+        "hbond_evidence_summary": {
+            "schema_version": "hbond_evidence_v1",
+            "status": "pass",
+        },
+        "topk": [
+            {
+                "queue_id": "q_tampered",
+                "target": "ADRB2",
+                "ligand_id": "lig1",
+                "ligand_smiles": "CCO",
+                "hbond_evidence": evidence,
+            }
+        ],
+    }
+
+    with pytest.raises(ContractValidationError, match=error):
+        build_job_scoped_hbond_evidence(
+            payload,
+            job_id="job_tampered",
+            admission_request_sha256="a" * 64,
+            execution_request_sha256="b" * 64,
+            result_file_sha256="c" * 64,
+        )
+
+
+@pytest.mark.parametrize(
+    ("summary_updates", "error"),
+    [
+        (
+            {"claim_safe_row_count": 2},
+            "claim-safe count exceeds evaluated rows",
+        ),
+        (
+            {"blocked_row_count": 1},
+            "blocked count contradicts evaluated rows",
+        ),
+        (
+            {"claim_safe_rate": 0.0},
+            "claim-safe rate contradicts counts",
+        ),
+        (
+            {"status": "review"},
+            "aggregate status contradicts counts",
+        ),
+        (
+            {"topk_claim_safe_row_count": 0},
+            "Top-K claim-safe count contradicts candidates",
+        ),
+        (
+            {"schema_ready_row_count": 99},
+            "schema_ready_row_count exceeds evaluated rows",
+        ),
+    ],
+)
+def test_job_scoped_hbond_rejects_contradictory_aggregate_summary(
+    summary_updates: dict,
+    error: str,
+) -> None:
+    from betelgeuze_engine.product.runners.backmapping_scoring import (
+        _flatten_hbond_evidence_for_runner,
+    )
+
+    evidence = _flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.asarray(
+            [[0.0, 0.0, 3.0], [1.6, 0.0, 3.0]],
+            dtype=np.float32,
+        ),
+        ligand_xyz=np.asarray(
+            [[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]],
+            dtype=np.float32,
+        ),
+    )["hbond_evidence"]
+    summary = {
+        "schema_version": "hbond_evidence_v1",
+        "status": "pass",
+        "evaluated_row_count": 1,
+        "claim_safe_row_count": 1,
+        "claim_safe_rate": 1.0,
+        "blocked_row_count": 0,
+        "topk_claim_safe_row_count": 1,
+        **summary_updates,
+    }
+
+    with pytest.raises(ContractValidationError, match=error):
+        build_job_scoped_hbond_evidence(
+            {
+                "hbond_evidence_summary": summary,
+                "topk": [
+                    {
+                        "queue_id": "q_summary",
+                        "target": "ADRB2",
+                        "ligand_id": "lig1",
+                        "ligand_smiles": "CCO",
+                        "hbond_evidence": evidence,
+                    }
+                ],
+            },
+            job_id="job_summary",
+            admission_request_sha256="a" * 64,
+            execution_request_sha256="b" * 64,
+            result_file_sha256="c" * 64,
+        )
+
+
+def test_job_scoped_hbond_rejects_contradictory_topk_blocker_counts() -> None:
+    from betelgeuze_engine.product.runners.backmapping_scoring import (
+        _flatten_hbond_evidence_for_runner,
+    )
+
+    evidence = _flatten_hbond_evidence_for_runner(
+        smiles="CCO",
+        protein_xyz=np.asarray([[0.0, 0.0, 3.0]], dtype=np.float32),
+        ligand_xyz=np.zeros((0, 3), dtype=np.float32),
+    )["hbond_evidence"]
+    assert evidence["claim_safe"] is False
+    assert evidence["blocked_reason"]
+
+    with pytest.raises(
+        ContractValidationError,
+        match="Top-K blocker counts contradict candidates",
+    ):
+        build_job_scoped_hbond_evidence(
+            {
+                "hbond_evidence_summary": {
+                    "schema_version": "hbond_evidence_v1",
+                    "status": "review",
+                    "evaluated_row_count": 1,
+                    "claim_safe_row_count": 0,
+                    "claim_safe_rate": 0.0,
+                    "blocked_row_count": 1,
+                    "topk_claim_safe_row_count": 0,
+                    "topk_blocked_reason_counts": {},
+                },
+                "topk": [
+                    {
+                        "queue_id": "q_blocked_summary",
+                        "target": "ADRB2",
+                        "ligand_id": "lig1",
+                        "ligand_smiles": "CCO",
+                        "hbond_evidence": evidence,
+                    }
+                ],
+            },
+            job_id="job_blocked_summary",
+            admission_request_sha256="a" * 64,
+            execution_request_sha256="b" * 64,
+            result_file_sha256="c" * 64,
+        )

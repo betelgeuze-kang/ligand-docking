@@ -550,12 +550,16 @@ def test_validated_runner_fails_before_spawn_without_linux_containment(
     assert spawned is False
 
 
-def _write_native_bundle_runner(path: Path) -> None:
+def _write_native_bundle_runner(
+    path: Path,
+    *,
+    overflow_metadata: bool = False,
+) -> None:
     path.write_text(
         "\n".join(
             [
                 "from __future__ import annotations",
-                "import argparse, json",
+                "import argparse, hashlib, json",
                 "from pathlib import Path",
                 "p = argparse.ArgumentParser()",
                 "p.add_argument('--request-json', required=True)",
@@ -568,10 +572,19 @@ def _write_native_bundle_runner(path: Path) -> None:
                 "    'runner_kind': 'fake_native_bundle_runner',",
                 "    'target_name': request.get('target_name'),",
                 "}, sort_keys=True) + '\\n', encoding='utf-8')",
+                "request_path = Path(args.request_json)",
+                "request_parent = request_path.parent",
+                "job_id = request_parent.parent.parent.name if request_parent.parent.name == '.attempts' else request_parent.name",
+                "request_sha256 = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')).hexdigest()",
+                "result_sha256 = hashlib.sha256(Path(args.out_json).read_bytes()).hexdigest()",
                 "bundle = {",
-                "    'bundle_id': 'native_' + request.get('target_name', 'job'),",
+                "    'bundle_id': 'api_' + job_id + '_evidence_bundle',",
                 "    'project_id': request.get('target_name', 'job'),",
-                "    'ranked_shortlist': [],",
+                (
+                    "    'ranked_shortlist': [{'metadata': 0.0}],"
+                    if overflow_metadata
+                    else "    'ranked_shortlist': [],"
+                ),
                 "    'trajectory_summary': {'frame_count': 0},",
                 "    'backmapped_poses': [],",
                 "    'interaction_report': {},",
@@ -583,13 +596,27 @@ def _write_native_bundle_runner(path: Path) -> None:
                 "    'ai_residual_report': {'residual_mode': 'disabled', 'uncertainty': 1.0, 'abstained': True},",
                 "    'failure_flags': ['delivery_bundle_validation_not_attached'],",
                 "    'source_hashes': {",
-                "        'input_hash': 'i' * 64,",
+                "        'input_hash': request_sha256,",
                 "        'config_hash': 'c' * 64,",
                 "        'model_hash': 'm' * 64,",
                 "        'executable_hash': 'e' * 64,",
                 "    },",
                 "    'viewer_assets': [],",
                 "    'wetlab_handoff_table': [],",
+                "    'result_manifest': {",
+                "        'job_id': job_id,",
+                "        'status': 'completed',",
+                "        'request_sha256': request_sha256,",
+                "        'execution_request_sha256': request_sha256,",
+                "        'execution_request_transform_id': 'identity_v1',",
+                "        'result_file': str(Path(args.out_json)),",
+                "        'result_file_sha256': result_sha256,",
+                "    },",
+                "    'request_provenance': {",
+                "        'admission_request_sha256': request_sha256,",
+                "        'execution_request_sha256': request_sha256,",
+                "        'execution_request_transform_id': 'identity_v1',",
+                "    },",
                 "    'verdict': {",
                 "        'claim_safe': False,",
                 "        'verdict_label': 'native_runner_review_only',",
@@ -599,7 +626,13 @@ def _write_native_bundle_runner(path: Path) -> None:
                 "        'failure_flags': ['delivery_bundle_validation_not_attached'],",
                 "    },",
                 "}",
-                "Path(args.evidence_bundle).write_text(json.dumps(bundle, sort_keys=True) + '\\n', encoding='utf-8')",
+                "encoded_bundle = json.dumps(bundle, sort_keys=True)",
+                (
+                    "encoded_bundle = encoded_bundle.replace('\\\"metadata\\\": 0.0', '\\\"metadata\\\": 1e309')"
+                    if overflow_metadata
+                    else "encoded_bundle = encoded_bundle"
+                ),
+                "Path(args.evidence_bundle).write_text(encoded_bundle + '\\n', encoding='utf-8')",
             ]
         )
         + "\n",
@@ -2052,6 +2085,78 @@ def test_validated_runner_fail_closed_when_native_bundle_invalid(
         )
 
     status = json.loads((tmp_path / "results" / "job_invalid_bundle" / "status.json").read_text(encoding="utf-8"))
+    assert status["status"] == "failed"
+
+
+def test_validated_runner_rejects_overflow_native_bundle_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import api.validated_runner as validated_runner
+
+    fake_runner = tmp_path / "overflow_bundle_runner.py"
+    _write_native_bundle_runner(fake_runner, overflow_metadata=True)
+    evidence = tmp_path / "profile_evidence.json"
+    _write_evidence(evidence)
+    profiles_dir = tmp_path / "profiles"
+    profiles_dir.mkdir()
+    (profiles_dir / "nonfinite_bundle.json").write_text(
+        json.dumps(
+            _profile_payload_with_evidence_bundle(
+                "nonfinite_bundle",
+                fake_runner,
+                evidence,
+            ),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        validated_runner,
+        "ALLOWED_RUNNER_SCRIPTS",
+        {str(fake_runner.resolve())},
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_enabled",
+        True,
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_profiles_path",
+        str(profiles_dir),
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "api_validated_runner_timeout_seconds",
+        5,
+    )
+    monkeypatch.setattr(
+        validated_runner.settings,
+        "results_storage_path",
+        str(tmp_path / "results"),
+    )
+
+    with pytest.raises(PermissionError, match="not valid JSON"):
+        asyncio.run(
+            validated_runner.execute_validated_runner_profile(
+                "job_nonfinite_bundle",
+                {
+                    "target_name": "Chignolin",
+                    "runner_profile_id": "nonfinite_bundle",
+                },
+            )
+        )
+
+    status = json.loads(
+        (
+            tmp_path
+            / "results"
+            / "job_nonfinite_bundle"
+            / "status.json"
+        ).read_text(encoding="utf-8")
+    )
     assert status["status"] == "failed"
 
 

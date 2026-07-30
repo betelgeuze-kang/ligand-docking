@@ -21,6 +21,7 @@ except Exception:  # pragma: no cover
 
 HBOND_EVIDENCE_SCHEMA_VERSION = "hbond_evidence_v1"
 HBOND_CLAIM_METADATA_SCHEMA_VERSION = "hbond_claim_metadata_v1"
+HBOND_CLAIM_SAFE_CONFIDENCE_MIN = 0.5
 HBOND_EVIDENCE_STATUSES = {"pass", "review", "invalid_smiles", "not_assessed"}
 HBOND_SITE_ROLES = {"donor", "acceptor"}
 HBOND_PAIR_REQUIRED_KEYS = {
@@ -96,7 +97,10 @@ def _pair_schema_ready(pair: dict[str, Any], *, geometry_evaluated: bool) -> boo
     try:
         site_index = int(pair.get("site_index"))
         atom_idx = int(pair.get("atom_idx"))
-        nearest_distance = float(pair.get("nearest_distance"))
+        nearest_raw = pair.get("nearest_distance")
+        nearest_distance = (
+            None if nearest_raw is None else float(nearest_raw)
+        )
         angle_score = float(pair.get("angle_score"))
     except (TypeError, ValueError, OverflowError):
         return False
@@ -111,8 +115,15 @@ def _pair_schema_ready(pair: dict[str, Any], *, geometry_evaluated: bool) -> boo
     if not np.isfinite(angle_score):
         return False
     if geometry_evaluated:
-        return bool(np.isfinite(nearest_distance) and nearest_distance >= 0.0)
-    return bool(np.isfinite(nearest_distance) or np.isinf(nearest_distance))
+        return bool(
+            nearest_distance is not None
+            and np.isfinite(nearest_distance)
+            and nearest_distance >= 0.0
+        )
+    return bool(
+        nearest_distance is None
+        or np.isfinite(nearest_distance)
+    )
 
 
 @dataclass
@@ -305,7 +316,7 @@ def _thresholds(
         "max_distance": float(max_distance),
         "overanchor_distance": float(overanchor_distance),
         "angle_threshold": float(angle_threshold),
-        "claim_safe_confidence_min": 0.5,
+        "claim_safe_confidence_min": HBOND_CLAIM_SAFE_CONFIDENCE_MIN,
         "delta_backmap_max": float(delta_backmap_max),
     }
 
@@ -359,7 +370,7 @@ def _blocked_reason(
         return "overanchored_decoy"
     if missing_anchor or distance_pass <= 0:
         return "missing_expected_anchor"
-    if confidence < 0.5:
+    if confidence < HBOND_CLAIM_SAFE_CONFIDENCE_MIN:
         return "low_hbond_confidence"
     return ""
 
@@ -457,16 +468,19 @@ def evaluate_hbond_evidence(
     unsatisfied_acceptor = 0
     for i, site in enumerate(sites):
         role = str(site.role)
-        dist = float("inf")
+        dist: float | None = None
         angle = 0.0
         if protein.size and ligand_sites.ndim == 2 and i < ligand_sites.shape[0]:
             d = np.linalg.norm(protein - ligand_sites[i].reshape(1, 3), axis=1)
             dist = float(np.min(d))
             if center is not None:
                 angle = float(hbond_angle_score(protein, ligand_sites[i], center))
-        dist_ok = bool(float(min_distance) <= dist <= float(max_distance))
+        dist_ok = bool(
+            dist is not None
+            and float(min_distance) <= dist <= float(max_distance)
+        )
         angle_ok = bool(angle >= float(angle_threshold)) if center is not None and protein.size else False
-        if dist < float(overanchor_distance):
+        if dist is not None and dist < float(overanchor_distance):
             overanchoring = True
         if dist_ok:
             distance_pass += 1
@@ -508,7 +522,7 @@ def evaluate_hbond_evidence(
     )
     claim_safe = bool(
         site_count > 0
-        and confidence >= 0.5
+        and confidence >= HBOND_CLAIM_SAFE_CONFIDENCE_MIN
         and not delta_yellow_band
         and not overanchoring
         and not missing_anchor

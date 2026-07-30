@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -12,6 +13,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 
+from betelgeuze_ai_md.contracts.serialization import parse_finite_json_float
 from betelgeuze_engine.product.selection_score_authority import (
     SelectionScoreAuthority,
     load_authority_summary,
@@ -25,6 +27,10 @@ from betelgeuze_engine.product.implementation_provenance import (
 
 TOPK_SELECTION_MODES = {"union", "global_only", "per_target_only"}
 TOPK_DELIVERY_CLAIM_METADATA_SCHEMA_VERSION = "topk_delivery_claim_metadata_v1"
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
 
 
 def build_topk_delivery_claim_metadata(
@@ -58,6 +64,23 @@ def build_topk_delivery_claim_metadata(
 
 def _ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
+
+
+def _read_json_object_with_sha256(path: str) -> tuple[dict[str, Any], str]:
+    try:
+        with open(path, "rb") as handle:
+            raw = handle.read()
+        payload = json.loads(
+            raw,
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
+    except (OSError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return {}, ""
+    return (
+        payload if isinstance(payload, dict) else {},
+        hashlib.sha256(raw).hexdigest(),
+    )
 
 
 def _normalize_selection_mode(value: Any) -> str:
@@ -271,6 +294,12 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
         "--make-bundle-zip" if bool(args.make_bundle_zip) else "--no-make-bundle-zip",
     ]
     rec = _run(cmd)
+    delivery_summary_path = f"{out_prefix}_delivery_summary.json"
+    delivery_summary, delivery_summary_sha256 = (
+        _read_json_object_with_sha256(delivery_summary_path)
+        if rec["ok"]
+        else ({}, "")
+    )
     claim_metadata = build_topk_delivery_claim_metadata(
         ok=bool(rec["ok"]),
         selected_rows=int(len(selected_scores)),
@@ -314,6 +343,16 @@ def build_delivery(args: argparse.Namespace) -> Dict[str, Any]:
             "delivery_summary_md": f"{out_prefix}_delivery_summary.md",
         },
     }
+    hbond_summary = delivery_summary.get("hbond_evidence_summary")
+    hbond_topk = delivery_summary.get("topk")
+    if isinstance(hbond_summary, dict) and isinstance(hbond_topk, list):
+        payload["hbond_evidence_summary"] = hbond_summary
+        payload["hbond_evidence_candidates"] = hbond_topk
+        payload["hbond_evidence_source"] = {
+            "source_kind": "topk_delivery_backmapping_result",
+            "result_file": delivery_summary_path,
+            "result_file_sha256": delivery_summary_sha256,
+        }
     if bool(args.make_bundle_zip):
         payload["artifacts"]["delivery_bundle_zip"] = os.path.join(delivery_out_dir, "ligand_delivery_bundle.zip")
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from betelgeuze_ai_md.contracts.claim_scope import TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
 from betelgeuze_ai_md.contracts.errors import ContractValidationError
+from betelgeuze_ai_md.contracts.job_scoped_hbond import JobScopedHbondEvidence
 from betelgeuze_ai_md.contracts.output_schema import (
     AIResidualReport,
     BackmappedPose,
@@ -39,6 +40,9 @@ class EvidenceBundle:
     verdict: Verdict
     result_manifest: dict[str, Any] = field(default_factory=dict)
     request_provenance: dict[str, str] = field(default_factory=dict)
+    job_scoped_hbond_evidence: JobScopedHbondEvidence | dict[str, Any] = field(
+        default_factory=dict
+    )
     bundle_schema_version: str = "ai_md_evidence_bundle_v1"
     claim_boundary: str = ""
 
@@ -53,6 +57,22 @@ class EvidenceBundle:
             object.__setattr__(self, "result_manifest", {})
         if not isinstance(self.request_provenance, dict):
             object.__setattr__(self, "request_provenance", {})
+        if isinstance(self.job_scoped_hbond_evidence, dict):
+            raw_hbond_evidence = self.job_scoped_hbond_evidence
+            object.__setattr__(
+                self,
+                "job_scoped_hbond_evidence",
+                JobScopedHbondEvidence(**raw_hbond_evidence)
+                if raw_hbond_evidence
+                else {},
+            )
+        elif not isinstance(
+            self.job_scoped_hbond_evidence,
+            JobScopedHbondEvidence,
+        ):
+            raise ContractValidationError(
+                "job_scoped_hbond_evidence must be an object"
+            )
         if isinstance(self.interaction_report, dict):
             interactions = [
                 item if isinstance(item, dict) else to_plain(item)
@@ -90,6 +110,66 @@ class EvidenceBundle:
         missing_hashes = [key for key in REQUIRED_SOURCE_HASHES if not str(self.source_hashes.get(key, "")).strip()]
         if missing_hashes:
             raise ContractValidationError(f"EvidenceBundle missing source hashes: {missing_hashes}")
+        scoped_hbond = self.job_scoped_hbond_evidence
+        if isinstance(scoped_hbond, JobScopedHbondEvidence):
+            expected_bundle_id = f"api_{scoped_hbond.job_id}_evidence_bundle"
+            if self.bundle_id != expected_bundle_id:
+                raise ContractValidationError(
+                    "job-scoped H-bond bundle_id binding mismatch"
+                )
+            manifest_job_id = str(self.result_manifest.get("job_id") or "").strip()
+            if manifest_job_id != scoped_hbond.job_id:
+                raise ContractValidationError(
+                    "job-scoped H-bond result manifest job binding mismatch"
+                )
+            if (
+                str(self.result_manifest.get("result_file_sha256") or "").lower()
+                != scoped_hbond.result_file_sha256
+            ):
+                raise ContractValidationError(
+                    "job-scoped H-bond result file binding mismatch"
+                )
+            manifest_admission_hash = str(
+                self.result_manifest.get("request_sha256") or ""
+            ).lower()
+            if manifest_admission_hash != scoped_hbond.admission_request_sha256:
+                raise ContractValidationError(
+                    "job-scoped H-bond admission request binding mismatch"
+                )
+            manifest_execution_hash = str(
+                self.result_manifest.get("execution_request_sha256")
+                or self.result_manifest.get("request_sha256")
+                or ""
+            ).lower()
+            if manifest_execution_hash != scoped_hbond.execution_request_sha256:
+                raise ContractValidationError(
+                    "job-scoped H-bond execution request binding mismatch"
+                )
+            if (
+                str(self.source_hashes.get("input_hash") or "").lower()
+                != scoped_hbond.execution_request_sha256
+            ):
+                raise ContractValidationError(
+                    "job-scoped H-bond source input binding mismatch"
+                )
+            provenance_admission = str(
+                self.request_provenance.get("admission_request_sha256") or ""
+            ).lower()
+            provenance_execution = str(
+                self.request_provenance.get("execution_request_sha256") or ""
+            ).lower()
+            if provenance_admission and (
+                provenance_admission != scoped_hbond.admission_request_sha256
+            ):
+                raise ContractValidationError(
+                    "job-scoped H-bond admission provenance mismatch"
+                )
+            if provenance_execution and (
+                provenance_execution != scoped_hbond.execution_request_sha256
+            ):
+                raise ContractValidationError(
+                    "job-scoped H-bond execution provenance mismatch"
+                )
         if self.verdict.claim_safe and self.failure_flags:
             raise ContractValidationError("claim_safe EvidenceBundle cannot contain failure_flags")
         topology_status = str(self.topology_report.status or "").strip()
@@ -154,6 +234,8 @@ class EvidenceBundle:
         # API-bound bundles opt in by carrying a non-empty provenance mapping.
         if not self.request_provenance:
             payload.pop("request_provenance", None)
+        if not self.job_scoped_hbond_evidence:
+            payload.pop("job_scoped_hbond_evidence", None)
         return payload
 
     def canonical_json(self) -> str:

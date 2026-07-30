@@ -9,10 +9,20 @@ from typing import Any
 
 from betelgeuze_ai_md.contracts.api_adapter import write_api_evidence_bundle
 from betelgeuze_ai_md.contracts.claim_scope import TOPOLOGY_FIDELITY_PLACEHOLDER_ALANINE
+from betelgeuze_ai_md.contracts.job_scoped_hbond import (
+    build_job_scoped_hbond_evidence,
+)
 from betelgeuze_ai_md.contracts.manifest import EvidenceBundle
-from betelgeuze_ai_md.contracts.serialization import sha256_payload
+from betelgeuze_ai_md.contracts.serialization import (
+    parse_finite_json_float,
+    sha256_payload,
+)
 
 DEFAULT_RUNNER_CLAIM_SCOPE = "restricted_local_delivery_proxy_refinement_only"
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON constant is forbidden: {value}")
 
 
 def _sha256_file(path: Path) -> str:
@@ -28,20 +38,34 @@ def _read_json_object(path_like: str | Path) -> dict[str, Any]:
     if not path.exists() or not path.is_file():
         return {}
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=_reject_json_constant,
+            parse_float=parse_finite_json_float,
+        )
+    except (OSError, ValueError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
 
 
 def _resolve_job_id(request: dict[str, Any], request_json_path: str) -> str:
-    for key in ("job_id", "docking_job_id"):
-        value = str(request.get(key, "") or "").strip()
-        if value:
-            return value
+    explicit_job_id = str(request.get("job_id", "") or "").strip()
     path = Path(request_json_path)
     if path.name == "request.json" and path.parent.name:
+        if path.parent.parent.name == ".attempts" and path.parent.parent.parent.name:
+            attempt_job_id = path.parent.parent.parent.name
+            if explicit_job_id and explicit_job_id != attempt_job_id:
+                raise ValueError(
+                    "request job_id does not match the active attempt path"
+                )
+            return attempt_job_id
+    if explicit_job_id:
+        return explicit_job_id
+    if path.name == "request.json" and path.parent.name:
         return path.parent.name
+    docking_job_id = str(request.get("docking_job_id", "") or "").strip()
+    if docking_job_id:
+        return docking_job_id
     profile_id = str(request.get("runner_profile_id", "") or "").strip()
     return profile_id or "runner_native_job"
 
@@ -97,8 +121,9 @@ def maybe_write_runner_native_evidence_bundle(
     result_path = Path(result_file)
     if not result_path.exists() or not result_path.is_file():
         raise FileNotFoundError(f"runner result file is required for native EvidenceBundle: {result_path}")
-    if result_payload is None:
-        result_payload = _read_json_object(result_path)
+    # Scientific evidence is always derived from the exact JSON file hashed
+    # below.  A caller-supplied in-memory payload is intentionally not trusted.
+    result_payload = _read_json_object(result_path)
     request_hash = sha256_payload(resolved_request) if resolved_request else ""
     if request_path and Path(request_path).exists():
         request_hash = request_hash or _sha256_file(Path(request_path))
@@ -121,6 +146,8 @@ def maybe_write_runner_native_evidence_bundle(
         "job_id": job_id,
         "status": status,
         "request_sha256": request_hash,
+        "execution_request_sha256": request_hash,
+        "execution_request_transform_id": "identity_v1",
         "result_file": str(result_path),
         "result_file_sha256": result_hash,
         "claim_scope": claim_scope,
@@ -132,12 +159,23 @@ def maybe_write_runner_native_evidence_bundle(
     if refine_element_summary:
         result_manifest["refine_element_summary"] = refine_element_summary
 
+    payload_for_bundle = dict(result_payload)
+    scoped_hbond = build_job_scoped_hbond_evidence(
+        payload_for_bundle,
+        job_id=job_id,
+        admission_request_sha256=request_hash,
+        execution_request_sha256=request_hash,
+        result_file_sha256=result_hash,
+    )
+    if scoped_hbond is not None:
+        payload_for_bundle["job_scoped_hbond_evidence"] = scoped_hbond.to_dict()
+
     return write_api_evidence_bundle(
         path_value,
         job_id=job_id,
         request=resolved_request,
         result_manifest=result_manifest,
-        result_payload=result_payload,
+        result_payload=payload_for_bundle,
         runner_execution=runner_execution,
         status_payload={"status": status},
     )
