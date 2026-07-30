@@ -4,6 +4,10 @@ import argparse
 import pandas as pd
 
 from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
+from betelgeuze_engine.product.implementation_provenance import (
+    build_implementation_source_manifest,
+    validate_implementation_source_manifest,
+)
 from tools import generate_ligand_trajectory_engine as traj_engine
 from tools import run_ligand_htvs_pipeline as mod
 
@@ -90,6 +94,83 @@ def test_finalize_preserves_runtime_selection_authority_on_post_stage3_failure(
     )
 
     assert out["selection_score_authority"] == authority
+    implementation = validate_implementation_source_manifest(
+        out["implementation_source_manifest"]
+    )
+    assert out["implementation_fingerprint_sha256"] == implementation[
+        "manifest_sha256"
+    ]
+
+
+def test_finalize_rejects_mismatched_physics_implementation(tmp_path: Path, monkeypatch):
+    args = argparse.Namespace(
+        _selection_score_authority={},
+        service_error_codes_json="config/ligand_service_error_codes_v1.json",
+        service_retry_after_sec_transient=30,
+        service_retry_after_sec_default=0,
+        service_schema_version="ligand_htvs_service_v1",
+        data_contract_json="",
+        evidence_bundle="",
+        docking_request_json="",
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod._finalize_and_write(
+        str(tmp_path / "implementation_mismatch"),
+        {
+            "pass": True,
+            "failed_stage": "",
+            "physics_refinement": {
+                "enabled": True,
+                "implementation_fingerprint_sha256": "0" * 64,
+            },
+        },
+        args,
+    )
+
+    assert out["pass"] is False
+    assert out["failed_stage"] == "stage3b_implementation_provenance"
+    assert out["service_result"]["status"] == "error"
+
+
+def test_finalize_rejects_malformed_child_manifest_with_matching_fingerprint(
+    tmp_path: Path,
+    monkeypatch,
+):
+    implementation = build_implementation_source_manifest()
+    args = argparse.Namespace(
+        _selection_score_authority={},
+        service_error_codes_json="config/ligand_service_error_codes_v1.json",
+        service_retry_after_sec_transient=30,
+        service_retry_after_sec_default=0,
+        service_schema_version="ligand_htvs_service_v1",
+        data_contract_json="",
+        evidence_bundle="",
+        docking_request_json="",
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod._finalize_and_write(
+        str(tmp_path / "malformed_child_manifest"),
+        {
+            "pass": True,
+            "failed_stage": "",
+            "physics_refinement": {
+                "enabled": True,
+                "implementation_source_manifest": {},
+                "implementation_fingerprint_sha256": implementation[
+                    "manifest_sha256"
+                ],
+            },
+        },
+        args,
+    )
+
+    assert out["pass"] is False
+    assert out["failed_stage"] == "stage3b_implementation_provenance"
+    assert "invalid physics refinement implementation manifest" in out[
+        "physics_refinement"
+    ]["implementation_provenance_error"]
 
 
 def test_validate_data_contract_input_detects_missing_column(tmp_path: Path):

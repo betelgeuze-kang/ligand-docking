@@ -43,7 +43,38 @@ def test_apply_engine_refinement_defaults_enables_refine_tier_cascade():
     assert bool(getattr(args, "run_physics_refinement")) is True
     assert getattr(args, "physics_refinement_backend") == "internal_gb_sa_v1"
     assert bool(getattr(args, "traj_cross_docking_pose_seed")) is True
-    assert getattr(args, "calibration_proxy_col") == "deltaG_mm_gbsa_kcal_mol"
+    assert getattr(args, "physics_refinement_base_proxy_col") == "binding_energy_mmpbsa_kcal_mol_proxy"
+    assert getattr(args, "calibration_proxy_col") == "binding_energy_mmpbsa_kcal_mol_proxy"
+
+
+def test_explicit_refinement_cli_limits_override_engine_defaults():
+    args = build_parser().parse_args(
+        [
+            "--no-run-physics-refinement",
+            "--physics-refinement-topk-global",
+            "7",
+            "--pocketmd-max-per-job",
+            "3",
+            "--pocketmd-cost-budget",
+            "2",
+        ]
+    )
+    _apply_engine_refinement_defaults(args, load_engine_refinement_config())
+
+    assert args.run_physics_refinement is False
+    assert args.physics_refinement_topk_global == 7
+    assert args.pocketmd_max_per_job == 3
+    assert args.pocketmd_cost_budget == 2.0
+    assert args.calibration_proxy_col == "binding_energy_mmpbsa_kcal_mol_proxy"
+
+
+def test_explicit_engine_refinement_config_missing_or_invalid_fails_closed(tmp_path: Path):
+    with pytest.raises(FileNotFoundError):
+        load_engine_refinement_config(tmp_path / "missing.json")
+    invalid = tmp_path / "invalid.json"
+    invalid.write_text("{", encoding="utf-8")
+    with pytest.raises(ValueError, match="invalid JSON"):
+        load_engine_refinement_config(invalid)
 
 
 def test_resolve_ligand_model_auto_and_rank_pct():

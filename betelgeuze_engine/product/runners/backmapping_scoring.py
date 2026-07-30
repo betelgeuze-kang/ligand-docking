@@ -49,6 +49,9 @@ from betelgeuze_engine.product.selection_score_authority import (
     selection_sort_metadata,
     topk_eligible_frame,
 )
+from betelgeuze_engine.product.implementation_provenance import (
+    build_implementation_source_manifest,
+)
 from betelgeuze_engine.topology import ligand_topology_from_smiles, summarize_topo_correction
 from tools.native_target_registry import resolve_repo_native_entry
 from tools.pdb_loader import load_native_structure
@@ -4166,6 +4169,7 @@ def _process_queue_row(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, An
         "queue_id": queue_id,
         "target": target,
         "ligand_id": ligand_id,
+        "family": str(row.get("family", row.get("target_family", "")) or ""),
         "ligand_smiles": str(row.get("ligand_smiles", row.get("smiles", "")) or ""),
         "replica_idx": replica_idx,
         "simulation_seed": simulation_seed,
@@ -4866,7 +4870,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
 
     ranking_meta = _resolve_ranking_columns(result_df, residual_shadow_meta)
     selection_score_authority = SelectionScoreAuthority.from_mapping(
-        ranking_meta["selection_score_authority"]
+        ranking_meta["selection_score_authority"],
+        require_current=True,
     )
     result_df = rank_selection_frame(result_df, selection_score_authority)
     result_df = _append_replicate_export_metrics(result_df, ranking_meta)
@@ -5089,16 +5094,31 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     if evidence_bundle_path:
         from betelgeuze_ai_md.contracts.runner_evidence_bundle import maybe_write_runner_native_evidence_bundle
 
+        implementation_manifest = build_implementation_source_manifest()
+        implementation_fingerprint = str(
+            implementation_manifest["manifest_sha256"]
+        )
+        effective_runner_config = {
+            str(key): json.loads(
+                json.dumps(value, sort_keys=True, ensure_ascii=False)
+            )
+            for key, value in sorted(vars(args).items())
+            if not str(key).startswith("_")
+        }
         maybe_write_runner_native_evidence_bundle(
             evidence_bundle_path,
             request_json_path=str(getattr(args, "docking_request_json", "") or ""),
             result_file=out_json,
             status="completed",
             runner_script="tools/run_ligand_backmapping_scoring.py",
+            runner_script_sha256=implementation_fingerprint,
             result_payload=summary,
             runner_metadata={
                 "runner_kind": "ligand_backmapping_scoring",
                 "selection_score_authority": selection_score_authority.to_dict(),
+                "implementation_source_manifest": implementation_manifest,
+                "implementation_fingerprint_sha256": implementation_fingerprint,
+                "effective_runner_config": effective_runner_config,
             },
         )
 
