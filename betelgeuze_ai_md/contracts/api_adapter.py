@@ -97,6 +97,15 @@ def _source_hashes(
 ) -> dict[str, str]:
     readiness = _as_dict(runner_execution.get("profile_readiness"))
     runner_metadata = _as_dict(result_manifest.get("runner_metadata"))
+    result_status = _text(result_manifest.get("status"))
+    failed_stage = _text(
+        result_payload.get("failed_stage")
+        or _summary(result_payload).get("failed_stage")
+    )
+    allow_startup_provenance = bool(
+        result_status == "failed"
+        and failed_stage == "implementation_source_drift"
+    )
     runner_kind = _text(runner_metadata.get("runner_kind"))
     runner_script = _text(runner_execution.get("runner_script"))
     native_runner_scripts = {
@@ -152,7 +161,7 @@ def _source_hashes(
 
         implementation_source_manifest = validate_implementation_source_manifest(
             implementation_source_manifest,
-            require_current=True,
+            require_current=not allow_startup_provenance,
         )
         implementation_fingerprint = str(
             implementation_source_manifest["manifest_sha256"]
@@ -168,8 +177,16 @@ def _source_hashes(
                 for item in implementation_source_manifest["files"]
             }
             canonical_runner_path = _REPO_ROOT / expected_native_relative
-            if source_hashes.get(expected_native_relative) != _sha256_file(
-                canonical_runner_path
+            recorded_runner_sha256 = source_hashes.get(
+                expected_native_relative,
+                "",
+            )
+            if not recorded_runner_sha256:
+                raise ValueError("native runner executable is absent from manifest")
+            if (
+                not allow_startup_provenance
+                and recorded_runner_sha256
+                != _sha256_file(canonical_runner_path)
             ):
                 raise ValueError("native runner executable content mismatch")
     elif native_runner_kind:
@@ -186,39 +203,83 @@ def _source_hashes(
     if native_runner_kind == "ligand_htvs_pipeline":
         if not engine_refinement_config:
             raise ValueError("HTVS resolved engine configuration is required")
-        resolved_path = Path(
-            _text(engine_refinement_config.get("resolved_path"))
-        )
-        resolved_config = _as_dict(
-            engine_refinement_config.get("resolved_config")
-        )
         if (
             engine_refinement_config.get("schema_version")
             != "ligand_engine_runtime_config_v1"
-            or not resolved_path.is_file()
-            or not resolved_config
         ):
             raise ValueError("HTVS resolved engine configuration is invalid")
-        if _text(engine_refinement_config.get("source_sha256")) != _sha256_file(
-            resolved_path
-        ):
-            raise ValueError("HTVS engine configuration source hash mismatch")
-        if _text(
-            engine_refinement_config.get("resolved_config_sha256")
-        ) != sha256_payload(resolved_config):
-            raise ValueError("HTVS resolved engine configuration hash mismatch")
-        from tools.product.engine_refinement_config import (
-            load_engine_refinement_config,
+        source_kind = _text(
+            engine_refinement_config.get("source_kind") or "file"
         )
+        if source_kind == "resolution_error":
+            if result_status != "failed" or not _text(
+                engine_refinement_config.get("error")
+            ):
+                raise ValueError("HTVS configuration failure evidence is invalid")
+        elif source_kind in {"file", "builtin_defaults"}:
+            resolved_config = _as_dict(
+                engine_refinement_config.get("resolved_config")
+            )
+            if not resolved_config:
+                raise ValueError("HTVS resolved engine configuration is invalid")
+            if _text(
+                engine_refinement_config.get("resolved_config_sha256")
+            ) != sha256_payload(resolved_config):
+                raise ValueError("HTVS resolved engine configuration hash mismatch")
+            from tools.product.engine_refinement_config import (
+                builtin_engine_refinement_config,
+                load_engine_refinement_config,
+            )
 
-        try:
-            current_resolved_config = load_engine_refinement_config(resolved_path)
-        except (FileNotFoundError, ValueError) as exc:
-            raise ValueError(
-                "HTVS resolved engine configuration cannot be reproduced"
-            ) from exc
-        if current_resolved_config != resolved_config:
-            raise ValueError("HTVS resolved engine configuration content mismatch")
+            if source_kind == "file":
+                resolved_path = Path(
+                    _text(engine_refinement_config.get("resolved_path"))
+                )
+                source_sha256 = _text(
+                    engine_refinement_config.get("source_sha256")
+                )
+                if len(source_sha256) != 64 or any(
+                    character not in "0123456789abcdef"
+                    for character in source_sha256
+                ):
+                    raise ValueError(
+                        "HTVS engine configuration source hash is invalid"
+                    )
+                if allow_startup_provenance:
+                    current_resolved_config = resolved_config
+                else:
+                    if not resolved_path.is_file():
+                        raise ValueError(
+                            "HTVS resolved engine configuration is invalid"
+                        )
+                    if source_sha256 != _sha256_file(resolved_path):
+                        raise ValueError(
+                            "HTVS engine configuration source hash mismatch"
+                        )
+                    try:
+                        current_resolved_config = load_engine_refinement_config(
+                            resolved_path
+                        )
+                    except (FileNotFoundError, ValueError) as exc:
+                        raise ValueError(
+                            "HTVS resolved engine configuration cannot be reproduced"
+                        ) from exc
+            else:
+                if _text(engine_refinement_config.get("source_sha256")):
+                    raise ValueError(
+                        "HTVS built-in configuration source hash must be empty"
+                    )
+                current_resolved_config = (
+                    resolved_config
+                    if allow_startup_provenance
+                    else builtin_engine_refinement_config()
+                )
+            if current_resolved_config != resolved_config:
+                raise ValueError(
+                    "HTVS resolved engine configuration content mismatch"
+                )
+        else:
+            raise ValueError("HTVS engine configuration source kind is invalid")
     runner_script_sha256 = _text(readiness.get("runner_script_sha256"))
     request_hash = _text(result_manifest.get("execution_request_sha256")) or sha256_payload(request)
     result_hash = _text(result_manifest.get("result_file_sha256"))

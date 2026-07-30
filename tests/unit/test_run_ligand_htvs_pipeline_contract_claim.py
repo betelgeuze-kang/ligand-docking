@@ -1,15 +1,44 @@
 from pathlib import Path
 import argparse
+import copy
+import hashlib
+import json
 
 import pandas as pd
 
 from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
 from betelgeuze_engine.product.implementation_provenance import (
+    ImplementationProvenanceError,
     build_implementation_source_manifest,
     validate_implementation_source_manifest,
 )
+from tools.product.engine_refinement_config import (
+    builtin_engine_refinement_config,
+    load_engine_refinement_config,
+)
 from tools import generate_ligand_trajectory_engine as traj_engine
 from tools import run_ligand_htvs_pipeline as mod
+
+
+def _current_engine_config_provenance() -> dict:
+    path = Path("config/ligand_engine_production.json").resolve()
+    resolved_config = load_engine_refinement_config(path)
+    return {
+        "schema_version": "ligand_engine_runtime_config_v1",
+        "source_kind": "file",
+        "requested_path": "config/ligand_engine_production.json",
+        "resolved_path": str(path),
+        "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "resolved_config": resolved_config,
+        "resolved_config_sha256": hashlib.sha256(
+            json.dumps(
+                resolved_config,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest(),
+    }
 
 
 def _traj_stage2_args_namespace(**overrides):
@@ -171,6 +200,175 @@ def test_finalize_rejects_malformed_child_manifest_with_matching_fingerprint(
     assert "invalid physics refinement implementation manifest" in out[
         "physics_refinement"
     ]["implementation_provenance_error"]
+
+
+def test_finalize_rejects_source_drift_after_startup_snapshot(
+    tmp_path: Path,
+    monkeypatch,
+):
+    implementation = build_implementation_source_manifest()
+    drifted = copy.deepcopy(implementation)
+    drifted["manifest_sha256"] = "0" * 64
+    evidence_bundle = tmp_path / "source_drift_evidence.json"
+    args = argparse.Namespace(
+        _implementation_source_manifest=implementation,
+        _engine_refinement_config_provenance=(
+            _current_engine_config_provenance()
+        ),
+        _selection_score_authority={},
+        service_error_codes_json="config/ligand_service_error_codes_v1.json",
+        service_retry_after_sec_transient=30,
+        service_retry_after_sec_default=0,
+        service_schema_version="ligand_htvs_service_v1",
+        data_contract_json="",
+        evidence_bundle=str(evidence_bundle),
+        docking_request_json="",
+    )
+    monkeypatch.setattr(
+        mod,
+        "build_implementation_source_manifest",
+        lambda: drifted,
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod._finalize_and_write(
+        str(tmp_path / "source_drift"),
+        {"pass": True, "failed_stage": ""},
+        args,
+    )
+
+    assert out["pass"] is False
+    assert out["failed_stage"] == "implementation_source_drift"
+    assert "changed after pipeline startup" in out[
+        "implementation_provenance_error"
+    ]
+    assert out["implementation_source_manifest"] == implementation
+    assert (tmp_path / "source_drift_summary.json").is_file()
+    assert evidence_bundle.is_file()
+
+
+def test_finalize_emits_drift_artifacts_when_current_manifest_cannot_build(
+    tmp_path: Path,
+    monkeypatch,
+):
+    implementation = build_implementation_source_manifest()
+    evidence_bundle = tmp_path / "source_missing_evidence.json"
+    args = argparse.Namespace(
+        _implementation_source_manifest=implementation,
+        _engine_refinement_config_provenance=(
+            _current_engine_config_provenance()
+        ),
+        _selection_score_authority={},
+        service_error_codes_json="config/ligand_service_error_codes_v1.json",
+        service_retry_after_sec_transient=30,
+        service_retry_after_sec_default=0,
+        service_schema_version="ligand_htvs_service_v1",
+        data_contract_json="",
+        evidence_bundle=str(evidence_bundle),
+        docking_request_json="",
+    )
+
+    def missing_source_manifest():
+        raise ImplementationProvenanceError(
+            "implementation source missing: covered.py"
+        )
+
+    monkeypatch.setattr(
+        mod,
+        "build_implementation_source_manifest",
+        missing_source_manifest,
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod._finalize_and_write(
+        str(tmp_path / "source_missing"),
+        {"pass": True, "failed_stage": ""},
+        args,
+    )
+
+    assert out["pass"] is False
+    assert out["failed_stage"] == "implementation_source_drift"
+    assert "cannot be revalidated" in out["implementation_provenance_error"]
+    assert (tmp_path / "source_missing_summary.json").is_file()
+    assert evidence_bundle.is_file()
+
+
+def test_failed_config_resolution_still_emits_evidence_bundle(
+    tmp_path: Path,
+    monkeypatch,
+):
+    evidence_bundle = tmp_path / "failed_evidence.json"
+    implementation = build_implementation_source_manifest()
+    args = argparse.Namespace(
+        _implementation_source_manifest=implementation,
+        _selection_score_authority={},
+        service_error_codes_json="config/ligand_service_error_codes_v1.json",
+        service_retry_after_sec_transient=30,
+        service_retry_after_sec_default=0,
+        service_schema_version="ligand_htvs_service_v1",
+        data_contract_json="",
+        evidence_bundle=str(evidence_bundle),
+        docking_request_json="",
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod._finalize_and_write(
+        str(tmp_path / "config_failure"),
+        {
+            "pass": False,
+            "failed_stage": "engine_refinement_config",
+            "engine_refinement_config": {
+                "schema_version": "ligand_engine_runtime_config_v1",
+                "source_kind": "resolution_error",
+                "requested_path": str(tmp_path / "missing.json"),
+                "error": "engine refinement config not found",
+            },
+        },
+        args,
+    )
+
+    assert out["pass"] is False
+    assert evidence_bundle.is_file()
+    evidence = json.loads(evidence_bundle.read_text(encoding="utf-8"))
+    assert evidence["verdict"]["verdict_label"] == "api_job_failed"
+    assert evidence["source_hashes"]["config_hash"]
+
+
+def test_default_config_absence_uses_builtin_provenance(
+    tmp_path: Path,
+    monkeypatch,
+):
+    args = mod.build_parser().parse_args(
+        [
+            "--out-prefix",
+            str(tmp_path / "builtin_config"),
+        ]
+    )
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        mod,
+        "load_engine_refinement_config",
+        lambda _path=None: builtin_engine_refinement_config(),
+    )
+    monkeypatch.setattr(
+        mod,
+        "_acquire_instance_lock",
+        lambda _path: {
+            "ok": False,
+            "lock_path": str(tmp_path / "occupied.lock"),
+            "owner": "other",
+            "fd": None,
+        },
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod.run_pipeline(args)
+
+    assert out["failed_stage"] == "stage_lock"
+    provenance = out["engine_refinement_config"]
+    assert provenance["source_kind"] == "builtin_defaults"
+    assert provenance["source_sha256"] == ""
+    assert provenance["resolved_config"] == builtin_engine_refinement_config()
 
 
 def test_validate_data_contract_input_detects_missing_column(tmp_path: Path):

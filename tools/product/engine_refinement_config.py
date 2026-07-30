@@ -53,10 +53,16 @@ _BUILTIN_DEFAULTS: dict[str, Any] = {
 }
 
 
+def builtin_engine_refinement_config() -> dict[str, Any]:
+    """Return an isolated copy of the deterministic built-in fallback."""
+
+    return copy.deepcopy(_BUILTIN_DEFAULTS)
+
+
 def load_engine_refinement_config(path: str | Path | None = None) -> dict[str, Any]:
     explicit_path = bool(str(path or "").strip())
     config_path = Path(path) if explicit_path else DEFAULT_CONFIG_PATH
-    payload: dict[str, Any] = copy.deepcopy(_BUILTIN_DEFAULTS)
+    payload = builtin_engine_refinement_config()
     if not config_path.exists():
         if explicit_path:
             raise FileNotFoundError(

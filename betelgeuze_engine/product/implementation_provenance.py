@@ -20,13 +20,13 @@ _IMPLEMENTATION_SOURCE_GLOBS: tuple[str, ...] = (
     "core/**/*.py",
     "theory/**/*.py",
     "train/**/*.py",
+    "tools/accounting/**/*.py",
     "tools/product/**/*.py",
     "tools/run_ligand*.py",
     "rust_engine/src/**/*.rs",
     "rust_engine_v2/src/**/*.rs",
 )
 _IMPLEMENTATION_EXPLICIT_SOURCE_PATHS: tuple[str, ...] = (
-    "config/ligand_engine_production.json",
     "tools/__init__.py",
     "tools/audit_ligand_leakage.py",
     "tools/build_ligand_admet_surface.py",
@@ -50,10 +50,18 @@ _IMPLEMENTATION_EXPLICIT_SOURCE_PATHS: tuple[str, ...] = (
     "tools/validate_ligand_eval_integrity.py",
     "train_router.py",
 )
+_IMPLEMENTATION_OPTIONAL_SOURCE_PATHS: tuple[str, ...] = (
+    "config/ligand_engine_production.json",
+)
 
 
 def _reviewed_implementation_source_paths(root: Path) -> tuple[str, ...]:
     paths = set(_IMPLEMENTATION_EXPLICIT_SOURCE_PATHS)
+    paths.update(
+        relative_path
+        for relative_path in _IMPLEMENTATION_OPTIONAL_SOURCE_PATHS
+        if (root / relative_path).is_file()
+    )
     for pattern in _IMPLEMENTATION_SOURCE_GLOBS:
         for source in root.glob(pattern):
             if source.is_file() and "__pycache__" not in source.parts:

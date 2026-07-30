@@ -79,6 +79,7 @@ def test_manifest_with_valid_aggregate_but_stale_source_fails_current_check(
         "betelgeuze_engine/residual/__init__.py",
         "betelgeuze_engine/topology/__init__.py",
         "tools/product/stage2_skip_router.py",
+        "tools/accounting/build_ligand_mapping_queue.py",
         "tools/generate_ligand_trajectory_engine.py",
         "train/train_pipeline.py",
     ],

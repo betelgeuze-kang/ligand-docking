@@ -1395,12 +1395,59 @@ def _attach_service_result(payload: Dict[str, Any], args: argparse.Namespace) ->
 
 def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
     out = dict(payload) if isinstance(payload, dict) else {}
-    implementation_manifest = build_implementation_source_manifest()
+    captured_implementation_manifest = getattr(
+        args,
+        "_implementation_source_manifest",
+        {},
+    )
+    implementation_provenance_error = ""
+    if (
+        isinstance(captured_implementation_manifest, dict)
+        and captured_implementation_manifest
+    ):
+        try:
+            implementation_manifest = validate_implementation_source_manifest(
+                captured_implementation_manifest,
+                require_current=False,
+            )
+        except (TypeError, ValueError) as exc:
+            implementation_manifest = build_implementation_source_manifest()
+            implementation_provenance_error = (
+                f"invalid startup implementation manifest: {exc}"
+            )
+        else:
+            try:
+                current_implementation_manifest = (
+                    build_implementation_source_manifest()
+                )
+            except (OSError, TypeError, ValueError) as exc:
+                implementation_provenance_error = (
+                    "implementation source tree cannot be revalidated after "
+                    f"pipeline execution: {exc}"
+                )
+            else:
+                if current_implementation_manifest != implementation_manifest:
+                    implementation_provenance_error = (
+                        "implementation source tree changed after pipeline startup"
+                    )
+    else:
+        # Compatibility for direct finalizer callers; real pipeline runs capture
+        # this snapshot before any stage executes.
+        implementation_manifest = build_implementation_source_manifest()
     implementation_fingerprint = str(
         implementation_manifest["manifest_sha256"]
     )
     out["implementation_source_manifest"] = implementation_manifest
     out["implementation_fingerprint_sha256"] = implementation_fingerprint
+    if implementation_provenance_error:
+        out["pass"] = False
+        prior_failed_stage = str(out.get("failed_stage") or "").strip()
+        if prior_failed_stage and prior_failed_stage != "implementation_source_drift":
+            out["prior_failed_stage"] = prior_failed_stage
+        out["failed_stage"] = "implementation_source_drift"
+        out["implementation_provenance_error"] = (
+            implementation_provenance_error
+        )
     engine_config_provenance = getattr(
         args, "_engine_refinement_config_provenance", {}
     )
@@ -1418,7 +1465,7 @@ def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse
                 physics_refinement_for_check.get(
                     "implementation_source_manifest", {}
                 ),
-                require_current=True,
+                require_current=False,
             )
             child_fingerprint = str(
                 physics_refinement_for_check.get(
@@ -1470,6 +1517,10 @@ def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse
         if isinstance(engine_config_provenance, dict) and engine_config_provenance:
             runner_metadata["engine_refinement_config"] = dict(
                 engine_config_provenance
+            )
+        elif isinstance(out.get("engine_refinement_config"), dict):
+            runner_metadata["engine_refinement_config"] = dict(
+                out["engine_refinement_config"]
             )
         selection_score_authority = out.get("selection_score_authority")
         if isinstance(selection_score_authority, dict):
@@ -1876,6 +1927,11 @@ def _strict_gate_from_operational(op_gate: Dict[str, Any], args: argparse.Namesp
 
 def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     setattr(args, "_selection_score_authority", {})
+    setattr(
+        args,
+        "_implementation_source_manifest",
+        build_implementation_source_manifest(),
+    )
     date_tag = str(args.date_tag).strip() or dt.date.today().isoformat()
     out_prefix = str(args.out_prefix).strip() or f"runs/ligand_htvs_pipeline_{date_tag}"
     _ensure_parent(f"{out_prefix}_summary.json")
@@ -1894,6 +1950,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 "run_scope": str(args.run_scope),
                 "generated_at_local": dt.datetime.now().isoformat(timespec="seconds"),
                 "engine_refinement_config": {
+                    "schema_version": "ligand_engine_runtime_config_v1",
+                    "source_kind": "resolution_error",
                     "requested_path": engine_config_request,
                     "error": str(exc),
                 },
@@ -1907,13 +1965,21 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         if engine_config_request
         else ROOT / "config" / "ligand_engine_production.json"
     )
+    engine_config_source_is_file = resolved_engine_config_path.is_file()
     engine_config_provenance: Dict[str, Any] = {
         "schema_version": "ligand_engine_runtime_config_v1",
+        "source_kind": (
+            "file" if engine_config_source_is_file else "builtin_defaults"
+        ),
         "requested_path": (
             engine_config_request or "config/ligand_engine_production.json"
         ),
         "resolved_path": str(resolved_engine_config_path),
-        "source_sha256": _sha256_file(resolved_engine_config_path),
+        "source_sha256": (
+            _sha256_file(resolved_engine_config_path)
+            if engine_config_source_is_file
+            else ""
+        ),
         "resolved_config": engine_cfg,
         "resolved_config_sha256": hashlib.sha256(
             json.dumps(
