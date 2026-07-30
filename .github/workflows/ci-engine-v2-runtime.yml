@@ -2,15 +2,6 @@ name: ci-engine-v2-runtime
 
 on:
   pull_request:
-    paths:
-      - "betelgeuze_engine_v2/**"
-      - "core/ai_correction.py"
-      - "core/sim_param_schema.py"
-      - "train/runtime_inputs.py"
-      - "train/checkpoint_contracts.py"
-      - "config/independent_engine_v2_capabilities.yaml"
-      - "tests/unit/test_engine_v2_runtime_checkpoint_contracts.py"
-      - ".github/workflows/ci-engine-v2-runtime.yml"
   push:
     branches:
       - "agent/v2-e-runtime-checkpoint-contracts"

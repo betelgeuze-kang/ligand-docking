@@ -21,6 +21,10 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from betelgeuze_engine.product.selection_score_authority import (
+    SelectionScoreAuthority,
+    authority_from_summary_payload,
+)
 from tools.product.engine_refinement_config import (
     load_engine_refinement_config,
     stage2_defaults,
@@ -1303,6 +1307,12 @@ def _attach_service_result(payload: Dict[str, Any], args: argparse.Namespace) ->
 
 def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
     out = _attach_service_result(payload, args)
+    runtime_selection_score_authority = getattr(args, "_selection_score_authority", {})
+    if (
+        not isinstance(out.get("selection_score_authority"), dict)
+        or not out.get("selection_score_authority")
+    ) and isinstance(runtime_selection_score_authority, dict) and runtime_selection_score_authority:
+        out["selection_score_authority"] = dict(runtime_selection_score_authority)
     out = _attach_absolute_paths(out_prefix, out)
     summary_json = f"{out_prefix}_summary.json"
     with open(summary_json, "w", encoding="utf-8") as f:
@@ -1311,6 +1321,13 @@ def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse
     if evidence_bundle_path:
         from betelgeuze_ai_md.contracts.runner_evidence_bundle import maybe_write_runner_native_evidence_bundle
 
+        runner_metadata: Dict[str, Any] = {
+            "runner_kind": "ligand_htvs_pipeline",
+            "out_prefix": out_prefix,
+        }
+        selection_score_authority = out.get("selection_score_authority")
+        if isinstance(selection_score_authority, dict):
+            runner_metadata["selection_score_authority"] = selection_score_authority
         maybe_write_runner_native_evidence_bundle(
             evidence_bundle_path,
             request_json_path=str(getattr(args, "docking_request_json", "") or ""),
@@ -1318,7 +1335,7 @@ def _finalize_and_write(out_prefix: str, payload: Dict[str, Any], args: argparse
             status="completed" if bool(out.get("pass", out.get("ok", False))) else "failed",
             runner_script="tools/run_ligand_htvs_pipeline.py",
             result_payload=out,
-            runner_metadata={"runner_kind": "ligand_htvs_pipeline", "out_prefix": out_prefix},
+            runner_metadata=runner_metadata,
         )
     # Keep CLOSEOUT_LATEST in sync at each run finalization for external review handoff.
     if callable(_write_closeout_latest):
@@ -1695,6 +1712,7 @@ def _strict_gate_from_operational(op_gate: Dict[str, Any], args: argparse.Namesp
 
 
 def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
+    setattr(args, "_selection_score_authority", {})
     date_tag = str(args.date_tag).strip() or dt.date.today().isoformat()
     out_prefix = str(args.out_prefix).strip() or f"runs/ligand_htvs_pipeline_{date_tag}"
     _ensure_parent(f"{out_prefix}_summary.json")
@@ -2641,6 +2659,38 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
                 "stage3_backmapping_scoring": rec3,
             },
             "artifacts": {"summary_json": f"{out_prefix}_summary.json"},
+        }
+        return _finalize_and_write(out_prefix, payload, args)
+
+    stage3_summary_json = f"{stage3_prefix}_summary.json"
+    stage3_summary_payload = _read_json_if_exists(stage3_summary_json)
+    try:
+        stage3_selection_score_authority = SelectionScoreAuthority.from_mapping(
+            authority_from_summary_payload(stage3_summary_payload)
+        ).to_dict()
+        setattr(args, "_selection_score_authority", stage3_selection_score_authority)
+    except ValueError as exc:
+        payload = {
+            "pass": False,
+            "failed_stage": "stage3_selection_score_authority",
+            "selection_score_authority": {},
+            "stages": {
+                "stage0_leakage_audit": rec0,
+                "stage1_ligand_mapping": rec1,
+                "stage1_eval_positive_check": stage1_positive_check,
+                "stage2_trajectory_generation": rec_traj,
+                "stage2_residual_meta": rec2,
+                "stage3_backmapping_scoring": rec3,
+                "stage3_selection_score_authority": {
+                    "ok": False,
+                    "error": str(exc),
+                    "summary_json": stage3_summary_json,
+                },
+            },
+            "artifacts": {
+                "stage3_summary_json": stage3_summary_json,
+                "summary_json": f"{out_prefix}_summary.json",
+            },
         }
         return _finalize_and_write(out_prefix, payload, args)
 
@@ -3921,6 +3971,8 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             stage3_delivery_prefix,
             "--score-col",
             str(args.stage3_delivery_score_col),
+            "--selection-authority-summary-json",
+            stage3_summary_json,
             "--topk-global",
             str(int(max(0, int(args.stage3_delivery_topk_global)))),
             "--topk-per-target",
@@ -3938,6 +3990,9 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             "--make-bundle-zip" if bool(args.stage3_delivery_make_bundle_zip) else "--no-make-bundle-zip",
         ]
         rec3_delivery = _run_cmd(stage3_delivery_cmd)
+        if not rec3_delivery["ok"]:
+            pipeline_pass = False
+            pipeline_failed_stage = "stage6b_topk_delivery"
 
     payload = {
         "pass": bool(pipeline_pass),
@@ -3947,6 +4002,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "gate_enforcement_mode": gate_enforcement_mode,
         "traj_prod": traj_prod_summary,
         "physics_refinement": physics_refinement_runtime,
+        "selection_score_authority": stage3_selection_score_authority,
         "pipeline_preset_meta": preset_meta,
         "docking_materialized_meta": docking_materialized_meta,
         "stage2_router_meta": stage2_router_meta,

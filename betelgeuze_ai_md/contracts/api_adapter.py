@@ -84,6 +84,8 @@ def _source_hashes(
     runner_execution: dict[str, Any],
 ) -> dict[str, str]:
     readiness = _as_dict(runner_execution.get("profile_readiness"))
+    runner_metadata = _as_dict(result_manifest.get("runner_metadata"))
+    selection_score_authority = _as_dict(runner_metadata.get("selection_score_authority"))
     runner_script_sha256 = _text(readiness.get("runner_script_sha256"))
     request_hash = _text(result_manifest.get("execution_request_sha256")) or sha256_payload(request)
     result_hash = _text(result_manifest.get("result_file_sha256"))
@@ -98,16 +100,17 @@ def _source_hashes(
             }
         )
     )
+    config_payload = {
+        "runner_profile_id": request.get("runner_profile_id", ""),
+        "runner_profile_params": request.get("runner_profile_params", {}),
+        "claim_scope": result_manifest.get("claim_scope", CLAIM_SCOPE_PRODUCT_LIGAND),
+        "accuracy_claim_grade": result_manifest.get("accuracy_claim_grade", ""),
+    }
+    if selection_score_authority:
+        config_payload["selection_score_authority"] = selection_score_authority
     return {
         "input_hash": request_hash,
-        "config_hash": sha256_payload(
-            {
-                "runner_profile_id": request.get("runner_profile_id", ""),
-                "runner_profile_params": request.get("runner_profile_params", {}),
-                "claim_scope": result_manifest.get("claim_scope", CLAIM_SCOPE_PRODUCT_LIGAND),
-                "accuracy_claim_grade": result_manifest.get("accuracy_claim_grade", ""),
-            }
-        ),
+        "config_hash": sha256_payload(config_payload),
         "model_hash": model_hash,
         "executable_hash": runner_script_sha256
         or sha256_payload(

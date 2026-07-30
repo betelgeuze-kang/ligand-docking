@@ -42,6 +42,13 @@ from betelgeuze_engine.backmapping.onsps import (
 )
 from betelgeuze_engine.physics.mm_gbsa import REFINE_LIGAND_MODEL, mm_gbsa_binding_energy
 from betelgeuze_engine.residual.score import apply_score_residual
+from betelgeuze_engine.product.selection_score_authority import (
+    SelectionScoreAuthority,
+    rank_selection_frame,
+    resolve_selection_score_authority,
+    selection_sort_metadata,
+    topk_eligible_frame,
+)
 from betelgeuze_engine.topology import ligand_topology_from_smiles, summarize_topo_correction
 from tools.native_target_registry import resolve_repo_native_entry
 from tools.pdb_loader import load_native_structure
@@ -244,86 +251,21 @@ def _clip_pos(values: pd.Series) -> np.ndarray:
     return np.clip(pd.to_numeric(values, errors="coerce").to_numpy(dtype=float), 0.0, None)
 
 
-def _has_usable_numeric_score(df: pd.DataFrame, col: str) -> bool:
-    name = str(col or "").strip()
-    if (not name) or (name not in df.columns):
-        return False
-    values = pd.to_numeric(df[name], errors="coerce")
-    return bool(values.notna().any())
-
-
-def _composite_score_sort_key(col: str) -> Tuple[int, int, str]:
-    match = re.match(r"^binding_score_composite_v(\d+)(.*)$", str(col or ""))
-    if not match:
-        return (10**9, 10**9, str(col or ""))
-    version = int(match.group(1))
-    suffix = str(match.group(2) or "")
-    suffix_rank = 3
-    if suffix == "_residual_active":
-        suffix_rank = 0
-    elif suffix == "":
-        suffix_rank = 1
-    elif suffix == "_residual_shadow":
-        suffix_rank = 2
-    return (-version, suffix_rank, str(col))
-
-
 def _resolve_ranking_columns(
     result_df: pd.DataFrame,
     residual_shadow_meta: Dict[str, Any],
 ) -> Dict[str, Any]:
-    ranking_candidates: List[str] = []
-    residual_meta = residual_shadow_meta if isinstance(residual_shadow_meta, dict) else {}
-    residual_active_col = str(residual_meta.get("active_score_col", "") or "").strip()
-    if _has_usable_numeric_score(result_df, residual_active_col):
-        ranking_candidates.append(residual_active_col)
-
-    composite_candidates = sorted(
-        [
-            str(col)
-            for col in result_df.columns
-            if str(col).startswith("binding_score_composite_") and _has_usable_numeric_score(result_df, str(col))
-        ],
-        key=_composite_score_sort_key,
+    authority = resolve_selection_score_authority(
+        result_df,
+        residual_metadata=residual_shadow_meta,
     )
-    for col in composite_candidates:
-        if col not in ranking_candidates:
-            ranking_candidates.append(col)
-
-    for fallback_col in ["binding_energy_mmpbsa_kcal_mol_proxy", "stability_score"]:
-        if _has_usable_numeric_score(result_df, fallback_col) and fallback_col not in ranking_candidates:
-            ranking_candidates.append(fallback_col)
-
-    ranking_score_col = (
-        ranking_candidates[0]
-        if ranking_candidates
-        else "binding_energy_mmpbsa_kcal_mol_proxy"
-    )
-    active_score_col = (
-        residual_active_col
-        if _has_usable_numeric_score(result_df, residual_active_col)
-        else ranking_score_col
-    )
-    sort_columns: List[str] = []
-    ascending: List[bool] = []
-    for col, asc in [
-        (ranking_score_col, True),
-        ("binding_energy_mmpbsa_kcal_mol_proxy", True),
-        ("stability_score", False),
-    ]:
-        if _has_usable_numeric_score(result_df, col) and col not in sort_columns:
-            sort_columns.append(col)
-            ascending.append(asc)
-
-    if not sort_columns:
-        sort_columns = ["binding_energy_mmpbsa_kcal_mol_proxy", "stability_score"]
-        ascending = [True, False]
-
+    sort_meta = selection_sort_metadata(result_df, authority)
     return {
-        "active_score_col": active_score_col,
-        "ranking_score_col_used": ranking_score_col,
-        "sort_columns": sort_columns,
-        "ascending": ascending,
+        "active_score_col": authority.score_column,
+        "ranking_score_col_used": authority.score_column,
+        "sort_columns": list(sort_meta["sort_columns"]),
+        "ascending": list(sort_meta["ascending"]),
+        "selection_score_authority": authority.to_dict(),
     }
 
 
@@ -4923,17 +4865,18 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         )
 
     ranking_meta = _resolve_ranking_columns(result_df, residual_shadow_meta)
-    result_df = result_df.sort_values(
-        ranking_meta["sort_columns"],
-        ascending=ranking_meta["ascending"],
-        na_position="last",
-    ).reset_index(drop=True)
+    selection_score_authority = SelectionScoreAuthority.from_mapping(
+        ranking_meta["selection_score_authority"]
+    )
+    result_df = rank_selection_frame(result_df, selection_score_authority)
     result_df = _append_replicate_export_metrics(result_df, ranking_meta)
     result_csv = str(args.out_scores_csv).strip() or os.path.join(out_root, "ligand_scores.csv")
     _ensure_dir(os.path.dirname(result_csv) or ".")
     result_df.to_csv(result_csv, index=False)
 
-    topk = result_df.head(int(max(args.topk_report, 1))).to_dict(orient="records")
+    topk = topk_eligible_frame(result_df, selection_score_authority).head(
+        int(max(args.topk_report, 1))
+    ).to_dict(orient="records")
     hbond_evidence_summary = _summarize_hbond_evidence(result_df, topk)
     runner_claim_metadata = _runner_claim_metadata(result_df, hbond_evidence_summary)
     replicate_group_count = (
@@ -5002,6 +4945,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         "active_score_col": str(ranking_meta["active_score_col"]),
         "ranking_score_col_used": str(ranking_meta["ranking_score_col_used"]),
         "ranking_sort_columns": list(ranking_meta["sort_columns"]),
+        "selection_score_authority": selection_score_authority.to_dict(),
         "avg_binding_energy_proxy": float(result_df["binding_energy_proxy"].mean()) if not result_df.empty else None,
         "avg_binding_energy_mmpbsa_kcal_mol_proxy": (
             float(result_df["binding_energy_mmpbsa_kcal_mol_proxy"].mean()) if not result_df.empty else None
@@ -5102,6 +5046,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         f"- blocked_reason: {summary['claim_metadata']['blocked_reason']}",
         f"- avg_replicate_consistency_score: {summary['avg_replicate_consistency_score']}",
         f"- ranking_score_col_used: {summary['ranking_score_col_used']}",
+        f"- selection_score_policy_sha256: {summary['selection_score_authority']['policy_sha256']}",
         f"- scores_csv: `{result_csv}`",
     ]
     residual_meta = summary.get("residual_prototype", {}) if isinstance(summary.get("residual_prototype"), dict) else {}
@@ -5151,7 +5096,10 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
             status="completed",
             runner_script="tools/run_ligand_backmapping_scoring.py",
             result_payload=summary,
-            runner_metadata={"runner_kind": "ligand_backmapping_scoring"},
+            runner_metadata={
+                "runner_kind": "ligand_backmapping_scoring",
+                "selection_score_authority": selection_score_authority.to_dict(),
+            },
         )
 
     return {

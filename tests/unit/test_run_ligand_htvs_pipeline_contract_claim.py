@@ -3,6 +3,7 @@ import argparse
 
 import pandas as pd
 
+from betelgeuze_engine.product.selection_score_authority import SelectionScoreAuthority
 from tools import generate_ligand_trajectory_engine as traj_engine
 from tools import run_ligand_htvs_pipeline as mod
 
@@ -60,6 +61,35 @@ def test_resolve_heavy_artifact_paths_explicit_root(tmp_path: Path):
     assert str(resolved["root"]) == str(root)
     assert Path(resolved["stage2_trajectory_root"]).exists()
     assert Path(resolved["stage3_delivery_dir"]).exists()
+
+
+def test_finalize_preserves_runtime_selection_authority_on_post_stage3_failure(
+    tmp_path: Path,
+    monkeypatch,
+):
+    authority = SelectionScoreAuthority.create(
+        score_column="binding_score_composite_v7",
+        score_direction="ascending",
+    ).to_dict()
+    args = argparse.Namespace(
+        _selection_score_authority=authority,
+        service_error_codes_json="config/ligand_service_error_codes_v1.json",
+        service_retry_after_sec_transient=30,
+        service_retry_after_sec_default=0,
+        service_schema_version="ligand_htvs_service_v1",
+        data_contract_json="",
+        evidence_bundle="",
+        docking_request_json="",
+    )
+    monkeypatch.setattr(mod, "_write_closeout_latest", None)
+
+    out = mod._finalize_and_write(
+        str(tmp_path / "post_stage3_failure"),
+        {"pass": False, "failed_stage": "stage4_calibration", "stages": {}},
+        args,
+    )
+
+    assert out["selection_score_authority"] == authority
 
 
 def test_validate_data_contract_input_detects_missing_column(tmp_path: Path):
