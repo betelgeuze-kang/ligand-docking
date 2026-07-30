@@ -147,8 +147,9 @@ The current `main` branch contains:
   by a result-independent SHA-256 rule from the published PoseBusters 308-case
   journal subset. A complete report existed before numeric Stage 0 freeze, so
   all 300 cases are contaminated development data and the former 298-case
-  primary-holdout designation is invalid. The legacy scope is retained only
-  for fail-closed rejection. A disjoint fresh 128-case complement is the
+  primary-holdout designation is invalid. The legacy scope is rejected for
+  execution but retained for historical report-schema serialization only; it
+  never identifies blind evidence. A disjoint fresh 128-case complement is the
   internal provisional blind holdout; it has not been executed. Its active
   refiner is V7, and Stage 0 admission, product promotion, and public claims
   remain false. The contract
