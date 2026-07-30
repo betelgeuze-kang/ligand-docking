@@ -26,8 +26,8 @@ PUBLIC_REDOCKING_COHORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_cohor
 PUBLIC_REDOCKING_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_evaluation_policy/1.3.0"
 )
-PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.9.0"
-PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.9.0"
+PUBLIC_REDOCKING_REPORT_SCHEMA_ID = "betelgeuze.engine_v2_public_redocking_report/1.10.0"
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.12.0"
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
@@ -35,7 +35,7 @@ PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_execution/1.1.0"
 )
 PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.4.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.5.0"
 )
 _SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0"
@@ -50,7 +50,7 @@ PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
     "2f701c05c6d073bab2542c9616ff177c0d7a3a601f913a4eceb07a99de790dda"
 )
 PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.5.0"
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.6.0"
 )
 PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "donor_acceptor_hotspot",
@@ -2555,6 +2555,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
     refinement_original_pose_valid: bool | None = None
     refinement_total_translation_binary64_hex: tuple[str, ...] = ()
     refinement_total_rotation_vector_binary64_hex: tuple[str, ...] = ()
+    refinement_receipt_payload: Mapping[str, object] = field(default_factory=dict)
     score_term_binary64_hex: Mapping[str, str] = field(default_factory=dict)
     error_code: str = ""
     schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
@@ -2767,6 +2768,28 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                 object.__setattr__(
                     self, "refinement_receipt_sha256", refinement_sha256
                 )
+                receipt_payload = dict(self.refinement_receipt_payload)
+                if receipt_payload:
+                    claimed_payload_sha256 = receipt_payload.pop(
+                        "receipt_sha256", ""
+                    )
+                    if (
+                        claimed_payload_sha256 != refinement_sha256
+                        or _sha256(receipt_payload) != refinement_sha256
+                    ):
+                        raise PublicRedockingBenchmarkError(
+                            "candidate refinement receipt payload is invalid"
+                        )
+                    receipt_payload["receipt_sha256"] = claimed_payload_sha256
+                elif proposal_mode == "uniform_v3_rigid_ensemble":
+                    raise PublicRedockingBenchmarkError(
+                        "V3 ensemble candidate lacks refinement receipt payload"
+                    )
+                object.__setattr__(
+                    self,
+                    "refinement_receipt_payload",
+                    MappingProxyType(receipt_payload),
+                )
         elif (
             self.proposal_fingerprint_sha256
             or self.coordinate_fingerprint_sha256
@@ -2788,6 +2811,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             or self.refinement_original_pose_valid is not None
             or self.refinement_total_translation_binary64_hex
             or self.refinement_total_rotation_vector_binary64_hex
+            or self.refinement_receipt_payload
             or not error_code
         ):
             raise PublicRedockingBenchmarkError(
@@ -2810,6 +2834,12 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "refinement_total_rotation_vector_binary64_hex",
             tuple(self.refinement_total_rotation_vector_binary64_hex),
         )
+        if not self.refinement_receipt_payload:
+            object.__setattr__(
+                self,
+                "refinement_receipt_payload",
+                MappingProxyType({}),
+            )
         object.__setattr__(self, "error_code", error_code)
         object.__setattr__(
             self,
@@ -2861,6 +2891,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "refinement_total_rotation_vector_binary64_hex": list(
                 self.refinement_total_rotation_vector_binary64_hex
             ),
+            "refinement_receipt_payload": dict(self.refinement_receipt_payload),
             "score_term_binary64_hex": dict(self.score_term_binary64_hex),
             "error_code": self.error_code,
         }

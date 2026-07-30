@@ -21,6 +21,9 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     ClashReliefRefinementError,
     ElementAwarePoseValidityContext,
     ElementAwareValidityError,
+    InteractionAwareRigidClearanceConfigV4,
+    InteractionAwareRigidClearanceEnsembleRefinerV5,
+    InteractionAwareRigidHybridClearanceEnsembleRefinerV6,
     InteractionAwareRigidConfigV3,
     InteractionAwareRigidEnsembleRefinerV4,
     InteractionAwareRigidRefinerV2,
@@ -469,6 +472,121 @@ def test_interaction_aware_v4_routes_only_receipt_bound_variants_to_v3() -> None
     ]["accepted_rotation_steps"]
     assert v2_receipt["source_lane_retained"] is True
     assert v3_receipt["source_lane_retained"] is True
+
+
+def test_interaction_aware_v5_binds_expanded_clearance_to_variant_lane() -> None:
+    receptor = replace(
+        _receptor(),
+        coordinates=torch.tensor(
+            [[[4.1, 0.5, 0.2], [8.0, 8.0, 8.0]]],
+            dtype=torch.float64,
+        ),
+    )
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposals = generate_bounded_docking_proposals(
+        authority.search_space,
+        DockingBudget(
+            candidate_count=2,
+            top_k=1,
+            max_torsions=1,
+            translation_radius_angstrom=0.0,
+            seed=101,
+        ),
+        problem=authority.problem,
+    )
+    config = InteractionAwareRigidClearanceConfigV4()
+    assert config.overlap_scale == 0.80
+    assert config.maximum_total_translation_angstrom == 4.0
+    assert config.maximum_total_rotation_radians == pytest.approx(
+        torch.pi / 6.0
+    )
+    assert config.maximum_rotation_steps == 6
+    assert config.to_dict()["policy_role"] == (
+        "retained_source_variant_clearance_rescue"
+    )
+    refiner = InteractionAwareRigidClearanceEnsembleRefinerV5(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="9" * 64,
+        v3_proposal_indices=(1,),
+    )
+
+    refiner.refine(proposals[0], max_steps=10)
+    refiner.refine(proposals[1], max_steps=10)
+    source_receipt = refiner.receipts[proposals[0].fingerprint_sha256]
+    variant_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
+
+    assert source_receipt["lane"] == "translation_v2"
+    assert variant_receipt["lane"] == "translation_rotation_v3"
+    assert source_receipt["schema_id"].endswith("/5.0.0")
+    assert variant_receipt["schema_id"].endswith("/5.0.0")
+    assert source_receipt["source_lane_retained"] is True
+    assert variant_receipt["source_lane_retained"] is True
+
+
+def test_interaction_aware_v6_records_receipt_bound_hybrid_selection() -> None:
+    receptor = replace(
+        _receptor(),
+        coordinates=torch.tensor(
+            [[[4.1, 0.5, 0.2], [8.0, 8.0, 8.0]]],
+            dtype=torch.float64,
+        ),
+    )
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposals = generate_bounded_docking_proposals(
+        authority.search_space,
+        DockingBudget(
+            candidate_count=2,
+            top_k=1,
+            max_torsions=1,
+            translation_radius_angstrom=0.0,
+            seed=103,
+        ),
+        problem=authority.problem,
+    )
+    refiner = InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="a" * 64,
+        v3_proposal_indices=(1,),
+    )
+
+    refiner.refine(proposals[0], max_steps=10)
+    refiner.refine(proposals[1], max_steps=10)
+    source_receipt = refiner.receipts[proposals[0].fingerprint_sha256]
+    variant_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
+
+    assert source_receipt["lane"] == "translation_v2"
+    assert source_receipt["schema_id"].endswith("/6.0.0")
+    assert variant_receipt["schema_id"].endswith("/6.0.0")
+    assert variant_receipt["selection_reason"] == "v2_duplicate_clearance_rescue"
+    assert variant_receipt["lane"] == (
+        "translation_rotation_v5_clearance_rescue"
+    )
+    assert variant_receipt["baseline_duplicate_of_v2_refinement"] is True
+    assert variant_receipt["clearance_evaluated"] is True
+    assert variant_receipt["clearance_selected"] is True
+    assert variant_receipt["clearance_initial_penalty_binary64_hex"]
+    assert variant_receipt["clearance_final_penalty_binary64_hex"]
+    assert len(variant_receipt["comparison_v2_receipt_sha256"]) == 64
+    assert len(variant_receipt["baseline_v3_receipt_sha256"]) == 64
+    assert len(variant_receipt["clearance_receipt_sha256"]) == 64
+    assert float.fromhex(
+        variant_receipt["near_clear_penalty_binary64_hex"]
+    ) == 2.0**-12
+    assert variant_receipt["source_lane_retained"] is True
 
 
 @pytest.mark.parametrize(

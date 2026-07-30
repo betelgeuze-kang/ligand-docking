@@ -38,13 +38,40 @@ INTERACTION_AWARE_RIGID_REFINER_V3_VERSION = "3.0.0"
 INTERACTION_AWARE_RIGID_CONFIG_V3_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_rigid_refiner_config/3.0.0"
 )
+INTERACTION_AWARE_RIGID_CLEARANCE_CONFIG_V4_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_clearance_config/4.0.0"
+)
 INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID = (
     "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_refiner"
 )
 INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION = "4.0.0"
+INTERACTION_AWARE_RIGID_ENSEMBLE_CONFIG_V4_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_config/4.0.0"
+)
 INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_receipt/4.0.0"
 )
+INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_REFINER_V5_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_clearance_ensemble_refiner"
+)
+INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_REFINER_V5_VERSION = "5.0.0"
+INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_CONFIG_V5_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_clearance_ensemble_config/5.0.0"
+)
+INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_RECEIPT_V5_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_clearance_ensemble_receipt/5.0.0"
+)
+INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_REFINER_V6_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_hybrid_ensemble_refiner"
+)
+INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_REFINER_V6_VERSION = "6.0.0"
+INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_CONFIG_V6_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_hybrid_ensemble_config/6.0.0"
+)
+INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_RECEIPT_V6_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_hybrid_ensemble_receipt/6.0.0"
+)
+INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY = 2.0**-12
 
 
 class ClashReliefRefinementError(DockingAuthorityError):
@@ -333,6 +360,34 @@ class InteractionAwareRigidConfigV3:
             "ranking_score_reused_as_physical_energy": False,
             "scientifically_validated": False,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class InteractionAwareRigidClearanceConfigV4(InteractionAwareRigidConfigV3):
+    """Bounded higher-clearance policy for retained-source variant lanes."""
+
+    overlap_scale: float = 0.80
+    maximum_total_translation_angstrom: float = 4.0
+    maximum_total_rotation_radians: float = math.pi / 6.0
+    maximum_rotation_steps: int = 6
+    schema_id: str = INTERACTION_AWARE_RIGID_CLEARANCE_CONFIG_V4_SCHEMA_ID
+
+    def to_dict(self) -> dict[str, object]:
+        payload = InteractionAwareRigidConfigV3.to_dict(self)
+        payload.update(
+            {
+                "schema_id": self.schema_id,
+                "validity_target": (
+                    "parameterized_sum_vdw_radii_contact_clearance"
+                ),
+                "validity_target_overlap_scale_binary64_hex": (
+                    self.overlap_scale.hex()
+                ),
+                "policy_role": "retained_source_variant_clearance_rescue",
+                "source_lane_retention_required": True,
+            }
+        )
+        return payload
 
 
 class ReceptorClashReliefRefiner:
@@ -1084,6 +1139,10 @@ class InteractionAwareRigidEnsembleRefinerV4:
 
     refiner_id = INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID
     refiner_version = INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION
+    ensemble_config_schema_id = (
+        INTERACTION_AWARE_RIGID_ENSEMBLE_CONFIG_V4_SCHEMA_ID
+    )
+    receipt_schema_id = INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID
 
     def __init__(
         self,
@@ -1130,9 +1189,7 @@ class InteractionAwareRigidEnsembleRefinerV4:
         self._implementation_source_sha256 = implementation_source_sha256
         self._component_config_fingerprint_sha256 = _sha256(
             {
-                "schema_id": (
-                    "betelgeuze.engine_v2_interaction_aware_rigid_ensemble_config/4.0.0"
-                ),
+                "schema_id": self.ensemble_config_schema_id,
                 "v2_component_config_sha256": self._v2.config_fingerprint_sha256,
                 "v3_component_config_sha256": self._v3.config_fingerprint_sha256,
                 "v3_proposal_indices": list(indices),
@@ -1185,7 +1242,7 @@ class InteractionAwareRigidEnsembleRefinerV4:
         nested_receipt = nested_refiner.receipts[proposal.fingerprint_sha256]
         zero_rotation = [0.0.hex(), 0.0.hex(), 0.0.hex()]
         receipt: dict[str, object] = {
-            "schema_id": INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID,
+            "schema_id": self.receipt_schema_id,
             "source_proposal_sha256": proposal.fingerprint_sha256,
             "config_sha256": self.config_fingerprint_sha256,
             "lane": lane,
@@ -1243,12 +1300,282 @@ class InteractionAwareRigidEnsembleRefinerV4:
         return refined
 
 
+class InteractionAwareRigidClearanceEnsembleRefinerV5(
+    InteractionAwareRigidEnsembleRefinerV4
+):
+    """Apply expanded clearance only to variants whose V2 sources remain retained."""
+
+    refiner_id = INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_REFINER_V5_ID
+    refiner_version = (
+        INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_REFINER_V5_VERSION
+    )
+    ensemble_config_schema_id = (
+        INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_CONFIG_V5_SCHEMA_ID
+    )
+    receipt_schema_id = (
+        INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_RECEIPT_V5_SCHEMA_ID
+    )
+
+    def __init__(
+        self,
+        authority: AuthenticatedDockingProblem,
+        receptor_system: AllAtomSystem,
+        ligand_system: AllAtomSystem,
+        *,
+        implementation_source_sha256: str,
+        v3_proposal_indices: tuple[int, ...],
+        v2_config: InteractionAwareRigidConfigV2 | None = None,
+        v3_config: InteractionAwareRigidConfigV3 | None = None,
+        radii_policy: VdwContactPolicy | None = None,
+    ) -> None:
+        super().__init__(
+            authority,
+            receptor_system,
+            ligand_system,
+            implementation_source_sha256=implementation_source_sha256,
+            v3_proposal_indices=v3_proposal_indices,
+            v2_config=v2_config,
+            v3_config=(v3_config or InteractionAwareRigidClearanceConfigV4()),
+            radii_policy=radii_policy,
+        )
+
+
+class InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
+    InteractionAwareRigidEnsembleRefinerV4
+):
+    """Rescue only duplicate or receipt-bound near-clear V3 variants."""
+
+    refiner_id = INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_REFINER_V6_ID
+    refiner_version = INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_REFINER_V6_VERSION
+    ensemble_config_schema_id = (
+        INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_CONFIG_V6_SCHEMA_ID
+    )
+    receipt_schema_id = (
+        INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_RECEIPT_V6_SCHEMA_ID
+    )
+
+    def __init__(
+        self,
+        authority: AuthenticatedDockingProblem,
+        receptor_system: AllAtomSystem,
+        ligand_system: AllAtomSystem,
+        *,
+        implementation_source_sha256: str,
+        v3_proposal_indices: tuple[int, ...],
+        v2_config: InteractionAwareRigidConfigV2 | None = None,
+        v3_config: InteractionAwareRigidConfigV3 | None = None,
+        clearance_config: InteractionAwareRigidConfigV3 | None = None,
+        radii_policy: VdwContactPolicy | None = None,
+    ) -> None:
+        super().__init__(
+            authority,
+            receptor_system,
+            ligand_system,
+            implementation_source_sha256=implementation_source_sha256,
+            v3_proposal_indices=v3_proposal_indices,
+            v2_config=v2_config,
+            v3_config=v3_config,
+            radii_policy=radii_policy,
+        )
+        selected_clearance = (
+            clearance_config or InteractionAwareRigidClearanceConfigV4()
+        )
+        self._clearance_v3 = InteractionAwareRigidRefinerV3(
+            authority,
+            receptor_system,
+            ligand_system,
+            implementation_source_sha256=implementation_source_sha256,
+            config=selected_clearance,
+            radii_policy=radii_policy,
+        )
+        baseline_config_sha256 = self._component_config_fingerprint_sha256
+        self._component_config_fingerprint_sha256 = _sha256(
+            {
+                "schema_id": self.ensemble_config_schema_id,
+                "baseline_ensemble_config_sha256": baseline_config_sha256,
+                "clearance_component_config_sha256": (
+                    self._clearance_v3.config_fingerprint_sha256
+                ),
+                "near_clear_penalty_binary64_hex": (
+                    INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY.hex()
+                ),
+                "selection_policy": (
+                    "v2_duplicate_or_near_clear_clearance_objective_reduction"
+                ),
+                "source_lane_retained": True,
+                "scientifically_validated": False,
+            }
+        )
+
+    def refine(self, proposal: DockingProposal, *, max_steps: int) -> DockingProposal:
+        proposal.assert_integrity()
+        if proposal.proposal_index not in self._v3_proposal_index_set:
+            return super().refine(proposal, max_steps=max_steps)
+        if proposal.fingerprint_sha256 in self._receipts:
+            raise ClashReliefRefinementError("proposal was already refined")
+
+        comparison_v2 = self._v2.refine(proposal, max_steps=max_steps)
+        baseline_v3 = self._v3.refine(proposal, max_steps=max_steps)
+        comparison_receipt = self._v2.receipts[proposal.fingerprint_sha256]
+        baseline_receipt = self._v3.receipts[proposal.fingerprint_sha256]
+        baseline_duplicate = bool(
+            coordinate_fingerprint(comparison_v2.coordinates)
+            == coordinate_fingerprint(baseline_v3.coordinates)
+        )
+        baseline_penalty = float.fromhex(
+            str(baseline_receipt["final_penalty_binary64_hex"])
+        )
+        clearance_evaluated = bool(
+            baseline_duplicate
+            or baseline_penalty
+            <= INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY
+        )
+        clearance_receipt: Mapping[str, object] | None = None
+        clearance_initial_penalty: float | None = None
+        clearance_penalty: float | None = None
+        clearance_selected = False
+        selected = baseline_v3
+        selected_refiner = self._v3
+        selected_receipt = baseline_receipt
+        selection_reason = "baseline_v3_retained"
+        if clearance_evaluated:
+            clearance = self._clearance_v3.refine(
+                proposal,
+                max_steps=max_steps,
+            )
+            clearance_receipt = self._clearance_v3.receipts[
+                proposal.fingerprint_sha256
+            ]
+            clearance_initial_penalty = float.fromhex(
+                str(clearance_receipt["initial_penalty_binary64_hex"])
+            )
+            clearance_penalty = float.fromhex(
+                str(clearance_receipt["final_penalty_binary64_hex"])
+            )
+            clearance_selected = bool(
+                baseline_duplicate
+                or clearance_penalty < clearance_initial_penalty
+            )
+            if clearance_selected:
+                selected = clearance
+                selected_refiner = self._clearance_v3
+                selected_receipt = clearance_receipt
+                selection_reason = (
+                    "v2_duplicate_clearance_rescue"
+                    if baseline_duplicate
+                    else "near_clear_clearance_objective_reduction"
+                )
+
+        zero_rotation = [0.0.hex(), 0.0.hex(), 0.0.hex()]
+        receipt: dict[str, object] = {
+            "schema_id": self.receipt_schema_id,
+            "source_proposal_sha256": proposal.fingerprint_sha256,
+            "config_sha256": self.config_fingerprint_sha256,
+            "lane": (
+                "translation_rotation_v5_clearance_rescue"
+                if clearance_selected
+                else "translation_rotation_v3"
+            ),
+            "selection_reason": selection_reason,
+            "v3_proposal_indices": list(self._v3_proposal_indices),
+            "comparison_v2_receipt_sha256": comparison_receipt[
+                "receipt_sha256"
+            ],
+            "baseline_v3_receipt_sha256": baseline_receipt["receipt_sha256"],
+            "clearance_receipt_sha256": (
+                ""
+                if clearance_receipt is None
+                else clearance_receipt["receipt_sha256"]
+            ),
+            "baseline_duplicate_of_v2_refinement": baseline_duplicate,
+            "baseline_final_penalty_binary64_hex": baseline_penalty.hex(),
+            "clearance_evaluated": clearance_evaluated,
+            "clearance_initial_penalty_binary64_hex": (
+                ""
+                if clearance_initial_penalty is None
+                else clearance_initial_penalty.hex()
+            ),
+            "clearance_final_penalty_binary64_hex": (
+                "" if clearance_penalty is None else clearance_penalty.hex()
+            ),
+            "clearance_selected": clearance_selected,
+            "near_clear_penalty_binary64_hex": (
+                INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY.hex()
+            ),
+            "nested_refiner_id": selected_refiner.refiner_id,
+            "nested_refiner_version": selected_refiner.refiner_version,
+            "nested_receipt_sha256": selected_receipt["receipt_sha256"],
+            "initial_penalty_binary64_hex": selected_receipt[
+                "initial_penalty_binary64_hex"
+            ],
+            "final_penalty_binary64_hex": selected_receipt[
+                "final_penalty_binary64_hex"
+            ],
+            "accepted_steps": selected_receipt["accepted_steps"],
+            "accepted_translation_steps": selected_receipt.get(
+                "accepted_translation_steps",
+                selected_receipt["accepted_steps"],
+            ),
+            "accepted_rotation_steps": selected_receipt.get(
+                "accepted_rotation_steps",
+                0,
+            ),
+            "line_search_evaluation_count": selected_receipt.get(
+                "line_search_evaluation_count",
+                0,
+            ),
+            "fallback_direction_step_count": selected_receipt.get(
+                "fallback_direction_step_count",
+                0,
+            ),
+            "original_pose_valid": selected_receipt["original_pose_valid"],
+            "total_translation_binary64_hex": selected_receipt[
+                "total_translation_binary64_hex"
+            ],
+            "total_rotation_vector_binary64_hex": selected_receipt.get(
+                "total_rotation_vector_binary64_hex",
+                zero_rotation,
+            ),
+            "pre_coordinates_sha256": selected_receipt[
+                "pre_coordinates_sha256"
+            ],
+            "post_coordinates_sha256": selected_receipt[
+                "post_coordinates_sha256"
+            ],
+            "ranking_score_reused_as_physical_energy": False,
+            "source_lane_retained": True,
+            "scientifically_validated": False,
+        }
+        receipt_sha256 = _sha256(receipt)
+        receipt["receipt_sha256"] = receipt_sha256
+        refined = proposal.with_refined_coordinates(
+            selected.coordinates,
+            refiner_id=self.refiner_id,
+            refiner_version=self.refiner_version,
+            refinement_receipt_sha256=receipt_sha256,
+            torsion_angles=selected.torsion_angles,
+        )
+        self._receipts[proposal.fingerprint_sha256] = MappingProxyType(receipt)
+        return refined
+
+
 __all__ = [
     "CLASH_RELIEF_CONFIG_SCHEMA_ID",
     "CLASH_RELIEF_REFINER_ID",
     "CLASH_RELIEF_REFINER_VERSION",
     "INTERACTION_AWARE_RIGID_CONFIG_V2_SCHEMA_ID",
     "INTERACTION_AWARE_RIGID_CONFIG_V3_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_CLEARANCE_CONFIG_V4_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_CONFIG_V5_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_RECEIPT_V5_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_REFINER_V5_ID",
+    "INTERACTION_AWARE_RIGID_CLEARANCE_ENSEMBLE_REFINER_V5_VERSION",
+    "INTERACTION_AWARE_RIGID_ENSEMBLE_CONFIG_V4_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_CONFIG_V6_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_RECEIPT_V6_SCHEMA_ID",
+    "INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_REFINER_V6_ID",
+    "INTERACTION_AWARE_RIGID_HYBRID_ENSEMBLE_REFINER_V6_VERSION",
+    "INTERACTION_AWARE_RIGID_HYBRID_NEAR_CLEAR_PENALTY",
     "INTERACTION_AWARE_RIGID_ENSEMBLE_RECEIPT_V4_SCHEMA_ID",
     "INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_ID",
     "INTERACTION_AWARE_RIGID_ENSEMBLE_REFINER_V4_VERSION",
@@ -1258,6 +1585,9 @@ __all__ = [
     "INTERACTION_AWARE_RIGID_REFINER_V3_VERSION",
     "ClashReliefConfig",
     "ClashReliefRefinementError",
+    "InteractionAwareRigidClearanceConfigV4",
+    "InteractionAwareRigidClearanceEnsembleRefinerV5",
+    "InteractionAwareRigidHybridClearanceEnsembleRefinerV6",
     "InteractionAwareRigidConfigV2",
     "InteractionAwareRigidConfigV3",
     "InteractionAwareRigidRefinerV2",

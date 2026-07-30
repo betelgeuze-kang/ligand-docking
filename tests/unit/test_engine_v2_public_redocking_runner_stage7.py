@@ -1420,6 +1420,9 @@ def test_cpu_policy_configures_and_verifies_single_torch_threads(
     runner._configure_engine_v2_cpu()
 
     assert state == {"intra": 1, "inter": 1}
+    assert runner.ENGINE_V2_CPU_POLICY["interaction_refiner"] == (
+        "interaction_aware_rigid_v6_hybrid_clearance_ensemble"
+    )
 
 
 def test_cpu_policy_rejects_unfrozen_torch_build(
@@ -2063,7 +2066,7 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
     )
     monkeypatch.setattr(
         runner,
-        "InteractionAwareRigidEnsembleRefinerV4",
+        "InteractionAwareRigidHybridClearanceEnsembleRefinerV6",
         lambda *args, **kwargs: object(),
     )
 
@@ -2197,7 +2200,7 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
     )
     monkeypatch.setattr(
         runner,
-        "InteractionAwareRigidEnsembleRefinerV4",
+        "InteractionAwareRigidHybridClearanceEnsembleRefinerV6",
         lambda *args, **kwargs: refiner,
     )
     term_rows = tuple(
