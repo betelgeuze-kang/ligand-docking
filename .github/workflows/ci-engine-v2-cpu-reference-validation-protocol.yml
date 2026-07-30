@@ -295,7 +295,7 @@ jobs:
               )
           )
           assert loaded == capability_snapshot()
-          assert len(loaded["capabilities"]) == 44
+          assert len(loaded["capabilities"]) == 45
           assert loaded["implementation_stage"] == "v2_ao_native_cpu_scorer_contract_rc5"
           minimization_authorization = reference_minimization_validation_authorization_contract_document()
           assert minimization_authorization["contract_sha256"] == (
