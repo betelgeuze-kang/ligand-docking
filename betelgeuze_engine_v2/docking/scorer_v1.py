@@ -33,6 +33,7 @@ from .contact_validity import ElementAwarePoseValidityContext
 from .guided_placement import (
     GuidedPlacementContext,
     GuidedPlacementPolicy,
+    GuidedPlacementReceipt,
     GuidedPlacementSearchResult,
     run_authenticated_guided_placement_search,
 )
@@ -1997,6 +1998,8 @@ def run_authenticated_scorer_v1_guided_search(
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
+    precomputed_proposals: Sequence[DockingProposal] | None = None,
+    precomputed_guided_receipt: GuidedPlacementReceipt | None = None,
 ) -> ScorerV1GuidedSearchResult:
     if not isinstance(scorer, ChemistryPoseScorerV1):
         raise TypeError("scorer must be ChemistryPoseScorerV1")
@@ -2016,6 +2019,8 @@ def run_authenticated_scorer_v1_guided_search(
         diversity_rmsd_angstrom=diversity_rmsd_angstrom,
         diversity_metric=diversity_metric,
         symmetry_permutations=symmetry_permutations,
+        precomputed_proposals=precomputed_proposals,
+        precomputed_guided_receipt=precomputed_guided_receipt,
     )
     retained: list[ScorerV1SearchTermRow] = []
     for row in guided.authenticated_search_result.search_result.rows:

@@ -74,11 +74,15 @@ from betelgeuze_engine_v2.benchmark import (
 )
 from betelgeuze_engine_v2.docking import (
     ChemistryPoseScorerV1,
+    ConformerPreparationConfig,
+    ConformerPreparationError,
     DockingBudget,
     DockingAuthorityError,
     DockingSearchError,
     DockingScope,
     ElementAwareValidityError,
+    FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID,
+    FixedSourceBoundConformerProposalReceipt,
     GuidedPlacementPolicy,
     INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_ID,
     INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_VERSION,
@@ -93,6 +97,10 @@ from betelgeuze_engine_v2.docking import (
     UnsupportedVdwElementError,
     build_element_aware_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
+    fixed_source_bound_conformer_profile_document,
+    fixed_source_bound_conformer_proposal_indices,
+    generate_fixed_source_bound_conformer_docking_proposals,
+    prepare_source_bound_conformer_ensemble,
     run_authenticated_scorer_v1_guided_search,
     uniform_v3_ensemble_proposal_indices,
 )
@@ -171,6 +179,33 @@ DEVELOPMENT_V8_CLEARANCE_CPU_POLICY = {
     "primary_claim_eligible": False,
     "public_claim_eligible": False,
 }
+_DEVELOPMENT_TRUE_CONFORMER_CONFIG = ConformerPreparationConfig()
+_DEVELOPMENT_TRUE_CONFORMER_PROFILE = (
+    fixed_source_bound_conformer_profile_document()
+)
+_DEVELOPMENT_TRUE_CONFORMER_CONFIG_SHA256 = hashlib.sha256(
+    json.dumps(
+        _DEVELOPMENT_TRUE_CONFORMER_CONFIG.to_dict(),
+        allow_nan=False,
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("ascii")
+).hexdigest()
+DEVELOPMENT_TRUE_CONFORMER_CPU_POLICY = {
+    **ENGINE_V2_CPU_POLICY,
+    "algorithm_profile_id": FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID,
+    "proposal_profile_sha256": _DEVELOPMENT_TRUE_CONFORMER_PROFILE[
+        "fingerprint_sha256"
+    ],
+    "source_conformer_config_sha256": (
+        _DEVELOPMENT_TRUE_CONFORMER_CONFIG_SHA256
+    ),
+    "development_experimental": True,
+    "stage0_eligible": False,
+    "primary_claim_eligible": False,
+    "public_claim_eligible": False,
+}
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
     "ligands.sdf",
@@ -205,6 +240,23 @@ DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID = (
 DEVELOPMENT_V8_CLEARANCE_SUMMARY_SCHEMA_ID = (
     "betelgeuze.engine_v2_historical_development_v8_clearance_summary/1.0.0"
 )
+DEVELOPMENT_TRUE_CONFORMER_SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_true_conformer_summary/1.0.0"
+)
+DEVELOPMENT_TRUE_CONFORMER_CASE_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_true_conformer_case_receipt/1.0.0"
+)
+_DEVELOPMENT_TRUE_CONFORMER_PROPOSAL_FAILURE_STAGES = frozenset(
+    {
+        "input_parse",
+        "partial_charge_assignment",
+        "source_bound_conformer_preparation",
+        "docking_context_preparation",
+        "fixed_proposal_or_refiner_preparation",
+        "pre_fixed_proposal_receipt",
+        "unclassified_pre_fixed_proposal_failure",
+    }
+)
 _DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
 _SEALED_CASE_INPUT_ROLES = ("receptor", "reference", "native", "seed")
 
@@ -238,10 +290,18 @@ class EngineV2PreparationFailure(EngineV2CaseFailure):
         message: str,
         *,
         failure_code: str = "engine_v2_case_failed",
+        development_proposal_failure_stage: str = "",
+        development_proposal_receipt: (
+            FixedSourceBoundConformerProposalReceipt | None
+        ) = None,
     ) -> None:
         super().__init__(message)
         self.preparation_failure_code = preparation_failure_code
         self.failure_code = failure_code
+        self.development_proposal_failure_stage = str(
+            development_proposal_failure_stage or ""
+        ).strip()
+        self.development_proposal_receipt = development_proposal_receipt
 
 
 class EngineV2SearchCaseFailure(EngineV2CaseFailure):
@@ -254,15 +314,51 @@ class EngineV2SearchCaseFailure(EngineV2CaseFailure):
         diagnostics: PublicRedockingEngineV2Diagnostics,
         failure_code: str = "engine_v2_case_failed",
         diagnostic_evaluation_seconds: float = 0.0,
+        development_proposal_receipt: (
+            FixedSourceBoundConformerProposalReceipt | None
+        ) = None,
     ) -> None:
         super().__init__(message)
         self.diagnostics = diagnostics
         self.failure_code = failure_code
         self.diagnostic_evaluation_seconds = diagnostic_evaluation_seconds
+        self.development_proposal_receipt = development_proposal_receipt
+
+
+class DevelopmentTrueConformerProposalEvidence:
+    __slots__ = ("failure_stage", "proposal_receipt")
+
+    def __init__(
+        self,
+        *,
+        proposal_receipt: FixedSourceBoundConformerProposalReceipt | None,
+        failure_stage: str = "",
+    ) -> None:
+        stage = str(failure_stage or "").strip()
+        if proposal_receipt is not None:
+            if not isinstance(
+                proposal_receipt,
+                FixedSourceBoundConformerProposalReceipt,
+            ):
+                raise TypeError(
+                    "proposal_receipt must be FixedSourceBoundConformerProposalReceipt"
+                )
+            proposal_receipt.receipt_sha256
+            if stage:
+                raise PublicRedockingRunnerError(
+                    "prepared true-conformer evidence cannot declare a failure stage"
+                )
+        elif stage not in _DEVELOPMENT_TRUE_CONFORMER_PROPOSAL_FAILURE_STAGES:
+            raise PublicRedockingRunnerError(
+                "missing true-conformer proposal evidence has an invalid failure stage"
+            )
+        self.proposal_receipt = proposal_receipt
+        self.failure_stage = stage
 
 
 class EngineV2PoseSearchOutcome:
     __slots__ = (
+        "development_proposal_receipt",
         "diagnostic_evaluation_seconds",
         "diagnostics",
         "ranked_coordinates",
@@ -274,10 +370,14 @@ class EngineV2PoseSearchOutcome:
         ranked_coordinates: tuple[torch.Tensor, ...],
         diagnostics: PublicRedockingEngineV2Diagnostics,
         diagnostic_evaluation_seconds: float = 0.0,
+        development_proposal_receipt: (
+            FixedSourceBoundConformerProposalReceipt | None
+        ) = None,
     ) -> None:
         self.ranked_coordinates = tuple(ranked_coordinates)
         self.diagnostics = diagnostics
         self.diagnostic_evaluation_seconds = float(diagnostic_evaluation_seconds)
+        self.development_proposal_receipt = development_proposal_receipt
 
 
 class ExecutionEnvironmentIdentity:
@@ -1031,16 +1131,25 @@ def _engine_v2_execution_policy(
     *,
     execution_profile_sha256: str = "",
     development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
 ) -> dict[str, object]:
-    if development_v8_clearance_variant and execution_profile_sha256:
+    if development_v8_clearance_variant and development_true_conformer_profile:
         raise PublicRedockingRunnerError(
-            "development V8 clearance execution rejects a Stage 0 profile binding"
+            "development V8 and true-conformer variants are mutually exclusive"
         )
-    base_policy = (
-        DEVELOPMENT_V8_CLEARANCE_CPU_POLICY
-        if development_v8_clearance_variant
-        else ENGINE_V2_CPU_POLICY
-    )
+    if (
+        development_v8_clearance_variant
+        or development_true_conformer_profile
+    ) and execution_profile_sha256:
+        raise PublicRedockingRunnerError(
+            "development variant execution rejects a Stage 0 profile binding"
+        )
+    if development_true_conformer_profile:
+        base_policy = DEVELOPMENT_TRUE_CONFORMER_CPU_POLICY
+    elif development_v8_clearance_variant:
+        base_policy = DEVELOPMENT_V8_CLEARANCE_CPU_POLICY
+    else:
+        base_policy = ENGINE_V2_CPU_POLICY
     return {
         **base_policy,
         "scorer_backend": scorer_backend.value,
@@ -2421,7 +2530,12 @@ def _engine_v2_command(
     seed: int,
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
     development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
 ) -> tuple[str, ...]:
+    if development_v8_clearance_variant and development_true_conformer_profile:
+        raise PublicRedockingRunnerError(
+            "development V8 and true-conformer variants are mutually exclusive"
+        )
     command = (
         RUNNER_ID,
         "engine_v2",
@@ -2446,6 +2560,8 @@ def _engine_v2_command(
     )
     if development_v8_clearance_variant:
         command += ("--development-v8-clearance-variant",)
+    if development_true_conformer_profile:
+        command += ("--development-true-conformer-profile",)
     return command
 
 
@@ -2473,7 +2589,12 @@ def _engine_v2_pose_coordinates(
     seed: int,
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
     development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
 ) -> EngineV2PoseSearchOutcome:
+    if development_v8_clearance_variant and development_true_conformer_profile:
+        raise PublicRedockingRunnerError(
+            "development V8 and true-conformer variants are mutually exclusive"
+        )
     try:
         receptor_bytes = paths["receptor"].read_bytes()
         seed_bytes = paths["seed"].read_bytes()
@@ -2503,6 +2624,11 @@ def _engine_v2_pose_coordinates(
             "input_parse_unsupported",
             "Engine V2 input parsing is unsupported",
             failure_code="engine_v2_input_unsupported",
+            development_proposal_failure_stage=(
+                "input_parse"
+                if development_true_conformer_profile
+                else ""
+            ),
         ) from exc
     try:
         receptor = _assign_receptor_proxy_charges(receptor)
@@ -2511,7 +2637,28 @@ def _engine_v2_pose_coordinates(
         raise EngineV2PreparationFailure(
             "partial_charge_assignment_failed",
             "Engine V2 partial-charge preparation failed",
+            development_proposal_failure_stage=(
+                "partial_charge_assignment"
+                if development_true_conformer_profile
+                else ""
+            ),
         ) from exc
+    source_conformer_ensemble = None
+    if development_true_conformer_profile:
+        try:
+            source_conformer_ensemble = prepare_source_bound_conformer_ensemble(
+                ligand,
+                seed_bytes,
+                config=_DEVELOPMENT_TRUE_CONFORMER_CONFIG,
+            )
+        except ConformerPreparationError as exc:
+            raise EngineV2PreparationFailure(
+                "docking_context_preparation_failed",
+                "Engine V2 source-bound conformer preparation failed",
+                development_proposal_failure_stage=(
+                    "source_bound_conformer_preparation"
+                ),
+            ) from exc
     native_coordinates = native.coordinates[0]
     center = native_coordinates.mean(dim=0)
     radius = max(
@@ -2546,6 +2693,9 @@ def _engine_v2_pose_coordinates(
         translation_radius_angstrom=min(4.0, radius),
         seed=seed,
     )
+    development_proposal_receipt = None
+    precomputed_proposals = None
+    precomputed_guided_receipt = None
     try:
         authority = build_element_aware_authenticated_known_pocket_docking_problem(
             receptor,
@@ -2564,14 +2714,48 @@ def _engine_v2_pose_coordinates(
             backend_options=ScorerBackendOptions(thread_count=1),
         )
         context = build_guided_placement_context(authority, receptor, ligand)
-        guided_policy = GuidedPlacementPolicy(
-            uniform_v3_ensemble_enabled=True,
-        )
-        v3_proposal_indices = uniform_v3_ensemble_proposal_indices(
-            context,
-            budget,
-            guided_policy,
-        )
+        if development_true_conformer_profile:
+            if source_conformer_ensemble is None:
+                raise DockingAuthorityError(
+                    "source-bound conformer ensemble is unavailable"
+                )
+            (
+                precomputed_proposals,
+                precomputed_guided_receipt,
+                development_proposal_receipt,
+            ) = generate_fixed_source_bound_conformer_docking_proposals(
+                authority,
+                budget,
+                context,
+                receptor_system=receptor,
+                ligand_system=ligand,
+                source_conformer_ensemble=source_conformer_ensemble,
+            )
+            if (
+                development_proposal_receipt.guided_receipt.receipt_sha256
+                != precomputed_guided_receipt.receipt_sha256
+                or development_proposal_receipt.proposal_fingerprint_sha256s
+                != tuple(
+                    proposal.fingerprint_sha256
+                    for proposal in precomputed_proposals
+                )
+            ):
+                raise DockingAuthorityError(
+                    "fixed true-conformer proposal evidence is cross-wired"
+                )
+            guided_policy = None
+            v3_proposal_indices = (
+                fixed_source_bound_conformer_proposal_indices()
+            )
+        else:
+            guided_policy = GuidedPlacementPolicy(
+                uniform_v3_ensemble_enabled=True,
+            )
+            v3_proposal_indices = uniform_v3_ensemble_proposal_indices(
+                context,
+                budget,
+                guided_policy,
+            )
         if development_v8_clearance_variant:
             refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
                 authority,
@@ -2597,11 +2781,33 @@ def _engine_v2_pose_coordinates(
         raise EngineV2PreparationFailure(
             "unsupported_vdw_element",
             "Engine V2 validity/scoring tables do not cover an observed element",
+            development_proposal_failure_stage=(
+                "docking_context_preparation"
+                if development_true_conformer_profile
+                and development_proposal_receipt is None
+                else ""
+            ),
+            development_proposal_receipt=(
+                development_proposal_receipt
+                if development_true_conformer_profile
+                else None
+            ),
         ) from exc
     except UnsupportedLargeRingSystemError as exc:
         raise EngineV2PreparationFailure(
             "unsupported_large_ring_system",
             "Engine V2 rigid-ring lane does not support this ring system",
+            development_proposal_failure_stage=(
+                "docking_context_preparation"
+                if development_true_conformer_profile
+                and development_proposal_receipt is None
+                else ""
+            ),
+            development_proposal_receipt=(
+                development_proposal_receipt
+                if development_true_conformer_profile
+                else None
+            ),
         ) from exc
     except (
         DockingAuthorityError,
@@ -2611,6 +2817,17 @@ def _engine_v2_pose_coordinates(
         raise EngineV2PreparationFailure(
             "docking_context_preparation_failed",
             "Engine V2 docking-context preparation failed",
+            development_proposal_failure_stage=(
+                "fixed_proposal_or_refiner_preparation"
+                if development_true_conformer_profile
+                and development_proposal_receipt is None
+                else ""
+            ),
+            development_proposal_receipt=(
+                development_proposal_receipt
+                if development_true_conformer_profile
+                else None
+            ),
         ) from exc
     preparation_counts = {
         "receptor_atom_count": receptor.atom_count,
@@ -2634,6 +2851,18 @@ def _engine_v2_pose_coordinates(
     def search_failure_diagnostics(
         error_code: str,
     ) -> PublicRedockingEngineV2Diagnostics:
+        if development_true_conformer_profile:
+            if precomputed_guided_receipt is None:
+                raise PublicRedockingRunnerError(
+                    "true-conformer search failure lacks proposal lineage"
+                )
+            failure_proposal_modes = precomputed_guided_receipt.proposal_modes
+            failure_source_indices = (
+                precomputed_guided_receipt.ensemble_source_proposal_indices
+            )
+        else:
+            failure_proposal_modes = ("",) * ENGINE_V2_CANDIDATE_COUNT
+            failure_source_indices = (None,) * ENGINE_V2_CANDIDATE_COUNT
         return PublicRedockingEngineV2Diagnostics(
             preparation_status="success",
             **preparation_counts,
@@ -2642,6 +2871,10 @@ def _engine_v2_pose_coordinates(
                 PublicRedockingEngineV2CandidateDiagnostic(
                     proposal_index=index,
                     status="failure",
+                    proposal_mode=failure_proposal_modes[index],
+                    ensemble_source_proposal_index=(
+                        failure_source_indices[index]
+                    ),
                     error_code=error_code,
                 )
                 for index in range(ENGINE_V2_CANDIDATE_COUNT)
@@ -2659,6 +2892,8 @@ def _engine_v2_pose_coordinates(
             refiner=refiner,
             guided_policy=guided_policy,
             diversity_rmsd_angstrom=0.0,
+            precomputed_proposals=precomputed_proposals,
+            precomputed_guided_receipt=precomputed_guided_receipt,
         )
     except (
         DockingAuthorityError,
@@ -2669,6 +2904,7 @@ def _engine_v2_pose_coordinates(
         raise EngineV2SearchCaseFailure(
             "Engine V2 candidate search failed",
             diagnostics=search_failure_diagnostics("search_execution_failed"),
+            development_proposal_receipt=development_proposal_receipt,
         ) from exc
     search = result.guided_search_result.authenticated_search_result.search_result
     if (
@@ -2680,6 +2916,7 @@ def _engine_v2_pose_coordinates(
         raise EngineV2SearchCaseFailure(
             "Engine V2 search did not retain the fixed candidate denominator",
             diagnostics=search_failure_diagnostics("candidate_denominator_incomplete"),
+            development_proposal_receipt=development_proposal_receipt,
         )
     term_rows = {row.proposal_index: row for row in result.rows}
     successful_rows = tuple(
@@ -2801,6 +3038,7 @@ def _engine_v2_pose_coordinates(
                     refinement_receipt_payload=(
                         dict(refinement_receipt)
                         if development_v8_clearance_variant
+                        or development_true_conformer_profile
                         or proposal_mode == "uniform_v3_rigid_ensemble"
                         else {}
                     ),
@@ -2858,11 +3096,13 @@ def _engine_v2_pose_coordinates(
             diagnostics=diagnostics,
             failure_code=ranking_failure.failure_code,
             diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
+            development_proposal_receipt=development_proposal_receipt,
         ) from ranking_failure
     return EngineV2PoseSearchOutcome(
         ranked_coordinates=tuple(proposal.coordinates for proposal in proposals),
         diagnostics=diagnostics,
         diagnostic_evaluation_seconds=diagnostic_evaluation_seconds,
+        development_proposal_receipt=development_proposal_receipt,
     )
 
 
@@ -2885,7 +3125,28 @@ def _engine_v2_result(
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
     execution_profile_sha256: str = "",
     development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
+    development_proposal_evidence_sink: (
+        dict[str, DevelopmentTrueConformerProposalEvidence] | None
+    ) = None,
 ) -> PublicRedockingCaseResult:
+    if development_v8_clearance_variant and development_true_conformer_profile:
+        raise PublicRedockingRunnerError(
+            "development V8 and true-conformer variants are mutually exclusive"
+        )
+    if development_true_conformer_profile != (
+        development_proposal_evidence_sink is not None
+    ):
+        raise PublicRedockingRunnerError(
+            "true-conformer execution requires its development evidence sink"
+        )
+    if (
+        development_proposal_evidence_sink is not None
+        and case_id in development_proposal_evidence_sink
+    ):
+        raise PublicRedockingRunnerError(
+            "true-conformer development evidence contains a duplicate case"
+        )
     _quarantine_managed_regular_file(
         output,
         label="stale Engine V2 pose output",
@@ -2899,6 +3160,8 @@ def _engine_v2_result(
     }
     if development_v8_clearance_variant:
         command_arguments["development_v8_clearance_variant"] = True
+    if development_true_conformer_profile:
+        command_arguments["development_true_conformer_profile"] = True
     command = _engine_v2_command(
         case_id,
         paths if logical_paths is None else logical_paths,
@@ -2909,10 +3172,34 @@ def _engine_v2_result(
             scorer_backend,
             execution_profile_sha256=execution_profile_sha256,
             development_v8_clearance_variant=development_v8_clearance_variant,
+            development_true_conformer_profile=(
+                development_true_conformer_profile
+            ),
         )
     )
     diagnostics: PublicRedockingEngineV2Diagnostics | None = None
     diagnostic_evaluation_seconds = 0.0
+    development_proposal_receipt = None
+    development_proposal_failure_stage = ""
+
+    def retain_development_proposal_evidence() -> None:
+        if not development_true_conformer_profile:
+            return
+        if development_proposal_evidence_sink is None:
+            raise PublicRedockingRunnerError(
+                "true-conformer development evidence sink is unavailable"
+            )
+        development_proposal_evidence_sink[case_id] = (
+            DevelopmentTrueConformerProposalEvidence(
+                proposal_receipt=development_proposal_receipt,
+                failure_stage=(
+                    development_proposal_failure_stage
+                    if development_proposal_receipt is None
+                    else ""
+                ),
+            )
+        )
+
     try:
         pose_arguments: dict[str, object] = {
             "seed": seed,
@@ -2920,6 +3207,8 @@ def _engine_v2_result(
         }
         if development_v8_clearance_variant:
             pose_arguments["development_v8_clearance_variant"] = True
+        if development_true_conformer_profile:
+            pose_arguments["development_true_conformer_profile"] = True
         outcome = _engine_v2_pose_coordinates(case_id, paths, **pose_arguments)
         if type(outcome) is not EngineV2PoseSearchOutcome:
             raise PublicRedockingRunnerError(
@@ -2927,6 +3216,14 @@ def _engine_v2_result(
             )
         diagnostics = outcome.diagnostics
         diagnostic_evaluation_seconds = outcome.diagnostic_evaluation_seconds
+        development_proposal_receipt = outcome.development_proposal_receipt
+        if (
+            development_true_conformer_profile
+            and development_proposal_receipt is None
+        ):
+            raise PublicRedockingRunnerError(
+                "successful true-conformer proposal search lacks its receipt"
+            )
         pose_payload, artifacts = _write_engine_v2_poses(
             output,
             paths["seed"],
@@ -2937,7 +3234,17 @@ def _engine_v2_result(
         if isinstance(exc, EngineV2SearchCaseFailure):
             diagnostics = exc.diagnostics
             diagnostic_evaluation_seconds = exc.diagnostic_evaluation_seconds
+            development_proposal_receipt = (
+                exc.development_proposal_receipt
+            )
         elif isinstance(exc, EngineV2PreparationFailure):
+            development_proposal_receipt = (
+                exc.development_proposal_receipt
+            )
+            development_proposal_failure_stage = (
+                exc.development_proposal_failure_stage
+                or "pre_fixed_proposal_receipt"
+            )
             diagnostics = PublicRedockingEngineV2Diagnostics(
                 preparation_status="failure",
                 preparation_failure_code=exc.preparation_failure_code,
@@ -2951,6 +3258,9 @@ def _engine_v2_result(
                 ligand_acceptor_count=0,
             )
         elif diagnostics is None:
+            development_proposal_failure_stage = (
+                "unclassified_pre_fixed_proposal_failure"
+            )
             diagnostics = PublicRedockingEngineV2Diagnostics(
                 preparation_status="failure",
                 preparation_failure_code="unclassified_engine_v2_case_failure",
@@ -2963,7 +3273,7 @@ def _engine_v2_result(
                 ligand_donor_count=0,
                 ligand_acceptor_count=0,
             )
-        return PublicRedockingCaseResult(
+        failure_result = PublicRedockingCaseResult(
             case_id=case_id,
             engine_id="engine_v2",
             status="failure",
@@ -2977,6 +3287,8 @@ def _engine_v2_result(
             failure_code=_engine_v2_failure_code(exc),
             engine_v2_diagnostics=diagnostics,
         )
+        retain_development_proposal_evidence()
+        return failure_result
     runtime = max(
         0.0,
         time.perf_counter() - started - diagnostic_evaluation_seconds,
@@ -2986,7 +3298,7 @@ def _engine_v2_result(
         native_payload=paths["native"].read_bytes(),
         receptor_payload=paths["receptor"].read_bytes(),
     )
-    return PublicRedockingCaseResult(
+    success_result = PublicRedockingCaseResult(
         case_id=case_id,
         engine_id="engine_v2",
         status="success",
@@ -3000,6 +3312,419 @@ def _engine_v2_result(
         pose_artifact_sha256s=artifacts,
         engine_v2_diagnostics=diagnostics,
     )
+    retain_development_proposal_evidence()
+    return success_result
+
+
+def _validate_true_conformer_proposal_source_binding(
+    proposal_payload: Mapping[str, object],
+    *,
+    expected_source_artifact_sha256: str,
+) -> None:
+    source_ensemble = proposal_payload.get("source_conformer_ensemble")
+    if not isinstance(source_ensemble, Mapping):
+        raise PublicRedockingRunnerError(
+            "true-conformer proposal source evidence is incomplete"
+        )
+    derivation = source_ensemble.get("derivation_evidence")
+    if not isinstance(derivation, Mapping):
+        raise PublicRedockingRunnerError(
+            "true-conformer proposal derivation evidence is incomplete"
+        )
+    if (
+        proposal_payload.get("profile")
+        != _DEVELOPMENT_TRUE_CONFORMER_PROFILE
+        or derivation.get("source_artifact_sha256")
+        != expected_source_artifact_sha256
+        or derivation.get("config")
+        != _DEVELOPMENT_TRUE_CONFORMER_CONFIG.to_dict()
+        or any(
+            proposal_payload.get(name) is not expected
+            for name, expected in (
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("scientifically_validated", False),
+                ("claim_safe", False),
+            )
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "true-conformer proposal source evidence is cross-wired"
+        )
+
+
+def _validate_true_conformer_not_prepared_row(
+    row_payload: Mapping[str, object],
+) -> None:
+    diagnostics = row_payload.get("engine_v2_diagnostics")
+    if (
+        row_payload.get("status") != "failure"
+        or not isinstance(diagnostics, Mapping)
+        or diagnostics.get("preparation_status") != "failure"
+        or diagnostics.get("candidates") != []
+    ):
+        raise PublicRedockingRunnerError(
+            "missing true-conformer proposal receipt requires a pre-search failure"
+        )
+
+
+def _validate_true_conformer_candidate_bindings(
+    row_payload: Mapping[str, object],
+    proposal_payload: Mapping[str, object],
+) -> None:
+    diagnostics = row_payload.get("engine_v2_diagnostics")
+    candidate_slots = proposal_payload.get("candidate_slots")
+    if not isinstance(diagnostics, Mapping) or not isinstance(candidate_slots, list):
+        raise PublicRedockingRunnerError(
+            "true-conformer candidate evidence is incomplete"
+        )
+    candidates = diagnostics.get("candidates")
+    if diagnostics.get("preparation_status") == "failure":
+        if row_payload.get("status") != "failure" or candidates:
+            raise PublicRedockingRunnerError(
+                "true-conformer pre-search failure fabricated candidate evidence"
+            )
+        return
+    if (
+        diagnostics.get("preparation_status") != "success"
+        or not isinstance(candidates, list)
+        or len(candidates) != ENGINE_V2_CANDIDATE_COUNT
+        or len(candidate_slots) != ENGINE_V2_CANDIDATE_COUNT
+    ):
+        raise PublicRedockingRunnerError(
+            "true-conformer candidate evidence has an invalid denominator"
+        )
+    for proposal_index, (candidate, slot) in enumerate(
+        zip(candidates, candidate_slots, strict=True)
+    ):
+        if not isinstance(candidate, Mapping) or not isinstance(slot, Mapping):
+            raise PublicRedockingRunnerError(
+                "true-conformer candidate evidence row is invalid"
+            )
+        expected_mode = (
+            "pocket_center_baseline"
+            if proposal_index < 8
+            else (
+                "uniform_v3_rigid_ensemble"
+                if proposal_index < 36
+                else "uniform_fallback"
+            )
+        )
+        expected_source = (
+            proposal_index + 28 if 8 <= proposal_index < 36 else None
+        )
+        if (
+            candidate.get("proposal_index") != proposal_index
+            or slot.get("proposal_index") != proposal_index
+            or candidate.get("proposal_mode") != expected_mode
+            or candidate.get("ensemble_source_proposal_index")
+            != expected_source
+        ):
+            raise PublicRedockingRunnerError(
+                "true-conformer candidate lineage is cross-wired"
+            )
+        candidate_status = candidate.get("status")
+        if candidate_status not in {"success", "failure"}:
+            raise PublicRedockingRunnerError(
+                "true-conformer candidate status is invalid"
+            )
+        if candidate_status == "failure":
+            continue
+        refinement_payload = candidate.get("refinement_receipt_payload")
+        if not isinstance(refinement_payload, Mapping):
+            raise PublicRedockingRunnerError(
+                "true-conformer successful candidate lacks refinement lineage"
+            )
+        refinement_document = dict(refinement_payload)
+        refinement_receipt_sha256 = refinement_document.pop(
+            "receipt_sha256",
+            None,
+        )
+        if (
+            refinement_receipt_sha256
+            != candidate.get("refinement_receipt_sha256")
+            or refinement_receipt_sha256
+            != hashlib.sha256(
+                _canonical_bytes(refinement_document)
+            ).hexdigest()
+            or refinement_document.get("source_proposal_sha256")
+            != slot.get("proposal_fingerprint_sha256")
+            or refinement_document.get("pre_coordinates_sha256")
+            != slot.get("coordinate_fingerprint_sha256")
+            or refinement_document.get("post_coordinates_sha256")
+            != candidate.get("coordinate_fingerprint_sha256")
+        ):
+            raise PublicRedockingRunnerError(
+                "true-conformer successful candidate refinement is cross-wired"
+            )
+
+
+def _development_true_conformer_case_receipt(
+    *,
+    case_id: str,
+    input_sha256s: Mapping[str, str],
+    result: PublicRedockingCaseResult,
+    execution: VerifiedPublicRedockingCaseExecution,
+    proposal_evidence: DevelopmentTrueConformerProposalEvidence,
+) -> dict[str, object]:
+    if not isinstance(
+        proposal_evidence,
+        DevelopmentTrueConformerProposalEvidence,
+    ):
+        raise TypeError(
+            "proposal_evidence must be DevelopmentTrueConformerProposalEvidence"
+        )
+    inputs = {str(name): str(value) for name, value in input_sha256s.items()}
+    if set(inputs) != set(_SEALED_CASE_INPUT_ROLES) or any(
+        len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+        for value in inputs.values()
+    ):
+        raise PublicRedockingRunnerError(
+            "true-conformer case receipt input identity is invalid"
+        )
+    result_payload = result.to_dict()
+    execution_payload = execution.to_dict()
+    if (
+        result.case_id != case_id
+        or result.engine_id != "engine_v2"
+        or execution_payload.get("result") != result_payload
+        or execution_payload.get("input_sha256s") != inputs
+        or "--development-true-conformer-profile"
+        not in execution_payload.get("command", ())
+        or "--development-v8-clearance-variant"
+        in execution_payload.get("command", ())
+    ):
+        raise PublicRedockingRunnerError(
+            "true-conformer case receipt execution is cross-wired"
+        )
+    proposal_receipt = proposal_evidence.proposal_receipt
+    if proposal_receipt is None:
+        if result.status != "failure" or not proposal_evidence.failure_stage:
+            raise PublicRedockingRunnerError(
+                "missing true-conformer proposal evidence is invalid"
+            )
+        _validate_true_conformer_not_prepared_row(result_payload)
+        proposal_payload = None
+        proposal_receipt_sha256 = None
+        proposal_status = "not_prepared"
+        proposal_failure_stage: str | None = proposal_evidence.failure_stage
+    else:
+        proposal_payload = proposal_receipt.to_dict()
+        proposal_receipt_sha256 = proposal_receipt.receipt_sha256
+        _validate_true_conformer_proposal_source_binding(
+            proposal_payload,
+            expected_source_artifact_sha256=inputs["seed"],
+        )
+        _validate_true_conformer_candidate_bindings(
+            result_payload,
+            proposal_payload,
+        )
+        proposal_status = "prepared"
+        proposal_failure_stage = None
+    projection: dict[str, object] = {
+        "schema_id": DEVELOPMENT_TRUE_CONFORMER_CASE_RECEIPT_SCHEMA_ID,
+        "runner_id": RUNNER_ID,
+        "analysis_scope": "historical_contaminated_development_only",
+        "evidence_role": "fixed_source_bound_true_conformer_case_execution",
+        "case_id": case_id,
+        "input_sha256s": inputs,
+        "engine_execution_receipt_sha256": execution.receipt_sha256,
+        "case_result_sha256": hashlib.sha256(
+            _canonical_bytes(result_payload)
+        ).hexdigest(),
+        "result_status": result.status,
+        "failure_code": result.failure_code,
+        "proposal_evidence_status": proposal_status,
+        "proposal_failure_stage": proposal_failure_stage,
+        "fixed_source_bound_conformer_profile": (
+            _DEVELOPMENT_TRUE_CONFORMER_PROFILE
+        ),
+        "source_conformer_config": (
+            _DEVELOPMENT_TRUE_CONFORMER_CONFIG.to_dict()
+        ),
+        "source_conformer_config_sha256": (
+            _DEVELOPMENT_TRUE_CONFORMER_CONFIG_SHA256
+        ),
+        "fixed_source_bound_conformer_proposal_receipt_sha256": (
+            proposal_receipt_sha256
+        ),
+        "fixed_source_bound_conformer_proposal_receipt": proposal_payload,
+        "development_only": True,
+        "stage0_eligible": False,
+        "fresh_execution_authorized": False,
+        "primary_claim_eligible": False,
+        "public_claim_eligible": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+    return {
+        **projection,
+        "receipt_sha256": hashlib.sha256(
+            _canonical_bytes(projection)
+        ).hexdigest(),
+    }
+
+
+def _validate_development_true_conformer_case_receipt(
+    value: Mapping[str, object],
+    *,
+    case_id: str,
+    expected_inputs: Mapping[str, str],
+    row_payload: Mapping[str, object],
+    execution_payload: Mapping[str, object],
+) -> dict[str, object]:
+    payload = {str(name): item for name, item in value.items()}
+    projection = dict(payload)
+    receipt_sha256 = projection.pop("receipt_sha256", None)
+    required_fields = {
+        "schema_id",
+        "runner_id",
+        "analysis_scope",
+        "evidence_role",
+        "case_id",
+        "input_sha256s",
+        "engine_execution_receipt_sha256",
+        "case_result_sha256",
+        "result_status",
+        "failure_code",
+        "proposal_evidence_status",
+        "proposal_failure_stage",
+        "fixed_source_bound_conformer_profile",
+        "source_conformer_config",
+        "source_conformer_config_sha256",
+        "fixed_source_bound_conformer_proposal_receipt_sha256",
+        "fixed_source_bound_conformer_proposal_receipt",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "primary_claim_eligible",
+        "public_claim_eligible",
+        "scientifically_validated",
+        "claim_safe",
+        "receipt_sha256",
+    }
+    if (
+        set(payload) != required_fields
+        or receipt_sha256
+        != hashlib.sha256(_canonical_bytes(projection)).hexdigest()
+        or payload.get("schema_id")
+        != DEVELOPMENT_TRUE_CONFORMER_CASE_RECEIPT_SCHEMA_ID
+        or payload.get("runner_id") != RUNNER_ID
+        or payload.get("analysis_scope")
+        != "historical_contaminated_development_only"
+        or payload.get("evidence_role")
+        != "fixed_source_bound_true_conformer_case_execution"
+        or payload.get("case_id") != case_id
+        or payload.get("input_sha256s") != dict(expected_inputs)
+        or payload.get("engine_execution_receipt_sha256")
+        != execution_payload.get("receipt_sha256")
+        or payload.get("case_result_sha256")
+        != hashlib.sha256(_canonical_bytes(dict(row_payload))).hexdigest()
+        or payload.get("result_status") != row_payload.get("status")
+        or payload.get("failure_code") != row_payload.get("failure_code")
+        or payload.get("fixed_source_bound_conformer_profile")
+        != _DEVELOPMENT_TRUE_CONFORMER_PROFILE
+        or payload.get("source_conformer_config")
+        != _DEVELOPMENT_TRUE_CONFORMER_CONFIG.to_dict()
+        or payload.get("source_conformer_config_sha256")
+        != _DEVELOPMENT_TRUE_CONFORMER_CONFIG_SHA256
+        or any(
+            payload.get(name) is not expected
+            for name, expected in (
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("primary_claim_eligible", False),
+                ("public_claim_eligible", False),
+                ("scientifically_validated", False),
+                ("claim_safe", False),
+            )
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "development true-conformer case receipt is cross-wired"
+        )
+    proposal_status = payload.get("proposal_evidence_status")
+    proposal_payload = payload.get(
+        "fixed_source_bound_conformer_proposal_receipt"
+    )
+    proposal_receipt_sha256 = payload.get(
+        "fixed_source_bound_conformer_proposal_receipt_sha256"
+    )
+    if proposal_status == "not_prepared":
+        if (
+            proposal_payload is not None
+            or proposal_receipt_sha256 is not None
+            or not isinstance(payload.get("proposal_failure_stage"), str)
+            or payload.get("proposal_failure_stage")
+            not in _DEVELOPMENT_TRUE_CONFORMER_PROPOSAL_FAILURE_STAGES
+            or row_payload.get("status") != "failure"
+        ):
+            raise PublicRedockingRunnerError(
+                "development true-conformer missing proposal evidence is invalid"
+            )
+        _validate_true_conformer_not_prepared_row(row_payload)
+        return payload
+    if (
+        proposal_status != "prepared"
+        or payload.get("proposal_failure_stage") is not None
+        or not isinstance(proposal_payload, Mapping)
+        or not isinstance(proposal_receipt_sha256, str)
+    ):
+        raise PublicRedockingRunnerError(
+            "development true-conformer proposal evidence is invalid"
+        )
+    proposal_document = dict(proposal_payload)
+    nested_receipt_sha256 = proposal_document.pop("receipt_sha256", None)
+    _validate_true_conformer_proposal_source_binding(
+        proposal_document,
+        expected_source_artifact_sha256=expected_inputs["seed"],
+    )
+    try:
+        candidate_slots = proposal_document["candidate_slots"]
+        lineage_rows = proposal_document["lineage_rows"]
+    except (KeyError, TypeError) as exc:
+        raise PublicRedockingRunnerError(
+            "development true-conformer proposal evidence is incomplete"
+        ) from exc
+    expected_variant_indices = tuple(range(8, 36))
+    if (
+        nested_receipt_sha256 != proposal_receipt_sha256
+        or proposal_receipt_sha256
+        != hashlib.sha256(_canonical_bytes(proposal_document)).hexdigest()
+        or proposal_document.get("profile")
+        != _DEVELOPMENT_TRUE_CONFORMER_PROFILE
+        or proposal_document.get("candidate_count") != ENGINE_V2_CANDIDATE_COUNT
+        or not isinstance(candidate_slots, list)
+        or len(candidate_slots) != ENGINE_V2_CANDIDATE_COUNT
+        or [row.get("proposal_index") for row in candidate_slots]
+        != list(range(ENGINE_V2_CANDIDATE_COUNT))
+        or not isinstance(lineage_rows, list)
+        or [row.get("proposal_index") for row in lineage_rows]
+        != list(expected_variant_indices)
+        or [row.get("source_proposal_index") for row in lineage_rows]
+        != list(range(36, 64))
+        or any(
+            proposal_document.get(name) is not expected
+            for name, expected in (
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("scientifically_validated", False),
+                ("claim_safe", False),
+            )
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "development true-conformer proposal evidence is cross-wired"
+        )
+    _validate_true_conformer_candidate_bindings(
+        row_payload,
+        proposal_document,
+    )
+    return payload
 
 
 def _external_result(
@@ -3256,12 +3981,22 @@ def _parser() -> argparse.ArgumentParser:
             "[2,11) using sealed in-memory inputs; never claimable"
         ),
     )
-    parser.add_argument(
+    development_variant_group = parser.add_mutually_exclusive_group()
+    development_variant_group.add_argument(
         "--development-v8-clearance-variant",
         action="store_true",
         help=(
             "use the nonclaimable V8 clearance-selection variant only inside "
             "the exact historical development Engine V2-only lane"
+        ),
+    )
+    development_variant_group.add_argument(
+        "--development-true-conformer-profile",
+        action="store_true",
+        help=(
+            "use the nonclaimable fixed 64-slot source-bound true-conformer "
+            "profile only inside the exact historical development Engine "
+            "V2-only lane"
         ),
     )
     parser.add_argument(
@@ -3359,12 +4094,24 @@ def _require_execution_lane_arguments(
     development_v8_clearance_variant = bool(
         getattr(arguments, "development_v8_clearance_variant", False)
     )
+    development_true_conformer_profile = bool(
+        getattr(arguments, "development_true_conformer_profile", False)
+    )
+    if development_v8_clearance_variant and development_true_conformer_profile:
+        raise PublicRedockingRunnerError(
+            "development V8 and true-conformer variants are mutually exclusive"
+        )
     if (
         development_v8_clearance_variant
-        and not arguments.development_engine_v2_only
-    ):
+        or development_true_conformer_profile
+    ) and not arguments.development_engine_v2_only:
+        variant_name = (
+            "V8 clearance"
+            if development_v8_clearance_variant
+            else "true-conformer"
+        )
         raise PublicRedockingRunnerError(
-            "development V8 clearance variant requires the development "
+            f"development {variant_name} variant requires the development "
             "Engine V2-only lane"
         )
     if not arguments.development_engine_v2_only:
@@ -3434,13 +4181,19 @@ def _development_engine_v2_only_summary_filename(
     case_ids: Sequence[str],
     *,
     development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
 ) -> str:
+    if development_v8_clearance_variant and development_true_conformer_profile:
+        raise PublicRedockingRunnerError(
+            "development summary variants are mutually exclusive"
+        )
     selection_sha256 = hashlib.sha256(_canonical_bytes(list(case_ids))).hexdigest()
-    lane = (
-        "development-v8-clearance"
-        if development_v8_clearance_variant
-        else "development"
-    )
+    if development_true_conformer_profile:
+        lane = "development-true-conformer"
+    elif development_v8_clearance_variant:
+        lane = "development-v8-clearance"
+    else:
+        lane = "development"
     return (
         f"engine-v2-only-summary-{lane}-{len(case_ids):03d}-"
         f"{selection_sha256[:16]}.json"
@@ -3459,7 +4212,15 @@ def _development_engine_v2_only_summary(
     evaluation_pipeline_sha256: str,
     execution_environment_sha256: str,
     development_v8_clearance_variant: bool = False,
+    development_true_conformer_profile: bool = False,
+    development_true_conformer_case_receipts: Sequence[
+        Mapping[str, object]
+    ] = (),
 ) -> dict[str, object]:
+    if development_v8_clearance_variant and development_true_conformer_profile:
+        raise PublicRedockingRunnerError(
+            "development summary variants are mutually exclusive"
+        )
     expected_case_ids = tuple(case_ids)
     if expected_case_ids != _DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS:
         raise PublicRedockingRunnerError(
@@ -3495,6 +4256,9 @@ def _development_engine_v2_only_summary(
     expected_policy = _engine_v2_execution_policy(
         scorer_backend,
         development_v8_clearance_variant=development_v8_clearance_variant,
+        development_true_conformer_profile=(
+            development_true_conformer_profile
+        ),
     )
     required_materialization_fields = {
         "schema_id",
@@ -3523,6 +4287,9 @@ def _development_engine_v2_only_summary(
         "result",
         "receipt_sha256",
     }
+    expected_inputs_by_case: dict[str, dict[str, str]] = {}
+    row_payload_by_case: dict[str, dict[str, object]] = {}
+    execution_payload_by_case: dict[str, dict[str, object]] = {}
     for case_id, materialization, row, execution in zip(
         expected_case_ids,
         materialization_payloads,
@@ -3623,6 +4390,9 @@ def _development_engine_v2_only_summary(
                     development_v8_clearance_variant=(
                         development_v8_clearance_variant
                     ),
+                    development_true_conformer_profile=(
+                        development_true_conformer_profile
+                    ),
                 )
             )
             or {
@@ -3634,21 +4404,68 @@ def _development_engine_v2_only_summary(
             raise PublicRedockingRunnerError(
                 "development Engine V2-only summary receipt identity is cross-wired"
             )
+        expected_inputs_by_case[case_id] = {
+            name: str(value) for name, value in expected_inputs.items()
+        }
+        row_payload_by_case[case_id] = row
+        execution_payload_by_case[case_id] = execution
+    true_conformer_case_receipts = tuple(
+        development_true_conformer_case_receipts
+    )
+    if development_true_conformer_profile:
+        if (
+            len(true_conformer_case_receipts) != len(expected_case_ids)
+            or any(
+                not isinstance(receipt, Mapping)
+                for receipt in true_conformer_case_receipts
+            )
+        ):
+            raise PublicRedockingRunnerError(
+                "development true-conformer case receipt ledger is incomplete"
+            )
+        validated_true_conformer_case_receipts = [
+            _validate_development_true_conformer_case_receipt(
+                receipt,
+                case_id=case_id,
+                expected_inputs=expected_inputs_by_case[case_id],
+                row_payload=row_payload_by_case[case_id],
+                execution_payload=execution_payload_by_case[case_id],
+            )
+            for case_id, receipt in zip(
+                expected_case_ids,
+                true_conformer_case_receipts,
+                strict=True,
+            )
+        ]
+    else:
+        if true_conformer_case_receipts:
+            raise PublicRedockingRunnerError(
+                "non-true-conformer summary rejects proposal evidence"
+            )
+        validated_true_conformer_case_receipts = []
     case_ids_sha256 = hashlib.sha256(
         _canonical_bytes(list(expected_case_ids))
     ).hexdigest()
     summary: dict[str, object] = {
         "schema_id": (
-            DEVELOPMENT_V8_CLEARANCE_SUMMARY_SCHEMA_ID
-            if development_v8_clearance_variant
-            else DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID
+            DEVELOPMENT_TRUE_CONFORMER_SUMMARY_SCHEMA_ID
+            if development_true_conformer_profile
+            else (
+                DEVELOPMENT_V8_CLEARANCE_SUMMARY_SCHEMA_ID
+                if development_v8_clearance_variant
+                else DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID
+            )
         ),
         "runner_id": RUNNER_ID,
         "analysis_scope": "historical_contaminated_development_only",
         "evidence_role": (
-            "development_v8_clearance_ab_execution_only"
-            if development_v8_clearance_variant
-            else "current_source_engine_v2_execution_only"
+            "development_true_conformer_fixed64_execution_only"
+            if development_true_conformer_profile
+            else (
+                "development_v8_clearance_ab_execution_only"
+                if development_v8_clearance_variant
+                else "current_source_engine_v2_execution_only"
+            )
         ),
         "development_v8_clearance_variant": (
             development_v8_clearance_variant
@@ -3693,6 +4510,33 @@ def _development_engine_v2_only_summary(
         "product_promotion_eligible": False,
         "claim_safe": False,
     }
+    if development_true_conformer_profile:
+        engine_identity = summary["engine_identity"]
+        if not isinstance(engine_identity, dict):
+            raise PublicRedockingRunnerError(
+                "development true-conformer engine identity is invalid"
+            )
+        engine_identity.update(
+            {
+                "proposal_profile_id": FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID,
+                "proposal_profile_sha256": (
+                    _DEVELOPMENT_TRUE_CONFORMER_PROFILE[
+                        "fingerprint_sha256"
+                    ]
+                ),
+                "source_conformer_config_sha256": (
+                    _DEVELOPMENT_TRUE_CONFORMER_CONFIG_SHA256
+                ),
+            }
+        )
+        summary.update(
+            {
+                "development_true_conformer_profile": True,
+                "development_true_conformer_case_receipts": (
+                    validated_true_conformer_case_receipts
+                ),
+            }
+        )
     summary["summary_sha256"] = hashlib.sha256(_canonical_bytes(summary)).hexdigest()
     return summary
 
@@ -3967,6 +4811,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     development_v8_clearance_variant = (
         arguments.development_v8_clearance_variant
     )
+    development_true_conformer_profile = (
+        arguments.development_true_conformer_profile
+    )
     source_binary = (
         arguments.gnina.resolve() if arguments.gnina is not None else None
     )
@@ -4050,6 +4897,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             development_v8_clearance_variant=(
                 development_v8_clearance_variant
             ),
+            development_true_conformer_profile=(
+                development_true_conformer_profile
+            ),
         )
     )
     if development_engine_v2_only:
@@ -4123,6 +4973,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     executions_by_engine: dict[str, list[VerifiedPublicRedockingCaseExecution]] = {
         engine_id: [] for engine_id in active_engine_ids
     }
+    development_proposal_evidence_by_case: dict[
+        str,
+        DevelopmentTrueConformerProposalEvidence,
+    ] = {}
+    development_true_conformer_case_receipts_by_case: dict[
+        str,
+        dict[str, object],
+    ] = {}
     pinned_input_type = (
         SealedCaseInputSnapshots
         if development_engine_v2_only
@@ -4178,6 +5036,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     development_v8_clearance_variant=(
                         development_v8_clearance_variant
                     ),
+                    development_true_conformer_profile=(
+                        development_true_conformer_profile
+                    ),
                 )
                 engine_receipt = (
                     output_root / "receipts" / "engine_v2" / f"{case_id}.json"
@@ -4195,6 +5056,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                         development_v8_clearance_variant=(
                             development_v8_clearance_variant
                         ),
+                        development_true_conformer_profile=(
+                            development_true_conformer_profile
+                        ),
+                        development_proposal_evidence_sink=(
+                            development_proposal_evidence_by_case
+                            if development_true_conformer_profile
+                            else None
+                        ),
                     )
                 pinned_inputs.verify()
                 engine_execution = _verified_case_execution(
@@ -4206,6 +5075,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                         development_v8_clearance_variant=(
                             development_v8_clearance_variant
                         ),
+                        development_true_conformer_profile=(
+                            development_true_conformer_profile
+                        ),
                     ),
                     input_sha256s=inputs,
                     materialization_receipt_sha256=(materialization.receipt_sha256),
@@ -4213,6 +5085,31 @@ def main(argv: Sequence[str] | None = None) -> int:
                     evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
                     execution_environment_sha256=(execution_environment.sha256),
                 )
+                if development_true_conformer_profile:
+                    proposal_evidence = (
+                        development_proposal_evidence_by_case.get(case_id)
+                    )
+                    if proposal_evidence is None:
+                        raise PublicRedockingRunnerError(
+                            "true-conformer case lacks proposal evidence"
+                        )
+                    case_receipt = _development_true_conformer_case_receipt(
+                        case_id=case_id,
+                        input_sha256s=inputs,
+                        result=engine_row,
+                        execution=engine_execution,
+                        proposal_evidence=proposal_evidence,
+                    )
+                    development_true_conformer_case_receipts_by_case[
+                        case_id
+                    ] = case_receipt
+                    _atomic_json(
+                        output_root
+                        / "receipts"
+                        / "development-true-conformer"
+                        / f"{case_id}.json",
+                        case_receipt,
+                    )
                 _atomic_json(
                     engine_receipt,
                     engine_execution.to_dict(),
@@ -4302,6 +5199,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             execution_environment_sha256=execution_environment.sha256,
             development_v8_clearance_variant=(
                 development_v8_clearance_variant
+            ),
+            development_true_conformer_profile=(
+                development_true_conformer_profile
+            ),
+            development_true_conformer_case_receipts=(
+                tuple(
+                    development_true_conformer_case_receipts_by_case[
+                        case_id
+                    ]
+                    for case_id in case_ids
+                )
+                if development_true_conformer_profile
+                else ()
             ),
         )
         _atomic_json(development_summary_path, development_summary)

@@ -1450,13 +1450,20 @@ def test_partial_summary_name_binds_exact_case_selection() -> None:
     assert first_name.endswith(".json")
 
 
-@pytest.mark.parametrize("development_v8_clearance_variant", (False, True))
+@pytest.mark.parametrize(
+    ("development_v8_clearance_variant", "development_true_conformer_profile"),
+    ((False, False), (True, False), (False, True)),
+)
 def test_development_engine_v2_only_requires_exact_historical_slice(
     development_v8_clearance_variant: bool,
+    development_true_conformer_profile: bool,
 ) -> None:
     arguments = SimpleNamespace(
         development_engine_v2_only=True,
         development_v8_clearance_variant=development_v8_clearance_variant,
+        development_true_conformer_profile=(
+            development_true_conformer_profile
+        ),
         gnina=None,
         stage0_policy=None,
         seed=runner.DEFAULT_SEED,
@@ -1483,6 +1490,7 @@ def test_development_v8_clearance_variant_requires_development_only_lane() -> No
     arguments = SimpleNamespace(
         development_engine_v2_only=False,
         development_v8_clearance_variant=True,
+        development_true_conformer_profile=False,
         gnina=Path("gnina"),
     )
 
@@ -1492,6 +1500,38 @@ def test_development_v8_clearance_variant_requires_development_only_lane() -> No
     ):
         runner._require_execution_lane_arguments(
             arguments,
+            FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
+        )
+
+
+def test_development_true_conformer_profile_is_exclusive_and_development_only() -> None:
+    outside_development = SimpleNamespace(
+        development_engine_v2_only=False,
+        development_v8_clearance_variant=False,
+        development_true_conformer_profile=True,
+        gnina=Path("gnina"),
+    )
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="requires the development Engine V2-only lane",
+    ):
+        runner._require_execution_lane_arguments(
+            outside_development,
+            FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
+        )
+
+    mixed_variants = SimpleNamespace(
+        development_engine_v2_only=True,
+        development_v8_clearance_variant=True,
+        development_true_conformer_profile=True,
+        gnina=None,
+    )
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="mutually exclusive",
+    ):
+        runner._require_execution_lane_arguments(
+            mixed_variants,
             FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
         )
 
@@ -1516,6 +1556,8 @@ def test_development_engine_v2_only_rejects_argument_drift(
 ) -> None:
     values: dict[str, object] = {
         "development_engine_v2_only": True,
+        "development_v8_clearance_variant": False,
+        "development_true_conformer_profile": False,
         "gnina": None,
         "stage0_policy": None,
         "seed": runner.DEFAULT_SEED,
@@ -1574,9 +1616,13 @@ def test_development_engine_v2_only_rejects_drift_before_output_creation(
     assert not output_root.exists()
 
 
-@pytest.mark.parametrize("development_v8_clearance_variant", (False, True))
+@pytest.mark.parametrize(
+    ("development_v8_clearance_variant", "development_true_conformer_profile"),
+    ((False, False), (True, False), (False, True)),
+)
 def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     development_v8_clearance_variant: bool,
+    development_true_conformer_profile: bool,
 ) -> None:
     case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
     output_root = (Path.cwd() / ".betelgeuze" / "summary-fixture").resolve()
@@ -1584,6 +1630,9 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     expected_policy = runner._engine_v2_execution_policy(
         scorer_backend,
         development_v8_clearance_variant=development_v8_clearance_variant,
+        development_true_conformer_profile=(
+            development_true_conformer_profile
+        ),
     )
     implementation_sha256 = "a" * 64
     evaluation_pipeline_sha256 = "b" * 64
@@ -1595,6 +1644,7 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     materialization_payloads = []
     row_payloads = []
     execution_payloads = []
+    true_conformer_case_receipts = []
     for index, case_id in enumerate(case_ids):
         artifact_sha256s = {
             filename: f"{index * 4 + offset + 1:064x}"
@@ -1637,11 +1687,16 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
                 development_v8_clearance_variant=(
                     development_v8_clearance_variant
                 ),
+                development_true_conformer_profile=(
+                    development_true_conformer_profile
+                ),
             )
         )
         row = {
             "case_id": case_id,
             "engine_id": "engine_v2",
+            "status": "failure",
+            "failure_code": "engine_v2_case_failed",
             **{
                 f"{role}_artifact_sha256": digest
                 for role, digest in inputs.items()
@@ -1651,6 +1706,11 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
                 runner._execution_policy_tokens(expected_policy)
             ),
         }
+        if development_true_conformer_profile:
+            row["engine_v2_diagnostics"] = {
+                "preparation_status": "failure",
+                "candidates": [],
+            }
         execution = {
             "schema_id": (
                 benchmark_contract.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID
@@ -1674,6 +1734,57 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         execution["receipt_sha256"] = runner.hashlib.sha256(
             runner._canonical_bytes(execution)
         ).hexdigest()
+        if development_true_conformer_profile:
+            case_projection = {
+                "schema_id": (
+                    runner.DEVELOPMENT_TRUE_CONFORMER_CASE_RECEIPT_SCHEMA_ID
+                ),
+                "runner_id": runner.RUNNER_ID,
+                "analysis_scope": "historical_contaminated_development_only",
+                "evidence_role": (
+                    "fixed_source_bound_true_conformer_case_execution"
+                ),
+                "case_id": case_id,
+                "input_sha256s": inputs,
+                "engine_execution_receipt_sha256": execution[
+                    "receipt_sha256"
+                ],
+                "case_result_sha256": runner.hashlib.sha256(
+                    runner._canonical_bytes(row)
+                ).hexdigest(),
+                "result_status": "failure",
+                "failure_code": "engine_v2_case_failed",
+                "proposal_evidence_status": "not_prepared",
+                "proposal_failure_stage": (
+                    "source_bound_conformer_preparation"
+                ),
+                "fixed_source_bound_conformer_profile": (
+                    runner._DEVELOPMENT_TRUE_CONFORMER_PROFILE
+                ),
+                "source_conformer_config": (
+                    runner._DEVELOPMENT_TRUE_CONFORMER_CONFIG.to_dict()
+                ),
+                "source_conformer_config_sha256": (
+                    runner._DEVELOPMENT_TRUE_CONFORMER_CONFIG_SHA256
+                ),
+                "fixed_source_bound_conformer_proposal_receipt_sha256": None,
+                "fixed_source_bound_conformer_proposal_receipt": None,
+                "development_only": True,
+                "stage0_eligible": False,
+                "fresh_execution_authorized": False,
+                "primary_claim_eligible": False,
+                "public_claim_eligible": False,
+                "scientifically_validated": False,
+                "claim_safe": False,
+            }
+            true_conformer_case_receipts.append(
+                {
+                    **case_projection,
+                    "receipt_sha256": runner.hashlib.sha256(
+                        runner._canonical_bytes(case_projection)
+                    ).hexdigest(),
+                }
+            )
         materialization_payloads.append(materialization)
         row_payloads.append(row)
         execution_payloads.append(execution)
@@ -1701,6 +1812,12 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         evaluation_pipeline_sha256=evaluation_pipeline_sha256,
         execution_environment_sha256=execution_environment_sha256,
         development_v8_clearance_variant=development_v8_clearance_variant,
+        development_true_conformer_profile=(
+            development_true_conformer_profile
+        ),
+        development_true_conformer_case_receipts=(
+            true_conformer_case_receipts
+        ),
     )
 
     claimed_sha256 = summary.pop("summary_sha256")
@@ -1715,11 +1832,49 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     assert summary["development_v8_clearance_variant"] is (
         development_v8_clearance_variant
     )
+    assert (
+        summary.get("development_true_conformer_profile", False)
+        is development_true_conformer_profile
+    )
     assert all(
         ("--development-v8-clearance-variant" in row["execution_command"])
         is development_v8_clearance_variant
         for row in summary["rows"]
     )
+    assert all(
+        ("--development-true-conformer-profile" in row["execution_command"])
+        is development_true_conformer_profile
+        for row in summary["rows"]
+    )
+    if development_true_conformer_profile:
+        tampered_case_receipts = [
+            dict(receipt) for receipt in true_conformer_case_receipts
+        ]
+        tampered_case_receipts[0]["proposal_failure_stage"] = "forged_stage"
+        tampered_case_projection = dict(tampered_case_receipts[0])
+        tampered_case_projection.pop("receipt_sha256")
+        tampered_case_receipts[0]["receipt_sha256"] = runner.hashlib.sha256(
+            runner._canonical_bytes(tampered_case_projection)
+        ).hexdigest()
+        with pytest.raises(
+            runner.PublicRedockingRunnerError,
+            match="missing proposal evidence is invalid",
+        ):
+            runner._development_engine_v2_only_summary(
+                case_ids=case_ids,
+                profiles=profiles,
+                materializations=materializations,
+                rows=rows,
+                executions=executions,
+                scorer_backend=scorer_backend,
+                engine_source_sha256=implementation_sha256,
+                evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+                execution_environment_sha256=execution_environment_sha256,
+                development_true_conformer_profile=True,
+                development_true_conformer_case_receipts=(
+                    tampered_case_receipts
+                ),
+            )
 
     tampered = dict(execution_payloads[0])
     tampered["implementation_sha256"] = "d" * 64
@@ -1745,6 +1900,12 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
             execution_environment_sha256=execution_environment_sha256,
             development_v8_clearance_variant=(
                 development_v8_clearance_variant
+            ),
+            development_true_conformer_profile=(
+                development_true_conformer_profile
+            ),
+            development_true_conformer_case_receipts=(
+                true_conformer_case_receipts
             ),
         )
 
@@ -2515,6 +2676,479 @@ def test_engine_v2_search_errors_retain_preparation_diagnostics(
         candidate.status == "failure"
         and candidate.error_code == "search_execution_failed"
         for candidate in diagnostics.candidates
+    )
+
+
+def test_true_conformer_result_sink_retains_receipt_on_search_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    output = tmp_path / "poses" / "engine_v2" / f"{case_id}.sdf"
+    inputs = {
+        "receptor": "3" * 64,
+        "reference": "4" * 64,
+        "native": "5" * 64,
+        "seed": "6" * 64,
+    }
+
+    class FakeFixedReceipt:
+        receipt_sha256 = "7" * 64
+
+    monkeypatch.setattr(
+        runner,
+        "FixedSourceBoundConformerProposalReceipt",
+        FakeFixedReceipt,
+    )
+    fixed_receipt = FakeFixedReceipt()
+    diagnostics = _engine_outcome((torch.zeros((1, 3)),) * 5).diagnostics
+
+    def fail_with_receipt(*args, **kwargs):
+        raise runner.EngineV2SearchCaseFailure(
+            "fixture search failure",
+            diagnostics=diagnostics,
+            development_proposal_receipt=fixed_receipt,
+        )
+
+    monkeypatch.setattr(
+        runner,
+        "_engine_v2_pose_coordinates",
+        fail_with_receipt,
+    )
+    times = iter((10.0, 12.0))
+    monkeypatch.setattr(runner.time, "perf_counter", lambda: next(times))
+    evidence_sink = {}
+
+    row = runner._engine_v2_result(
+        case_id,
+        paths,
+        input_sha256s=inputs,
+        output=output,
+        seed=11,
+        development_true_conformer_profile=True,
+        development_proposal_evidence_sink=evidence_sink,
+    )
+
+    assert row.status == "failure"
+    assert evidence_sink[case_id].proposal_receipt is fixed_receipt
+    assert evidence_sink[case_id].failure_stage == ""
+
+
+def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2))
+    parsed_system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    charged_ligand = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    source_ensemble = object()
+    authority = object()
+    context = object()
+    fixed_proposals = tuple(
+        SimpleNamespace(
+            fingerprint_sha256=f"{index + 1:064x}",
+            coordinate_fingerprint_sha256=f"{index + 65:064x}",
+        )
+        for index in range(64)
+    )
+    fixed_guided_receipt = SimpleNamespace(
+        receipt_sha256="a" * 64,
+        proposal_modes=(
+            ("pocket_center_baseline",) * 8
+            + ("uniform_v3_rigid_ensemble",) * 28
+            + ("uniform_fallback",) * 28
+        ),
+        ensemble_source_proposal_indices=(
+            (None,) * 8 + tuple(range(36, 64)) + (None,) * 28
+        ),
+    )
+    fixed_development_receipt = SimpleNamespace(
+        guided_receipt=fixed_guided_receipt,
+        proposal_fingerprint_sha256s=tuple(
+            proposal.fingerprint_sha256 for proposal in fixed_proposals
+        ),
+    )
+    refiner = object()
+    scorer = SimpleNamespace(
+        backend_receipt=SimpleNamespace(to_dict=_python_backend_receipt),
+        context=SimpleNamespace(
+            receptor_donors=(0,),
+            receptor_acceptors=(1,),
+            ligand_donors=(0,),
+            ligand_acceptors=(1,),
+        ),
+    )
+    observed: dict[str, object] = {}
+
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: parsed_system)
+    monkeypatch.setattr(
+        runner,
+        "parse_sdf_v2000",
+        lambda *args, **kwargs: parsed_system,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_receptor_proxy_charges",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: charged_ligand,
+    )
+
+    def prepare_source(source_system, source_sdf, *, config):
+        observed["prepared_source"] = source_system
+        observed["prepared_bytes"] = source_sdf
+        observed["prepared_config"] = config
+        return source_ensemble
+
+    monkeypatch.setattr(
+        runner,
+        "prepare_source_bound_conformer_ensemble",
+        prepare_source,
+    )
+
+    def build_authority(receptor, ligand, *args, **kwargs):
+        observed["authority_ligand"] = ligand
+        return authority
+
+    monkeypatch.setattr(
+        runner,
+        "build_element_aware_authenticated_known_pocket_docking_problem",
+        build_authority,
+    )
+
+    def build_scorer(bound_authority, receptor, ligand, **kwargs):
+        assert bound_authority is authority
+        observed["scorer_ligand"] = ligand
+        return scorer
+
+    monkeypatch.setattr(runner, "ChemistryPoseScorerV1", build_scorer)
+
+    def build_context(bound_authority, receptor, ligand):
+        assert bound_authority is authority
+        observed["context_ligand"] = ligand
+        return context
+
+    monkeypatch.setattr(runner, "build_guided_placement_context", build_context)
+
+    def generate_fixed(bound_authority, budget, guided_context, **kwargs):
+        assert bound_authority is authority
+        assert guided_context is context
+        assert kwargs["ligand_system"] is charged_ligand
+        assert kwargs["source_conformer_ensemble"] is source_ensemble
+        return (
+            fixed_proposals,
+            fixed_guided_receipt,
+            fixed_development_receipt,
+        )
+
+    monkeypatch.setattr(
+        runner,
+        "generate_fixed_source_bound_conformer_docking_proposals",
+        generate_fixed,
+    )
+    monkeypatch.setattr(
+        runner,
+        "uniform_v3_ensemble_proposal_indices",
+        lambda *args, **kwargs: pytest.fail("uniform V3 allocation was used"),
+    )
+
+    def build_refiner(bound_authority, receptor, ligand, **kwargs):
+        assert bound_authority is authority
+        observed["refiner_ligand"] = ligand
+        observed["refiner_indices"] = kwargs["v3_proposal_indices"]
+        return refiner
+
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareTorsionContactEnsembleRefinerV7",
+        build_refiner,
+    )
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareTorsionClearanceEnsembleRefinerV8",
+        lambda *args, **kwargs: pytest.fail("V8 refiner was used"),
+    )
+
+    def fail_search(*args, **kwargs):
+        assert kwargs["guided_policy"] is None
+        assert kwargs["precomputed_proposals"] is fixed_proposals
+        assert kwargs["precomputed_guided_receipt"] is fixed_guided_receipt
+        raise runner.DockingAuthorityError("fixture search failure")
+
+    monkeypatch.setattr(
+        runner,
+        "run_authenticated_scorer_v1_guided_search",
+        fail_search,
+    )
+
+    with pytest.raises(runner.EngineV2SearchCaseFailure) as captured:
+        runner._engine_v2_pose_coordinates(
+            case_id,
+            paths,
+            seed=11,
+            development_true_conformer_profile=True,
+        )
+
+    assert observed["prepared_source"] is charged_ligand
+    assert observed["prepared_bytes"] == b"fixture seed\n"
+    assert observed["prepared_config"] is runner._DEVELOPMENT_TRUE_CONFORMER_CONFIG
+    assert observed["authority_ligand"] is charged_ligand
+    assert observed["scorer_ligand"] is charged_ligand
+    assert observed["context_ligand"] is charged_ligand
+    assert observed["refiner_ligand"] is charged_ligand
+    assert observed["refiner_indices"] == tuple(range(8, 36))
+    assert (
+        captured.value.development_proposal_receipt
+        is fixed_development_receipt
+    )
+    failure_diagnostics = captured.value.diagnostics.to_dict()
+    assert [
+        candidate["proposal_mode"]
+        for candidate in failure_diagnostics["candidates"]
+    ] == list(fixed_guided_receipt.proposal_modes)
+    runner._validate_true_conformer_candidate_bindings(
+        {
+            "status": "failure",
+            "engine_v2_diagnostics": failure_diagnostics,
+        },
+        {
+            "candidate_slots": [
+                {
+                    "proposal_index": index,
+                    "proposal_fingerprint_sha256": (
+                        proposal.fingerprint_sha256
+                    ),
+                    "coordinate_fingerprint_sha256": (
+                        proposal.coordinate_fingerprint_sha256
+                    ),
+                }
+                for index, proposal in enumerate(fixed_proposals)
+            ]
+        },
+    )
+
+    def fail_refiner_after_receipt(*args, **kwargs):
+        raise runner.UnsupportedLargeRingSystemError(
+            "fixture post-receipt refiner failure"
+        )
+
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareTorsionContactEnsembleRefinerV7",
+        fail_refiner_after_receipt,
+    )
+    with pytest.raises(runner.EngineV2PreparationFailure) as post_receipt:
+        runner._engine_v2_pose_coordinates(
+            case_id,
+            paths,
+            seed=11,
+            development_true_conformer_profile=True,
+        )
+    assert (
+        post_receipt.value.development_proposal_receipt
+        is fixed_development_receipt
+    )
+    assert post_receipt.value.development_proposal_failure_stage == ""
+
+
+def test_true_conformer_receipt_binds_config_and_refinement_lineage() -> None:
+    not_prepared_row = {
+        "status": "failure",
+        "engine_v2_diagnostics": {
+            "preparation_status": "failure",
+            "candidates": [],
+        },
+    }
+    runner._validate_true_conformer_not_prepared_row(not_prepared_row)
+    disguised_search_failure = {
+        "status": "failure",
+        "engine_v2_diagnostics": {
+            "preparation_status": "success",
+            "candidates": [{"proposal_index": index} for index in range(64)],
+        },
+    }
+    with pytest.raises(runner.PublicRedockingRunnerError):
+        runner._validate_true_conformer_not_prepared_row(
+            disguised_search_failure
+        )
+
+    source_sha256 = "1" * 64
+    source_payload = {
+        "profile": runner._DEVELOPMENT_TRUE_CONFORMER_PROFILE,
+        "source_conformer_ensemble": {
+            "derivation_evidence": {
+                "source_artifact_sha256": source_sha256,
+                "config": runner._DEVELOPMENT_TRUE_CONFORMER_CONFIG.to_dict(),
+            }
+        },
+        "development_only": True,
+        "stage0_eligible": False,
+        "fresh_execution_authorized": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+    runner._validate_true_conformer_proposal_source_binding(
+        source_payload,
+        expected_source_artifact_sha256=source_sha256,
+    )
+    wrong_config = json.loads(json.dumps(source_payload))
+    wrong_config["source_conformer_ensemble"]["derivation_evidence"][
+        "config"
+    ]["candidate_count"] = 31
+    with pytest.raises(runner.PublicRedockingRunnerError):
+        runner._validate_true_conformer_proposal_source_binding(
+            wrong_config,
+            expected_source_artifact_sha256=source_sha256,
+        )
+
+    candidate_slots = [
+        {
+            "proposal_index": index,
+            "proposal_fingerprint_sha256": f"{index + 1:064x}",
+            "coordinate_fingerprint_sha256": f"{index + 65:064x}",
+        }
+        for index in range(64)
+    ]
+    candidates = [
+        {
+            "proposal_index": index,
+            "status": "failure",
+            "proposal_mode": (
+                "pocket_center_baseline"
+                if index < 8
+                else (
+                    "uniform_v3_rigid_ensemble"
+                    if index < 36
+                    else "uniform_fallback"
+                )
+            ),
+            "ensemble_source_proposal_index": (
+                index + 28 if 8 <= index < 36 else None
+            ),
+        }
+        for index in range(64)
+    ]
+    refinement_projection = {
+        "source_proposal_sha256": candidate_slots[0][
+            "proposal_fingerprint_sha256"
+        ],
+        "pre_coordinates_sha256": candidate_slots[0][
+            "coordinate_fingerprint_sha256"
+        ],
+        "post_coordinates_sha256": "f" * 64,
+    }
+    refinement_sha256 = runner._sha256_bytes(
+        runner._canonical_bytes(refinement_projection)
+    )
+    candidates[0].update(
+        {
+            "status": "success",
+            "proposal_fingerprint_sha256": "e" * 64,
+            "coordinate_fingerprint_sha256": "f" * 64,
+            "refinement_receipt_sha256": refinement_sha256,
+            "refinement_receipt_payload": {
+                **refinement_projection,
+                "receipt_sha256": refinement_sha256,
+            },
+        }
+    )
+    row_payload = {
+        "status": "success",
+        "engine_v2_diagnostics": {
+            "preparation_status": "success",
+            "candidates": candidates,
+        },
+    }
+    proposal_payload = {"candidate_slots": candidate_slots}
+    runner._validate_true_conformer_candidate_bindings(
+        row_payload,
+        proposal_payload,
+    )
+    cross_wired = json.loads(json.dumps(row_payload))
+    cross_wired["engine_v2_diagnostics"]["candidates"][0][
+        "coordinate_fingerprint_sha256"
+    ] = "d" * 64
+    with pytest.raises(runner.PublicRedockingRunnerError):
+        runner._validate_true_conformer_candidate_bindings(
+            cross_wired,
+            proposal_payload,
+        )
+
+
+def test_true_conformer_adapter_failure_is_a_bounded_preparation_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2))
+    system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
+    monkeypatch.setattr(
+        runner,
+        "parse_sdf_v2000",
+        lambda *args, **kwargs: system,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_receptor_proxy_charges",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: value,
+    )
+
+    def fail_preparation(*args, **kwargs):
+        raise runner.ConformerPreparationError("fixture unsupported conformer")
+
+    monkeypatch.setattr(
+        runner,
+        "prepare_source_bound_conformer_ensemble",
+        fail_preparation,
+    )
+
+    with pytest.raises(runner.EngineV2PreparationFailure) as captured:
+        runner._engine_v2_pose_coordinates(
+            case_id,
+            paths,
+            seed=11,
+            development_true_conformer_profile=True,
+        )
+
+    assert captured.value.preparation_failure_code == (
+        "docking_context_preparation_failed"
+    )
+    assert captured.value.development_proposal_failure_stage == (
+        "source_bound_conformer_preparation"
     )
 
 

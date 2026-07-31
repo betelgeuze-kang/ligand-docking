@@ -580,6 +580,60 @@ def test_uniform_v3_ensemble_preserves_v2_sources_and_binds_lineage() -> None:
         )
 
 
+def test_precomputed_guided_batch_requires_one_exact_proposal_receipt_pair() -> None:
+    authority, receptor, ligand = _authority()
+    context = build_guided_placement_context(authority, receptor, ligand)
+    budget = _budget()
+    proposals, receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+    )
+    scorer = _Scorer(authority.problem.fingerprint_sha256)
+
+    result = run_authenticated_guided_placement_search(
+        authority,
+        budget,
+        scorer,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+        precomputed_proposals=proposals,
+        precomputed_guided_receipt=receipt,
+    )
+
+    assert result.guided_receipt is receipt
+    assert tuple(
+        row.proposal_fingerprint_sha256
+        for row in result.authenticated_search_result.search_result.rows
+    ) == receipt.proposal_fingerprint_sha256s
+    with pytest.raises(DockingAuthorityError, match="must be supplied together"):
+        run_authenticated_guided_placement_search(
+            authority,
+            budget,
+            scorer,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            precomputed_proposals=proposals,
+        )
+    with pytest.raises(DockingAuthorityError, match="reject a second policy"):
+        run_authenticated_guided_placement_search(
+            authority,
+            budget,
+            scorer,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            policy=GuidedPlacementPolicy(),
+            precomputed_proposals=proposals,
+            precomputed_guided_receipt=receipt,
+        )
+
+
 def test_each_guidance_mode_changes_geometry_by_its_feature_contract() -> None:
     authority, receptor, ligand = _authority()
     budget = replace(_budget(), candidate_count=24)
