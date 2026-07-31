@@ -524,9 +524,15 @@ python3 tools/run_engine_v2_public_redocking_300.py \
 This lane requires the proposal batch, guided receipt, and full fixed-profile
 provenance receipt as one authenticated triplet. It writes a separate
 development-only case receipt for every case and rejects any use outside the
-exact historical slice. The exact merge-SHA experiment rejected the current
-profile before geometry comparison because source-bound conformer preparation
-failed for 8/9 cases. See
+exact historical slice. The initial exact-SHA experiment failed closed before
+geometry comparison because source-bound conformer preparation failed for 8/9
+cases. After source-index, aromatic-representation, declared-valence, and
+source-byte binding repairs, the post-compatibility exact-SHA rerun prepared
+and scored the same 8/9 cases and 512 candidates as V7. Exact-valid candidates
+increased 7 to 8 and native-like candidates 4 to 6, but only inside the already
+recovered `6T88_MWQ`; proposal-oracle, Top-1, and Top-5 recovery all remained
+1/8 while Engine V2 runtime increased about 60%. The profile is therefore
+comparable but rejected for no recovery-breadth gain. See
 [`engine_v2_true_conformer_development_ab.md`](engine_v2_true_conformer_development_ab.md).
 
 Argument drift is rejected before output creation. The policy is verified
