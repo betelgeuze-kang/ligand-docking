@@ -143,14 +143,18 @@ The canonical capability state is:
   Top-1 recovery (`6T88_MWQ`) was preserved. Full evidence identities, descriptive
   runtime, archive hash, and the next-action boundary are recorded in
   [the V8 clearance development A/B](engine_v2_v8_clearance_development_ab.md).
-- The exact merge-SHA fixed64 true-conformer A/B at
+- The initial fixed64 true-conformer A/B at
   `3dbe39c786dc00fe149d6f933b4186ab1ced1d89` failed source-compatibility
-  admission before geometry comparison: only `6VTA_AKN` prepared, while seven
-  seeds were rejected because RDKit sanitization changed the source atom-order
-  or topology projection and one used unsupported non-default atom fields. The
-  lane scored 1/9 cases and 64 candidates, so it is insufficient for a track
-  decision and is not promoted. The fail-closed evidence and next source-order
-  mapping slice are recorded in
+  admission at 1/9 prepared cases. After exact source-index,
+  Kekule/aromatic-representation, declared-valence, and source-byte binding
+  repairs, the exact same-SHA A/B at
+  `7cfb0216a1476dfe903bd4b176fa5febe8061d7a` prepared and scored the same 8/9
+  cases and 512 candidates in both lanes. Exact-valid candidates increased
+  7 to 8 and native-like candidates 4 to 6, but both gains were confined to
+  the already recovered `6T88_MWQ`; proposal-oracle, Top-1, and Top-5 recovery
+  all stayed 1/8, valid Top-1 stayed 3/8, and Engine V2 runtime increased about
+  60%. The profile is comparable but rejected for no recovery-breadth gain.
+  The evidence, archive identities, and cleanup record are in
   [the true-conformer development A/B](engine_v2_true_conformer_development_ab.md).
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
