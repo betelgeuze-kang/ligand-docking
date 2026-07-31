@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import fields, replace
 import hashlib
 import json
 
@@ -31,6 +31,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     InteractionAwareRigidEnsembleRefinerV4,
     InteractionAwareRigidRefinerV2,
     InteractionAwareRigidRefinerV3,
+    InteractionAwareTorsionClearanceConfigV8,
+    InteractionAwareTorsionClearanceEnsembleRefinerV8,
     InteractionAwareTorsionContactConfigV7,
     InteractionAwareTorsionContactEnsembleRefinerV7,
     TorsionContactRefinementError,
@@ -41,6 +43,13 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     build_element_aware_authenticated_known_pocket_docking_problem,
     element_aware_authority_document,
     generate_bounded_docking_proposals,
+)
+from betelgeuze_engine_v2.docking.identity import (  # noqa: E402
+    coordinate_fingerprint,
+)
+from betelgeuze_engine_v2.docking.proposals import (  # noqa: E402
+    DockingProposal,
+    _proposal_fingerprint,
 )
 
 
@@ -888,6 +897,327 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
         pruned_variant.torsion_angles,
         expected_variant.torsion_angles,
     )
+
+
+def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    receptor = replace(
+        _receptor(),
+        coordinates=torch.tensor(
+            [
+                [
+                    [1.2307712254983234, 3.9434758050512015, 1.6523553225866865],
+                    [8.0, 8.0, 8.0],
+                ]
+            ],
+            dtype=torch.float64,
+        ),
+    )
+    ligand = _ligand()
+    authority = build_element_aware_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        _pocket(),
+    )
+    proposals = generate_bounded_docking_proposals(
+        authority.search_space,
+        DockingBudget(
+            candidate_count=2,
+            top_k=1,
+            max_torsions=1,
+            translation_radius_angstrom=0.0,
+            seed=103,
+        ),
+        problem=authority.problem,
+    )
+    v2_config = InteractionAwareRigidConfigV2(
+        maximum_step_angstrom=0.001,
+        minimum_step_angstrom=0.000125,
+        maximum_total_translation_angstrom=0.001,
+    )
+    v3_config = InteractionAwareRigidConfigV3(
+        maximum_step_angstrom=0.001,
+        minimum_step_angstrom=0.000125,
+        maximum_total_translation_angstrom=0.001,
+        maximum_rotation_step_radians=1.0e-4,
+        minimum_rotation_step_radians=1.0e-5,
+        maximum_total_rotation_radians=1.0e-4,
+        maximum_rotation_steps=1,
+    )
+    clearance_config = InteractionAwareRigidClearanceConfigV4(
+        overlap_scale=0.85,
+        maximum_step_angstrom=0.001,
+        minimum_step_angstrom=0.000125,
+        maximum_total_translation_angstrom=0.001,
+        maximum_rotation_step_radians=1.0e-4,
+        minimum_rotation_step_radians=1.0e-5,
+        maximum_total_rotation_radians=1.0e-4,
+        maximum_rotation_steps=1,
+    )
+    outside_window = InteractionAwareTorsionContactConfigV7(
+        maximum_torsion_steps=3,
+        minimum_selected_final_receptor_penalty=0.0,
+        maximum_selected_final_receptor_penalty=1.0e-12,
+    )
+    expected_v7 = InteractionAwareTorsionContactEnsembleRefinerV7(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="c" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=outside_window,
+    )
+    legacy_variant = expected_v7.refine(proposals[1], max_steps=20)
+    refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="c" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=outside_window,
+    )
+
+    observed = refiner.refine(proposals[1], max_steps=20)
+    receipt = refiner.receipts[proposals[1].fingerprint_sha256]
+
+    assert receipt["legacy_v7_selected"] is False
+    assert receipt["torsion_variant_available"] is True
+    assert receipt["combined_strict_decrease_guard_passed"] is True
+    assert receipt["receptor_nonincrease_guard_passed"] is True
+    assert receipt["internal_nonincrease_guard_passed"] is True
+    assert receipt[
+        "minimum_vdw_surface_gap_improvement_guard_passed"
+    ] is True
+    assert receipt["raw_minimum_distance_nonregression_guard_passed"] is True
+    assert receipt["v8_clearance_guard_passed"] is True
+    assert receipt["v8_clearance_selected"] is True
+    assert receipt["selection_reason"] == (
+        "outside_v7_window_clearance_guard_selected"
+    )
+    legacy_gap = float.fromhex(
+        receipt["legacy_v7_clearance"][
+            "minimum_vdw_surface_gap_angstrom_binary64_hex"
+        ]
+    )
+    optimized_gap = float.fromhex(
+        receipt["optimized_clearance"][
+            "minimum_vdw_surface_gap_angstrom_binary64_hex"
+        ]
+    )
+    legacy_distance = float.fromhex(
+        receipt["legacy_v7_clearance"][
+            "minimum_distance_angstrom_binary64_hex"
+        ]
+    )
+    final_distance = float.fromhex(
+        receipt["final_clearance"]["minimum_distance_angstrom_binary64_hex"]
+    )
+    assert optimized_gap > legacy_gap
+    assert final_distance >= legacy_distance - 1.0e-9
+    assert not torch.equal(observed.coordinates, legacy_variant.coordinates)
+    for bond in ligand.bonds:
+        before = torch.linalg.vector_norm(
+            legacy_variant.coordinates[bond.atom_i]
+            - legacy_variant.coordinates[bond.atom_j]
+        )
+        after = torch.linalg.vector_norm(
+            observed.coordinates[bond.atom_i] - observed.coordinates[bond.atom_j]
+        )
+        assert after == pytest.approx(before, abs=1.0e-12)
+    outer = dict(receipt)
+    outer_sha256 = outer.pop("receipt_sha256")
+    assert hashlib.sha256(
+        json.dumps(
+            outer,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest() == outer_sha256
+    nested = dict(receipt["legacy_v7_receipt_payload"])
+    nested_sha256 = nested.pop("receipt_sha256")
+    assert nested_sha256 == receipt["legacy_v7_receipt_sha256"]
+    assert hashlib.sha256(
+        json.dumps(
+            nested,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest() == nested_sha256
+
+    duplicate = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="c" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=outside_window,
+    )
+    duplicate_observed = duplicate.refine(proposals[1], max_steps=20)
+    assert torch.equal(duplicate_observed.coordinates, observed.coordinates)
+    assert duplicate.receipts[proposals[1].fingerprint_sha256] == receipt
+
+    exposed_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
+    exposed_receipt["legacy_v7_receipt_payload"]["schema_id"] = "tampered"
+    protected_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
+    assert protected_receipt["legacy_v7_receipt_payload"]["schema_id"] != (
+        "tampered"
+    )
+    assert protected_receipt["receipt_sha256"] == receipt["receipt_sha256"]
+
+    source = proposals[1]
+    proposal_fields = {
+        definition.name: getattr(source, definition.name)
+        for definition in fields(DockingProposal)
+        if definition.init
+    }
+    coordinates, torsion_angles, rotation, translation = (
+        value.float()
+        for value in (
+            source.coordinates,
+            source.torsion_angles,
+            source.rotation,
+            source.translation,
+        )
+    )
+    coordinate_sha256 = coordinate_fingerprint(coordinates)
+    proposal_fields.update(
+        coordinates=coordinates,
+        torsion_angles=torsion_angles,
+        rotation=rotation,
+        translation=translation,
+        coordinate_fingerprint_sha256=coordinate_sha256,
+        fingerprint_sha256=_proposal_fingerprint(
+            proposal_index=source.proposal_index,
+            seed=source.seed,
+            torsion_angles=torsion_angles,
+            rotation=rotation,
+            translation=translation,
+            problem_fingerprint_sha256=source.problem_fingerprint_sha256,
+            search_space_fingerprint_sha256=(
+                source.search_space_fingerprint_sha256
+            ),
+            coordinate_fingerprint_sha256=coordinate_sha256,
+        ),
+    )
+    float32_proposal = DockingProposal(**proposal_fields)
+    float32_refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="e" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=outside_window,
+    )
+    float32_observed = float32_refiner.refine(float32_proposal, max_steps=20)
+    float32_receipt = float32_refiner.receipts[
+        float32_proposal.fingerprint_sha256
+    ]
+    assert float32_observed.coordinates.dtype == torch.float32
+    assert float32_receipt["v8_clearance_selected"] is True
+    assert float32_receipt[
+        "optimized_objective_recomputed_from_output_coordinates"
+    ] is True
+
+    retry_refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="f" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=outside_window,
+    )
+    original_clearance_statistics = retry_refiner._clearance_statistics
+    failed_once = False
+
+    def fail_once(coordinates: torch.Tensor):
+        nonlocal failed_once
+        if not failed_once:
+            failed_once = True
+            raise TorsionContactRefinementError("fixture post-V7 failure")
+        return original_clearance_statistics(coordinates)
+
+    monkeypatch.setattr(retry_refiner, "_clearance_statistics", fail_once)
+    with pytest.raises(TorsionContactRefinementError, match="post-V7 failure"):
+        retry_refiner.refine(proposals[1], max_steps=20)
+    for invalid_max_steps in (True, 20.0):
+        with pytest.raises(TorsionContactRefinementError, match="max_steps"):
+            retry_refiner.refine(
+                proposals[1],
+                max_steps=invalid_max_steps,
+            )
+    with pytest.raises(TorsionContactRefinementError, match="original max_steps"):
+        retry_refiner.refine(proposals[1], max_steps=0)
+    retried = retry_refiner.refine(proposals[1], max_steps=20)
+    assert retried.coordinate_fingerprint_sha256 == (
+        observed.coordinate_fingerprint_sha256
+    )
+
+    legacy_window = InteractionAwareTorsionContactConfigV7(
+        maximum_torsion_steps=3,
+        minimum_selected_final_receptor_penalty=0.0,
+        maximum_selected_final_receptor_penalty=100.0,
+    )
+    expected_selected_v7 = InteractionAwareTorsionContactEnsembleRefinerV7(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="d" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=legacy_window,
+    ).refine(proposals[1], max_steps=20)
+    retaining_v8 = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="d" * 64,
+        v3_proposal_indices=(1,),
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=legacy_window,
+    )
+    retained = retaining_v8.refine(proposals[1], max_steps=20)
+    retained_receipt = retaining_v8.receipts[proposals[1].fingerprint_sha256]
+    assert retained_receipt["legacy_v7_selected"] is True
+    assert retained_receipt["v8_clearance_selected"] is False
+    assert retained_receipt["selection_reason"] == (
+        "legacy_v7_window_selection_retained"
+    )
+    assert torch.equal(retained.coordinates, expected_selected_v7.coordinates)
+    assert torch.equal(retained.torsion_angles, expected_selected_v7.torsion_angles)
+
+
+@pytest.mark.parametrize("tolerance", (0.0, -1.0e-9, 1.0e-5, float("inf")))
+def test_interaction_aware_v8_rejects_invalid_clearance_tolerance(
+    tolerance: float,
+) -> None:
+    with pytest.raises(TorsionContactRefinementError, match="tolerance"):
+        InteractionAwareTorsionClearanceConfigV8(
+            clearance_tolerance_angstrom=tolerance
+        )
 
 
 @pytest.mark.parametrize(

@@ -480,6 +480,32 @@ external aliases nor inotify watches. Its dedicated single-engine summary is
 development evidence only: it contains no paired-baseline metrics and every
 claim, validation, and promotion flag remains false.
 
+To compare the development-only V8 clearance guard against the retained V7
+evidence, use a different output root and add the explicit variant flag:
+
+```bash
+python3 tools/run_engine_v2_public_redocking_300.py \
+  --archive /path/to/posebusters_paper_data.zip \
+  --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
+  --output-root .betelgeuze/stage0-development/v8-clearance-nine \
+  --case-subset all \
+  --start-index 2 \
+  --limit 9 \
+  --development-engine-v2-only \
+  --development-v8-clearance-variant
+```
+
+V8 preserves the same 64-candidate budget, proposal lineage, scorer, and exact
+historical case denominator. It retains V7 output unless an already evaluated
+torsion state outside the V7 `[2.0,4.0)` selection window strictly improves the
+minimum receptor van-der-Waals surface gap while the raw minimum distance and
+receptor/internal objectives do not regress. Selection does not consume RMSD,
+PoseBusters, native-pose, or ranking-score results. The flag is rejected outside
+the exact sealed nine-case development lane, produces a distinct nonclaimable
+summary, and cannot satisfy Stage 0 admission. V7 remains the active Stage 0
+profile until a later evidence review explicitly promotes and refreezes a
+replacement; fresh-128 execution remains prohibited.
+
 Argument drift is rejected before output creation. The policy is verified
 again before report materialization, and its execution-profile SHA-256 must be
 present in every case receipt and the complete 384-row internal report ledger.

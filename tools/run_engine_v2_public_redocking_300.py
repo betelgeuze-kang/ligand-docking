@@ -80,6 +80,10 @@ from betelgeuze_engine_v2.docking import (
     DockingScope,
     ElementAwareValidityError,
     GuidedPlacementPolicy,
+    INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_ID,
+    INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_VERSION,
+    InteractionAwareTorsionClearanceConfigV8,
+    InteractionAwareTorsionClearanceEnsembleRefinerV8,
     InteractionAwareTorsionContactEnsembleRefinerV7,
     PocketDefinition,
     ScorerBackend,
@@ -146,6 +150,27 @@ ENGINE_V2_CPU_POLICY = {
     "interaction_refinement_steps": PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS,
     "runner_id": RUNNER_ID,
 }
+_DEVELOPMENT_V8_CLEARANCE_CONFIG = InteractionAwareTorsionClearanceConfigV8()
+DEVELOPMENT_V8_CLEARANCE_CPU_POLICY = {
+    **ENGINE_V2_CPU_POLICY,
+    "algorithm_profile_id": (
+        "betelgeuze.engine_v2_historical_development_v8_clearance_profile/1.0.0"
+    ),
+    "interaction_refiner": (
+        f"{INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_ID}/"
+        f"{INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_VERSION}"
+    ),
+    "interaction_refiner_config_sha256": (
+        _DEVELOPMENT_V8_CLEARANCE_CONFIG.fingerprint_sha256
+    ),
+    "legacy_v7_interaction_refiner_config_sha256": (
+        PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256
+    ),
+    "development_experimental": True,
+    "stage0_eligible": False,
+    "primary_claim_eligible": False,
+    "public_claim_eligible": False,
+}
 _CASE_FILE_SUFFIXES = (
     "protein.pdb",
     "ligands.sdf",
@@ -176,6 +201,9 @@ CHEMICAL_COLUMNS = benchmark_contract.PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHEC
 GEOMETRIC_COLUMNS = benchmark_contract.PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS
 DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID = (
     "betelgeuze.engine_v2_historical_development_execution_summary/1.0.0"
+)
+DEVELOPMENT_V8_CLEARANCE_SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_v8_clearance_summary/1.0.0"
 )
 _DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
 _SEALED_CASE_INPUT_ROLES = ("receptor", "reference", "native", "seed")
@@ -996,6 +1024,29 @@ def _execution_profile_binding(profile_sha256: str) -> dict[str, object]:
         if profile_sha256
         else {}
     )
+
+
+def _engine_v2_execution_policy(
+    scorer_backend: ScorerBackend,
+    *,
+    execution_profile_sha256: str = "",
+    development_v8_clearance_variant: bool = False,
+) -> dict[str, object]:
+    if development_v8_clearance_variant and execution_profile_sha256:
+        raise PublicRedockingRunnerError(
+            "development V8 clearance execution rejects a Stage 0 profile binding"
+        )
+    base_policy = (
+        DEVELOPMENT_V8_CLEARANCE_CPU_POLICY
+        if development_v8_clearance_variant
+        else ENGINE_V2_CPU_POLICY
+    )
+    return {
+        **base_policy,
+        "scorer_backend": scorer_backend.value,
+        "scorer_thread_count": 1,
+        **_execution_profile_binding(execution_profile_sha256),
+    }
 
 
 def _external_execution_policy(
@@ -2369,8 +2420,9 @@ def _engine_v2_command(
     output: Path,
     seed: int,
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
+    development_v8_clearance_variant: bool = False,
 ) -> tuple[str, ...]:
-    return (
+    command = (
         RUNNER_ID,
         "engine_v2",
         "--case-id",
@@ -2392,6 +2444,9 @@ def _engine_v2_command(
         "--out",
         str(output),
     )
+    if development_v8_clearance_variant:
+        command += ("--development-v8-clearance-variant",)
+    return command
 
 
 def _benchmark_ranked_proposals(search) -> tuple[object, ...]:
@@ -2417,6 +2472,7 @@ def _engine_v2_pose_coordinates(
     *,
     seed: int,
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
+    development_v8_clearance_variant: bool = False,
 ) -> EngineV2PoseSearchOutcome:
     try:
         receptor_bytes = paths["receptor"].read_bytes()
@@ -2516,15 +2572,27 @@ def _engine_v2_pose_coordinates(
             budget,
             guided_policy,
         )
-        refiner = InteractionAwareTorsionContactEnsembleRefinerV7(
-            authority,
-            receptor,
-            ligand,
-            implementation_source_sha256=_sha256_bytes(
-                b"engine-v2-interaction-aware-torsion-contact-ensemble-refiner-v7"
-            ),
-            v3_proposal_indices=v3_proposal_indices,
-        )
+        if development_v8_clearance_variant:
+            refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
+                authority,
+                receptor,
+                ligand,
+                implementation_source_sha256=_sha256_bytes(
+                    b"engine-v2-interaction-aware-torsion-clearance-ensemble-refiner-v8"
+                ),
+                v3_proposal_indices=v3_proposal_indices,
+                clearance_guard_config=_DEVELOPMENT_V8_CLEARANCE_CONFIG,
+            )
+        else:
+            refiner = InteractionAwareTorsionContactEnsembleRefinerV7(
+                authority,
+                receptor,
+                ligand,
+                implementation_source_sha256=_sha256_bytes(
+                    b"engine-v2-interaction-aware-torsion-contact-ensemble-refiner-v7"
+                ),
+                v3_proposal_indices=v3_proposal_indices,
+            )
     except UnsupportedVdwElementError as exc:
         raise EngineV2PreparationFailure(
             "unsupported_vdw_element",
@@ -2659,6 +2727,7 @@ def _engine_v2_pose_coordinates(
                 strict=True,
             )
         }
+    refinement_receipts = refiner.receipts
     candidate_rows: list[PublicRedockingEngineV2CandidateDiagnostic] = []
     for row in search.rows:
         if row.proposal_index in evaluated_by_index:
@@ -2676,7 +2745,9 @@ def _engine_v2_pose_coordinates(
             ensemble_source_proposal_index = result.guided_search_result.guided_receipt.ensemble_source_proposal_indices[
                 row.proposal_index
             ]
-            refinement_receipt = refiner.receipts.get(row.proposal_fingerprint_sha256)
+            refinement_receipt = refinement_receipts.get(
+                row.proposal_fingerprint_sha256
+            )
             if refinement_receipt is None:
                 raise PublicRedockingRunnerError(
                     "successful Engine V2 candidate lacks refinement receipt"
@@ -2729,7 +2800,8 @@ def _engine_v2_pose_coordinates(
                     ),
                     refinement_receipt_payload=(
                         dict(refinement_receipt)
-                        if proposal_mode == "uniform_v3_rigid_ensemble"
+                        if development_v8_clearance_variant
+                        or proposal_mode == "uniform_v3_rigid_ensemble"
                         else {}
                     ),
                     score_term_binary64_hex={
@@ -2812,6 +2884,7 @@ def _engine_v2_result(
     seed: int,
     scorer_backend: ScorerBackend = ScorerBackend.PYTHON_REFERENCE,
     execution_profile_sha256: str = "",
+    development_v8_clearance_variant: bool = False,
 ) -> PublicRedockingCaseResult:
     _quarantine_managed_regular_file(
         output,
@@ -2819,30 +2892,35 @@ def _engine_v2_result(
         required_mode=0o600,
     )
     started = time.perf_counter()
+    command_arguments: dict[str, object] = {
+        "output": output,
+        "seed": seed,
+        "scorer_backend": scorer_backend,
+    }
+    if development_v8_clearance_variant:
+        command_arguments["development_v8_clearance_variant"] = True
     command = _engine_v2_command(
         case_id,
         paths if logical_paths is None else logical_paths,
-        output=output,
-        seed=seed,
-        scorer_backend=scorer_backend,
+        **command_arguments,
     )
     execution_policy = _execution_policy_tokens(
-        {
-            **ENGINE_V2_CPU_POLICY,
-            "scorer_backend": scorer_backend.value,
-            "scorer_thread_count": 1,
-            **_execution_profile_binding(execution_profile_sha256),
-        }
+        _engine_v2_execution_policy(
+            scorer_backend,
+            execution_profile_sha256=execution_profile_sha256,
+            development_v8_clearance_variant=development_v8_clearance_variant,
+        )
     )
     diagnostics: PublicRedockingEngineV2Diagnostics | None = None
     diagnostic_evaluation_seconds = 0.0
     try:
-        outcome = _engine_v2_pose_coordinates(
-            case_id,
-            paths,
-            seed=seed,
-            scorer_backend=scorer_backend,
-        )
+        pose_arguments: dict[str, object] = {
+            "seed": seed,
+            "scorer_backend": scorer_backend,
+        }
+        if development_v8_clearance_variant:
+            pose_arguments["development_v8_clearance_variant"] = True
+        outcome = _engine_v2_pose_coordinates(case_id, paths, **pose_arguments)
         if type(outcome) is not EngineV2PoseSearchOutcome:
             raise PublicRedockingRunnerError(
                 "Engine V2 search did not return typed diagnostics"
@@ -3179,6 +3257,14 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--development-v8-clearance-variant",
+        action="store_true",
+        help=(
+            "use the nonclaimable V8 clearance-selection variant only inside "
+            "the exact historical development Engine V2-only lane"
+        ),
+    )
+    parser.add_argument(
         "--stage0-policy",
         type=Path,
         help=(
@@ -3270,6 +3356,17 @@ def _require_execution_lane_arguments(
     arguments: argparse.Namespace,
     case_ids: Sequence[str],
 ) -> None:
+    development_v8_clearance_variant = bool(
+        getattr(arguments, "development_v8_clearance_variant", False)
+    )
+    if (
+        development_v8_clearance_variant
+        and not arguments.development_engine_v2_only
+    ):
+        raise PublicRedockingRunnerError(
+            "development V8 clearance variant requires the development "
+            "Engine V2-only lane"
+        )
     if not arguments.development_engine_v2_only:
         if arguments.gnina is None:
             raise PublicRedockingRunnerError(
@@ -3335,10 +3432,17 @@ def _partial_summary_filename(
 
 def _development_engine_v2_only_summary_filename(
     case_ids: Sequence[str],
+    *,
+    development_v8_clearance_variant: bool = False,
 ) -> str:
     selection_sha256 = hashlib.sha256(_canonical_bytes(list(case_ids))).hexdigest()
+    lane = (
+        "development-v8-clearance"
+        if development_v8_clearance_variant
+        else "development"
+    )
     return (
-        f"engine-v2-only-summary-development-{len(case_ids):03d}-"
+        f"engine-v2-only-summary-{lane}-{len(case_ids):03d}-"
         f"{selection_sha256[:16]}.json"
     )
 
@@ -3354,6 +3458,7 @@ def _development_engine_v2_only_summary(
     engine_source_sha256: str,
     evaluation_pipeline_sha256: str,
     execution_environment_sha256: str,
+    development_v8_clearance_variant: bool = False,
 ) -> dict[str, object]:
     expected_case_ids = tuple(case_ids)
     if expected_case_ids != _DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS:
@@ -3387,11 +3492,10 @@ def _development_engine_v2_only_summary(
         raise PublicRedockingRunnerError(
             "development Engine V2-only summary ledger is cross-wired"
         )
-    expected_policy = {
-        **ENGINE_V2_CPU_POLICY,
-        "scorer_backend": scorer_backend.value,
-        "scorer_thread_count": 1,
-    }
+    expected_policy = _engine_v2_execution_policy(
+        scorer_backend,
+        development_v8_clearance_variant=development_v8_clearance_variant,
+    )
     required_materialization_fields = {
         "schema_id",
         "case_id",
@@ -3516,6 +3620,9 @@ def _development_engine_v2_only_summary(
                     output=output_path,
                     seed=frozen_public_redocking_case_seed(case_id),
                     scorer_backend=scorer_backend,
+                    development_v8_clearance_variant=(
+                        development_v8_clearance_variant
+                    ),
                 )
             )
             or {
@@ -3531,10 +3638,21 @@ def _development_engine_v2_only_summary(
         _canonical_bytes(list(expected_case_ids))
     ).hexdigest()
     summary: dict[str, object] = {
-        "schema_id": DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID,
+        "schema_id": (
+            DEVELOPMENT_V8_CLEARANCE_SUMMARY_SCHEMA_ID
+            if development_v8_clearance_variant
+            else DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID
+        ),
         "runner_id": RUNNER_ID,
         "analysis_scope": "historical_contaminated_development_only",
-        "evidence_role": "current_source_engine_v2_execution_only",
+        "evidence_role": (
+            "development_v8_clearance_ab_execution_only"
+            if development_v8_clearance_variant
+            else "current_source_engine_v2_execution_only"
+        ),
+        "development_v8_clearance_variant": (
+            development_v8_clearance_variant
+        ),
         "case_count": len(expected_case_ids),
         "case_ids": list(expected_case_ids),
         "case_ids_sha256": case_ids_sha256,
@@ -3545,6 +3663,11 @@ def _development_engine_v2_only_summary(
             "evaluation_pipeline_sha256": evaluation_pipeline_sha256,
             "execution_environment_sha256": execution_environment_sha256,
             "scorer_backend": scorer_backend.value,
+            "interaction_refiner": expected_policy["interaction_refiner"],
+            "interaction_refiner_config_sha256": expected_policy[
+                "interaction_refiner_config_sha256"
+            ],
+            "stage0_eligible": False,
         },
         "input_binding": {
             "mode": "sealed_linux_memfd_snapshot/1.0.0",
@@ -3841,6 +3964,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     case_ids = _case_ids_from_arguments(arguments)
     _require_execution_lane_arguments(arguments, case_ids)
     development_engine_v2_only = arguments.development_engine_v2_only
+    development_v8_clearance_variant = (
+        arguments.development_v8_clearance_variant
+    )
     source_binary = (
         arguments.gnina.resolve() if arguments.gnina is not None else None
     )
@@ -3919,7 +4045,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         required_mode=0o600,
     )
     development_summary_path = output_root / (
-        _development_engine_v2_only_summary_filename(case_ids)
+        _development_engine_v2_only_summary_filename(
+            case_ids,
+            development_v8_clearance_variant=(
+                development_v8_clearance_variant
+            ),
+        )
     )
     if development_engine_v2_only:
         _quarantine_managed_regular_file(
@@ -4044,6 +4175,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                     output=engine_output,
                     seed=case_seed,
                     scorer_backend=scorer_backend,
+                    development_v8_clearance_variant=(
+                        development_v8_clearance_variant
+                    ),
                 )
                 engine_receipt = (
                     output_root / "receipts" / "engine_v2" / f"{case_id}.json"
@@ -4058,17 +4192,21 @@ def main(argv: Sequence[str] | None = None) -> int:
                         seed=case_seed,
                         scorer_backend=scorer_backend,
                         execution_profile_sha256=execution_profile_sha256,
+                        development_v8_clearance_variant=(
+                            development_v8_clearance_variant
+                        ),
                     )
                 pinned_inputs.verify()
                 engine_execution = _verified_case_execution(
                     engine_row,
                     command=engine_command,
-                    execution_policy={
-                        **ENGINE_V2_CPU_POLICY,
-                        "scorer_backend": scorer_backend.value,
-                        "scorer_thread_count": 1,
-                        **_execution_profile_binding(execution_profile_sha256),
-                    },
+                    execution_policy=_engine_v2_execution_policy(
+                        scorer_backend,
+                        execution_profile_sha256=execution_profile_sha256,
+                        development_v8_clearance_variant=(
+                            development_v8_clearance_variant
+                        ),
+                    ),
                     input_sha256s=inputs,
                     materialization_receipt_sha256=(materialization.receipt_sha256),
                     implementation_sha256=engine_source_sha256,
@@ -4162,6 +4300,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             engine_source_sha256=engine_source_sha256,
             evaluation_pipeline_sha256=evaluation_pipeline_sha256,
             execution_environment_sha256=execution_environment.sha256,
+            development_v8_clearance_variant=(
+                development_v8_clearance_variant
+            ),
         )
         _atomic_json(development_summary_path, development_summary)
         print(development_summary["summary_sha256"])
