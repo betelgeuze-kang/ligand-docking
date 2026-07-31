@@ -46,10 +46,15 @@ def build_inventory(repo_root: Path) -> dict[str, Any]:
     hashes = {path: _sha256(repo_root / path) for path in workflows}
     main_text = (repo_root / AUTHORITATIVE_WORKFLOWS[0]).read_text(encoding="utf-8")
     stage0_required_tokens = (
+        "tools/__init__.py",
+        "config/engine_v2_public_redocking_stage0_threshold_evidence.json",
+        "tests/unit/test_analyze_engine_v2_score_terms.py",
         "tests/unit/test_engine_v2_blind_stage0.py",
+        "tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py",
         "tests/unit/test_classify_engine_v2_stage0_full_suite.py",
         "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py",
         "tools/verify_engine_v2_public_redocking_stage0.py",
+        "tools/build_engine_v2_stage0_development_gate_ledger.py",
         "tools/classify_engine_v2_stage0_full_suite.py",
         "tools/reconcile_engine_v2_stage0_full_suites.py",
     )

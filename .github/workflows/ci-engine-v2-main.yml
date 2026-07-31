@@ -95,11 +95,14 @@ jobs:
             config/independent_engine_v2_capabilities.yaml
             config/engine_v2_public_redocking_contamination_registry.json
             config/engine_v2_fresh_redocking_holdout_manifest.json
+            config/engine_v2_public_redocking_stage0_threshold_evidence.json
+            tools/__init__.py
             tools/build_engine_v2_wheel.py
             tools/build_engine_v2_native_wheel.py
             tools/build_engine_v2_sbom.py
             tools/check_engine_v2_architecture.py
             tools/analyze_engine_v2_score_terms.py
+            tools/build_engine_v2_stage0_development_gate_ledger.py
             tools/run_engine_v2_public_redocking_300.py
             tools/verify_engine_v2_public_redocking_stage0.py
             tools/classify_engine_v2_stage0_full_suite.py
@@ -108,7 +111,9 @@ jobs:
             config/engine_v2_public_redocking_stage0_freeze.template.json
             config/engine_v2_public_redocking_stage0_attestation.template.json
             config/engine_v2_public_redocking_stage0_threshold_evidence.template.json
+            tests/unit/test_analyze_engine_v2_score_terms.py
             tests/unit/test_engine_v2_blind_stage0.py
+            tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py
             tests/unit/test_classify_engine_v2_stage0_full_suite.py
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
             tests/unit/test_audit_engine_v2_ci_authority.py
@@ -235,6 +240,7 @@ jobs:
             betelgeuze_engine_v2 \
             tools/build_engine_v2_wheel.py \
             tools/check_engine_v2_architecture.py \
+            tools/build_engine_v2_stage0_development_gate_ledger.py \
             tools/run_engine_v2_public_redocking_300.py \
             tools/verify_engine_v2_public_redocking_stage0.py \
             tools/classify_engine_v2_stage0_full_suite.py \
@@ -317,7 +323,9 @@ jobs:
             tests/unit/test_engine_v2_reference_physics.py \
             tests/unit/test_engine_v2_reference_solvation.py \
             tests/unit/test_engine_v2_external_baseline.py \
+            tests/unit/test_analyze_engine_v2_score_terms.py \
             tests/unit/test_engine_v2_blind_stage0.py \
+            tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py \
             tests/unit/test_classify_engine_v2_stage0_full_suite.py \
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py \
             tests/unit/test_audit_engine_v2_ci_authority.py \

@@ -312,12 +312,19 @@ python3 -m pip install --no-deps posebusters==0.3.1
 ```
 
 The fresh 128-case internal provisional blind holdout cannot be run from the
-protocol file alone. First copy
-`config/engine_v2_public_redocking_stage0_threshold_evidence.template.json`
-and fill it from exact-contract contaminated development evidence. The verifier
+protocol file alone. The current machine authority is the tracked
+`config/engine_v2_public_redocking_stage0_threshold_evidence.json`, whose frozen
+inner `evidence_sha256` is
+`8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3`.
+That artifact was derived from 12 historical development cases and freezes the
+proposal-oracle floor at `0.31666666666666665`. The separate V7 narrative that
+used a `0.49375` floor is not the current machine authority; this mismatch is a
+blocker until reviewed replacement evidence and policy bindings are frozen.
+The threshold-evidence template is therefore only an input to such a reviewed
+replacement, not an interchangeable runtime artifact. The verifier
 cross-checks all seven proposed threshold values and both paired-baseline
-margins against that artifact; a generic literature note or unrelated file hash
-cannot satisfy the gate. Then copy
+margins against the tracked authority; a generic literature note or unrelated
+file hash cannot satisfy the gate. Then copy
 `config/engine_v2_public_redocking_stage0_freeze.template.json`, bind the
 evidence path/SHA-256, and fill the remaining fields. The solo policy builder
 constructs one self-hashed execution profile from the exact Scorer-v1
@@ -326,7 +333,31 @@ requires the exact analysis schema, at least eight scored contaminated cases,
 the complete typed 64-slot diagnostics, frozen materialization/input hashes,
 and a mechanically disjoint fresh cohort. The verifier reruns analyzer 1.2.0
 from those receipts and requires the entire report to match; a self-described
-report is rejected. Print the SHA-only host snapshot:
+report is rejected. Before changing proposal or refinement behavior, build the
+compact development-gate ledger from a current-source V7 report:
+
+```bash
+python3 tools/build_engine_v2_stage0_development_gate_ledger.py \
+  --repo-root . \
+  --development-report .betelgeuze/stage0-development/v7-analysis.json \
+  --expected-development-report-sha256 OPERATOR_REVIEWED_SHA256 \
+  --threshold-evidence \
+    config/engine_v2_public_redocking_stage0_threshold_evidence.json \
+  --expected-threshold-evidence-sha256 \
+    8f6e548bae67e56dbe05e95ae4ac08f4af5b1eb7b8119adc09cb33e366a36ce3 \
+  --output .betelgeuze/stage0-development/v7-gate-ledger.json
+```
+
+The output is canonical, self-hashed, exclusive mode-0600 state under
+`.betelgeuze/`; owned output-parent directories are normalized to mode 0700.
+It stores exact gate counts and per-case observed blocker IDs,
+but compresses full candidate and refinement lineage into SHA-256 identities;
+the authenticated source receipts remain the detailed evidence. Fresh or smoke
+cases, report drift, receipt relabeling, and threshold claim-boundary drift fail
+closed. Geometry causes that cannot be proved from diagnostics remain
+`unresolved_requires_coordinate_replay`.
+
+Print the SHA-only host snapshot:
 
 ```bash
 python3 tools/verify_engine_v2_public_redocking_stage0.py \
