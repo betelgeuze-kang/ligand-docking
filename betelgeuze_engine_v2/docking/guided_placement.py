@@ -3263,15 +3263,146 @@ def run_authenticated_guided_placement_search(
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
+    precomputed_proposals: Sequence[DockingProposal] | None = None,
+    precomputed_guided_receipt: GuidedPlacementReceipt | None = None,
+    precomputed_provenance_receipt: (
+        FixedSourceBoundConformerProposalReceipt | None
+    ) = None,
 ) -> GuidedPlacementSearchResult:
-    proposals, receipt = generate_guided_docking_proposals(
-        authenticated_problem,
-        budget,
-        context,
-        receptor_system=receptor_system,
-        ligand_system=ligand_system,
-        policy=policy,
+    supplied_precomputed_values = (
+        precomputed_proposals is not None,
+        precomputed_guided_receipt is not None,
+        precomputed_provenance_receipt is not None,
     )
+    if any(supplied_precomputed_values) and not all(supplied_precomputed_values):
+        raise DockingAuthorityError(
+            "precomputed guided proposals, receipt, and provenance must be "
+            "supplied together"
+        )
+    if precomputed_proposals is None:
+        proposals, receipt = generate_guided_docking_proposals(
+            authenticated_problem,
+            budget,
+            context,
+            receptor_system=receptor_system,
+            ligand_system=ligand_system,
+            policy=policy,
+        )
+    else:
+        if policy is not None:
+            raise DockingAuthorityError(
+                "precomputed guided proposals reject a second policy"
+            )
+        if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
+            raise TypeError(
+                "authenticated_problem must be AuthenticatedDockingProblem"
+            )
+        if not isinstance(budget, DockingBudget):
+            raise TypeError("budget must be DockingBudget")
+        if not isinstance(context, GuidedPlacementContext):
+            raise TypeError("context must be GuidedPlacementContext")
+        if not isinstance(precomputed_guided_receipt, GuidedPlacementReceipt):
+            raise TypeError(
+                "precomputed_guided_receipt must be GuidedPlacementReceipt"
+            )
+        if not isinstance(
+            precomputed_provenance_receipt,
+            FixedSourceBoundConformerProposalReceipt,
+        ):
+            raise TypeError(
+                "precomputed_provenance_receipt must be "
+                "FixedSourceBoundConformerProposalReceipt"
+            )
+        authenticated_problem.input_receipt_sha256
+        context.fingerprint_sha256
+        receipt = precomputed_guided_receipt
+        receipt.receipt_sha256
+        provenance = precomputed_provenance_receipt
+        provenance.receipt_sha256
+        derived_context = build_guided_placement_context(
+            authenticated_problem,
+            receptor_system,
+            ligand_system,
+        )
+        if (
+            derived_context.fingerprint_sha256 != context.fingerprint_sha256
+            or context.authority_input_receipt_sha256
+            != authenticated_problem.input_receipt_sha256
+            or receipt.authenticated_input_receipt_sha256
+            != authenticated_problem.input_receipt_sha256
+            or receipt.guidance_context_sha256 != context.fingerprint_sha256
+            or receipt.budget_sha256 != _budget_sha256(budget)
+            or dict(receipt.feature_counts) != context.feature_counts()
+        ):
+            raise DockingAuthorityError(
+                "precomputed guided proposal authority is cross-wired"
+            )
+        proposals = tuple(precomputed_proposals)
+        if len(proposals) != budget.candidate_count or any(
+            not isinstance(proposal, DockingProposal) for proposal in proposals
+        ):
+            raise DockingAuthorityError(
+                "precomputed guided proposal denominator is invalid"
+            )
+        for proposal_index, proposal in enumerate(proposals):
+            proposal.assert_integrity()
+            expected_candidate_id = _stable_candidate_id(
+                proposal_index=proposal_index,
+                seed=budget.seed,
+                problem_fingerprint_sha256=(
+                    authenticated_problem.problem.fingerprint_sha256
+                ),
+                search_space_fingerprint_sha256=(
+                    authenticated_problem.search_space.fingerprint_sha256
+                ),
+            )
+            if (
+                proposal.proposal_index != proposal_index
+                or proposal.seed != budget.seed
+                or proposal.candidate_id != expected_candidate_id
+                or proposal.problem_fingerprint_sha256
+                != authenticated_problem.problem.fingerprint_sha256
+                or proposal.search_space_fingerprint_sha256
+                != authenticated_problem.search_space.fingerprint_sha256
+                or proposal.refined
+            ):
+                raise DockingAuthorityError(
+                    "precomputed guided proposal identity is invalid"
+                )
+        if tuple(
+            proposal.fingerprint_sha256 for proposal in proposals
+        ) != receipt.proposal_fingerprint_sha256s:
+            raise DockingAuthorityError(
+                "precomputed guided proposal fingerprints are cross-wired"
+            )
+        if (
+            provenance.authenticated_input_receipt_sha256
+            != authenticated_problem.input_receipt_sha256
+            or provenance.budget_sha256 != _budget_sha256(budget)
+            or provenance.source_ligand_system_sha256
+            != canonical_system_sha256(ligand_system)
+            or provenance.source_ligand_topology_sha256
+            != canonical_topology_sha256(ligand_system)
+            or provenance.guided_receipt.receipt_sha256
+            != receipt.receipt_sha256
+            or provenance.candidate_ids
+            != tuple(proposal.candidate_id for proposal in proposals)
+            or provenance.proposal_fingerprint_sha256s
+            != tuple(proposal.fingerprint_sha256 for proposal in proposals)
+            or provenance.proposal_coordinate_fingerprint_sha256s
+            != tuple(
+                proposal.coordinate_fingerprint_sha256
+                for proposal in proposals
+            )
+            or provenance.proposal_torsion_metadata_sha256s
+            != tuple(
+                _torsion_metadata_sha256(proposal.torsion_angles)
+                for proposal in proposals
+            )
+        ):
+            raise DockingAuthorityError(
+                "precomputed guided proposal provenance is cross-wired"
+            )
     override = _ProposalOverride(
         search_space_fingerprint_sha256=authenticated_problem.search_space.fingerprint_sha256,
         budget_sha256=_budget_sha256(budget),
