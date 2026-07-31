@@ -24,12 +24,18 @@ RMSD, PoseBusters result, native-pose outcome, or ranking score.
 | V8 analysis self-hash | `cf1bcdac637ce5c33988e5d3f37eccfd6d51182d862501c6fe83492cb78a4947` |
 | Combined evidence archive | `.betelgeuze/stage0-development/archives/v7-v8-d6ba3afe-clearance-ab.tar.zst` |
 | Archive SHA-256 | `4be857ecb5647634505c5f65450d4b08d85be0830b98857f56649db475920ac3` |
+| Member-manifest SHA-256 | `41b5d58c62703148a896d93ae1cfce359a841ef425a78af72e3e77eada2f1886` |
+| Bundle-checksum SHA-256 | `0cfeb7993e32ec64b7b01e7746ec5ad4975d03ef4c95ed5db12c31468506de25` |
 
 The archive is mode `0600`, is 558,597 bytes, expands to a 23,941,120-byte
 deterministic tar stream, and passed `zstd -t`. It contains both complete run
 roots, both Scorer-v1 analyses, the authenticated V7 gate ledger, and the frozen
 threshold-evidence input. The archive is local mutable run state and is not a
 committed benchmark result.
+
+Separate mode-`0600` member-manifest and bundle-checksum sidecars were added
+before expanded-state cleanup. A temporary full extraction passed all 58 member
+hashes; the sidecars also passed their bundle checksum.
 
 Both runs used the same ordered cases:
 `5SD5_HWI`, `5SIS_JSM`, `6M2B_EZO`, `6M73_FNR`, `6T88_MWQ`,
