@@ -459,6 +459,27 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --limit 0
 ```
 
+To rematerialize the exact historical non-smoke development slice used for
+current-source Engine V2 receipt authentication, run the internal engine only:
+
+```bash
+python3 tools/run_engine_v2_public_redocking_300.py \
+  --archive /path/to/posebusters_paper_data.zip \
+  --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
+  --output-root .betelgeuze/stage0-development/current-source-nine \
+  --case-subset all \
+  --start-index 2 \
+  --limit 9 \
+  --development-engine-v2-only
+```
+
+This narrow lane rejects GNINA, Vina, Stage 0 admission, every other selection,
+the two engineering-smoke cases, and all frozen holdout cases. Engine V2 reads
+hash-verified, write-sealed Linux memfd snapshots, so the lane creates neither
+external aliases nor inotify watches. Its dedicated single-engine summary is
+development evidence only: it contains no paired-baseline metrics and every
+claim, validation, and promotion flag remains false.
+
 Argument drift is rejected before output creation. The policy is verified
 again before report materialization, and its execution-profile SHA-256 must be
 present in every case receipt and the complete 384-row internal report ledger.
