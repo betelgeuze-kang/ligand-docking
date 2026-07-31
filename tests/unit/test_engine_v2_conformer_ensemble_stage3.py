@@ -525,6 +525,91 @@ def test_source_index_mapping_normalizes_and_rejects_non_bijections() -> None:
         )
 
 
+def test_matching_declared_valence_is_bound_and_mismatch_fails_closed() -> None:
+    source_bytes = _source_sdf_bytes("OP(=O)(O)O")
+    source_lines = source_bytes.decode("ascii").splitlines()
+    atom_count = int(source_lines[3][0:3])
+    declared_rows = [
+        (offset, int(source_lines[4 + offset].ljust(69)[48:51].strip() or "0"))
+        for offset in range(atom_count)
+        if int(source_lines[4 + offset].ljust(69)[48:51].strip() or "0")
+    ]
+    assert [value for _, value in declared_rows] == [5]
+    source = parse_sdf_v2000(
+        source_bytes,
+        source_id="declared-valence-fixture",
+    )
+    projection = conformers._require_supported_source_molfile_fields(
+        source_bytes.decode("ascii")
+    )
+    mol_block = source_bytes.decode("ascii").split("$$$$", 1)[0]
+    molecule = Chem.MolFromMolBlock(
+        mol_block,
+        sanitize=False,
+        removeHs=False,
+        strictParsing=True,
+    )
+    assert molecule is not None
+    Chem.SanitizeMol(molecule)
+    projection["rdkit_declared_valence_checks"] = (
+        conformers._require_rdkit_declared_valence(
+            molecule,
+            projection,
+        )
+    )
+    conformers._require_source_text_projection_contract(projection, source)
+    declared_atom_rows = [
+        row for row in projection["atoms"] if row["declared_valence"] is not None
+    ]
+    assert len(declared_atom_rows) == 1
+    assert declared_atom_rows[0]["declared_valence"] == 5
+    assert float.fromhex(
+        declared_atom_rows[0]["raw_bond_order_sum_binary64_hex"]
+    ) == 5.0
+    assert projection["rdkit_declared_valence_checks"] == [
+        {
+            "atom_index": declared_atom_rows[0]["index"],
+            "declared_valence": 5,
+            "rdkit_explicit_valence": 5,
+            "rdkit_total_valence": 5,
+            "rdkit_implicit_hydrogen_count": 0,
+            "rdkit_no_implicit": True,
+        }
+    ]
+
+    mismatched_lines = list(source_lines)
+    declared_atom_index = declared_rows[0][0]
+    atom_line = mismatched_lines[4 + declared_atom_index].ljust(69)
+    mismatched_lines[4 + declared_atom_index] = (
+        atom_line[:48] + f"{4:3d}" + atom_line[51:]
+    )
+    mismatched_bytes = ("\n".join(mismatched_lines) + "\n").encode("ascii")
+    with pytest.raises(
+        ConformerPreparationError,
+        match="declared atom valence does not match the raw bond order sum",
+    ):
+        conformers._require_supported_source_molfile_fields(
+            mismatched_bytes.decode("ascii")
+        )
+
+    tampered_projection = conformers._thaw_json(
+        conformers._freeze_json(projection)
+    )
+    next(
+        row
+        for row in tampered_projection["atoms"]
+        if row["declared_valence"] is not None
+    )["declared_valence"] = 4
+    with pytest.raises(
+        ConformerPreparationError,
+        match="atom-field projection is cross-wired",
+    ):
+        conformers._require_source_text_projection_contract(
+            tampered_projection,
+            source,
+        )
+
+
 def test_source_bound_input_cross_wires_and_implicit_hydrogens_fail_closed() -> None:
     source_bytes = _source_sdf_bytes()
     source = parse_sdf_v2000(source_bytes, source_id="source-bound-fixture")
@@ -662,6 +747,89 @@ def test_source_bound_receipt_and_raw_coordinates_are_anti_tamper() -> None:
         match="receipt changed",
     ):
         replace(ensemble, receipt=mutated_receipt)
+
+    def rehashed_source_text_receipt(mutator):
+        receipt = conformers._thaw_json(ensemble.receipt)
+        derivation_evidence = receipt["derivation_evidence"]
+        projection = derivation_evidence["source_text_projection"]
+        mutator(projection)
+        derivation_evidence["source_text_projection_sha256"] = conformers._sha256(
+            projection
+        )
+        receipt["derivation_evidence_sha256"] = conformers._sha256(
+            derivation_evidence
+        )
+        return receipt
+
+    parity_receipt = rehashed_source_text_receipt(
+        lambda projection: projection["atoms"][0].__setitem__(
+            "molfile_atom_parity_code",
+            (projection["atoms"][0]["molfile_atom_parity_code"] + 1) % 4,
+        )
+    )
+
+    def add_topology_compatible_declared_valence(projection):
+        row = next(
+            atom_row
+            for atom_row in projection["atoms"]
+            if atom_row["declared_valence"] is None
+            and float.fromhex(
+                atom_row["raw_bond_order_sum_binary64_hex"]
+            ).is_integer()
+            and 1
+            <= int(float.fromhex(atom_row["raw_bond_order_sum_binary64_hex"]))
+            <= 14
+        )
+        declared_valence = int(
+            float.fromhex(row["raw_bond_order_sum_binary64_hex"])
+        )
+        row["declared_valence"] = declared_valence
+        projection["rdkit_declared_valence_checks"].append(
+            {
+                "atom_index": row["index"],
+                "declared_valence": declared_valence,
+                "rdkit_explicit_valence": declared_valence,
+                "rdkit_total_valence": declared_valence,
+                "rdkit_implicit_hydrogen_count": 0,
+                "rdkit_no_implicit": True,
+            }
+        )
+        projection["rdkit_declared_valence_checks"].sort(
+            key=lambda check: check["atom_index"]
+        )
+
+    declared_valence_receipt = rehashed_source_text_receipt(
+        add_topology_compatible_declared_valence
+    )
+
+    def reverse_directional_bond(projection):
+        row = next(
+            bond_row
+            for bond_row in projection["bonds"]
+            if bond_row["molfile_stereo_code"] in {1, 6}
+        )
+        row["begin_atom_index"], row["end_atom_index"] = (
+            row["end_atom_index"],
+            row["begin_atom_index"],
+        )
+
+    reversed_bond_receipt = rehashed_source_text_receipt(
+        reverse_directional_bond
+    )
+    for receipt in (
+        parity_receipt,
+        declared_valence_receipt,
+        reversed_bond_receipt,
+    ):
+        with pytest.raises(
+            ConformerPreparationError,
+            match="atom fields changed from the exact bytes",
+        ):
+            replace(
+                ensemble,
+                receipt=receipt,
+                receipt_sha256=conformers._sha256(receipt),
+            )
 
     ensemble.raw_coordinates[0, 0, 0] += 1.0
     with pytest.raises(
