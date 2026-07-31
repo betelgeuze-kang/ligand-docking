@@ -23,6 +23,7 @@ from betelgeuze_engine_v2.ai import torsion_tree_forward_kinematics
 from betelgeuze_engine_v2.molecular import (
     AllAtomSystem,
     canonical_system_sha256,
+    canonical_topology_sha256,
     require_valid_all_atom_system,
 )
 
@@ -30,6 +31,11 @@ from .authority import (
     AuthenticatedDockingProblem,
     AuthenticatedDockingSearchResult,
     DockingAuthorityError,
+)
+from .conformers import (
+    SOURCE_BOUND_CONFORMER_ENSEMBLE_SCHEMA_ID,
+    ConformerPreparationError,
+    SourceBoundPreparedConformerEnsemble,
 )
 from .identity import coordinate_fingerprint
 from .placement import (
@@ -70,6 +76,24 @@ MULTI_ANCHOR_MODE = "multi_anchor_hotspot"
 POCKET_CENTER_BASELINE_MODE = "pocket_center_baseline"
 UNIFORM_FALLBACK_MODE = "uniform_fallback"
 UNIFORM_V3_ENSEMBLE_MODE = "uniform_v3_rigid_ensemble"
+FIXED_SOURCE_BOUND_CONFORMER_PROFILE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_fixed_source_bound_conformer_profile/1.0.0"
+)
+FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID = "betelgeuze.engine_v2_historical_development_fixed64_source_paired_true_conformer/1.0.0"
+FIXED_SOURCE_BOUND_CONFORMER_LINEAGE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_fixed_source_bound_conformer_lineage/1.0.0"
+)
+FIXED_SOURCE_BOUND_CONFORMER_TORSION_METADATA_SCHEMA_ID = (
+    "betelgeuze.engine_v2_fixed_source_bound_conformer_torsion_metadata/1.0.0"
+)
+FIXED_SOURCE_BOUND_CONFORMER_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_fixed_source_bound_conformer_proposal_receipt/1.0.0"
+)
+FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT = 64
+FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT = 8
+FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT = 28
+FIXED_SOURCE_BOUND_CONFORMER_VARIANT_START = 8
+FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START = 36
 MAX_GUIDED_FEATURE_ATOMS = 2_048
 MAX_GUIDED_AROMATIC_SYSTEMS = 128
 MAX_GUIDED_RECEPTOR_BONDS_SCANNED = 1_000_000
@@ -115,6 +139,50 @@ def _digest(value: object, *, name: str) -> str:
     ):
         raise DockingAuthorityError(f"{name} must be a lowercase SHA-256")
     return text
+
+
+def fixed_source_bound_conformer_profile_document() -> dict[str, object]:
+    projection = {
+        "schema_id": FIXED_SOURCE_BOUND_CONFORMER_PROFILE_SCHEMA_ID,
+        "profile_id": FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID,
+        "candidate_count": FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT,
+        "centered_source_slots": [0, 8],
+        "true_conformer_variant_slots": [8, 36],
+        "retained_uniform_source_slots": [36, 64],
+        "variant_count": FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT,
+        "variant_source_pairing": "variant_8_plus_j_to_source_36_plus_j",
+        "conformer_assignment": "energy_rank_j_mod_selected_conformer_count",
+        "minimum_selected_conformer_count": 2,
+        "maximum_selected_conformer_count": 8,
+        "variant_rigid_frame": (
+            "centered_conformer_times_paired_source_rotation_transpose_plus_paired_source_centroid"
+        ),
+        "retained_source_proposal_objects_bit_identical": True,
+        "variant_coordinate_geometry_authoritative": True,
+        "variant_torsion_metadata": (
+            "source_relative_heavy_first_rotor_dihedral_delta_non_reconstructive"
+        ),
+        "public_proposal_mode": UNIFORM_V3_ENSEMBLE_MODE,
+        "public_candidate_schema_changed": False,
+        "development_only": True,
+        "stage0_eligible": False,
+        "fresh_execution_authorized": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+    return {
+        **projection,
+        "fingerprint_sha256": _sha256(projection),
+    }
+
+
+def fixed_source_bound_conformer_proposal_indices() -> tuple[int, ...]:
+    return tuple(
+        range(
+            FIXED_SOURCE_BOUND_CONFORMER_VARIANT_START,
+            FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START,
+        )
+    )
 
 
 def _freeze_json(value: Any) -> Any:
@@ -1033,6 +1101,141 @@ def _evenly_spaced_uniform_sources(
             "uniform V3 ensemble source spacing is not one-to-one"
         )
     return selected
+
+
+def _rotor_dihedral_angle(
+    coordinates: torch.Tensor,
+    atoms: tuple[int, int, int, int],
+) -> float:
+    first, second, third, fourth = (coordinates[index] for index in atoms)
+    middle = third - second
+    middle_norm = float(torch.linalg.vector_norm(middle).item())
+    if middle_norm <= 1.0e-12:
+        raise DockingAuthorityError(
+            "true-conformer rotor geometry contains a degenerate central bond"
+        )
+    axis = middle / middle_norm
+    left = first - second
+    right = fourth - third
+    left = left - torch.dot(left, axis) * axis
+    right = right - torch.dot(right, axis) * axis
+    left_norm = float(torch.linalg.vector_norm(left).item())
+    right_norm = float(torch.linalg.vector_norm(right).item())
+    if min(left_norm, right_norm) <= 1.0e-12:
+        raise DockingAuthorityError(
+            "true-conformer rotor geometry lacks a stable dihedral anchor"
+        )
+    left = left / left_norm
+    right = right / right_norm
+    sine = float(torch.dot(torch.cross(left, right, dim=0), axis).item())
+    cosine = float(torch.dot(left, right).item())
+    return math.atan2(sine, cosine)
+
+
+def _source_relative_rotor_torsion_metadata(
+    authenticated_problem: AuthenticatedDockingProblem,
+    source_system: AllAtomSystem,
+    conformer_coordinates: torch.Tensor,
+) -> torch.Tensor:
+    if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
+        raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
+    if not isinstance(source_system, AllAtomSystem):
+        raise TypeError("source_system must be AllAtomSystem")
+    require_valid_all_atom_system(source_system)
+    if source_system.model_count != 1:
+        raise DockingAuthorityError(
+            "true-conformer torsion metadata requires one source model"
+        )
+    if (
+        not isinstance(conformer_coordinates, torch.Tensor)
+        or conformer_coordinates.device.type != "cpu"
+        or not conformer_coordinates.is_floating_point()
+        or conformer_coordinates.shape != (source_system.atom_count, 3)
+        or not bool(torch.isfinite(conformer_coordinates).all().item())
+    ):
+        raise DockingAuthorityError(
+            "true-conformer coordinates must be finite CPU [N,3] floating data"
+        )
+    source_coordinates = source_system.coordinates[0].to(
+        dtype=conformer_coordinates.dtype,
+        device="cpu",
+    )
+    search_space = authenticated_problem.search_space
+    if int(search_space.local_offsets.shape[0]) != source_system.atom_count:
+        raise DockingAuthorityError(
+            "true-conformer source and torsion search space are cross-wired"
+        )
+    adjacency = _adjacency(source_system)
+
+    def anchor(index: int, excluded: int) -> int:
+        candidates = [neighbor for neighbor in adjacency[index] if neighbor != excluded]
+        if not candidates:
+            raise DockingAuthorityError(
+                "true-conformer rotatable bond lacks a dihedral anchor"
+            )
+        return min(
+            candidates,
+            key=lambda value: (
+                source_system.atoms[value].element == "H",
+                value,
+            ),
+        )
+
+    result = torch.zeros(
+        source_system.atom_count,
+        dtype=conformer_coordinates.dtype,
+        device="cpu",
+    )
+    for child_value in (
+        torch.nonzero(search_space.rotatable_mask, as_tuple=False).reshape(-1).tolist()
+    ):
+        child = int(child_value)
+        parent = int(search_space.parent[child].item())
+        if not 0 <= parent < source_system.atom_count:
+            raise DockingAuthorityError(
+                "true-conformer rotatable bond parent is invalid"
+            )
+        atoms = (
+            anchor(parent, child),
+            parent,
+            child,
+            anchor(child, parent),
+        )
+        reference_angle = _rotor_dihedral_angle(source_coordinates, atoms)
+        conformer_angle = _rotor_dihedral_angle(conformer_coordinates, atoms)
+        result[child] = math.atan2(
+            math.sin(conformer_angle - reference_angle),
+            math.cos(conformer_angle - reference_angle),
+        )
+    return result.contiguous()
+
+
+def _torsion_metadata_sha256(torsion_angles: torch.Tensor) -> str:
+    if (
+        not isinstance(torsion_angles, torch.Tensor)
+        or torsion_angles.device.type != "cpu"
+        or not torsion_angles.is_floating_point()
+        or torsion_angles.ndim != 1
+        or not bool(torch.isfinite(torsion_angles).all().item())
+    ):
+        raise DockingAuthorityError(
+            "true-conformer torsion metadata must be a finite CPU vector"
+        )
+    return _sha256(
+        {
+            "schema_id": FIXED_SOURCE_BOUND_CONFORMER_TORSION_METADATA_SCHEMA_ID,
+            "shape": [int(torsion_angles.shape[0])],
+            "values_binary64_hex": [
+                float(value).hex()
+                for value in torsion_angles.detach()
+                .to(dtype=torch.float64, device="cpu")
+                .tolist()
+            ],
+            "semantics": (
+                "source_relative_heavy_first_rotor_dihedral_delta_non_reconstructive"
+            ),
+        }
+    )
 
 
 def _pick_index(length: int, *, seed: int, proposal_index: int, domain: str) -> int:
@@ -1965,6 +2168,469 @@ class GuidedPlacementReceipt:
         return {**self._projection(), "receipt_sha256": self.receipt_sha256}
 
 
+@dataclass(frozen=True, slots=True)
+class FixedSourceBoundConformerLineageRow:
+    proposal_index: int
+    source_proposal_index: int
+    candidate_id: str
+    conformer_rank: int
+    source_conformer_index: int
+    conformer_id: str
+    conformer_energy_kcal_mol: float
+    conformer_coordinates_sha256: str
+    source_proposal_fingerprint_sha256: str
+    source_coordinate_fingerprint_sha256: str
+    variant_proposal_fingerprint_sha256: str
+    variant_coordinate_fingerprint_sha256: str
+    torsion_metadata_sha256: str
+
+    def __post_init__(self) -> None:
+        for name in (
+            "proposal_index",
+            "source_proposal_index",
+            "conformer_rank",
+            "source_conformer_index",
+        ):
+            value = getattr(self, name)
+            if type(value) is not int:
+                raise DockingAuthorityError(
+                    f"fixed true-conformer {name} must be an exact integer"
+                )
+        if not (
+            FIXED_SOURCE_BOUND_CONFORMER_VARIANT_START
+            <= self.proposal_index
+            < FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer proposal index is outside the variant lane"
+            )
+        expected_source = (
+            FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START
+            + self.proposal_index
+            - FIXED_SOURCE_BOUND_CONFORMER_VARIANT_START
+        )
+        if self.source_proposal_index != expected_source:
+            raise DockingAuthorityError(
+                "fixed true-conformer source pairing is invalid"
+            )
+        if self.conformer_rank < 0 or self.source_conformer_index < 0:
+            raise DockingAuthorityError(
+                "fixed true-conformer conformer indices must be nonnegative"
+            )
+        candidate_id = str(self.candidate_id or "").strip()
+        if not candidate_id:
+            raise DockingAuthorityError(
+                "fixed true-conformer candidate ID must be non-empty"
+            )
+        energy = float(self.conformer_energy_kcal_mol)
+        if not math.isfinite(energy):
+            raise DockingAuthorityError("fixed true-conformer energy must be finite")
+        object.__setattr__(self, "candidate_id", candidate_id)
+        object.__setattr__(self, "conformer_energy_kcal_mol", energy)
+        for name in (
+            "conformer_id",
+            "conformer_coordinates_sha256",
+            "source_proposal_fingerprint_sha256",
+            "source_coordinate_fingerprint_sha256",
+            "variant_proposal_fingerprint_sha256",
+            "variant_coordinate_fingerprint_sha256",
+            "torsion_metadata_sha256",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                _digest(getattr(self, name), name=name),
+            )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_id": FIXED_SOURCE_BOUND_CONFORMER_LINEAGE_SCHEMA_ID,
+            "proposal_index": self.proposal_index,
+            "source_proposal_index": self.source_proposal_index,
+            "candidate_id": self.candidate_id,
+            "conformer_rank": self.conformer_rank,
+            "source_conformer_index": self.source_conformer_index,
+            "conformer_id": self.conformer_id,
+            "conformer_energy_kcal_mol_binary64_hex": (
+                self.conformer_energy_kcal_mol.hex()
+            ),
+            "conformer_coordinates_sha256": self.conformer_coordinates_sha256,
+            "source_proposal_fingerprint_sha256": (
+                self.source_proposal_fingerprint_sha256
+            ),
+            "source_coordinate_fingerprint_sha256": (
+                self.source_coordinate_fingerprint_sha256
+            ),
+            "variant_proposal_fingerprint_sha256": (
+                self.variant_proposal_fingerprint_sha256
+            ),
+            "variant_coordinate_fingerprint_sha256": (
+                self.variant_coordinate_fingerprint_sha256
+            ),
+            "torsion_metadata_sha256": self.torsion_metadata_sha256,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class FixedSourceBoundConformerProposalReceipt:
+    authenticated_input_receipt_sha256: str
+    budget_sha256: str
+    source_ligand_system_sha256: str
+    source_ligand_topology_sha256: str
+    source_conformer_ensemble_receipt_sha256: str
+    source_conformer_ensemble_document: Mapping[str, Any]
+    baseline_placement_receipt_sha256: str
+    profile_fingerprint_sha256: str
+    guided_receipt: GuidedPlacementReceipt
+    baseline_candidate_ids: tuple[str, ...]
+    candidate_ids: tuple[str, ...]
+    baseline_proposal_fingerprint_sha256s: tuple[str, ...]
+    proposal_fingerprint_sha256s: tuple[str, ...]
+    baseline_coordinate_fingerprint_sha256s: tuple[str, ...]
+    proposal_coordinate_fingerprint_sha256s: tuple[str, ...]
+    proposal_torsion_metadata_sha256s: tuple[str, ...]
+    lineage_rows: tuple[FixedSourceBoundConformerLineageRow, ...]
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        for name in (
+            "authenticated_input_receipt_sha256",
+            "budget_sha256",
+            "source_ligand_system_sha256",
+            "source_ligand_topology_sha256",
+            "source_conformer_ensemble_receipt_sha256",
+            "baseline_placement_receipt_sha256",
+            "profile_fingerprint_sha256",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                _digest(getattr(self, name), name=name),
+            )
+        profile = fixed_source_bound_conformer_profile_document()
+        if self.profile_fingerprint_sha256 != profile["fingerprint_sha256"]:
+            raise DockingAuthorityError(
+                "fixed true-conformer profile fingerprint is cross-wired"
+            )
+        if not isinstance(self.guided_receipt, GuidedPlacementReceipt):
+            raise TypeError("guided_receipt must be GuidedPlacementReceipt")
+        self.guided_receipt.receipt_sha256
+
+        baseline_candidate_ids = tuple(
+            str(value or "").strip() for value in self.baseline_candidate_ids
+        )
+        candidate_ids = tuple(str(value or "").strip() for value in self.candidate_ids)
+        if (
+            len(baseline_candidate_ids) != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT
+            or len(candidate_ids) != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT
+            or any(not value for value in (*baseline_candidate_ids, *candidate_ids))
+            or len(set(baseline_candidate_ids))
+            != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT
+            or len(set(candidate_ids)) != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT
+            or baseline_candidate_ids != candidate_ids
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer candidate IDs are invalid"
+            )
+
+        def digest_rows(values: Sequence[str], *, name: str) -> tuple[str, ...]:
+            rows = tuple(_digest(value, name=name) for value in values)
+            if len(rows) != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT:
+                raise DockingAuthorityError(
+                    f"fixed true-conformer {name} rows must contain 64 values"
+                )
+            return rows
+
+        baseline_fingerprints = digest_rows(
+            self.baseline_proposal_fingerprint_sha256s,
+            name="baseline proposal fingerprint",
+        )
+        fingerprints = digest_rows(
+            self.proposal_fingerprint_sha256s,
+            name="proposal fingerprint",
+        )
+        baseline_coordinate_fingerprints = digest_rows(
+            self.baseline_coordinate_fingerprint_sha256s,
+            name="baseline coordinate fingerprint",
+        )
+        coordinate_fingerprints = digest_rows(
+            self.proposal_coordinate_fingerprint_sha256s,
+            name="proposal coordinate fingerprint",
+        )
+        torsion_metadata_fingerprints = digest_rows(
+            self.proposal_torsion_metadata_sha256s,
+            name="proposal torsion metadata fingerprint",
+        )
+        lineages = tuple(self.lineage_rows)
+        if any(
+            not isinstance(row, FixedSourceBoundConformerLineageRow) for row in lineages
+        ):
+            raise TypeError(
+                "lineage_rows must contain FixedSourceBoundConformerLineageRow values"
+            )
+        expected_variant_indices = fixed_source_bound_conformer_proposal_indices()
+        if tuple(row.proposal_index for row in lineages) != expected_variant_indices:
+            raise DockingAuthorityError(
+                "fixed true-conformer lineage must cover the ordered 28-slot lane"
+            )
+
+        guided = self.guided_receipt
+        expected_modes = (
+            (POCKET_CENTER_BASELINE_MODE,) * FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT
+            + (UNIFORM_V3_ENSEMBLE_MODE,) * FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT
+            + (UNIFORM_FALLBACK_MODE,) * FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT
+        )
+        expected_sources: tuple[int | None, ...] = (
+            (None,) * FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT
+            + tuple(
+                range(
+                    FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START,
+                    FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT,
+                )
+            )
+            + (None,) * FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT
+        )
+        if (
+            guided.authenticated_input_receipt_sha256
+            != self.authenticated_input_receipt_sha256
+            or guided.budget_sha256 != self.budget_sha256
+            or guided.guided_policy_sha256 != self.profile_fingerprint_sha256
+            or guided.proposal_fingerprint_sha256s != fingerprints
+            or guided.proposal_modes != expected_modes
+            or guided.ensemble_source_proposal_indices != expected_sources
+            or any(guided.ligand_anchor_atom_indices)
+            or any(guided.receptor_anchor_atom_indices)
+            or any(
+                value is not None
+                for value in guided.requested_anchor_distance_angstroms
+            )
+            or any(
+                value is not None for value in guided.observed_anchor_distance_angstroms
+            )
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer guided receipt is cross-wired"
+            )
+
+        ensemble_document = _thaw_json(self.source_conformer_ensemble_document)
+        if not isinstance(ensemble_document, dict):
+            raise DockingAuthorityError(
+                "fixed true-conformer ensemble document must be a mapping"
+            )
+        ensemble_receipt = dict(ensemble_document)
+        observed_ensemble_digest = ensemble_receipt.pop("receipt_sha256", None)
+        conformer_rows = ensemble_receipt.pop("conformers", None)
+        derivation = ensemble_receipt.get("derivation_evidence")
+        if (
+            observed_ensemble_digest != self.source_conformer_ensemble_receipt_sha256
+            or _sha256(ensemble_receipt)
+            != self.source_conformer_ensemble_receipt_sha256
+            or ensemble_receipt.get("schema_id")
+            != SOURCE_BOUND_CONFORMER_ENSEMBLE_SCHEMA_ID
+            or not isinstance(derivation, dict)
+            or derivation.get("source_system_sha256")
+            != self.source_ligand_system_sha256
+            or derivation.get("source_topology_sha256")
+            != self.source_ligand_topology_sha256
+            or ensemble_receipt.get("prepared_topology_sha256")
+            != self.source_ligand_topology_sha256
+            or any(
+                ensemble_receipt.get(name) is not expected
+                for name, expected in (
+                    ("development_only", True),
+                    ("stage0_eligible", False),
+                    ("fresh_execution_authorized", False),
+                    ("scientifically_validated", False),
+                    ("claim_safe", False),
+                )
+            )
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer ensemble evidence is cross-wired"
+            )
+        selected_count = derivation.get("selected_conformer_count")
+        if (
+            type(selected_count) is not int
+            or not 2 <= selected_count <= 8
+            or not isinstance(conformer_rows, list)
+            or len(conformer_rows) != selected_count
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer ensemble must contain two to eight records"
+            )
+        if conformer_rows != derivation.get("selected_conformer_records"):
+            raise DockingAuthorityError(
+                "fixed true-conformer rows are not bound to ensemble evidence"
+            )
+        try:
+            energies = tuple(
+                float.fromhex(str(row["energy_kcal_mol_binary64_hex"]))
+                for row in conformer_rows
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise DockingAuthorityError(
+                "fixed true-conformer ensemble records are incomplete"
+            ) from exc
+        if any(not math.isfinite(value) for value in energies) or any(
+            energies[index] > energies[index + 1] for index in range(len(energies) - 1)
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer records must remain energy-ranked"
+            )
+
+        retained_indices = (
+            *range(FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT),
+            *range(
+                FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START,
+                FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT,
+            ),
+        )
+        if any(
+            baseline_fingerprints[index] != fingerprints[index]
+            or baseline_coordinate_fingerprints[index] != coordinate_fingerprints[index]
+            for index in retained_indices
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer retained source proposals changed"
+            )
+        for offset, row in enumerate(lineages):
+            expected_rank = offset % selected_count
+            record = conformer_rows[expected_rank]
+            if not isinstance(record, dict):
+                raise DockingAuthorityError(
+                    "fixed true-conformer ensemble record is invalid"
+                )
+            if (
+                row.conformer_rank != expected_rank
+                or row.source_proposal_index
+                != FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START + offset
+                or row.candidate_id != candidate_ids[row.proposal_index]
+                or row.conformer_id != record.get("conformer_id")
+                or row.source_conformer_index != record.get("source_conformer_index")
+                or row.conformer_energy_kcal_mol != energies[expected_rank]
+                or row.conformer_coordinates_sha256 != record.get("coordinates_sha256")
+                or row.source_proposal_fingerprint_sha256
+                != baseline_fingerprints[row.source_proposal_index]
+                or row.source_coordinate_fingerprint_sha256
+                != baseline_coordinate_fingerprints[row.source_proposal_index]
+                or row.variant_proposal_fingerprint_sha256
+                != fingerprints[row.proposal_index]
+                or row.variant_coordinate_fingerprint_sha256
+                != coordinate_fingerprints[row.proposal_index]
+                or row.torsion_metadata_sha256
+                != torsion_metadata_fingerprints[row.proposal_index]
+                or fingerprints[row.proposal_index]
+                == baseline_fingerprints[row.proposal_index]
+            ):
+                raise DockingAuthorityError(
+                    "fixed true-conformer lineage is cross-wired"
+                )
+
+        object.__setattr__(self, "baseline_candidate_ids", baseline_candidate_ids)
+        object.__setattr__(self, "candidate_ids", candidate_ids)
+        object.__setattr__(
+            self,
+            "baseline_proposal_fingerprint_sha256s",
+            baseline_fingerprints,
+        )
+        object.__setattr__(self, "proposal_fingerprint_sha256s", fingerprints)
+        object.__setattr__(
+            self,
+            "baseline_coordinate_fingerprint_sha256s",
+            baseline_coordinate_fingerprints,
+        )
+        object.__setattr__(
+            self,
+            "proposal_coordinate_fingerprint_sha256s",
+            coordinate_fingerprints,
+        )
+        object.__setattr__(
+            self,
+            "proposal_torsion_metadata_sha256s",
+            torsion_metadata_fingerprints,
+        )
+        object.__setattr__(self, "lineage_rows", lineages)
+        object.__setattr__(
+            self,
+            "source_conformer_ensemble_document",
+            _freeze_json(ensemble_document),
+        )
+        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        profile = fixed_source_bound_conformer_profile_document()
+        retained = set(range(FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT)) | set(
+            range(
+                FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START,
+                FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT,
+            )
+        )
+        return {
+            "schema_id": FIXED_SOURCE_BOUND_CONFORMER_RECEIPT_SCHEMA_ID,
+            "profile": profile,
+            "profile_fingerprint_sha256": self.profile_fingerprint_sha256,
+            "authenticated_input_receipt_sha256": (
+                self.authenticated_input_receipt_sha256
+            ),
+            "budget_sha256": self.budget_sha256,
+            "source_ligand_system_sha256": self.source_ligand_system_sha256,
+            "source_ligand_topology_sha256": self.source_ligand_topology_sha256,
+            "source_conformer_ensemble_receipt_sha256": (
+                self.source_conformer_ensemble_receipt_sha256
+            ),
+            "source_conformer_ensemble": _thaw_json(
+                self.source_conformer_ensemble_document
+            ),
+            "baseline_placement_receipt_sha256": (
+                self.baseline_placement_receipt_sha256
+            ),
+            "guided_placement_receipt_sha256": self.guided_receipt.receipt_sha256,
+            "candidate_count": FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT,
+            "candidate_slots": [
+                {
+                    "proposal_index": index,
+                    "candidate_id": self.candidate_ids[index],
+                    "baseline_candidate_id": self.baseline_candidate_ids[index],
+                    "baseline_proposal_fingerprint_sha256": (
+                        self.baseline_proposal_fingerprint_sha256s[index]
+                    ),
+                    "proposal_fingerprint_sha256": (
+                        self.proposal_fingerprint_sha256s[index]
+                    ),
+                    "baseline_coordinate_fingerprint_sha256": (
+                        self.baseline_coordinate_fingerprint_sha256s[index]
+                    ),
+                    "coordinate_fingerprint_sha256": (
+                        self.proposal_coordinate_fingerprint_sha256s[index]
+                    ),
+                    "torsion_metadata_sha256": (
+                        self.proposal_torsion_metadata_sha256s[index]
+                    ),
+                    "baseline_object_retained": index in retained,
+                }
+                for index in range(FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT)
+            ],
+            "lineage_rows": [row.to_dict() for row in self.lineage_rows],
+            "coordinate_geometry_authoritative": True,
+            "torsion_metadata_non_reconstructive": True,
+            "development_only": True,
+            "stage0_eligible": False,
+            "fresh_execution_authorized": False,
+            "scientifically_validated": False,
+            "claim_safe": False,
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise DockingAuthorityError("fixed true-conformer proposal receipt changed")
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
+
+
 def generate_guided_docking_proposals(
     authenticated_problem: AuthenticatedDockingProblem,
     budget: DockingBudget,
@@ -2226,6 +2892,306 @@ def generate_guided_docking_proposals(
     return result, receipt
 
 
+def generate_fixed_source_bound_conformer_docking_proposals(
+    authenticated_problem: AuthenticatedDockingProblem,
+    budget: DockingBudget,
+    context: GuidedPlacementContext,
+    *,
+    receptor_system: AllAtomSystem,
+    ligand_system: AllAtomSystem,
+    source_conformer_ensemble: SourceBoundPreparedConformerEnsemble,
+) -> tuple[
+    tuple[DockingProposal, ...],
+    GuidedPlacementReceipt,
+    FixedSourceBoundConformerProposalReceipt,
+]:
+    """Build the historical-development fixed 64-slot true-conformer lane."""
+
+    if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
+        raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
+    if not isinstance(budget, DockingBudget):
+        raise TypeError("budget must be DockingBudget")
+    if not isinstance(context, GuidedPlacementContext):
+        raise TypeError("context must be GuidedPlacementContext")
+    if not isinstance(source_conformer_ensemble, SourceBoundPreparedConformerEnsemble):
+        raise TypeError(
+            "source_conformer_ensemble must be SourceBoundPreparedConformerEnsemble"
+        )
+    if budget.candidate_count != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT:
+        raise DockingAuthorityError(
+            "fixed true-conformer profile requires exactly 64 candidates"
+        )
+    authenticated_problem.input_receipt_sha256
+    if (
+        context.authority_input_receipt_sha256
+        != authenticated_problem.input_receipt_sha256
+        or context.receptor_system_sha256
+        != authenticated_problem.receptor_system_sha256
+        or context.ligand_system_sha256 != authenticated_problem.ligand_system_sha256
+        or context.receptor_atom_indices != authenticated_problem.receptor_atom_indices
+    ):
+        raise DockingAuthorityError(
+            "fixed true-conformer guided context is cross-wired"
+        )
+    context.fingerprint_sha256
+    derived_context = build_guided_placement_context(
+        authenticated_problem,
+        receptor_system,
+        ligand_system,
+    )
+    if derived_context.fingerprint_sha256 != context.fingerprint_sha256:
+        raise DockingAuthorityError(
+            "fixed true-conformer context does not match its derivation"
+        )
+    try:
+        ensemble_document = source_conformer_ensemble.to_dict()
+    except ConformerPreparationError as exc:
+        raise DockingAuthorityError(
+            "fixed true-conformer prepared ensemble is invalid"
+        ) from exc
+    source_ligand_system_sha256 = canonical_system_sha256(
+        source_conformer_ensemble.source_system
+    )
+    active_ligand_system_sha256 = canonical_system_sha256(ligand_system)
+    source_ligand_topology_sha256 = canonical_topology_sha256(
+        source_conformer_ensemble.source_system
+    )
+    prepared_topology_sha256 = canonical_topology_sha256(
+        source_conformer_ensemble.system
+    )
+    if (
+        source_ligand_system_sha256 != active_ligand_system_sha256
+        or source_ligand_system_sha256 != authenticated_problem.ligand_system_sha256
+        or source_ligand_topology_sha256 != prepared_topology_sha256
+    ):
+        raise DockingAuthorityError(
+            "fixed true-conformer ensemble is cross-wired to another ligand"
+        )
+    conformer_count = len(source_conformer_ensemble.records)
+    search_space = authenticated_problem.search_space
+    ensemble_coordinates = source_conformer_ensemble.system.coordinates
+    if (
+        not 2 <= conformer_count <= 8
+        or ensemble_coordinates.shape != (conformer_count, ligand_system.atom_count, 3)
+        or ensemble_coordinates.device.type != "cpu"
+        or ensemble_coordinates.dtype != search_space.local_offsets.dtype
+        or ligand_system.coordinates.dtype != search_space.local_offsets.dtype
+        or ligand_system.coordinates.device.type != "cpu"
+    ):
+        raise DockingAuthorityError(
+            "fixed true-conformer ensemble is outside the fixed profile contract"
+        )
+
+    placement_policy = PocketPlacementPolicy(
+        centered_candidate_count=FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT
+    )
+    baseline, placement_receipt = generate_pocket_centered_docking_proposals(
+        authenticated_problem,
+        budget,
+        policy=placement_policy,
+    )
+    if len(baseline) != FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT:
+        raise DockingAuthorityError(
+            "fixed true-conformer baseline does not contain 64 proposals"
+        )
+    for proposal_index, proposal in enumerate(baseline):
+        proposal.assert_integrity()
+        expected_candidate_id = _stable_candidate_id(
+            proposal_index=proposal_index,
+            seed=budget.seed,
+            problem_fingerprint_sha256=(
+                authenticated_problem.problem.fingerprint_sha256
+            ),
+            search_space_fingerprint_sha256=search_space.fingerprint_sha256,
+        )
+        if (
+            proposal.proposal_index != proposal_index
+            or proposal.seed != budget.seed
+            or proposal.candidate_id != expected_candidate_id
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer baseline candidate identity is invalid"
+            )
+
+    torsion_metadata_by_rank = tuple(
+        _source_relative_rotor_torsion_metadata(
+            authenticated_problem,
+            source_conformer_ensemble.source_system,
+            ensemble_coordinates[rank],
+        )
+        for rank in range(conformer_count)
+    )
+    proposals = list(baseline)
+    torsion_metadata_fingerprints = [
+        _torsion_metadata_sha256(proposal.torsion_angles) for proposal in baseline
+    ]
+    lineages: list[FixedSourceBoundConformerLineageRow] = []
+    from . import proposals as proposal_module
+
+    pocket_center = authenticated_problem.pocket.center.to(
+        dtype=search_space.local_offsets.dtype,
+        device="cpu",
+    )
+    for offset in range(FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT):
+        proposal_index = FIXED_SOURCE_BOUND_CONFORMER_VARIANT_START + offset
+        source_index = FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START + offset
+        conformer_rank = offset % conformer_count
+        target = baseline[proposal_index]
+        source = baseline[source_index]
+        record = source_conformer_ensemble.records[conformer_rank]
+        conformer = ensemble_coordinates[conformer_rank]
+        conformer_centroid = conformer.mean(dim=0)
+        source_centroid = source.coordinates.mean(dim=0)
+        rotation = source.rotation
+        coordinates = (
+            (conformer - conformer_centroid) @ rotation.T + source_centroid
+        ).contiguous()
+        translation = (source_centroid - conformer_centroid @ rotation.T).contiguous()
+        reconstructed = conformer @ rotation.T + translation
+        if not bool(
+            torch.allclose(
+                reconstructed,
+                coordinates,
+                atol=1.0e-12,
+                rtol=0.0,
+            )
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer rigid frame is numerically inconsistent"
+            )
+        centroid_error = float(
+            torch.linalg.vector_norm(coordinates.mean(dim=0) - source_centroid).item()
+        )
+        centroid_offset = float(
+            torch.linalg.vector_norm(coordinates.mean(dim=0) - pocket_center).item()
+        )
+        if (
+            centroid_error > _CENTROID_TOLERANCE_ANGSTROM
+            or centroid_offset
+            > budget.translation_radius_angstrom + _CENTROID_TOLERANCE_ANGSTROM
+        ):
+            raise DockingAuthorityError(
+                "fixed true-conformer proposal exceeds its paired source frame"
+            )
+        torsion_metadata = torsion_metadata_by_rank[conformer_rank]
+        coordinate_digest = coordinate_fingerprint(coordinates)
+        torsion_metadata_digest = _torsion_metadata_sha256(torsion_metadata)
+        fingerprint = proposal_module._proposal_fingerprint(
+            proposal_index=proposal_index,
+            seed=budget.seed,
+            torsion_angles=torsion_metadata,
+            rotation=rotation,
+            translation=translation,
+            problem_fingerprint_sha256=(
+                authenticated_problem.problem.fingerprint_sha256
+            ),
+            search_space_fingerprint_sha256=search_space.fingerprint_sha256,
+            coordinate_fingerprint_sha256=coordinate_digest,
+        )
+        variant = DockingProposal(
+            candidate_id=target.candidate_id,
+            coordinates=coordinates,
+            torsion_angles=torsion_metadata,
+            rotation=rotation,
+            translation=translation,
+            proposal_index=proposal_index,
+            seed=budget.seed,
+            fingerprint_sha256=fingerprint,
+            problem_fingerprint_sha256=(
+                authenticated_problem.problem.fingerprint_sha256
+            ),
+            search_space_fingerprint_sha256=search_space.fingerprint_sha256,
+            coordinate_fingerprint_sha256=coordinate_digest,
+        )
+        variant.assert_integrity()
+        proposals[proposal_index] = variant
+        torsion_metadata_fingerprints[proposal_index] = torsion_metadata_digest
+        lineages.append(
+            FixedSourceBoundConformerLineageRow(
+                proposal_index=proposal_index,
+                source_proposal_index=source_index,
+                candidate_id=target.candidate_id,
+                conformer_rank=conformer_rank,
+                source_conformer_index=record.source_conformer_index,
+                conformer_id=record.conformer_id,
+                conformer_energy_kcal_mol=record.energy_kcal_mol,
+                conformer_coordinates_sha256=record.coordinates_sha256,
+                source_proposal_fingerprint_sha256=source.fingerprint_sha256,
+                source_coordinate_fingerprint_sha256=(
+                    source.coordinate_fingerprint_sha256
+                ),
+                variant_proposal_fingerprint_sha256=variant.fingerprint_sha256,
+                variant_coordinate_fingerprint_sha256=(
+                    variant.coordinate_fingerprint_sha256
+                ),
+                torsion_metadata_sha256=torsion_metadata_digest,
+            )
+        )
+
+    result = tuple(proposals)
+    profile = fixed_source_bound_conformer_profile_document()
+    profile_fingerprint_sha256 = str(profile["fingerprint_sha256"])
+    proposal_modes = (
+        (POCKET_CENTER_BASELINE_MODE,) * FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT
+        + (UNIFORM_V3_ENSEMBLE_MODE,) * FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT
+        + (UNIFORM_FALLBACK_MODE,) * FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT
+    )
+    ensemble_source_indices: tuple[int | None, ...] = (
+        (None,) * FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT
+        + tuple(
+            range(
+                FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START,
+                FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT,
+            )
+        )
+        + (None,) * FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT
+    )
+    guided_receipt = GuidedPlacementReceipt(
+        authenticated_input_receipt_sha256=(authenticated_problem.input_receipt_sha256),
+        guidance_context_sha256=context.fingerprint_sha256,
+        guided_policy_sha256=profile_fingerprint_sha256,
+        budget_sha256=_budget_sha256(budget),
+        proposal_fingerprint_sha256s=tuple(
+            proposal.fingerprint_sha256 for proposal in result
+        ),
+        proposal_modes=proposal_modes,
+        ligand_anchor_atom_indices=((),) * len(result),
+        receptor_anchor_atom_indices=((),) * len(result),
+        requested_anchor_distance_angstroms=(None,) * len(result),
+        observed_anchor_distance_angstroms=(None,) * len(result),
+        feature_counts=context.feature_counts(),
+        ensemble_source_proposal_indices=ensemble_source_indices,
+    )
+    development_receipt = FixedSourceBoundConformerProposalReceipt(
+        authenticated_input_receipt_sha256=(authenticated_problem.input_receipt_sha256),
+        budget_sha256=_budget_sha256(budget),
+        source_ligand_system_sha256=source_ligand_system_sha256,
+        source_ligand_topology_sha256=source_ligand_topology_sha256,
+        source_conformer_ensemble_receipt_sha256=(
+            source_conformer_ensemble.receipt_sha256
+        ),
+        source_conformer_ensemble_document=ensemble_document,
+        baseline_placement_receipt_sha256=placement_receipt.receipt_sha256,
+        profile_fingerprint_sha256=profile_fingerprint_sha256,
+        guided_receipt=guided_receipt,
+        baseline_candidate_ids=tuple(row.candidate_id for row in baseline),
+        candidate_ids=tuple(row.candidate_id for row in result),
+        baseline_proposal_fingerprint_sha256s=tuple(
+            row.fingerprint_sha256 for row in baseline
+        ),
+        proposal_fingerprint_sha256s=tuple(row.fingerprint_sha256 for row in result),
+        baseline_coordinate_fingerprint_sha256s=tuple(
+            row.coordinate_fingerprint_sha256 for row in baseline
+        ),
+        proposal_coordinate_fingerprint_sha256s=tuple(
+            row.coordinate_fingerprint_sha256 for row in result
+        ),
+        proposal_torsion_metadata_sha256s=tuple(torsion_metadata_fingerprints),
+        lineage_rows=tuple(lineages),
+    )
+    return result, guided_receipt, development_receipt
+
+
 @dataclass(frozen=True, slots=True)
 class GuidedPlacementSearchResult:
     guided_receipt: GuidedPlacementReceipt
@@ -2334,6 +3300,16 @@ def run_authenticated_guided_placement_search(
 
 
 __all__ = [
+    "FIXED_SOURCE_BOUND_CONFORMER_CANDIDATE_COUNT",
+    "FIXED_SOURCE_BOUND_CONFORMER_CENTERED_COUNT",
+    "FIXED_SOURCE_BOUND_CONFORMER_LINEAGE_SCHEMA_ID",
+    "FIXED_SOURCE_BOUND_CONFORMER_PROFILE_ID",
+    "FIXED_SOURCE_BOUND_CONFORMER_PROFILE_SCHEMA_ID",
+    "FIXED_SOURCE_BOUND_CONFORMER_RECEIPT_SCHEMA_ID",
+    "FIXED_SOURCE_BOUND_CONFORMER_SOURCE_START",
+    "FIXED_SOURCE_BOUND_CONFORMER_TORSION_METADATA_SCHEMA_ID",
+    "FIXED_SOURCE_BOUND_CONFORMER_VARIANT_COUNT",
+    "FIXED_SOURCE_BOUND_CONFORMER_VARIANT_START",
     "GUIDED_FEATURE_POLICY_ID",
     "GUIDED_MODES",
     "GUIDED_PLACEMENT_CONTEXT_SCHEMA_ID",
@@ -2349,11 +3325,16 @@ __all__ = [
     "POCKET_CENTER_BASELINE_MODE",
     "UNIFORM_FALLBACK_MODE",
     "UNIFORM_V3_ENSEMBLE_MODE",
+    "FixedSourceBoundConformerLineageRow",
+    "FixedSourceBoundConformerProposalReceipt",
     "GuidedPlacementContext",
     "GuidedPlacementPolicy",
     "GuidedPlacementReceipt",
     "GuidedPlacementSearchResult",
     "build_guided_placement_context",
+    "fixed_source_bound_conformer_profile_document",
+    "fixed_source_bound_conformer_proposal_indices",
+    "generate_fixed_source_bound_conformer_docking_proposals",
     "generate_guided_docking_proposals",
     "run_authenticated_guided_placement_search",
     "uniform_v3_ensemble_proposal_indices",
