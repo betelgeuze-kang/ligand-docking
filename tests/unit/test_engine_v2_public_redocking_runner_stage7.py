@@ -1450,9 +1450,13 @@ def test_partial_summary_name_binds_exact_case_selection() -> None:
     assert first_name.endswith(".json")
 
 
-def test_development_engine_v2_only_requires_exact_historical_slice() -> None:
+@pytest.mark.parametrize("development_v8_clearance_variant", (False, True))
+def test_development_engine_v2_only_requires_exact_historical_slice(
+    development_v8_clearance_variant: bool,
+) -> None:
     arguments = SimpleNamespace(
         development_engine_v2_only=True,
+        development_v8_clearance_variant=development_v8_clearance_variant,
         gnina=None,
         stage0_policy=None,
         seed=runner.DEFAULT_SEED,
@@ -1473,6 +1477,23 @@ def test_development_engine_v2_only_requires_exact_historical_slice() -> None:
     assert not set(case_ids) & set(
         runner.FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS
     )
+
+
+def test_development_v8_clearance_variant_requires_development_only_lane() -> None:
+    arguments = SimpleNamespace(
+        development_engine_v2_only=False,
+        development_v8_clearance_variant=True,
+        gnina=Path("gnina"),
+    )
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="requires the development Engine V2-only lane",
+    ):
+        runner._require_execution_lane_arguments(
+            arguments,
+            FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
+        )
 
 
 @pytest.mark.parametrize(
@@ -1553,15 +1574,17 @@ def test_development_engine_v2_only_rejects_drift_before_output_creation(
     assert not output_root.exists()
 
 
-def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable() -> None:
+@pytest.mark.parametrize("development_v8_clearance_variant", (False, True))
+def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
+    development_v8_clearance_variant: bool,
+) -> None:
     case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
     output_root = (Path.cwd() / ".betelgeuze" / "summary-fixture").resolve()
     scorer_backend = runner.ScorerBackend.PYTHON_REFERENCE
-    expected_policy = {
-        **runner.ENGINE_V2_CPU_POLICY,
-        "scorer_backend": scorer_backend.value,
-        "scorer_thread_count": 1,
-    }
+    expected_policy = runner._engine_v2_execution_policy(
+        scorer_backend,
+        development_v8_clearance_variant=development_v8_clearance_variant,
+    )
     implementation_sha256 = "a" * 64
     evaluation_pipeline_sha256 = "b" * 64
     execution_environment_sha256 = "c" * 64
@@ -1611,6 +1634,9 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable() 
                 output=output,
                 seed=runner.frozen_public_redocking_case_seed(case_id),
                 scorer_backend=scorer_backend,
+                development_v8_clearance_variant=(
+                    development_v8_clearance_variant
+                ),
             )
         )
         row = {
@@ -1674,6 +1700,7 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable() 
         engine_source_sha256=implementation_sha256,
         evaluation_pipeline_sha256=evaluation_pipeline_sha256,
         execution_environment_sha256=execution_environment_sha256,
+        development_v8_clearance_variant=development_v8_clearance_variant,
     )
 
     claimed_sha256 = summary.pop("summary_sha256")
@@ -1685,6 +1712,14 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable() 
     assert summary["external_engines_executed"] is False
     assert summary["paired_baseline_metrics_present"] is False
     assert summary["claim_safe"] is False
+    assert summary["development_v8_clearance_variant"] is (
+        development_v8_clearance_variant
+    )
+    assert all(
+        ("--development-v8-clearance-variant" in row["execution_command"])
+        is development_v8_clearance_variant
+        for row in summary["rows"]
+    )
 
     tampered = dict(execution_payloads[0])
     tampered["implementation_sha256"] = "d" * 64
@@ -1708,6 +1743,9 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable() 
             engine_source_sha256=implementation_sha256,
             evaluation_pipeline_sha256=evaluation_pipeline_sha256,
             execution_environment_sha256=execution_environment_sha256,
+            development_v8_clearance_variant=(
+                development_v8_clearance_variant
+            ),
         )
 
 
