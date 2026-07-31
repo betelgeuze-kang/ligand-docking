@@ -36,6 +36,8 @@ from .guided_placement import (
     GuidedPlacementPolicy,
     GuidedPlacementReceipt,
     GuidedPlacementSearchResult,
+    SourcePairedTorsionRescueProposalReceipt,
+    SourcePairedTorsionRescuePolicy,
     run_authenticated_guided_placement_search,
 )
 from .proposals import DockingBudget, DockingProposal
@@ -421,7 +423,9 @@ class ScorerBackendReceipt:
                 self.build_flags,
             )
         ):
-            raise ScorerV1Error("python reference backend cannot claim native build data")
+            raise ScorerV1Error(
+                "python reference backend cannot claim native build data"
+            )
         if backend is not ScorerBackend.PYTHON_REFERENCE and not all(
             (
                 self.extension_sha256,
@@ -1616,9 +1620,7 @@ class ChemistryPoseScorerV1:
                 ),
                 ligand_pair_count=int(native_row.ligand_pair_count),
                 hbond_count=int(native_row.hbond_count),
-                hydrophobic_contact_count=int(
-                    native_row.hydrophobic_contact_count
-                ),
+                hydrophobic_contact_count=int(native_row.hydrophobic_contact_count),
                 buried_polar_count=int(native_row.buried_polar_count),
                 **dict(zip(term_names, values[:8], strict=True)),
             )
@@ -1995,14 +1997,18 @@ def run_authenticated_scorer_v1_guided_search(
     receptor_system: AllAtomSystem,
     ligand_system: AllAtomSystem,
     refiner=None,
-    guided_policy: GuidedPlacementPolicy | None = None,
+    guided_policy: GuidedPlacementPolicy
+    | SourcePairedTorsionRescuePolicy
+    | None = None,
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     precomputed_proposals: Sequence[DockingProposal] | None = None,
     precomputed_guided_receipt: GuidedPlacementReceipt | None = None,
     precomputed_provenance_receipt: (
-        FixedSourceBoundConformerProposalReceipt | None
+        FixedSourceBoundConformerProposalReceipt
+        | SourcePairedTorsionRescueProposalReceipt
+        | None
     ) = None,
 ) -> ScorerV1GuidedSearchResult:
     if not isinstance(scorer, ChemistryPoseScorerV1):

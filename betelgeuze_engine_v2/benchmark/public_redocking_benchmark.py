@@ -49,6 +49,9 @@ PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
 PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.5.0"
 )
+PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.6.0"
+)
 _SCORER_V1_BACKEND_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0"
 )
@@ -63,6 +66,16 @@ PUBLIC_REDOCKING_HISTORICAL_REPORT_SHA256 = (
 )
 PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.6.0"
+)
+PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.7.0"
+)
+PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE = "uniform_torsion_rescue_variant"
+_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256 = (
+    "1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6"
+)
+_SOURCE_PAIRED_TORSION_RESCUE_BASE_GUIDED_POLICY_SHA256 = (
+    "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f"
 )
 PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "donor_acceptor_hotspot",
@@ -225,6 +238,89 @@ _SCORER_TERM_NAMES = (
     "weak_pocket_prior",
     "total_score",
 )
+_SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS = frozenset(
+    {
+        "schema_id",
+        "source_proposal_sha256",
+        "config_sha256",
+        "lane",
+        "selection_reason",
+        "baseline_v6_receipt_sha256",
+        "baseline_v6_receipt_payload",
+        "baseline_v6_max_steps",
+        "v3_proposal_indices",
+        "rotatable_child_atom_indices",
+        "torsion_step_budget",
+        "selection_window_reachable_from_baseline_v6_receptor_penalty",
+        "torsion_evaluation_skip_reason",
+        "evaluation_stopped_after_selection_window_became_unreachable",
+        "torsion_evaluated",
+        "torsion_variant_available",
+        "torsion_selected",
+        "evaluated_torsion_steps",
+        "evaluated_torsion_moves",
+        "evaluated_total_torsion_path_radians_binary64_hex",
+        "accepted_torsion_steps",
+        "accepted_torsion_moves",
+        "objective_evaluation_count",
+        "fixed_objective_evaluation_count",
+        "torsion_trial_objective_evaluation_count",
+        "initial_receptor_penalty_binary64_hex",
+        "baseline_v6_receptor_penalty_binary64_hex",
+        "optimized_receptor_penalty_binary64_hex",
+        "final_receptor_penalty_binary64_hex",
+        "initial_internal_penalty_binary64_hex",
+        "baseline_v6_internal_penalty_binary64_hex",
+        "optimized_internal_penalty_binary64_hex",
+        "final_internal_penalty_binary64_hex",
+        "initial_combined_penalty_binary64_hex",
+        "baseline_v6_combined_penalty_binary64_hex",
+        "optimized_combined_penalty_binary64_hex",
+        "final_combined_penalty_binary64_hex",
+        "initial_penalty_binary64_hex",
+        "final_penalty_binary64_hex",
+        "generic_penalty_scope",
+        "baseline_v6_penalty_scope",
+        "minimum_selected_final_receptor_penalty_binary64_hex",
+        "maximum_selected_final_receptor_penalty_binary64_hex",
+        "total_torsion_path_radians_binary64_hex",
+        "accepted_steps",
+        "accepted_translation_steps",
+        "accepted_rigid_rotation_steps",
+        "accepted_rotation_steps",
+        "accepted_rotation_steps_include_torsion",
+        "line_search_evaluation_count",
+        "fallback_direction_step_count",
+        "original_pose_valid",
+        "total_translation_binary64_hex",
+        "total_rotation_vector_binary64_hex",
+        "pre_coordinates_sha256",
+        "baseline_coordinates_sha256",
+        "post_coordinates_sha256",
+        "ranking_score_reused_as_physical_energy",
+        "posebusters_or_rmsd_used_for_selection",
+        "source_lane_retained",
+        "scientifically_validated",
+        "legacy_v7_receipt_schema_id",
+        "source_paired_torsion_rescue_profile",
+        "source_paired_torsion_rescue_pairs",
+        "source_paired_torsion_rescue_allocation_sha256",
+        "source_paired_torsion_rescue_policy_sha256",
+        "source_paired_torsion_rescue_guidance_context_sha256",
+        "source_paired_torsion_rescue_budget_sha256",
+        "source_paired_torsion_rescue_variant_cap",
+        "proposal_torsion_eligibility_lane",
+        "source_paired_parent_proposal_index",
+        "nested_v6_treated_proposal_as_v3_variant",
+        "rescue_target_excluded_from_nested_v3_indices",
+        "result_dependent_eligibility",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "claim_safe",
+        "receipt_sha256",
+    }
+)
 
 
 class PublicRedockingBenchmarkError(ValueError):
@@ -255,6 +351,24 @@ def _digest(value: object, *, name: str) -> str:
     if _SHA256_RE.fullmatch(result) is None:
         raise PublicRedockingBenchmarkError(f"{name} must be a lowercase SHA-256")
     return result
+
+
+def _freeze_canonical_json(value: object) -> object:
+    if isinstance(value, Mapping):
+        return MappingProxyType(
+            {str(key): _freeze_canonical_json(item) for key, item in value.items()}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_canonical_json(item) for item in value)
+    return value
+
+
+def _thaw_canonical_json(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw_canonical_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_canonical_json(item) for item in value]
+    return value
 
 
 def _finite(
@@ -2561,12 +2675,22 @@ class PublicRedockingEngineV2CandidateDiagnostic:
     score_term_binary64_hex: Mapping[str, str] = field(default_factory=dict)
     error_code: str = ""
     schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+    torsion_rescue_parent_proposal_index: int | None = None
 
     def __post_init__(self) -> None:
-        if self.schema_id != PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID:
+        if self.schema_id not in {
+            PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+            PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID,
+        }:
             raise PublicRedockingBenchmarkError(
                 "unsupported Engine V2 candidate diagnostic schema"
             )
+        allowed_proposal_modes = set(PUBLIC_REDOCKING_PROPOSAL_MODES)
+        if (
+            self.schema_id
+            == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+        ):
+            allowed_proposal_modes.add(PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
         if (
             type(self.proposal_index) is not int
             or not 0 <= self.proposal_index < PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
@@ -2582,11 +2706,13 @@ class PublicRedockingEngineV2CandidateDiagnostic:
         error_code = str(self.error_code or "").strip()
         proposal_mode = str(self.proposal_mode or "").strip()
         ensemble_source = self.ensemble_source_proposal_index
+        rescue_parent = self.torsion_rescue_parent_proposal_index
         if proposal_mode == "uniform_v3_rigid_ensemble":
             if (
                 type(ensemble_source) is not int
                 or not 0 <= ensemble_source < PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
                 or ensemble_source == self.proposal_index
+                or rescue_parent is not None
             ):
                 raise PublicRedockingBenchmarkError(
                     "uniform V3 ensemble candidate source index is invalid"
@@ -2594,6 +2720,22 @@ class PublicRedockingEngineV2CandidateDiagnostic:
         elif ensemble_source is not None:
             raise PublicRedockingBenchmarkError(
                 "non-ensemble candidate cannot declare an ensemble source"
+            )
+        if proposal_mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE:
+            if (
+                self.schema_id
+                != PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+                or type(rescue_parent) is not int
+                or not 0 <= rescue_parent < PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
+                or rescue_parent == self.proposal_index
+                or ensemble_source is not None
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "torsion-rescue candidate parent index is invalid"
+                )
+        elif rescue_parent is not None:
+            raise PublicRedockingBenchmarkError(
+                "non-rescue candidate cannot declare a torsion-rescue parent"
             )
         failed_checks = tuple(
             str(value or "").strip() for value in self.posebusters_failed_check_ids
@@ -2610,7 +2752,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             )
         score_terms = dict(self.score_term_binary64_hex)
         if status == "success":
-            if proposal_mode not in PUBLIC_REDOCKING_PROPOSAL_MODES:
+            if proposal_mode not in allowed_proposal_modes:
                 raise PublicRedockingBenchmarkError(
                     "successful candidate proposal mode is invalid"
                 )
@@ -2760,7 +2902,11 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                         "candidate refinement diagnostics are incomplete"
                     )
                 object.__setattr__(self, "refinement_receipt_sha256", refinement_sha256)
-                receipt_payload = dict(self.refinement_receipt_payload)
+                receipt_payload = _thaw_canonical_json(self.refinement_receipt_payload)
+                if not isinstance(receipt_payload, dict):
+                    raise PublicRedockingBenchmarkError(
+                        "candidate refinement receipt payload is invalid"
+                    )
                 if receipt_payload:
                     claimed_payload_sha256 = receipt_payload.pop("receipt_sha256", "")
                     if (
@@ -2771,14 +2917,17 @@ class PublicRedockingEngineV2CandidateDiagnostic:
                             "candidate refinement receipt payload is invalid"
                         )
                     receipt_payload["receipt_sha256"] = claimed_payload_sha256
-                elif proposal_mode == "uniform_v3_rigid_ensemble":
+                elif proposal_mode in {
+                    "uniform_v3_rigid_ensemble",
+                    "uniform_torsion_rescue_variant",
+                }:
                     raise PublicRedockingBenchmarkError(
-                        "V3 ensemble candidate lacks refinement receipt payload"
+                        "source-paired candidate lacks refinement receipt payload"
                     )
                 object.__setattr__(
                     self,
                     "refinement_receipt_payload",
-                    MappingProxyType(receipt_payload),
+                    _freeze_canonical_json(receipt_payload),
                 )
         elif (
             self.proposal_fingerprint_sha256
@@ -2807,7 +2956,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             raise PublicRedockingBenchmarkError(
                 "failed Engine V2 candidate requires error_code and optional mode"
             )
-        elif proposal_mode and proposal_mode not in PUBLIC_REDOCKING_PROPOSAL_MODES:
+        elif proposal_mode and proposal_mode not in allowed_proposal_modes:
             raise PublicRedockingBenchmarkError(
                 "failed candidate proposal mode is invalid"
             )
@@ -2844,7 +2993,7 @@ class PublicRedockingEngineV2CandidateDiagnostic:
         )
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "schema_id": self.schema_id,
             "proposal_index": self.proposal_index,
             "status": self.status,
@@ -2879,10 +3028,20 @@ class PublicRedockingEngineV2CandidateDiagnostic:
             "refinement_total_rotation_vector_binary64_hex": list(
                 self.refinement_total_rotation_vector_binary64_hex
             ),
-            "refinement_receipt_payload": dict(self.refinement_receipt_payload),
+            "refinement_receipt_payload": _thaw_canonical_json(
+                self.refinement_receipt_payload
+            ),
             "score_term_binary64_hex": dict(self.score_term_binary64_hex),
             "error_code": self.error_code,
         }
+        if (
+            self.schema_id
+            == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+        ):
+            payload["torsion_rescue_parent_proposal_index"] = (
+                self.torsion_rescue_parent_proposal_index
+            )
+        return payload
 
 
 def _validated_scorer_backend_receipt(
@@ -2967,6 +3126,519 @@ def _validated_scorer_backend_receipt(
     return MappingProxyType(payload)
 
 
+def _validated_source_paired_torsion_rescue_proposal_receipt(
+    value: Mapping[str, object] | None,
+) -> Mapping[str, object] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise TypeError("torsion-rescue proposal receipt must be a mapping")
+    try:
+        thawed_value = _thaw_canonical_json(value)
+        if not isinstance(thawed_value, dict):
+            raise TypeError("torsion-rescue proposal receipt must be an object")
+        payload = json.loads(
+            json.dumps(
+                thawed_value,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            )
+        )
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal receipt is not canonical JSON"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal receipt must be an object"
+        )
+
+    def hashed_document(
+        document: object,
+        *,
+        hash_field: str,
+        name: str,
+    ) -> tuple[dict[str, object], str]:
+        if not isinstance(document, dict):
+            raise PublicRedockingBenchmarkError(f"{name} must be an object")
+        projection = dict(document)
+        claimed = _digest(projection.pop(hash_field, ""), name=hash_field)
+        if _sha256(projection) != claimed:
+            raise PublicRedockingBenchmarkError(f"{name} hash mismatch")
+        return projection, claimed
+
+    projection, receipt_sha256 = hashed_document(
+        payload,
+        hash_field="receipt_sha256",
+        name="torsion-rescue proposal receipt",
+    )
+    policy, policy_sha256 = hashed_document(
+        projection.get("rescue_policy"),
+        hash_field="fingerprint_sha256",
+        name="torsion-rescue policy",
+    )
+    allocation, allocation_sha256 = hashed_document(
+        projection.get("allocation"),
+        hash_field="allocation_sha256",
+        name="torsion-rescue allocation",
+    )
+    baseline, baseline_sha256 = hashed_document(
+        projection.get("baseline_guided_placement"),
+        hash_field="receipt_sha256",
+        name="baseline guided receipt",
+    )
+    guided, guided_sha256 = hashed_document(
+        projection.get("guided_placement"),
+        hash_field="receipt_sha256",
+        name="torsion-rescue guided receipt",
+    )
+    expected_schema_values = {
+        "proposal": (
+            "betelgeuze.engine_v2_source_paired_torsion_rescue_proposal_receipt/1.0.0"
+        ),
+        "policy": ("betelgeuze.engine_v2_source_paired_torsion_rescue_policy/1.0.0"),
+        "allocation": (
+            "betelgeuze.engine_v2_source_paired_torsion_rescue_allocation/1.0.0"
+        ),
+        "baseline": "betelgeuze.engine_v2_guided_placement_receipt/1.3.0",
+        "guided": "betelgeuze.engine_v2_guided_placement_receipt/1.4.0",
+    }
+    expected_top_fields = {
+        "schema_id",
+        "authenticated_input_receipt_sha256",
+        "budget_sha256",
+        "source_ligand_system_sha256",
+        "source_ligand_topology_sha256",
+        "rescue_policy_sha256",
+        "rescue_policy",
+        "allocation",
+        "baseline_guided_placement",
+        "guided_placement",
+        "candidate_count",
+        "candidate_slots",
+        "proposal_objects_and_coordinates_unchanged",
+        "selected_parent_proposal_objects_retained",
+        "result_dependent_allocation",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "scientifically_validated",
+        "claim_safe",
+    }
+    expected_policy_fields = {
+        "schema_id",
+        "policy_id",
+        "base_guided_policy_sha256",
+        "candidate_count",
+        "maximum_variant_count",
+        "source_pair_authority",
+        "variant_target_selection",
+        "authority_rotor_required",
+        "proposal_objects_and_coordinates_unchanged",
+        "selected_parent_proposal_objects_retained",
+        "ordinary_v3_and_rescue_target_parent_unions_disjoint",
+        "candidate_denominator_changed",
+        "rmsd_posebusters_native_rank_or_score_used_for_allocation",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "product_promotion_eligible",
+        "public_claim_eligible",
+        "scientifically_validated",
+        "claim_safe",
+    }
+    expected_allocation_fields = {
+        "schema_id",
+        "authenticated_input_receipt_sha256",
+        "guidance_context_sha256",
+        "budget_sha256",
+        "rescue_policy_sha256",
+        "base_guided_policy_sha256",
+        "candidate_count",
+        "authority_rotor_count",
+        "v3_target_parent_pairs",
+        "rescue_target_parent_pairs",
+        "rescue_variant_count",
+        "rescue_variant_cap",
+        "selected_parent_proposal_objects_retained",
+        "candidate_denominator_changed",
+        "result_dependent_allocation",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "claim_safe",
+    }
+    common_guided_fields = {
+        "schema_id",
+        "authenticated_input_receipt_sha256",
+        "guidance_context_sha256",
+        "guided_policy_sha256",
+        "budget_sha256",
+        "proposal_count",
+        "proposal_fingerprint_sha256s",
+        "proposal_modes",
+        "proposal_guidance_rows",
+        "guided_proposal_count",
+        "pocket_center_baseline_count",
+        "uniform_fallback_count",
+        "uniform_v3_ensemble_count",
+        "uniform_random_placement_retained_as_fallback",
+        "feature_counts",
+        "scientifically_validated",
+        "claim_safe",
+    }
+    rescue_guided_fields = common_guided_fields | {
+        "source_paired_torsion_rescue_profile",
+        "baseline_guided_receipt_sha256",
+        "torsion_rescue_allocation_sha256",
+        "uniform_torsion_rescue_variant_count",
+        "uniform_torsion_rescue_variant_cap",
+        "proposal_objects_and_coordinates_unchanged",
+        "selected_parent_proposal_objects_retained",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+    }
+    if (
+        set(projection) != expected_top_fields
+        or set(policy) != expected_policy_fields
+        or set(allocation) != expected_allocation_fields
+        or set(baseline) != common_guided_fields
+        or set(guided) != rescue_guided_fields
+    ):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal receipt fields are not the fixed contract"
+        )
+    authority_sha256 = _digest(
+        projection.get("authenticated_input_receipt_sha256"),
+        name="authenticated_input_receipt_sha256",
+    )
+    budget_sha256 = _digest(
+        projection.get("budget_sha256"),
+        name="budget_sha256",
+    )
+    rescue_policy_sha256 = _digest(
+        projection.get("rescue_policy_sha256"),
+        name="rescue_policy_sha256",
+    )
+    for name in (
+        "source_ligand_system_sha256",
+        "source_ligand_topology_sha256",
+    ):
+        _digest(projection.get(name), name=name)
+    if (
+        projection.get("schema_id") != expected_schema_values["proposal"]
+        or policy.get("schema_id") != expected_schema_values["policy"]
+        or allocation.get("schema_id") != expected_schema_values["allocation"]
+        or baseline.get("schema_id") != expected_schema_values["baseline"]
+        or guided.get("schema_id") != expected_schema_values["guided"]
+        or rescue_policy_sha256 != policy_sha256
+        or policy_sha256 != _SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+        or policy.get("base_guided_policy_sha256")
+        != _SOURCE_PAIRED_TORSION_RESCUE_BASE_GUIDED_POLICY_SHA256
+        or allocation.get("rescue_policy_sha256") != policy_sha256
+        or allocation.get("base_guided_policy_sha256")
+        != policy.get("base_guided_policy_sha256")
+        or allocation.get("authenticated_input_receipt_sha256") != authority_sha256
+        or allocation.get("guidance_context_sha256")
+        != baseline.get("guidance_context_sha256")
+        or allocation.get("budget_sha256") != budget_sha256
+        or baseline.get("authenticated_input_receipt_sha256") != authority_sha256
+        or guided.get("authenticated_input_receipt_sha256") != authority_sha256
+        or baseline.get("budget_sha256") != budget_sha256
+        or guided.get("budget_sha256") != budget_sha256
+        or baseline.get("guided_policy_sha256")
+        != policy.get("base_guided_policy_sha256")
+        or guided.get("guided_policy_sha256") != policy_sha256
+        or guided.get("baseline_guided_receipt_sha256") != baseline_sha256
+        or guided.get("torsion_rescue_allocation_sha256") != allocation_sha256
+        or projection.get("candidate_count") != 64
+        or allocation.get("candidate_count") != 64
+        or guided.get("proposal_count") != 64
+        or baseline.get("proposal_count") != 64
+        or guided.get("source_paired_torsion_rescue_profile") is not True
+        or any(
+            projection.get(name) is not expected
+            for name, expected in (
+                ("proposal_objects_and_coordinates_unchanged", True),
+                ("selected_parent_proposal_objects_retained", True),
+                ("result_dependent_allocation", False),
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("scientifically_validated", False),
+                ("claim_safe", False),
+            )
+        )
+    ):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal receipt authority is cross-wired"
+        )
+
+    def normalized_pairs(name: str) -> tuple[tuple[int, int], ...]:
+        raw_rows = allocation.get(name)
+        if not isinstance(raw_rows, list):
+            raise PublicRedockingBenchmarkError(
+                "torsion-rescue allocation pair rows are invalid"
+            )
+        pairs: list[tuple[int, int]] = []
+        for row in raw_rows:
+            if not isinstance(row, dict) or set(row) != {
+                "target_proposal_index",
+                "parent_proposal_index",
+            }:
+                raise PublicRedockingBenchmarkError(
+                    "torsion-rescue allocation pair row is invalid"
+                )
+            target = row["target_proposal_index"]
+            parent = row["parent_proposal_index"]
+            if (
+                type(target) is not int
+                or type(parent) is not int
+                or not 0 <= target < 64
+                or not 0 <= parent < 64
+                or target == parent
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "torsion-rescue allocation indices are invalid"
+                )
+            pairs.append((target, parent))
+        result = tuple(pairs)
+        if result != tuple(sorted(result)):
+            raise PublicRedockingBenchmarkError(
+                "torsion-rescue allocation pairs are not ordered"
+            )
+        return result
+
+    v3_pairs = normalized_pairs("v3_target_parent_pairs")
+    rescue_pairs = normalized_pairs("rescue_target_parent_pairs")
+    v3_union = {index for pair in v3_pairs for index in pair}
+    rescue_union = {index for pair in rescue_pairs for index in pair}
+    rotor_count = allocation.get("authority_rotor_count")
+    ordered_pairs = tuple(sorted((*v3_pairs, *rescue_pairs)))
+    expected_rescue_count = min(4, len(ordered_pairs)) if rotor_count else 0
+    if expected_rescue_count == 0:
+        expected_rescue_targets: frozenset[int] = frozenset()
+    elif expected_rescue_count == 1:
+        expected_rescue_targets = frozenset((ordered_pairs[0][0],))
+    else:
+        target_indices = tuple(target for target, _ in ordered_pairs)
+        expected_rescue_targets = frozenset(
+            target_indices[
+                round(index * (len(target_indices) - 1) / (expected_rescue_count - 1))
+            ]
+            for index in range(expected_rescue_count)
+        )
+    expected_rescue_pairs = tuple(
+        pair for pair in ordered_pairs if pair[0] in expected_rescue_targets
+    )
+    expected_v3_pairs = tuple(
+        pair for pair in ordered_pairs if pair[0] not in expected_rescue_targets
+    )
+    if (
+        len(rescue_pairs) > 4
+        or type(rotor_count) is not int
+        or rotor_count < 0
+        or (rescue_pairs and rotor_count == 0)
+        or v3_union & rescue_union
+        or len({target for target, _ in (*v3_pairs, *rescue_pairs)})
+        != len(v3_pairs) + len(rescue_pairs)
+        or len({parent for _, parent in (*v3_pairs, *rescue_pairs)})
+        != len(v3_pairs) + len(rescue_pairs)
+        or allocation.get("rescue_variant_count") != len(rescue_pairs)
+        or allocation.get("rescue_variant_cap") != 4
+        or any(
+            allocation.get(name) is not expected
+            for name, expected in (
+                ("selected_parent_proposal_objects_retained", True),
+                ("candidate_denominator_changed", False),
+                ("result_dependent_allocation", False),
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("claim_safe", False),
+            )
+        )
+        or rescue_pairs != expected_rescue_pairs
+        or v3_pairs != expected_v3_pairs
+    ):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue allocation lanes are invalid"
+        )
+
+    candidate_slots = projection.get("candidate_slots")
+    baseline_fingerprints = baseline.get("proposal_fingerprint_sha256s")
+    guided_fingerprints = guided.get("proposal_fingerprint_sha256s")
+    baseline_modes = baseline.get("proposal_modes")
+    guided_modes = guided.get("proposal_modes")
+    baseline_rows = baseline.get("proposal_guidance_rows")
+    guided_rows = guided.get("proposal_guidance_rows")
+    if any(
+        not isinstance(rows, list) or len(rows) != 64
+        for rows in (
+            candidate_slots,
+            baseline_fingerprints,
+            guided_fingerprints,
+            baseline_modes,
+            guided_modes,
+            baseline_rows,
+            guided_rows,
+        )
+    ):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal receipt rows are incomplete"
+        )
+    slot_fingerprints: list[str] = []
+    candidate_ids: list[str] = []
+    for index, slot in enumerate(candidate_slots):
+        if (
+            not isinstance(slot, dict)
+            or set(slot)
+            != {
+                "proposal_index",
+                "candidate_id",
+                "proposal_fingerprint_sha256",
+                "coordinate_fingerprint_sha256",
+                "torsion_metadata_sha256",
+            }
+            or slot.get("proposal_index") != index
+            or not str(slot.get("candidate_id") or "").strip()
+        ):
+            raise PublicRedockingBenchmarkError(
+                "torsion-rescue candidate slot is invalid"
+            )
+        candidate_ids.append(str(slot["candidate_id"]))
+        slot_fingerprints.append(
+            _digest(
+                slot.get("proposal_fingerprint_sha256"),
+                name="proposal_fingerprint_sha256",
+            )
+        )
+        _digest(
+            slot.get("coordinate_fingerprint_sha256"),
+            name="coordinate_fingerprint_sha256",
+        )
+        _digest(
+            slot.get("torsion_metadata_sha256"),
+            name="torsion_metadata_sha256",
+        )
+    if (
+        len(set(candidate_ids)) != 64
+        or baseline_fingerprints != slot_fingerprints
+        or guided_fingerprints != slot_fingerprints
+    ):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal fingerprints are cross-wired"
+        )
+
+    expected_v3 = dict(v3_pairs)
+    expected_rescue = dict(rescue_pairs)
+    baseline_guidance_fields = {
+        "proposal_index",
+        "mode",
+        "ligand_anchor_atom_indices",
+        "receptor_anchor_atom_indices",
+        "anchor_pairs",
+        "anchor_pairing",
+        "anchor_distance_aggregation",
+        "requested_anchor_distance_angstrom_binary64_hex",
+        "observed_anchor_distance_angstrom_binary64_hex",
+        "ensemble_source_proposal_index",
+    }
+    for index, (baseline_mode, guided_mode, baseline_row, guided_row) in enumerate(
+        zip(
+            baseline_modes,
+            guided_modes,
+            baseline_rows,
+            guided_rows,
+            strict=True,
+        )
+    ):
+        if (
+            not isinstance(baseline_row, dict)
+            or not isinstance(guided_row, dict)
+            or set(baseline_row) != baseline_guidance_fields
+            or set(guided_row)
+            != baseline_guidance_fields | {"torsion_rescue_parent_proposal_index"}
+            or baseline_row.get("proposal_index") != index
+            or guided_row.get("proposal_index") != index
+            or baseline_row.get("mode") != baseline_mode
+            or guided_row.get("mode") != guided_mode
+        ):
+            raise PublicRedockingBenchmarkError(
+                "torsion-rescue guided rows are invalid"
+            )
+        baseline_common = dict(baseline_row)
+        guided_common = dict(guided_row)
+        for document in (baseline_common, guided_common):
+            document.pop("mode", None)
+            document.pop("ensemble_source_proposal_index", None)
+        guided_common.pop("torsion_rescue_parent_proposal_index", None)
+        if baseline_common != guided_common:
+            raise PublicRedockingBenchmarkError(
+                "torsion-rescue guided evidence changed placement guidance"
+            )
+        if index in expected_rescue:
+            if (
+                baseline_mode != "uniform_v3_rigid_ensemble"
+                or baseline_row.get("ensemble_source_proposal_index")
+                != expected_rescue[index]
+                or guided_mode != PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+                or guided_row.get("ensemble_source_proposal_index") is not None
+                or guided_row.get("torsion_rescue_parent_proposal_index")
+                != expected_rescue[index]
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "torsion-rescue guided lineage is cross-wired"
+                )
+        elif index in expected_v3:
+            if (
+                baseline_mode != "uniform_v3_rigid_ensemble"
+                or guided_mode != "uniform_v3_rigid_ensemble"
+                or baseline_row.get("ensemble_source_proposal_index")
+                != expected_v3[index]
+                or guided_row.get("ensemble_source_proposal_index")
+                != expected_v3[index]
+                or guided_row.get("torsion_rescue_parent_proposal_index") is not None
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "ordinary V3 guided lineage is cross-wired"
+                )
+        elif (
+            guided_mode != baseline_mode
+            or guided_row.get("ensemble_source_proposal_index")
+            != baseline_row.get("ensemble_source_proposal_index")
+            or guided_row.get("torsion_rescue_parent_proposal_index") is not None
+        ):
+            raise PublicRedockingBenchmarkError("non-rescue guided lineage changed")
+    baseline_pairs = tuple(
+        (index, row.get("ensemble_source_proposal_index"))
+        for index, (mode, row) in enumerate(
+            zip(baseline_modes, baseline_rows, strict=True)
+        )
+        if mode == "uniform_v3_rigid_ensemble"
+    )
+    if baseline_pairs != ordered_pairs:
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue allocation lanes are not an exhaustive baseline partition"
+        )
+    if baseline.get("guidance_context_sha256") != guided.get(
+        "guidance_context_sha256"
+    ) or baseline.get("feature_counts") != guided.get("feature_counts"):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue guided context evidence changed"
+        )
+    payload["receipt_sha256"] = receipt_sha256
+    frozen = _freeze_canonical_json(payload)
+    if not isinstance(frozen, Mapping):
+        raise PublicRedockingBenchmarkError(
+            "torsion-rescue proposal receipt freeze failed"
+        )
+    return frozen
+
+
 @dataclass(frozen=True, slots=True)
 class PublicRedockingEngineV2Diagnostics:
     """Preparation, search-oracle, scoring, charge, and H-bond evidence."""
@@ -2987,12 +3659,20 @@ class PublicRedockingEngineV2Diagnostics:
     diagnostic_evaluation_seconds: float = 0.0
     candidate_budget: int = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
     schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID
+    source_paired_torsion_rescue_proposal_receipt: Mapping[str, object] | None = None
 
     def __post_init__(self) -> None:
-        if self.schema_id != PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID:
+        if self.schema_id not in {
+            PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
+            PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
+        }:
             raise PublicRedockingBenchmarkError(
                 "unsupported Engine V2 diagnostic schema"
             )
+        rescue_diagnostic = (
+            self.schema_id
+            == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+        )
         if self.candidate_budget != PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT:
             raise PublicRedockingBenchmarkError(
                 "Engine V2 diagnostic candidate budget must equal 64"
@@ -3022,6 +3702,20 @@ class PublicRedockingEngineV2Diagnostics:
             )
         candidates = tuple(self.candidates)
         backend_receipt = _validated_scorer_backend_receipt(self.scorer_backend_receipt)
+        rescue_proposal_receipt = (
+            _validated_source_paired_torsion_rescue_proposal_receipt(
+                self.source_paired_torsion_rescue_proposal_receipt
+            )
+        )
+        if rescue_diagnostic:
+            if status == "success" and rescue_proposal_receipt is None:
+                raise PublicRedockingBenchmarkError(
+                    "successful torsion-rescue diagnostics lack proposal evidence"
+                )
+        elif rescue_proposal_receipt is not None:
+            raise PublicRedockingBenchmarkError(
+                "torsion-rescue proposal evidence requires its diagnostic schema"
+            )
         failure_code = str(self.preparation_failure_code or "").strip()
         diagnostic_evaluation_seconds = _finite(
             self.diagnostic_evaluation_seconds,
@@ -3071,6 +3765,15 @@ class PublicRedockingEngineV2Diagnostics:
         ):
             raise TypeError("Engine V2 candidates must be typed candidate diagnostics")
         if status == "success":
+            expected_candidate_schema = (
+                PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+                if rescue_diagnostic
+                else PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+            )
+            if any(row.schema_id != expected_candidate_schema for row in candidates):
+                raise PublicRedockingBenchmarkError(
+                    "Engine V2 candidate and diagnostic schemas are cross-wired"
+                )
             ensemble_sources = tuple(
                 row.ensemble_source_proposal_index
                 for row in candidates
@@ -3083,6 +3786,178 @@ class PublicRedockingEngineV2Diagnostics:
                 raise PublicRedockingBenchmarkError(
                     "uniform V3 ensemble candidate lineage is invalid"
                 )
+            rescue_targets = tuple(
+                row.proposal_index
+                for row in candidates
+                if row.proposal_mode == "uniform_torsion_rescue_variant"
+            )
+            rescue_parents = tuple(
+                row.torsion_rescue_parent_proposal_index
+                for row in candidates
+                if row.torsion_rescue_parent_proposal_index is not None
+            )
+            v3_targets = frozenset(
+                row.proposal_index
+                for row in candidates
+                if row.proposal_mode == "uniform_v3_rigid_ensemble"
+            )
+            if (
+                len(rescue_targets) > 4
+                or len(rescue_targets) != len(rescue_parents)
+                or len(rescue_parents) != len(set(rescue_parents))
+                or any(
+                    candidates[parent_index].proposal_mode != "uniform_fallback"
+                    for parent_index in rescue_parents
+                )
+                or (v3_targets | set(ensemble_sources))
+                & (set(rescue_targets) | set(rescue_parents))
+                or (bool(rescue_targets) and not rescue_diagnostic)
+            ):
+                raise PublicRedockingBenchmarkError(
+                    "torsion-rescue candidate lineage is invalid"
+                )
+            if rescue_diagnostic:
+                evidence = dict(rescue_proposal_receipt)
+                guided_evidence = evidence["guided_placement"]
+                guided_rows = guided_evidence["proposal_guidance_rows"]
+                allocation_evidence = evidence["allocation"]
+                rescue_pairs_evidence = allocation_evidence[
+                    "rescue_target_parent_pairs"
+                ]
+                expected_v3_indices = tuple(
+                    pair["target_proposal_index"]
+                    for pair in allocation_evidence["v3_target_parent_pairs"]
+                )
+                refinement_config_sha256: str | None = None
+                candidate_slots = evidence["candidate_slots"]
+                for row, guided_row, slot in zip(
+                    candidates,
+                    guided_rows,
+                    candidate_slots,
+                    strict=True,
+                ):
+                    if (
+                        row.proposal_mode != guided_row["mode"]
+                        or row.ensemble_source_proposal_index
+                        != guided_row["ensemble_source_proposal_index"]
+                        or row.torsion_rescue_parent_proposal_index
+                        != guided_row["torsion_rescue_parent_proposal_index"]
+                    ):
+                        raise PublicRedockingBenchmarkError(
+                            "candidate rows contradict torsion-rescue proposal evidence"
+                        )
+                    if row.status != "success":
+                        continue
+                    refinement = dict(row.refinement_receipt_payload)
+                    observed_config_sha256 = _digest(
+                        refinement.get("config_sha256"),
+                        name="source-paired refinement config_sha256",
+                    )
+                    if refinement_config_sha256 is None:
+                        refinement_config_sha256 = observed_config_sha256
+                    elif refinement_config_sha256 != observed_config_sha256:
+                        raise PublicRedockingBenchmarkError(
+                            "source-paired refinement config identity changed within a case"
+                        )
+                    expected_lane = (
+                        PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+                        if row.proposal_mode
+                        == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+                        else (
+                            "uniform_v3_rigid_ensemble"
+                            if row.proposal_mode == "uniform_v3_rigid_ensemble"
+                            else "ineligible_source_or_other_lane"
+                        )
+                    )
+                    if (
+                        set(refinement)
+                        != _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
+                        or refinement.get("schema_id")
+                        != "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+                        or refinement.get("legacy_v7_receipt_schema_id")
+                        != "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
+                        or refinement.get("source_proposal_sha256")
+                        != slot["proposal_fingerprint_sha256"]
+                        or refinement.get("pre_coordinates_sha256")
+                        != slot["coordinate_fingerprint_sha256"]
+                        or refinement.get("post_coordinates_sha256")
+                        != row.coordinate_fingerprint_sha256
+                        or refinement.get("initial_penalty_binary64_hex")
+                        != row.refinement_initial_penalty_binary64_hex
+                        or refinement.get("final_penalty_binary64_hex")
+                        != row.refinement_final_penalty_binary64_hex
+                        or type(refinement.get("accepted_steps")) is not int
+                        or refinement.get("accepted_steps")
+                        != row.refinement_accepted_steps
+                        or type(refinement.get("accepted_rotation_steps")) is not int
+                        or refinement.get("accepted_rotation_steps")
+                        != row.refinement_accepted_rotation_steps
+                        or refinement.get("original_pose_valid")
+                        is not row.refinement_original_pose_valid
+                        or refinement.get("total_translation_binary64_hex")
+                        != row.refinement_total_translation_binary64_hex
+                        or refinement.get("total_rotation_vector_binary64_hex")
+                        != row.refinement_total_rotation_vector_binary64_hex
+                        or tuple(refinement.get("v3_proposal_indices", ()))
+                        != expected_v3_indices
+                        or refinement.get("proposal_torsion_eligibility_lane")
+                        != expected_lane
+                        or refinement.get("source_paired_parent_proposal_index")
+                        != row.torsion_rescue_parent_proposal_index
+                        or refinement.get("source_paired_torsion_rescue_pairs")
+                        != rescue_pairs_evidence
+                        or refinement.get(
+                            "source_paired_torsion_rescue_allocation_sha256"
+                        )
+                        != allocation_evidence["allocation_sha256"]
+                        or refinement.get("source_paired_torsion_rescue_policy_sha256")
+                        != evidence["rescue_policy_sha256"]
+                        or refinement.get(
+                            "source_paired_torsion_rescue_guidance_context_sha256"
+                        )
+                        != allocation_evidence["guidance_context_sha256"]
+                        or refinement.get("source_paired_torsion_rescue_budget_sha256")
+                        != allocation_evidence["budget_sha256"]
+                        or refinement.get("source_paired_torsion_rescue_profile")
+                        is not True
+                        or refinement.get(
+                            "source_paired_torsion_rescue_variant_cap"
+                        )
+                        != 4
+                        or refinement.get("nested_v6_treated_proposal_as_v3_variant")
+                        is not (row.proposal_mode == "uniform_v3_rigid_ensemble")
+                        or refinement.get(
+                            "rescue_target_excluded_from_nested_v3_indices"
+                        )
+                        is not (
+                            row.proposal_mode
+                            == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+                        )
+                        or refinement.get("result_dependent_eligibility") is not False
+                        or refinement.get("development_only") is not True
+                        or refinement.get("stage0_eligible") is not False
+                        or refinement.get("fresh_execution_authorized") is not False
+                        or refinement.get("claim_safe") is not False
+                        or refinement.get("source_lane_retained") is not True
+                        or refinement.get("scientifically_validated") is not False
+                        or refinement.get(
+                            "ranking_score_reused_as_physical_energy"
+                        )
+                        is not False
+                        or refinement.get("posebusters_or_rmsd_used_for_selection")
+                        is not False
+                        or refinement.get(
+                            "accepted_rotation_steps_include_torsion"
+                        )
+                        is not True
+                        or refinement.get("generic_penalty_scope")
+                        != "source_proposal_to_final_coordinates_v7_objective"
+                        or refinement.get("baseline_v6_penalty_scope")
+                        != "post_v6_coordinates_v7_objective"
+                    ):
+                        raise PublicRedockingBenchmarkError(
+                            "refinement receipt contradicts torsion-rescue proposal evidence"
+                        )
         object.__setattr__(self, "preparation_status", status)
         object.__setattr__(self, "preparation_failure_code", failure_code)
         object.__setattr__(
@@ -3092,6 +3967,11 @@ class PublicRedockingEngineV2Diagnostics:
         )
         object.__setattr__(self, "candidates", candidates)
         object.__setattr__(self, "scorer_backend_receipt", backend_receipt)
+        object.__setattr__(
+            self,
+            "source_paired_torsion_rescue_proposal_receipt",
+            rescue_proposal_receipt,
+        )
 
     @property
     def charge_coverage_complete(self) -> bool:
@@ -3134,7 +4014,7 @@ class PublicRedockingEngineV2Diagnostics:
         return None if not values else min(values)
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "schema_id": self.schema_id,
             "preparation_status": self.preparation_status,
             "preparation_failure_code": self.preparation_failure_code,
@@ -3172,6 +4052,18 @@ class PublicRedockingEngineV2Diagnostics:
             "proposal_oracle_rmsd_angstrom": (self.proposal_oracle_rmsd_angstrom),
             "candidates": [row.to_dict() for row in self.candidates],
         }
+        if (
+            self.schema_id
+            == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+        ):
+            payload["source_paired_torsion_rescue_proposal_receipt"] = (
+                None
+                if self.source_paired_torsion_rescue_proposal_receipt is None
+                else _thaw_canonical_json(
+                    self.source_paired_torsion_rescue_proposal_receipt
+                )
+            )
+        return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -4906,14 +5798,17 @@ __all__ = [
     "PUBLIC_REDOCKING_COHORT_ID",
     "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT",
     "PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID",
+    "PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID",
     "PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID",
     "PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256",
     "PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID",
     "PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS",
     "PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID",
+    "PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID",
     "PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS",
     "PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS",
     "PUBLIC_REDOCKING_PROPOSAL_MODES",
+    "PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE",
     "PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS",
     "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SCHEMA_ID",
     "PUBLIC_REDOCKING_CONTAMINATION_REGISTRY_SHA256",

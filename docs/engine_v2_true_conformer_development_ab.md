@@ -157,6 +157,10 @@ with archive SHA-256
 
 Do not freeze or promote this true-conformer profile and do not change the
 scorer. Preserve V7 and continue only on historical contaminated development
-with a result-independent, hard-capped torsion-rescue variant lane for source
-families beyond the current V3-only eligibility, informed by explicit
-uncovered-case cause classification. Fresh-128 data remains unopened.
+with the result-independent source-paired torsion-rescue lane documented in
+[`engine_v2_public_redocking_300.md`](engine_v2_public_redocking_300.md). It
+reclassifies at most four already generated V3 children, retains their parent
+objects, keeps the 64-candidate denominator fixed, and binds allocation through
+proposal, refinement, and failure diagnostics. Run a same-source historical
+A/B before recording any accuracy or performance conclusion. Fresh-128 data
+remains unopened.

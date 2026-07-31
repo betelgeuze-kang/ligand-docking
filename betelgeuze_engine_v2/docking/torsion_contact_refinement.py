@@ -24,6 +24,10 @@ from betelgeuze_engine_v2.molecular import AllAtomSystem, canonical_system_sha25
 from .authority import AuthenticatedDockingProblem
 from .contact_validity import VdwContactPolicy
 from .identity import coordinate_fingerprint
+from .guided_placement import (
+    SourcePairedTorsionRescueAllocation,
+    SourcePairedTorsionRescuePolicy,
+)
 from .interaction_refinement import (
     ClashReliefRefinementError,
     InteractionAwareRigidClearanceConfigV4,
@@ -44,6 +48,18 @@ INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION = "7.0.0"
 INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
 )
+INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_CONFIG_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_refiner_config/1.0.0"
+)
+INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_refiner"
+)
+INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_VERSION = "1.0.0"
+INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+)
+MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS = 4
+SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT = 64
 INTERACTION_AWARE_TORSION_CLEARANCE_CONFIG_V8_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_torsion_clearance_config/8.0.0"
 )
@@ -170,7 +186,8 @@ class InteractionAwareTorsionContactConfigV7:
                 "torsion-contact selection window bounds must be finite"
             )
         if not (
-            0.0 <= self.minimum_selected_final_receptor_penalty
+            0.0
+            <= self.minimum_selected_final_receptor_penalty
             < self.maximum_selected_final_receptor_penalty
         ):
             raise TorsionContactRefinementError(
@@ -182,29 +199,21 @@ class InteractionAwareTorsionContactConfigV7:
     def fingerprint_sha256(self) -> str:
         observed = _sha256(self.to_dict())
         if observed != self._fingerprint_sha256:
-            raise TorsionContactRefinementError(
-                "torsion-contact configuration changed"
-            )
+            raise TorsionContactRefinementError("torsion-contact configuration changed")
         return observed
 
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_id": self.schema_id,
-            "receptor_overlap_scale_binary64_hex": (
-                self.receptor_overlap_scale.hex()
-            ),
-            "internal_overlap_scale_binary64_hex": (
-                self.internal_overlap_scale.hex()
-            ),
+            "receptor_overlap_scale_binary64_hex": (self.receptor_overlap_scale.hex()),
+            "internal_overlap_scale_binary64_hex": (self.internal_overlap_scale.hex()),
             "internal_overlap_weight_binary64_hex": (
                 self.internal_overlap_weight.hex()
             ),
             "maximum_baseline_v6_steps": self.maximum_baseline_v6_steps,
             "maximum_torsions_evaluated": self.maximum_torsions_evaluated,
             "maximum_torsion_steps": self.maximum_torsion_steps,
-            "maximum_backtracking_evaluations": (
-                self.maximum_backtracking_evaluations
-            ),
+            "maximum_backtracking_evaluations": (self.maximum_backtracking_evaluations),
             "maximum_torsion_step_radians_binary64_hex": (
                 self.maximum_torsion_step_radians.hex()
             ),
@@ -440,6 +449,10 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         *,
         implementation_source_sha256: str,
         v3_proposal_indices: tuple[int, ...],
+        source_paired_torsion_rescue_profile: bool = False,
+        source_paired_torsion_rescue_allocation: (
+            SourcePairedTorsionRescueAllocation | None
+        ) = None,
         torsion_config: InteractionAwareTorsionContactConfigV7 | None = None,
         v2_config: InteractionAwareRigidConfigV2 | None = None,
         v3_config: InteractionAwareRigidConfigV3 | None = None,
@@ -452,15 +465,67 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             raise TorsionContactRefinementError("receptor system is cross-wired")
         if canonical_system_sha256(ligand_system) != authority.ligand_system_sha256:
             raise TorsionContactRefinementError("ligand system is cross-wired")
-        if (
-            len(implementation_source_sha256) != 64
-            or any(
-                character not in "0123456789abcdef"
-                for character in implementation_source_sha256
+        if len(implementation_source_sha256) != 64 or any(
+            character not in "0123456789abcdef"
+            for character in implementation_source_sha256
+        ):
+            raise TorsionContactRefinementError("implementation source hash is invalid")
+        if type(source_paired_torsion_rescue_profile) is not bool:
+            raise TorsionContactRefinementError(
+                "source-paired torsion-rescue profile flag must be boolean"
             )
+        if source_paired_torsion_rescue_profile:
+            if not isinstance(
+                source_paired_torsion_rescue_allocation,
+                SourcePairedTorsionRescueAllocation,
+            ):
+                raise TorsionContactRefinementError(
+                    "source-paired torsion rescue requires typed allocation evidence"
+                )
+            allocation = source_paired_torsion_rescue_allocation
+            allocation.allocation_sha256
+            policy = SourcePairedTorsionRescuePolicy()
+            authority_rotor_count = int(
+                torch.count_nonzero(authority.search_space.rotatable_mask).item()
+            )
+            expected_v3_indices = tuple(
+                target for target, _ in allocation.v3_target_parent_pairs
+            )
+            if (
+                allocation.authenticated_input_receipt_sha256
+                != authority.input_receipt_sha256
+                or allocation.rescue_policy_sha256 != policy.fingerprint_sha256
+                or allocation.base_guided_policy_sha256
+                != policy.base_guided_policy.fingerprint_sha256
+                or allocation.candidate_count
+                != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT
+                or allocation.authority_rotor_count != authority_rotor_count
+                or tuple(v3_proposal_indices) != expected_v3_indices
+            ):
+                raise TorsionContactRefinementError(
+                    "source-paired torsion-rescue allocation is cross-wired"
+                )
+            normalized_rescue_pairs = allocation.rescue_target_parent_pairs
+        else:
+            if source_paired_torsion_rescue_allocation is not None:
+                raise TorsionContactRefinementError(
+                    "typed torsion-rescue allocation requires the development profile"
+                )
+            allocation = None
+            normalized_rescue_pairs = ()
+        rescue_targets = tuple(row[0] for row in normalized_rescue_pairs)
+        rescue_parents = tuple(row[1] for row in normalized_rescue_pairs)
+        if (
+            normalized_rescue_pairs != tuple(sorted(normalized_rescue_pairs))
+            or len(normalized_rescue_pairs) > MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS
+            or len(rescue_targets) != len(set(rescue_targets))
+            or len(rescue_parents) != len(set(rescue_parents))
+            or set(rescue_targets) & set(rescue_parents)
+            or set(rescue_targets) & set(v3_proposal_indices)
+            or set(rescue_parents) & set(v3_proposal_indices)
         ):
             raise TorsionContactRefinementError(
-                "implementation source hash is invalid"
+                "source-paired torsion-rescue lanes overlap or exceed their cap"
             )
         selected_config = torsion_config or InteractionAwareTorsionContactConfigV7()
         selected_policy = radii_policy or VdwContactPolicy()
@@ -482,13 +547,34 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         self._implementation_source_sha256 = implementation_source_sha256
         self._v3_proposal_indices = tuple(v3_proposal_indices)
         self._v3_proposal_index_set = frozenset(v3_proposal_indices)
+        self._source_paired_torsion_rescue_profile = (
+            source_paired_torsion_rescue_profile
+        )
+        self._source_paired_torsion_rescue_pairs = normalized_rescue_pairs
+        self._source_paired_torsion_rescue_allocation = allocation
+        self._source_paired_torsion_rescue_parent_by_target = MappingProxyType(
+            dict(normalized_rescue_pairs)
+        )
+        self._source_paired_torsion_rescue_index_set = frozenset(rescue_targets)
+        self._torsion_eligible_proposal_index_set = (
+            self._v3_proposal_index_set | self._source_paired_torsion_rescue_index_set
+        )
+        if source_paired_torsion_rescue_profile:
+            self.refiner_id = INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_ID
+            self.refiner_version = (
+                INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_VERSION
+            )
         self._search_space = authority.search_space
         self._search_space.assert_integrity()
         receptor_indices = list(authority.receptor_atom_indices)
-        self._receptor_coordinates = receptor_system.coordinates[
-            authority.receptor_model_index,
-            receptor_indices,
-        ].to(dtype=torch.float64, device="cpu").contiguous()
+        self._receptor_coordinates = (
+            receptor_system.coordinates[
+                authority.receptor_model_index,
+                receptor_indices,
+            ]
+            .to(dtype=torch.float64, device="cpu")
+            .contiguous()
+        )
         self._receptor_radii = torch.tensor(
             [
                 selected_policy.radius(receptor_system.atoms[index].element)
@@ -513,9 +599,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         self._internal_second = torch.tensor(
             [row[1] for row in internal_pairs], dtype=torch.long
         )
-        children: list[list[int]] = [
-            [] for _ in range(self._search_space.atom_count)
-        ]
+        children: list[list[int]] = [[] for _ in range(self._search_space.atom_count)]
         for child, raw_parent in enumerate(self._search_space.parent.tolist()):
             parent = int(raw_parent)
             if parent >= 0:
@@ -526,7 +610,9 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             for value in torch.nonzero(
                 self._search_space.rotatable_mask,
                 as_tuple=False,
-            ).reshape(-1).tolist()
+            )
+            .reshape(-1)
+            .tolist()
         )
         for rotor in rotor_indices:
             pending = [rotor]
@@ -554,36 +640,69 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         }
         self._rotor_indices = rotor_indices
         self._descendants = MappingProxyType(descendants)
-        self._descendant_index_tensors = MappingProxyType(
-            descendant_index_tensors
-        )
+        self._descendant_index_tensors = MappingProxyType(descendant_index_tensors)
         self._cross_internal_pair_indices = MappingProxyType(
             cross_internal_pair_indices
         )
-        self._component_config_fingerprint_sha256 = _sha256(
-            {
-                "schema_id": INTERACTION_AWARE_TORSION_CONTACT_CONFIG_V7_SCHEMA_ID,
-                "baseline_v6_config_sha256": self._v6.config_fingerprint_sha256,
-                "torsion_config_sha256": selected_config.fingerprint_sha256,
-                "radii_policy_sha256": selected_policy.fingerprint_sha256,
-                "authority_input_receipt_sha256": authority.input_receipt_sha256,
-                "search_space_fingerprint_sha256": (
-                    self._search_space.fingerprint_sha256
-                ),
-                "rotatable_child_atom_indices": list(rotor_indices),
-                "rotor_descendant_atom_indices": {
-                    str(index): list(descendants[index]) for index in rotor_indices
-                },
-                "rotor_cross_internal_pair_indices": {
-                    str(index): list(cross_internal_pair_indices[index])
-                    for index in rotor_indices
-                },
-                "excluded_internal_pair_count": len(exclusions),
-                "evaluated_internal_pair_count": len(internal_pairs),
-                "source_lane_retained": True,
-                "scientifically_validated": False,
-            }
-        )
+        component_config: dict[str, object] = {
+            "schema_id": INTERACTION_AWARE_TORSION_CONTACT_CONFIG_V7_SCHEMA_ID,
+            "baseline_v6_config_sha256": self._v6.config_fingerprint_sha256,
+            "torsion_config_sha256": selected_config.fingerprint_sha256,
+            "radii_policy_sha256": selected_policy.fingerprint_sha256,
+            "authority_input_receipt_sha256": authority.input_receipt_sha256,
+            "search_space_fingerprint_sha256": (self._search_space.fingerprint_sha256),
+            "rotatable_child_atom_indices": list(rotor_indices),
+            "rotor_descendant_atom_indices": {
+                str(index): list(descendants[index]) for index in rotor_indices
+            },
+            "rotor_cross_internal_pair_indices": {
+                str(index): list(cross_internal_pair_indices[index])
+                for index in rotor_indices
+            },
+            "excluded_internal_pair_count": len(exclusions),
+            "evaluated_internal_pair_count": len(internal_pairs),
+            "source_lane_retained": True,
+            "scientifically_validated": False,
+        }
+        if source_paired_torsion_rescue_profile:
+            component_config.update(
+                {
+                    "schema_id": (
+                        INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_CONFIG_SCHEMA_ID
+                    ),
+                    "legacy_v7_config_sha256": _sha256(component_config),
+                    "v3_proposal_indices": list(self._v3_proposal_indices),
+                    "source_paired_torsion_rescue_pairs": [
+                        {
+                            "target_proposal_index": target,
+                            "parent_proposal_index": parent,
+                        }
+                        for target, parent in normalized_rescue_pairs
+                    ],
+                    "source_paired_torsion_rescue_allocation_sha256": (
+                        allocation.allocation_sha256
+                    ),
+                    "source_paired_torsion_rescue_policy_sha256": (
+                        allocation.rescue_policy_sha256
+                    ),
+                    "source_paired_torsion_rescue_guidance_context_sha256": (
+                        allocation.guidance_context_sha256
+                    ),
+                    "source_paired_torsion_rescue_budget_sha256": (
+                        allocation.budget_sha256
+                    ),
+                    "source_paired_torsion_rescue_variant_cap": (
+                        MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS
+                    ),
+                    "nested_v6_receives_only_v3_indices": True,
+                    "result_dependent_eligibility": False,
+                    "development_only": True,
+                    "stage0_eligible": False,
+                    "fresh_execution_authorized": False,
+                    "claim_safe": False,
+                }
+            )
+        self._component_config_fingerprint_sha256 = _sha256(component_config)
         self._receipts: dict[str, Mapping[str, object]] = {}
         self._baseline_states: dict[str, _TorsionOptimizedState] = {}
         self._optimized_states: dict[str, _TorsionOptimizedState] = {}
@@ -671,10 +790,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
     def _internal_pair_penalties(self, coordinates: torch.Tensor) -> torch.Tensor:
         if not len(self._internal_first):
             return torch.zeros(0, dtype=torch.float64)
-        delta = (
-            coordinates[self._internal_first]
-            - coordinates[self._internal_second]
-        )
+        delta = coordinates[self._internal_first] - coordinates[self._internal_second]
         distance = torch.linalg.vector_norm(delta, dim=-1).clamp_min(
             self._config.epsilon_angstrom
         )
@@ -739,11 +855,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         sine = math.sin(delta_radians)
         cross = torch.cross(axis.expand_as(vectors), vectors, dim=1)
         projection = (vectors * axis).sum(dim=1, keepdim=True) * axis
-        rotated = (
-            vectors * cosine
-            + cross * sine
-            + projection * (1.0 - cosine)
-        )
+        rotated = vectors * cosine + cross * sine + projection * (1.0 - cosine)
         result = coordinates.clone()
         result[indices] = origin + rotated
         return result
@@ -776,14 +888,10 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             proposal,
             max_steps=baseline_v6_max_steps,
         )
-        baseline_receipt = dict(
-            self._v6.receipts[proposal.fingerprint_sha256]
-        )
-        self._baseline_states[proposal.fingerprint_sha256] = (
-            _TorsionOptimizedState(
-                coordinates=baseline.coordinates.clone(),
-                torsion_angles=baseline.torsion_angles.clone(),
-            )
+        baseline_receipt = dict(self._v6.receipts[proposal.fingerprint_sha256])
+        self._baseline_states[proposal.fingerprint_sha256] = _TorsionOptimizedState(
+            coordinates=baseline.coordinates.clone(),
+            torsion_angles=baseline.torsion_angles.clone(),
         )
         source_coordinates = proposal.coordinates.to(
             dtype=torch.float64,
@@ -822,12 +930,21 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             remaining_steps,
         )
         selection_window_reachable = bool(
-            baseline_receptor
-            + torsion_step_budget * self._config.penalty_tolerance
+            baseline_receptor + torsion_step_budget * self._config.penalty_tolerance
             >= self._config.minimum_selected_final_receptor_penalty
         )
-        if proposal.proposal_index not in self._v3_proposal_index_set:
-            torsion_evaluation_skip_reason = "not_v3_variant"
+        proposal_is_torsion_rescue = (
+            proposal.proposal_index in self._source_paired_torsion_rescue_index_set
+        )
+        proposal_is_torsion_eligible = (
+            proposal.proposal_index in self._torsion_eligible_proposal_index_set
+        )
+        if not proposal_is_torsion_eligible:
+            torsion_evaluation_skip_reason = (
+                "not_v3_or_source_paired_torsion_rescue_variant"
+                if self._source_paired_torsion_rescue_profile
+                else "not_v3_variant"
+            )
         elif not self._rotor_indices:
             torsion_evaluation_skip_reason = "no_authority_rotor"
         elif torsion_step_budget == 0:
@@ -841,7 +958,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         else:
             torsion_evaluation_skip_reason = "none"
         torsion_evaluated = bool(
-            proposal.proposal_index in self._v3_proposal_index_set
+            proposal_is_torsion_eligible
             and self._rotor_indices
             and torsion_step_budget > 0
             and current_combined > self._config.penalty_tolerance
@@ -849,9 +966,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         )
         evaluation_stopped_after_selection_window_became_unreachable = False
 
-        for _ in range(
-            torsion_step_budget if torsion_evaluated else 0
-        ):
+        for _ in range(torsion_step_budget if torsion_evaluated else 0):
             prioritized = sorted(
                 (
                     (
@@ -867,22 +982,23 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 key=lambda row: (row[0], row[1]),
             )[: self._config.maximum_torsions_evaluated]
             evaluated_rotors = tuple(row[1] for row in prioritized)
-            best: tuple[
-                float,
-                float,
-                float,
-                int,
-                int,
-                float,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-                torch.Tensor,
-            ] | None = None
+            best: (
+                tuple[
+                    float,
+                    float,
+                    float,
+                    int,
+                    int,
+                    float,
+                    torch.Tensor,
+                    torch.Tensor,
+                    torch.Tensor,
+                    torch.Tensor,
+                ]
+                | None
+            ) = None
             step = self._config.maximum_torsion_step_radians
-            for _backtracking in range(
-                self._config.maximum_backtracking_evaluations
-            ):
+            for _backtracking in range(self._config.maximum_backtracking_evaluations):
                 if step + self._config.penalty_tolerance < (
                     self._config.minimum_torsion_step_radians
                 ):
@@ -903,8 +1019,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                         )
                         centroid_offset = float(
                             torch.linalg.vector_norm(
-                                candidate.mean(dim=0)
-                                - self._authority.pocket.center
+                                candidate.mean(dim=0) - self._authority.pocket.center
                             ).item()
                         )
                         if centroid_offset > (
@@ -995,15 +1110,13 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         optimized_combined = current_combined
         evaluated_moves = accepted_moves
         evaluated_total_torsion_path = total_torsion_path
-        self._optimized_states[proposal.fingerprint_sha256] = (
-            _TorsionOptimizedState(
-                coordinates=optimized_coordinates.to(
-                    dtype=proposal.coordinates.dtype
-                ).clone(),
-                torsion_angles=optimized_torsion_angles.to(
-                    dtype=proposal.torsion_angles.dtype
-                ).clone(),
-            )
+        self._optimized_states[proposal.fingerprint_sha256] = _TorsionOptimizedState(
+            coordinates=optimized_coordinates.to(
+                dtype=proposal.coordinates.dtype
+            ).clone(),
+            torsion_angles=optimized_torsion_angles.to(
+                dtype=proposal.torsion_angles.dtype
+            ).clone(),
         )
         torsion_selected = bool(
             torsion_variant_available
@@ -1034,19 +1147,23 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         if torsion_selected:
             selection_reason = "final_receptor_penalty_window_selected"
         elif torsion_variant_available:
-            selection_reason = (
-                "v6_retained_outside_final_receptor_penalty_window"
-            )
+            selection_reason = "v6_retained_outside_final_receptor_penalty_window"
         else:
-            selection_reason = (
-                "v6_baseline_retained_no_torsion_objective_reduction"
-            )
+            selection_reason = "v6_baseline_retained_no_torsion_objective_reduction"
         receipt: dict[str, object] = {
-            "schema_id": INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID,
+            "schema_id": (
+                INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID
+                if self._source_paired_torsion_rescue_profile
+                else INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID
+            ),
             "source_proposal_sha256": proposal.fingerprint_sha256,
             "config_sha256": self.config_fingerprint_sha256,
             "lane": (
-                "torsion_contact_v7_rescue"
+                (
+                    "source_paired_torsion_rescue"
+                    if proposal_is_torsion_rescue
+                    else "torsion_contact_v7_rescue"
+                )
                 if torsion_selected
                 else "rigid_v6_retained"
             ),
@@ -1080,35 +1197,23 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 torsion_trial_evaluation_count
             ),
             "initial_receptor_penalty_binary64_hex": source_receptor.hex(),
-            "baseline_v6_receptor_penalty_binary64_hex": (
-                baseline_receptor.hex()
-            ),
-            "optimized_receptor_penalty_binary64_hex": (
-                optimized_receptor.hex()
-            ),
+            "baseline_v6_receptor_penalty_binary64_hex": (baseline_receptor.hex()),
+            "optimized_receptor_penalty_binary64_hex": (optimized_receptor.hex()),
             "final_receptor_penalty_binary64_hex": final_receptor.hex(),
             "initial_internal_penalty_binary64_hex": source_internal.hex(),
-            "baseline_v6_internal_penalty_binary64_hex": (
-                baseline_internal.hex()
-            ),
+            "baseline_v6_internal_penalty_binary64_hex": (baseline_internal.hex()),
             "optimized_internal_penalty_binary64_hex": optimized_internal.hex(),
             "final_internal_penalty_binary64_hex": final_internal.hex(),
             "initial_combined_penalty_binary64_hex": source_combined.hex(),
-            "baseline_v6_combined_penalty_binary64_hex": (
-                baseline_combined.hex()
-            ),
-            "optimized_combined_penalty_binary64_hex": (
-                optimized_combined.hex()
-            ),
+            "baseline_v6_combined_penalty_binary64_hex": (baseline_combined.hex()),
+            "optimized_combined_penalty_binary64_hex": (optimized_combined.hex()),
             "final_combined_penalty_binary64_hex": final_combined.hex(),
             "initial_penalty_binary64_hex": source_combined.hex(),
             "final_penalty_binary64_hex": final_combined.hex(),
             "generic_penalty_scope": (
                 "source_proposal_to_final_coordinates_v7_objective"
             ),
-            "baseline_v6_penalty_scope": (
-                "post_v6_coordinates_v7_objective"
-            ),
+            "baseline_v6_penalty_scope": ("post_v6_coordinates_v7_objective"),
             "minimum_selected_final_receptor_penalty_binary64_hex": (
                 self._config.minimum_selected_final_receptor_penalty.hex()
             ),
@@ -1146,20 +1251,70 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             "total_rotation_vector_binary64_hex": baseline_receipt[
                 "total_rotation_vector_binary64_hex"
             ],
-            "pre_coordinates_sha256": baseline_receipt[
-                "pre_coordinates_sha256"
-            ],
-            "baseline_coordinates_sha256": coordinate_fingerprint(
-                baseline.coordinates
-            ),
-            "post_coordinates_sha256": coordinate_fingerprint(
-                final_coordinates
-            ),
+            "pre_coordinates_sha256": baseline_receipt["pre_coordinates_sha256"],
+            "baseline_coordinates_sha256": coordinate_fingerprint(baseline.coordinates),
+            "post_coordinates_sha256": coordinate_fingerprint(final_coordinates),
             "ranking_score_reused_as_physical_energy": False,
             "posebusters_or_rmsd_used_for_selection": False,
             "source_lane_retained": True,
             "scientifically_validated": False,
         }
+        if self._source_paired_torsion_rescue_profile:
+            receipt.update(
+                {
+                    "legacy_v7_receipt_schema_id": (
+                        INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID
+                    ),
+                    "source_paired_torsion_rescue_profile": True,
+                    "source_paired_torsion_rescue_pairs": [
+                        {
+                            "target_proposal_index": target,
+                            "parent_proposal_index": parent,
+                        }
+                        for target, parent in (self._source_paired_torsion_rescue_pairs)
+                    ],
+                    "source_paired_torsion_rescue_allocation_sha256": (
+                        self._source_paired_torsion_rescue_allocation.allocation_sha256
+                    ),
+                    "source_paired_torsion_rescue_policy_sha256": (
+                        self._source_paired_torsion_rescue_allocation.rescue_policy_sha256
+                    ),
+                    "source_paired_torsion_rescue_guidance_context_sha256": (
+                        self._source_paired_torsion_rescue_allocation.guidance_context_sha256
+                    ),
+                    "source_paired_torsion_rescue_budget_sha256": (
+                        self._source_paired_torsion_rescue_allocation.budget_sha256
+                    ),
+                    "source_paired_torsion_rescue_variant_cap": (
+                        MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS
+                    ),
+                    "proposal_torsion_eligibility_lane": (
+                        "source_paired_torsion_rescue_variant"
+                        if proposal_is_torsion_rescue
+                        else (
+                            "uniform_v3_rigid_ensemble"
+                            if proposal.proposal_index in self._v3_proposal_index_set
+                            else "ineligible_source_or_other_lane"
+                        )
+                    ),
+                    "source_paired_parent_proposal_index": (
+                        self._source_paired_torsion_rescue_parent_by_target.get(
+                            proposal.proposal_index
+                        )
+                    ),
+                    "nested_v6_treated_proposal_as_v3_variant": (
+                        proposal.proposal_index in self._v3_proposal_index_set
+                    ),
+                    "rescue_target_excluded_from_nested_v3_indices": (
+                        proposal_is_torsion_rescue
+                    ),
+                    "result_dependent_eligibility": False,
+                    "development_only": True,
+                    "stage0_eligible": False,
+                    "fresh_execution_authorized": False,
+                    "claim_safe": False,
+                }
+            )
         receipt_sha256 = _sha256(receipt)
         receipt["receipt_sha256"] = receipt_sha256
         refined = proposal.with_refined_coordinates(
@@ -1292,9 +1447,7 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
                 raise TorsionContactRefinementError(
                     "experimental V8 retry must use the original max_steps"
                 )
-        legacy_v7_receipt = dict(
-            self._v7.receipts[proposal.fingerprint_sha256]
-        )
+        legacy_v7_receipt = dict(self._v7.receipts[proposal.fingerprint_sha256])
         legacy_projection = dict(legacy_v7_receipt)
         legacy_receipt_sha256 = legacy_projection.pop("receipt_sha256", "")
         if (
@@ -1441,22 +1594,14 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
         legacy_final_internal = observed_legacy_final_internal
         legacy_final_combined = observed_legacy_final_combined
         legacy_clearance = self._clearance_statistics(legacy_v7.coordinates)
-        optimized_clearance = self._clearance_statistics(
-            optimized_state.coordinates
-        )
+        optimized_clearance = self._clearance_statistics(optimized_state.coordinates)
         torsion_variant_available = bool(
             legacy_v7_receipt.get("torsion_variant_available")
         )
         legacy_v7_selected = bool(legacy_v7_receipt.get("torsion_selected"))
-        combined_guard = bool(
-            optimized_combined < baseline_combined - tolerance
-        )
-        receptor_guard = bool(
-            optimized_receptor <= baseline_receptor + tolerance
-        )
-        internal_guard = bool(
-            optimized_internal <= baseline_internal + tolerance
-        )
+        combined_guard = bool(optimized_combined < baseline_combined - tolerance)
+        receptor_guard = bool(optimized_receptor <= baseline_receptor + tolerance)
+        internal_guard = bool(optimized_internal <= baseline_internal + tolerance)
         surface_gap_guard = bool(
             optimized_clearance.minimum_vdw_surface_gap_angstrom
             > legacy_clearance.minimum_vdw_surface_gap_angstrom
@@ -1475,25 +1620,17 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
             and surface_gap_guard
             and raw_distance_guard
         )
-        v8_clearance_selected = bool(
-            not legacy_v7_selected and clearance_guard_passed
-        )
+        v8_clearance_selected = bool(not legacy_v7_selected and clearance_guard_passed)
         if v8_clearance_selected:
             final_coordinates = optimized_state.coordinates
             final_torsion_angles = optimized_state.torsion_angles
             final_receptor = optimized_receptor
             final_internal = optimized_internal
             final_combined = optimized_combined
-            accepted_torsion_steps = int(
-                legacy_v7_receipt["evaluated_torsion_steps"]
-            )
-            accepted_torsion_moves = list(
-                legacy_v7_receipt["evaluated_torsion_moves"]
-            )
+            accepted_torsion_steps = int(legacy_v7_receipt["evaluated_torsion_steps"])
+            accepted_torsion_moves = list(legacy_v7_receipt["evaluated_torsion_moves"])
             total_torsion_path = str(
-                legacy_v7_receipt[
-                    "evaluated_total_torsion_path_radians_binary64_hex"
-                ]
+                legacy_v7_receipt["evaluated_total_torsion_path_radians_binary64_hex"]
             )
             selection_reason = "outside_v7_window_clearance_guard_selected"
         else:
@@ -1502,12 +1639,8 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
             final_receptor = legacy_final_receptor
             final_internal = legacy_final_internal
             final_combined = legacy_final_combined
-            accepted_torsion_steps = int(
-                legacy_v7_receipt["accepted_torsion_steps"]
-            )
-            accepted_torsion_moves = list(
-                legacy_v7_receipt["accepted_torsion_moves"]
-            )
+            accepted_torsion_steps = int(legacy_v7_receipt["accepted_torsion_steps"])
+            accepted_torsion_moves = list(legacy_v7_receipt["accepted_torsion_moves"])
             total_torsion_path = str(
                 legacy_v7_receipt["total_torsion_path_radians_binary64_hex"]
             )
@@ -1550,9 +1683,7 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
             "combined_strict_decrease_guard_passed": combined_guard,
             "receptor_nonincrease_guard_passed": receptor_guard,
             "internal_nonincrease_guard_passed": internal_guard,
-            "minimum_vdw_surface_gap_improvement_guard_passed": (
-                surface_gap_guard
-            ),
+            "minimum_vdw_surface_gap_improvement_guard_passed": (surface_gap_guard),
             "raw_minimum_distance_nonregression_guard_passed": raw_distance_guard,
             "v8_clearance_guard_passed": clearance_guard_passed,
             "v8_clearance_selected": v8_clearance_selected,
@@ -1606,9 +1737,7 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
             "total_rotation_vector_binary64_hex": legacy_v7_receipt[
                 "total_rotation_vector_binary64_hex"
             ],
-            "pre_coordinates_sha256": legacy_v7_receipt[
-                "pre_coordinates_sha256"
-            ],
+            "pre_coordinates_sha256": legacy_v7_receipt["pre_coordinates_sha256"],
             "legacy_v7_coordinates_sha256": coordinate_fingerprint(
                 legacy_v7.coordinates
             ),
@@ -1637,6 +1766,10 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
 
 
 __all__ = [
+    "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_CONFIG_SCHEMA_ID",
+    "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID",
+    "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_ID",
+    "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_VERSION",
     "INTERACTION_AWARE_TORSION_CLEARANCE_CONFIG_V8_SCHEMA_ID",
     "INTERACTION_AWARE_TORSION_CLEARANCE_RECEIPT_V8_SCHEMA_ID",
     "INTERACTION_AWARE_TORSION_CLEARANCE_REFINER_V8_ID",
@@ -1645,6 +1778,7 @@ __all__ = [
     "INTERACTION_AWARE_TORSION_CONTACT_RECEIPT_V7_SCHEMA_ID",
     "INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_ID",
     "INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION",
+    "MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS",
     "InteractionAwareTorsionClearanceConfigV8",
     "InteractionAwareTorsionClearanceEnsembleRefinerV8",
     "InteractionAwareTorsionContactConfigV7",
