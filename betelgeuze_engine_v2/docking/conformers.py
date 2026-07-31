@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from collections.abc import Mapping
 import hashlib
 import importlib
@@ -38,13 +38,13 @@ CONFORMER_PREPARATION_POLICY_ID = (
     "betelgeuze.engine_v2_deterministic_etkdgv3_energy_rmsd/1.0.0"
 )
 SOURCE_BOUND_CONFORMER_ENSEMBLE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_bound_prepared_conformer_ensemble/1.1.0"
+    "betelgeuze.engine_v2_source_bound_prepared_conformer_ensemble/1.2.0"
 )
 SOURCE_BOUND_CONFORMER_DERIVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_bound_conformer_derivation/1.1.0"
+    "betelgeuze.engine_v2_source_bound_conformer_derivation/1.2.0"
 )
 SOURCE_BOUND_CONFORMER_PREPARATION_POLICY_ID = (
-    "betelgeuze.engine_v2_source_bound_deterministic_etkdgv3_energy_rmsd/1.1.0"
+    "betelgeuze.engine_v2_source_bound_deterministic_etkdgv3_energy_rmsd/1.2.0"
 )
 SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_bound_rdkit_source_index_mapping/1.0.0"
@@ -577,6 +577,7 @@ class SourceBoundPreparedConformerRecord:
 @dataclass(frozen=True, slots=True)
 class SourceBoundPreparedConformerEnsemble:
     source_system: AllAtomSystem
+    source_sdf: bytes = field(repr=False)
     system: AllAtomSystem
     raw_coordinates: torch.Tensor
     records: tuple[SourceBoundPreparedConformerRecord, ...]
@@ -776,6 +777,42 @@ class SourceBoundPreparedConformerEnsemble:
                 raise ConformerPreparationError(
                     "source-bound RDKit projection is cross-wired"
                 )
+        if not isinstance(self.source_sdf, bytes):
+            raise ConformerPreparationError(
+                "source-bound source SDF authority must be exact bytes"
+            )
+        source_artifact_sha256 = hashlib.sha256(self.source_sdf).hexdigest()
+        if (
+            not self.source_system.provenance.source_digest_verified
+            or self.source_system.provenance.source_sha256
+            != source_artifact_sha256
+        ):
+            raise ConformerPreparationError(
+                "source-bound source SDF authority digest is cross-wired"
+            )
+        try:
+            source_text_authority = self.source_sdf.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ConformerPreparationError(
+                "source-bound source SDF authority must be UTF-8"
+            ) from exc
+        source_text_authority_projection = (
+            _require_supported_source_molfile_fields(source_text_authority)
+        )
+        observed_source_text_projection = derivation["source_text_projection"]
+        observed_source_text_authority = dict(observed_source_text_projection)
+        observed_source_text_authority.pop(
+            "rdkit_declared_valence_checks",
+            None,
+        )
+        if observed_source_text_authority != source_text_authority_projection:
+            raise ConformerPreparationError(
+                "source-bound source SDF atom fields changed from the exact bytes"
+            )
+        _require_source_text_projection_contract(
+            observed_source_text_projection,
+            self.source_system,
+        )
         source_index_mapping = derivation.get("source_index_mapping")
         source_index_mapping_sha256 = derivation.get(
             "source_index_mapping_sha256"
@@ -1521,10 +1558,9 @@ def _require_supported_source_molfile_fields(
         raise ConformerPreparationError("source SDF V2000 counts are invalid") from exc
     if len(lines) < 4 + atom_count + bond_count:
         raise ConformerPreparationError("source SDF V2000 record is truncated")
-    ignored_atom_slices = (
+    unsupported_atom_slices = (
         (42, 45),
         (45, 48),
-        (48, 51),
         (51, 54),
         (54, 57),
         (57, 60),
@@ -1532,16 +1568,44 @@ def _require_supported_source_molfile_fields(
         (63, 66),
         (66, 69),
     )
+    atom_projection = []
     for offset in range(atom_count):
         line = lines[4 + offset].ljust(69)
-        for start, end in ignored_atom_slices:
+        try:
+            parity_code = int(line[39:42].strip() or "0")
+            declared_valence_code = int(line[48:51].strip() or "0")
+        except ValueError as exc:
+            raise ConformerPreparationError(
+                "source SDF uses an invalid atom field"
+            ) from exc
+        if parity_code not in {0, 1, 2, 3}:
+            raise ConformerPreparationError(
+                "source SDF uses an unsupported atom parity code"
+            )
+        if declared_valence_code == 0:
+            declared_valence = None
+        elif 1 <= declared_valence_code <= 14:
+            declared_valence = declared_valence_code
+        else:
+            raise ConformerPreparationError(
+                "source SDF uses an unsupported declared atom valence"
+            )
+        for start, end in unsupported_atom_slices:
             field = line[start:end].strip()
             if field and field != "0":
                 raise ConformerPreparationError(
                     "source SDF uses unsupported non-default atom fields"
                 )
+        atom_projection.append(
+            {
+                "index": offset,
+                "molfile_atom_parity_code": parity_code,
+                "declared_valence": declared_valence,
+            }
+        )
     supported_bond_stereo_codes = {0, 1, 4, 6}
     bond_projection = []
+    raw_bond_order_sums = [0.0] * atom_count
     for offset in range(bond_count):
         line = lines[4 + atom_count + offset]
         padded = line.ljust(12)
@@ -1555,7 +1619,12 @@ def _require_supported_source_molfile_fields(
                 "source SDF uses an invalid bond record"
             ) from exc
         if (
-            bond_type not in {1, 2, 3, 4}
+            begin_atom_index < 0
+            or end_atom_index < 0
+            or begin_atom_index >= atom_count
+            or end_atom_index >= atom_count
+            or begin_atom_index == end_atom_index
+            or bond_type not in {1, 2, 3, 4}
             or stereo_code not in supported_bond_stereo_codes
         ):
             raise ConformerPreparationError(
@@ -1566,19 +1635,211 @@ def _require_supported_source_molfile_fields(
                 raise ConformerPreparationError(
                     "source SDF uses unsupported non-default bond fields"
                 )
+        order = 1.5 if bond_type == 4 else float(bond_type)
+        raw_bond_order_sums[begin_atom_index] += order
+        raw_bond_order_sums[end_atom_index] += order
         bond_projection.append(
             {
                 "index": offset,
                 "begin_atom_index": begin_atom_index,
                 "end_atom_index": end_atom_index,
-                "order_binary64_hex": (
-                    1.5 if bond_type == 4 else float(bond_type)
-                ).hex(),
+                "order_binary64_hex": order.hex(),
                 "aromatic": bond_type == 4,
                 "molfile_stereo_code": stereo_code,
             }
         )
-    return {"bonds": bond_projection}
+    for row, raw_bond_order_sum in zip(atom_projection, raw_bond_order_sums):
+        row["raw_bond_order_sum_binary64_hex"] = raw_bond_order_sum.hex()
+        declared_valence = row["declared_valence"]
+        if (
+            declared_valence is not None
+            and raw_bond_order_sum != float(declared_valence)
+        ):
+            raise ConformerPreparationError(
+                "source SDF declared atom valence does not match the raw bond order sum"
+            )
+    return {
+        "atom_parity_policy": (
+            "raw_code_bound_perceived_stereo_verified_separately"
+        ),
+        "declared_valence_policy": (
+            "nonzero_1_to_14_must_equal_raw_bond_order_sum"
+        ),
+        "atoms": atom_projection,
+        "bonds": bond_projection,
+    }
+
+
+def _require_rdkit_declared_valence(
+    molecule: Any,
+    source_text_projection: Mapping[str, Any],
+) -> list[dict[str, object]]:
+    atom_rows = source_text_projection.get("atoms")
+    if not isinstance(atom_rows, list):
+        raise ConformerPreparationError(
+            "source SDF atom-field projection is missing"
+        )
+    checks: list[dict[str, object]] = []
+    for row in atom_rows:
+        if not isinstance(row, dict) or type(row.get("index")) is not int:
+            raise ConformerPreparationError(
+                "source SDF atom-field projection is invalid"
+            )
+        declared_valence = row.get("declared_valence")
+        if declared_valence is None:
+            continue
+        atom_index = row["index"]
+        try:
+            atom = molecule.GetAtomWithIdx(atom_index)
+            explicit_valence = int(atom.GetExplicitValence())
+            total_valence = int(atom.GetTotalValence())
+            implicit_hydrogen_count = int(atom.GetNumImplicitHs())
+            no_implicit = bool(atom.GetNoImplicit())
+        except (IndexError, RuntimeError, ValueError) as exc:
+            raise ConformerPreparationError(
+                "RDKit could not verify the source declared atom valence"
+            ) from exc
+        if (
+            explicit_valence != declared_valence
+            or total_valence != declared_valence
+            or implicit_hydrogen_count != 0
+            or not no_implicit
+        ):
+            raise ConformerPreparationError(
+                "RDKit declared atom valence does not match the source topology"
+            )
+        checks.append(
+            {
+                "atom_index": atom_index,
+                "declared_valence": declared_valence,
+                "rdkit_explicit_valence": explicit_valence,
+                "rdkit_total_valence": total_valence,
+                "rdkit_implicit_hydrogen_count": implicit_hydrogen_count,
+                "rdkit_no_implicit": no_implicit,
+            }
+        )
+    return checks
+
+
+def _require_source_text_projection_contract(
+    projection: Mapping[str, Any],
+    source_system: AllAtomSystem,
+) -> None:
+    if (
+        set(projection)
+        != {
+            "atom_parity_policy",
+            "declared_valence_policy",
+            "atoms",
+            "bonds",
+            "rdkit_declared_valence_checks",
+        }
+        or projection.get("atom_parity_policy")
+        != "raw_code_bound_perceived_stereo_verified_separately"
+        or projection.get("declared_valence_policy")
+        != "nonzero_1_to_14_must_equal_raw_bond_order_sum"
+    ):
+        raise ConformerPreparationError(
+            "source SDF atom-field policy is invalid"
+        )
+    stereo_codes = {"none": 0, "up": 1, "either": 4, "down": 6}
+    bond_rows = projection.get("bonds")
+    if not isinstance(bond_rows, list) or len(bond_rows) != len(
+        source_system.bonds
+    ):
+        raise ConformerPreparationError(
+            "source SDF bond projection is incomplete"
+        )
+    raw_bond_order_sums = [0.0] * source_system.atom_count
+    for bond, row in zip(source_system.bonds, bond_rows):
+        stereo_code = stereo_codes.get(bond.stereo)
+        begin_atom_index = (
+            row.get("begin_atom_index") if isinstance(row, dict) else None
+        )
+        end_atom_index = (
+            row.get("end_atom_index") if isinstance(row, dict) else None
+        )
+        if (
+            stereo_code is None
+            or not isinstance(row, dict)
+            or set(row)
+            != {
+                "index",
+                "begin_atom_index",
+                "end_atom_index",
+                "order_binary64_hex",
+                "aromatic",
+                "molfile_stereo_code",
+            }
+            or row.get("index") != bond.index
+            or type(begin_atom_index) is not int
+            or type(end_atom_index) is not int
+            or tuple(sorted((begin_atom_index, end_atom_index)))
+            != (bond.atom_i, bond.atom_j)
+            or row.get("order_binary64_hex") != bond.order.hex()
+            or row.get("aromatic") is not bond.aromatic
+            or row.get("molfile_stereo_code") != stereo_code
+        ):
+            raise ConformerPreparationError(
+                "source SDF bond projection is cross-wired"
+            )
+        raw_bond_order_sums[bond.atom_i] += bond.order
+        raw_bond_order_sums[bond.atom_j] += bond.order
+    atom_rows = projection.get("atoms")
+    if not isinstance(atom_rows, list) or len(atom_rows) != source_system.atom_count:
+        raise ConformerPreparationError(
+            "source SDF atom-field projection is incomplete"
+        )
+    expected_checks = []
+    for atom_index, (row, raw_bond_order_sum) in enumerate(
+        zip(atom_rows, raw_bond_order_sums)
+    ):
+        if not isinstance(row, dict):
+            raise ConformerPreparationError(
+                "source SDF atom-field projection is invalid"
+            )
+        parity_code = row.get("molfile_atom_parity_code")
+        declared_valence = row.get("declared_valence")
+        if (
+            set(row)
+            != {
+                "index",
+                "molfile_atom_parity_code",
+                "declared_valence",
+                "raw_bond_order_sum_binary64_hex",
+            }
+            or row.get("index") != atom_index
+            or type(parity_code) is not int
+            or parity_code not in {0, 1, 2, 3}
+            or (
+                declared_valence is not None
+                and (
+                    type(declared_valence) is not int
+                    or not 1 <= declared_valence <= 14
+                    or raw_bond_order_sum != float(declared_valence)
+                )
+            )
+            or row.get("raw_bond_order_sum_binary64_hex")
+            != raw_bond_order_sum.hex()
+        ):
+            raise ConformerPreparationError(
+                "source SDF atom-field projection is cross-wired"
+            )
+        if declared_valence is not None:
+            expected_checks.append(
+                {
+                    "atom_index": atom_index,
+                    "declared_valence": declared_valence,
+                    "rdkit_explicit_valence": declared_valence,
+                    "rdkit_total_valence": declared_valence,
+                    "rdkit_implicit_hydrogen_count": 0,
+                    "rdkit_no_implicit": True,
+                }
+            )
+    if projection.get("rdkit_declared_valence_checks") != expected_checks:
+        raise ConformerPreparationError(
+            "source SDF RDKit declared-valence checks are cross-wired"
+        )
 
 
 def _verify_generated_conformer_stereo(
@@ -1750,23 +2011,21 @@ def _source_bound_rdkit_molecule(
     if molecule is None:
         raise ConformerPreparationError("RDKit source SDF parsing failed")
     raw_rdkit_projection = _rdkit_raw_source_projection(molecule)
-    raw_text_projection = {
-        "bonds": [
-            {
-                key: row[key]
-                for key in (
-                    "index",
-                    "begin_atom_index",
-                    "end_atom_index",
-                    "order_binary64_hex",
-                    "aromatic",
-                    "molfile_stereo_code",
-                )
-            }
-            for row in raw_rdkit_projection["bonds"]
-        ]
-    }
-    if raw_text_projection != source_text_projection:
+    raw_text_bond_projection = [
+        {
+            key: row[key]
+            for key in (
+                "index",
+                "begin_atom_index",
+                "end_atom_index",
+                "order_binary64_hex",
+                "aromatic",
+                "molfile_stereo_code",
+            )
+        }
+        for row in raw_rdkit_projection["bonds"]
+    ]
+    if raw_text_bond_projection != source_text_projection["bonds"]:
         raise ConformerPreparationError(
             "RDKit molfile bond projection does not match the source SDF"
         )
@@ -1817,6 +2076,12 @@ def _source_bound_rdkit_molecule(
         molecule,
         source_system,
         chemistry=chemistry,
+    )
+    source_text_projection["rdkit_declared_valence_checks"] = (
+        _require_rdkit_declared_valence(
+            molecule,
+            source_text_projection,
+        )
     )
     try:
         chemistry.AssignAtomChiralTagsFromStructure(
@@ -2593,6 +2858,7 @@ def prepare_source_bound_conformer_ensemble(
     }
     return SourceBoundPreparedConformerEnsemble(
         source_system=source_system,
+        source_sdf=source_sdf,
         system=system,
         raw_coordinates=raw_coordinate_tensor,
         records=tuple(records),
