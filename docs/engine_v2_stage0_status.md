@@ -131,8 +131,18 @@ The canonical capability state is:
   PoseBusters failure counts, and proposal/refiner lineage digests. It does not
   duplicate candidate payloads, cannot authorize runtime or fresh execution,
   and labels unproven conformer/orientation causes
-  `unresolved_requires_coordinate_replay`. A current-source V7 report and
-  receipt bundle still must be rematerialized before a real ledger is frozen.
+  `unresolved_requires_coordinate_replay`. The exact current-source nine-case
+  V7 receipt bundle at `58b6f5f7e0fc7f2f19c64dee139befc142e05006`
+  produced a self-hashed analysis and authenticated ledger; five of seven gates
+  pass, while proposal-oracle recovery and invalid Top-1 remain blocked.
+- The merge-SHA V8 absolute-clearance A/B at
+  `d6ba3afe9b30bfb35efe2c99c13e4e6df5f6ce27` selected 28 existing V3 torsion
+  states and reduced protein minimum-distance/volume-overlap failures by 2/4,
+  but exact valid candidates stayed 7/512 and invalid Top-1 stayed 5/8. It failed
+  its predeclared improvement criterion and is not promoted. The only oracle and
+  Top-1 recovery (`6T88_MWQ`) was preserved. Full evidence identities, descriptive
+  runtime, archive hash, and the next-action boundary are recorded in
+  [the V8 clearance development A/B](engine_v2_v8_clearance_development_ab.md).
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -192,31 +202,25 @@ The canonical capability state is:
 
 ## Blocking inputs
 
-1. **Scientific development gates:** the latest V7 hybrid historical-development
-   slice contains 29 scored cases, 1,856 candidates, and the same three typed
-   unsupported large-ring preparation failures. Proposal-oracle recovery is
-   6/29 (0.20690). The tracked 12-case machine authority freezes a
-   `0.31666666666666665` floor, while the prior `0.49375` narrative was not
-   rebound to that artifact. This authority/narrative mismatch remains a
-   blocker until reviewed replacement evidence and policy bindings are frozen;
-   neither value may be silently substituted. Invalid Top-1 is 0.62069 against
-   a 0.20 ceiling. Conditional Top-1 and Top-5 selection failure are 0.83333
-   and 0.50 against 0.50 and 0.20 ceilings. All four gates remain blocked, so
-   fresh 128-case execution and promotion remain prohibited. This execution was
-   Engine-V2-only because the host inotify watch limit was exhausted; it does
-   not claim a new Vina/GNINA comparison or invariance result. The compact
-   ledger contract is implemented, but these V7 observations must be
-   rematerialized from current-source receipts before becoming its frozen
-   machine-readable input.
-2. **Proposal/scorer diagnosis:** all 1,856 successful candidate rows retain
-   canonical binary64 values for all eight terms. The six oracle cases still
-   yield only one Top-1 and three Top-5 recoveries, so the scorer-selection
-   bottleneck remains. The report contains no fresh-holdout result.
-3. **Refinement/validity diagnosis:** V7 increases exact valid candidates and
-   valid-case coverage without regressing V6 aggregate RMSD, but only 14/29
-   cases contain any valid candidate and invalid Top-1 remains 62.07%. Further
-   validity work must generate valid candidates in uncovered cases rather than
-   relabel, filter, or abstain around the current pool.
+1. **Scientific development gates:** the exact current-source V7 non-smoke slice
+   contains 8 scored cases, 512 candidates, and one typed unsupported-large-ring
+   preparation failure in the fixed 9-case denominator. Candidate generation,
+   case failure, preparation failure, and conditional Top-1/Top-5 selection all
+   pass. Proposal-oracle recovery is 1/8 (0.125) against the tracked
+   `0.31666666666666665` floor, and invalid Top-1 is 5/8 (0.625) against the 0.20
+   ceiling. Five of seven gates pass; the remaining two block fresh-128 execution
+   and promotion. This execution is Engine-V2-only and does not claim a new
+   Vina/GNINA comparison or invariance result.
+2. **Proposal/scorer diagnosis:** all 512 scored candidate rows retain canonical
+   binary64 values for all eight terms. The sole oracle case is also the sole
+   Top-1 and Top-5 recovery, so proposal coverage—not scorer calibration—is the
+   immediate bottleneck. The report contains no fresh-holdout result.
+3. **Refinement/validity diagnosis:** only 7/512 candidates across three cases
+   are exactly valid. The result-independent V8 clearance guard improved several
+   individual protein-contact checks without creating a valid candidate or
+   reducing invalid Top-1. Further work must generate genuinely different valid
+   proposals in the five uncovered scored cases rather than relabel, filter,
+   abstain, or relax thresholds around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier
