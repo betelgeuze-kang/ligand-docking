@@ -26,6 +26,7 @@ from betelgeuze_engine_v2.benchmark import (  # noqa: E402
     VerifiedPublicRedockingArchive,
 )
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract  # noqa: E402
+import betelgeuze_engine_v2.benchmark.blind_stage0 as stage0_contract  # noqa: E402
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -385,6 +386,122 @@ def test_pinned_external_alias_rejects_swap_and_restore(tmp_path: Path) -> None:
         match="pinned input mutation monitor observed a change",
     ):
         pinned.close()
+
+
+def test_sealed_case_input_snapshots_pin_all_roles_with_linux_seals(
+    tmp_path: Path,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True, mode=0o700)
+    ligand_fixture = tmp_path / "ligand-fixture.sdf"
+    _ligand(ligand_fixture)
+    ligand_payload = ligand_fixture.read_bytes()
+    payloads = {
+        "receptor": b"sealed-receptor\n",
+        "reference": ligand_payload,
+        "native": ligand_payload,
+        "seed": ligand_payload,
+    }
+    for role in ("receptor", "reference", "native", "seed"):
+        paths[role].write_bytes(payloads[role])
+        paths[role].chmod(0o400)
+    paths["directory"].chmod(0o500)
+    expected = runner._input_sha256s(paths)
+    required_seals = (
+        runner.fcntl.F_SEAL_WRITE
+        | runner.fcntl.F_SEAL_GROW
+        | runner.fcntl.F_SEAL_SHRINK
+        | runner.fcntl.F_SEAL_SEAL
+    )
+
+    with runner.SealedCaseInputSnapshots(paths, expected) as snapshots:
+        assert len(snapshots.descriptors) == 4
+        for role in ("receptor", "reference", "native", "seed"):
+            execution_path = snapshots.execution_paths[role]
+            descriptor = int(execution_path.name)
+            assert execution_path.read_bytes() == payloads[role]
+            assert (
+                runner.fcntl.fcntl(descriptor, runner.fcntl.F_GET_SEALS)
+                == required_seals
+            )
+            with pytest.raises(OSError):
+                runner.os.write(descriptor, b"mutation")
+        assert runner._first_molecule(
+            snapshots.execution_paths["native"]
+        ).GetNumAtoms() > 0
+        with pytest.raises(
+            runner.PublicRedockingRunnerError,
+            match="cannot execute external engines",
+        ):
+            snapshots.external_execution_paths
+
+    assert not tuple(paths["directory"].parent.glob(f".{case_id}.pinned-*"))
+
+
+def test_sealed_case_input_snapshots_fail_closed_without_linux_descriptors(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True, mode=0o700)
+    for role in ("receptor", "reference", "native", "seed"):
+        paths[role].write_bytes(f"{role}\n".encode("ascii"))
+        paths[role].chmod(0o400)
+    paths["directory"].chmod(0o500)
+    expected = runner._input_sha256s(paths)
+    monkeypatch.setattr(runner.platform, "system", lambda: "Darwin")
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="require Linux descriptor execution",
+    ):
+        runner.SealedCaseInputSnapshots(paths, expected)
+
+
+def test_sealed_engine_execution_retains_stage0_logical_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2]
+    output_root = tmp_path / "run"
+    paths = runner._case_paths(output_root / "inputs", case_id)
+    paths["directory"].mkdir(parents=True, mode=0o700)
+    for role in ("receptor", "reference", "native", "seed"):
+        paths[role].write_bytes(f"{role}\n".encode("ascii"))
+        paths[role].chmod(0o400)
+    paths["directory"].chmod(0o500)
+    inputs = runner._input_sha256s(paths)
+    output = output_root / "poses" / "engine_v2" / f"{case_id}.sdf"
+
+    def fail_before_science(*_args, **_kwargs):
+        raise runner.EngineV2PreparationFailure(
+            "input_parse_unsupported",
+            "fixture preparation failure",
+            failure_code="engine_v2_input_unsupported",
+        )
+
+    monkeypatch.setattr(runner, "_engine_v2_pose_coordinates", fail_before_science)
+    with runner.SealedCaseInputSnapshots(paths, inputs) as snapshots:
+        result = runner._engine_v2_result(
+            case_id,
+            snapshots.execution_paths,
+            logical_paths=paths,
+            input_sha256s=inputs,
+            output=output,
+            seed=runner.frozen_public_redocking_case_seed(case_id),
+            scorer_backend=runner.ScorerBackend.PYTHON_REFERENCE,
+        )
+
+    expected = stage0_contract._stage0_development_execution_command(
+        output_root / "receipts" / "engine_v2" / f"{case_id}.json",
+        case_id=case_id,
+        scorer_backend="python_reference",
+    )
+    assert result.status == "failure"
+    assert result.execution_command == expected
+    assert all("/proc/self/fd/" not in token for token in result.execution_command)
 
 
 def test_case_cleanup_rejects_symlinked_input_ancestor_without_deleting_victim(
@@ -1331,6 +1448,267 @@ def test_partial_summary_name_binds_exact_case_selection() -> None:
     assert first_name != second_name
     assert first_name.startswith("partial-summary-all-010-")
     assert first_name.endswith(".json")
+
+
+def test_development_engine_v2_only_requires_exact_historical_slice() -> None:
+    arguments = SimpleNamespace(
+        development_engine_v2_only=True,
+        gnina=None,
+        stage0_policy=None,
+        seed=runner.DEFAULT_SEED,
+        timeout_seconds=300,
+        bootstrap_samples=2_000,
+        engine_v2_scorer_backend="python_reference",
+        case_subset="all",
+        start_index=2,
+        limit=9,
+    )
+    case_ids = runner._case_ids_from_arguments(arguments)
+
+    runner._require_execution_lane_arguments(arguments, case_ids)
+
+    assert case_ids == FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
+    assert len(case_ids) == 9
+    assert not set(case_ids) & set(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS)
+    assert not set(case_ids) & set(
+        runner.FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS
+    )
+
+
+@pytest.mark.parametrize(
+    ("updates", "message"),
+    (
+        ({"start_index": 3}, "exact historical slice"),
+        ({"limit": 8}, "exact historical slice"),
+        ({"case_subset": "engineering-smoke"}, "exact historical slice"),
+        ({"gnina": Path("gnina")}, "rejects gnina"),
+        ({"stage0_policy": Path("stage0.json")}, "rejects Stage 0"),
+        ({"seed": runner.DEFAULT_SEED + 1}, "requires seed"),
+        ({"timeout_seconds": 299}, "frozen runtime defaults"),
+        ({"bootstrap_samples": 1_999}, "frozen runtime defaults"),
+        ({"engine_v2_scorer_backend": "rust_cpu_required"}, "python_reference"),
+    ),
+)
+def test_development_engine_v2_only_rejects_argument_drift(
+    updates: dict[str, object],
+    message: str,
+) -> None:
+    values: dict[str, object] = {
+        "development_engine_v2_only": True,
+        "gnina": None,
+        "stage0_policy": None,
+        "seed": runner.DEFAULT_SEED,
+        "timeout_seconds": 300,
+        "bootstrap_samples": 2_000,
+        "engine_v2_scorer_backend": "python_reference",
+        "case_subset": "all",
+        "start_index": 2,
+        "limit": 9,
+    }
+    values.update(updates)
+    arguments = SimpleNamespace(**values)
+
+    with pytest.raises(runner.PublicRedockingRunnerError, match=message):
+        runner._require_execution_lane_arguments(
+            arguments,
+            FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
+        )
+
+
+@pytest.mark.parametrize(
+    ("extra_arguments", "message"),
+    (
+        (("--start-index", "3"), "exact historical slice"),
+        (("--seed", str(runner.DEFAULT_SEED + 1)), "requires seed"),
+    ),
+)
+def test_development_engine_v2_only_rejects_drift_before_output_creation(
+    tmp_path: Path,
+    extra_arguments: tuple[str, ...],
+    message: str,
+) -> None:
+    output_root = tmp_path / "run"
+
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match=message,
+    ):
+        runner.main(
+            (
+                "--archive",
+                str(tmp_path / "missing.zip"),
+                "--source-identifiers",
+                str(tmp_path / "missing.txt"),
+                "--output-root",
+                str(output_root),
+                "--start-index",
+                "2",
+                "--limit",
+                "9",
+                "--development-engine-v2-only",
+                *extra_arguments,
+            )
+        )
+
+    assert not output_root.exists()
+
+
+def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable() -> None:
+    case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
+    output_root = (Path.cwd() / ".betelgeuze" / "summary-fixture").resolve()
+    scorer_backend = runner.ScorerBackend.PYTHON_REFERENCE
+    expected_policy = {
+        **runner.ENGINE_V2_CPU_POLICY,
+        "scorer_backend": scorer_backend.value,
+        "scorer_thread_count": 1,
+    }
+    implementation_sha256 = "a" * 64
+    evaluation_pipeline_sha256 = "b" * 64
+    execution_environment_sha256 = "c" * 64
+    profiles = [
+        SimpleNamespace(to_dict=lambda case_id=case_id: {"case_id": case_id})
+        for case_id in case_ids
+    ]
+    materialization_payloads = []
+    row_payloads = []
+    execution_payloads = []
+    for index, case_id in enumerate(case_ids):
+        artifact_sha256s = {
+            filename: f"{index * 4 + offset + 1:064x}"
+            for offset, filename in enumerate(runner._CASE_FILE_SUFFIXES)
+        }
+        materialization = {
+            "schema_id": (
+                benchmark_contract.PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID
+            ),
+            "case_id": case_id,
+            "frozen_case_seed": runner.frozen_public_redocking_case_seed(case_id),
+            "source_archive_sha256": (
+                benchmark_contract.PUBLIC_REDOCKING_ARCHIVE_SHA256
+            ),
+            "archive_members": {
+                filename: f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+                for filename in runner._CASE_FILE_SUFFIXES
+            },
+            "artifact_sha256s": artifact_sha256s,
+            "hash_verified_archive": True,
+        }
+        materialization["receipt_sha256"] = runner.hashlib.sha256(
+            runner._canonical_bytes(materialization)
+        ).hexdigest()
+        inputs = {
+            "receptor": artifact_sha256s["protein.pdb"],
+            "reference": artifact_sha256s["ligands.sdf"],
+            "native": artifact_sha256s["ligand.sdf"],
+            "seed": artifact_sha256s["ligand_start_conf.sdf"],
+        }
+        logical_paths = runner._case_paths(output_root / "inputs", case_id)
+        output = output_root / "poses" / "engine_v2" / f"{case_id}.sdf"
+        command = list(
+            runner._engine_v2_command(
+                case_id,
+                logical_paths,
+                output=output,
+                seed=runner.frozen_public_redocking_case_seed(case_id),
+                scorer_backend=scorer_backend,
+            )
+        )
+        row = {
+            "case_id": case_id,
+            "engine_id": "engine_v2",
+            **{
+                f"{role}_artifact_sha256": digest
+                for role, digest in inputs.items()
+            },
+            "execution_command": command,
+            "execution_policy": list(
+                runner._execution_policy_tokens(expected_policy)
+            ),
+        }
+        execution = {
+            "schema_id": (
+                benchmark_contract.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID
+            ),
+            "runner_id": runner.RUNNER_ID,
+            "archive_sha256": benchmark_contract.PUBLIC_REDOCKING_ARCHIVE_SHA256,
+            "source_ids_sha256": (
+                benchmark_contract.PUBLIC_REDOCKING_SOURCE_IDS_SHA256
+            ),
+            "command": command,
+            "execution_policy": expected_policy,
+            "input_sha256s": inputs,
+            "materialization_receipt_sha256": materialization["receipt_sha256"],
+            "implementation_sha256": implementation_sha256,
+            "evaluation_pipeline_sha256": evaluation_pipeline_sha256,
+            "execution_environment_sha256": execution_environment_sha256,
+            "cache_read_allowed": False,
+            "fresh_execution": True,
+            "result": row,
+        }
+        execution["receipt_sha256"] = runner.hashlib.sha256(
+            runner._canonical_bytes(execution)
+        ).hexdigest()
+        materialization_payloads.append(materialization)
+        row_payloads.append(row)
+        execution_payloads.append(execution)
+    materializations = [
+        SimpleNamespace(to_dict=lambda payload=payload: payload)
+        for payload in materialization_payloads
+    ]
+    rows = [
+        SimpleNamespace(to_dict=lambda payload=payload: payload)
+        for payload in row_payloads
+    ]
+    executions = [
+        SimpleNamespace(to_dict=lambda payload=payload: payload)
+        for payload in execution_payloads
+    ]
+
+    summary = runner._development_engine_v2_only_summary(
+        case_ids=case_ids,
+        profiles=profiles,
+        materializations=materializations,
+        rows=rows,
+        executions=executions,
+        scorer_backend=scorer_backend,
+        engine_source_sha256=implementation_sha256,
+        evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+        execution_environment_sha256=execution_environment_sha256,
+    )
+
+    claimed_sha256 = summary.pop("summary_sha256")
+    assert claimed_sha256 == runner.hashlib.sha256(
+        runner._canonical_bytes(summary)
+    ).hexdigest()
+    assert summary["case_ids"] == list(case_ids)
+    assert summary["engine_ids"] == ["engine_v2"]
+    assert summary["external_engines_executed"] is False
+    assert summary["paired_baseline_metrics_present"] is False
+    assert summary["claim_safe"] is False
+
+    tampered = dict(execution_payloads[0])
+    tampered["implementation_sha256"] = "d" * 64
+    tampered_projection = dict(tampered)
+    tampered_projection.pop("receipt_sha256")
+    tampered["receipt_sha256"] = runner.hashlib.sha256(
+        runner._canonical_bytes(tampered_projection)
+    ).hexdigest()
+    executions[0] = SimpleNamespace(to_dict=lambda: tampered)
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="receipt identity is cross-wired",
+    ):
+        runner._development_engine_v2_only_summary(
+            case_ids=case_ids,
+            profiles=profiles,
+            materializations=materializations,
+            rows=rows,
+            executions=executions,
+            scorer_backend=scorer_backend,
+            engine_source_sha256=implementation_sha256,
+            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+            execution_environment_sha256=execution_environment_sha256,
+        )
 
 
 def test_ligand_gasteiger_assignment_is_complete_and_charge_conserving(

@@ -7,6 +7,7 @@ import argparse
 from contextlib import contextmanager, ExitStack
 import ctypes
 from dataclasses import replace
+import fcntl
 from functools import lru_cache
 import hashlib
 from io import BytesIO
@@ -44,6 +45,7 @@ from betelgeuze_engine_v2.benchmark.fresh_redocking_holdout import (
 )
 from betelgeuze_engine_v2.benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
+    FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_ALLOWED_TORCH_VERSIONS,
     PUBLIC_REDOCKING_CASE_SEED_BASE,
     PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS,
@@ -172,6 +174,11 @@ _INOTIFY_FILE_MUTATION_MASK = (
 )
 CHEMICAL_COLUMNS = benchmark_contract.PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS
 GEOMETRIC_COLUMNS = benchmark_contract.PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS
+DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_execution_summary/1.0.0"
+)
+_DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
+_SEALED_CASE_INPUT_ROLES = ("receptor", "reference", "native", "seed")
 
 
 class PublicRedockingRunnerError(RuntimeError):
@@ -703,6 +710,250 @@ class PinnedCaseInputs:
         try:
             self.close()
         except (AttributeError, OSError):
+            pass
+
+
+def _sealed_case_input_descriptor(
+    source_descriptor: int,
+    *,
+    role: str,
+    expected_sha256: str,
+) -> int:
+    descriptor_root = Path("/proc/self/fd")
+    if platform.system() != "Linux" or not descriptor_root.is_dir():
+        raise PublicRedockingRunnerError(
+            "sealed case-input snapshots require Linux descriptor execution"
+        )
+    required_os_names = ("memfd_create", "MFD_CLOEXEC", "MFD_ALLOW_SEALING")
+    required_fcntl_names = (
+        "F_ADD_SEALS",
+        "F_GET_SEALS",
+        "F_SEAL_WRITE",
+        "F_SEAL_GROW",
+        "F_SEAL_SHRINK",
+        "F_SEAL_SEAL",
+    )
+    if any(not hasattr(os, name) for name in required_os_names) or any(
+        not hasattr(fcntl, name) for name in required_fcntl_names
+    ):
+        raise PublicRedockingRunnerError(
+            "sealed case-input snapshots are unavailable"
+        )
+    payload = _bytes_from_descriptor(source_descriptor)
+    if (
+        _sha256_bytes(payload) != expected_sha256
+        or _sha256_descriptor(source_descriptor) != expected_sha256
+    ):
+        raise PublicRedockingRunnerError(
+            f"materialized {role} input changed while it was snapshotted"
+        )
+    descriptor = -1
+    try:
+        descriptor = os.memfd_create(
+            f"betelgeuze-redocking-{role}",
+            flags=os.MFD_CLOEXEC | os.MFD_ALLOW_SEALING,
+        )
+        remaining = memoryview(payload)
+        while remaining:
+            written = os.write(descriptor, remaining)
+            if written <= 0:
+                raise PublicRedockingRunnerError(
+                    f"sealed {role} input snapshot write made no progress"
+                )
+            remaining = remaining[written:]
+        os.fchmod(descriptor, 0o400)
+        seals = (
+            fcntl.F_SEAL_WRITE
+            | fcntl.F_SEAL_GROW
+            | fcntl.F_SEAL_SHRINK
+            | fcntl.F_SEAL_SEAL
+        )
+        fcntl.fcntl(descriptor, fcntl.F_ADD_SEALS, seals)
+        status = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(status.st_mode)
+            or stat.S_IMODE(status.st_mode) != 0o400
+            or status.st_size != len(payload)
+            or fcntl.fcntl(descriptor, fcntl.F_GET_SEALS) != seals
+            or _sha256_descriptor(descriptor) != expected_sha256
+        ):
+            raise PublicRedockingRunnerError(
+                f"sealed {role} input snapshot could not be verified"
+            )
+        result = descriptor
+        descriptor = -1
+        return result
+    except OSError as exc:
+        raise PublicRedockingRunnerError(
+            f"sealed {role} input snapshot could not be created"
+        ) from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+
+
+class SealedCaseInputSnapshots:
+    """Pin exact internal-engine input bytes without external aliases or inotify."""
+
+    __slots__ = (
+        "_closed",
+        "_expected_sha256s",
+        "_logical_paths",
+        "_snapshot_descriptors",
+        "_source_descriptors",
+    )
+
+    def __init__(
+        self,
+        logical_paths: Mapping[str, Path],
+        expected_sha256s: Mapping[str, str],
+    ) -> None:
+        self._logical_paths = dict(logical_paths)
+        self._expected_sha256s = dict(expected_sha256s)
+        self._source_descriptors: dict[str, int] = {}
+        self._snapshot_descriptors: dict[str, int] = {}
+        self._closed = True
+        _require_case_input_identity(
+            self._logical_paths,
+            self._expected_sha256s,
+        )
+        flags = os.O_RDONLY
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            for role in _SEALED_CASE_INPUT_ROLES:
+                path = self._logical_paths[role]
+                source_descriptor = os.open(path, flags)
+                self._source_descriptors[role] = source_descriptor
+                path_status = path.lstat()
+                descriptor_status = os.fstat(source_descriptor)
+                if (
+                    not stat.S_ISREG(descriptor_status.st_mode)
+                    or (path_status.st_dev, path_status.st_ino)
+                    != (descriptor_status.st_dev, descriptor_status.st_ino)
+                    or _sha256_descriptor(source_descriptor)
+                    != self._expected_sha256s[role]
+                ):
+                    raise PublicRedockingRunnerError(
+                        f"materialized {role} input could not be pinned"
+                    )
+                self._snapshot_descriptors[role] = (
+                    _sealed_case_input_descriptor(
+                        source_descriptor,
+                        role=role,
+                        expected_sha256=self._expected_sha256s[role],
+                    )
+                )
+            self._closed = False
+            self.verify()
+        except BaseException:
+            for descriptor in self._snapshot_descriptors.values():
+                os.close(descriptor)
+            self._snapshot_descriptors.clear()
+            for descriptor in self._source_descriptors.values():
+                os.close(descriptor)
+            self._source_descriptors.clear()
+            raise
+
+    @property
+    def descriptors(self) -> tuple[int, ...]:
+        if self._closed:
+            raise PublicRedockingRunnerError("case input snapshots are closed")
+        return tuple(
+            self._snapshot_descriptors[role] for role in _SEALED_CASE_INPUT_ROLES
+        )
+
+    @property
+    def execution_paths(self) -> dict[str, Path]:
+        if self._closed:
+            raise PublicRedockingRunnerError("case input snapshots are closed")
+        return {
+            "directory": self._logical_paths["directory"],
+            **{
+                role: Path("/proc/self/fd")
+                / str(self._snapshot_descriptors[role])
+                for role in _SEALED_CASE_INPUT_ROLES
+            },
+        }
+
+    @property
+    def external_execution_paths(self) -> dict[str, Path]:
+        raise PublicRedockingRunnerError(
+            "sealed case-input snapshots cannot execute external engines"
+        )
+
+    def verify(self) -> None:
+        if self._closed:
+            raise PublicRedockingRunnerError("case input snapshots are closed")
+        _require_case_input_identity(
+            self._logical_paths,
+            self._expected_sha256s,
+        )
+        seals = (
+            fcntl.F_SEAL_WRITE
+            | fcntl.F_SEAL_GROW
+            | fcntl.F_SEAL_SHRINK
+            | fcntl.F_SEAL_SEAL
+        )
+        try:
+            for role in _SEALED_CASE_INPUT_ROLES:
+                path_status = self._logical_paths[role].lstat()
+                source_status = os.fstat(self._source_descriptors[role])
+                snapshot_descriptor = self._snapshot_descriptors[role]
+                snapshot_status = os.fstat(snapshot_descriptor)
+                if (
+                    not stat.S_ISREG(source_status.st_mode)
+                    or (path_status.st_dev, path_status.st_ino)
+                    != (source_status.st_dev, source_status.st_ino)
+                    or _sha256_descriptor(self._source_descriptors[role])
+                    != self._expected_sha256s[role]
+                    or not stat.S_ISREG(snapshot_status.st_mode)
+                    or stat.S_IMODE(snapshot_status.st_mode) != 0o400
+                    or fcntl.fcntl(snapshot_descriptor, fcntl.F_GET_SEALS) != seals
+                    or _sha256_descriptor(snapshot_descriptor)
+                    != self._expected_sha256s[role]
+                ):
+                    raise PublicRedockingRunnerError(
+                        f"sealed {role} input snapshot changed during the run"
+                    )
+        except OSError as exc:
+            raise PublicRedockingRunnerError(
+                "sealed case-input snapshots could not be reverified"
+            ) from exc
+
+    @contextmanager
+    def verified_window(self) -> Iterator[None]:
+        self.verify()
+        try:
+            yield
+        finally:
+            self.verify()
+
+    def close(self) -> None:
+        if not self._closed:
+            try:
+                self.verify()
+            finally:
+                for descriptor in self._snapshot_descriptors.values():
+                    os.close(descriptor)
+                self._snapshot_descriptors.clear()
+                for descriptor in self._source_descriptors.values():
+                    os.close(descriptor)
+                self._source_descriptors.clear()
+                self._closed = True
+
+    def __enter__(self) -> "SealedCaseInputSnapshots":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
             pass
 
 
@@ -2897,7 +3148,11 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--source-identifiers", type=Path, required=True)
-    parser.add_argument("--gnina", type=Path, required=True)
+    parser.add_argument(
+        "--gnina",
+        type=Path,
+        help="required except in the exact development Engine V2-only lane",
+    )
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--timeout-seconds", type=int, default=300)
@@ -2915,6 +3170,14 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--development-engine-v2-only",
+        action="store_true",
+        help=(
+            "execute only the exact historical non-smoke development slice "
+            "[2,11) using sealed in-memory inputs; never claimable"
+        ),
+    )
     parser.add_argument(
         "--stage0-policy",
         type=Path,
@@ -3003,6 +3266,62 @@ def _case_ids_from_arguments(arguments: argparse.Namespace) -> tuple[str, ...]:
     return all_case_ids[arguments.start_index : end_index]
 
 
+def _require_execution_lane_arguments(
+    arguments: argparse.Namespace,
+    case_ids: Sequence[str],
+) -> None:
+    if not arguments.development_engine_v2_only:
+        if arguments.gnina is None:
+            raise PublicRedockingRunnerError(
+                "gnina is required outside the development Engine V2-only lane"
+            )
+        return
+    if arguments.gnina is not None:
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution rejects gnina input"
+        )
+    if arguments.stage0_policy is not None:
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution rejects Stage 0 admission"
+        )
+    if type(arguments.seed) is not int or arguments.seed != DEFAULT_SEED:
+        raise PublicRedockingRunnerError(
+            f"development Engine V2-only execution requires seed {DEFAULT_SEED}"
+        )
+    if (
+        arguments.timeout_seconds != 300
+        or arguments.bootstrap_samples != 2_000
+    ):
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution requires frozen runtime defaults"
+        )
+    if (
+        arguments.engine_v2_scorer_backend
+        != ScorerBackend.PYTHON_REFERENCE.value
+    ):
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution requires python_reference"
+        )
+    if (
+        arguments.case_subset != "all"
+        or arguments.start_index != 2
+        or arguments.limit != 9
+        or tuple(case_ids) != _DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS
+    ):
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution requires the exact historical "
+            "slice --case-subset all --start-index 2 --limit 9"
+        )
+    if set(case_ids) & set(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS):
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution contains engineering smoke cases"
+        )
+    if set(case_ids) & set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS):
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only execution contains a frozen holdout case"
+        )
+
+
 def _partial_summary_filename(
     case_subset: str,
     case_ids: Sequence[str],
@@ -3012,6 +3331,247 @@ def _partial_summary_filename(
         f"partial-summary-{case_subset}-{len(case_ids):03d}-"
         f"{selection_sha256[:16]}.json"
     )
+
+
+def _development_engine_v2_only_summary_filename(
+    case_ids: Sequence[str],
+) -> str:
+    selection_sha256 = hashlib.sha256(_canonical_bytes(list(case_ids))).hexdigest()
+    return (
+        f"engine-v2-only-summary-development-{len(case_ids):03d}-"
+        f"{selection_sha256[:16]}.json"
+    )
+
+
+def _development_engine_v2_only_summary(
+    *,
+    case_ids: Sequence[str],
+    profiles: Sequence[PublicRedockingCaseProfile],
+    materializations: Sequence[VerifiedCaseMaterialization],
+    rows: Sequence[PublicRedockingCaseResult],
+    executions: Sequence[VerifiedPublicRedockingCaseExecution],
+    scorer_backend: ScorerBackend,
+    engine_source_sha256: str,
+    evaluation_pipeline_sha256: str,
+    execution_environment_sha256: str,
+) -> dict[str, object]:
+    expected_case_ids = tuple(case_ids)
+    if expected_case_ids != _DEVELOPMENT_ENGINE_V2_ONLY_CASE_IDS:
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only summary case selection is invalid"
+        )
+    profile_payloads = [profile.to_dict() for profile in profiles]
+    materialization_payloads = [row.to_dict() for row in materializations]
+    row_payloads = [row.to_dict() for row in rows]
+    execution_payloads = [execution.to_dict() for execution in executions]
+    if (
+        tuple(str(row.get("case_id", "")) for row in profile_payloads)
+        != expected_case_ids
+        or tuple(
+            str(row.get("case_id", "")) for row in materialization_payloads
+        )
+        != expected_case_ids
+        or tuple(str(row.get("case_id", "")) for row in row_payloads)
+        != expected_case_ids
+        or any(row.get("engine_id") != "engine_v2" for row in row_payloads)
+        or len(execution_payloads) != len(expected_case_ids)
+        or any(
+            execution.get("result") != row
+            for execution, row in zip(
+                execution_payloads,
+                row_payloads,
+                strict=True,
+            )
+        )
+    ):
+        raise PublicRedockingRunnerError(
+            "development Engine V2-only summary ledger is cross-wired"
+        )
+    expected_policy = {
+        **ENGINE_V2_CPU_POLICY,
+        "scorer_backend": scorer_backend.value,
+        "scorer_thread_count": 1,
+    }
+    required_materialization_fields = {
+        "schema_id",
+        "case_id",
+        "frozen_case_seed",
+        "source_archive_sha256",
+        "archive_members",
+        "artifact_sha256s",
+        "hash_verified_archive",
+        "receipt_sha256",
+    }
+    required_execution_fields = {
+        "schema_id",
+        "runner_id",
+        "archive_sha256",
+        "source_ids_sha256",
+        "command",
+        "execution_policy",
+        "input_sha256s",
+        "materialization_receipt_sha256",
+        "implementation_sha256",
+        "evaluation_pipeline_sha256",
+        "execution_environment_sha256",
+        "cache_read_allowed",
+        "fresh_execution",
+        "result",
+        "receipt_sha256",
+    }
+    for case_id, materialization, row, execution in zip(
+        expected_case_ids,
+        materialization_payloads,
+        row_payloads,
+        execution_payloads,
+        strict=True,
+    ):
+        materialization_projection = dict(materialization)
+        materialization_receipt_sha256 = materialization_projection.pop(
+            "receipt_sha256",
+            None,
+        )
+        artifact_sha256s = materialization.get("artifact_sha256s")
+        if not isinstance(artifact_sha256s, Mapping):
+            raise PublicRedockingRunnerError(
+                "development Engine V2-only materialization is invalid"
+            )
+        expected_inputs = {
+            "receptor": artifact_sha256s.get("protein.pdb"),
+            "reference": artifact_sha256s.get("ligands.sdf"),
+            "native": artifact_sha256s.get("ligand.sdf"),
+            "seed": artifact_sha256s.get("ligand_start_conf.sdf"),
+        }
+        execution_projection = dict(execution)
+        execution_receipt_sha256 = execution_projection.pop(
+            "receipt_sha256",
+            None,
+        )
+        execution_policy = execution.get("execution_policy")
+        command = execution.get("command")
+        if not isinstance(execution_policy, Mapping) or not isinstance(command, list):
+            raise PublicRedockingRunnerError(
+                "development Engine V2-only execution receipt is invalid"
+            )
+        try:
+            output_index = command.index("--out") + 1
+            output_path = Path(str(command[output_index]))
+        except (IndexError, ValueError) as exc:
+            raise PublicRedockingRunnerError(
+                "development Engine V2-only command is invalid"
+            ) from exc
+        if (
+            set(materialization) != required_materialization_fields
+            or materialization.get("schema_id")
+            != benchmark_contract.PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID
+            or materialization.get("case_id") != case_id
+            or materialization.get("frozen_case_seed")
+            != frozen_public_redocking_case_seed(case_id)
+            or materialization.get("source_archive_sha256")
+            != benchmark_contract.PUBLIC_REDOCKING_ARCHIVE_SHA256
+            or materialization.get("hash_verified_archive") is not True
+            or set(artifact_sha256s) != set(_CASE_FILE_SUFFIXES)
+            or materialization_receipt_sha256
+            != hashlib.sha256(
+                _canonical_bytes(materialization_projection)
+            ).hexdigest()
+            or any(
+                not isinstance(value, str) or len(value) != 64
+                for value in expected_inputs.values()
+            )
+            or set(execution) != required_execution_fields
+            or execution.get("schema_id")
+            != benchmark_contract.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID
+            or execution.get("runner_id") != RUNNER_ID
+            or execution.get("archive_sha256")
+            != benchmark_contract.PUBLIC_REDOCKING_ARCHIVE_SHA256
+            or execution.get("source_ids_sha256")
+            != benchmark_contract.PUBLIC_REDOCKING_SOURCE_IDS_SHA256
+            or execution.get("input_sha256s") != expected_inputs
+            or execution.get("materialization_receipt_sha256")
+            != materialization_receipt_sha256
+            or execution.get("implementation_sha256") != engine_source_sha256
+            or execution.get("evaluation_pipeline_sha256")
+            != evaluation_pipeline_sha256
+            or execution.get("execution_environment_sha256")
+            != execution_environment_sha256
+            or execution.get("cache_read_allowed") is not False
+            or execution.get("fresh_execution") is not True
+            or execution_receipt_sha256
+            != hashlib.sha256(_canonical_bytes(execution_projection)).hexdigest()
+            or dict(execution_policy) != expected_policy
+            or row.get("execution_policy")
+            != list(_execution_policy_tokens(expected_policy))
+            or row.get("execution_command") != command
+            or any("/proc/self/fd/" in str(token) for token in command)
+            or not output_path.is_absolute()
+            or output_path.name != f"{case_id}.sdf"
+            or output_path.parent.name != "engine_v2"
+            or output_path.parent.parent.name != "poses"
+            or command
+            != list(
+                _engine_v2_command(
+                    case_id,
+                    _case_paths(output_path.parents[2] / "inputs", case_id),
+                    output=output_path,
+                    seed=frozen_public_redocking_case_seed(case_id),
+                    scorer_backend=scorer_backend,
+                )
+            )
+            or {
+                role: row.get(f"{role}_artifact_sha256")
+                for role in _SEALED_CASE_INPUT_ROLES
+            }
+            != expected_inputs
+        ):
+            raise PublicRedockingRunnerError(
+                "development Engine V2-only summary receipt identity is cross-wired"
+            )
+    case_ids_sha256 = hashlib.sha256(
+        _canonical_bytes(list(expected_case_ids))
+    ).hexdigest()
+    summary: dict[str, object] = {
+        "schema_id": DEVELOPMENT_ENGINE_V2_ONLY_SUMMARY_SCHEMA_ID,
+        "runner_id": RUNNER_ID,
+        "analysis_scope": "historical_contaminated_development_only",
+        "evidence_role": "current_source_engine_v2_execution_only",
+        "case_count": len(expected_case_ids),
+        "case_ids": list(expected_case_ids),
+        "case_ids_sha256": case_ids_sha256,
+        "engine_ids": ["engine_v2"],
+        "engine_identity": {
+            "engine_id": "engine_v2",
+            "implementation_sha256": engine_source_sha256,
+            "evaluation_pipeline_sha256": evaluation_pipeline_sha256,
+            "execution_environment_sha256": execution_environment_sha256,
+            "scorer_backend": scorer_backend.value,
+        },
+        "input_binding": {
+            "mode": "sealed_linux_memfd_snapshot/1.0.0",
+            "immutable_execution_bytes": True,
+            "source_identity_verified_before_and_after": True,
+            "continuous_source_monitoring": False,
+            "external_aliases_created": False,
+        },
+        "profiles": profile_payloads,
+        "materializations": materialization_payloads,
+        "rows": row_payloads,
+        "execution_receipts": execution_payloads,
+        "external_engines_executed": False,
+        "paired_baseline_metrics_present": False,
+        "contains_engineering_smoke": False,
+        "contains_fresh_internal_blind_holdout": False,
+        "fresh_execution_authorized": False,
+        "primary_claim_eligible": False,
+        "public_claim_eligible": False,
+        "scientifically_validated": False,
+        "benchmark_validated": False,
+        "product_qualified": False,
+        "product_promotion_eligible": False,
+        "claim_safe": False,
+    }
+    summary["summary_sha256"] = hashlib.sha256(_canonical_bytes(summary)).hexdigest()
+    return summary
 
 
 def _fresh_execution_receipt_payloads(
@@ -3264,7 +3824,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     repo_root = Path(__file__).resolve().parents[1]
     archive_path = arguments.archive.resolve()
     source_identifiers = arguments.source_identifiers.resolve()
-    source_binary = arguments.gnina.resolve()
     output_root = Path(os.path.abspath(arguments.output_root))
     fresh_run = arguments.case_subset == "fresh-internal-blind-holdout"
     fresh_holdout = (
@@ -3280,11 +3839,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         else FROZEN_PUBLIC_REDOCKING_CASE_IDS
     )
     case_ids = _case_ids_from_arguments(arguments)
+    _require_execution_lane_arguments(arguments, case_ids)
+    development_engine_v2_only = arguments.development_engine_v2_only
+    source_binary = (
+        arguments.gnina.resolve() if arguments.gnina is not None else None
+    )
     requires_stage0 = fresh_run
     scorer_backend = ScorerBackend(arguments.engine_v2_scorer_backend)
     stage0_receipt: VerifiedStage0Admission | None = None
     stage0_policy_path: Path | None = None
     if requires_stage0:
+        if source_binary is None:
+            raise Stage0AdmissionError(("fresh_holdout_gnina_required",))
         if arguments.stage0_policy is None:
             raise Stage0AdmissionError(("stage0_policy_required_before_holdout",))
         if scorer_backend is not ScorerBackend.RUST_CPU_REQUIRED:
@@ -3307,6 +3873,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     def reverify_stage0() -> None:
         if stage0_receipt is None or stage0_policy_path is None:
             return
+        if source_binary is None:
+            raise Stage0AdmissionError(("fresh_holdout_gnina_required",))
         current = verify_stage0_admission(
             stage0_policy_path,
             repo_root=repo_root,
@@ -3350,16 +3918,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         label="prior fresh internal redocking report",
         required_mode=0o600,
     )
+    development_summary_path = output_root / (
+        _development_engine_v2_only_summary_filename(case_ids)
+    )
+    if development_engine_v2_only:
+        _quarantine_managed_regular_file(
+            development_summary_path,
+            label="prior development Engine V2-only summary",
+            required_mode=0o600,
+        )
     if not source_identifiers.is_file():
         raise PublicRedockingRunnerError(
             "published 308-case identifier document is missing"
         )
     verify_public_redocking_source_identifiers(source_identifiers.read_bytes())
-    pinned_binary = _stage_external_binary(
-        source_binary,
-        output_root=output_root,
-    )
-    _verify_external_binary(pinned_binary)
+    pinned_binary: PinnedExternalBinary | None = None
+    binary_version = ""
+    if source_binary is not None:
+        pinned_binary = _stage_external_binary(
+            source_binary,
+            output_root=output_root,
+        )
+        _verify_external_binary(pinned_binary)
+        binary_version = _binary_version(pinned_binary)
+        _verify_external_binary(pinned_binary)
     _load_rdkit_modules()
     _load_posebusters()
     evaluator_versions = _evaluator_environment_versions()
@@ -3374,8 +3956,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"seed must equal the frozen case-seed base {expected_seed_base}"
         )
     evaluation_policy = _evaluation_policy_from_arguments(arguments)
-    binary_version = _binary_version(pinned_binary)
-    _verify_external_binary(pinned_binary)
     engine_source_sha256 = _engine_source_sha256(repo_root)
     evaluation_pipeline_sha256 = _evaluation_pipeline_sha256(
         repo_root,
@@ -3383,6 +3963,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     execution_environment = _execution_environment_identity()
     partial_run = tuple(case_ids) != all_case_ids
+    active_engine_ids = (
+        ("engine_v2",)
+        if development_engine_v2_only
+        else PUBLIC_REDOCKING_PRIMARY_ENGINES
+    )
 
     profiles: list[PublicRedockingCaseProfile] = []
     materializations: list[VerifiedCaseMaterialization | FrozenFreshRedockingCase] = []
@@ -3402,11 +3987,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             for case in fresh_holdout.cases
         }
     rows_by_engine: dict[str, list[PublicRedockingCaseResult]] = {
-        engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        engine_id: [] for engine_id in active_engine_ids
     }
     executions_by_engine: dict[str, list[VerifiedPublicRedockingCaseExecution]] = {
-        engine_id: [] for engine_id in PUBLIC_REDOCKING_PRIMARY_ENGINES
+        engine_id: [] for engine_id in active_engine_ids
     }
+    pinned_input_type = (
+        SealedCaseInputSnapshots
+        if development_engine_v2_only
+        else PinnedCaseInputs
+    )
     archive_context = (
         VerifiedFreshRedockingArchive.open(
             archive_path,
@@ -3436,7 +4026,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 else frozen_public_redocking_case_seed(case_id)
             )
             print(f"[{index + 1}/{len(all_case_ids)}] {case_id}", flush=True)
-            with PinnedCaseInputs(paths, inputs) as pinned_inputs:
+            with pinned_input_type(paths, inputs) as pinned_inputs:
                 execution_paths = pinned_inputs.execution_paths
                 with pinned_inputs.verified_window():
                     profiles.append(
@@ -3492,50 +4082,95 @@ def main(argv: Sequence[str] | None = None) -> int:
                 rows_by_engine["engine_v2"].append(engine_row)
                 executions_by_engine["engine_v2"].append(engine_execution)
 
-                for engine_id in ("vina", "gnina"):
-                    pose_output = output_root / "poses" / engine_id / f"{case_id}.sdf"
-                    receipt = output_root / "receipts" / engine_id / f"{case_id}.json"
-                    with pinned_inputs.verified_window():
-                        row, command = _external_result(
-                            case_id,
-                            engine_id,
-                            execution_paths,
-                            binary=pinned_binary,
-                            input_descriptors=pinned_inputs.descriptors,
-                            input_sha256s=inputs,
-                            external_paths=pinned_inputs.external_execution_paths,
-                            logical_paths=paths,
-                            output=pose_output,
-                            seed=case_seed,
-                            timeout_seconds=arguments.timeout_seconds,
-                            execution_profile_sha256=execution_profile_sha256,
+                if not development_engine_v2_only:
+                    if pinned_binary is None:
+                        raise PublicRedockingRunnerError(
+                            "external engine binary is unavailable"
                         )
-                    pinned_inputs.verify()
-                    execution = _verified_case_execution(
-                        row,
-                        command=command,
-                        execution_policy=_external_execution_policy(
-                            arguments.timeout_seconds,
-                            execution_profile_sha256,
-                        ),
-                        input_sha256s=inputs,
-                        materialization_receipt_sha256=(materialization.receipt_sha256),
-                        implementation_sha256=pinned_binary.sha256,
-                        evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
-                        execution_environment_sha256=(execution_environment.sha256),
-                    )
-                    _atomic_json(
-                        receipt,
-                        execution.to_dict(),
-                    )
-                    rows_by_engine[engine_id].append(row)
-                    executions_by_engine[engine_id].append(execution)
+                    for engine_id in ("vina", "gnina"):
+                        pose_output = (
+                            output_root / "poses" / engine_id / f"{case_id}.sdf"
+                        )
+                        receipt = (
+                            output_root
+                            / "receipts"
+                            / engine_id
+                            / f"{case_id}.json"
+                        )
+                        with pinned_inputs.verified_window():
+                            row, command = _external_result(
+                                case_id,
+                                engine_id,
+                                execution_paths,
+                                binary=pinned_binary,
+                                input_descriptors=pinned_inputs.descriptors,
+                                input_sha256s=inputs,
+                                external_paths=pinned_inputs.external_execution_paths,
+                                logical_paths=paths,
+                                output=pose_output,
+                                seed=case_seed,
+                                timeout_seconds=arguments.timeout_seconds,
+                                execution_profile_sha256=execution_profile_sha256,
+                            )
+                        pinned_inputs.verify()
+                        execution = _verified_case_execution(
+                            row,
+                            command=command,
+                            execution_policy=_external_execution_policy(
+                                arguments.timeout_seconds,
+                                execution_profile_sha256,
+                            ),
+                            input_sha256s=inputs,
+                            materialization_receipt_sha256=(
+                                materialization.receipt_sha256
+                            ),
+                            implementation_sha256=pinned_binary.sha256,
+                            evaluation_pipeline_sha256=(evaluation_pipeline_sha256),
+                            execution_environment_sha256=(
+                                execution_environment.sha256
+                            ),
+                        )
+                        _atomic_json(
+                            receipt,
+                            execution.to_dict(),
+                        )
+                        rows_by_engine[engine_id].append(row)
+                        executions_by_engine[engine_id].append(execution)
                 pinned_inputs.verify()
             _require_case_input_identity(paths, inputs)
             _remove_materialized_case_inputs(paths, inputs)
 
+    if development_engine_v2_only:
+        if any(
+            not isinstance(row, VerifiedCaseMaterialization)
+            for row in materializations
+        ):
+            raise PublicRedockingRunnerError(
+                "development Engine V2-only materialization ledger is invalid"
+            )
+        development_summary = _development_engine_v2_only_summary(
+            case_ids=case_ids,
+            profiles=profiles,
+            materializations=[
+                row
+                for row in materializations
+                if isinstance(row, VerifiedCaseMaterialization)
+            ],
+            rows=rows_by_engine["engine_v2"],
+            executions=executions_by_engine["engine_v2"],
+            scorer_backend=scorer_backend,
+            engine_source_sha256=engine_source_sha256,
+            evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+            execution_environment_sha256=execution_environment.sha256,
+        )
+        _atomic_json(development_summary_path, development_summary)
+        print(development_summary["summary_sha256"])
+        return 0
+
     if partial_run:
         reverify_stage0()
+        if pinned_binary is None:
+            raise PublicRedockingRunnerError("external engine binary is unavailable")
         _verify_external_binary(pinned_binary)
         if tuple(case_ids) == PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS:
             analysis_scope = "engineering_smoke"
@@ -3574,6 +4209,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     reverify_stage0()
+    if pinned_binary is None:
+        raise PublicRedockingRunnerError("external engine binary is unavailable")
     _verify_external_binary(pinned_binary)
     identities = _report_engine_identities(
         binary=pinned_binary.path,
