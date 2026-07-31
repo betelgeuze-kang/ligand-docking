@@ -143,6 +143,15 @@ The canonical capability state is:
   Top-1 recovery (`6T88_MWQ`) was preserved. Full evidence identities, descriptive
   runtime, archive hash, and the next-action boundary are recorded in
   [the V8 clearance development A/B](engine_v2_v8_clearance_development_ab.md).
+- The exact merge-SHA fixed64 true-conformer A/B at
+  `3dbe39c786dc00fe149d6f933b4186ab1ced1d89` failed source-compatibility
+  admission before geometry comparison: only `6VTA_AKN` prepared, while seven
+  seeds were rejected because RDKit sanitization changed the source atom-order
+  or topology projection and one used unsupported non-default atom fields. The
+  lane scored 1/9 cases and 64 candidates, so it is insufficient for a track
+  decision and is not promoted. The fail-closed evidence and next source-order
+  mapping slice are recorded in
+  [the true-conformer development A/B](engine_v2_true_conformer_development_ab.md).
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate

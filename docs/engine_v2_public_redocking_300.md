@@ -506,6 +506,29 @@ summary, and cannot satisfy Stage 0 admission. V7 remains the active Stage 0
 profile until a later evidence review explicitly promotes and refreezes a
 replacement; fresh-128 execution remains prohibited.
 
+To execute the fixed 64-slot source-bound true-conformer profile, use another
+new output root and the mutually exclusive true-conformer flag:
+
+```bash
+python3 tools/run_engine_v2_public_redocking_300.py \
+  --archive /path/to/posebusters_paper_data.zip \
+  --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
+  --output-root .betelgeuze/stage0-development/true-conformer-nine \
+  --case-subset all \
+  --start-index 2 \
+  --limit 9 \
+  --development-engine-v2-only \
+  --development-true-conformer-profile
+```
+
+This lane requires the proposal batch, guided receipt, and full fixed-profile
+provenance receipt as one authenticated triplet. It writes a separate
+development-only case receipt for every case and rejects any use outside the
+exact historical slice. The exact merge-SHA experiment rejected the current
+profile before geometry comparison because source-bound conformer preparation
+failed for 8/9 cases. See
+[`engine_v2_true_conformer_development_ab.md`](engine_v2_true_conformer_development_ab.md).
+
 Argument drift is rejected before output creation. The policy is verified
 again before report materialization, and its execution-profile SHA-256 must be
 present in every case receipt and the complete 384-row internal report ledger.
