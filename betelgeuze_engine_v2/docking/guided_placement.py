@@ -3265,10 +3265,19 @@ def run_authenticated_guided_placement_search(
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     precomputed_proposals: Sequence[DockingProposal] | None = None,
     precomputed_guided_receipt: GuidedPlacementReceipt | None = None,
+    precomputed_provenance_receipt: (
+        FixedSourceBoundConformerProposalReceipt | None
+    ) = None,
 ) -> GuidedPlacementSearchResult:
-    if (precomputed_proposals is None) != (precomputed_guided_receipt is None):
+    supplied_precomputed_values = (
+        precomputed_proposals is not None,
+        precomputed_guided_receipt is not None,
+        precomputed_provenance_receipt is not None,
+    )
+    if any(supplied_precomputed_values) and not all(supplied_precomputed_values):
         raise DockingAuthorityError(
-            "precomputed guided proposals and receipt must be supplied together"
+            "precomputed guided proposals, receipt, and provenance must be "
+            "supplied together"
         )
     if precomputed_proposals is None:
         proposals, receipt = generate_guided_docking_proposals(
@@ -3296,10 +3305,20 @@ def run_authenticated_guided_placement_search(
             raise TypeError(
                 "precomputed_guided_receipt must be GuidedPlacementReceipt"
             )
+        if not isinstance(
+            precomputed_provenance_receipt,
+            FixedSourceBoundConformerProposalReceipt,
+        ):
+            raise TypeError(
+                "precomputed_provenance_receipt must be "
+                "FixedSourceBoundConformerProposalReceipt"
+            )
         authenticated_problem.input_receipt_sha256
         context.fingerprint_sha256
         receipt = precomputed_guided_receipt
         receipt.receipt_sha256
+        provenance = precomputed_provenance_receipt
+        provenance.receipt_sha256
         derived_context = build_guided_placement_context(
             authenticated_problem,
             receptor_system,
@@ -3313,6 +3332,7 @@ def run_authenticated_guided_placement_search(
             != authenticated_problem.input_receipt_sha256
             or receipt.guidance_context_sha256 != context.fingerprint_sha256
             or receipt.budget_sha256 != _budget_sha256(budget)
+            or dict(receipt.feature_counts) != context.feature_counts()
         ):
             raise DockingAuthorityError(
                 "precomputed guided proposal authority is cross-wired"
@@ -3354,6 +3374,34 @@ def run_authenticated_guided_placement_search(
         ) != receipt.proposal_fingerprint_sha256s:
             raise DockingAuthorityError(
                 "precomputed guided proposal fingerprints are cross-wired"
+            )
+        if (
+            provenance.authenticated_input_receipt_sha256
+            != authenticated_problem.input_receipt_sha256
+            or provenance.budget_sha256 != _budget_sha256(budget)
+            or provenance.source_ligand_system_sha256
+            != canonical_system_sha256(ligand_system)
+            or provenance.source_ligand_topology_sha256
+            != canonical_topology_sha256(ligand_system)
+            or provenance.guided_receipt.receipt_sha256
+            != receipt.receipt_sha256
+            or provenance.candidate_ids
+            != tuple(proposal.candidate_id for proposal in proposals)
+            or provenance.proposal_fingerprint_sha256s
+            != tuple(proposal.fingerprint_sha256 for proposal in proposals)
+            or provenance.proposal_coordinate_fingerprint_sha256s
+            != tuple(
+                proposal.coordinate_fingerprint_sha256
+                for proposal in proposals
+            )
+            or provenance.proposal_torsion_metadata_sha256s
+            != tuple(
+                _torsion_metadata_sha256(proposal.torsion_angles)
+                for proposal in proposals
+            )
+        ):
+            raise DockingAuthorityError(
+                "precomputed guided proposal provenance is cross-wired"
             )
     override = _ProposalOverride(
         search_space_fingerprint_sha256=authenticated_problem.search_space.fingerprint_sha256,

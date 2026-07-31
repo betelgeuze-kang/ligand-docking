@@ -31,6 +31,7 @@ from betelgeuze_engine_v2.molecular import (
 from .authority import AuthenticatedDockingProblem, DockingAuthorityError
 from .contact_validity import ElementAwarePoseValidityContext
 from .guided_placement import (
+    FixedSourceBoundConformerProposalReceipt,
     GuidedPlacementContext,
     GuidedPlacementPolicy,
     GuidedPlacementReceipt,
@@ -2000,6 +2001,9 @@ def run_authenticated_scorer_v1_guided_search(
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     precomputed_proposals: Sequence[DockingProposal] | None = None,
     precomputed_guided_receipt: GuidedPlacementReceipt | None = None,
+    precomputed_provenance_receipt: (
+        FixedSourceBoundConformerProposalReceipt | None
+    ) = None,
 ) -> ScorerV1GuidedSearchResult:
     if not isinstance(scorer, ChemistryPoseScorerV1):
         raise TypeError("scorer must be ChemistryPoseScorerV1")
@@ -2021,6 +2025,7 @@ def run_authenticated_scorer_v1_guided_search(
         symmetry_permutations=symmetry_permutations,
         precomputed_proposals=precomputed_proposals,
         precomputed_guided_receipt=precomputed_guided_receipt,
+        precomputed_provenance_receipt=precomputed_provenance_receipt,
     )
     retained: list[ScorerV1SearchTermRow] = []
     for row in guided.authenticated_search_result.search_result.rows:

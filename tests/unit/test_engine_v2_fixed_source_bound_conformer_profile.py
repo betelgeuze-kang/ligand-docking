@@ -21,15 +21,40 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     ConformerPreparationConfig,
     DockingAuthorityError,
     DockingBudget,
+    DockingScoreDescriptor,
     DockingScope,
+    GuidedPlacementPolicy,
     PocketDefinition,
+    ScoreDirection,
     build_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
     generate_fixed_source_bound_conformer_docking_proposals,
     prepare_source_bound_conformer_ensemble,
+    run_authenticated_guided_placement_search,
 )
 from betelgeuze_engine_v2.docking import guided_placement as guided_module  # noqa: E402
 from betelgeuze_engine_v2.io import parse_sdf_v2000  # noqa: E402
+
+
+class _FixedProfileScorer:
+    scorer_id = "fixed-profile-test-scorer"
+    scorer_version = "1.0.0"
+    validated_for_docking_ranking = False
+    implementation_source_sha256 = "e" * 64
+    config_fingerprint_sha256 = "f" * 64
+    score_descriptor = DockingScoreDescriptor(
+        score_id="fixed-profile-test-score",
+        direction=ScoreDirection.MINIMIZE,
+        unit=None,
+        semantics="unit_test_only",
+        calibrated=False,
+    )
+
+    def __init__(self, problem_fingerprint_sha256: str) -> None:
+        self.problem_fingerprint_sha256 = problem_fingerprint_sha256
+
+    def score(self, proposal):
+        return proposal.coordinates.square().sum()
 
 
 def _source_sdf_bytes() -> bytes:
@@ -173,6 +198,83 @@ def test_fixed_source_bound_profile_layout_lineage_and_tamper_rejection(
     )
     assert guided_receipt.receipt_sha256 == repeated_guided.receipt_sha256
     assert development_receipt.receipt_sha256 == (repeated_development.receipt_sha256)
+
+    scorer = _FixedProfileScorer(authority.problem.fingerprint_sha256)
+    search_result = run_authenticated_guided_placement_search(
+        authority,
+        budget,
+        scorer,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        diversity_rmsd_angstrom=0.0,
+        precomputed_proposals=proposals,
+        precomputed_guided_receipt=guided_receipt,
+        precomputed_provenance_receipt=development_receipt,
+    )
+    assert search_result.guided_receipt is guided_receipt
+    assert tuple(
+        row.proposal_fingerprint_sha256
+        for row in search_result.authenticated_search_result.search_result.rows
+    ) == guided_receipt.proposal_fingerprint_sha256s
+
+    forged_guided_receipt = replace(
+        guided_receipt,
+        guided_policy_sha256="0" * 64,
+        proposal_modes=(UNIFORM_FALLBACK_MODE,) * len(proposals),
+        ensemble_source_proposal_indices=(None,) * len(proposals),
+    )
+    with pytest.raises(DockingAuthorityError, match="provenance is cross-wired"):
+        run_authenticated_guided_placement_search(
+            authority,
+            budget,
+            scorer,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            diversity_rmsd_angstrom=0.0,
+            precomputed_proposals=proposals,
+            precomputed_guided_receipt=forged_guided_receipt,
+            precomputed_provenance_receipt=development_receipt,
+        )
+
+    forged_feature_counts = dict(guided_receipt.feature_counts)
+    forged_feature_name = next(iter(forged_feature_counts))
+    forged_feature_counts[forged_feature_name] += 1
+    forged_feature_receipt = replace(
+        guided_receipt,
+        feature_counts=forged_feature_counts,
+    )
+    forged_feature_provenance = replace(
+        development_receipt,
+        guided_receipt=forged_feature_receipt,
+    )
+    with pytest.raises(DockingAuthorityError, match="authority is cross-wired"):
+        run_authenticated_guided_placement_search(
+            authority,
+            budget,
+            scorer,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            diversity_rmsd_angstrom=0.0,
+            precomputed_proposals=proposals,
+            precomputed_guided_receipt=forged_feature_receipt,
+            precomputed_provenance_receipt=forged_feature_provenance,
+        )
+    with pytest.raises(DockingAuthorityError, match="reject a second policy"):
+        run_authenticated_guided_placement_search(
+            authority,
+            budget,
+            scorer,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            policy=GuidedPlacementPolicy(),
+            precomputed_proposals=proposals,
+            precomputed_guided_receipt=guided_receipt,
+            precomputed_provenance_receipt=development_receipt,
+        )
 
     copied_source_torsion_count = 0
     conformer_count = len(ensemble.records)

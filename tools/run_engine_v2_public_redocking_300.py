@@ -2894,6 +2894,9 @@ def _engine_v2_pose_coordinates(
             diversity_rmsd_angstrom=0.0,
             precomputed_proposals=precomputed_proposals,
             precomputed_guided_receipt=precomputed_guided_receipt,
+            precomputed_provenance_receipt=(
+                development_proposal_receipt
+            ),
         )
     except (
         DockingAuthorityError,

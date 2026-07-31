@@ -2892,6 +2892,10 @@ def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
         assert kwargs["guided_policy"] is None
         assert kwargs["precomputed_proposals"] is fixed_proposals
         assert kwargs["precomputed_guided_receipt"] is fixed_guided_receipt
+        assert (
+            kwargs["precomputed_provenance_receipt"]
+            is fixed_development_receipt
+        )
         raise runner.DockingAuthorityError("fixture search failure")
 
     monkeypatch.setattr(
