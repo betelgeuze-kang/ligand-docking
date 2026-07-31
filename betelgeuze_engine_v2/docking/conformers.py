@@ -38,19 +38,23 @@ CONFORMER_PREPARATION_POLICY_ID = (
     "betelgeuze.engine_v2_deterministic_etkdgv3_energy_rmsd/1.0.0"
 )
 SOURCE_BOUND_CONFORMER_ENSEMBLE_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_bound_prepared_conformer_ensemble/1.0.0"
+    "betelgeuze.engine_v2_source_bound_prepared_conformer_ensemble/1.1.0"
 )
 SOURCE_BOUND_CONFORMER_DERIVATION_SCHEMA_ID = (
-    "betelgeuze.engine_v2_source_bound_conformer_derivation/1.0.0"
+    "betelgeuze.engine_v2_source_bound_conformer_derivation/1.1.0"
 )
 SOURCE_BOUND_CONFORMER_PREPARATION_POLICY_ID = (
-    "betelgeuze.engine_v2_source_bound_deterministic_etkdgv3_energy_rmsd/1.0.0"
+    "betelgeuze.engine_v2_source_bound_deterministic_etkdgv3_energy_rmsd/1.1.0"
+)
+SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_bound_rdkit_source_index_mapping/1.0.0"
 )
 MAX_CONFORMER_INPUT_ATOMS = 256
 MAX_CONFORMER_INPUT_BONDS = 512
 MAX_CONFORMER_PREPARED_ATOMS = 512
 MAX_CONFORMER_PREPARED_BONDS = 2_048
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_SOURCE_ATOM_INDEX_PROPERTY = "_BetelgeuzeSourceAtomIndex"
 
 
 class ConformerPreparationError(ValueError):
@@ -772,6 +776,153 @@ class SourceBoundPreparedConformerEnsemble:
                 raise ConformerPreparationError(
                     "source-bound RDKit projection is cross-wired"
                 )
+        source_index_mapping = derivation.get("source_index_mapping")
+        source_index_mapping_sha256 = derivation.get(
+            "source_index_mapping_sha256"
+        )
+        identity = list(range(self.source_system.atom_count))
+        if (
+            not isinstance(source_index_mapping, dict)
+            or source_index_mapping_sha256 != _sha256(source_index_mapping)
+            or source_index_mapping.get("schema_id")
+            != SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID
+            or source_index_mapping.get("source_index_property")
+            != _SOURCE_ATOM_INDEX_PROPERTY
+            or source_index_mapping.get("source_atom_count")
+            != self.source_system.atom_count
+            or source_index_mapping.get(
+                "pre_sanitize_source_index_by_rdkit_index"
+            )
+            != identity
+            or source_index_mapping.get(
+                "normalized_source_index_by_rdkit_index"
+            )
+            != identity
+            or source_index_mapping.get(
+                "raw_source_projection_exact_before_sanitization"
+            )
+            is not True
+            or source_index_mapping.get("post_sanitize_atom_identity_fields")
+            != ["atomic_number", "formal_charge", "isotope_mass_number"]
+            or source_index_mapping.get("post_sanitize_bond_identity")
+            != "exact_source_endpoint_connectivity"
+            or source_index_mapping.get(
+                "post_sanitize_bond_order_aromaticity_policy"
+            )
+            != "exact_or_kekule_ring_to_rdkit_aromatic"
+            or source_index_mapping.get(
+                "source_coordinates_preserved_after_normalization"
+            )
+            is not True
+        ):
+            raise ConformerPreparationError(
+                "source-bound RDKit source-index mapping is cross-wired"
+            )
+        post_sanitize_indices = source_index_mapping.get(
+            "post_sanitize_source_index_by_rdkit_index"
+        )
+        if (
+            not isinstance(post_sanitize_indices, list)
+            or any(type(value) is not int for value in post_sanitize_indices)
+            or sorted(post_sanitize_indices) != identity
+            or source_index_mapping.get("renumbered_to_source_order")
+            is not (post_sanitize_indices != identity)
+        ):
+            raise ConformerPreparationError(
+                "source-bound RDKit source-index mapping is not bijective"
+            )
+        post_sanitize_bonds = source_index_mapping.get(
+            "post_sanitize_bond_projection"
+        )
+        if (
+            not isinstance(post_sanitize_bonds, list)
+            or source_index_mapping.get(
+                "post_sanitize_bond_projection_sha256"
+            )
+            != _sha256(post_sanitize_bonds)
+            or len(post_sanitize_bonds) != len(self.source_system.bonds)
+        ):
+            raise ConformerPreparationError(
+                "source-bound post-sanitize bond projection is cross-wired"
+            )
+        source_bonds = {
+            (bond.atom_i, bond.atom_j): bond for bond in self.source_system.bonds
+        }
+        observed_bonds: list[tuple[int, int]] = []
+        for row in post_sanitize_bonds:
+            if not isinstance(row, dict):
+                raise ConformerPreparationError(
+                    "source-bound post-sanitize bond projection is invalid"
+                )
+            source_atom_i = row.get("source_atom_i")
+            source_atom_j = row.get("source_atom_j")
+            if (
+                type(source_atom_i) is not int
+                or type(source_atom_j) is not int
+                or source_atom_i >= source_atom_j
+            ):
+                raise ConformerPreparationError(
+                    "source-bound post-sanitize bond endpoints are invalid"
+                )
+            endpoints = (source_atom_i, source_atom_j)
+            source_bond = source_bonds.get(endpoints)
+            if source_bond is None:
+                raise ConformerPreparationError(
+                    "source-bound post-sanitize bond connectivity is cross-wired"
+                )
+            try:
+                rdkit_order = float.fromhex(
+                    str(row.get("rdkit_order_binary64_hex") or "")
+                )
+            except (OverflowError, ValueError) as exc:
+                raise ConformerPreparationError(
+                    "source-bound post-sanitize bond order is invalid"
+                ) from exc
+            rdkit_aromatic = row.get("rdkit_aromatic")
+            rdkit_conjugated = row.get("rdkit_conjugated")
+            rdkit_in_ring = row.get("rdkit_in_ring")
+            endpoint_atoms_aromatic = row.get(
+                "rdkit_endpoint_atoms_aromatic"
+            )
+            equivalence = row.get("equivalence")
+            if (
+                row.get("source_order_binary64_hex") != source_bond.order.hex()
+                or row.get("source_aromatic") is not source_bond.aromatic
+                or not math.isfinite(rdkit_order)
+                or type(rdkit_aromatic) is not bool
+                or type(rdkit_conjugated) is not bool
+                or type(rdkit_in_ring) is not bool
+                or not isinstance(endpoint_atoms_aromatic, list)
+                or len(endpoint_atoms_aromatic) != 2
+                or any(type(value) is not bool for value in endpoint_atoms_aromatic)
+            ):
+                raise ConformerPreparationError(
+                    "source-bound post-sanitize bond projection is cross-wired"
+                )
+            exact = (
+                equivalence == "exact"
+                and rdkit_order == source_bond.order
+                and rdkit_aromatic is source_bond.aromatic
+            )
+            kekule_aromatic = (
+                equivalence == "kekule_ring_to_rdkit_aromatic"
+                and not source_bond.aromatic
+                and source_bond.order in {1.0, 2.0}
+                and rdkit_order == 1.5
+                and rdkit_aromatic
+                and rdkit_conjugated
+                and rdkit_in_ring
+                and endpoint_atoms_aromatic == [True, True]
+            )
+            if not exact and not kekule_aromatic:
+                raise ConformerPreparationError(
+                    "source-bound post-sanitize bond equivalence is invalid"
+                )
+            observed_bonds.append(endpoints)
+        if tuple(observed_bonds) != tuple(sorted(source_bonds)):
+            raise ConformerPreparationError(
+                "source-bound post-sanitize bond projection is not complete"
+            )
         try:
             source_system_sha256 = canonical_system_sha256(self.source_system)
             source_topology_sha256 = canonical_topology_sha256(self.source_system)
@@ -1105,6 +1256,187 @@ def _rdkit_bond_projection(molecule: Any) -> tuple[tuple[object, ...], ...]:
     return tuple(sorted(rows))
 
 
+def _bind_rdkit_source_atom_indices(
+    molecule: Any,
+    *,
+    source_atom_count: int,
+) -> None:
+    if int(molecule.GetNumAtoms()) != source_atom_count:
+        raise ConformerPreparationError(
+            "RDKit source atom count does not match the strict SDF parser"
+        )
+    for atom in molecule.GetAtoms():
+        atom.SetIntProp(_SOURCE_ATOM_INDEX_PROPERTY, int(atom.GetIdx()))
+
+
+def _require_rdkit_source_identity(
+    molecule: Any,
+    source_system: AllAtomSystem,
+) -> tuple[tuple[int, ...], list[dict[str, object]]]:
+    atom_count = source_system.atom_count
+    if int(molecule.GetNumAtoms()) != atom_count:
+        raise ConformerPreparationError(
+            "RDKit sanitization changed the source atom count"
+        )
+    try:
+        source_indices = tuple(
+            int(atom.GetIntProp(_SOURCE_ATOM_INDEX_PROPERTY))
+            for atom in molecule.GetAtoms()
+            if atom.HasProp(_SOURCE_ATOM_INDEX_PROPERTY)
+        )
+    except (KeyError, RuntimeError, TypeError, ValueError) as exc:
+        raise ConformerPreparationError(
+            "RDKit sanitization invalidated the source atom-index mapping"
+        ) from exc
+    identity = tuple(range(atom_count))
+    if len(source_indices) != atom_count or tuple(sorted(source_indices)) != identity:
+        raise ConformerPreparationError(
+            "RDKit sanitization invalidated the source atom-index mapping"
+        )
+    source_atoms = {
+        atom.index: (
+            atom.atomic_number,
+            atom.formal_charge,
+            atom.isotope_mass_number,
+        )
+        for atom in source_system.atoms
+    }
+    observed_atoms = {
+        source_index: (
+            int(atom.GetAtomicNum()),
+            int(atom.GetFormalCharge()),
+            int(atom.GetIsotope()) or None,
+        )
+        for atom, source_index in zip(molecule.GetAtoms(), source_indices)
+    }
+    if observed_atoms != source_atoms:
+        raise ConformerPreparationError(
+            "RDKit sanitization changed the source atom identity"
+        )
+    source_bonds = {
+        (bond.atom_i, bond.atom_j): bond for bond in source_system.bonds
+    }
+    observed_connectivity: list[tuple[int, int]] = []
+    post_sanitize_bonds: list[dict[str, object]] = []
+    for bond in molecule.GetBonds():
+        endpoints = tuple(
+            sorted(
+                (
+                    source_indices[int(bond.GetBeginAtomIdx())],
+                    source_indices[int(bond.GetEndAtomIdx())],
+                )
+            )
+        )
+        observed_connectivity.append(endpoints)
+        source_bond = source_bonds.get(endpoints)
+        if source_bond is None:
+            raise ConformerPreparationError(
+                "RDKit sanitization changed the source bond connectivity"
+            )
+        rdkit_order = float(bond.GetBondTypeAsDouble())
+        rdkit_aromatic = bool(bond.GetIsAromatic())
+        if (
+            rdkit_order == source_bond.order
+            and rdkit_aromatic is source_bond.aromatic
+        ):
+            equivalence = "exact"
+        elif (
+            not source_bond.aromatic
+            and source_bond.order in {1.0, 2.0}
+            and rdkit_order == 1.5
+            and rdkit_aromatic
+            and bool(bond.IsInRing())
+            and bool(bond.GetBeginAtom().GetIsAromatic())
+            and bool(bond.GetEndAtom().GetIsAromatic())
+        ):
+            equivalence = "kekule_ring_to_rdkit_aromatic"
+        else:
+            raise ConformerPreparationError(
+                "RDKit sanitization changed the source bond order outside the "
+                "allowed aromatic equivalence"
+            )
+        post_sanitize_bonds.append(
+            {
+                "source_atom_i": endpoints[0],
+                "source_atom_j": endpoints[1],
+                "source_order_binary64_hex": source_bond.order.hex(),
+                "source_aromatic": source_bond.aromatic,
+                "rdkit_order_binary64_hex": rdkit_order.hex(),
+                "rdkit_aromatic": rdkit_aromatic,
+                "rdkit_conjugated": bool(bond.GetIsConjugated()),
+                "rdkit_in_ring": bool(bond.IsInRing()),
+                "rdkit_endpoint_atoms_aromatic": [
+                    bool(bond.GetBeginAtom().GetIsAromatic()),
+                    bool(bond.GetEndAtom().GetIsAromatic()),
+                ],
+                "equivalence": equivalence,
+            }
+        )
+    source_connectivity = tuple(sorted(source_bonds))
+    if tuple(sorted(observed_connectivity)) != source_connectivity:
+        raise ConformerPreparationError(
+            "RDKit sanitization changed the source bond connectivity"
+        )
+    post_sanitize_bonds.sort(
+        key=lambda row: (int(row["source_atom_i"]), int(row["source_atom_j"]))
+    )
+    return source_indices, post_sanitize_bonds
+
+
+def _normalize_rdkit_source_atom_order(
+    molecule: Any,
+    source_system: AllAtomSystem,
+    *,
+    chemistry: Any,
+) -> tuple[Any, dict[str, object]]:
+    identity = tuple(range(source_system.atom_count))
+    source_indices, _ = _require_rdkit_source_identity(molecule, source_system)
+    renumbered = source_indices != identity
+    if renumbered:
+        source_to_current = [0] * source_system.atom_count
+        for current_index, source_index in enumerate(source_indices):
+            source_to_current[source_index] = current_index
+        molecule = chemistry.RenumberAtoms(molecule, source_to_current)
+    normalized_indices, post_sanitize_bonds = _require_rdkit_source_identity(
+        molecule,
+        source_system,
+    )
+    if normalized_indices != identity:
+        raise ConformerPreparationError(
+            "RDKit source atom-index mapping was not normalized to source order"
+        )
+    if int(molecule.GetNumConformers()) != 1 or not torch.equal(
+        _coordinates(molecule, 0),
+        source_system.coordinates[0],
+    ):
+        raise ConformerPreparationError(
+            "RDKit source atom-index mapping did not preserve source coordinates"
+        )
+    projection: dict[str, object] = {
+        "schema_id": SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID,
+        "source_index_property": _SOURCE_ATOM_INDEX_PROPERTY,
+        "source_atom_count": source_system.atom_count,
+        "pre_sanitize_source_index_by_rdkit_index": list(identity),
+        "post_sanitize_source_index_by_rdkit_index": list(source_indices),
+        "normalized_source_index_by_rdkit_index": list(normalized_indices),
+        "renumbered_to_source_order": renumbered,
+        "raw_source_projection_exact_before_sanitization": True,
+        "post_sanitize_atom_identity_fields": [
+            "atomic_number",
+            "formal_charge",
+            "isotope_mass_number",
+        ],
+        "post_sanitize_bond_identity": "exact_source_endpoint_connectivity",
+        "post_sanitize_bond_order_aromaticity_policy": (
+            "exact_or_kekule_ring_to_rdkit_aromatic"
+        ),
+        "post_sanitize_bond_projection": post_sanitize_bonds,
+        "post_sanitize_bond_projection_sha256": _sha256(post_sanitize_bonds),
+        "source_coordinates_preserved_after_normalization": True,
+    }
+    return molecule, projection
+
+
 def _rdkit_raw_source_projection(molecule: Any) -> dict[str, object]:
     return {
         "atoms": [
@@ -1333,6 +1665,7 @@ def _source_bound_rdkit_molecule(
     dict[str, object],
     dict[str, object],
     dict[str, object],
+    dict[str, object],
 ]:
     if not isinstance(source_system, AllAtomSystem):
         raise TypeError("source_system must be AllAtomSystem")
@@ -1470,8 +1803,22 @@ def _source_bound_rdkit_molecule(
         raise ConformerPreparationError(
             "RDKit source atom order or bond topology does not match the strict SDF parser"
         )
+    _bind_rdkit_source_atom_indices(
+        molecule,
+        source_atom_count=source_system.atom_count,
+    )
     try:
         chemistry.SanitizeMol(molecule)
+    except (RuntimeError, ValueError) as exc:
+        raise ConformerPreparationError(
+            "source SDF chemistry sanitization failed"
+        ) from exc
+    molecule, source_index_mapping = _normalize_rdkit_source_atom_order(
+        molecule,
+        source_system,
+        chemistry=chemistry,
+    )
+    try:
         chemistry.AssignAtomChiralTagsFromStructure(
             molecule,
             confId=0,
@@ -1489,25 +1836,8 @@ def _source_bound_rdkit_molecule(
         )
     except (RuntimeError, ValueError) as exc:
         raise ConformerPreparationError(
-            "source SDF chemistry sanitization failed"
+            "source SDF stereochemistry assignment failed"
         ) from exc
-    sanitized_atoms = tuple(
-        (
-            int(atom.GetIdx()),
-            int(atom.GetAtomicNum()),
-            int(atom.GetFormalCharge()),
-            int(atom.GetIsotope()) or None,
-        )
-        for atom in molecule.GetAtoms()
-    )
-    if (
-        int(molecule.GetNumAtoms()) != source_system.atom_count
-        or sanitized_atoms != source_atoms
-        or _rdkit_bond_projection(molecule) != source_bonds
-    ):
-        raise ConformerPreparationError(
-            "RDKit sanitization changed the source atom order or topology"
-        )
     if len(chemistry.GetMolFrags(molecule)) != 1:
         raise ConformerPreparationError(
             "conformer preparation requires one connected ligand component"
@@ -1548,6 +1878,7 @@ def _source_bound_rdkit_molecule(
         raw_rdkit_projection,
         source_text_projection,
         stereo_projection,
+        source_index_mapping,
     )
 
 
@@ -1941,6 +2272,7 @@ def prepare_source_bound_conformer_ensemble(
         raw_rdkit_projection,
         source_text_projection,
         stereo_projection,
+        source_index_mapping,
     ) = _source_bound_rdkit_molecule(
         source_system,
         source_sdf,
@@ -2010,11 +2342,13 @@ def prepare_source_bound_conformer_ensemble(
     minimum_energy = candidate_rows[0][2]
     energy_limit = minimum_energy + settings.energy_window_kcal_mol
     energy_filtered = [row for row in candidate_rows if row[2] <= energy_limit]
-    if int(molecule.GetNumAtoms()) != source_system.atom_count or int(
-        molecule.GetNumBonds()
-    ) != len(source_system.bonds):
+    post_embedding_indices, _ = _require_rdkit_source_identity(
+        molecule,
+        source_system,
+    )
+    if post_embedding_indices != tuple(range(source_system.atom_count)):
         raise ConformerPreparationError(
-            "conformer preparation changed the source atom order or topology"
+            "conformer preparation changed the normalized source atom order"
         )
     generated_conformer_stereo_verifications = [
         {
@@ -2155,6 +2489,8 @@ def prepare_source_bound_conformer_ensemble(
         "source_raw_rdkit_projection_sha256": _sha256(raw_rdkit_projection),
         "source_text_projection": source_text_projection,
         "source_text_projection_sha256": _sha256(source_text_projection),
+        "source_index_mapping": source_index_mapping,
+        "source_index_mapping_sha256": _sha256(source_index_mapping),
         "source_stereo_projection": stereo_projection,
         "source_stereo_projection_sha256": _sha256(stereo_projection),
         "source_stereo_binding_policy": {
@@ -2271,6 +2607,7 @@ __all__ = [
     "SOURCE_BOUND_CONFORMER_DERIVATION_SCHEMA_ID",
     "SOURCE_BOUND_CONFORMER_ENSEMBLE_SCHEMA_ID",
     "SOURCE_BOUND_CONFORMER_PREPARATION_POLICY_ID",
+    "SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID",
     "ConformerPreparationConfig",
     "ConformerPreparationError",
     "PreparedConformerEnsemble",

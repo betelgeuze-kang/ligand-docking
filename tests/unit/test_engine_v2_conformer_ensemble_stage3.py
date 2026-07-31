@@ -12,6 +12,7 @@ from rdkit.Chem import AllChem  # noqa: E402
 from betelgeuze_engine_v2.docking import (  # noqa: E402
     CONFORMER_ENSEMBLE_SCHEMA_ID,
     SOURCE_BOUND_CONFORMER_ENSEMBLE_SCHEMA_ID,
+    SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID,
     ConformerPreparationConfig,
     ConformerPreparationError,
     prepare_deterministic_conformer_ensemble,
@@ -349,6 +350,17 @@ def test_source_bound_ensemble_is_exact_deterministic_and_nonclaiming() -> None:
     )
     derivation = document["derivation_evidence"]
     assert derivation["source_sdf_rdkit_atom_order_verified"] is True
+    source_index_mapping = derivation["source_index_mapping"]
+    assert source_index_mapping["schema_id"] == (
+        SOURCE_BOUND_CONFORMER_SOURCE_INDEX_MAPPING_SCHEMA_ID
+    )
+    assert source_index_mapping["normalized_source_index_by_rdkit_index"] == list(
+        range(charged_source.atom_count)
+    )
+    assert source_index_mapping["source_coordinates_preserved_after_normalization"]
+    assert derivation["source_index_mapping_sha256"] == conformers._sha256(
+        source_index_mapping
+    )
     assert (
         derivation["generated_conformer_stereo_verified_count"]
         == (derivation["embedded_candidate_count"])
@@ -374,6 +386,143 @@ def test_source_bound_ensemble_is_exact_deterministic_and_nonclaiming() -> None:
             dtype=torch.float64,
         )
         assert float(torch.linalg.det(rotation).item()) == pytest.approx(1.0)
+
+
+def test_source_bound_aromatic_perception_preserves_source_topology_authority() -> None:
+    source_bytes = _source_sdf_bytes("c1ccccc1")
+    source = parse_sdf_v2000(
+        source_bytes,
+        source_id="aromatic-source-index-fixture",
+    )
+    ensemble = prepare_source_bound_conformer_ensemble(
+        source,
+        source_bytes,
+        config=replace(
+            _source_config(),
+            candidate_count=4,
+            selected_count=1,
+            diversity_rmsd_angstrom=0.0,
+        ),
+    )
+
+    assert canonical_topology_sha256(ensemble.system) == canonical_topology_sha256(
+        source
+    )
+    derivation = ensemble.to_dict()["derivation_evidence"]
+    mapping = derivation["source_index_mapping"]
+    assert mapping["raw_source_projection_exact_before_sanitization"] is True
+    assert mapping["post_sanitize_bond_order_aromaticity_policy"] == (
+        "exact_or_kekule_ring_to_rdkit_aromatic"
+    )
+    assert mapping["normalized_source_index_by_rdkit_index"] == list(
+        range(source.atom_count)
+    )
+    assert any(
+        not row["aromatic"]
+        for row in derivation["source_raw_rdkit_projection"]["bonds"]
+    )
+    post_sanitize_bonds = mapping["post_sanitize_bond_projection"]
+    assert mapping["post_sanitize_bond_projection_sha256"] == conformers._sha256(
+        post_sanitize_bonds
+    )
+    assert any(
+        row["equivalence"] == "kekule_ring_to_rdkit_aromatic"
+        for row in post_sanitize_bonds
+    )
+    assert all(
+        row["equivalence"] in {"exact", "kekule_ring_to_rdkit_aromatic"}
+        for row in post_sanitize_bonds
+    )
+
+    tampered_receipt = conformers._thaw_json(ensemble.receipt)
+    tampered_mapping = tampered_receipt["derivation_evidence"][
+        "source_index_mapping"
+    ]
+    aromatic_row = next(
+        row
+        for row in tampered_mapping["post_sanitize_bond_projection"]
+        if row["equivalence"] == "kekule_ring_to_rdkit_aromatic"
+    )
+    aromatic_row["equivalence"] = "exact"
+    tampered_mapping["post_sanitize_bond_projection_sha256"] = conformers._sha256(
+        tampered_mapping["post_sanitize_bond_projection"]
+    )
+    tampered_receipt["derivation_evidence"][
+        "source_index_mapping_sha256"
+    ] = conformers._sha256(tampered_mapping)
+    tampered_receipt["derivation_evidence_sha256"] = conformers._sha256(
+        tampered_receipt["derivation_evidence"]
+    )
+    with pytest.raises(
+        ConformerPreparationError,
+        match="post-sanitize bond equivalence is invalid",
+    ):
+        replace(
+            ensemble,
+            receipt=tampered_receipt,
+            receipt_sha256=conformers._sha256(tampered_receipt),
+        )
+
+
+def test_source_index_mapping_normalizes_and_rejects_non_bijections() -> None:
+    source_bytes = _source_sdf_bytes("CCCC")
+    source = parse_sdf_v2000(
+        source_bytes,
+        source_id="renumbered-source-index-fixture",
+    )
+    mol_block = source_bytes.decode("ascii").split("$$$$", 1)[0]
+    molecule = Chem.MolFromMolBlock(
+        mol_block,
+        sanitize=False,
+        removeHs=False,
+        strictParsing=True,
+    )
+    assert molecule is not None
+    conformers._bind_rdkit_source_atom_indices(
+        molecule,
+        source_atom_count=source.atom_count,
+    )
+    Chem.SanitizeMol(molecule)
+    reversed_order = list(reversed(range(source.atom_count)))
+    renumbered = Chem.RenumberAtoms(molecule, reversed_order)
+
+    normalized, mapping = conformers._normalize_rdkit_source_atom_order(
+        renumbered,
+        source,
+        chemistry=Chem,
+    )
+    assert mapping["post_sanitize_source_index_by_rdkit_index"] == reversed_order
+    assert mapping["normalized_source_index_by_rdkit_index"] == list(
+        range(source.atom_count)
+    )
+    assert mapping["renumbered_to_source_order"] is True
+    assert torch.equal(conformers._coordinates(normalized, 0), source.coordinates[0])
+
+    changed_order = Chem.Mol(normalized)
+    changed_order.GetBondWithIdx(0).SetBondType(Chem.BondType.DOUBLE)
+    with pytest.raises(
+        ConformerPreparationError,
+        match="outside the allowed aromatic equivalence",
+    ):
+        conformers._normalize_rdkit_source_atom_order(
+            changed_order,
+            source,
+            chemistry=Chem,
+        )
+
+    normalized.GetAtomWithIdx(1).SetIntProp(
+        conformers._SOURCE_ATOM_INDEX_PROPERTY,
+        0,
+    )
+    with pytest.raises(
+        ConformerPreparationError,
+        match="invalidated the source atom-index mapping",
+    ):
+        conformers._normalize_rdkit_source_atom_order(
+            normalized,
+            source,
+            chemistry=Chem,
+        )
 
 
 def test_source_bound_input_cross_wires_and_implicit_hydrogens_fail_closed() -> None:
