@@ -169,6 +169,14 @@ The canonical capability state is:
   and closed; its evidence identities, descriptive runtime, verified archive,
   and cleanup record are in
   [the source-paired torsion-rescue development A/B](engine_v2_source_paired_torsion_rescue_development_ab.md).
+- The companion
+  [source-paired uncovered failure atlas](engine_v2_source_paired_failure_atlas.md)
+  classifies the seven proposal-oracle-uncovered scored cases as five invalid
+  Top-1 and two valid-but-nonnative Top-1 cases. Across those cases, 24 rescue
+  slots produced 23 evaluations, 22 available variants, and zero selections;
+  all 22 available optimized receptor penalties were at or above `4.0`, and
+  none entered `[2.0,4.0)`. This is a descriptive scale signal only. It neither
+  proves a scale root cause nor authorizes a policy change.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -249,11 +257,15 @@ The canonical capability state is:
    for all of them. It gained no recovery or PoseBusters exact validity and
    regressed selection eligibility 31 to 30 and native-like selection
    eligibility 3 to 2 in `6T88_MWQ`. Seven of eight scored cases remain
-   proposal-oracle-uncovered: five
-   have an invalid Top-1 and two have a valid but nonnative Top-1. Build a
-   failure atlas for those seven cases before defining another bounded,
-   genuinely coordinate-changing proposal intervention; do not relabel, filter,
-   abstain, or relax thresholds around the current pool.
+   proposal-oracle-uncovered: five have an invalid Top-1 and two have a valid
+   but nonnative Top-1. Their completed failure atlas finds no selected torsion
+   variant and places all 22 available optimized receptor penalties at or above
+   `4.0`, outside `[2.0,4.0)`, while leaving conformer, native-relative
+   orientation, pocket-boundary, ring, and physical-clearance causes unresolved.
+   Run a receipt-bound normalization/lexicographic scale-feasibility audit
+   before defining another bounded, genuinely coordinate-changing proposal
+   intervention; do not relabel, filter, abstain, or relax thresholds around
+   the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier
