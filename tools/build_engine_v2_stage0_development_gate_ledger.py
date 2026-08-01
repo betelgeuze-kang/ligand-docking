@@ -9,7 +9,7 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import stat
 from typing import Mapping, Sequence
 
@@ -38,6 +38,7 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
 SCHEMA_ID = "betelgeuze.engine_v2_stage0_development_gate_ledger/1.0.0"
 THRESHOLD_SCHEMA_ID = "betelgeuze.engine_v2_stage0_threshold_evidence/1.0.0"
 THRESHOLD_DERIVATION_POLICY_ID = "baseline_anchored_operational_gate/1.0.0"
+_THRESHOLD_SOURCE_ENGINES = ("engine_v2", "vina", "gnina")
 
 _THRESHOLD_FIELDS = {
     "schema_id",
@@ -166,6 +167,66 @@ def _rates_by_engine(value: object, *, name: str) -> dict[str, float]:
     }
 
 
+def _threshold_source_case_ids(
+    source_reports: object,
+    *,
+    case_count: int,
+    expected_case_ids_sha256: object,
+) -> tuple[str, ...]:
+    if (
+        not isinstance(source_reports, Mapping)
+        or not source_reports
+        or type(case_count) is not int
+        or case_count < 1
+        or not _is_sha256(expected_case_ids_sha256)
+    ):
+        raise ValueError("threshold evidence source reports are invalid")
+    allowed_case_ids = (
+        set(PUBLIC_REDOCKING_CONTAMINATED_DEVELOPMENT_CASE_IDS)
+        - set(PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS)
+        - set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS)
+    )
+    observed_pairs: set[tuple[str, str]] = set()
+    for raw_path, digest in source_reports.items():
+        if (
+            not isinstance(raw_path, str)
+            or not raw_path
+            or "\\" in raw_path
+            or "\x00" in raw_path
+            or not _is_sha256(digest)
+        ):
+            raise ValueError("threshold evidence source reports are invalid")
+        path = PurePosixPath(raw_path)
+        if (
+            not path.is_absolute()
+            or len(path.parts) < 4
+            or any(part in {"", ".", ".."} for part in path.parts)
+            or path.parts[-3] != "receipts"
+            or path.parts[-2] not in _THRESHOLD_SOURCE_ENGINES
+            or path.suffix != ".json"
+            or path.stem not in allowed_case_ids
+        ):
+            raise ValueError("threshold evidence source report path is invalid")
+        pair = (path.parts[-2], path.stem)
+        if pair in observed_pairs:
+            raise ValueError("threshold evidence source report pair is duplicated")
+        observed_pairs.add(pair)
+    case_ids = tuple(sorted({case_id for _, case_id in observed_pairs}))
+    expected_pairs = {
+        (engine, case_id)
+        for engine in _THRESHOLD_SOURCE_ENGINES
+        for case_id in case_ids
+    }
+    if (
+        len(source_reports) != len(_THRESHOLD_SOURCE_ENGINES) * case_count
+        or len(case_ids) != case_count
+        or observed_pairs != expected_pairs
+        or _sha256_payload(list(case_ids)) != expected_case_ids_sha256
+    ):
+        raise ValueError("threshold evidence source report identity is invalid")
+    return case_ids
+
+
 def _validated_thresholds(payload: Mapping[str, object]) -> dict[str, dict[str, object]]:
     if set(payload) != _THRESHOLD_FIELDS:
         raise ValueError("threshold evidence schema fields are invalid")
@@ -199,14 +260,11 @@ def _validated_thresholds(payload: Mapping[str, object]) -> dict[str, dict[str, 
         or not 0 <= oracle_count <= preparation_count
     ):
         raise ValueError("threshold evidence case counts are invalid")
-    source_reports = payload.get("source_reports_sha256")
-    if not isinstance(source_reports, Mapping) or not source_reports or any(
-        not isinstance(path, str)
-        or not path
-        or not _is_sha256(digest)
-        for path, digest in source_reports.items()
-    ):
-        raise ValueError("threshold evidence source reports are invalid")
+    _threshold_source_case_ids(
+        payload.get("source_reports_sha256"),
+        case_count=case_count,
+        expected_case_ids_sha256=payload.get("case_ids_sha256"),
+    )
     if dict(payload.get("metric_denominator_policy", {})) != dict(
         STAGE0_DEVELOPMENT_GATE_DENOMINATORS
     ):

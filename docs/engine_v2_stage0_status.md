@@ -103,6 +103,18 @@ The canonical capability state is:
   is `148 passed, 7 deselected`; lint, py_compile, diff-check, and orchestration
   smoke also pass. Evidence self-hash is
   `9c89ac550cfc8259cdb236ee9970242c4b06a6d720295078b106b7b9a4ee27e5`.
+- The separately tracked Stage 0 threshold authority contains exactly 36
+  source-report hashes: one `engine_v2`, `vina`, and `gnina` receipt identity
+  for each of 12 historical cases. The gate-ledger validator now recomputes
+  the identical case set for all three engines, requires non-smoke historical
+  membership, and binds the sorted case IDs to
+  `cba8259f2dd99b1b998903f4edffb4696f0bbdcb758f9c4df15573d29db2a621`.
+  Nine IDs overlap the exact source-paired A/B cohort; the threshold-only IDs
+  are `7A9E_R4W`, `7MWU_ZPM`, and `7OSO_0V1`. This authenticates the tracked
+  source map only: its receipt payloads are not committed, and it neither
+  defines nor authorizes a 15-case failure atlas. The narrative count 15 is
+  only `29 scored - 14 with any exact-valid candidate`; it is not an exact
+  proposal-oracle-uncovered roster.
 - The Stage 0 source-freeze contract names one V7 algorithm profile and binds
   runner `2.13.0`, candidate schema `1.6.0`, the complete binary64 V7 config,
   its `5e8b61d2...75337` fingerprint, and the result-independent `[2.0,4.0)`
