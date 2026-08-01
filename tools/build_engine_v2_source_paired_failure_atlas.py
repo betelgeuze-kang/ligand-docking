@@ -432,11 +432,7 @@ def _bounded_repository_artifact_bytes(
                 raise ValueError(f"{name} parent must be an owned directory")
             os.close(directory_descriptor)
             directory_descriptor = next_descriptor
-        flags = (
-            os.O_RDONLY
-            | getattr(os, "O_CLOEXEC", 0)
-            | getattr(os, "O_NOFOLLOW", 0)
-        )
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
         try:
             file_descriptor = os.open(
                 relative.name,
