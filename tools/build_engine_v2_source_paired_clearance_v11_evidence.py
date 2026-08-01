@@ -828,6 +828,20 @@ def _historical_v11_candidate(
                     != payload.get("baseline_coordinates_sha256")
                 )
             )
+            or payload.get("initial_penalty_binary64_hex")
+            != candidate.get("refinement_initial_penalty_binary64_hex")
+            or payload.get("final_penalty_binary64_hex")
+            != candidate.get("refinement_final_penalty_binary64_hex")
+            or payload.get("accepted_steps")
+            != candidate.get("refinement_accepted_steps")
+            or payload.get("accepted_rotation_steps")
+            != candidate.get("refinement_accepted_rotation_steps")
+            or payload.get("original_pose_valid")
+            is not candidate.get("refinement_original_pose_valid")
+            or payload.get("total_translation_binary64_hex")
+            != candidate.get("refinement_total_translation_binary64_hex")
+            or payload.get("total_rotation_vector_binary64_hex")
+            != candidate.get("refinement_total_rotation_vector_binary64_hex")
         ):
             raise ValueError(f"{lane} {case_id} V1.1 receipt contract is invalid")
         receipt_projection = dict(payload)
@@ -2416,6 +2430,8 @@ def _tar_members(tar_raw: bytes, manifest: Mapping[str, str]) -> dict[str, bytes
         raise ValueError("tar stream is invalid") from exc
     if set(restored) != set(manifest):
         raise ValueError("tar member set contradicts the manifest")
+    if tar_raw != _deterministic_tar_bytes(restored):
+        raise ValueError("tar stream is not in the canonical deterministic layout")
     return restored
 
 

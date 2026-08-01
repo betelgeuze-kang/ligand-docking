@@ -332,6 +332,23 @@ def test_manifest_and_tar_reject_member_hash_drift() -> None:
 
     assert evidence._tar_members(tar_raw, manifest) == members
 
+    noncanonical_buffer = io.BytesIO()
+    with tarfile.open(
+        fileobj=noncanonical_buffer,
+        mode="w",
+        format=tarfile.GNU_FORMAT,
+    ) as archive:
+        for name in reversed(sorted(members)):
+            info = tarfile.TarInfo(name)
+            info.size = len(members[name])
+            info.mode = 0o600
+            info.uid = 0
+            info.gid = 0
+            info.mtime = 0
+            archive.addfile(info, io.BytesIO(members[name]))
+    with pytest.raises(ValueError, match="canonical deterministic layout"):
+        evidence._tar_members(noncanonical_buffer.getvalue(), manifest)
+
     tampered = dict(manifest)
     tampered["members/00.txt"] = "0" * 64
     with pytest.raises(ValueError, match="payload hash"):
@@ -1001,13 +1018,36 @@ def _successful_frozen_result(lane: str) -> dict[str, object]:
         )
         if lane == "rescue":
             candidate["torsion_rescue_parent_proposal_index"] = None
-            payload["torsion_selected"] = False
-            payload["baseline_coordinates_sha256"] = candidate[
-                "coordinate_fingerprint_sha256"
-            ]
-            payload["post_coordinates_sha256"] = candidate[
-                "coordinate_fingerprint_sha256"
-            ]
+            payload.update(
+                {
+                    "torsion_selected": False,
+                    "baseline_coordinates_sha256": candidate[
+                        "coordinate_fingerprint_sha256"
+                    ],
+                    "post_coordinates_sha256": candidate[
+                        "coordinate_fingerprint_sha256"
+                    ],
+                    "initial_penalty_binary64_hex": candidate[
+                        "refinement_initial_penalty_binary64_hex"
+                    ],
+                    "final_penalty_binary64_hex": candidate[
+                        "refinement_final_penalty_binary64_hex"
+                    ],
+                    "accepted_steps": candidate["refinement_accepted_steps"],
+                    "accepted_rotation_steps": candidate[
+                        "refinement_accepted_rotation_steps"
+                    ],
+                    "original_pose_valid": candidate[
+                        "refinement_original_pose_valid"
+                    ],
+                    "total_translation_binary64_hex": candidate[
+                        "refinement_total_translation_binary64_hex"
+                    ],
+                    "total_rotation_vector_binary64_hex": candidate[
+                        "refinement_total_rotation_vector_binary64_hex"
+                    ],
+                }
+            )
             candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
         candidates.append(candidate)
     diagnostic_fields = (
@@ -1102,6 +1142,7 @@ def test_frozen_result_parser_accepts_successful_baseline_and_rescue(
         "execution_policy",
         "post_coordinates",
         "unselected_baseline_coordinates",
+        "refinement_projection",
         "v1_schema",
         "v11_keyset",
     ),
@@ -1156,6 +1197,9 @@ def test_successful_frozen_rescue_rejects_resealed_contract_drift(
         candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
     elif drift == "unselected_baseline_coordinates":
         payload["baseline_coordinates_sha256"] = "e" * 64
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
+    elif drift == "refinement_projection":
+        payload["final_penalty_binary64_hex"] = (1.0).hex()
         candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
     elif drift == "v1_schema":
         payload["schema_id"] = (
