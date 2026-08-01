@@ -189,9 +189,20 @@ def _build_authenticated_report(
 def test_receipt_bound_audit_emits_exact_descriptive_partition(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    report = _build_authenticated_report(monkeypatch)
+    authenticated_atlas = _authenticated_failure_atlas()
+    report = _build_authenticated_report(
+        monkeypatch,
+        authenticated_atlas=authenticated_atlas,
+    )
 
     assert report["schema_id"] == audit_builder.SCHEMA_ID
+    assert report["authentication"]["failure_atlas_schema_id"] == (
+        failure_atlas.SCHEMA_ID
+    )
+    assert (
+        report["authentication"]["failure_atlas_report_sha256"]
+        == (authenticated_atlas["report_sha256"])
+    )
     assert report["historical_cohort_outcome_selected"] is True
     assert report["outcomes_consumed_for_cohort_authentication"] is True
     assert report["scale_computation_result_independent"] is True

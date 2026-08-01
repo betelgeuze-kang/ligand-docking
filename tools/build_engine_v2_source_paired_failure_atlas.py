@@ -42,7 +42,7 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
 )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0"
+SCHEMA_ID = "betelgeuze.engine_v2_source_paired_failure_atlas/2.1.0"
 AB_SCHEMA_ID = "betelgeuze.engine_v2_source_paired_torsion_rescue_development_ab/1.1.0"
 ANALYSIS_SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
 SUMMARY_SCHEMA_ID = (
@@ -107,6 +107,28 @@ _POSEBUSTERS_CHECK_IDS = frozenset(
     )
 )
 _INTERNAL_CHECK_IDS = frozenset(("internal_steric_clash", "internal_energy"))
+CAUSE_CATEGORY_STATUS_VOCABULARY = {
+    "good_conformer_absence": ("unresolved_no_independent_conformer_axis",),
+    "wrong_global_orientation": ("unresolved_receipt_motion_scale_only",),
+    "pocket_boundary": ("unresolved_no_numeric_boundary_metric",),
+    "receptor_minimum_distance": (
+        "observed_top1_failure",
+        "not_observed_at_top1",
+    ),
+    "volume_overlap": ("observed_top1_failure", "not_observed_at_top1"),
+    "ligand_internal_clash": (
+        "observed_top1_failure",
+        "not_observed_at_top1",
+    ),
+    "internal_energy": ("observed_top1_failure", "not_observed_at_top1"),
+    "torsion_freedom": (
+        "observed_no_authority_rotor",
+        "unresolved_bounded_rescue_unsuccessful",
+    ),
+    "ring_conformer": ("unresolved_profile_not_in_receipts",),
+    "unsupported_chemistry": ("not_observed_preparation_succeeded",),
+}
+CAUSE_CATEGORY_KEYS = tuple(CAUSE_CATEGORY_STATUS_VOCABULARY)
 _EXECUTION_FIELDS = frozenset(
     {
         "schema_id",
@@ -1389,38 +1411,10 @@ def _case_atlas_row(
         str(candidate["proposal_mode"]) for candidate in rescue_candidates
     )
     top1_failed_checks = set(top1["posebusters_failed_check_ids"])
-    cause_category_status = {
-        "good_conformer_absence": "unresolved_no_independent_conformer_axis",
-        "wrong_global_orientation": "unresolved_receipt_motion_scale_only",
-        "pocket_boundary": "unresolved_no_numeric_boundary_metric",
-        "receptor_minimum_distance": (
-            "observed_top1_failure"
-            if "minimum_distance_to_protein" in top1_failed_checks
-            else "not_observed_at_top1"
-        ),
-        "volume_overlap": (
-            "observed_top1_failure"
-            if "volume_overlap_with_protein" in top1_failed_checks
-            else "not_observed_at_top1"
-        ),
-        "ligand_internal_clash": (
-            "observed_top1_failure"
-            if "internal_steric_clash" in top1_failed_checks
-            else "not_observed_at_top1"
-        ),
-        "internal_energy": (
-            "observed_top1_failure"
-            if "internal_energy" in top1_failed_checks
-            else "not_observed_at_top1"
-        ),
-        "torsion_freedom": (
-            "observed_no_authority_rotor"
-            if rotor_count == 0
-            else "unresolved_bounded_rescue_unsuccessful"
-        ),
-        "ring_conformer": "unresolved_profile_not_in_receipts",
-        "unsupported_chemistry": "not_observed_preparation_succeeded",
-    }
+    cause_category_status = _cause_category_status(
+        top1_failed_checks=frozenset(top1_failed_checks),
+        rotor_count=rotor_count,
+    )
     return {
         "case_id": case_id,
         "failure_class": failure_class,
@@ -1549,6 +1543,81 @@ def _case_atlas_row(
     }
 
 
+def _cause_category_status(
+    *,
+    top1_failed_checks: frozenset[str],
+    rotor_count: int,
+) -> dict[str, str]:
+    statuses = {
+        "good_conformer_absence": "unresolved_no_independent_conformer_axis",
+        "wrong_global_orientation": "unresolved_receipt_motion_scale_only",
+        "pocket_boundary": "unresolved_no_numeric_boundary_metric",
+        "receptor_minimum_distance": (
+            "observed_top1_failure"
+            if "minimum_distance_to_protein" in top1_failed_checks
+            else "not_observed_at_top1"
+        ),
+        "volume_overlap": (
+            "observed_top1_failure"
+            if "volume_overlap_with_protein" in top1_failed_checks
+            else "not_observed_at_top1"
+        ),
+        "ligand_internal_clash": (
+            "observed_top1_failure"
+            if "internal_steric_clash" in top1_failed_checks
+            else "not_observed_at_top1"
+        ),
+        "internal_energy": (
+            "observed_top1_failure"
+            if "internal_energy" in top1_failed_checks
+            else "not_observed_at_top1"
+        ),
+        "torsion_freedom": (
+            "observed_no_authority_rotor"
+            if rotor_count == 0
+            else "unresolved_bounded_rescue_unsuccessful"
+        ),
+        "ring_conformer": "unresolved_profile_not_in_receipts",
+        "unsupported_chemistry": "not_observed_preparation_succeeded",
+    }
+    if tuple(statuses) != CAUSE_CATEGORY_KEYS or any(
+        status not in CAUSE_CATEGORY_STATUS_VOCABULARY[category]
+        for category, status in statuses.items()
+    ):
+        raise RuntimeError("failure-atlas cause taxonomy contract is invalid")
+    return statuses
+
+
+def _cause_category_status_counts(
+    rows: Sequence[Mapping[str, object]],
+) -> dict[str, dict[str, int]]:
+    counters = {category: Counter() for category in CAUSE_CATEGORY_KEYS}
+    for row in rows:
+        statuses = row.get("cause_category_status")
+        if not isinstance(statuses, Mapping) or set(statuses) != set(
+            CAUSE_CATEGORY_KEYS
+        ):
+            raise ValueError("failure-atlas cause taxonomy keys are invalid")
+        for category in CAUSE_CATEGORY_KEYS:
+            status = statuses.get(category)
+            if status not in CAUSE_CATEGORY_STATUS_VOCABULARY[category]:
+                raise ValueError("failure-atlas cause taxonomy status is invalid")
+            counters[category][str(status)] += 1
+    counts = {
+        category: {
+            status: counters[category][status]
+            for status in CAUSE_CATEGORY_STATUS_VOCABULARY[category]
+        }
+        for category in CAUSE_CATEGORY_KEYS
+    }
+    if any(
+        sum(category_counts.values()) != len(rows)
+        for category_counts in counts.values()
+    ):
+        raise ValueError("failure-atlas cause taxonomy counts do not reconcile")
+    return counts
+
+
 def _build_failure_atlas_payload(
     *,
     ab_report: Mapping[str, object],
@@ -1581,6 +1650,7 @@ def _build_failure_atlas_payload(
     blocker_counts = Counter(
         blocker for row in rows for blocker in row["observed_blocker_ids"]
     )
+    cause_category_status_counts = _cause_category_status_counts(rows)
     uncovered_torsion_counts = Counter()
     uncovered_selection_reasons: Counter[str] = Counter()
     uncovered_penalty_bands: Counter[str] = Counter()
@@ -1640,6 +1710,14 @@ def _build_failure_atlas_payload(
         "case_ids_sha256": _sha256_payload(list(observed_uncovered)),
         "failure_class_counts": dict(sorted(class_counts.items())),
         "observed_blocker_counts": dict(sorted(blocker_counts.items())),
+        "cause_category_contract": {
+            "category_keys": list(CAUSE_CATEGORY_KEYS),
+            "allowed_statuses": {
+                category: list(CAUSE_CATEGORY_STATUS_VOCABULARY[category])
+                for category in CAUSE_CATEGORY_KEYS
+            },
+        },
+        "cause_category_status_counts": cause_category_status_counts,
         "cross_lane_summary": cross_lane,
         "uncovered_torsion_scale_summary": {
             **dict(sorted(uncovered_torsion_counts.items())),

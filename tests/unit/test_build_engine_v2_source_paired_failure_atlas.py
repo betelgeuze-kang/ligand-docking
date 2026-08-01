@@ -927,6 +927,70 @@ def test_authenticated_archive_builds_exact_source_paired_atlas(
         "invalid_top1": 5,
         "valid_nonnative_top1": 2,
     }
+    expected_vocabulary = {
+        "good_conformer_absence": ["unresolved_no_independent_conformer_axis"],
+        "wrong_global_orientation": ["unresolved_receipt_motion_scale_only"],
+        "pocket_boundary": ["unresolved_no_numeric_boundary_metric"],
+        "receptor_minimum_distance": [
+            "observed_top1_failure",
+            "not_observed_at_top1",
+        ],
+        "volume_overlap": ["observed_top1_failure", "not_observed_at_top1"],
+        "ligand_internal_clash": [
+            "observed_top1_failure",
+            "not_observed_at_top1",
+        ],
+        "internal_energy": ["observed_top1_failure", "not_observed_at_top1"],
+        "torsion_freedom": [
+            "observed_no_authority_rotor",
+            "unresolved_bounded_rescue_unsuccessful",
+        ],
+        "ring_conformer": ["unresolved_profile_not_in_receipts"],
+        "unsupported_chemistry": ["not_observed_preparation_succeeded"],
+    }
+    assert report["cause_category_contract"] == {
+        "category_keys": list(expected_vocabulary),
+        "allowed_statuses": expected_vocabulary,
+    }
+    assert report["cause_category_status_counts"] == {
+        "good_conformer_absence": {
+            "unresolved_no_independent_conformer_axis": 7,
+        },
+        "wrong_global_orientation": {
+            "unresolved_receipt_motion_scale_only": 7,
+        },
+        "pocket_boundary": {"unresolved_no_numeric_boundary_metric": 7},
+        "receptor_minimum_distance": {
+            "observed_top1_failure": 5,
+            "not_observed_at_top1": 2,
+        },
+        "volume_overlap": {
+            "observed_top1_failure": 1,
+            "not_observed_at_top1": 6,
+        },
+        "ligand_internal_clash": {
+            "observed_top1_failure": 0,
+            "not_observed_at_top1": 7,
+        },
+        "internal_energy": {
+            "observed_top1_failure": 1,
+            "not_observed_at_top1": 6,
+        },
+        "torsion_freedom": {
+            "observed_no_authority_rotor": 1,
+            "unresolved_bounded_rescue_unsuccessful": 6,
+        },
+        "ring_conformer": {"unresolved_profile_not_in_receipts": 7},
+        "unsupported_chemistry": {
+            "not_observed_preparation_succeeded": 7,
+        },
+    }
+    for case in report["cases"]:
+        assert list(case["cause_category_status"]) == list(expected_vocabulary)
+        assert all(
+            status in expected_vocabulary[category]
+            for category, status in case["cause_category_status"].items()
+        )
     assert report["cross_lane_summary"]["rescue_parent_duplicate_count"] == 28
     assert report["cross_lane_summary"]["torsion_selected_count"] == 0
     assert report["authentication"]["both_raw_receipt_lanes_verified"] is True
@@ -939,7 +1003,7 @@ def test_authenticated_archive_builds_exact_source_paired_atlas(
 
 def test_schema_and_reviewed_archive_identities_are_pinned() -> None:
     assert atlas_builder.SCHEMA_ID == (
-        "betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0"
+        "betelgeuze.engine_v2_source_paired_failure_atlas/2.1.0"
     )
     assert atlas_builder.EXPECTED_EVIDENCE_ARCHIVE_SHA256 == (
         "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc"
@@ -950,6 +1014,36 @@ def test_schema_and_reviewed_archive_identities_are_pinned() -> None:
     assert atlas_builder.EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 == (
         "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9"
     )
+
+
+def test_cause_taxonomy_observed_and_unresolved_branches() -> None:
+    observed = atlas_builder._cause_category_status(
+        top1_failed_checks=frozenset(
+            {
+                "minimum_distance_to_protein",
+                "volume_overlap_with_protein",
+                "internal_steric_clash",
+                "internal_energy",
+            }
+        ),
+        rotor_count=0,
+    )
+    unresolved = atlas_builder._cause_category_status(
+        top1_failed_checks=frozenset(),
+        rotor_count=3,
+    )
+
+    assert tuple(observed) == atlas_builder.CAUSE_CATEGORY_KEYS
+    assert observed["receptor_minimum_distance"] == "observed_top1_failure"
+    assert observed["volume_overlap"] == "observed_top1_failure"
+    assert observed["ligand_internal_clash"] == "observed_top1_failure"
+    assert observed["internal_energy"] == "observed_top1_failure"
+    assert observed["torsion_freedom"] == "observed_no_authority_rotor"
+    assert unresolved["receptor_minimum_distance"] == "not_observed_at_top1"
+    assert unresolved["volume_overlap"] == "not_observed_at_top1"
+    assert unresolved["ligand_internal_clash"] == "not_observed_at_top1"
+    assert unresolved["internal_energy"] == "not_observed_at_top1"
+    assert unresolved["torsion_freedom"] == "unresolved_bounded_rescue_unsuccessful"
 
 
 def test_production_result_binding_rejects_nested_candidate_drift() -> None:
