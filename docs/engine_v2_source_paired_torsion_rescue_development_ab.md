@@ -181,9 +181,13 @@ all 22 available optimized receptor penalties were at or above `4.0`, outside
 the absolute `[2.0,4.0)` window. Scale mismatch remains an unconfirmed
 hypothesis, not a conclusion.
 
-Before adding another proposal variant, perform the receipt-bound Phase 2.4
-scale-feasibility audit defined by the atlas. Do not change the active policy
-until one bounded rule is predeclared. Any later intervention must be result-
-independent, bounded, source-retaining, and genuinely coordinate-changing.
+The receipt-bound Phase 2.4
+[scale-feasibility audit](engine_v2_receipt_bound_scale_feasibility_audit.md)
+is complete. Heavy-atom normalization moves 7/22 available variants into the
+same numeric interval, but that interval is not calibrated for the normalized
+objective. Exact lexicographic ordering marks all 22 improved and is not a
+bounded selector. Do not change the active policy until one rule is
+predeclared. Any later intervention must be result-independent, bounded,
+source-retaining, and genuinely coordinate-changing.
 Scorer calibration, threshold relaxation, relabeling/filtering, V7 replacement,
 and holdout execution remain out of scope.

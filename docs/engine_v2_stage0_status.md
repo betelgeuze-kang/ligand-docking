@@ -177,6 +177,14 @@ The canonical capability state is:
   all 22 available optimized receptor penalties were at or above `4.0`, and
   none entered `[2.0,4.0)`. This is a descriptive scale signal only. It neither
   proves a scale root cause nor authorizes a policy change.
+- The follow-up
+  [receipt-bound scale-feasibility audit](engine_v2_receipt_bound_scale_feasibility_audit.md)
+  binds heavy-atom counts to the exact ligand artifact hashes and evaluates
+  only refinement objectives. Reusing the numeric `[2.0,4.0)` bounds after
+  heavy-atom normalization places 7/22 available variants inside, but those
+  bounds are not calibrated for the normalized objective. Exact lexicographic
+  receptor/internal ordering marks all 22 improved and is non-discriminating;
+  it also permits internal-penalty increases. No rule or policy was selected.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -262,10 +270,11 @@ The canonical capability state is:
    variant and places all 22 available optimized receptor penalties at or above
    `4.0`, outside `[2.0,4.0)`, while leaving conformer, native-relative
    orientation, pocket-boundary, ring, and physical-clearance causes unresolved.
-   Run a receipt-bound normalization/lexicographic scale-feasibility audit
-   before defining another bounded, genuinely coordinate-changing proposal
-   intervention; do not relabel, filter, abstain, or relax thresholds around
-   the current pool.
+   The completed receipt-bound scale audit finds 7/22 inside the same numeric
+   interval only after heavy-atom normalization, while exact lexicographic
+   ordering accepts all 22 and therefore does not provide a bounded selector.
+   Predeclare one result-independent rule before any historical A/B; do not
+   relabel, filter, abstain, or relax thresholds around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
    debt and freezes the Engine-required/legacy/product/local-evidence tier

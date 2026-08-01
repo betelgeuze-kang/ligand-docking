@@ -135,16 +135,16 @@ recorded per case; they must not be promoted to causal conclusions.
 ## Next bounded action
 
 Do not widen the torsion lane, relax `[2.0,4.0)`, or calibrate the scorer from
-this atlas. The next Phase 2.4 slice should be a result-independent,
-receipt-bound scale-feasibility audit. It should first inventory which
-normalizers the authenticated receipts actually bind, evaluate ligand-heavy-
-atom normalization and lexicographic receptor/internal ordering only when their
-required counts and objectives are available, and explicitly mark accepted-
-pair, clash-atom, maximum-penetration, and absolute-clearance alternatives
-unavailable when the receipts cannot support them.
+this atlas. The follow-up receipt-bound
+[scale-feasibility audit](engine_v2_receipt_bound_scale_feasibility_audit.md)
+is complete. It finds 7/22 inside the same numeric interval after heavy-atom
+normalization, while exact receptor/internal lexicographic ordering marks all
+22 improved. The former is uncalibrated and the latter is non-discriminating;
+neither is selected automatically. Accepted-pair, clash-atom,
+maximum-penetration, and absolute-clearance alternatives remain unavailable.
 
-Only after that audit should one bounded selection rule be predeclared for a
-historical-development A/B. Any later proposal intervention must remain
+One bounded selection rule must be predeclared before a historical-development
+A/B. Any later proposal intervention must remain
 result-independent, hard-capped, source-retaining, and genuinely coordinate-
 changing. Fresh execution, scorer calibration, relabeling/filtering, V7
 replacement, product promotion, and public claims remain out of scope.
