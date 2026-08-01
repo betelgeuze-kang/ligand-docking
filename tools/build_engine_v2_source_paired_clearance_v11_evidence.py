@@ -26,9 +26,7 @@ import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas  # noq
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.2.0"
-OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1 = (
-    "6a749540339db5e53875841e463cfcbcdf7072b2"
-)
+OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1 = "6a749540339db5e53875841e463cfcbcdf7072b2"
 EXPECTED_CASE_IDS = (
     "5SD5_HWI",
     "5SIS_JSM",
@@ -70,9 +68,7 @@ PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
 PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
 )
-PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE = (
-    "uniform_torsion_rescue_variant"
-)
+PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE = "uniform_torsion_rescue_variant"
 EXPECTED_BASE_PROPOSAL_MODES = frozenset(
     {
         "donor_acceptor_hotspot",
@@ -147,6 +143,22 @@ EXPECTED_RESCUE_CANDIDATE_SCHEMA_ID = (
 )
 EXPECTED_CANDIDATE_COUNT = 64
 EXPECTED_SCORER_BACKEND = "python_reference"
+EXPECTED_INTERACTION_REFINER_CONFIG_SHA256 = (
+    "5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337"
+)
+# The execution-policy hash above identifies the shared generic refiner policy.
+# V1.1 receipts bind a case-specific composite refiner configuration that also
+# includes authenticated authority, allocation, and proposal context.
+EXPECTED_SOURCE_PAIRED_REFINER_COMPOSITE_CONFIG_SHA256_BY_CASE = {
+    "5SD5_HWI": ("1d4896a6597ecde6956565730d343bbf0ff25cfc287a6d74537565f1f42abe71"),
+    "5SIS_JSM": ("6edbf859fb4933ea5cd30a5901bd195f7583de8ca46ab90868944b6290fa62cc"),
+    "6M2B_EZO": ("60a13d239dc58f684cfccc4f0576792026f2807a8fc275e7154aba8602908dc3"),
+    "6T88_MWQ": ("81136a4d81b5728f13aafb58ad68bd19c5e6cff2c46caf06ad58a32058ec5c89"),
+    "6TW5_9M2": ("694ff7b3cf2a63ebe4b1b1dc35bb6ac676ca3b6a91431b8abd5ee28d4803d59a"),
+    "6TW7_NZB": ("565b30512cc9ae53897b43abceefd09edd43aa0c0ae0b339bc9ecb7e6a21176b"),
+    "6VTA_AKN": ("db16a22b37d24246d9fd7f13f60bcb8218ba68448433e5a50e840e78bc99649b"),
+    "6WTN_RXT": ("aa3fb65a9a171553f1c6ce69d17ea424b2f24497eb3375a71c3b1fb457bb65c7"),
+}
 EXPECTED_SCORER_BACKEND_RECEIPT = {
     "backend": EXPECTED_SCORER_BACKEND,
     "backend_version": "1.0.0",
@@ -168,8 +180,7 @@ EXPECTED_SCORER_BACKEND_RECEIPT = {
     "target_triple": "",
 }
 EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID = (
-    "betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue/"
-    "1.0.0"
+    "betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue/1.0.0"
 )
 EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256 = (
     "1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6"
@@ -180,6 +191,12 @@ EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256 = (
 EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP = 4
 EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_proposal_receipt/1.0.0"
+)
+EXPECTED_BASELINE_GUIDED_PLACEMENT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_guided_placement_receipt/1.3.0"
+)
+EXPECTED_RESCUE_GUIDED_PLACEMENT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_guided_placement_receipt/1.4.0"
 )
 EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_policy/1.0.0"
@@ -421,16 +438,11 @@ EXPECTED_BASELINE_V7_RECEIPT_KEYSET_SHA256 = (
 )
 
 BASELINE_RUN_ROOT = (
-    ".betelgeuze/stage0-development/"
-    "v7-clearance-v11-6a749540-baseline-nine"
+    ".betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-nine"
 )
-RESCUE_RUN_ROOT = (
-    ".betelgeuze/stage0-development/"
-    "v7-clearance-v11-6a749540-rescue-nine"
-)
+RESCUE_RUN_ROOT = ".betelgeuze/stage0-development/v7-clearance-v11-6a749540-rescue-nine"
 BASELINE_SUMMARY_PATH = (
-    f"{BASELINE_RUN_ROOT}/"
-    "engine-v2-only-summary-development-009-cd2c24c9c7d93786.json"
+    f"{BASELINE_RUN_ROOT}/engine-v2-only-summary-development-009-cd2c24c9c7d93786.json"
 )
 RESCUE_SUMMARY_PATH = (
     f"{RESCUE_RUN_ROOT}/"
@@ -438,18 +450,15 @@ RESCUE_SUMMARY_PATH = (
     "009-cd2c24c9c7d93786.json"
 )
 BASELINE_ANALYSIS_PATH = (
-    ".betelgeuze/stage0-development/"
-    "v7-clearance-v11-6a749540-baseline-analysis.json"
+    ".betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-analysis.json"
 )
 RESCUE_ANALYSIS_PATH = (
-    ".betelgeuze/stage0-development/"
-    "v7-clearance-v11-6a749540-rescue-analysis.json"
+    ".betelgeuze/stage0-development/v7-clearance-v11-6a749540-rescue-analysis.json"
 )
 BASELINE_WALLTIME_PATH = f"{BASELINE_RUN_ROOT}.walltime.txt"
 RESCUE_WALLTIME_PATH = f"{RESCUE_RUN_ROOT}.walltime.txt"
 REPORT_PATH = (
-    ".betelgeuze/stage0-development/"
-    "source-paired-clearance-v11-6a749540-audit.json"
+    ".betelgeuze/stage0-development/source-paired-clearance-v11-6a749540-audit.json"
 )
 ARCHIVE_PATH = (
     ".betelgeuze/stage0-development/archives/"
@@ -649,7 +658,9 @@ def _historical_v11_candidate(
         or type(candidate.get("hbond_count")) is not int
         or int(candidate["hbond_count"]) < 0
         or not isinstance(failed_checks, list)
-        or any(not isinstance(check_id, str) or not check_id for check_id in failed_checks)
+        or any(
+            not isinstance(check_id, str) or not check_id for check_id in failed_checks
+        )
     ):
         raise ValueError(f"{lane} {case_id} candidate shape is invalid")
     if proposal_mode == "uniform_v3_rigid_ensemble":
@@ -685,15 +696,13 @@ def _historical_v11_candidate(
         or candidate.get("geometric_valid")
         is not (
             not bool(
-                set(failed_check_tuple)
-                & set(EXPECTED_POSEBUSTERS_GEOMETRIC_CHECK_IDS)
+                set(failed_check_tuple) & set(EXPECTED_POSEBUSTERS_GEOMETRIC_CHECK_IDS)
             )
         )
         or candidate.get("chemical_valid")
         is not (
             not bool(
-                set(failed_check_tuple)
-                & set(EXPECTED_POSEBUSTERS_CHEMICAL_CHECK_IDS)
+                set(failed_check_tuple) & set(EXPECTED_POSEBUSTERS_CHEMICAL_CHECK_IDS)
             )
         )
     ):
@@ -727,9 +736,7 @@ def _historical_v11_candidate(
             name=f"candidate score term {term}",
         )
     if candidate_score.hex() != decoded_terms["total_score"].hex():
-        raise ValueError(
-            f"{lane} {case_id} candidate score contradicts retained total"
-        )
+        raise ValueError(f"{lane} {case_id} candidate score contradicts retained total")
     if not math.isclose(
         decoded_terms["total_score"],
         sum(decoded_terms[name] for name in EXPECTED_SCORER_TERM_NAMES[:-1]),
@@ -767,18 +774,21 @@ def _historical_v11_candidate(
     payload = candidate.get("refinement_receipt_payload")
     if not isinstance(payload, Mapping):
         raise ValueError(f"{lane} {case_id} refinement payload is invalid")
-    if proposal_mode in {
-        "uniform_v3_rigid_ensemble",
-        PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
-    } and not payload:
+    if (
+        proposal_mode
+        in {
+            "uniform_v3_rigid_ensemble",
+            PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
+        }
+        and not payload
+    ):
         raise ValueError(f"{lane} {case_id} source-paired payload is missing")
     if lane == "baseline":
         if payload:
             if (
                 _sha256_payload(sorted(payload))
                 != EXPECTED_BASELINE_V7_RECEIPT_KEYSET_SHA256
-                or payload.get("schema_id")
-                != EXPECTED_BASELINE_V7_RECEIPT_SCHEMA_ID
+                or payload.get("schema_id") != EXPECTED_BASELINE_V7_RECEIPT_SCHEMA_ID
                 or payload.get("receipt_sha256")
                 != candidate.get("refinement_receipt_sha256")
             ):
@@ -796,8 +806,7 @@ def _historical_v11_candidate(
     else:
         if (
             set(payload) != EXPECTED_V11_RECEIPT_FIELDS
-            or _sha256_payload(sorted(payload))
-            != EXPECTED_V11_RECEIPT_KEYSET_SHA256
+            or _sha256_payload(sorted(payload)) != EXPECTED_V11_RECEIPT_KEYSET_SHA256
             or payload.get("schema_id") != EXPECTED_RECEIPT_SCHEMA_ID
             or payload.get("receipt_sha256")
             != candidate.get("refinement_receipt_sha256")
@@ -817,6 +826,10 @@ def _historical_v11_candidate(
             or payload.get("source_paired_torsion_rescue_variant_cap")
             != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
             or payload.get("result_dependent_eligibility") is not False
+            or payload.get("config_sha256")
+            != EXPECTED_SOURCE_PAIRED_REFINER_COMPOSITE_CONFIG_SHA256_BY_CASE.get(
+                case_id
+            )
             or payload.get("post_coordinates_sha256")
             != candidate.get("coordinate_fingerprint_sha256")
             or type(payload.get("torsion_selected")) is not bool
@@ -958,18 +971,22 @@ def _historical_v11_result(
         or diagnostics.get("candidate_success_count") != EXPECTED_CANDIDATE_COUNT
         or diagnostics.get("candidate_failure_count") != 0
         or len(raw_candidates) != EXPECTED_CANDIDATE_COUNT
-        or diagnostics.get("scorer_backend_receipt")
-        != EXPECTED_SCORER_BACKEND_RECEIPT
+        or diagnostics.get("scorer_backend_receipt") != EXPECTED_SCORER_BACKEND_RECEIPT
     ):
         raise ValueError(f"{lane} {case_id} successful denominator is invalid")
     candidates = tuple(
         _historical_v11_candidate(candidate, lane=lane, case_id=case_id)
         for candidate in raw_candidates
     )
-    if {
-        int(candidate["proposal_index"]) for candidate in candidates
-    } != set(range(EXPECTED_CANDIDATE_COUNT)):
+    if {int(candidate["proposal_index"]) for candidate in candidates} != set(
+        range(EXPECTED_CANDIDATE_COUNT)
+    ):
         raise ValueError(f"{lane} {case_id} candidate indices are invalid")
+    proposal_fingerprints = [
+        str(candidate["proposal_fingerprint_sha256"]) for candidate in candidates
+    ]
+    if len(proposal_fingerprints) != len(set(proposal_fingerprints)):
+        raise ValueError(f"{lane} {case_id} proposal fingerprints are duplicated")
     failure_atlas._validate_ranked_result_projection(
         result,
         candidates,
@@ -1009,8 +1026,7 @@ def _validate_pose_member(
     if (
         not isinstance(expected_hashes, list)
         or len(records) != 5
-        or tuple(_sha256_bytes(record) for record in records)
-        != tuple(expected_hashes)
+        or tuple(_sha256_bytes(record) for record in records) != tuple(expected_hashes)
     ):
         raise ValueError(
             f"{lane} {case_id} pose artifact hashes contradict retained SDF"
@@ -1041,7 +1057,9 @@ def _member_object(
     return payload, raw
 
 
-def _walltime(members: Mapping[str, bytes], path: str, *, lane: str) -> dict[str, object]:
+def _walltime(
+    members: Mapping[str, bytes], path: str, *, lane: str
+) -> dict[str, object]:
     raw = members.get(_safe_member_name(path))
     if raw is None or len(raw) > 4096:
         raise ValueError(f"{lane} wall-time receipt is missing or oversized")
@@ -1071,7 +1089,9 @@ def _walltime(members: Mapping[str, bytes], path: str, *, lane: str) -> dict[str
     maximum_rss = int(values["max_rss_kb"])
     exit_status = int(values["exit_status"])
     if (
-        not all(math.isfinite(value) and value >= 0.0 for value in (elapsed, user, system))
+        not all(
+            math.isfinite(value) and value >= 0.0 for value in (elapsed, user, system)
+        )
         or maximum_rss < 1
         or exit_status != 0
     ):
@@ -1218,9 +1238,7 @@ def _metric_summary(results: Mapping[str, Mapping[str, object]]) -> dict[str, in
             ),
         )
         totals["proposal_oracle_recovery_case_count"] += bool(native_like)
-        totals["top1_recovery_case_count"] += (
-            float(ranked[0]["rmsd_angstrom"]) <= 2.0
-        )
+        totals["top1_recovery_case_count"] += float(ranked[0]["rmsd_angstrom"]) <= 2.0
         totals["top5_recovery_case_count"] += any(
             float(candidate["rmsd_angstrom"]) <= 2.0 for candidate in ranked[:5]
         )
@@ -1266,8 +1284,7 @@ def _load_lane(
     )
     if (
         summary.get("schema_id") != expected_schema
-        or summary.get("analysis_scope")
-        != "historical_contaminated_development_only"
+        or summary.get("analysis_scope") != "historical_contaminated_development_only"
         or summary.get("runner_id") != PUBLIC_REDOCKING_RUNNER_ID
         or summary.get("case_count") != len(EXPECTED_CASE_IDS)
         or tuple(summary.get("case_ids", ())) != EXPECTED_CASE_IDS
@@ -1289,8 +1306,7 @@ def _load_lane(
             )
         )
         or (
-            lane == "baseline"
-            and "development_source_paired_torsion_rescue" in summary
+            lane == "baseline" and "development_source_paired_torsion_rescue" in summary
         )
     ):
         raise ValueError(f"{lane} summary identity or boundary is invalid")
@@ -1302,9 +1318,7 @@ def _load_lane(
     expected_members = {summary_path}
     for case_id in EXPECTED_CASE_IDS:
         receipt_path = f"{run_root}/receipts/engine_v2/{case_id}.json"
-        materialization_path = (
-            f"{run_root}/receipts/materializations/{case_id}.json"
-        )
+        materialization_path = f"{run_root}/receipts/materializations/{case_id}.json"
         expected_members.update((receipt_path, materialization_path))
         receipt, receipt_raw = _member_object(
             members,
@@ -1340,9 +1354,7 @@ def _load_lane(
         if (
             typed_payload != dict(result)
             or receipt.get("command") != typed_payload.get("execution_command")
-            or failure_atlas._execution_policy_tokens(
-                receipt.get("execution_policy")
-            )
+            or failure_atlas._execution_policy_tokens(receipt.get("execution_policy"))
             != typed_payload.get("execution_policy")
         ):
             raise ValueError(f"{lane} execution receipt result is cross-wired")
@@ -1586,9 +1598,7 @@ def _clearance_summary(
             torsion_counts["torsion_selected_candidate_count"] += (
                 torsion_selected is True
             )
-            torsion_counts["clearance_evaluated_candidate_count"] += (
-                evaluated is True
-            )
+            torsion_counts["clearance_evaluated_candidate_count"] += evaluated is True
             ligand_count = payload.get("clearance_ligand_atom_count")
             receptor_count = payload.get("clearance_receptor_atom_count")
             pair_count = payload.get("clearance_full_cartesian_pair_count")
@@ -1618,9 +1628,7 @@ def _clearance_summary(
                     "unselected torsion coordinates must retain the baseline"
                 )
             if variant_available is False:
-                baseline_coordinates_sha256 = payload.get(
-                    "baseline_coordinates_sha256"
-                )
+                baseline_coordinates_sha256 = payload.get("baseline_coordinates_sha256")
                 if (
                     not _is_sha256(baseline_coordinates_sha256)
                     or payload.get("optimized_coordinates_sha256")
@@ -1737,15 +1745,13 @@ def _v11_rescue_allocation(
         or _sha256_payload(policy_projection) != policy_sha256
         or policy.get("schema_id")
         != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID
-        or policy.get("policy_id")
-        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID
+        or policy.get("policy_id") != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID
         or policy.get("base_guided_policy_sha256")
         != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
         or policy.get("candidate_count") != EXPECTED_CANDIDATE_COUNT
         or policy.get("maximum_variant_count")
         != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
-        or policy.get("source_pair_authority")
-        != "base_uniform_v3_ensemble_receipt"
+        or policy.get("source_pair_authority") != "base_uniform_v3_ensemble_receipt"
         or policy.get("variant_target_selection")
         != "rounded_even_spacing_across_ordered_v3_target_indices"
         or policy.get("authority_rotor_required") is not True
@@ -1851,11 +1857,7 @@ def _v11_rescue_allocation(
         target_indices = [row["target_proposal_index"] for row in ordered_pairs]
         expected_targets = {
             target_indices[
-                round(
-                    index
-                    * (len(target_indices) - 1)
-                    / (rescue_count - 1)
-                )
+                round(index * (len(target_indices) - 1) / (rescue_count - 1))
             ]
             for index in range(rescue_count)
         }
@@ -1892,6 +1894,7 @@ def _v11_rescue_allocation(
         raise ValueError("source-paired candidate slots are incomplete")
     slots: list[Mapping[str, object]] = []
     candidate_ids: set[str] = set()
+    slot_fingerprints: set[str] = set()
     for index, slot in enumerate(raw_slots):
         if (
             not isinstance(slot, Mapping)
@@ -1903,9 +1906,11 @@ def _v11_rescue_allocation(
             or not _is_sha256(slot.get("coordinate_fingerprint_sha256"))
             or not _is_sha256(slot.get("torsion_metadata_sha256"))
             or str(slot["candidate_id"]) in candidate_ids
+            or str(slot["proposal_fingerprint_sha256"]) in slot_fingerprints
         ):
             raise ValueError("source-paired candidate slot is invalid")
         candidate_ids.add(str(slot["candidate_id"]))
+        slot_fingerprints.add(str(slot["proposal_fingerprint_sha256"]))
         slots.append(slot)
     candidate_by_index = {
         int(candidate["proposal_index"]): candidate for candidate in candidates
@@ -1929,6 +1934,122 @@ def _v11_rescue_allocation(
         if candidate.get("proposal_mode")
         == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
     }
+    v3_targets = {row["target_proposal_index"] for row in v3_pairs}
+    candidate_v3_targets = {
+        index
+        for index, candidate in candidate_by_index.items()
+        if candidate.get("proposal_mode") == "uniform_v3_rigid_ensemble"
+    }
+    v3_parent_by_target = {
+        row["target_proposal_index"]: row["parent_proposal_index"] for row in v3_pairs
+    }
+    if candidate_v3_targets != v3_targets or any(
+        candidate_by_index[target].get("ensemble_source_proposal_index") != parent
+        for target, parent in v3_parent_by_target.items()
+    ):
+        raise ValueError("V3 candidate lineage contradicts the allocation")
+    baseline_guided = proposal.get("baseline_guided_placement")
+    guided = proposal.get("guided_placement")
+
+    def authenticated_guided_receipt(
+        value: object,
+        *,
+        expected_schema_id: str,
+        name: str,
+    ) -> tuple[Mapping[str, object], str]:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{name} receipt is missing")
+        projection = dict(value)
+        receipt_sha256 = projection.pop("receipt_sha256", None)
+        if (
+            value.get("schema_id") != expected_schema_id
+            or not _is_sha256(receipt_sha256)
+            or receipt_sha256 != _sha256_payload(projection)
+        ):
+            raise ValueError(f"{name} receipt self-hash is invalid")
+        return value, str(receipt_sha256)
+
+    baseline_guided, baseline_guided_sha256 = authenticated_guided_receipt(
+        baseline_guided,
+        expected_schema_id=EXPECTED_BASELINE_GUIDED_PLACEMENT_SCHEMA_ID,
+        name="baseline guided placement",
+    )
+    guided, _ = authenticated_guided_receipt(
+        guided,
+        expected_schema_id=EXPECTED_RESCUE_GUIDED_PLACEMENT_SCHEMA_ID,
+        name="rescue guided placement",
+    )
+    if (
+        guided.get("baseline_guided_receipt_sha256") != baseline_guided_sha256
+        or guided.get("torsion_rescue_allocation_sha256") != allocation_sha256
+    ):
+        raise ValueError("guided proposal receipt linkage is invalid")
+    baseline_rows = baseline_guided.get("proposal_guidance_rows")
+    baseline_modes = baseline_guided.get("proposal_modes")
+    baseline_fingerprints = baseline_guided.get("proposal_fingerprint_sha256s")
+    guided_rows = guided.get("proposal_guidance_rows")
+    guided_modes = guided.get("proposal_modes")
+    guided_fingerprints = guided.get("proposal_fingerprint_sha256s")
+    if any(
+        not isinstance(value, list) or len(value) != EXPECTED_CANDIDATE_COUNT
+        for value in (
+            baseline_rows,
+            baseline_modes,
+            baseline_fingerprints,
+            guided_rows,
+            guided_modes,
+            guided_fingerprints,
+        )
+    ):
+        raise ValueError("guided proposal lineage is incomplete")
+    assert isinstance(baseline_rows, list)
+    assert isinstance(baseline_modes, list)
+    assert isinstance(baseline_fingerprints, list)
+    assert isinstance(guided_rows, list)
+    assert isinstance(guided_modes, list)
+    assert isinstance(guided_fingerprints, list)
+    baseline_parent_by_target = {
+        row["target_proposal_index"]: row["parent_proposal_index"]
+        for row in ordered_pairs
+    }
+    baseline_v3_targets = {
+        index
+        for index, mode in enumerate(baseline_modes)
+        if mode == "uniform_v3_rigid_ensemble"
+    }
+    if baseline_v3_targets != set(baseline_parent_by_target):
+        raise ValueError("baseline guided V3 targets contradict the allocation")
+    for index, candidate in candidate_by_index.items():
+        baseline_row = baseline_rows[index]
+        row = guided_rows[index]
+        slot = slots[index]
+        expected_baseline_mode = (
+            "uniform_v3_rigid_ensemble"
+            if index in baseline_parent_by_target
+            else candidate.get("proposal_mode")
+        )
+        if (
+            not isinstance(baseline_row, Mapping)
+            or baseline_row.get("proposal_index") != index
+            or baseline_row.get("mode") != expected_baseline_mode
+            or baseline_modes[index] != expected_baseline_mode
+            or baseline_fingerprints[index] != slot.get("proposal_fingerprint_sha256")
+            or baseline_row.get("ensemble_source_proposal_index")
+            != baseline_parent_by_target.get(index)
+        ):
+            raise ValueError("baseline guided lineage contradicts the allocation")
+        if (
+            not isinstance(row, Mapping)
+            or row.get("proposal_index") != index
+            or row.get("mode") != candidate.get("proposal_mode")
+            or guided_modes[index] != candidate.get("proposal_mode")
+            or guided_fingerprints[index] != slot.get("proposal_fingerprint_sha256")
+            or row.get("ensemble_source_proposal_index")
+            != candidate.get("ensemble_source_proposal_index")
+            or row.get("torsion_rescue_parent_proposal_index")
+            != candidate.get("torsion_rescue_parent_proposal_index")
+        ):
+            raise ValueError("guided proposal lineage contradicts candidate rows")
     pair_targets = [row["target_proposal_index"] for row in pairs]
     if rescue_targets != set(pair_targets) or len(pair_targets) != len(
         set(pair_targets)
@@ -2044,10 +2165,9 @@ def _lane_comparison(
             target_candidate = rescue_by_index[target]
             parent_candidate = rescue_by_index[parent]
             payload = target_candidate.get("refinement_receipt_payload")
-            if (
-                target_candidate.get("coordinate_fingerprint_sha256")
-                == parent_candidate.get("coordinate_fingerprint_sha256")
-            ):
+            if target_candidate.get(
+                "coordinate_fingerprint_sha256"
+            ) == parent_candidate.get("coordinate_fingerprint_sha256"):
                 parent_duplicate_count += 1
             if (
                 isinstance(payload, Mapping)
@@ -2113,6 +2233,8 @@ def _shared_engine_identity(
     ) or (
         shared_identity["scorer_backend"] != EXPECTED_SCORER_BACKEND
         or rescue_identity.get("scorer_backend") != EXPECTED_SCORER_BACKEND
+        or shared_identity["interaction_refiner_config_sha256"]
+        != EXPECTED_INTERACTION_REFINER_CONFIG_SHA256
     ):
         raise ValueError("lane engine identity is not comparable")
     return shared_identity
@@ -2199,9 +2321,7 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
         "comparison": _lane_comparison(baseline, rescue),
         "runtime": {
             "wall_elapsed_delta_seconds_binary64_hex": elapsed_delta.hex(),
-            "interpretation": (
-                "single_run_historical_development_only_no_speed_claim"
-            ),
+            "interpretation": ("single_run_historical_development_only_no_speed_claim"),
         },
         "preservation": {
             "report_member": REPORT_PATH,
@@ -2225,9 +2345,7 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
         "selection_rule_changed": False,
         "threshold_changed": False,
         "v7_replacement_authorized": False,
-        "decision": (
-            "telemetry_available_for_descriptive_review_no_policy_change"
-        ),
+        "decision": ("telemetry_available_for_descriptive_review_no_policy_change"),
     }
     report["report_sha256"] = _sha256_payload(report)
     return report
@@ -2464,8 +2582,7 @@ def _verify_bundle_bytes(
         _sha256_bytes(archive_raw) != expected_archive_sha256
         or _sha256_bytes(members_raw) != expected_members_sha256
         or _sha256_bytes(bundle_raw) != expected_bundle_sha256
-        or bundle_raw
-        != _bundle_bytes(expected_archive_sha256, expected_members_sha256)
+        or bundle_raw != _bundle_bytes(expected_archive_sha256, expected_members_sha256)
     ):
         raise ValueError("archive bundle identity is invalid")
     manifest = _parse_manifest(members_raw)
@@ -2484,9 +2601,7 @@ def _verify_bundle_bytes(
         report.get("schema_id") != SCHEMA_ID
         or report.get("operator_observed_checkout_or_base_sha1")
         != OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1
-        or report.get(
-            "operator_observed_checkout_or_base_receipt_authenticated"
-        )
+        or report.get("operator_observed_checkout_or_base_receipt_authenticated")
         is not False
         or report.get("report_sha256") != expected_report_sha256
     ):
@@ -2657,7 +2772,8 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
     repo_root = repo_root.resolve()
     failure_atlas._prohibited_path(repo_root, name="repository root")
     output_paths = tuple(
-        repo_root / path for path in (REPORT_PATH, ARCHIVE_PATH, MEMBERS_PATH, BUNDLE_PATH)
+        repo_root / path
+        for path in (REPORT_PATH, ARCHIVE_PATH, MEMBERS_PATH, BUNDLE_PATH)
     )
     if any(path.exists() or path.is_symlink() for path in output_paths):
         raise FileExistsError("V1.1 evidence outputs already exist")
@@ -2719,12 +2835,16 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
             if not removed:
                 rollback_failed = True
         if rollback_failed:
-            raise RuntimeError("evidence publication failed and rollback was incomplete") from exc
+            raise RuntimeError(
+                "evidence publication failed and rollback was incomplete"
+            ) from exc
         raise
     return identity
 
 
-def verify_pinned_evidence(repo_root: Path) -> tuple[dict[str, object], dict[str, object]]:
+def verify_pinned_evidence(
+    repo_root: Path,
+) -> tuple[dict[str, object], dict[str, object]]:
     failure_atlas._reject_symlink_ancestry(repo_root, name="repository root")
     repo_root = repo_root.resolve()
     failure_atlas._prohibited_path(repo_root, name="repository root")
@@ -2797,9 +2917,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 **identity,
                 "decision": report["decision"],
-                "clearance_evaluated_candidate_count": report[
-                    "clearance_telemetry"
-                ]["torsion"]["clearance_evaluated_candidate_count"],
+                "clearance_evaluated_candidate_count": report["clearance_telemetry"][
+                    "torsion"
+                ]["clearance_evaluated_candidate_count"],
             },
             sort_keys=True,
         )

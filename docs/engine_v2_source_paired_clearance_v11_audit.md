@@ -7,7 +7,10 @@ operator-observed checkout or base was
 `6a749540339db5e53875841e463cfcbcdf7072b2`, but that SHA-1 is contextual and
 is not authenticated by the execution receipts. The receipts authenticate the
 implementation, evaluation-pipeline, execution-environment, and refiner-config
-SHA-256 closure instead. The rerun used only the fixed nine-case contaminated-
+SHA-256 closure instead. The shared `5e8b…5337` refiner value is the generic
+execution-policy identity; each successful V1.1 case separately authenticates
+a case-specific composite refiner configuration that includes its authority and
+allocation context. The rerun used only the fixed nine-case contaminated-
 development slice and did not access the frozen fresh-128 holdout.
 
 All 512 rescue-lane candidates carry the uniform source-paired V1.1 receipt.
@@ -45,6 +48,7 @@ three to two native-like selection-eligible candidates.
 | Baseline analysis self-hash | `c05a06e3d146d02cb22e20b1e200db572903455b35f574b6a36a64c8acb9ba33` |
 | Rescue analysis self-hash | `9e95970c9f51a9b9cd6a3e795d7a6af9b0cce27d554ceaa6e3553940577c72bc` |
 | Shared scorer backend | `python_reference` |
+| Shared generic refiner execution-policy config | `5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337` |
 | Audit schema | `betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.2.0` |
 | Audit self-hash | `8d9e9eef5907e51fbf2f25385c7cb1468dbd099c5636715ddea78274ef22fae3` |
 | Verified archive SHA-256 | `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98` |
@@ -61,6 +65,15 @@ than committed scientific evidence. The deterministic packer and verifier are
 `tools/build_engine_v2_source_paired_clearance_v11_evidence.py`; the code pins
 all four reviewed archive/report identities and recomputes the audit from the
 raw restored receipts.
+
+The verifier independently pins the V1.1 composite receipt configuration for
+each successful case: `5SD5_HWI=1d4896a6…abe71`,
+`5SIS_JSM=6edbf859…62cc`, `6M2B_EZO=60a13d23…8dc3`,
+`6T88_MWQ=81136a4d…5c89`, `6TW5_9M2=694ff7b3…d59a`,
+`6TW7_NZB=565b3051…176b`, `6VTA_AKN=db16a22b…649b`, and
+`6WTN_RXT=aa3fb65a…65c7`. These case-bound composite hashes are intentionally
+distinct from the shared generic policy hash; a generic, arbitrary, or
+cross-case substituted value is rejected even when its receipt is resealed.
 
 ## Clearance inventory
 
@@ -190,7 +203,10 @@ hashes for every successful case, complete compact score-term analyses
 recomputed from the restored candidate terms,
 historical outcome counts, telemetry denominators, the frozen result-independent
 allocation policy, unavailable-variant baseline equality, scalar/term score
-identity, the shared Python scorer backend, and the recomputed audit self-hash.
+identity, the shared Python scorer backend, the shared generic refiner-policy
+identity, each case-specific composite refiner receipt, both nested guided-
+placement self-hashes and their allocation/lineage links, and the recomputed
+audit self-hash.
 It does not depend on the mutable live result parser.
 
 ## Next bounded action
