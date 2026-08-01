@@ -205,8 +205,12 @@ historical outcome counts, telemetry denominators, the frozen result-independent
 allocation policy, unavailable-variant baseline equality, scalar/term score
 identity, the shared Python scorer backend, the shared generic refiner-policy
 identity, each case-specific composite refiner receipt, both nested guided-
-placement self-hashes and their allocation/lineage links, and the recomputed
-audit self-hash.
+placement self-hashes and their complete frozen policy/context/row lineage,
+each case's complete top-level proposal receipt, every candidate payload's
+case-allocation lineage, each case's ordered 64-candidate receipt-set pin, each
+nested baseline-V6
+schema/self-hash/case config and duplicated operational projection, and the
+recomputed audit self-hash.
 It does not depend on the mutable live result parser.
 
 ## Next bounded action

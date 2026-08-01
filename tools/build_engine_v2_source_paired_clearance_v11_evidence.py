@@ -159,6 +159,16 @@ EXPECTED_SOURCE_PAIRED_REFINER_COMPOSITE_CONFIG_SHA256_BY_CASE = {
     "6VTA_AKN": ("db16a22b37d24246d9fd7f13f60bcb8218ba68448433e5a50e840e78bc99649b"),
     "6WTN_RXT": ("aa3fb65a9a171553f1c6ce69d17ea424b2f24497eb3375a71c3b1fb457bb65c7"),
 }
+EXPECTED_BASELINE_V6_COMPOSITE_CONFIG_SHA256_BY_CASE = {
+    "5SD5_HWI": "e9573816ae586c472f2660e11826f4bd523403fa25b78d42322d7befe3d2e204",
+    "5SIS_JSM": "628c979f9bd322797744003d64965d8e894effe100ce081a88d7ae317bf2ab22",
+    "6M2B_EZO": "81dde35e1db400a6b05ab0aca9cd62ab2793f3edea37a4841e61ae44e4c2da33",
+    "6T88_MWQ": "65885329393d474a20d7f1e5741a316a250dfbca306343d7c97c08c824ce8460",
+    "6TW5_9M2": "adabd62848da6e8031b108eafa23ec6ed8a3cc8342b94f36c3e1dadbb529044b",
+    "6TW7_NZB": "73bbbaee9ec90cad5ba33892998571ed3122b501014b5e1015fd79b55a1b4e0a",
+    "6VTA_AKN": "f7e16e2f74ca22018dfe61c100bc7847a1dff58235b23054261a379e6ed9b0dc",
+    "6WTN_RXT": "4aa9fdb5aa2286d31704e1112b749e142836aedf89904939d264e1ecd94ce194",
+}
 EXPECTED_SCORER_BACKEND_RECEIPT = {
     "backend": EXPECTED_SCORER_BACKEND,
     "backend_version": "1.0.0",
@@ -198,6 +208,9 @@ EXPECTED_BASELINE_GUIDED_PLACEMENT_SCHEMA_ID = (
 EXPECTED_RESCUE_GUIDED_PLACEMENT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_receipt/1.4.0"
 )
+EXPECTED_BASELINE_V6_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_rigid_hybrid_ensemble_receipt/6.0.0"
+)
 EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_policy/1.0.0"
 )
@@ -213,6 +226,26 @@ EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE = {
     "6TW7_NZB": "11fbd284284313dec2a141f6209e08c2019fac505e67277742b48f973f306851",
     "6VTA_AKN": "7d21c9f638c77f1a95e6455b8a489ceb23f3935d4dfe42d8de9c5bd5a73d281b",
     "6WTN_RXT": "1ecb7dcad4a3ff6fa7402f78bf23c1b31d57549e789274fe2be7655fecf9fa38",
+}
+EXPECTED_RESCUE_PROPOSAL_SHA256_BY_CASE = {
+    "5SD5_HWI": "f2a100e35c8951f5ce954a963091ee04cf6d86eb15d6c47e8cc1e8a2d6ab67ba",
+    "5SIS_JSM": "7ca5389edbfbf9a06b467da95336e21b8f1bcb0d4cfe91384d9b6ef3829637b5",
+    "6M2B_EZO": "ee5e729f4171962a8326012ec6b80c52c0f708398b412ebc4665c3f094590368",
+    "6T88_MWQ": "51339ee6fc9138f84753ad7fa637f0f8957ae18af0e0facc98a1a340ce57293d",
+    "6TW5_9M2": "906ad8807a1da95345921f4139ca39f73a57427f16c156b843a2b53c3d0352e3",
+    "6TW7_NZB": "279b65abf065c925b61fe6234cdf57215b7583c615c29f0563ae6f802bebbf80",
+    "6VTA_AKN": "3c1f1e5a4fb026321b116cc10cbefe79a1a0447b0f4b1f9b2d0d392200749641",
+    "6WTN_RXT": "e5b35bbb5852821f35151ddd6b3c496076268f57a1fd72d7b7c0cf65ed2e9d2f",
+}
+EXPECTED_RESCUE_CANDIDATE_RECEIPT_SET_SHA256_BY_CASE = {
+    "5SD5_HWI": "1ad73e8bd63ec0dad264267fc3be704501cc96c7deedf27829a243750d9636e1",
+    "5SIS_JSM": "26455e788ea11465587667d5085018788e153cb128830769a059f8a3b2db396b",
+    "6M2B_EZO": "478e74c434090f1cf049d444c9da10bc8546d8e4c615e622c8a15715147df28b",
+    "6T88_MWQ": "cfff587271fa72a730a67ec9a8f377ee548243fd1d93fe8928f957a83b28e9be",
+    "6TW5_9M2": "dee3c999d6ca9b90d6f0733b337e0359987ca4b44c19b8316bfb716bbc3bbb38",
+    "6TW7_NZB": "1947e10103e3bc25ab4e23f5e16d5d6a0f718906eccf98b4caa3fd3798e59183",
+    "6VTA_AKN": "5cf355f7348e218096516276fbd3f6f57715fbaa27e7261321db770196066bb3",
+    "6WTN_RXT": "6b15a5f5abdcc66fc8c623e01b7b0f163937994007fe390783d0a5b85e000d29",
 }
 EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE = {
     "baseline": {
@@ -826,6 +859,16 @@ def _historical_v11_candidate(
             or payload.get("source_paired_torsion_rescue_variant_cap")
             != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
             or payload.get("result_dependent_eligibility") is not False
+            or payload.get("legacy_v7_receipt_schema_id")
+            != "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
+            or payload.get("source_lane_retained") is not True
+            or payload.get("ranking_score_reused_as_physical_energy") is not False
+            or payload.get("posebusters_or_rmsd_used_for_selection") is not False
+            or payload.get("accepted_rotation_steps_include_torsion") is not True
+            or payload.get("generic_penalty_scope")
+            != "source_proposal_to_final_coordinates_v7_objective"
+            or payload.get("baseline_v6_penalty_scope")
+            != "post_v6_coordinates_v7_objective"
             or payload.get("config_sha256")
             != EXPECTED_SOURCE_PAIRED_REFINER_COMPOSITE_CONFIG_SHA256_BY_CASE.get(
                 case_id
@@ -863,6 +906,113 @@ def _historical_v11_candidate(
             receipt_projection
         ):
             raise ValueError(f"{lane} {case_id} V1.1 receipt self-hash is invalid")
+        baseline_v6_payload = payload.get("baseline_v6_receipt_payload")
+        if not isinstance(baseline_v6_payload, Mapping):
+            raise ValueError(f"{lane} {case_id} baseline V6 receipt payload is invalid")
+        baseline_v6_projection = dict(baseline_v6_payload)
+        baseline_v6_sha256 = baseline_v6_projection.pop("receipt_sha256", None)
+        baseline_v6_core_fields = {
+            "accepted_rotation_steps",
+            "accepted_steps",
+            "accepted_translation_steps",
+            "config_sha256",
+            "fallback_direction_step_count",
+            "final_penalty_binary64_hex",
+            "initial_penalty_binary64_hex",
+            "lane",
+            "line_search_evaluation_count",
+            "nested_receipt_sha256",
+            "nested_refiner_id",
+            "nested_refiner_version",
+            "original_pose_valid",
+            "post_coordinates_sha256",
+            "pre_coordinates_sha256",
+            "ranking_score_reused_as_physical_energy",
+            "receipt_sha256",
+            "schema_id",
+            "scientifically_validated",
+            "source_lane_retained",
+            "source_proposal_sha256",
+            "total_rotation_vector_binary64_hex",
+            "total_translation_binary64_hex",
+            "v3_proposal_indices",
+        }
+        baseline_v6_extended_fields = baseline_v6_core_fields | {
+            "baseline_duplicate_of_v2_refinement",
+            "baseline_final_penalty_binary64_hex",
+            "baseline_v3_receipt_sha256",
+            "clearance_evaluated",
+            "clearance_final_penalty_binary64_hex",
+            "clearance_initial_penalty_binary64_hex",
+            "clearance_receipt_sha256",
+            "clearance_selected",
+            "comparison_v2_receipt_sha256",
+            "near_clear_penalty_binary64_hex",
+            "selection_reason",
+        }
+        baseline_v6_fields = set(baseline_v6_payload)
+        nested_accepted_steps = baseline_v6_payload.get("accepted_steps")
+        nested_rotation_steps = baseline_v6_payload.get("accepted_rotation_steps")
+        nested_line_search_count = baseline_v6_payload.get(
+            "line_search_evaluation_count"
+        )
+        accepted_torsion_steps = payload.get("accepted_torsion_steps")
+        torsion_trial_count = payload.get("torsion_trial_objective_evaluation_count")
+        if (
+            baseline_v6_fields
+            not in (baseline_v6_core_fields, baseline_v6_extended_fields)
+            or baseline_v6_payload.get("schema_id")
+            != EXPECTED_BASELINE_V6_RECEIPT_SCHEMA_ID
+            or not _is_sha256(baseline_v6_sha256)
+            or baseline_v6_sha256 != _sha256_payload(baseline_v6_projection)
+            or payload.get("baseline_v6_receipt_sha256") != baseline_v6_sha256
+            or baseline_v6_payload.get("config_sha256")
+            != EXPECTED_BASELINE_V6_COMPOSITE_CONFIG_SHA256_BY_CASE.get(case_id)
+            or not _is_sha256(baseline_v6_payload.get("nested_receipt_sha256"))
+            or baseline_v6_payload.get("source_proposal_sha256")
+            != payload.get("source_proposal_sha256")
+            or baseline_v6_payload.get("pre_coordinates_sha256")
+            != payload.get("pre_coordinates_sha256")
+            or baseline_v6_payload.get("post_coordinates_sha256")
+            != payload.get("baseline_coordinates_sha256")
+            or baseline_v6_payload.get("v3_proposal_indices")
+            != payload.get("v3_proposal_indices")
+            or baseline_v6_payload.get("original_pose_valid")
+            is not payload.get("original_pose_valid")
+            or baseline_v6_payload.get("accepted_translation_steps")
+            != payload.get("accepted_translation_steps")
+            or baseline_v6_payload.get("accepted_rotation_steps")
+            != payload.get("accepted_rigid_rotation_steps")
+            or baseline_v6_payload.get("total_translation_binary64_hex")
+            != payload.get("total_translation_binary64_hex")
+            or baseline_v6_payload.get("total_rotation_vector_binary64_hex")
+            != payload.get("total_rotation_vector_binary64_hex")
+            or baseline_v6_payload.get("fallback_direction_step_count")
+            != payload.get("fallback_direction_step_count")
+            or any(
+                type(value) is not int or value < 0
+                for value in (
+                    nested_accepted_steps,
+                    nested_rotation_steps,
+                    nested_line_search_count,
+                    accepted_torsion_steps,
+                    torsion_trial_count,
+                )
+            )
+            or payload.get("accepted_steps")
+            != nested_accepted_steps + accepted_torsion_steps
+            or payload.get("accepted_rotation_steps")
+            != nested_rotation_steps + accepted_torsion_steps
+            or payload.get("line_search_evaluation_count")
+            != nested_line_search_count + torsion_trial_count
+            or baseline_v6_payload.get("source_lane_retained") is not True
+            or baseline_v6_payload.get("scientifically_validated") is not False
+            or baseline_v6_payload.get("ranking_score_reused_as_physical_energy")
+            is not False
+        ):
+            raise ValueError(
+                f"{lane} {case_id} baseline V6 receipt contract is invalid"
+            )
     return candidate
 
 
@@ -987,6 +1137,20 @@ def _historical_v11_result(
     ]
     if len(proposal_fingerprints) != len(set(proposal_fingerprints)):
         raise ValueError(f"{lane} {case_id} proposal fingerprints are duplicated")
+    if lane == "rescue":
+        ordered_receipt_sha256s = [
+            str(candidate["refinement_receipt_sha256"])
+            for candidate in sorted(
+                candidates,
+                key=lambda candidate: int(candidate["proposal_index"]),
+            )
+        ]
+        if _sha256_payload(ordered_receipt_sha256s) != (
+            EXPECTED_RESCUE_CANDIDATE_RECEIPT_SET_SHA256_BY_CASE.get(case_id)
+        ):
+            raise ValueError(
+                f"{lane} {case_id} candidate receipt set is not the pinned cohort"
+            )
     failure_atlas._validate_ranked_result_projection(
         result,
         candidates,
@@ -1772,6 +1936,121 @@ def _v11_rescue_allocation(
         raise ValueError("source-paired allocation self-hash is invalid")
     if allocation_sha256 != EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE.get(case_id):
         raise ValueError("source-paired allocation is not the pinned case allocation")
+    expected_top_fields = {
+        "schema_id",
+        "authenticated_input_receipt_sha256",
+        "budget_sha256",
+        "source_ligand_system_sha256",
+        "source_ligand_topology_sha256",
+        "rescue_policy_sha256",
+        "rescue_policy",
+        "allocation",
+        "baseline_guided_placement",
+        "guided_placement",
+        "candidate_count",
+        "candidate_slots",
+        "proposal_objects_and_coordinates_unchanged",
+        "selected_parent_proposal_objects_retained",
+        "result_dependent_allocation",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "scientifically_validated",
+        "claim_safe",
+        "receipt_sha256",
+    }
+    expected_policy_fields = {
+        "schema_id",
+        "policy_id",
+        "base_guided_policy_sha256",
+        "candidate_count",
+        "maximum_variant_count",
+        "source_pair_authority",
+        "variant_target_selection",
+        "authority_rotor_required",
+        "proposal_objects_and_coordinates_unchanged",
+        "selected_parent_proposal_objects_retained",
+        "ordinary_v3_and_rescue_target_parent_unions_disjoint",
+        "candidate_denominator_changed",
+        "rmsd_posebusters_native_rank_or_score_used_for_allocation",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "product_promotion_eligible",
+        "public_claim_eligible",
+        "scientifically_validated",
+        "claim_safe",
+        "fingerprint_sha256",
+    }
+    expected_allocation_fields = {
+        "schema_id",
+        "authenticated_input_receipt_sha256",
+        "guidance_context_sha256",
+        "budget_sha256",
+        "rescue_policy_sha256",
+        "base_guided_policy_sha256",
+        "candidate_count",
+        "authority_rotor_count",
+        "v3_target_parent_pairs",
+        "rescue_target_parent_pairs",
+        "rescue_variant_count",
+        "rescue_variant_cap",
+        "selected_parent_proposal_objects_retained",
+        "candidate_denominator_changed",
+        "result_dependent_allocation",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "claim_safe",
+        "allocation_sha256",
+    }
+    authority_sha256 = proposal.get("authenticated_input_receipt_sha256")
+    budget_sha256 = proposal.get("budget_sha256")
+    guidance_context_sha256 = allocation.get("guidance_context_sha256")
+    if (
+        set(proposal) != expected_top_fields
+        or set(policy) != expected_policy_fields
+        or set(allocation) != expected_allocation_fields
+        or any(
+            not _is_sha256(value)
+            for value in (
+                authority_sha256,
+                budget_sha256,
+                guidance_context_sha256,
+                proposal.get("source_ligand_system_sha256"),
+                proposal.get("source_ligand_topology_sha256"),
+            )
+        )
+        or allocation.get("authenticated_input_receipt_sha256") != authority_sha256
+        or allocation.get("budget_sha256") != budget_sha256
+        or proposal.get("rescue_policy_sha256") != policy_sha256
+        or any(
+            proposal.get(field) is not expected
+            for field, expected in (
+                ("proposal_objects_and_coordinates_unchanged", True),
+                ("selected_parent_proposal_objects_retained", True),
+                ("result_dependent_allocation", False),
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("scientifically_validated", False),
+                ("claim_safe", False),
+            )
+        )
+        or any(
+            allocation.get(field) is not expected
+            for field, expected in (
+                ("selected_parent_proposal_objects_retained", True),
+                ("candidate_denominator_changed", False),
+                ("result_dependent_allocation", False),
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("claim_safe", False),
+            )
+        )
+    ):
+        raise ValueError("source-paired proposal authority contract is invalid")
     if (
         proposal.get("schema_id")
         != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_SCHEMA_ID
@@ -1979,11 +2258,105 @@ def _v11_rescue_allocation(
         expected_schema_id=EXPECTED_RESCUE_GUIDED_PLACEMENT_SCHEMA_ID,
         name="rescue guided placement",
     )
+    common_guided_fields = {
+        "schema_id",
+        "authenticated_input_receipt_sha256",
+        "guidance_context_sha256",
+        "guided_policy_sha256",
+        "budget_sha256",
+        "proposal_count",
+        "proposal_fingerprint_sha256s",
+        "proposal_modes",
+        "proposal_guidance_rows",
+        "guided_proposal_count",
+        "pocket_center_baseline_count",
+        "uniform_fallback_count",
+        "uniform_v3_ensemble_count",
+        "uniform_random_placement_retained_as_fallback",
+        "feature_counts",
+        "scientifically_validated",
+        "claim_safe",
+        "receipt_sha256",
+    }
+    rescue_guided_fields = common_guided_fields | {
+        "source_paired_torsion_rescue_profile",
+        "baseline_guided_receipt_sha256",
+        "torsion_rescue_allocation_sha256",
+        "uniform_torsion_rescue_variant_count",
+        "uniform_torsion_rescue_variant_cap",
+        "proposal_objects_and_coordinates_unchanged",
+        "selected_parent_proposal_objects_retained",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+    }
+    feature_fields = {
+        "ligand_acceptor",
+        "ligand_aromatic",
+        "ligand_aromatic_system",
+        "ligand_donor",
+        "ligand_hydrophobic",
+        "ligand_hydrophobic_patch",
+        "ligand_negative",
+        "ligand_positive",
+        "ligand_shape_atom",
+        "receptor_acceptor",
+        "receptor_aromatic",
+        "receptor_aromatic_plane",
+        "receptor_donor",
+        "receptor_hydrophobic",
+        "receptor_hydrophobic_patch",
+        "receptor_negative",
+        "receptor_positive",
+        "receptor_shape_atom",
+    }
+    baseline_features = baseline_guided.get("feature_counts")
+    guided_features = guided.get("feature_counts")
     if (
-        guided.get("baseline_guided_receipt_sha256") != baseline_guided_sha256
+        set(baseline_guided) != common_guided_fields
+        or set(guided) != rescue_guided_fields
+        or guided.get("baseline_guided_receipt_sha256") != baseline_guided_sha256
         or guided.get("torsion_rescue_allocation_sha256") != allocation_sha256
+        or baseline_guided.get("authenticated_input_receipt_sha256") != authority_sha256
+        or guided.get("authenticated_input_receipt_sha256") != authority_sha256
+        or baseline_guided.get("guidance_context_sha256") != guidance_context_sha256
+        or guided.get("guidance_context_sha256") != guidance_context_sha256
+        or baseline_guided.get("budget_sha256") != budget_sha256
+        or guided.get("budget_sha256") != budget_sha256
+        or baseline_guided.get("guided_policy_sha256")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
+        or guided.get("guided_policy_sha256")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+        or baseline_guided.get("proposal_count") != EXPECTED_CANDIDATE_COUNT
+        or guided.get("proposal_count") != EXPECTED_CANDIDATE_COUNT
+        or baseline_guided.get("uniform_random_placement_retained_as_fallback")
+        is not True
+        or guided.get("uniform_random_placement_retained_as_fallback") is not True
+        or baseline_guided.get("scientifically_validated") is not False
+        or baseline_guided.get("claim_safe") is not False
+        or guided.get("source_paired_torsion_rescue_profile") is not True
+        or guided.get("uniform_torsion_rescue_variant_cap")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+        or any(
+            guided.get(field) is not expected
+            for field, expected in (
+                ("proposal_objects_and_coordinates_unchanged", True),
+                ("selected_parent_proposal_objects_retained", True),
+                ("development_only", True),
+                ("stage0_eligible", False),
+                ("fresh_execution_authorized", False),
+                ("scientifically_validated", False),
+                ("claim_safe", False),
+            )
+        )
+        or not isinstance(baseline_features, Mapping)
+        or set(baseline_features) != feature_fields
+        or any(
+            type(value) is not int or value < 0 for value in baseline_features.values()
+        )
+        or guided_features != baseline_features
     ):
-        raise ValueError("guided proposal receipt linkage is invalid")
+        raise ValueError("guided proposal authority contract is invalid")
     baseline_rows = baseline_guided.get("proposal_guidance_rows")
     baseline_modes = baseline_guided.get("proposal_modes")
     baseline_fingerprints = baseline_guided.get("proposal_fingerprint_sha256s")
@@ -2008,6 +2381,26 @@ def _v11_rescue_allocation(
     assert isinstance(guided_rows, list)
     assert isinstance(guided_modes, list)
     assert isinstance(guided_fingerprints, list)
+    if (
+        baseline_guided.get("guided_proposal_count") != len(ordered_pairs)
+        or baseline_guided.get("pocket_center_baseline_count") != 8
+        or baseline_guided.get("uniform_fallback_count") != 40
+        or baseline_guided.get("uniform_v3_ensemble_count") != len(ordered_pairs)
+        or baseline_modes.count("pocket_center_baseline") != 8
+        or baseline_modes.count("uniform_fallback") != 40
+        or baseline_modes.count("uniform_v3_rigid_ensemble") != len(ordered_pairs)
+        or guided.get("guided_proposal_count") != len(ordered_pairs)
+        or guided.get("pocket_center_baseline_count") != 8
+        or guided.get("uniform_fallback_count") != 40
+        or guided.get("uniform_v3_ensemble_count") != len(v3_pairs)
+        or guided.get("uniform_torsion_rescue_variant_count") != len(pairs)
+        or guided_modes.count("pocket_center_baseline") != 8
+        or guided_modes.count("uniform_fallback") != 40
+        or guided_modes.count("uniform_v3_rigid_ensemble") != len(v3_pairs)
+        or guided_modes.count(PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
+        != len(pairs)
+    ):
+        raise ValueError("guided proposal counts contradict the frozen cohort")
     baseline_parent_by_target = {
         row["target_proposal_index"]: row["parent_proposal_index"]
         for row in ordered_pairs
@@ -2019,6 +2412,18 @@ def _v11_rescue_allocation(
     }
     if baseline_v3_targets != set(baseline_parent_by_target):
         raise ValueError("baseline guided V3 targets contradict the allocation")
+    baseline_guidance_fields = {
+        "proposal_index",
+        "mode",
+        "ligand_anchor_atom_indices",
+        "receptor_anchor_atom_indices",
+        "anchor_pairs",
+        "anchor_pairing",
+        "anchor_distance_aggregation",
+        "requested_anchor_distance_angstrom_binary64_hex",
+        "observed_anchor_distance_angstrom_binary64_hex",
+        "ensemble_source_proposal_index",
+    }
     for index, candidate in candidate_by_index.items():
         baseline_row = baseline_rows[index]
         row = guided_rows[index]
@@ -2030,16 +2435,36 @@ def _v11_rescue_allocation(
         )
         if (
             not isinstance(baseline_row, Mapping)
+            or set(baseline_row) != baseline_guidance_fields
             or baseline_row.get("proposal_index") != index
             or baseline_row.get("mode") != expected_baseline_mode
             or baseline_modes[index] != expected_baseline_mode
             or baseline_fingerprints[index] != slot.get("proposal_fingerprint_sha256")
             or baseline_row.get("ensemble_source_proposal_index")
             != baseline_parent_by_target.get(index)
+            or any(
+                baseline_row.get(field) != []
+                for field in (
+                    "ligand_anchor_atom_indices",
+                    "receptor_anchor_atom_indices",
+                    "anchor_pairs",
+                )
+            )
+            or any(
+                baseline_row.get(field) is not None
+                for field in (
+                    "anchor_pairing",
+                    "anchor_distance_aggregation",
+                    "requested_anchor_distance_angstrom_binary64_hex",
+                    "observed_anchor_distance_angstrom_binary64_hex",
+                )
+            )
         ):
             raise ValueError("baseline guided lineage contradicts the allocation")
         if (
             not isinstance(row, Mapping)
+            or set(row)
+            != baseline_guidance_fields | {"torsion_rescue_parent_proposal_index"}
             or row.get("proposal_index") != index
             or row.get("mode") != candidate.get("proposal_mode")
             or guided_modes[index] != candidate.get("proposal_mode")
@@ -2050,6 +2475,46 @@ def _v11_rescue_allocation(
             != candidate.get("torsion_rescue_parent_proposal_index")
         ):
             raise ValueError("guided proposal lineage contradicts candidate rows")
+        baseline_common = dict(baseline_row)
+        guided_common = dict(row)
+        for document in (baseline_common, guided_common):
+            document.pop("mode", None)
+            document.pop("ensemble_source_proposal_index", None)
+        guided_common.pop("torsion_rescue_parent_proposal_index", None)
+        if baseline_common != guided_common:
+            raise ValueError("guided proposal changed frozen placement guidance")
+    expected_v3_indices = [row["target_proposal_index"] for row in v3_pairs]
+    for candidate in candidates:
+        payload = candidate.get("refinement_receipt_payload")
+        mode = candidate.get("proposal_mode")
+        expected_lane = (
+            "source_paired_torsion_rescue_variant"
+            if mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+            else (
+                "uniform_v3_rigid_ensemble"
+                if mode == "uniform_v3_rigid_ensemble"
+                else "ineligible_source_or_other_lane"
+            )
+        )
+        if (
+            not isinstance(payload, Mapping)
+            or payload.get("source_paired_torsion_rescue_allocation_sha256")
+            != allocation_sha256
+            or payload.get("source_paired_torsion_rescue_pairs") != pairs
+            or payload.get("source_paired_torsion_rescue_guidance_context_sha256")
+            != guidance_context_sha256
+            or payload.get("source_paired_torsion_rescue_budget_sha256")
+            != budget_sha256
+            or payload.get("v3_proposal_indices") != expected_v3_indices
+            or payload.get("proposal_torsion_eligibility_lane") != expected_lane
+            or payload.get("source_paired_parent_proposal_index")
+            != candidate.get("torsion_rescue_parent_proposal_index")
+            or payload.get("nested_v6_treated_proposal_as_v3_variant")
+            is not (mode == "uniform_v3_rigid_ensemble")
+            or payload.get("rescue_target_excluded_from_nested_v3_indices")
+            is not (mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
+        ):
+            raise ValueError("candidate receipt contradicts case allocation lineage")
     pair_targets = [row["target_proposal_index"] for row in pairs]
     if rescue_targets != set(pair_targets) or len(pair_targets) != len(
         set(pair_targets)
@@ -2074,6 +2539,8 @@ def _v11_rescue_allocation(
             != allocation_sha256
         ):
             raise ValueError("rescue allocation parent binding is invalid")
+    if proposal_sha256 != EXPECTED_RESCUE_PROPOSAL_SHA256_BY_CASE.get(case_id):
+        raise ValueError("source-paired proposal is not the pinned case proposal")
     return rotor_count, pairs
 
 
