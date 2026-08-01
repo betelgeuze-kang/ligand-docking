@@ -119,6 +119,12 @@ The canonical capability state is:
   file digests but cannot reconstruct case IDs from filenames. Receipt and
   aggregate modes cannot be mixed, so adding a report cannot bypass an
   incomplete receipt cohort.
+- The fail-closed
+  [Phase 2.5 failure-cohort admission contract](engine_v2_phase25_failure_cohort_admission_contract.md)
+  keeps the authenticated atlas at seven cases. Expansion requires an exact
+  historical-only roster, complete per-case diagnostic receipts, a pinned
+  archive, and deterministic proposal-oracle-uncovered derivation; neither the
+  12-case threshold map nor the narrative remainder 15 satisfies that gate.
 - The Stage 0 source-freeze contract names one V7 algorithm profile and binds
   runner `2.13.0`, candidate schema `1.6.0`, the complete binary64 V7 config,
   its `5e8b61d2...75337` fingerprint, and the result-independent `[2.0,4.0)`
