@@ -21,7 +21,6 @@ import tarfile
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import tools.analyze_engine_v2_score_terms as score_term_analysis  # noqa: E402
 import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas  # noqa: E402
 
 
@@ -257,28 +256,6 @@ EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE = {
     "6VTA_AKN": "308b8b9463a666163180f6b67ab07f8b3950f9b7122b4ac4201b5be0d774ac07",
     "6WTN_RXT": "df6bf6c4fbd475dca26e32b66d8c6562bccc1be73c247387f443fc0a4f51e112",
 }
-EXPECTED_CANDIDATE_SCORE_TERM_PROJECTION_SET_SHA256_BY_LANE_CASE = {
-    "baseline": {
-        "5SD5_HWI": "d5cb2fa10df230fdddab17fc19ed10eeffb9631bb5e85c1647e0eddfade53899",
-        "5SIS_JSM": "bac31d3db6a447dafd657494c757ad89d8c260ed9e0bd7e9d65636b11a4aff3a",
-        "6M2B_EZO": "23c8c301d2b79ddabce561db658ab1a5141a52b40cbe701d2f79bd3a89ea7c9a",
-        "6T88_MWQ": "1afd29b8da3b541ddfe84b37b52e417ac2792ae2beaf3c7068e5ef127d550d09",
-        "6TW5_9M2": "35719baa933233124373b0538ec06c42fe25a2d76a87e78d35464426e830be4f",
-        "6TW7_NZB": "be8f197c4879ae48571b6a3c72521538a6c8990fb2f96e5d3cf1d6371d273c5a",
-        "6VTA_AKN": "98d113ac769e2353a004d93f6b95bb5b6f1c8029322308b788a18cfcb29b4925",
-        "6WTN_RXT": "894b179adfa684c8fe5bf2fc6fb6aebc8003de694220ba24da04297626321079",
-    },
-    "rescue": {
-        "5SD5_HWI": "58e058badb2789667fb3d7e7df3142cc1e9964ca0e32d11f80d5706b82e1e057",
-        "5SIS_JSM": "b6169337744135b79df0a449a67d9e16489e41e58704b1b8218d652368eea3a8",
-        "6M2B_EZO": "855968b252fca3ab0dd56c50cdfbe6e6f4e7ec8c1f377f824c75e8dcc6584aff",
-        "6T88_MWQ": "257cdb6ba1070e79a85c7f62efa0667bf604f0029b2f3e524a4db92ea7e19df8",
-        "6TW5_9M2": "258d43d0a603f756feeeef5cd170c27c238c743ef41f08e1cc86589010b29b56",
-        "6TW7_NZB": "1b534a8df42ca9ef2d8d149e0304a28e7e9ebfdcbfc2625cd7a104c7225ed42e",
-        "6VTA_AKN": "3883e87c533281fc49bc7cd6d0aa6dfccd05803a83d0aade14972ec3fbd7a567",
-        "6WTN_RXT": "c3e4f710457fb274c4308d61c38f7b20ee5aa9ebf055f3e3ea32d35fc6fe4edd",
-    },
-}
 EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE = {
     "baseline": {
         "5SD5_HWI": "f6cbd306fd98e23333a6a00558258f433ed8cec96cfd4d1270324161fa6cf7a2",
@@ -303,10 +280,6 @@ EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE = {
         "6WTN_RXT": "3717f3bb6551798c9a376e4885b09d1d614e67e25870ec13e3bcfebd619fe225",
     },
 }
-EXPECTED_SCORE_TERM_ANALYZER_SOURCE_SHA256 = (
-    "10e586424ee0a456749ea7441ba0b5ef3ba8146491afd2b0c4ac741382045e78"
-)
-
 EXPECTED_RESULT_FIELDS = frozenset(
     {
         "case_id",
@@ -705,6 +678,14 @@ BUNDLE_PATH = (
     ".betelgeuze/stage0-development/archives/"
     "v7-source-paired-clearance-v11-6a749540-ab.bundle.sha256"
 )
+SCORE_TERM_SUPERSESSION_PATH = (
+    ".betelgeuze/stage0-development/"
+    "source-paired-clearance-v11-6a749540-score-term-supersession.json"
+)
+SCORE_TERM_SUPERSESSION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_clearance_v11_"
+    "score_term_supersession/1.0.0"
+)
 
 EXPECTED_EVIDENCE_ARCHIVE_SHA256 = (
     "7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98"
@@ -718,6 +699,29 @@ EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 = (
 EXPECTED_REPORT_SHA256 = (
     "8d9e9eef5907e51fbf2f25385c7cb1468dbd099c5636715ddea78274ef22fae3"
 )
+EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE = {
+    "baseline": {
+        "path": BASELINE_ANALYSIS_PATH,
+        "raw_sha256": (
+            "083d231e2fdf518d7bf4012ab4152a0331adc5ae67e8a5f48e937c8205a953f5"
+        ),
+        "report_sha256": (
+            "c05a06e3d146d02cb22e20b1e200db572903455b35f574b6a36a64c8acb9ba33"
+        ),
+    },
+    "rescue": {
+        "path": RESCUE_ANALYSIS_PATH,
+        "raw_sha256": (
+            "067d0f41d6b97f6c94d87e09479d73db979cddede3fdf679e9d63ba6d2738b2f"
+        ),
+        "report_sha256": (
+            "9e95970c9f51a9b9cd6a3e795d7a6af9b0cce27d554ceaa6e3553940577c72bc"
+        ),
+    },
+}
+EXPECTED_SCORE_TERM_SUPERSESSION_SHA256 = (
+    "9979349b8a87bb54920a55cad6492b2f3af0c293b5be237b9d2f6127676fa4c6"
+)
 EXPECTED_EVIDENCE_MEMBER_COUNT = 59
 
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
@@ -725,6 +729,7 @@ MAX_TAR_BYTES = 128 * 1024 * 1024
 MAX_MEMBER_BYTES = 32 * 1024 * 1024
 MAX_MEMBER_MANIFEST_BYTES = 256 * 1024
 MAX_BUNDLE_CHECKSUM_BYTES = 4 * 1024
+MAX_SCORE_TERM_SUPERSESSION_BYTES = 64 * 1024
 EXPECTED_CLEARANCE_PAIR_COUNT_BOUND = 1_000_000
 EXPECTED_CLEARANCE_RADII_POLICY_SHA256 = (
     "acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e"
@@ -748,6 +753,44 @@ EXPECTED_RESCUE_METRICS = {
     "selection_eligible_candidate_count": 30,
     "native_like_selection_eligible_candidate_count": 2,
 }
+EXPECTED_VERIFIED_NON_SCORE_METRICS_BY_LANE = {
+    "baseline": {
+        "case_count": 9,
+        "successful_case_count": 8,
+        "candidate_success_count": 512,
+        "exact_valid_candidate_count": 7,
+        "native_like_candidate_count": 4,
+        "selection_eligible_candidate_count": 31,
+        "native_like_selection_eligible_candidate_count": 3,
+        "proposal_oracle_recovery_case_count": 1,
+    },
+    "rescue": {
+        "case_count": 9,
+        "successful_case_count": 8,
+        "candidate_success_count": 512,
+        "exact_valid_candidate_count": 7,
+        "native_like_candidate_count": 4,
+        "selection_eligible_candidate_count": 30,
+        "native_like_selection_eligible_candidate_count": 2,
+        "proposal_oracle_recovery_case_count": 1,
+    },
+}
+LEGACY_UNAUTHENTICATED_CANDIDATE_SCORE_FIELDS = frozenset(
+    {
+        "score",
+        "score_terms_receipt_sha256",
+        "score_term_binary64_hex",
+        "hbond_count",
+    }
+)
+LEGACY_UNAUTHENTICATED_SCORE_RANKED_RESULT_FIELDS = frozenset(
+    {
+        "rmsd_angstroms",
+        "geometric_valid",
+        "chemical_valid",
+        "pose_artifact_sha256s",
+    }
+)
 EXPECTED_TORSION_COUNTS = {
     "allocated_candidate_count": 28,
     "torsion_evaluated_candidate_count": 27,
@@ -773,6 +816,63 @@ def _sha256_bytes(value: bytes) -> str:
 
 def _sha256_payload(value: object) -> str:
     return _sha256_bytes(_canonical_bytes(value))
+
+
+def _expected_score_term_supersession_projection() -> dict[str, object]:
+    return {
+        "schema_id": SCORE_TERM_SUPERSESSION_SCHEMA_ID,
+        "source_audit_schema_id": SCHEMA_ID,
+        "source_audit_path": REPORT_PATH,
+        "archive_sha256": EXPECTED_EVIDENCE_ARCHIVE_SHA256,
+        "member_manifest_sha256": EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256,
+        "bundle_sha256": EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256,
+        "archived_audit_report_sha256": EXPECTED_REPORT_SHA256,
+        "legacy_analysis_members": EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE,
+        "complete_scorer_term_receipts_retained": False,
+        "score_term_semantics_authenticated": False,
+        "reconstruction_available": False,
+        "scorer_term_vectors_consumed_by_superseding_verifier": False,
+        "legacy_analysis_status": (
+            "historical_bytes_only_unavailable_for_semantic_verification"
+        ),
+        "score_ranked_metrics_status": (
+            "legacy_descriptive_scalar_score_output_not_scorer_receipt_"
+            "authenticated_unavailable_for_verification_or_decisions"
+        ),
+        "legacy_score_ranked_fields": [
+            "baseline.analysis.full_top1_recovery_case_count",
+            "baseline.analysis.full_top5_recovery_case_count",
+            "baseline.metrics.top1_recovery_case_count",
+            "baseline.metrics.top5_recovery_case_count",
+            "baseline.metrics.valid_top1_case_count",
+            "comparison.semantic_regression_against_pinned_v1_metrics",
+            "rescue.analysis.full_top1_recovery_case_count",
+            "rescue.analysis.full_top5_recovery_case_count",
+            "rescue.metrics.top1_recovery_case_count",
+            "rescue.metrics.top5_recovery_case_count",
+            "rescue.metrics.valid_top1_case_count",
+        ],
+        "replacement_verification_scope": [
+            "archive_bundle_identity",
+            "candidate_and_coordinate_lineage",
+            "clearance_telemetry",
+            "input_and_materialization_bindings",
+            "result_independent_allocation",
+            "walltime_historical_record",
+        ],
+        "excluded_semantic_scope": [
+            "legacy_compact_score_term_analyses",
+            "score_ranked_top1_top5_valid_top1_metrics",
+            "scorer_term_semantics",
+            "semantic_regression_against_pinned_v1_metrics",
+        ],
+        "development_only": True,
+        "stage0_eligible": False,
+        "product_promotion_eligible": False,
+        "public_claim_eligible": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
 
 
 def _is_sha256(value: object) -> bool:
@@ -844,11 +944,62 @@ def _execution_policy_mapping(value: object) -> dict[str, object]:
     return mapping
 
 
+def _non_score_candidate_projection(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError("non-score candidate projection requires an object")
+    return {
+        key: value[key]
+        for key in value
+        if key not in LEGACY_UNAUTHENTICATED_CANDIDATE_SCORE_FIELDS
+    }
+
+
+def _non_score_result_projection(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError("non-score result projection requires an object")
+    diagnostics = value.get("engine_v2_diagnostics")
+    if not isinstance(diagnostics, Mapping):
+        raise ValueError("non-score result diagnostics are invalid")
+    candidates = diagnostics.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("non-score result candidates are invalid")
+    projected_diagnostics = {
+        key: diagnostics[key] for key in diagnostics if key != "candidates"
+    }
+    projected_diagnostics["candidates"] = [
+        _non_score_candidate_projection(candidate) for candidate in candidates
+    ]
+    projection = {
+        key: value[key]
+        for key in value
+        if key
+        not in {
+            *LEGACY_UNAUTHENTICATED_SCORE_RANKED_RESULT_FIELDS,
+            "engine_v2_diagnostics",
+        }
+    }
+    projection["engine_v2_diagnostics"] = projected_diagnostics
+    return projection
+
+
+def _non_score_execution_receipt_projection(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError("non-score execution receipt projection requires an object")
+    projection = {
+        key: value[key]
+        for key in value
+        if key not in {"receipt_sha256", "result"}
+    }
+    projection["result"] = _non_score_result_projection(value.get("result"))
+    return projection
+
+
 def _historical_v11_candidate(
     value: object,
     *,
     lane: str,
     case_id: str,
+    verify_legacy_score_projection: bool = True,
 ) -> dict[str, object]:
     if not isinstance(value, Mapping):
         raise ValueError(f"{lane} {case_id} candidate must be an object")
@@ -888,8 +1039,13 @@ def _historical_v11_candidate(
                 "refinement_original_pose_valid",
             )
         )
-        or type(candidate.get("hbond_count")) is not int
-        or int(candidate["hbond_count"]) < 0
+        or (
+            verify_legacy_score_projection
+            and (
+                type(candidate.get("hbond_count")) is not int
+                or int(candidate["hbond_count"]) < 0
+            )
+        )
         or not isinstance(failed_checks, list)
         or any(
             not isinstance(check_id, str) or not check_id for check_id in failed_checks
@@ -940,43 +1096,30 @@ def _historical_v11_candidate(
         )
     ):
         raise ValueError(f"{lane} {case_id} PoseBusters projection is invalid")
-    candidate_score = _finite_number(candidate.get("score"), name="candidate score")
+    if verify_legacy_score_projection:
+        _finite_number(candidate.get("score"), name="candidate score")
     _finite_number(
         candidate.get("rmsd_angstrom"),
         name="candidate RMSD",
         minimum=0.0,
     )
-    for field in (
+    candidate_sha256_fields = [
         "proposal_fingerprint_sha256",
         "coordinate_fingerprint_sha256",
         "pose_artifact_sha256",
-        "score_terms_receipt_sha256",
         "refinement_receipt_sha256",
-    ):
+    ]
+    if verify_legacy_score_projection:
+        candidate_sha256_fields.append("score_terms_receipt_sha256")
+    for field in candidate_sha256_fields:
         if not _is_sha256(candidate.get(field)):
             raise ValueError(f"{lane} {case_id} candidate {field} is invalid")
-    score_terms = candidate.get("score_term_binary64_hex")
-    if not isinstance(score_terms, Mapping) or set(score_terms) != set(
-        EXPECTED_SCORER_TERM_NAMES
-    ):
-        raise ValueError(f"{lane} {case_id} candidate score terms are invalid")
-    decoded_terms: dict[str, float] = {}
-    for term, encoded in score_terms.items():
-        if not isinstance(term, str) or not term:
-            raise ValueError("candidate score term name is invalid")
-        decoded_terms[term] = _binary64(
-            encoded,
-            name=f"candidate score term {term}",
-        )
-    if candidate_score.hex() != decoded_terms["total_score"].hex():
-        raise ValueError(f"{lane} {case_id} candidate score contradicts retained total")
-    if not math.isclose(
-        decoded_terms["total_score"],
-        sum(decoded_terms[name] for name in EXPECTED_SCORER_TERM_NAMES[:-1]),
-        rel_tol=0.0,
-        abs_tol=1.0e-12,
-    ):
-        raise ValueError(f"{lane} {case_id} candidate score terms are inconsistent")
+    if verify_legacy_score_projection:
+        score_terms = candidate.get("score_term_binary64_hex")
+        if not isinstance(score_terms, Mapping) or set(score_terms) != set(
+            EXPECTED_SCORER_TERM_NAMES
+        ) or any(not isinstance(value, str) for value in score_terms.values()):
+            raise ValueError(f"{lane} {case_id} candidate score terms are invalid")
     initial_penalty = _binary64(
         candidate.get("refinement_initial_penalty_binary64_hex"),
         name="candidate refinement initial penalty",
@@ -1213,7 +1356,9 @@ def _historical_v11_candidate(
             raise ValueError(
                 f"{lane} {case_id} baseline V6 receipt contract is invalid"
             )
-    return candidate
+    if verify_legacy_score_projection:
+        return candidate
+    return _non_score_candidate_projection(candidate)
 
 
 def _historical_v11_result(
@@ -1221,6 +1366,7 @@ def _historical_v11_result(
     *,
     lane: str,
     case_id: str,
+    verify_legacy_score_projection: bool = True,
 ) -> dict[str, object]:
     if not isinstance(value, Mapping) or set(value) != EXPECTED_RESULT_FIELDS:
         raise ValueError(f"{lane} {case_id} result shape is invalid")
@@ -1330,13 +1476,15 @@ def _historical_v11_result(
             )
         ):
             raise ValueError(f"{lane} preparation failure is invalid")
-        failure_atlas._validate_ranked_result_projection(
-            result,
-            (),
-            lane=lane,
-            case_id=case_id,
-        )
-        return result
+        if verify_legacy_score_projection:
+            failure_atlas._validate_ranked_result_projection(
+                result,
+                (),
+                lane=lane,
+                case_id=case_id,
+            )
+            return result
+        return _non_score_result_projection(result)
     if (
         diagnostics.get("preparation_status") != "success"
         or result.get("status") != "success"
@@ -1390,7 +1538,12 @@ def _historical_v11_result(
     ):
         raise ValueError(f"{lane} {case_id} successful denominator is invalid")
     candidates = tuple(
-        _historical_v11_candidate(candidate, lane=lane, case_id=case_id)
+        _historical_v11_candidate(
+            candidate,
+            lane=lane,
+            case_id=case_id,
+            verify_legacy_score_projection=verify_legacy_score_projection,
+        )
         for candidate in raw_candidates
     )
     if {int(candidate["proposal_index"]) for candidate in candidates} != set(
@@ -1440,41 +1593,15 @@ def _historical_v11_result(
             raise ValueError(
                 f"{lane} {case_id} candidate receipt set is not the pinned cohort"
             )
-    # The historical summaries retain the score-term receipt ID and only the
-    # candidate-facing term projection, not the opaque complete ScorerV1Terms
-    # receipt. Pin their complete retained co-projection without claiming that
-    # the omitted receipt internals were reconstructed after the fact.
-    retained_score_term_projections = [
-        {
-            "proposal_index": int(candidate["proposal_index"]),
-            "proposal_fingerprint_sha256": str(
-                candidate["proposal_fingerprint_sha256"]
-            ),
-            "score_terms_receipt_sha256": str(
-                candidate["score_terms_receipt_sha256"]
-            ),
-            "score_term_binary64_hex": dict(candidate["score_term_binary64_hex"]),
-            "hbond_count": int(candidate["hbond_count"]),
-        }
-        for candidate in ordered_candidates
-    ]
-    if _sha256_payload(retained_score_term_projections) != (
-        EXPECTED_CANDIDATE_SCORE_TERM_PROJECTION_SET_SHA256_BY_LANE_CASE.get(
-            lane,
-            {},
-        ).get(case_id)
-    ):
-        raise ValueError(
-            f"{lane} {case_id} retained score-term projection is not the "
-            "pinned cohort"
+    if verify_legacy_score_projection:
+        failure_atlas._validate_ranked_result_projection(
+            result,
+            candidates,
+            lane=lane,
+            case_id=case_id,
         )
-    failure_atlas._validate_ranked_result_projection(
-        result,
-        candidates,
-        lane=lane,
-        case_id=case_id,
-    )
-    return result
+        return result
+    return _non_score_result_projection(result)
 
 
 def _split_historical_sdf_records(source: bytes) -> tuple[bytes, ...]:
@@ -1538,6 +1665,113 @@ def _member_object(
     return payload, raw
 
 
+def _score_term_supersession_from_raw(raw: bytes) -> dict[str, object]:
+    payload, _ = _member_object(
+        {SCORE_TERM_SUPERSESSION_PATH: raw},
+        SCORE_TERM_SUPERSESSION_PATH,
+        name="V1.1 score-term supersession",
+        hash_field="supersession_sha256",
+    )
+    projection = dict(payload)
+    observed_sha256 = projection.pop("supersession_sha256")
+    if (
+        projection != _expected_score_term_supersession_projection()
+        or observed_sha256 != EXPECTED_SCORE_TERM_SUPERSESSION_SHA256
+    ):
+        raise ValueError("V1.1 score-term supersession is not the reviewed contract")
+    return payload
+
+
+def _load_score_term_supersession(
+    repo_root: Path,
+) -> tuple[dict[str, object], bytes]:
+    raw = failure_atlas._bounded_repository_artifact_bytes(
+        repo_root,
+        Path(SCORE_TERM_SUPERSESSION_PATH),
+        maximum=MAX_SCORE_TERM_SUPERSESSION_BYTES,
+        name="V1.1 score-term supersession",
+    )[0]
+    return _score_term_supersession_from_raw(raw), raw
+
+
+def _bind_score_term_supersession_identity(
+    identity: Mapping[str, object],
+    supersession: Mapping[str, object],
+    report: Mapping[str, object],
+) -> dict[str, object]:
+    _validate_supersession_report_binding(supersession, report)
+    supersession_boundary_fields = (
+        "complete_scorer_term_receipts_retained",
+        "reconstruction_available",
+        "score_term_semantics_authenticated",
+        "development_only",
+        "stage0_eligible",
+        "product_promotion_eligible",
+        "public_claim_eligible",
+        "scientifically_validated",
+        "claim_safe",
+    )
+    expected_supersession_boundary = {
+        "development_only": True,
+        **{
+            field: False
+            for field in supersession_boundary_fields
+            if field != "development_only"
+        },
+    }
+    report_false_boundary_fields = (
+        "contains_fresh_internal_blind_holdout",
+        "fresh_execution_authorized",
+        "primary_claim_eligible",
+        "selection_rule_changed",
+        "threshold_changed",
+        "v7_replacement_authorized",
+    )
+    if any(
+        supersession.get(field) is not expected
+        for field, expected in expected_supersession_boundary.items()
+    ) or any(report.get(field) is not False for field in report_false_boundary_fields):
+        raise ValueError("V1.1 supersession claim boundary is invalid")
+    bound = dict(identity)
+    bound["score_term_supersession_sha256"] = supersession[
+        "supersession_sha256"
+    ]
+    bound.update(
+        {
+            field: supersession[field] for field in supersession_boundary_fields
+        }
+    )
+    bound.update({field: False for field in report_false_boundary_fields})
+    return bound
+
+
+def _validate_supersession_report_binding(
+    supersession: Mapping[str, object],
+    report: Mapping[str, object],
+) -> None:
+    legacy_members = supersession.get("legacy_analysis_members")
+    if not isinstance(legacy_members, Mapping):
+        raise ValueError("V1.1 score-term supersession analysis binding is invalid")
+    for lane in ("baseline", "rescue"):
+        lane_report = report.get(lane)
+        analysis = (
+            lane_report.get("analysis")
+            if isinstance(lane_report, Mapping)
+            else None
+        )
+        expected = legacy_members.get(lane)
+        if (
+            not isinstance(analysis, Mapping)
+            or not isinstance(expected, Mapping)
+            or analysis.get("path") != expected.get("path")
+            or analysis.get("file_sha256") != expected.get("raw_sha256")
+            or analysis.get("report_sha256") != expected.get("report_sha256")
+        ):
+            raise ValueError(
+                "V1.1 score-term supersession contradicts legacy analysis bytes"
+            )
+
+
 def _walltime(
     members: Mapping[str, bytes], path: str, *, lane: str
 ) -> dict[str, object]:
@@ -1594,7 +1828,6 @@ def _analysis(
     lane: str,
     run_root: str,
     receipt_hashes: Mapping[str, str],
-    results: Mapping[str, Mapping[str, object]],
 ) -> dict[str, object]:
     payload, raw = _member_object(
         members,
@@ -1618,23 +1851,8 @@ def _analysis(
     }
     if dict(source) != expected_source:
         raise ValueError(f"{lane} analysis contradicts restored receipts")
-    analyzer_path = Path(score_term_analysis.__file__)
-    try:
-        analyzer_raw = analyzer_path.read_bytes()
-    except OSError as exc:
-        raise ValueError("frozen score-term analyzer source is unavailable") from exc
-    if _sha256_bytes(analyzer_raw) != EXPECTED_SCORE_TERM_ANALYZER_SOURCE_SHA256:
-        raise ValueError("frozen score-term analyzer implementation drifted")
-    allowed_proposal_modes = set(EXPECTED_BASE_PROPOSAL_MODES)
-    if lane == "rescue":
-        allowed_proposal_modes.add(PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
-    recomputed = score_term_analysis.analyze_validated_results(
-        [results[case_id] for case_id in EXPECTED_CASE_IDS],
-        source_receipts_sha256=expected_source,
-        allowed_proposal_modes=tuple(sorted(allowed_proposal_modes)),
-    )
-    if payload != recomputed:
-        raise ValueError(f"{lane} analysis contradicts restored candidate terms")
+    # Complete scorer-term receipts are absent. Preserve this self-hashed member
+    # and its source-receipt binding, but never consume its term semantics.
     return {
         "path": path,
         "file_sha256": _sha256_bytes(raw),
@@ -1645,6 +1863,30 @@ def _analysis(
         "oracle_2a_recovery_case_count": payload.get("oracle_2a_recovery_case_count"),
         "full_top1_recovery_case_count": payload.get("full_top1_recovery_case_count"),
         "full_top5_recovery_case_count": payload.get("full_top5_recovery_case_count"),
+    }
+
+
+def _legacy_analysis_member_identity(
+    members: Mapping[str, bytes],
+    path: str,
+    *,
+    lane: str,
+) -> dict[str, object]:
+    expected = EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE.get(lane)
+    raw = members.get(_safe_member_name(path))
+    if (
+        not isinstance(expected, Mapping)
+        or expected.get("path") != path
+        or raw is None
+        or len(raw) > MAX_MEMBER_BYTES
+        or _sha256_bytes(raw) != expected.get("raw_sha256")
+    ):
+        raise ValueError(f"{lane} legacy analysis byte identity drifted")
+    return {
+        "path": path,
+        "file_sha256": expected["raw_sha256"],
+        "report_sha256": expected["report_sha256"],
+        "status": "historical_bytes_only_unavailable_for_semantic_verification",
     }
 
 
@@ -1728,6 +1970,72 @@ def _metric_summary(results: Mapping[str, Mapping[str, object]]) -> dict[str, in
             and ranked[0].get("chemical_valid") is True
         )
     return {key: int(totals[key]) for key in EXPECTED_BASELINE_METRICS}
+
+
+def _verified_non_score_metric_summary(
+    results: Mapping[str, Mapping[str, object]],
+) -> dict[str, int]:
+    if tuple(sorted(results)) != EXPECTED_CASE_IDS:
+        raise ValueError("lane result case set is invalid")
+    totals: Counter[str] = Counter(
+        {
+            "case_count": len(EXPECTED_CASE_IDS),
+            "successful_case_count": 0,
+            "candidate_success_count": 0,
+            "exact_valid_candidate_count": 0,
+            "native_like_candidate_count": 0,
+            "selection_eligible_candidate_count": 0,
+            "native_like_selection_eligible_candidate_count": 0,
+            "proposal_oracle_recovery_case_count": 0,
+        }
+    )
+    for case_id in EXPECTED_CASE_IDS:
+        result = results[case_id]
+        diagnostics = result.get("engine_v2_diagnostics")
+        candidates = (
+            diagnostics.get("candidates") if isinstance(diagnostics, Mapping) else None
+        )
+        if not isinstance(candidates, list):
+            raise ValueError(f"{case_id} non-score candidates are invalid")
+        if result.get("status") == "failure":
+            if case_id != EXPECTED_PREPARATION_FAILURE_CASE_ID or candidates:
+                raise ValueError("unexpected preparation-failure result")
+            continue
+        if result.get("status") != "success" or len(candidates) != 64:
+            raise ValueError(f"{case_id} successful candidate denominator drifted")
+        if any(
+            not isinstance(candidate, Mapping)
+            or candidate.get("status") != "success"
+            for candidate in candidates
+        ):
+            raise ValueError(f"{case_id} candidate success denominator drifted")
+        native_like = [
+            candidate
+            for candidate in candidates
+            if float(candidate["rmsd_angstrom"]) <= 2.0
+        ]
+        eligible = [
+            candidate
+            for candidate in candidates
+            if candidate.get("selection_eligible") is True
+        ]
+        totals["successful_case_count"] += 1
+        totals["candidate_success_count"] += len(candidates)
+        totals["exact_valid_candidate_count"] += sum(
+            candidate.get("geometric_valid") is True
+            and candidate.get("chemical_valid") is True
+            for candidate in candidates
+        )
+        totals["native_like_candidate_count"] += len(native_like)
+        totals["selection_eligible_candidate_count"] += len(eligible)
+        totals["native_like_selection_eligible_candidate_count"] += sum(
+            float(candidate["rmsd_angstrom"]) <= 2.0 for candidate in eligible
+        )
+        totals["proposal_oracle_recovery_case_count"] += bool(native_like)
+    return {
+        key: int(totals[key])
+        for key in EXPECTED_VERIFIED_NON_SCORE_METRICS_BY_LANE["baseline"]
+    }
 
 
 def _frozen_summary_input_binding(value: object, *, lane: str) -> dict[str, object]:
@@ -1831,6 +2139,7 @@ def _load_lane(
     summary_path: str,
     analysis_path: str,
     walltime_path: str,
+    verify_legacy_score_projection: bool,
 ) -> dict[str, object]:
     expected_schema = (
         EXPECTED_BASELINE_SUMMARY_SCHEMA_ID
@@ -1914,12 +2223,16 @@ def _load_lane(
             result,
             lane=lane,
             case_id=case_id,
+            verify_legacy_score_projection=verify_legacy_score_projection,
         )
         if (
-            typed_payload != dict(result)
-            or receipt.get("command") != typed_payload.get("execution_command")
+            receipt.get("command") != typed_payload.get("execution_command")
             or failure_atlas._execution_policy_tokens(receipt.get("execution_policy"))
             != typed_payload.get("execution_policy")
+            or (
+                verify_legacy_score_projection
+                and typed_payload != dict(result)
+            )
         ):
             raise ValueError(f"{lane} execution receipt result is cross-wired")
 
@@ -1954,18 +2267,29 @@ def _load_lane(
             raise ValueError(f"{lane} materialization binding is invalid")
 
         results[case_id] = typed_payload
-        receipt_payloads[case_id] = receipt
+        receipt_payloads[case_id] = (
+            receipt
+            if verify_legacy_score_projection
+            else _non_score_execution_receipt_projection(receipt)
+        )
         receipt_hashes[case_id] = _sha256_bytes(receipt_raw)
         materializations[case_id] = materialization
         if typed_payload["status"] == "success":
             pose_path = f"{run_root}/poses/engine_v2/{case_id}.sdf"
-            _validate_pose_member(
-                members,
-                pose_path,
-                typed_payload["pose_artifact_sha256s"],
-                lane=lane,
-                case_id=case_id,
-            )
+            if verify_legacy_score_projection:
+                _validate_pose_member(
+                    members,
+                    pose_path,
+                    typed_payload["pose_artifact_sha256s"],
+                    lane=lane,
+                    case_id=case_id,
+                )
+            else:
+                pose_raw = members.get(_safe_member_name(pose_path))
+                if pose_raw is None or len(pose_raw) > MAX_MEMBER_BYTES:
+                    raise ValueError(
+                        f"{lane} {case_id} historical ranked pose member is missing"
+                    )
             expected_members.add(pose_path)
 
     rows = summary.get("rows")
@@ -1995,9 +2319,19 @@ def _load_lane(
             lane=lane,
             case_id=case_id,
         )
+        expected_row = (
+            rows[index]
+            if verify_legacy_score_projection
+            else _non_score_result_projection(rows[index])
+        )
+        expected_receipt = (
+            embedded_receipts[index]
+            if verify_legacy_score_projection
+            else _non_score_execution_receipt_projection(embedded_receipts[index])
+        )
         if (
-            rows[index] != results[case_id]
-            or embedded_receipts[index] != receipt_payloads[case_id]
+            expected_row != results[case_id]
+            or expected_receipt != receipt_payloads[case_id]
             or embedded_materializations[index] != materializations[case_id]
             or profile.get("case_id") != case_id
         ):
@@ -2008,32 +2342,39 @@ def _load_lane(
     if observed_members != expected_members:
         raise ValueError(f"{lane} run-root member set is invalid")
 
-    metrics = _metric_summary(results)
-    expected_metrics = (
-        EXPECTED_BASELINE_METRICS if lane == "baseline" else EXPECTED_RESCUE_METRICS
-    )
-    if metrics != expected_metrics:
-        raise ValueError(f"{lane} historical metrics drifted")
-    analysis = _analysis(
-        members,
-        analysis_path,
-        lane=lane,
-        run_root=run_root,
-        receipt_hashes=receipt_hashes,
-        results=results,
-    )
-    if (
-        analysis["case_count"] != metrics["case_count"]
-        or analysis["scored_case_count"] != metrics["scored_case_count"]
-        or analysis["candidate_count"] != metrics["candidate_success_count"]
-        or analysis["oracle_2a_recovery_case_count"]
-        != metrics["proposal_oracle_recovery_case_count"]
-        or analysis["full_top1_recovery_case_count"]
-        != metrics["top1_recovery_case_count"]
-        or analysis["full_top5_recovery_case_count"]
-        != metrics["top5_recovery_case_count"]
-    ):
-        raise ValueError(f"{lane} compact analysis metrics drifted")
+    if verify_legacy_score_projection:
+        metrics = _metric_summary(results)
+        expected_metrics = (
+            EXPECTED_BASELINE_METRICS
+            if lane == "baseline"
+            else EXPECTED_RESCUE_METRICS
+        )
+        if metrics != expected_metrics:
+            raise ValueError(f"{lane} historical metrics drifted")
+        analysis = _analysis(
+            members,
+            analysis_path,
+            lane=lane,
+            run_root=run_root,
+            receipt_hashes=receipt_hashes,
+        )
+        if (
+            analysis["case_count"] != metrics["case_count"]
+            or analysis["scored_case_count"] != metrics["scored_case_count"]
+            or analysis["candidate_count"] != metrics["candidate_success_count"]
+            or analysis["oracle_2a_recovery_case_count"]
+            != metrics["proposal_oracle_recovery_case_count"]
+        ):
+            raise ValueError(f"{lane} compact analysis metrics drifted")
+    else:
+        metrics = _verified_non_score_metric_summary(results)
+        if metrics != EXPECTED_VERIFIED_NON_SCORE_METRICS_BY_LANE[lane]:
+            raise ValueError(f"{lane} verified non-score metrics drifted")
+        analysis = _legacy_analysis_member_identity(
+            members,
+            analysis_path,
+            lane=lane,
+        )
 
     return {
         "run_root": run_root,
@@ -2985,6 +3326,8 @@ def _v11_rescue_allocation(
 def _lane_comparison(
     baseline: Mapping[str, object],
     rescue: Mapping[str, object],
+    *,
+    include_legacy_metric_interpretation: bool = True,
 ) -> dict[str, object]:
     baseline_results = baseline.get("results")
     rescue_results = rescue.get("results")
@@ -3097,7 +3440,7 @@ def _lane_comparison(
     changed_count = sum(len(indices) for indices in coordinate_changes.values())
     if changed_count != 28 or parent_duplicate_count != 28:
         raise ValueError("source-paired coordinate lineage drifted")
-    return {
+    comparison: dict[str, object] = {
         "same_case_denominator": True,
         "same_candidate_denominator": True,
         "same_input_artifacts": True,
@@ -3109,12 +3452,23 @@ def _lane_comparison(
             parent_duplicate_count
         ),
         "torsion_selected_candidate_count": 0,
-        "semantic_regression_against_pinned_v1_metrics": False,
-        "interpretation": (
-            "v11_adds_clearance_telemetry_without_changing_the_pinned_v1_"
-            "historical_outcome_counts"
-        ),
     }
+    if include_legacy_metric_interpretation:
+        comparison.update(
+            {
+                "semantic_regression_against_pinned_v1_metrics": False,
+                "interpretation": (
+                    "v11_adds_clearance_telemetry_without_changing_the_pinned_v1_"
+                    "historical_outcome_counts"
+                ),
+            }
+        )
+    else:
+        comparison["interpretation"] = (
+            "non_score_coordinate_and_allocation_lineage_verified_"
+            "score_ranked_metrics_excluded"
+        )
+    return comparison
 
 
 def _shared_engine_identity(
@@ -3153,6 +3507,7 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
         summary_path=BASELINE_SUMMARY_PATH,
         analysis_path=BASELINE_ANALYSIS_PATH,
         walltime_path=BASELINE_WALLTIME_PATH,
+        verify_legacy_score_projection=True,
     )
     rescue = _load_lane(
         members,
@@ -3161,6 +3516,7 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
         summary_path=RESCUE_SUMMARY_PATH,
         analysis_path=RESCUE_ANALYSIS_PATH,
         walltime_path=RESCUE_WALLTIME_PATH,
+        verify_legacy_score_projection=True,
     )
     baseline_identity = baseline["engine_identity"]
     rescue_identity = rescue["engine_identity"]
@@ -3254,6 +3610,72 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
     }
     report["report_sha256"] = _sha256_payload(report)
     return report
+
+
+def _build_superseding_non_score_verification(
+    members: Mapping[str, bytes],
+) -> dict[str, object]:
+    baseline = _load_lane(
+        members,
+        lane="baseline",
+        run_root=BASELINE_RUN_ROOT,
+        summary_path=BASELINE_SUMMARY_PATH,
+        analysis_path=BASELINE_ANALYSIS_PATH,
+        walltime_path=BASELINE_WALLTIME_PATH,
+        verify_legacy_score_projection=False,
+    )
+    rescue = _load_lane(
+        members,
+        lane="rescue",
+        run_root=RESCUE_RUN_ROOT,
+        summary_path=RESCUE_SUMMARY_PATH,
+        analysis_path=RESCUE_ANALYSIS_PATH,
+        walltime_path=RESCUE_WALLTIME_PATH,
+        verify_legacy_score_projection=False,
+    )
+    baseline_identity = baseline.get("engine_identity")
+    rescue_identity = rescue.get("engine_identity")
+    rescue_results = rescue.get("results")
+    if (
+        not isinstance(baseline_identity, Mapping)
+        or not isinstance(rescue_identity, Mapping)
+        or not isinstance(rescue_results, Mapping)
+    ):
+        raise ValueError("superseding non-score lane projection is invalid")
+    shared_identity = _shared_engine_identity(baseline_identity, rescue_identity)
+    comparison = _lane_comparison(
+        baseline,
+        rescue,
+        include_legacy_metric_interpretation=False,
+    )
+    clearance = _clearance_summary(rescue_results)
+    torsion = clearance.get("torsion")
+    if not isinstance(torsion, Mapping):
+        raise ValueError("superseding clearance telemetry is invalid")
+    return {
+        "verification_scope": "superseding_non_score_receipt_and_clearance",
+        "decision": (
+            "clearance_evidence_verified_score_ranked_metrics_unavailable_"
+            "no_policy_change"
+        ),
+        "score_term_semantics_authenticated": False,
+        "engine_identity": shared_identity,
+        "baseline_verified_non_score_metrics": baseline["metrics"],
+        "rescue_verified_non_score_metrics": rescue["metrics"],
+        "clearance_evaluated_candidate_count": torsion[
+            "clearance_evaluated_candidate_count"
+        ],
+        "coordinate_change_candidate_count": comparison[
+            "baseline_to_rescue_coordinate_change_candidate_count"
+        ],
+        "torsion_selected_candidate_count": comparison[
+            "torsion_selected_candidate_count"
+        ],
+        "lane_comparison_interpretation": comparison["interpretation"],
+        "legacy_analysis_status": (
+            "historical_bytes_only_unavailable_for_semantic_verification"
+        ),
+    }
 
 
 def _read_regular_mode_0600(path: Path, *, repo_root: Path) -> tuple[str, bytes]:
@@ -3474,7 +3896,10 @@ def _verify_bundle_bytes(
     expected_members_sha256: str,
     expected_bundle_sha256: str,
     expected_report_sha256: str,
+    verification_scope: str,
 ) -> tuple[dict[str, object], dict[str, object]]:
+    if verification_scope not in {"legacy_pack", "superseding_non_score"}:
+        raise ValueError("V1.1 verification scope is invalid")
     for value, name in (
         (expected_archive_sha256, "archive SHA-256"),
         (expected_members_sha256, "member-manifest SHA-256"),
@@ -3513,9 +3938,15 @@ def _verify_bundle_bytes(
         raise ValueError("V1.1 clearance audit identity is invalid")
     source_members = dict(restored)
     source_members.pop(REPORT_PATH)
-    recomputed = _build_report(source_members)
-    if report != recomputed or report_raw != _canonical_bytes(recomputed) + b"\n":
-        raise ValueError("archived V1.1 audit contradicts raw receipt members")
+    superseding_verification: dict[str, object] | None = None
+    if verification_scope == "legacy_pack":
+        recomputed = _build_report(source_members)
+        if report != recomputed or report_raw != _canonical_bytes(recomputed) + b"\n":
+            raise ValueError("archived V1.1 audit contradicts raw receipt members")
+    else:
+        superseding_verification = _build_superseding_non_score_verification(
+            source_members
+        )
     identity = {
         "archive_sha256": expected_archive_sha256,
         "member_manifest_sha256": expected_members_sha256,
@@ -3525,7 +3956,10 @@ def _verify_bundle_bytes(
         "archive_size_bytes": len(archive_raw),
         "tar_size_bytes": len(tar_raw),
         "expanded_member_size_bytes": sum(len(value) for value in restored.values()),
+        "verification_scope": verification_scope,
     }
+    if superseding_verification is not None:
+        identity["superseding_verification"] = superseding_verification
     return report, identity
 
 
@@ -3676,6 +4110,7 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
     failure_atlas._reject_symlink_ancestry(repo_root, name="repository root")
     repo_root = repo_root.resolve()
     failure_atlas._prohibited_path(repo_root, name="repository root")
+    supersession, _ = _load_score_term_supersession(repo_root)
     output_paths = tuple(
         repo_root / path
         for path in (REPORT_PATH, ARCHIVE_PATH, MEMBERS_PATH, BUNDLE_PATH)
@@ -3685,6 +4120,7 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
 
     source_members = _collect_source_members(repo_root)
     report = _build_report(source_members)
+    _validate_supersession_report_binding(supersession, report)
     report_raw = _canonical_bytes(report) + b"\n"
     members = {**source_members, REPORT_PATH: report_raw}
     if len(members) != EXPECTED_EVIDENCE_MEMBER_COUNT:
@@ -3705,6 +4141,7 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
         expected_members_sha256=members_sha256,
         expected_bundle_sha256=bundle_sha256,
         expected_report_sha256=report_sha256,
+        verification_scope="legacy_pack",
     )
     expected_identity = {
         "archive_sha256": EXPECTED_EVIDENCE_ARCHIVE_SHA256,
@@ -3714,6 +4151,11 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
     }
     if any(identity[key] != value for key, value in expected_identity.items()):
         raise ValueError("generated evidence does not match the reviewed pins")
+    identity = _bind_score_term_supersession_identity(
+        identity,
+        supersession,
+        report,
+    )
     created: list[tuple[Path, int, int]] = []
     try:
         for relative, raw in (
@@ -3785,6 +4227,7 @@ def verify_pinned_evidence(
         maximum=MAX_MEMBER_BYTES,
         name="V1.1 external audit report",
     )[0]
+    supersession, _ = _load_score_term_supersession(repo_root)
     report, identity = _verify_bundle_bytes(
         archive_raw=archive_raw,
         members_raw=members_raw,
@@ -3793,9 +4236,15 @@ def verify_pinned_evidence(
         expected_members_sha256=EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256,
         expected_bundle_sha256=EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256,
         expected_report_sha256=EXPECTED_REPORT_SHA256,
+        verification_scope="superseding_non_score",
     )
     if external_report_raw != _canonical_bytes(report) + b"\n":
         raise ValueError("external V1.1 audit contradicts the pinned archive")
+    identity = _bind_score_term_supersession_identity(
+        identity,
+        supersession,
+        report,
+    )
     return report, identity
 
 
@@ -3816,15 +4265,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         identity = pack_evidence(arguments.repo_root)
         print(json.dumps(identity, sort_keys=True))
         return 0
-    report, identity = verify_pinned_evidence(arguments.repo_root)
+    _, identity = verify_pinned_evidence(arguments.repo_root)
+    superseding = identity.get("superseding_verification")
+    if not isinstance(superseding, Mapping):
+        raise ValueError("superseding non-score verification result is missing")
     print(
         json.dumps(
             {
                 **identity,
-                "decision": report["decision"],
-                "clearance_evaluated_candidate_count": report["clearance_telemetry"][
-                    "torsion"
-                ]["clearance_evaluated_candidate_count"],
+                "decision": superseding["decision"],
+                "clearance_evaluated_candidate_count": superseding[
+                    "clearance_evaluated_candidate_count"
+                ],
+                "legacy_analysis_status": superseding["legacy_analysis_status"],
             },
             sort_keys=True,
         )

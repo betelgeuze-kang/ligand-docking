@@ -252,7 +252,7 @@ def test_walltime_receipt_is_strict_and_binary64_encoded() -> None:
         evidence._walltime(members, path, lane="fixture")
 
 
-def test_compact_analysis_is_fully_recomputed_from_restored_results(
+def test_compact_analysis_is_preserved_without_consuming_term_semantics(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     case_id = "5SD5_HWI"
@@ -260,13 +260,23 @@ def test_compact_analysis_is_fully_recomputed_from_restored_results(
     path = "analysis.json"
     run_root = "run"
     source_path = f"{run_root}/receipts/engine_v2/{case_id}.json"
-    result = _successful_frozen_result("baseline")
     source_receipts = {source_path: "a" * 64}
-    payload = evidence.score_term_analysis.analyze_validated_results(
-        [result],
-        source_receipts_sha256=source_receipts,
-        allowed_proposal_modes=tuple(sorted(evidence.EXPECTED_BASE_PROPOSAL_MODES)),
-    )
+    projection: dict[str, object] = {
+        "schema_id": evidence.EXPECTED_ANALYSIS_SCHEMA_ID,
+        "analysis_scope": "historical_contaminated_development_only",
+        "contains_fresh_internal_blind_holdout": False,
+        "claimable": False,
+        "case_ids": [case_id],
+        "source_receipts_sha256": source_receipts,
+        "case_count": 1,
+        "scored_case_count": 1,
+        "candidate_count": evidence.EXPECTED_CANDIDATE_COUNT,
+        "oracle_2a_recovery_case_count": 1,
+        "full_top1_recovery_case_count": 1,
+        "full_top5_recovery_case_count": 1,
+        "term_summary": {"legacy": "opaque"},
+    }
+    payload = {**projection, "report_sha256": evidence._sha256_payload(projection)}
     members = {path: evidence._canonical_bytes(payload) + b"\n"}
 
     observed = evidence._analysis(
@@ -275,24 +285,30 @@ def test_compact_analysis_is_fully_recomputed_from_restored_results(
         lane="fixture",
         run_root=run_root,
         receipt_hashes={case_id: "a" * 64},
-        results={case_id: result},
     )
     assert observed["report_sha256"] == payload["report_sha256"]
 
     tampered = deepcopy(payload)
-    tampered["term_summary"]["typed_vdw"]["removed_top1_changed_case_count"] += 1
+    tampered["term_summary"] = {"different": "legacy bytes"}
     tampered["report_sha256"] = evidence._sha256_payload(
         {key: value for key, value in tampered.items() if key != "report_sha256"}
     )
     members[path] = evidence._canonical_bytes(tampered) + b"\n"
-    with pytest.raises(ValueError, match="candidate terms"):
+    assert evidence._analysis(
+        members,
+        path,
+        lane="fixture",
+        run_root=run_root,
+        receipt_hashes={case_id: "a" * 64},
+    )["report_sha256"] == tampered["report_sha256"]
+
+    with pytest.raises(ValueError, match="restored receipts"):
         evidence._analysis(
             members,
             path,
             lane="fixture",
             run_root=run_root,
-            receipt_hashes={case_id: "a" * 64},
-            results={case_id: result},
+            receipt_hashes={case_id: "b" * 64},
         )
 
 
@@ -1322,6 +1338,38 @@ def _synthetic_bundle(
         ),
         "operator_observed_checkout_or_base_receipt_authenticated": False,
         "decision": "fixture",
+        "contains_fresh_internal_blind_holdout": False,
+        "fresh_execution_authorized": False,
+        "primary_claim_eligible": False,
+        "selection_rule_changed": False,
+        "threshold_changed": False,
+        "v7_replacement_authorized": False,
+        "baseline": {
+            "analysis": {
+                "path": evidence.EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE[
+                    "baseline"
+                ]["path"],
+                "file_sha256": evidence.EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE[
+                    "baseline"
+                ]["raw_sha256"],
+                "report_sha256": evidence.EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE[
+                    "baseline"
+                ]["report_sha256"],
+            }
+        },
+        "rescue": {
+            "analysis": {
+                "path": evidence.EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE["rescue"][
+                    "path"
+                ],
+                "file_sha256": evidence.EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE[
+                    "rescue"
+                ]["raw_sha256"],
+                "report_sha256": evidence.EXPECTED_LEGACY_ANALYSIS_IDENTITY_BY_LANE[
+                    "rescue"
+                ]["report_sha256"],
+            }
+        },
     }
     report["report_sha256"] = evidence._sha256_payload(report)
     report_raw = evidence._canonical_bytes(report) + b"\n"
@@ -1343,6 +1391,19 @@ def _synthetic_bundle(
         lambda raw: tar_raw,
     )
     monkeypatch.setattr(evidence, "_build_report", lambda members: deepcopy(report))
+    monkeypatch.setattr(
+        evidence,
+        "_build_superseding_non_score_verification",
+        lambda members: {
+            "verification_scope": "superseding_non_score_receipt_and_clearance",
+            "decision": "fixture_non_score",
+            "score_term_semantics_authenticated": False,
+            "clearance_evaluated_candidate_count": 28,
+            "legacy_analysis_status": (
+                "historical_bytes_only_unavailable_for_semantic_verification"
+            ),
+        },
+    )
     return source_members, report, report_raw, archive_raw, members_raw, bundle_raw
 
 
@@ -1350,6 +1411,27 @@ def _write_mode_0600(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(payload)
     path.chmod(0o600)
+
+
+def _write_current_score_term_supersession(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> bytes:
+    projection = evidence._expected_score_term_supersession_projection()
+    supersession_sha256 = evidence._sha256_payload(projection)
+    monkeypatch.setattr(
+        evidence,
+        "EXPECTED_SCORE_TERM_SUPERSESSION_SHA256",
+        supersession_sha256,
+    )
+    raw = evidence._canonical_bytes(
+        {
+            **projection,
+            "supersession_sha256": supersession_sha256,
+        }
+    ) + b"\n"
+    _write_mode_0600(repo_root / evidence.SCORE_TERM_SUPERSESSION_PATH, raw)
+    return raw
 
 
 def _pin_fixture_execution_contract(
@@ -1370,36 +1452,11 @@ def _pin_fixture_execution_contract(
         ),
     )
     candidates = result["engine_v2_diagnostics"]["candidates"]
-    if candidates:
+    if lane == "rescue" and candidates:
         ordered_candidates = sorted(
             candidates,
             key=lambda candidate: candidate["proposal_index"],
         )
-        monkeypatch.setitem(
-            evidence.EXPECTED_CANDIDATE_SCORE_TERM_PROJECTION_SET_SHA256_BY_LANE_CASE[
-                lane
-            ],
-            case_id,
-            evidence._sha256_payload(
-                [
-                    {
-                        "proposal_index": candidate["proposal_index"],
-                        "proposal_fingerprint_sha256": candidate[
-                            "proposal_fingerprint_sha256"
-                        ],
-                        "score_terms_receipt_sha256": candidate[
-                            "score_terms_receipt_sha256"
-                        ],
-                        "score_term_binary64_hex": candidate[
-                            "score_term_binary64_hex"
-                        ],
-                        "hbond_count": candidate["hbond_count"],
-                    }
-                    for candidate in ordered_candidates
-                ]
-            ),
-        )
-    if lane == "rescue" and candidates:
         monkeypatch.setitem(
             evidence.EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE,
             case_id,
@@ -2074,7 +2131,6 @@ def test_successful_diagnostics_require_frozen_typed_and_derived_contract(
         case_id="5SD5_HWI",
         result=result,
     )
-    diagnostics = result["engine_v2_diagnostics"]
     drifts: list[tuple[str, object]] = [
         ("candidate_success_count", False),
         ("candidate_failure_count", 0.0),
@@ -2140,7 +2196,7 @@ def test_successful_diagnostics_require_frozen_typed_and_derived_contract(
 
 
 @pytest.mark.parametrize("lane", ("baseline", "rescue"))
-def test_successful_results_pin_retained_score_term_receipt_projection(
+def test_successful_results_treat_score_term_projection_as_opaque_legacy_bytes(
     lane: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2152,28 +2208,70 @@ def test_successful_results_pin_retained_score_term_receipt_projection(
         result=result,
     )
 
-    receipt_drift = deepcopy(result)
-    receipt_drift["engine_v2_diagnostics"]["candidates"][0][
+    opaque_legacy_drift = deepcopy(result)
+    candidate = opaque_legacy_drift["engine_v2_diagnostics"]["candidates"][0]
+    candidate[
         "score_terms_receipt_sha256"
     ] = "f" * 64
-    with pytest.raises(ValueError, match="retained score-term projection"):
-        evidence._historical_v11_result(
-            receipt_drift,
-            lane=lane,
-            case_id="5SD5_HWI",
-        )
+    candidate["score_term_binary64_hex"]["weak_pocket_prior"] = "opaque-legacy"
+    assert evidence._historical_v11_result(
+        opaque_legacy_drift,
+        lane=lane,
+        case_id="5SD5_HWI",
+    ) == opaque_legacy_drift
 
-    terms_drift = deepcopy(result)
-    candidate = terms_drift["engine_v2_diagnostics"]["candidates"][0]
-    candidate["score"] = 1.0
-    candidate["score_term_binary64_hex"]["weak_pocket_prior"] = (1.0).hex()
-    candidate["score_term_binary64_hex"]["total_score"] = (1.0).hex()
-    with pytest.raises(ValueError, match="retained score-term projection"):
-        evidence._historical_v11_result(
-            terms_drift,
-            lane=lane,
-            case_id="5SD5_HWI",
-        )
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_superseding_result_projection_never_consumes_legacy_score_fields(
+    lane: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _successful_frozen_result(lane)
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane=lane,
+        case_id="5SD5_HWI",
+        result=result,
+    )
+    drifted = deepcopy(result)
+    candidate = drifted["engine_v2_diagnostics"]["candidates"][0]
+    candidate["score"] = {"opaque": "legacy"}
+    candidate["score_terms_receipt_sha256"] = 17
+    candidate["score_term_binary64_hex"] = ["not", "a", "term", "vector"]
+    candidate["hbond_count"] = False
+    for field in evidence.LEGACY_UNAUTHENTICATED_SCORE_RANKED_RESULT_FIELDS:
+        drifted[field] = {"opaque": field}
+
+    def fail_ranked_projection(*args: object, **kwargs: object) -> None:
+        raise AssertionError("ranked projection must not run")
+
+    monkeypatch.setattr(
+        evidence.failure_atlas,
+        "_validate_ranked_result_projection",
+        fail_ranked_projection,
+    )
+    observed = evidence._historical_v11_result(
+        drifted,
+        lane=lane,
+        case_id="5SD5_HWI",
+        verify_legacy_score_projection=False,
+    )
+
+    assert not (
+        set(observed) & evidence.LEGACY_UNAUTHENTICATED_SCORE_RANKED_RESULT_FIELDS
+    )
+    observed_candidate = observed["engine_v2_diagnostics"]["candidates"][0]
+    assert not (
+        set(observed_candidate)
+        & evidence.LEGACY_UNAUTHENTICATED_CANDIDATE_SCORE_FIELDS
+    )
+    non_score_drift = deepcopy(drifted)
+    non_score_drift["engine_v2_diagnostics"]["candidates"][0][
+        "rmsd_angstrom"
+    ] = 99.0
+    assert evidence._non_score_result_projection(drifted) != (
+        evidence._non_score_result_projection(non_score_drift)
+    )
 
 
 @pytest.mark.parametrize("case_id", ("5SD5_HWI", "5SIS_JSM"))
@@ -2205,8 +2303,6 @@ def test_frozen_rescue_accepts_distinct_pinned_case_composite_configs(
         "proposal_mode",
         "ensemble_lineage",
         "posebusters_flags",
-        "score_terms",
-        "score_scalar",
         "rescue_profile",
         "rescue_policy",
         "rescue_variant_cap",
@@ -2257,10 +2353,6 @@ def test_successful_frozen_rescue_rejects_resealed_contract_drift(
         candidate["ensemble_source_proposal_index"] = 1
     elif drift == "posebusters_flags":
         candidate["geometric_valid"] = False
-    elif drift == "score_terms":
-        candidate["score_term_binary64_hex"]["total_score"] = (999.0).hex()
-    elif drift == "score_scalar":
-        candidate["score"] = 0.5
     elif drift == "rescue_profile":
         payload["source_paired_torsion_rescue_profile"] = False
         candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
@@ -2454,6 +2546,7 @@ def test_bundle_verifier_rejects_fixed_pin_mismatch(
         archive_raw=archive_raw,
         members_raw=members_raw,
         bundle_raw=bundle_raw,
+        verification_scope="legacy_pack",
         **expected,
     )
 
@@ -2464,8 +2557,36 @@ def test_bundle_verifier_rejects_fixed_pin_mismatch(
             archive_raw=archive_raw,
             members_raw=members_raw,
             bundle_raw=bundle_raw,
+            verification_scope="legacy_pack",
             **{**expected, "expected_archive_sha256": "0" * 64},
         )
+
+
+def test_superseding_bundle_verifier_does_not_rebuild_legacy_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, report, _, archive_raw, members_raw, bundle_raw = _synthetic_bundle(monkeypatch)
+
+    def fail_legacy_rebuild(*args: object, **kwargs: object) -> None:
+        raise AssertionError("legacy report rebuild must not run")
+
+    monkeypatch.setattr(evidence, "_build_report", fail_legacy_rebuild)
+    observed, identity = evidence._verify_bundle_bytes(
+        archive_raw=archive_raw,
+        members_raw=members_raw,
+        bundle_raw=bundle_raw,
+        expected_archive_sha256=evidence._sha256_bytes(archive_raw),
+        expected_members_sha256=evidence._sha256_bytes(members_raw),
+        expected_bundle_sha256=evidence._sha256_bytes(bundle_raw),
+        expected_report_sha256=str(report["report_sha256"]),
+        verification_scope="superseding_non_score",
+    )
+
+    assert observed == report
+    assert identity["verification_scope"] == "superseding_non_score"
+    assert identity["superseding_verification"][
+        "score_term_semantics_authenticated"
+    ] is False
 
 
 def test_pinned_verifier_requires_matching_external_report(
@@ -2483,20 +2604,81 @@ def test_pinned_verifier_requires_matching_external_report(
     }
     for name, value in pins.items():
         monkeypatch.setattr(evidence, name, value)
+    supersession_projection = evidence._expected_score_term_supersession_projection()
+    supersession_sha256 = evidence._sha256_payload(supersession_projection)
+    monkeypatch.setattr(
+        evidence,
+        "EXPECTED_SCORE_TERM_SUPERSESSION_SHA256",
+        supersession_sha256,
+    )
+    supersession_raw = evidence._canonical_bytes(
+        {
+            **supersession_projection,
+            "supersession_sha256": supersession_sha256,
+        }
+    ) + b"\n"
     for relative, raw in (
         (evidence.ARCHIVE_PATH, archive_raw),
         (evidence.MEMBERS_PATH, members_raw),
         (evidence.BUNDLE_PATH, bundle_raw),
         (evidence.REPORT_PATH, report_raw),
+        (evidence.SCORE_TERM_SUPERSESSION_PATH, supersession_raw),
     ):
         _write_mode_0600(tmp_path / relative, raw)
 
-    observed, _ = evidence.verify_pinned_evidence(tmp_path)
+    observed, identity = evidence.verify_pinned_evidence(tmp_path)
 
     assert observed == report
+    assert identity["development_only"] is True
+    for field in (
+        "claim_safe",
+        "complete_scorer_term_receipts_retained",
+        "contains_fresh_internal_blind_holdout",
+        "fresh_execution_authorized",
+        "primary_claim_eligible",
+        "product_promotion_eligible",
+        "public_claim_eligible",
+        "reconstruction_available",
+        "scientifically_validated",
+        "score_term_semantics_authenticated",
+        "selection_rule_changed",
+        "stage0_eligible",
+        "threshold_changed",
+        "v7_replacement_authorized",
+    ):
+        assert identity[field] is False
     _write_mode_0600(tmp_path / evidence.REPORT_PATH, report_raw + b" ")
     with pytest.raises(ValueError, match="external V1.1 audit"):
         evidence.verify_pinned_evidence(tmp_path)
+
+    _write_mode_0600(tmp_path / evidence.REPORT_PATH, report_raw)
+    _write_mode_0600(
+        tmp_path / evidence.SCORE_TERM_SUPERSESSION_PATH,
+        supersession_raw + b" ",
+    )
+    with pytest.raises(ValueError, match="supersession"):
+        evidence.verify_pinned_evidence(tmp_path)
+
+
+def test_pack_requires_supersession_before_collecting_or_publishing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_collection(repo_root: Path) -> dict[str, bytes]:
+        raise AssertionError("source collection must not start without supersession")
+
+    monkeypatch.setattr(evidence, "_collect_source_members", fail_collection)
+    with pytest.raises((FileNotFoundError, ValueError)):
+        evidence.pack_evidence(tmp_path)
+    assert not any(
+        (tmp_path / path).exists()
+        for path in (
+            evidence.REPORT_PATH,
+            evidence.ARCHIVE_PATH,
+            evidence.MEMBERS_PATH,
+            evidence.BUNDLE_PATH,
+        )
+    )
 
 
 @pytest.mark.parametrize("directory_fsync_failure", (5, 6))
@@ -2515,6 +2697,7 @@ def test_pack_requires_reviewed_pins_and_rolls_back_partial_publication(
     )
     monkeypatch.setattr(evidence, "_compress_zstd", lambda tar_raw: archive_raw)
     monkeypatch.setattr(evidence, "EXPECTED_EVIDENCE_ARCHIVE_SHA256", "0" * 64)
+    _write_current_score_term_supersession(tmp_path, monkeypatch)
     output_paths = (
         evidence.REPORT_PATH,
         evidence.ARCHIVE_PATH,
@@ -2534,6 +2717,7 @@ def test_pack_requires_reviewed_pins_and_rolls_back_partial_publication(
     }
     for name, value in pins.items():
         monkeypatch.setattr(evidence, name, value)
+    _write_current_score_term_supersession(tmp_path, monkeypatch)
     real_fsync = evidence.os.fsync
     directory_fsync_count = 0
 
@@ -2572,6 +2756,7 @@ def test_pack_outer_rollback_continues_after_parent_open_failure(
         "EXPECTED_REPORT_SHA256": str(report["report_sha256"]),
     }.items():
         monkeypatch.setattr(evidence, name, value)
+    _write_current_score_term_supersession(tmp_path, monkeypatch)
 
     real_write = evidence._write_exclusive_owned
     write_count = 0

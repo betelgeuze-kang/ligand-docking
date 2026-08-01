@@ -28,10 +28,13 @@ penetration. V7, its raw `[2.0,4.0)` selection window, thresholds, scoring, and
 claim boundaries remain unchanged.
 
 The rerun also confirms that V1.1 is instrumentation-only for the pinned
-historical outcome contract. Baseline and rescue again contain 512 successful
-candidates, seven PoseBusters-exact-valid candidates, four native-like
-candidates, and one proposal-oracle/Top-1/Top-5 recovery case. Torsion counts
-remain 28 allocated, 27 evaluated, 26 variant-available, and zero selected.
+historical candidate and clearance census. Baseline and rescue again contain
+512 successful candidates, seven PoseBusters-exact-valid candidates, four
+native-like candidates, and one proposal-oracle recovery case. The archived
+Top-1/Top-5 figures are legacy descriptive scalar-score outputs only: complete
+ScorerV1Terms receipts were not retained, so those figures are unavailable for
+semantic verification or decisions. Torsion counts remain 28 allocated, 27
+evaluated, 26 variant-available, and zero selected.
 All 28 rescue outputs still duplicate their retained parents. The previously
 documented selection-eligible regression remains 31 to 30 candidates, including
 three to two native-like selection-eligible candidates.
@@ -45,8 +48,10 @@ three to two native-like selection-eligible candidates.
 | Source-identifiers SHA-256 | `a69a7b6b9a5a52531933078ef983e6c069e3a987a1d7a733bd7d72cbe1793de6` |
 | Baseline summary self-hash | `400b2e07d1eee754af35ab99257249a5ef4f0e5c77bcd2e6ee15bd2c54459ad3` |
 | Rescue summary self-hash | `92e5e0500a59aa88ce0851178c7656e9d105e6d3e136470e3bc7f61b6f19e2c9` |
-| Baseline analysis self-hash | `c05a06e3d146d02cb22e20b1e200db572903455b35f574b6a36a64c8acb9ba33` |
-| Rescue analysis self-hash | `9e95970c9f51a9b9cd6a3e795d7a6af9b0cce27d554ceaa6e3553940577c72bc` |
+| Baseline legacy analysis raw-member SHA-256 (semantic verification unavailable) | `083d231e2fdf518d7bf4012ab4152a0331adc5ae67e8a5f48e937c8205a953f5` |
+| Baseline legacy analysis self-hash (semantic verification unavailable) | `c05a06e3d146d02cb22e20b1e200db572903455b35f574b6a36a64c8acb9ba33` |
+| Rescue legacy analysis raw-member SHA-256 (semantic verification unavailable) | `067d0f41d6b97f6c94d87e09479d73db979cddede3fdf679e9d63ba6d2738b2f` |
+| Rescue legacy analysis self-hash (semantic verification unavailable) | `9e95970c9f51a9b9cd6a3e795d7a6af9b0cce27d554ceaa6e3553940577c72bc` |
 | Shared scorer backend | `python_reference` |
 | Shared generic refiner execution-policy config | `5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337` |
 | Audit schema | `betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.2.0` |
@@ -54,6 +59,8 @@ three to two native-like selection-eligible candidates.
 | Verified archive SHA-256 | `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98` |
 | Member-manifest SHA-256 | `7ae57e3bec8ecf96b754e2038dd2eef023058c4ea1adae2fbf4933bf556cf6bd` |
 | Bundle-sidecar SHA-256 | `37d9478c78076eef908e3a86c712f49820078ab14289fb1ee26a1f8c4fc37ea5` |
+| Score-term supersession schema | `betelgeuze.engine_v2_source_paired_clearance_v11_score_term_supersession/1.0.0` |
+| Score-term supersession self-hash | `9979349b8a87bb54920a55cad6492b2f3af0c293b5be237b9d2f6127676fa4c6` |
 | Archive members | 59 mode-`0600` regular files |
 
 The compact external audit is
@@ -63,8 +70,14 @@ execution source. The audit is mode `0600`, 14,730 bytes, and is mutable local
 diagnostic state rather
 than committed scientific evidence. The deterministic packer and verifier are
 `tools/build_engine_v2_source_paired_clearance_v11_evidence.py`; the code pins
-all four reviewed archive/report identities and recomputes the audit from the
-raw restored receipts.
+all four reviewed archive/report identities, byte-identifies the archived audit,
+and independently recomputes a score-independent receipt and clearance
+projection from the raw restored members. It does not rebuild the legacy audit
+in the authoritative `verify` path. The external mode-`0600`
+score-term supersession sidecar binds those identities and records that the two
+legacy compact analyses are historical bytes only. It explicitly sets complete
+receipt retention, score-term semantic authentication, and reconstruction
+availability to false. The original 59-member archive is unchanged.
 
 The verifier independently pins the V1.1 composite receipt configuration for
 each successful case: `5SD5_HWI=1d4896a6…abe71`,
@@ -105,7 +118,9 @@ lane; it is not a speed or slowdown claim.
 The 59 retained members total 21,367,212 bytes and occupy a 21,452,800-byte tar
 stream. Deterministic Zstandard compression produced a 505,161-byte archive,
 a 97.64% reduction from expanded member bytes. The archive, member manifest,
-bundle sidecar, compact audit, and two compact score-term analyses are retained.
+bundle sidecar, compact audit, and score-term supersession sidecar are retained.
+The two legacy compact-analysis records remain available only inside the
+authenticated archive; duplicate expanded exports are not retained.
 After the pinned verifier succeeded, the expanded run roots, wall-time files,
 Python bytecode caches, and pytest cache were removed. This reclaimed
 27,392,262 apparent bytes in this worktree; the Stage 0 development directory
@@ -115,7 +130,13 @@ same raw members from the authenticated archive, did not rerun MD, removed the
 expanded members again, and left the final directory at 595,505 apparent bytes.
 The final 1.2 identity-hardening repack reclaimed 21,344,459 temporary bytes;
 both the feature worktree and persistent store retain only the compact audit,
-archive, two checksum sidecars, and two compact score-term analyses.
+archive, two checksum sidecars, and compact score-term supersession sidecar. A
+later result-only cleanup removed another 280,020,775 apparent bytes (267.05
+MiB) of ignored Python caches, clean-install targets, build environments, and
+packaging output whose pass counts and reproducible artifact hashes were already
+documented. Hypothesis regression examples and all CASP17 target, model,
+official-archive, and active-run state were preserved; no pytest, Ruff,
+coverage, or benchmark log file was retained.
 
 ## Historical command record and pinned verification
 
@@ -178,9 +199,12 @@ test ! -e "$rescue_walltime"
 test "$(stat -c '%a' "$rescue_walltime")" = 600
 ```
 
-Build a new comparison's compact analyses with
-`python3 -m tools.analyze_engine_v2_score_terms`; do not feed fresh outputs to
-the immutable historical `pack` action.
+Do not use the two retained compact analyses as score-term evidence. Retaining
+each complete canonical ScorerV1Terms receipt and verifying it against the
+candidate receipt ID is an external admissibility precondition for any future
+comparison; the current `tools.analyze_engine_v2_score_terms` implementation
+does not enforce that precondition, so analyzer output alone is not admissible.
+Do not feed fresh outputs to the immutable historical `pack` action.
 
 Validate the retained pinned evidence from the repository root with:
 
@@ -188,30 +212,46 @@ Validate the retained pinned evidence from the repository root with:
 python3 -m tools.build_engine_v2_source_paired_clearance_v11_evidence verify
 ```
 
-`pack` is a maintenance-only, exact-original-member restoration operation. It
+`pack` is a quarantined maintenance-only, exact-original-member byte-
+restoration operation; it is not the authoritative semantic verification
+route. It
 requires the 58 byte-identical historical source members restored from the
-already authenticated archive, requires the reviewed four-hash identity before
-publishing, refuses existing outputs, intentionally rejects fresh reruns, and
-rolls back only outputs created by a failed publication attempt. `verify` checks
+already authenticated archive, requires and validates the reviewed external
+mode-`0600` supersession sidecar before any publication, requires the reviewed
+four-hash identity before publishing, refuses existing outputs, intentionally
+rejects fresh reruns, and rolls back only outputs created by a failed publication
+attempt. `verify` checks
 the external audit against the archived copy, Zstandard stream, sorted manifest,
 bundle hashes, safe member
 names, regular file types, fixed modes and metadata, all raw execution/
 materialization cross-links, the complete pinned command and policy for every
 lane/case, frozen archive-specific V1.1 result shapes, candidate-to-post and
-unselected-post-to-baseline coordinate bindings, all five ranked SDF-record
-hashes for every successful case, complete compact score-term analyses
-recomputed from the restored candidate terms,
-historical outcome counts, telemetry denominators, the frozen result-independent
-allocation policy, unavailable-variant baseline equality, scalar/term score
-identity, the shared Python scorer backend, the shared generic refiner-policy
+unselected-post-to-baseline coordinate bindings, ranked SDF-member byte identity
+through the reviewed manifest without interpreting the score-selected records,
+legacy compact-analysis raw identities and their explicit semantic
+unavailability, non-score-ranked historical outcome
+counts, telemetry denominators, the frozen result-independent
+allocation policy, unavailable-variant baseline equality, the archived Python
+scorer-backend identity, the shared generic refiner-policy
 identity, each case-specific composite refiner receipt, both nested guided-
 placement self-hashes and their complete frozen policy/context/row lineage,
 each case's complete top-level proposal receipt, every candidate payload's
 case-allocation lineage, each case's ordered 64-candidate receipt-set pin, each
 nested baseline-V6
 schema/self-hash/case config and duplicated operational projection, and the
-recomputed audit self-hash.
-It does not depend on the mutable live result parser.
+archived audit self-hash and reviewed raw identity.
+The superseding verifier removes candidate `score`,
+`score_terms_receipt_sha256`, `score_term_binary64_hex`, and `hbond_count`, plus
+the four outer score-ranked result arrays, before downstream cross-linking. It
+does not inspect those values, validate their sum, compare scalar score to
+retained `total_score`, recompute the legacy term analyses, validate ranked SDF
+record projections, rebuild the legacy audit, or accept
+Top-1/Top-5/valid-Top-1 and semantic-regression fields as verified evidence. It
+does not depend on the mutable live result parser.
+Its JSON result explicitly carries `development_only=true` and the reviewed
+false values for stage, product, public, scientific, claim, fresh-execution,
+primary-claim, threshold, selection-rule, and V7-replacement boundaries so a
+result-only downstream consumer remains fail-closed.
 
 ## Next bounded action
 
