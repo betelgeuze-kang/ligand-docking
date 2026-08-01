@@ -105,10 +105,12 @@ selection-only intervention is closed as insufficient. The subsequent
 true-conformer and source-paired torsion-rescue experiments also failed to
 broaden recovery; the latter selected zero torsion variants, duplicated parent
 coordinates for all 28 rescue outputs, and regressed selection eligibility.
-Current work should first build the seven-case uncovered
-failure atlas described in
-[`engine_v2_source_paired_torsion_rescue_development_ab.md`](engine_v2_source_paired_torsion_rescue_development_ab.md),
-then define at most one result-independent, bounded, genuinely
-coordinate-changing proposal intervention. Scorer calibration remains
-premature because proposal-oracle coverage is still only 1/8 in this fixed
-slice.
+The subsequent
+[seven-case uncovered failure atlas](engine_v2_source_paired_failure_atlas.md)
+is complete. It records five invalid Top-1 and two valid-but-nonnative cases;
+all 22 available uncovered-case torsion variants remained at or above the
+absolute window maximum and zero were selected. Current work should first run
+the atlas-defined receipt-bound scale-feasibility audit, then define at most one
+result-independent, bounded, genuinely coordinate-changing proposal
+intervention. Scorer calibration remains premature because proposal-oracle
+coverage is still only 1/8 in this fixed slice.

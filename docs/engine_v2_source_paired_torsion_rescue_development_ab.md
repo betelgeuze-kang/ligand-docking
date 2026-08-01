@@ -171,12 +171,19 @@ The report explicitly retains `scientifically_validated=false`,
 `primary_claim_eligible=false`, and `product_promotion_eligible=false`.
 Fresh-128 remains unopened.
 
-Before adding another proposal variant, build an uncovered-case failure atlas
-for all seven proposal-oracle-uncovered scored cases. Separate the five
-invalid-Top-1 cases from the two valid-but-nonnative cases, and quantify
-placement, translation, rotation, torsion-displacement scale, clearance, and
-selection-window blockers. Treat scale mismatch as a hypothesis to test, not a
-conclusion from this A/B. Any later intervention must be result-independent,
-bounded, and genuinely coordinate-changing. Scorer calibration, threshold
-relaxation, relabeling/filtering, V7 replacement, and holdout execution remain
-out of scope.
+The bounded
+[seven-case failure atlas](engine_v2_source_paired_failure_atlas.md) is now
+complete. It separates five invalid Top-1 cases from two valid-but-nonnative
+cases and records placement, refinement displacement, torsion, categorical
+clearance, and selection-window evidence. In the uncovered subset, 24 rescue
+candidates led to 23 evaluations, 22 available variants, and zero selections;
+all 22 available optimized receptor penalties were at or above `4.0`, outside
+the absolute `[2.0,4.0)` window. Scale mismatch remains an unconfirmed
+hypothesis, not a conclusion.
+
+Before adding another proposal variant, perform the receipt-bound Phase 2.4
+scale-feasibility audit defined by the atlas. Do not change the active policy
+until one bounded rule is predeclared. Any later intervention must be result-
+independent, bounded, source-retaining, and genuinely coordinate-changing.
+Scorer calibration, threshold relaxation, relabeling/filtering, V7 replacement,
+and holdout execution remain out of scope.

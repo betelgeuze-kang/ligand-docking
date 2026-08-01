@@ -579,6 +579,11 @@ candidates regressed 31 to 30 and native-like selection-eligible candidates
 regressed 3 to 2 in `6T88_MWQ`, so the lane was rejected. The 1.03% accounted
 runtime decrease is a single-run historical observation, not a speed claim. See
 [`engine_v2_source_paired_torsion_rescue_development_ab.md`](engine_v2_source_paired_torsion_rescue_development_ab.md).
+The compact companion
+[failure atlas](engine_v2_source_paired_failure_atlas.md) records the seven
+remaining proposal-oracle-uncovered cases and the observed `24/23/22/0`
+rescue/evaluation/available/selected partition. It does not change the runner,
+selection window, active profile, or claim boundary.
 
 Argument drift is rejected before output creation. The policy is verified
 again before report materialization, and its execution-profile SHA-256 must be
