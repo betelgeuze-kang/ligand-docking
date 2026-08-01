@@ -7,13 +7,19 @@ import argparse
 from collections import Counter
 from collections.abc import Mapping, Sequence
 import hashlib
+import io
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import secrets
 import stat
 import statistics
+import subprocess
+import tarfile
+import tempfile
 
+from betelgeuze_engine_v2.benchmark.blind_stage0 import _typed_development_result
 from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
@@ -24,18 +30,46 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
+    PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
     PUBLIC_REDOCKING_POSEBUSTERS_CHEMICAL_CHECK_IDS,
     PUBLIC_REDOCKING_POSEBUSTERS_GEOMETRIC_CHECK_IDS,
     PUBLIC_REDOCKING_PROPOSAL_MODES,
     PUBLIC_REDOCKING_RUNNER_ID,
     PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
     PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
+    _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS,
+    frozen_public_redocking_case_seed,
 )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_source_paired_failure_atlas/1.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0"
 AB_SCHEMA_ID = "betelgeuze.engine_v2_source_paired_torsion_rescue_development_ab/1.1.0"
 ANALYSIS_SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
+SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_execution_summary/1.0.0"
+)
+RESCUE_SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_source_paired_"
+    "torsion_rescue_summary/1.0.0"
+)
+SOURCE_PAIRED_RESCUE_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+)
+MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
+MAX_TAR_BYTES = 128 * 1024 * 1024
+MAX_MEMBER_BYTES = 32 * 1024 * 1024
+MAX_MEMBER_MANIFEST_BYTES = 256 * 1024
+MAX_BUNDLE_CHECKSUM_BYTES = 4 * 1024
+EXPECTED_EVIDENCE_ARCHIVE_SHA256 = (
+    "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc"
+)
+EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256 = (
+    "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21"
+)
+EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 = (
+    "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9"
+)
+EXPECTED_EVIDENCE_MEMBER_COUNT = 59
 EXPECTED_SOURCE_COMMIT_SHA256 = "754bebb9ddc2fbffdaca5d4143ff515c3b38c032"
 EXPECTED_CASE_IDS = (
     "5SD5_HWI",
@@ -92,6 +126,18 @@ _EXECUTION_FIELDS = frozenset(
         "receipt_sha256",
     }
 )
+_MATERIALIZATION_FIELDS = frozenset(
+    {
+        "schema_id",
+        "case_id",
+        "frozen_case_seed",
+        "source_archive_sha256",
+        "archive_members",
+        "artifact_sha256s",
+        "hash_verified_archive",
+        "receipt_sha256",
+    }
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -102,6 +148,18 @@ def _canonical_bytes(value: object) -> bytes:
         ensure_ascii=True,
         allow_nan=False,
     ).encode("ascii")
+
+
+def _execution_policy_tokens(value: object) -> list[str]:
+    if not isinstance(value, Mapping) or any(not isinstance(key, str) for key in value):
+        raise ValueError("execution policy is invalid")
+    try:
+        return [
+            f"{key}={json.dumps(item, allow_nan=False, separators=(',', ':'))}"
+            for key, item in sorted(value.items())
+        ]
+    except (TypeError, ValueError) as exc:
+        raise ValueError("execution policy is invalid") from exc
 
 
 def _sha256_payload(value: object) -> str:
@@ -193,48 +251,276 @@ def _distribution(values: Sequence[float]) -> dict[str, object]:
     }
 
 
-def _optional_binary64(
-    payload: Mapping[str, object], field: str
-) -> float | None:
+def _optional_binary64(payload: Mapping[str, object], field: str) -> float | None:
     value = payload.get(field)
     if value in {None, ""}:
         return None
     return float.fromhex(_binary64_hex(value, name=field))
 
 
-def _reject_prohibited_path(path: Path, *, name: str) -> None:
-    candidates = [path]
-    try:
-        candidates.append(path.resolve(strict=False))
-    except OSError:
-        pass
-    for candidate in candidates:
-        for component in candidate.parts:
-            normalized = component.casefold()
-            compact = normalized.replace("-", "").replace("_", "")
-            environment_file = (
-                normalized == ".env"
-                or normalized.startswith(".env.")
-                or normalized.endswith(".env")
-                or ".env." in normalized
-            )
-            fresh_holdout_path = "fresh128" in compact or (
-                "fresh" in compact and "128" in compact
-            )
-            if fresh_holdout_path or environment_file:
-                raise ValueError(f"{name} uses a prohibited path")
+def _prohibited_path(path: Path, *, name: str) -> None:
+    text = path.as_posix().lower()
+    normalized = text.replace("_", "-")
+    if any(
+        marker in normalized
+        for marker in ("fresh128", "fresh-128", "fresh-redocking-128")
+    ):
+        raise ValueError(f"{name} cannot reference fresh-128 state")
+    for component in path.parts:
+        lowered = component.lower()
+        if (
+            lowered == ".env"
+            or lowered.startswith(".env.")
+            or lowered.endswith(".env")
+            or ".env." in lowered
+        ):
+            raise ValueError(f"{name} cannot reference environment files")
 
 
-def _load_object(path: Path, *, name: str) -> tuple[dict[str, object], bytes]:
-    _reject_prohibited_path(path, name=name)
-    raw = path.read_bytes()
+def _reject_symlink_ancestry(path: Path, *, name: str) -> None:
+    absolute = path.absolute()
+    current = Path(absolute.anchor)
+    for component in absolute.parts[1:]:
+        current /= component
+        try:
+            if current.is_symlink():
+                raise ValueError(f"{name} cannot use symlink path components")
+        except OSError as exc:
+            raise ValueError(f"{name} ancestry cannot be inspected") from exc
+
+
+def _artifact_file(repo_root: Path, path: Path, *, name: str) -> tuple[Path, str]:
+    _prohibited_path(path, name=name)
+    _reject_symlink_ancestry(repo_root, name="repository root")
+    root = repo_root.resolve(strict=True)
+    candidate = path if path.is_absolute() else root / path
     try:
-        parsed = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValueError(f"{name} is not valid JSON") from exc
-    if not isinstance(parsed, dict):
-        raise ValueError(f"{name} must contain a JSON object")
-    return parsed, raw
+        lexical_relative = candidate.relative_to(root)
+        if not lexical_relative.parts or any(
+            part in {"", ".", ".."} for part in lexical_relative.parts
+        ):
+            raise ValueError
+        _reject_symlink_ancestry(candidate, name=name)
+        resolved = candidate.resolve(strict=True)
+        relative = resolved.relative_to(root)
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"{name} must be an existing repository artifact") from exc
+    _prohibited_path(resolved, name=name)
+    if (
+        not resolved.is_file()
+        or not relative.parts
+        or relative.parts[0] != ".betelgeuze"
+        or stat.S_IMODE(resolved.stat().st_mode) != 0o600
+    ):
+        raise ValueError(f"{name} must be a mode-0600 .betelgeuze file")
+    return resolved, relative.as_posix()
+
+
+def _safe_member_name(value: str) -> str:
+    if not value or "\\" in value or "\x00" in value:
+        raise ValueError("archive member name is unsafe")
+    path = PurePosixPath(value)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise ValueError("archive member name is unsafe")
+    normalized = path.as_posix()
+    if normalized != value or not normalized.startswith(".betelgeuze/"):
+        raise ValueError("archive member name is unsafe")
+    _prohibited_path(Path(*path.parts), name="archive member")
+    return normalized
+
+
+def _member_manifest(raw: bytes) -> dict[str, str]:
+    try:
+        text = raw.decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise ValueError("member manifest is not ASCII") from exc
+    if not text.endswith("\n"):
+        raise ValueError("member manifest must end with a newline")
+    rows: list[tuple[str, str]] = []
+    for line in text.splitlines():
+        digest, separator, name = line.partition("  ")
+        safe_name = _safe_member_name(name)
+        if not separator or not _is_sha256(digest):
+            raise ValueError("member manifest row is malformed")
+        rows.append((safe_name, digest))
+    if not rows or len(rows) != len(set(name for name, _ in rows)):
+        raise ValueError("member manifest names are empty or duplicated")
+    if rows != sorted(rows):
+        raise ValueError("member manifest is not ordered")
+    return dict(rows)
+
+
+def _bundle_rows(raw: bytes) -> tuple[tuple[str, str], ...]:
+    try:
+        text = raw.decode("ascii")
+    except UnicodeDecodeError as exc:
+        raise ValueError("bundle checksum is not ASCII") from exc
+    if not text.endswith("\n"):
+        raise ValueError("bundle checksum must end with a newline")
+    rows: list[tuple[str, str]] = []
+    for line in text.splitlines():
+        digest, separator, name = line.partition("  ")
+        if (
+            not separator
+            or not _is_sha256(digest)
+            or not name
+            or "/" in name
+            or "\\" in name
+        ):
+            raise ValueError("bundle checksum row is malformed")
+        rows.append((digest, name))
+    if len(rows) != 2 or len(set(name for _, name in rows)) != 2:
+        raise ValueError("bundle checksum must bind exactly two files")
+    return tuple(rows)
+
+
+def _bounded_file_bytes(path: Path, *, maximum: int, name: str) -> bytes:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError(f"{name} cannot be opened safely") from exc
+    try:
+        status = os.fstat(descriptor)
+        if not stat.S_ISREG(status.st_mode) or status.st_size > maximum:
+            raise ValueError(f"{name} exceeds its bounded regular-file contract")
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            payload = handle.read(maximum + 1)
+        if len(payload) > maximum:
+            raise ValueError(f"{name} exceeds its bounded regular-file contract")
+        return payload
+    finally:
+        os.close(descriptor)
+
+
+def _bounded_zstd_decompress(archive_raw: bytes) -> bytes:
+    if len(archive_raw) > MAX_ARCHIVE_BYTES:
+        raise ValueError("archive exceeds the bounded compressed size")
+    try:
+        with tempfile.TemporaryFile() as verified_archive:
+            verified_archive.write(archive_raw)
+            verified_archive.seek(0)
+            process = subprocess.Popen(
+                ("zstd", "-dc"),
+                stdin=verified_archive,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            if process.stdout is None:
+                process.kill()
+                process.wait()
+                raise ValueError("zstd decompressor stdout is unavailable")
+            payload = process.stdout.read(MAX_TAR_BYTES + 1)
+            if len(payload) > MAX_TAR_BYTES:
+                process.kill()
+                process.wait()
+                raise ValueError("archive exceeds the bounded tar size")
+            returncode = process.wait()
+    except OSError as exc:
+        raise ValueError("zstd decompressor is unavailable") from exc
+    if returncode != 0:
+        raise ValueError("archive failed Zstandard decompression")
+    return payload
+
+
+def _verified_archive_members(
+    *,
+    archive_path: Path,
+    members_path: Path,
+    bundle_path: Path,
+    expected_archive_sha256: str,
+    expected_members_sha256: str,
+    expected_bundle_sha256: str,
+) -> tuple[dict[str, bytes], dict[str, object]]:
+    for digest, name in (
+        (expected_archive_sha256, "expected archive SHA-256"),
+        (expected_members_sha256, "expected member-manifest SHA-256"),
+        (expected_bundle_sha256, "expected bundle SHA-256"),
+    ):
+        if not _is_sha256(digest):
+            raise ValueError(f"{name} is invalid")
+    if (
+        expected_archive_sha256 != EXPECTED_EVIDENCE_ARCHIVE_SHA256
+        or expected_members_sha256 != EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256
+        or expected_bundle_sha256 != EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256
+    ):
+        raise ValueError("archive bundle does not match the pinned evidence identity")
+    archive_raw = _bounded_file_bytes(
+        archive_path,
+        maximum=MAX_ARCHIVE_BYTES,
+        name="archive",
+    )
+    members_raw = _bounded_file_bytes(
+        members_path,
+        maximum=MAX_MEMBER_MANIFEST_BYTES,
+        name="member manifest",
+    )
+    bundle_raw = _bounded_file_bytes(
+        bundle_path,
+        maximum=MAX_BUNDLE_CHECKSUM_BYTES,
+        name="bundle checksum",
+    )
+    if (
+        _sha256_bytes(archive_raw) != expected_archive_sha256
+        or _sha256_bytes(members_raw) != expected_members_sha256
+        or _sha256_bytes(bundle_raw) != expected_bundle_sha256
+    ):
+        raise ValueError("archive bundle does not match the reviewed identities")
+    expected_bundle = (
+        (expected_archive_sha256, archive_path.name),
+        (expected_members_sha256, members_path.name),
+    )
+    if _bundle_rows(bundle_raw) != expected_bundle:
+        raise ValueError("bundle checksum cross-links are invalid")
+    manifest = _member_manifest(members_raw)
+    if len(manifest) != EXPECTED_EVIDENCE_MEMBER_COUNT:
+        raise ValueError(
+            "archive member manifest count is not the pinned 59-member set"
+        )
+    tar_raw = _bounded_zstd_decompress(archive_raw)
+    retained: dict[str, bytes] = {}
+    observed: dict[str, str] = {}
+    try:
+        with tarfile.open(fileobj=io.BytesIO(tar_raw), mode="r:") as archive:
+            for member in archive:
+                member_name = _safe_member_name(member.name)
+                if (
+                    member_name in observed
+                    or member_name not in manifest
+                    or not member.isreg()
+                    or stat.S_IMODE(member.mode) != 0o600
+                    or member.uid != 0
+                    or member.gid != 0
+                    or member.mtime != 0
+                    or member.size < 0
+                    or member.size > MAX_MEMBER_BYTES
+                ):
+                    raise ValueError("archive member contract is invalid")
+                handle = archive.extractfile(member)
+                if handle is None:
+                    raise ValueError("archive member payload is missing")
+                payload = handle.read()
+                if len(payload) != member.size:
+                    raise ValueError("archive member size is inconsistent")
+                digest = _sha256_bytes(payload)
+                if digest != manifest[member_name]:
+                    raise ValueError("archive member hash is inconsistent")
+                observed[member_name] = digest
+                if member_name.endswith(".json"):
+                    retained[member_name] = payload
+    except (tarfile.TarError, OSError) as exc:
+        raise ValueError("archive tar stream is invalid") from exc
+    if observed != manifest:
+        raise ValueError("archive member set does not match its manifest")
+    return retained, {
+        "archive_sha256": expected_archive_sha256,
+        "archive_size_bytes": len(archive_raw),
+        "tar_size_bytes": len(tar_raw),
+        "member_manifest_sha256": expected_members_sha256,
+        "bundle_checksum_sha256": expected_bundle_sha256,
+        "member_count": len(observed),
+        "all_members_regular_mode_0600": True,
+    }
 
 
 def _validate_ab_report(report: Mapping[str, object]) -> None:
@@ -335,9 +621,9 @@ def _validated_candidate(
     )
     proposal_index = candidate.get("proposal_index")
     failed_checks = candidate.get("posebusters_failed_check_ids")
-    allowed_modes = set(PUBLIC_REDOCKING_PROPOSAL_MODES) | {
-        PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
-    }
+    allowed_modes = set(PUBLIC_REDOCKING_PROPOSAL_MODES)
+    if lane == "rescue":
+        allowed_modes.add(PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
     if (
         candidate.get("schema_id") != expected_schema
         or candidate.get("status") != "success"
@@ -373,6 +659,37 @@ def _validated_candidate(
         _self_hash(payload, field="receipt_sha256", name="refinement receipt")
     elif receipt_sha256 not in {"", None} and not _is_sha256(receipt_sha256):
         raise ValueError("compact refinement receipt hash is invalid")
+    if candidate.get("proposal_mode") == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE:
+        parent = candidate.get("torsion_rescue_parent_proposal_index")
+        if (
+            lane != "rescue"
+            or type(parent) is not int
+            or parent == proposal_index
+            or set(payload) != _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
+            or payload.get("schema_id") != SOURCE_PAIRED_RESCUE_RECEIPT_SCHEMA_ID
+            or payload.get("source_paired_parent_proposal_index") != parent
+            or any(
+                type(payload.get(field)) is not bool
+                for field in (
+                    "torsion_evaluated",
+                    "torsion_variant_available",
+                    "torsion_selected",
+                )
+            )
+            or payload.get("development_only") is not True
+            or any(
+                payload.get(field) is not False
+                for field in (
+                    "claim_safe",
+                    "fresh_execution_authorized",
+                    "scientifically_validated",
+                    "stage0_eligible",
+                )
+            )
+        ):
+            raise ValueError(
+                f"{lane} {case_id} source-paired rescue receipt is invalid"
+            )
     _vector_summary(
         candidate.get("refinement_total_translation_binary64_hex"),
         name="refinement translation",
@@ -413,6 +730,12 @@ def _case_candidates(
             or raw_candidates
         ):
             raise ValueError(f"{lane} preparation failure is invalid")
+        _validate_ranked_result_projection(
+            result,
+            (),
+            lane=lane,
+            case_id=case_id,
+        )
         return dict(diagnostics), ()
     if (
         preparation_status != "success"
@@ -435,6 +758,12 @@ def _case_candidates(
         int(candidate["proposal_index"]) for candidate in candidates
     } != set(range(PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT)):
         raise ValueError(f"{lane} {case_id} candidate indices are invalid")
+    _validate_ranked_result_projection(
+        result,
+        candidates,
+        lane=lane,
+        case_id=case_id,
+    )
     return dict(diagnostics), candidates
 
 
@@ -450,6 +779,51 @@ def _ranked(
             ),
         )
     )
+
+
+def _validate_ranked_result_projection(
+    result: Mapping[str, object],
+    candidates: Sequence[Mapping[str, object]],
+    *,
+    lane: str,
+    case_id: str,
+) -> None:
+    rmsds = result.get("rmsd_angstroms")
+    geometric = result.get("geometric_valid")
+    chemical = result.get("chemical_valid")
+    pose_hashes = result.get("pose_artifact_sha256s")
+    projections = (rmsds, geometric, chemical, pose_hashes)
+    if any(not isinstance(value, list) for value in projections):
+        raise ValueError(f"{lane} {case_id} ranked result projection is invalid")
+    assert isinstance(rmsds, list)
+    assert isinstance(geometric, list)
+    assert isinstance(chemical, list)
+    assert isinstance(pose_hashes, list)
+    if result.get("status") == "failure":
+        if any(projections):
+            raise ValueError(
+                f"{lane} {case_id} ranked result contradicts candidate diagnostics"
+            )
+        return
+    if any(len(value) != 5 for value in projections):
+        raise ValueError(f"{lane} {case_id} ranked result projection is invalid")
+    for index, candidate in enumerate(_ranked(candidates)[:5]):
+        rmsd = rmsds[index]
+        if (
+            isinstance(rmsd, bool)
+            or not isinstance(rmsd, (int, float))
+            or not math.isfinite(float(rmsd))
+            or float(rmsd).hex() != float(candidate["rmsd_angstrom"]).hex()
+            or type(geometric[index]) is not bool
+            or geometric[index] is not candidate.get("geometric_valid")
+            or type(chemical[index]) is not bool
+            or chemical[index] is not candidate.get("chemical_valid")
+            or not _is_sha256(pose_hashes[index])
+            or pose_hashes[index] != candidate.get("pose_artifact_sha256")
+        ):
+            raise ValueError(
+                f"{lane} {case_id} ranked result contradicts candidate diagnostics"
+            )
 
 
 def _posebusters_exact_valid(candidate: Mapping[str, object]) -> bool:
@@ -591,9 +965,19 @@ def _cross_lane_changes(
         _, baseline_candidates = _case_candidates(
             baseline_results[case_id], lane="baseline"
         )
-        _, rescue_candidates = _case_candidates(rescue_results[case_id], lane="rescue")
+        rescue_diagnostics, rescue_candidates = _case_candidates(
+            rescue_results[case_id], lane="rescue"
+        )
         if not baseline_candidates or not rescue_candidates:
             continue
+        _, allocation_pairs = _rescue_allocation(
+            rescue_diagnostics,
+            rescue_candidates,
+        )
+        parent_by_target = {
+            row["target_proposal_index"]: row["parent_proposal_index"]
+            for row in allocation_pairs
+        }
         baseline_by_index = {
             int(candidate["proposal_index"]): candidate
             for candidate in baseline_candidates
@@ -608,6 +992,8 @@ def _cross_lane_changes(
             if baseline_by_index[index]["coordinate_fingerprint_sha256"]
             != rescue_by_index[index]["coordinate_fingerprint_sha256"]
         ]
+        if set(changed) != set(parent_by_target):
+            raise ValueError("rescue coordinate changes contradict the allocation")
         if changed:
             changed_by_case[case_id] = changed
         for index in range(PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT):
@@ -622,7 +1008,8 @@ def _cross_lane_changes(
             ):
                 continue
             rescue_candidate_count += 1
-            parent = candidate.get("torsion_rescue_parent_proposal_index")
+            proposal_index = int(candidate["proposal_index"])
+            parent = parent_by_target.get(proposal_index)
             if type(parent) is not int or parent not in rescue_by_index:
                 raise ValueError("rescue candidate parent binding is invalid")
             if (
@@ -631,6 +1018,7 @@ def _cross_lane_changes(
             ):
                 rescue_parent_duplicate_count += 1
             payload = candidate["refinement_receipt_payload"]
+            assert isinstance(payload, Mapping)
             torsion_selected_count += payload.get("torsion_selected") is True
     expected_changes = report["candidate_level_changes"]
     if (
@@ -726,13 +1114,36 @@ def _rescue_allocation(
         ):
             raise ValueError("source-paired pair indices are invalid")
         pairs.append({"target_proposal_index": target, "parent_proposal_index": parent})
+    candidate_by_index = {
+        int(candidate["proposal_index"]): candidate for candidate in candidates
+    }
     rescue_targets = {
         int(candidate["proposal_index"])
         for candidate in candidates
         if candidate["proposal_mode"] == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
     }
-    if rescue_targets != {row["target_proposal_index"] for row in pairs}:
+    pair_targets = [row["target_proposal_index"] for row in pairs]
+    if rescue_targets != set(pair_targets) or len(pair_targets) != len(
+        set(pair_targets)
+    ):
         raise ValueError("rescue candidate modes contradict the allocation")
+    for row in pairs:
+        target = row["target_proposal_index"]
+        parent = row["parent_proposal_index"]
+        candidate = candidate_by_index[target]
+        parent_candidate = candidate_by_index[parent]
+        payload = candidate.get("refinement_receipt_payload")
+        if (
+            target == parent
+            or parent in rescue_targets
+            or candidate.get("torsion_rescue_parent_proposal_index") != parent
+            or parent_candidate.get("proposal_mode")
+            == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+            or not isinstance(payload, Mapping)
+            or payload.get("source_paired_parent_proposal_index") != parent
+            or payload.get("source_paired_torsion_rescue_pairs") != pairs
+        ):
+            raise ValueError("rescue allocation parent binding is invalid")
     return rotor_count, pairs
 
 
@@ -831,7 +1242,9 @@ def _case_atlas_row(
             name="candidate rotation",
         )
         if translation["available"] is True:
-            translation_norms.append(float.fromhex(str(translation["norm_binary64_hex"])))
+            translation_norms.append(
+                float.fromhex(str(translation["norm_binary64_hex"]))
+            )
         if rotation["available"] is True:
             rotation_norms.append(float.fromhex(str(rotation["norm_binary64_hex"])))
     evaluated_paths = [
@@ -1062,14 +1475,13 @@ def _case_atlas_row(
     }
 
 
-def build_failure_atlas(
+def _build_failure_atlas_payload(
     *,
     ab_report: Mapping[str, object],
     baseline_results: Mapping[str, Mapping[str, object]],
     rescue_results: Mapping[str, Mapping[str, object]],
-    evidence_binding: Mapping[str, object],
 ) -> dict[str, object]:
-    """Build the exact seven-case, historical-only failure atlas."""
+    """Build an unsealed seven-case draft from authenticated input objects."""
     _validate_ab_report(ab_report)
     _validate_lane(baseline_results, lane="baseline", report=ab_report)
     _validate_lane(rescue_results, lane="rescue", report=ab_report)
@@ -1078,19 +1490,6 @@ def build_failure_atlas(
         rescue_results,
         report=ab_report,
     )
-    required_binding_fields = {
-        "ab_report_file_sha256",
-        "baseline_analysis_file_sha256",
-        "baseline_analysis_self_sha256",
-        "rescue_analysis_file_sha256",
-        "rescue_analysis_self_sha256",
-        "baseline_source_receipts_sha256",
-        "rescue_source_receipts_sha256",
-    }
-    if set(evidence_binding) != required_binding_fields or any(
-        not _is_sha256(value) for value in evidence_binding.values()
-    ):
-        raise ValueError("failure-atlas evidence binding is invalid")
     rows = [
         _case_atlas_row(
             case_id=case_id,
@@ -1144,8 +1543,7 @@ def build_failure_atlas(
         }
     ):
         raise ValueError("uncovered torsion-scale partition drifted")
-    report: dict[str, object] = {
-        "schema_id": SCHEMA_ID,
+    return {
         "analysis_scope": "historical_contaminated_development_only",
         "evidence_role": "source_paired_failure_atlas_companion",
         "development_only": True,
@@ -1162,7 +1560,6 @@ def build_failure_atlas(
         "source_archive_sha256": PUBLIC_REDOCKING_ARCHIVE_SHA256,
         "source_identifiers_sha256": PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
         "ab_report_sha256": ab_report["report_sha256"],
-        "evidence_binding": dict(sorted(evidence_binding.items())),
         "engine_identity": dict(ab_report["engine_identity"]),
         "case_count": len(rows),
         "case_ids": list(observed_uncovered),
@@ -1188,40 +1585,62 @@ def build_failure_atlas(
         ],
         "cases": rows,
     }
-    report["report_sha256"] = _sha256_payload(report)
-    return report
 
 
-def _receipt_paths(path: Path) -> tuple[Path, ...]:
-    _reject_prohibited_path(path, name="execution receipt input")
-    if path.is_file():
-        return (path,)
-    candidates = (path / "engine_v2", path / "receipts" / "engine_v2", path)
-    for candidate in candidates:
-        if candidate.is_dir():
-            found = tuple(sorted(candidate.glob("*.json")))
-            if found:
-                for receipt_path in found:
-                    _reject_prohibited_path(
-                        receipt_path,
-                        name="execution receipt input",
-                    )
-                return found
-    raise ValueError(f"no Engine V2 execution receipts found under {path}")
+def _archive_object(
+    members: Mapping[str, bytes],
+    path: object,
+    *,
+    name: str,
+    require_canonical_bytes: bool,
+) -> tuple[dict[str, object], bytes, str]:
+    member = _safe_member_name(str(path))
+    raw = members.get(member)
+    if raw is None:
+        raise ValueError(f"{name} archive member is missing")
+    try:
+        parsed = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{name} is not valid JSON") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError(f"{name} must contain a JSON object")
+    if require_canonical_bytes and raw != _canonical_bytes(parsed) + b"\n":
+        raise ValueError(f"{name} is not canonical JSON")
+    return parsed, raw, member
 
 
 def _load_receipt_set(
-    path: Path,
+    members: Mapping[str, bytes],
     *,
+    run_root: object,
     lane: str,
     engine_identity: Mapping[str, object],
-) -> tuple[dict[str, dict[str, object]], dict[str, str]]:
+) -> tuple[
+    dict[str, dict[str, object]],
+    dict[str, str],
+    dict[str, dict[str, object]],
+]:
+    root = _safe_member_name(str(run_root))
+    prefix = f"{root}/receipts/engine_v2/"
+    expected_members = {f"{prefix}{case_id}.json" for case_id in EXPECTED_CASE_IDS}
+    observed_members = {
+        member
+        for member in members
+        if member.startswith(prefix) and member.endswith(".json")
+    }
+    if observed_members != expected_members:
+        raise ValueError(f"{lane} execution receipt member set is invalid")
     results: dict[str, dict[str, object]] = {}
     hashes: dict[str, str] = {}
-    for receipt_path in _receipt_paths(path):
-        payload, raw = _load_object(receipt_path, name=f"{lane} execution receipt")
-        if raw != _canonical_bytes(payload) + b"\n":
-            raise ValueError(f"{lane} execution receipt is not canonical JSON")
+    payloads: dict[str, dict[str, object]] = {}
+    for case_id in EXPECTED_CASE_IDS:
+        member = f"{prefix}{case_id}.json"
+        payload, raw, _ = _archive_object(
+            members,
+            member,
+            name=f"{lane} execution receipt {case_id}",
+            require_canonical_bytes=True,
+        )
         if set(payload) != _EXECUTION_FIELDS:
             raise ValueError(f"{lane} execution receipt fields are invalid")
         _self_hash(payload, field="receipt_sha256", name=f"{lane} execution receipt")
@@ -1242,41 +1661,48 @@ def _load_receipt_set(
             != engine_identity.get("execution_environment_sha256")
         ):
             raise ValueError(f"{lane} execution receipt identity is invalid")
-        case_id = str(result.get("case_id", ""))
-        if case_id in results or case_id != receipt_path.stem:
+        if result.get("case_id") != case_id:
             raise ValueError(f"{lane} execution receipt case identity is invalid")
-        results[case_id] = dict(result)
+        try:
+            typed_result = _typed_development_result(result)
+        except ValueError as exc:
+            raise ValueError(
+                f"{lane} execution receipt strict result binding is invalid"
+            ) from exc
+        typed_payload = typed_result.to_dict()
+        try:
+            policy_tokens = _execution_policy_tokens(payload.get("execution_policy"))
+        except ValueError as exc:
+            raise ValueError(f"{lane} execution receipt policy is invalid") from exc
+        if (
+            typed_result.case_id != case_id
+            or typed_result.engine_id != "engine_v2"
+            or typed_payload != dict(result)
+            or payload.get("command") != typed_payload.get("execution_command")
+            or policy_tokens != typed_payload.get("execution_policy")
+        ):
+            raise ValueError(f"{lane} execution receipt typed result is cross-wired")
+        results[case_id] = typed_payload
         hashes[case_id] = _sha256_bytes(raw)
-    return results, hashes
-
-
-def _repo_file(repo_root: Path, value: object, *, name: str) -> Path:
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{name} path is invalid")
-    root = repo_root.resolve(strict=True)
-    candidate = Path(value)
-    candidate = candidate if candidate.is_absolute() else root / candidate
-    _reject_prohibited_path(candidate, name=name)
-    try:
-        resolved = candidate.resolve(strict=True)
-        resolved.relative_to(root)
-    except (OSError, ValueError) as exc:
-        raise ValueError(f"{name} must be an existing repository file") from exc
-    if not resolved.is_file():
-        raise ValueError(f"{name} must be an existing repository file")
-    _reject_prohibited_path(resolved, name=name)
-    return resolved
+        payloads[case_id] = payload
+    return results, hashes, payloads
 
 
 def _load_bound_analysis(
-    repo_root: Path,
+    members: Mapping[str, bytes],
     *,
     lane: str,
     ab_report: Mapping[str, object],
 ) -> tuple[dict[str, object], str]:
     lane_row = ab_report[lane]
-    path = _repo_file(repo_root, lane_row.get("analysis_path"), name=f"{lane} analysis")
-    payload, raw = _load_object(path, name=f"{lane} analysis")
+    if not isinstance(lane_row, Mapping):
+        raise ValueError(f"A/B report {lane} lane is invalid")
+    payload, raw, _ = _archive_object(
+        members,
+        lane_row.get("analysis_path"),
+        name=f"{lane} analysis",
+        require_canonical_bytes=True,
+    )
     self_hash = _self_hash(payload, field="report_sha256", name=f"{lane} analysis")
     file_hash = _sha256_bytes(raw)
     if (
@@ -1289,6 +1715,170 @@ def _load_bound_analysis(
     ):
         raise ValueError(f"{lane} analysis binding is invalid")
     return payload, file_hash
+
+
+def _materialization_inputs(
+    materialization: Mapping[str, object],
+    *,
+    case_id: str,
+) -> dict[str, str]:
+    artifact_filenames = (
+        "protein.pdb",
+        "ligands.sdf",
+        "ligand.sdf",
+        "ligand_start_conf.sdf",
+    )
+    expected_members = {
+        filename: f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+        for filename in artifact_filenames
+    }
+    artifacts = materialization.get("artifact_sha256s")
+    if (
+        set(materialization) != _MATERIALIZATION_FIELDS
+        or materialization.get("frozen_case_seed")
+        != frozen_public_redocking_case_seed(case_id)
+        or materialization.get("archive_members") != expected_members
+        or not isinstance(artifacts, Mapping)
+        or set(artifacts) != set(artifact_filenames)
+        or any(not _is_sha256(artifacts.get(name)) for name in artifact_filenames)
+    ):
+        raise ValueError("materialization input identity is invalid")
+    return {
+        "receptor": str(artifacts["protein.pdb"]),
+        "reference": str(artifacts["ligands.sdf"]),
+        "native": str(artifacts["ligand.sdf"]),
+        "seed": str(artifacts["ligand_start_conf.sdf"]),
+    }
+
+
+def _validate_lane_summary(
+    members: Mapping[str, bytes],
+    *,
+    lane: str,
+    ab_report: Mapping[str, object],
+    receipt_payloads: Mapping[str, Mapping[str, object]],
+) -> tuple[str, str]:
+    lane_row = ab_report[lane]
+    if not isinstance(lane_row, Mapping):
+        raise ValueError(f"A/B report {lane} lane is invalid")
+    summary, raw, _ = _archive_object(
+        members,
+        lane_row.get("summary_path"),
+        name=f"{lane} summary",
+        require_canonical_bytes=True,
+    )
+    summary_self_sha256 = _self_hash(
+        summary,
+        field="summary_sha256",
+        name=f"{lane} summary",
+    )
+    summary_file_sha256 = _sha256_bytes(raw)
+    false_fields = (
+        "benchmark_validated",
+        "claim_safe",
+        "contains_engineering_smoke",
+        "contains_fresh_internal_blind_holdout",
+        "fresh_execution_authorized",
+        "primary_claim_eligible",
+        "product_promotion_eligible",
+        "product_qualified",
+        "public_claim_eligible",
+        "scientifically_validated",
+    )
+    engine_identity = summary.get("engine_identity")
+    report_identity = ab_report.get("engine_identity")
+    expected_schema_id = (
+        SUMMARY_SCHEMA_ID if lane == "baseline" else RESCUE_SUMMARY_SCHEMA_ID
+    )
+    if (
+        summary.get("schema_id") != expected_schema_id
+        or summary.get("analysis_scope") != "historical_contaminated_development_only"
+        or summary.get("runner_id") != PUBLIC_REDOCKING_RUNNER_ID
+        or summary.get("case_count") != len(EXPECTED_CASE_IDS)
+        or tuple(summary.get("case_ids", ())) != EXPECTED_CASE_IDS
+        or summary.get("case_ids_sha256") != EXPECTED_CASE_IDS_SHA256
+        or any(summary.get(field) is not False for field in false_fields)
+        or summary_self_sha256 != lane_row.get("summary_self_sha256")
+        or summary_file_sha256 != lane_row.get("summary_file_sha256")
+        or not isinstance(engine_identity, Mapping)
+        or not isinstance(report_identity, Mapping)
+    ):
+        raise ValueError(f"{lane} summary identity or boundary is invalid")
+    for key in (
+        "implementation_sha256",
+        "evaluation_pipeline_sha256",
+        "execution_environment_sha256",
+        "interaction_refiner_config_sha256",
+    ):
+        if engine_identity.get(key) != report_identity.get(key):
+            raise ValueError(f"{lane} summary engine identity is cross-wired")
+    rows = summary.get("rows")
+    embedded_receipts = summary.get("execution_receipts")
+    materializations = summary.get("materializations")
+    profiles = summary.get("profiles")
+    if not all(
+        isinstance(value, list)
+        for value in (rows, embedded_receipts, materializations, profiles)
+    ):
+        raise ValueError(f"{lane} summary collections are invalid")
+    assert isinstance(rows, list)
+    assert isinstance(embedded_receipts, list)
+    assert isinstance(materializations, list)
+    assert isinstance(profiles, list)
+    if any(
+        len(value) != len(EXPECTED_CASE_IDS)
+        for value in (rows, embedded_receipts, materializations, profiles)
+    ):
+        raise ValueError(f"{lane} summary collection lengths are invalid")
+    run_root = _safe_member_name(str(lane_row.get("run_root", "")))
+    for index, case_id in enumerate(EXPECTED_CASE_IDS):
+        receipt = receipt_payloads.get(case_id)
+        materialization = materializations[index]
+        profile = profiles[index]
+        if (
+            receipt is None
+            or embedded_receipts[index] != receipt
+            or rows[index] != receipt.get("result")
+            or not isinstance(materialization, Mapping)
+            or not isinstance(profile, Mapping)
+            or materialization.get("case_id") != case_id
+            or profile.get("case_id") != case_id
+        ):
+            raise ValueError(f"{lane} summary row or receipt is cross-wired")
+        standalone, standalone_raw, _ = _archive_object(
+            members,
+            f"{run_root}/receipts/materializations/{case_id}.json",
+            name=f"{lane} materialization {case_id}",
+            require_canonical_bytes=True,
+        )
+        _self_hash(
+            standalone,
+            field="receipt_sha256",
+            name=f"{lane} materialization {case_id}",
+        )
+        expected_inputs = _materialization_inputs(standalone, case_id=case_id)
+        result = receipt.get("result")
+        if (
+            standalone != materialization
+            or standalone_raw != _canonical_bytes(materialization) + b"\n"
+            or standalone.get("schema_id") != PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID
+            or standalone.get("source_archive_sha256")
+            != PUBLIC_REDOCKING_ARCHIVE_SHA256
+            or standalone.get("hash_verified_archive") is not True
+            or receipt.get("materialization_receipt_sha256")
+            != standalone.get("receipt_sha256")
+            or receipt.get("input_sha256s") != expected_inputs
+            or not isinstance(result, Mapping)
+            or {
+                "receptor": result.get("receptor_artifact_sha256"),
+                "reference": result.get("reference_artifact_sha256"),
+                "native": result.get("native_artifact_sha256"),
+                "seed": result.get("seed_artifact_sha256"),
+            }
+            != expected_inputs
+        ):
+            raise ValueError(f"{lane} materialization is cross-wired")
+    return summary_file_sha256, summary_self_sha256
 
 
 def _validate_analysis_receipts(
@@ -1314,49 +1904,97 @@ def _validate_analysis_receipts(
 def build_authenticated_failure_atlas(
     *,
     repo_root: Path,
-    ab_report_path: Path,
-    expected_ab_report_sha256: str,
-    baseline_receipts_path: Path,
-    rescue_receipts_path: Path,
+    archive_path: Path,
+    members_path: Path,
+    bundle_path: Path,
+    report_member: str,
+    expected_archive_sha256: str,
+    expected_members_sha256: str,
+    expected_bundle_sha256: str,
+    expected_report_sha256: str,
 ) -> dict[str, object]:
-    _reject_prohibited_path(repo_root, name="repository root")
-    ab_report_file = _repo_file(
-        repo_root,
-        str(ab_report_path),
-        name="A/B report",
+    archive_file, archive_relative = _artifact_file(
+        repo_root, archive_path, name="archive"
     )
-    ab_report, ab_raw = _load_object(ab_report_file, name="A/B report")
+    members_file, members_relative = _artifact_file(
+        repo_root, members_path, name="member manifest"
+    )
+    bundle_file, bundle_relative = _artifact_file(
+        repo_root, bundle_path, name="bundle checksum"
+    )
+    members, archive_identity = _verified_archive_members(
+        archive_path=archive_file,
+        members_path=members_file,
+        bundle_path=bundle_file,
+        expected_archive_sha256=expected_archive_sha256,
+        expected_members_sha256=expected_members_sha256,
+        expected_bundle_sha256=expected_bundle_sha256,
+    )
+    ab_report, ab_raw, safe_report_member = _archive_object(
+        members,
+        report_member,
+        name="A/B report",
+        require_canonical_bytes=False,
+    )
     _validate_ab_report(ab_report)
     if (
-        not _is_sha256(expected_ab_report_sha256)
-        or ab_report.get("report_sha256") != expected_ab_report_sha256
+        not _is_sha256(expected_report_sha256)
+        or ab_report.get("report_sha256") != expected_report_sha256
     ):
         raise ValueError("A/B report does not match the expected self-hash")
     engine_identity = ab_report.get("engine_identity")
     if not isinstance(engine_identity, Mapping):
         raise ValueError("A/B report engine identity is invalid")
     baseline_analysis, baseline_analysis_file_sha256 = _load_bound_analysis(
-        repo_root, lane="baseline", ab_report=ab_report
+        members, lane="baseline", ab_report=ab_report
     )
     rescue_analysis, rescue_analysis_file_sha256 = _load_bound_analysis(
-        repo_root, lane="rescue", ab_report=ab_report
+        members, lane="rescue", ab_report=ab_report
     )
-    baseline_results, baseline_hashes = _load_receipt_set(
-        baseline_receipts_path,
+    baseline_row = ab_report.get("baseline")
+    rescue_row = ab_report.get("rescue")
+    if not isinstance(baseline_row, Mapping) or not isinstance(rescue_row, Mapping):
+        raise ValueError("A/B report lanes are invalid")
+    baseline_results, baseline_hashes, baseline_receipts = _load_receipt_set(
+        members,
+        run_root=baseline_row.get("run_root"),
         lane="baseline",
         engine_identity=engine_identity,
     )
-    rescue_results, rescue_hashes = _load_receipt_set(
-        rescue_receipts_path,
+    rescue_results, rescue_hashes, rescue_receipts = _load_receipt_set(
+        members,
+        run_root=rescue_row.get("run_root"),
         lane="rescue",
         engine_identity=engine_identity,
     )
-    binding = {
+    baseline_summary_file_sha256, baseline_summary_self_sha256 = _validate_lane_summary(
+        members,
+        lane="baseline",
+        ab_report=ab_report,
+        receipt_payloads=baseline_receipts,
+    )
+    rescue_summary_file_sha256, rescue_summary_self_sha256 = _validate_lane_summary(
+        members,
+        lane="rescue",
+        ab_report=ab_report,
+        receipt_payloads=rescue_receipts,
+    )
+    evidence_binding: dict[str, object] = {
+        **archive_identity,
+        "archive_path": archive_relative,
+        "member_manifest_path": members_relative,
+        "bundle_checksum_path": bundle_relative,
+        "ab_report_member": safe_report_member,
         "ab_report_file_sha256": _sha256_bytes(ab_raw),
+        "ab_report_self_sha256": ab_report["report_sha256"],
         "baseline_analysis_file_sha256": baseline_analysis_file_sha256,
         "baseline_analysis_self_sha256": baseline_analysis["report_sha256"],
+        "baseline_summary_file_sha256": baseline_summary_file_sha256,
+        "baseline_summary_self_sha256": baseline_summary_self_sha256,
         "rescue_analysis_file_sha256": rescue_analysis_file_sha256,
         "rescue_analysis_self_sha256": rescue_analysis["report_sha256"],
+        "rescue_summary_file_sha256": rescue_summary_file_sha256,
+        "rescue_summary_self_sha256": rescue_summary_self_sha256,
         "baseline_source_receipts_sha256": _validate_analysis_receipts(
             baseline_analysis, baseline_hashes, lane="baseline"
         ),
@@ -1364,63 +2002,144 @@ def build_authenticated_failure_atlas(
             rescue_analysis, rescue_hashes, lane="rescue"
         ),
     }
-    return build_failure_atlas(
+    draft = _build_failure_atlas_payload(
         ab_report=ab_report,
         baseline_results=baseline_results,
         rescue_results=rescue_results,
-        evidence_binding=binding,
+    )
+    report: dict[str, object] = {
+        "schema_id": SCHEMA_ID,
+        **draft,
+        "authentication": {
+            "status": "verified_archive_member_bundle",
+            "authoritative_builder_path": "authenticated_only",
+            "both_raw_receipt_lanes_verified": True,
+            "both_summary_receipt_sets_cross_checked": True,
+        },
+        "input_evidence": dict(sorted(evidence_binding.items())),
+    }
+    report["report_sha256"] = _sha256_payload(report)
+    return report
+
+
+def _output_relative_path(repo_root: Path, path: Path) -> Path:
+    _prohibited_path(path, name="output")
+    _reject_symlink_ancestry(repo_root, name="repository root")
+    root = repo_root.resolve(strict=True)
+    try:
+        relative = path.relative_to(root) if path.is_absolute() else path
+    except ValueError as exc:
+        raise ValueError("output must remain inside the repository") from exc
+    if (
+        not relative.parts
+        or relative.parts[0] != ".betelgeuze"
+        or any(component in {"", ".", ".."} for component in relative.parts)
+        or relative.name == ".betelgeuze"
+    ):
+        raise ValueError("mutable atlas output must be stored under .betelgeuze")
+    return relative
+
+
+def _directory_flags() -> int:
+    return (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
     )
 
 
-def _write_exclusive(repo_root: Path, output: Path, payload: bytes) -> None:
-    root = repo_root.resolve(strict=True)
-    candidate = output if output.is_absolute() else root / output
-    _reject_prohibited_path(candidate, name="output")
+def _owned_output_directory_descriptor(
+    repo_root: Path,
+    relative_directory: Path,
+) -> int:
+    _reject_symlink_ancestry(repo_root, name="repository root")
+    descriptor = os.open(repo_root.resolve(strict=True), _directory_flags())
     try:
-        candidate = candidate.resolve(strict=False)
-        relative_output = candidate.relative_to(root)
-    except (OSError, ValueError) as exc:
-        raise ValueError("output must remain inside the repository") from exc
-    if not relative_output.parts or relative_output.parts[0] != ".betelgeuze":
-        raise ValueError("output must remain under repository .betelgeuze state")
-    parent = candidate.parent
-    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    try:
-        resolved_parent = parent.resolve(strict=True)
-        relative_parent = resolved_parent.relative_to(root)
-    except (OSError, ValueError) as exc:
-        raise ValueError("output must remain inside the repository") from exc
-    if not relative_parent.parts or relative_parent.parts[0] != ".betelgeuze":
-        raise ValueError("output must remain under repository .betelgeuze state")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0)
-    flags |= getattr(os, "O_NOFOLLOW", 0)
-    parent_descriptor = os.open(
-        resolved_parent,
-        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+        root_status = os.fstat(descriptor)
+        if not stat.S_ISDIR(root_status.st_mode) or (
+            hasattr(os, "geteuid") and root_status.st_uid != os.geteuid()
+        ):
+            raise ValueError("repository root must be an owned directory")
+        for component in relative_directory.parts:
+            try:
+                next_descriptor = os.open(
+                    component,
+                    _directory_flags(),
+                    dir_fd=descriptor,
+                )
+            except FileNotFoundError:
+                try:
+                    os.mkdir(component, 0o700, dir_fd=descriptor)
+                except FileExistsError:
+                    pass
+                next_descriptor = os.open(
+                    component,
+                    _directory_flags(),
+                    dir_fd=descriptor,
+                )
+            status = os.fstat(next_descriptor)
+            if not stat.S_ISDIR(status.st_mode) or (
+                hasattr(os, "geteuid") and status.st_uid != os.geteuid()
+            ):
+                os.close(next_descriptor)
+                raise ValueError("atlas output parent must be an owned directory")
+            os.fchmod(next_descriptor, 0o700)
+            if stat.S_IMODE(os.fstat(next_descriptor).st_mode) != 0o700:
+                os.close(next_descriptor)
+                raise ValueError("atlas output parent permissions are invalid")
+            os.close(descriptor)
+            descriptor = next_descriptor
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _write_exclusive(repo_root: Path, relative_path: Path, payload: bytes) -> None:
+    parent_descriptor = _owned_output_directory_descriptor(
+        repo_root, relative_path.parent
     )
     descriptor = -1
+    temporary_name = f".{relative_path.name}.{secrets.token_hex(16)}.tmp"
+    temporary_created = False
     try:
-        parent_status = os.fstat(parent_descriptor)
-        if not stat.S_ISDIR(parent_status.st_mode) or (
-            hasattr(os, "geteuid") and parent_status.st_uid != os.geteuid()
-        ):
-            raise ValueError("output parent must be an owned directory")
-        os.fchmod(parent_descriptor, 0o700)
         descriptor = os.open(
-            candidate.name,
-            flags,
+            temporary_name,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
             0o600,
             dir_fd=parent_descriptor,
         )
+        temporary_created = True
+        os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb", closefd=True) as handle:
             descriptor = -1
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
+        os.link(
+            temporary_name,
+            relative_path.name,
+            src_dir_fd=parent_descriptor,
+            dst_dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
         os.fsync(parent_descriptor)
-    finally:
+    except BaseException:
         if descriptor >= 0:
             os.close(descriptor)
+        raise
+    finally:
+        if temporary_created:
+            try:
+                os.unlink(temporary_name, dir_fd=parent_descriptor)
+                os.fsync(parent_descriptor)
+            except FileNotFoundError:
+                pass
         os.close(parent_descriptor)
 
 
@@ -1429,28 +2148,37 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
     )
-    parser.add_argument("--ab-report", type=Path, required=True)
-    parser.add_argument("--expected-ab-report-sha256", required=True)
-    parser.add_argument("--baseline-receipts", type=Path, required=True)
-    parser.add_argument("--rescue-receipts", type=Path, required=True)
+    parser.add_argument("--archive", type=Path, required=True)
+    parser.add_argument("--members-sha256", type=Path, required=True)
+    parser.add_argument("--bundle-sha256", type=Path, required=True)
+    parser.add_argument("--report-member", required=True)
+    parser.add_argument("--expected-archive-sha256", required=True)
+    parser.add_argument("--expected-members-sha256", required=True)
+    parser.add_argument("--expected-bundle-sha256", required=True)
+    parser.add_argument("--expected-report-sha256", required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
-    _reject_prohibited_path(arguments.repo_root, name="repository root")
+    _prohibited_path(arguments.repo_root, name="repository root")
     repo_root = arguments.repo_root.resolve()
     report = build_authenticated_failure_atlas(
         repo_root=repo_root,
-        ab_report_path=arguments.ab_report,
-        expected_ab_report_sha256=arguments.expected_ab_report_sha256,
-        baseline_receipts_path=arguments.baseline_receipts,
-        rescue_receipts_path=arguments.rescue_receipts,
+        archive_path=arguments.archive,
+        members_path=arguments.members_sha256,
+        bundle_path=arguments.bundle_sha256,
+        report_member=arguments.report_member,
+        expected_archive_sha256=arguments.expected_archive_sha256,
+        expected_members_sha256=arguments.expected_members_sha256,
+        expected_bundle_sha256=arguments.expected_bundle_sha256,
+        expected_report_sha256=arguments.expected_report_sha256,
     )
+    output = _output_relative_path(repo_root, arguments.output)
     _write_exclusive(
         repo_root,
-        arguments.output,
+        output,
         _canonical_bytes(report) + b"\n",
     )
     print(

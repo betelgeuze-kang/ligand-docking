@@ -28,30 +28,49 @@ work, not a claim that every historical uncovered case has been classified.
 | Archive bundle-checksum SHA-256 | `6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9` |
 | Corrected A/B report file SHA-256 | `8e85942c882be73d6d7bdccca6854d2a7c6d9246d4b69a0d9d1eac24a999db00` |
 | Corrected A/B report self-hash | `fb94287855b8843cea7a28bb271018e2444688ff89381ea5a7a6483dd3c49133` |
-| Atlas schema | `betelgeuze.engine_v2_source_paired_failure_atlas/1.1.0` |
-| Atlas self-hash | `4b6b290c7ce44ac5ec80fb4e93173256816ce3d12b7b24ae330b670452fb3b13` |
-| Atlas file SHA-256 | `e9d03f525127d8244d100bf0abb1a6cdb9c32f85589166e87d70522a1f634dec` |
+| Atlas schema | `betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0` |
+| Atlas self-hash | `6b659616074fee3b00ab89b999ba9459fbe80391ffce12e1510e740b49dcf06b` |
+| Atlas file SHA-256 | `8dac00ebba0da5fcba4f30cd6eeb72f3518e0c8ea7bb6cf2dd1352e3fc45b9ca` |
 
 The compact atlas is local mutable state at
-`.betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9.json`.
-It is mode `0600` and 47,587 bytes. It is not a committed benchmark result or
+`.betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9-v2.json`.
+It is mode `0600` and 49,092 bytes. It is not a committed benchmark result or
 scientific claim.
 
 ## Construction and safety boundary
 
-`tools/build_engine_v2_source_paired_failure_atlas.py` accepts the corrected
-A/B report plus restored baseline and rescue execution-receipt directories. It
-rejects prohibited fresh-128 and environment-file paths before reading them,
-requires the exact historical cohort and source commit, validates canonical
-receipt bytes and self-hashes, cross-checks both receipt sets against the two
-bound compact analyses, and writes an exclusive mode-`0600` output below
-`.betelgeuze`.
+`tools/build_engine_v2_source_paired_failure_atlas.py` accepts the verified
+archive, its member manifest and bundle checksum, and the corrected A/B report
+member. The three reviewed bundle identities and exact 59-member count are
+pinned. The builder bounds all three input files, decompresses the exact bytes
+that were hashed, validates every archive-member hash, and never extracts the
+archive to a filesystem directory. It rejects prohibited fresh-128 and
+environment-file paths before reading them.
 
-Only the 18 execution-receipt JSON members needed for this fixed cohort were
-temporarily restored from the already verified archive. The temporary restore
-directory was deleted immediately after the successful build. No fresh-holdout,
-engineering-smoke, or external/public-result data was opened or used. The
-historical A/B outcomes were consumed only inside this diagnostic boundary.
+Both nine-receipt lanes are decoded with the production development-result
+validator. The builder cross-checks proposal, refinement, ranked-result,
+materialization, execution-command, policy, and input-artifact bindings against
+the two summaries and compact analyses. It writes an exclusive mode-`0600`
+output below `.betelgeuze`.
+
+The authenticated invocation used for the recorded artifact was:
+
+```bash
+python3 tools/build_engine_v2_source_paired_failure_atlas.py \
+  --archive .betelgeuze/stage0-development/archives/v7-source-paired-torsion-rescue-754bebb9-ab.tar.zst \
+  --members-sha256 .betelgeuze/stage0-development/archives/v7-source-paired-torsion-rescue-754bebb9-ab.members.sha256 \
+  --bundle-sha256 .betelgeuze/stage0-development/archives/v7-source-paired-torsion-rescue-754bebb9-ab.bundle.sha256 \
+  --report-member .betelgeuze/stage0-development/source-paired-torsion-rescue-754bebb9-ab.json \
+  --expected-archive-sha256 8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc \
+  --expected-members-sha256 7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21 \
+  --expected-bundle-sha256 6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9 \
+  --expected-report-sha256 fb94287855b8843cea7a28bb271018e2444688ff89381ea5a7a6483dd3c49133 \
+  --output .betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9-v2.json
+```
+
+No fresh-holdout, engineering-smoke, or external/public-result data was opened
+or used. The historical A/B outcomes were consumed only inside this diagnostic
+boundary.
 
 ## Seven-case partition
 
