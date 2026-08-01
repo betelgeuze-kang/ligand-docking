@@ -211,9 +211,18 @@ The canonical capability state is:
   objective, or selection policy.
   Live cases require one uniform V1.1 receipt version and the frozen default
   vdW-policy fingerprint; V1 remains confined to the exact pinned-archive
-  verifier. The pinned V1 historical archive remains clearance-unavailable
-  until a separate reviewed historical-development rerun produces and pins
-  V1.1 evidence.
+  verifier. The pinned V1 historical archive remains clearance-unavailable and
+  immutable. The separate historical-development
+  [V1.1 clearance audit](engine_v2_source_paired_clearance_v11_audit.md) now
+  authenticates 512 uniform V1.1 candidate receipts and 28 measured rescue
+  targets with zero pair-bound skips. Across the 24 targets in the fixed seven-
+  case uncovered cohort, minimum surface gap improves for 10, is equal for 13,
+  and regresses for one; all gaps remain negative. Historical validity and
+  recovery counts, zero torsion selections, and the 31-to-30 eligibility
+  regression are unchanged. The new 59-member mode-0600 archive compresses
+  21,367,212 expanded bytes to 505,161 bytes and is pinned to
+  `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98`.
+  This is descriptive telemetry only and selects no rule.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate

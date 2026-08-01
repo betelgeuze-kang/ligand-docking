@@ -103,7 +103,7 @@ variants. That rule is descriptive here and remains unfrozen.
 | Accepted receptor-pair normalization | Unavailable; count is absent from receipts |
 | Clash-atom normalization | Unavailable; count is absent from receipts |
 | Maximum local penetration | Unavailable; value is absent from receipts |
-| Absolute numeric geometric clearance | Unavailable in the pinned V1 archive; V1.1 instruments future source-paired receipts only |
+| Absolute numeric geometric clearance | Unavailable in this pinned V1 archive; available in the separate historical-development V1.1 audit |
 | Scorer-v1 term normalization | Ineligible; ranking terms are a different objective contract |
 
 No V8 clearance receipt is cross-joined. It belongs to a separate rejected
@@ -128,9 +128,11 @@ unavailable state only when those counts are internally consistent and the
 product actually exceeds the bound.
 
 That extension does not retroactively make clearance available in this audit:
-the pinned archive contains V1 receipts. A separate reviewed historical-
-development rerun and newly pinned archive are required before clearance can be
-compared here.
+the pinned archive contains V1 receipts and remains immutable. The separate
+reviewed historical-development rerun is now complete and is documented in the
+[source-paired clearance V1.1 audit](engine_v2_source_paired_clearance_v11_audit.md).
+Its new archive contains uniform V1.1 receipts and does not replace or widen the
+V1 evidence chain.
 
 Live source-paired diagnostics require one uniform V1.1 receipt version per
 case. Legacy V1 is accepted only by the exact pinned-archive verification path;
@@ -153,14 +155,14 @@ python3 tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py \
 
 ## Next bounded action
 
-The audit narrows the choice but does not make it. The next admissible evidence
-step is a separately reviewed historical-development rerun that emits V1.1
-telemetry and pins a new authenticated archive. Only after that receipt set is
-audited may a later task predeclare one result-independent rule for one
-historical-development A/B. That rule must state its numeric tolerance and
-decide explicitly whether internal penalty may increase when receptor penalty
-decreases. It must remain source-retaining, hard-capped, and genuinely
-coordinate-changing.
+The audit narrows the choice but does not make it. The V1.1 rerun now provides
+the missing absolute-clearance inventory: among the 24 fixed uncovered rescue
+targets, 10 gaps improve, 13 are equal, and one regresses. The next admissible
+task is therefore to predeclare one result-independent rule for one historical-
+development A/B. That rule must state its numeric tolerances, forbid an
+internal-penalty increase unless explicitly justified before execution, require
+strict gap improvement, retain the raw minimum-distance guard, and remain
+source-retaining, four-variant-capped, and genuinely coordinate-changing.
 
 Do not fit a normalized threshold from these seven cases, reuse `[2.0,4.0)` as
 if it were calibrated after normalization, correlate alternatives with RMSD or

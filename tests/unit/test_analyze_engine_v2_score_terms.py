@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 import pytest
 
 from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
@@ -12,6 +14,7 @@ from tools.analyze_engine_v2_score_terms import (
     SCHEMA_ID,
     TERM_NAMES,
     analyze_results,
+    analyze_validated_results,
 )
 
 
@@ -81,6 +84,51 @@ def test_score_term_analysis_is_nonclaimable_and_detects_ablation() -> None:
         PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
         not in report["proposal_mode_summary"]
     )
+
+
+def test_validated_receipt_core_matches_live_without_schema_routing() -> None:
+    source = {"receipt.json": "1" * 64}
+    baseline = _result("5SD5_HWI")
+    live_baseline = analyze_results(
+        [baseline],
+        source_receipts_sha256=source,
+    )
+    assert analyze_validated_results(
+        [baseline],
+        source_receipts_sha256=source,
+        allowed_proposal_modes=PUBLIC_REDOCKING_PROPOSAL_MODES,
+    ) == live_baseline
+
+    frozen_schema = deepcopy(baseline)
+    frozen_schema["engine_v2_diagnostics"]["schema_id"] = "frozen-receipt-schema"
+    assert analyze_validated_results(
+        [frozen_schema],
+        source_receipts_sha256=source,
+        allowed_proposal_modes=PUBLIC_REDOCKING_PROPOSAL_MODES,
+    ) == live_baseline
+    with pytest.raises(ValueError, match="schema"):
+        analyze_results([frozen_schema], source_receipts_sha256=source)
+
+    rescue = _result("5SD5_HWI")
+    rescue_diagnostics = rescue["engine_v2_diagnostics"]
+    assert isinstance(rescue_diagnostics, dict)
+    rescue_diagnostics["schema_id"] = (
+        PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+    )
+    rescue_candidates = rescue_diagnostics["candidates"]
+    assert isinstance(rescue_candidates, list)
+    rescue_candidates[0]["proposal_mode"] = (
+        PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+    )
+    live_rescue = analyze_results([rescue], source_receipts_sha256=source)
+    assert analyze_validated_results(
+        [rescue],
+        source_receipts_sha256=source,
+        allowed_proposal_modes=(
+            *PUBLIC_REDOCKING_PROPOSAL_MODES,
+            PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
+        ),
+    ) == live_rescue
 
 
 @pytest.mark.parametrize("candidate_status", ("success", "failure"))

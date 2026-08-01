@@ -38,7 +38,7 @@ cross-case/public-result data, or fresh-holdout data.
 | Implementation SHA-256 | `295ef252343333e474aa70a46de1af3b740c318dbdcba7d873744f1e012d73ed` |
 | Evaluation-pipeline SHA-256 | `3137682f5d211748ad0b37991f075898fc705823ae400928883f8d61ca822f5b` |
 | Execution-environment SHA-256 | `e6f96f53ec1d0ce83f665f170b27d0727e98455153720c741122584d0cfadb79` |
-| Interaction-refiner config SHA-256 | `5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337` |
+| Generic interaction-refiner execution-policy config SHA-256 | `5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337` |
 | Rescue proposal profile | `betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue/1.0.0` |
 | Rescue proposal profile SHA-256 | `1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6` |
 | Baseline summary self-hash | `6f766ea21c8b71ea7d5b677cd215b212fa182eca9241df12b5e72bb08e33ec30` |
