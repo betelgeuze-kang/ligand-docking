@@ -1230,18 +1230,67 @@ def test_output_is_confined_hardened_and_exclusive(tmp_path: Path) -> None:
     artifact.write_bytes(b"archive")
     artifact.chmod(0o600)
     os.symlink("real-artifacts", repo_root / ".betelgeuze" / "artifact-link")
-    with pytest.raises(ValueError, match="existing repository artifact"):
-        atlas_builder._artifact_file(
+    with pytest.raises(ValueError, match="cannot be opened safely"):
+        atlas_builder._bounded_repository_artifact_bytes(
             repo_root,
             Path(".betelgeuze/artifact-link/archive.bin"),
+            maximum=1024,
             name="archive",
         )
 
     repo_root_link = tmp_path / "repo-root-link"
     os.symlink(repo_root, repo_root_link)
-    with pytest.raises(ValueError, match="symlink path components"):
-        atlas_builder._artifact_file(
+    with pytest.raises(ValueError, match="cannot be opened safely"):
+        atlas_builder._bounded_repository_artifact_bytes(
             repo_root_link,
             Path(".betelgeuze/real-artifacts/archive.bin"),
+            maximum=1024,
             name="archive",
         )
+
+
+def test_artifact_reader_rejects_parent_swap_after_lexical_validation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo_root = tmp_path / "repo"
+    state = repo_root / ".betelgeuze"
+    state.mkdir(parents=True)
+    artifact = state / "archive.bin"
+    artifact.write_bytes(b"reviewed archive")
+    artifact.chmod(0o600)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    outside_artifact = outside / "archive.bin"
+    outside_artifact.write_bytes(b"prohibited replacement")
+    outside_artifact.chmod(0o600)
+    retained_state = repo_root / ".betelgeuze-retained"
+    original = atlas_builder._lexical_repository_artifact
+    swapped = False
+
+    def swap_parent_after_validation(
+        root: Path,
+        path: Path,
+        *,
+        name: str,
+    ) -> tuple[Path, Path]:
+        nonlocal swapped
+        location = original(root, path, name=name)
+        state.rename(retained_state)
+        os.symlink(outside, state)
+        swapped = True
+        return location
+
+    monkeypatch.setattr(
+        atlas_builder,
+        "_lexical_repository_artifact",
+        swap_parent_after_validation,
+    )
+    with pytest.raises(ValueError, match="cannot be opened safely"):
+        atlas_builder._bounded_repository_artifact_bytes(
+            repo_root,
+            Path(".betelgeuze/archive.bin"),
+            maximum=1024,
+            name="archive",
+        )
+    assert swapped is True

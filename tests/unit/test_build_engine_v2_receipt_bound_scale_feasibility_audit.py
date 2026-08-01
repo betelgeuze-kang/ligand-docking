@@ -64,6 +64,8 @@ def _rescue_payload(
     parent_index: int,
     evaluated: bool,
     available: bool,
+    baseline_receptor: float,
+    optimized_receptor: float,
 ) -> dict[str, object]:
     return {
         "schema_id": failure_atlas.SOURCE_PAIRED_RESCUE_RECEIPT_SCHEMA_ID,
@@ -73,8 +75,8 @@ def _rescue_payload(
         "torsion_selected": False,
         "minimum_selected_final_receptor_penalty_binary64_hex": (2.0).hex(),
         "maximum_selected_final_receptor_penalty_binary64_hex": (4.0).hex(),
-        "baseline_v6_receptor_penalty_binary64_hex": (6.0).hex(),
-        "optimized_receptor_penalty_binary64_hex": (5.0).hex(),
+        "baseline_v6_receptor_penalty_binary64_hex": baseline_receptor.hex(),
+        "optimized_receptor_penalty_binary64_hex": optimized_receptor.hex(),
         "baseline_v6_internal_penalty_binary64_hex": (2.0).hex(),
         "optimized_internal_penalty_binary64_hex": (1.0).hex(),
     }
@@ -82,6 +84,7 @@ def _rescue_payload(
 
 def _results() -> dict[str, dict[str, object]]:
     results: dict[str, dict[str, object]] = {}
+    available_ordinal = 0
     for case_id in failure_atlas.EXPECTED_CASE_IDS:
         if case_id not in audit_builder.EXPECTED_HEAVY_ATOM_PROFILES:
             results[case_id] = {
@@ -104,6 +107,20 @@ def _results() -> dict[str, dict[str, object]]:
                 break
             evaluated = not (case_id == "6VTA_AKN" and target_index == 23)
             available = evaluated and not (case_id == "5SD5_HWI" and target_index == 8)
+            if available:
+                normalized_optimized = (
+                    2.0
+                    if available_ordinal == 0
+                    else 3.0
+                    if available_ordinal < 7
+                    else 4.0
+                    if available_ordinal == 7
+                    else 5.0
+                )
+                available_ordinal += 1
+            else:
+                normalized_optimized = 5.0
+            optimized_receptor = normalized_optimized * heavy_atom_count
             candidates.append(
                 {
                     "proposal_index": target_index,
@@ -115,6 +132,8 @@ def _results() -> dict[str, dict[str, object]]:
                         parent_index=parent_index,
                         evaluated=evaluated,
                         available=available,
+                        baseline_receptor=optimized_receptor + heavy_atom_count,
+                        optimized_receptor=optimized_receptor,
                     ),
                 }
             )
@@ -128,6 +147,7 @@ def _results() -> dict[str, dict[str, object]]:
                 "candidates": candidates,
             },
         }
+    assert available_ordinal == 22
     return results
 
 
@@ -194,8 +214,8 @@ def test_receipt_bound_audit_emits_exact_descriptive_partition(
     }
     assert report["summary"]["diagnostic_heavy_atom_normalized_window_counts"] == {
         "interpretation": "current_numeric_bounds_reused_for_scale_comparison_only",
-        "inside_2_inclusive_4_exclusive": 0,
-        "outside_2_inclusive_4_exclusive": 22,
+        "inside_2_inclusive_4_exclusive": 7,
+        "outside_2_inclusive_4_exclusive": 15,
     }
     assert report["summary"]["exact_lexicographic_receptor_then_internal_counts"] == {
         "improved": 22,
@@ -207,7 +227,16 @@ def test_receipt_bound_audit_emits_exact_descriptive_partition(
         first_case["heavy_atom_normalized_receptor_penalty"]["optimized"][
             "minimum_binary64_hex"
         ]
-        == (5.0 / 29).hex()
+        == (2.0).hex()
+    )
+    first_upper_boundary_case = next(
+        case for case in report["cases"] if case["case_id"] == "6TW5_9M2"
+    )
+    assert (
+        first_upper_boundary_case["heavy_atom_normalized_receptor_penalty"][
+            "optimized"
+        ]["minimum_binary64_hex"]
+        == (4.0).hex()
     )
     assert report["decision"]["selected_rule"] is None
     assert report["decision"]["automatic_policy_change_allowed"] is False

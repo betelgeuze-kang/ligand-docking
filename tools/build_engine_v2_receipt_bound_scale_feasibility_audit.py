@@ -584,19 +584,11 @@ def _load_authenticated_inputs(
         expected_bundle_sha256=expected_bundle_sha256,
         expected_report_sha256=expected_report_sha256,
     )
-    archive_file, _ = failure_atlas._artifact_file(
-        repo_root, archive_path, name="archive"
-    )
-    members_file, _ = failure_atlas._artifact_file(
-        repo_root, members_path, name="member manifest"
-    )
-    bundle_file, _ = failure_atlas._artifact_file(
-        repo_root, bundle_path, name="bundle checksum"
-    )
     members, _ = failure_atlas._verified_archive_members(
-        archive_path=archive_file,
-        members_path=members_file,
-        bundle_path=bundle_file,
+        repo_root=repo_root,
+        archive_path=archive_path,
+        members_path=members_path,
+        bundle_path=bundle_path,
         expected_archive_sha256=expected_archive_sha256,
         expected_members_sha256=expected_members_sha256,
         expected_bundle_sha256=expected_bundle_sha256,
