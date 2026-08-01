@@ -9,6 +9,8 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
+import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract  # noqa: E402
+
 from betelgeuze_engine_v2 import (  # noqa: E402
     AllAtomSystem,
     Atom,
@@ -35,6 +37,8 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     InteractionAwareTorsionClearanceEnsembleRefinerV8,
     InteractionAwareTorsionContactConfigV7,
     InteractionAwareTorsionContactEnsembleRefinerV7,
+    SourcePairedTorsionRescueAllocation,
+    SourcePairedTorsionRescuePolicy,
     TorsionContactRefinementError,
     UnsupportedVdwElementError,
     PocketDefinition,
@@ -191,8 +195,7 @@ def test_element_aware_context_adds_conjunctive_vdw_checks() -> None:
     assert result.checks["element_vdw_ligand_overlap_free"] is True
     assert result.checks["element_vdw_receptor_overlap_free"] is True
     assert all(
-        isinstance(value, (int, float))
-        for value in result.measurements.values()
+        isinstance(value, (int, float)) for value in result.measurements.values()
     )
     assert len(authority.validity_context.contact_policy.fingerprint_sha256) == 64
     document = element_aware_authority_document(authority)
@@ -230,9 +233,7 @@ def test_element_aware_context_detects_severe_receptor_overlap() -> None:
     )
     result = authority.validity_context.evaluate(_baseline(authority))
     assert result.checks["element_vdw_receptor_overlap_free"] is False
-    assert result.measurements[
-        "element_vdw_receptor_severe_overlap_count"
-    ] >= 1
+    assert result.measurements["element_vdw_receptor_severe_overlap_count"] >= 1
     assert "element_vdw_receptor_severe_overlap_detected" in result.blockers
     assert result.valid is False
 
@@ -245,12 +246,8 @@ def test_sparse_receptor_candidates_are_less_than_full_cartesian_pairs() -> None
         receptor_margin_angstrom=0.0,
     )
     result = authority.validity_context.evaluate(_baseline(authority))
-    candidates = result.measurements[
-        "element_vdw_receptor_candidate_pair_count"
-    ]
-    cartesian = result.measurements[
-        "element_vdw_receptor_full_cartesian_pair_count"
-    ]
+    candidates = result.measurements["element_vdw_receptor_candidate_pair_count"]
+    cartesian = result.measurements["element_vdw_receptor_full_cartesian_pair_count"]
     assert 0 <= candidates < cartesian
     assert result.measurements["element_vdw_receptor_cell_count"] > 1
 
@@ -404,12 +401,14 @@ def test_interaction_aware_v3_records_rotation_and_enforces_pocket_guard() -> No
         dtype=torch.float64,
     )
     assert torch.linalg.vector_norm(rotation) > 0.0
-    assert float.fromhex(
-        receipt["total_rotation_path_radians_binary64_hex"]
-    ) <= config.maximum_total_rotation_radians
-    assert float.fromhex(
-        receipt["final_centroid_offset_angstrom_binary64_hex"]
-    ) <= config.maximum_centroid_offset_angstrom
+    assert (
+        float.fromhex(receipt["total_rotation_path_radians_binary64_hex"])
+        <= config.maximum_total_rotation_radians
+    )
+    assert (
+        float.fromhex(receipt["final_centroid_offset_angstrom_binary64_hex"])
+        <= config.maximum_centroid_offset_angstrom
+    )
     assert refined.refiner_id == refiner.refiner_id
     assert refined.parent_proposal_fingerprint_sha256 == proposal.fingerprint_sha256
 
@@ -475,16 +474,25 @@ def test_interaction_aware_v4_routes_only_receipt_bound_variants_to_v3() -> None
     assert v3_receipt["lane"] == "translation_rotation_v3"
     assert v2_receipt["nested_refiner_id"] == expected_v2_refiner.refiner_id
     assert v3_receipt["nested_refiner_id"] == expected_v3_refiner.refiner_id
-    assert v2_receipt["nested_receipt_sha256"] == expected_v2_refiner.receipts[
-        proposals[0].fingerprint_sha256
-    ]["receipt_sha256"]
-    assert v3_receipt["nested_receipt_sha256"] == expected_v3_refiner.receipts[
-        proposals[1].fingerprint_sha256
-    ]["receipt_sha256"]
+    assert (
+        v2_receipt["nested_receipt_sha256"]
+        == expected_v2_refiner.receipts[proposals[0].fingerprint_sha256][
+            "receipt_sha256"
+        ]
+    )
+    assert (
+        v3_receipt["nested_receipt_sha256"]
+        == expected_v3_refiner.receipts[proposals[1].fingerprint_sha256][
+            "receipt_sha256"
+        ]
+    )
     assert v2_receipt["accepted_rotation_steps"] == 0
-    assert v3_receipt["accepted_rotation_steps"] == expected_v3_refiner.receipts[
-        proposals[1].fingerprint_sha256
-    ]["accepted_rotation_steps"]
+    assert (
+        v3_receipt["accepted_rotation_steps"]
+        == expected_v3_refiner.receipts[proposals[1].fingerprint_sha256][
+            "accepted_rotation_steps"
+        ]
+    )
     assert v2_receipt["source_lane_retained"] is True
     assert v3_receipt["source_lane_retained"] is True
 
@@ -517,9 +525,7 @@ def test_interaction_aware_v5_binds_expanded_clearance_to_variant_lane() -> None
     config = InteractionAwareRigidClearanceConfigV4()
     assert config.overlap_scale == 0.80
     assert config.maximum_total_translation_angstrom == 4.0
-    assert config.maximum_total_rotation_radians == pytest.approx(
-        torch.pi / 6.0
-    )
+    assert config.maximum_total_rotation_radians == pytest.approx(torch.pi / 6.0)
     assert config.maximum_rotation_steps == 6
     assert config.to_dict()["policy_role"] == (
         "retained_source_variant_clearance_rescue"
@@ -587,9 +593,7 @@ def test_interaction_aware_v6_records_receipt_bound_hybrid_selection() -> None:
     assert source_receipt["schema_id"].endswith("/6.0.0")
     assert variant_receipt["schema_id"].endswith("/6.0.0")
     assert variant_receipt["selection_reason"] == "v2_duplicate_clearance_rescue"
-    assert variant_receipt["lane"] == (
-        "translation_rotation_v5_clearance_rescue"
-    )
+    assert variant_receipt["lane"] == ("translation_rotation_v5_clearance_rescue")
     assert variant_receipt["baseline_duplicate_of_v2_refinement"] is True
     assert variant_receipt["clearance_evaluated"] is True
     assert variant_receipt["clearance_selected"] is True
@@ -598,9 +602,7 @@ def test_interaction_aware_v6_records_receipt_bound_hybrid_selection() -> None:
     assert len(variant_receipt["comparison_v2_receipt_sha256"]) == 64
     assert len(variant_receipt["baseline_v3_receipt_sha256"]) == 64
     assert len(variant_receipt["clearance_receipt_sha256"]) == 64
-    assert float.fromhex(
-        variant_receipt["near_clear_penalty_binary64_hex"]
-    ) == 2.0**-12
+    assert float.fromhex(variant_receipt["near_clear_penalty_binary64_hex"]) == 2.0**-12
     assert variant_receipt["source_lane_retained"] is True
 
 
@@ -691,6 +693,24 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     source_receipt = refiner.receipts[proposals[0].fingerprint_sha256]
     variant_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
 
+    assert refiner.config_fingerprint_sha256 == (
+        "96e542103a1967d18aef2290c8bf7ae4e69f193ed123069bbf0e660530860330"
+    )
+    assert source_receipt["schema_id"] == (
+        "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
+    )
+    assert source_receipt["receipt_sha256"] == (
+        "9b617518253c3c5949cabcc4897362a79c64bed9939451419da1a9fa2d9a8581"
+    )
+    assert variant_receipt["schema_id"] == source_receipt["schema_id"]
+    for active_v7_receipt in (source_receipt, variant_receipt):
+        assert "source_paired_torsion_rescue_profile" not in active_v7_receipt
+        assert (
+            "source_paired_torsion_rescue_allocation_sha256"
+            not in active_v7_receipt
+        )
+        assert "proposal_torsion_eligibility_lane" not in active_v7_receipt
+
     assert torch.equal(observed_source.coordinates, expected_source.coordinates)
     assert source_receipt["torsion_evaluated"] is False
     assert source_receipt["torsion_variant_available"] is False
@@ -699,20 +719,25 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert source_receipt["selection_reason"] == (
         "v6_baseline_retained_no_torsion_objective_reduction"
     )
-    assert source_receipt["baseline_v6_receipt_sha256"] == (
-        expected_v6.receipts[proposals[0].fingerprint_sha256]["receipt_sha256"]
-    )
-    assert source_receipt["baseline_v6_receipt_payload"]["receipt_sha256"] == (
+    assert (
         source_receipt["baseline_v6_receipt_sha256"]
+        == (expected_v6.receipts[proposals[0].fingerprint_sha256]["receipt_sha256"])
     )
-    assert source_receipt["initial_penalty_binary64_hex"] == (
-        source_receipt["initial_combined_penalty_binary64_hex"]
+    assert (
+        source_receipt["baseline_v6_receipt_payload"]["receipt_sha256"]
+        == (source_receipt["baseline_v6_receipt_sha256"])
     )
-    assert source_receipt["final_penalty_binary64_hex"] == (
-        source_receipt["final_combined_penalty_binary64_hex"]
+    assert (
+        source_receipt["initial_penalty_binary64_hex"]
+        == (source_receipt["initial_combined_penalty_binary64_hex"])
     )
-    assert source_receipt["accepted_rotation_steps"] == (
-        source_receipt["accepted_rigid_rotation_steps"]
+    assert (
+        source_receipt["final_penalty_binary64_hex"]
+        == (source_receipt["final_combined_penalty_binary64_hex"])
+    )
+    assert (
+        source_receipt["accepted_rotation_steps"]
+        == (source_receipt["accepted_rigid_rotation_steps"])
     )
     assert source_receipt["generic_penalty_scope"] == (
         "source_proposal_to_final_coordinates_v7_objective"
@@ -738,19 +763,17 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     } == {2}
     assert float.fromhex(
         variant_receipt["final_receptor_penalty_binary64_hex"]
-    ) <= float.fromhex(
-        variant_receipt["baseline_v6_receptor_penalty_binary64_hex"]
-    )
+    ) <= float.fromhex(variant_receipt["baseline_v6_receptor_penalty_binary64_hex"])
     assert float.fromhex(
         variant_receipt["final_combined_penalty_binary64_hex"]
-    ) < float.fromhex(
-        variant_receipt["baseline_v6_combined_penalty_binary64_hex"]
+    ) < float.fromhex(variant_receipt["baseline_v6_combined_penalty_binary64_hex"])
+    assert (
+        variant_receipt["initial_penalty_binary64_hex"]
+        == (variant_receipt["initial_combined_penalty_binary64_hex"])
     )
-    assert variant_receipt["initial_penalty_binary64_hex"] == (
-        variant_receipt["initial_combined_penalty_binary64_hex"]
-    )
-    assert variant_receipt["final_penalty_binary64_hex"] == (
-        variant_receipt["final_combined_penalty_binary64_hex"]
+    assert (
+        variant_receipt["final_penalty_binary64_hex"]
+        == (variant_receipt["final_combined_penalty_binary64_hex"])
     )
     source_combined = refiner._objective(
         proposals[1].coordinates.to(dtype=torch.float64, device="cpu")
@@ -758,12 +781,14 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     baseline_combined = refiner._objective(
         expected_variant.coordinates.to(dtype=torch.float64, device="cpu")
     )[2]
-    assert float.fromhex(
-        variant_receipt["initial_penalty_binary64_hex"]
-    ) == source_combined
-    assert float.fromhex(
-        variant_receipt["baseline_v6_combined_penalty_binary64_hex"]
-    ) == baseline_combined
+    assert (
+        float.fromhex(variant_receipt["initial_penalty_binary64_hex"])
+        == source_combined
+    )
+    assert (
+        float.fromhex(variant_receipt["baseline_v6_combined_penalty_binary64_hex"])
+        == baseline_combined
+    )
     assert variant_receipt["accepted_rotation_steps_include_torsion"] is True
     assert not torch.equal(
         observed_variant.coordinates,
@@ -776,27 +801,33 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert observed_variant.torsion_angles[2] != expected_variant.torsion_angles[2]
     outer_payload = dict(variant_receipt)
     outer_sha256 = outer_payload.pop("receipt_sha256")
-    assert hashlib.sha256(
-        json.dumps(
-            outer_payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("ascii")
-    ).hexdigest() == outer_sha256
+    assert (
+        hashlib.sha256(
+            json.dumps(
+                outer_payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest()
+        == outer_sha256
+    )
     nested_payload = dict(variant_receipt["baseline_v6_receipt_payload"])
     nested_sha256 = nested_payload.pop("receipt_sha256")
     assert nested_sha256 == variant_receipt["baseline_v6_receipt_sha256"]
-    assert hashlib.sha256(
-        json.dumps(
-            nested_payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("ascii")
-    ).hexdigest() == nested_sha256
+    assert (
+        hashlib.sha256(
+            json.dumps(
+                nested_payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest()
+        == nested_sha256
+    )
     for bond in ligand.bonds:
         before = torch.linalg.vector_norm(
             expected_variant.coordinates[bond.atom_i]
@@ -824,9 +855,7 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
         ),
     )
     rejected_variant = rejecting_refiner.refine(proposals[1], max_steps=20)
-    rejected_receipt = rejecting_refiner.receipts[
-        proposals[1].fingerprint_sha256
-    ]
+    rejected_receipt = rejecting_refiner.receipts[proposals[1].fingerprint_sha256]
 
     assert rejected_receipt["torsion_evaluated"] is True
     assert rejected_receipt["torsion_variant_available"] is True
@@ -840,20 +869,22 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert rejected_receipt["accepted_torsion_moves"] == []
     assert float.fromhex(
         rejected_receipt["optimized_combined_penalty_binary64_hex"]
-    ) < float.fromhex(
-        rejected_receipt["baseline_v6_combined_penalty_binary64_hex"]
-    )
-    assert rejected_receipt["final_combined_penalty_binary64_hex"] == (
-        rejected_receipt["baseline_v6_combined_penalty_binary64_hex"]
-    )
-    assert rejected_receipt["initial_penalty_binary64_hex"] == (
-        rejected_receipt["initial_combined_penalty_binary64_hex"]
-    )
-    assert rejected_receipt["final_penalty_binary64_hex"] == (
+    ) < float.fromhex(rejected_receipt["baseline_v6_combined_penalty_binary64_hex"])
+    assert (
         rejected_receipt["final_combined_penalty_binary64_hex"]
+        == (rejected_receipt["baseline_v6_combined_penalty_binary64_hex"])
     )
-    assert rejected_receipt["accepted_rotation_steps"] == (
-        rejected_receipt["accepted_rigid_rotation_steps"]
+    assert (
+        rejected_receipt["initial_penalty_binary64_hex"]
+        == (rejected_receipt["initial_combined_penalty_binary64_hex"])
+    )
+    assert (
+        rejected_receipt["final_penalty_binary64_hex"]
+        == (rejected_receipt["final_combined_penalty_binary64_hex"])
+    )
+    assert (
+        rejected_receipt["accepted_rotation_steps"]
+        == (rejected_receipt["accepted_rigid_rotation_steps"])
     )
     assert torch.equal(rejected_variant.coordinates, expected_variant.coordinates)
     assert torch.equal(
@@ -882,9 +913,10 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert pruned_receipt["torsion_evaluated"] is False
     assert pruned_receipt["torsion_variant_available"] is False
     assert pruned_receipt["torsion_selected"] is False
-    assert pruned_receipt[
-        "selection_window_reachable_from_baseline_v6_receptor_penalty"
-    ] is False
+    assert (
+        pruned_receipt["selection_window_reachable_from_baseline_v6_receptor_penalty"]
+        is False
+    )
     assert pruned_receipt["torsion_evaluation_skip_reason"] == (
         "selection_window_unreachable_under_receptor_nonincrease"
     )
@@ -897,6 +929,98 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
         pruned_variant.torsion_angles,
         expected_variant.torsion_angles,
     )
+
+    rescue_policy = SourcePairedTorsionRescuePolicy()
+    rescue_allocation = SourcePairedTorsionRescueAllocation(
+        authenticated_input_receipt_sha256=authority.input_receipt_sha256,
+        guidance_context_sha256="8" * 64,
+        budget_sha256="9" * 64,
+        rescue_policy_sha256=rescue_policy.fingerprint_sha256,
+        base_guided_policy_sha256=(rescue_policy.base_guided_policy.fingerprint_sha256),
+        candidate_count=64,
+        authority_rotor_count=int(
+            torch.count_nonzero(authority.search_space.rotatable_mask).item()
+        ),
+        v3_target_parent_pairs=(),
+        rescue_target_parent_pairs=((1, 0),),
+    )
+    rescue_refiner = InteractionAwareTorsionContactEnsembleRefinerV7(
+        authority,
+        receptor,
+        ligand,
+        implementation_source_sha256="7" * 64,
+        v3_proposal_indices=(),
+        source_paired_torsion_rescue_profile=True,
+        source_paired_torsion_rescue_allocation=rescue_allocation,
+        v2_config=v2_config,
+        v3_config=v3_config,
+        clearance_config=clearance_config,
+        torsion_config=InteractionAwareTorsionContactConfigV7(
+            maximum_torsion_steps=3,
+            minimum_selected_final_receptor_penalty=0.0,
+            maximum_selected_final_receptor_penalty=100.0,
+        ),
+    )
+    rescue_refiner.refine(proposals[0], max_steps=20)
+    rescue_refiner.refine(proposals[1], max_steps=20)
+    parent_receipt = rescue_refiner.receipts[proposals[0].fingerprint_sha256]
+    rescue_receipt = rescue_refiner.receipts[proposals[1].fingerprint_sha256]
+
+    assert parent_receipt["torsion_evaluated"] is False
+    assert parent_receipt["proposal_torsion_eligibility_lane"] == (
+        "ineligible_source_or_other_lane"
+    )
+    assert rescue_receipt["torsion_evaluated"] is True
+    assert rescue_receipt["proposal_torsion_eligibility_lane"] == (
+        "source_paired_torsion_rescue_variant"
+    )
+    assert rescue_receipt["source_paired_parent_proposal_index"] == 0
+    assert rescue_receipt["nested_v6_treated_proposal_as_v3_variant"] is False
+    assert rescue_receipt["rescue_target_excluded_from_nested_v3_indices"] is True
+    assert rescue_receipt["source_paired_torsion_rescue_pairs"] == [
+        {"target_proposal_index": 1, "parent_proposal_index": 0}
+    ]
+    assert set(rescue_receipt) == (
+        benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
+    )
+    assert (
+        rescue_receipt["source_paired_torsion_rescue_allocation_sha256"]
+        == rescue_allocation.allocation_sha256
+    )
+    rescue_payload = dict(rescue_receipt)
+    rescue_sha256 = rescue_payload.pop("receipt_sha256")
+    assert (
+        hashlib.sha256(
+            json.dumps(
+                rescue_payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest()
+        == rescue_sha256
+    )
+
+    with pytest.raises(TorsionContactRefinementError, match="cross-wired"):
+        InteractionAwareTorsionContactEnsembleRefinerV7(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="7" * 64,
+            v3_proposal_indices=(1,),
+            source_paired_torsion_rescue_profile=True,
+            source_paired_torsion_rescue_allocation=rescue_allocation,
+        )
+    with pytest.raises(TorsionContactRefinementError, match="typed allocation"):
+        InteractionAwareTorsionContactEnsembleRefinerV7(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="7" * 64,
+            v3_proposal_indices=(),
+            source_paired_torsion_rescue_profile=True,
+        )
 
 
 def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
@@ -992,29 +1116,19 @@ def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
     assert receipt["combined_strict_decrease_guard_passed"] is True
     assert receipt["receptor_nonincrease_guard_passed"] is True
     assert receipt["internal_nonincrease_guard_passed"] is True
-    assert receipt[
-        "minimum_vdw_surface_gap_improvement_guard_passed"
-    ] is True
+    assert receipt["minimum_vdw_surface_gap_improvement_guard_passed"] is True
     assert receipt["raw_minimum_distance_nonregression_guard_passed"] is True
     assert receipt["v8_clearance_guard_passed"] is True
     assert receipt["v8_clearance_selected"] is True
-    assert receipt["selection_reason"] == (
-        "outside_v7_window_clearance_guard_selected"
-    )
+    assert receipt["selection_reason"] == ("outside_v7_window_clearance_guard_selected")
     legacy_gap = float.fromhex(
-        receipt["legacy_v7_clearance"][
-            "minimum_vdw_surface_gap_angstrom_binary64_hex"
-        ]
+        receipt["legacy_v7_clearance"]["minimum_vdw_surface_gap_angstrom_binary64_hex"]
     )
     optimized_gap = float.fromhex(
-        receipt["optimized_clearance"][
-            "minimum_vdw_surface_gap_angstrom_binary64_hex"
-        ]
+        receipt["optimized_clearance"]["minimum_vdw_surface_gap_angstrom_binary64_hex"]
     )
     legacy_distance = float.fromhex(
-        receipt["legacy_v7_clearance"][
-            "minimum_distance_angstrom_binary64_hex"
-        ]
+        receipt["legacy_v7_clearance"]["minimum_distance_angstrom_binary64_hex"]
     )
     final_distance = float.fromhex(
         receipt["final_clearance"]["minimum_distance_angstrom_binary64_hex"]
@@ -1033,27 +1147,33 @@ def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
         assert after == pytest.approx(before, abs=1.0e-12)
     outer = dict(receipt)
     outer_sha256 = outer.pop("receipt_sha256")
-    assert hashlib.sha256(
-        json.dumps(
-            outer,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("ascii")
-    ).hexdigest() == outer_sha256
+    assert (
+        hashlib.sha256(
+            json.dumps(
+                outer,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest()
+        == outer_sha256
+    )
     nested = dict(receipt["legacy_v7_receipt_payload"])
     nested_sha256 = nested.pop("receipt_sha256")
     assert nested_sha256 == receipt["legacy_v7_receipt_sha256"]
-    assert hashlib.sha256(
-        json.dumps(
-            nested,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=True,
-            allow_nan=False,
-        ).encode("ascii")
-    ).hexdigest() == nested_sha256
+    assert (
+        hashlib.sha256(
+            json.dumps(
+                nested,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest()
+        == nested_sha256
+    )
 
     duplicate = InteractionAwareTorsionClearanceEnsembleRefinerV8(
         authority,
@@ -1073,9 +1193,7 @@ def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
     exposed_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
     exposed_receipt["legacy_v7_receipt_payload"]["schema_id"] = "tampered"
     protected_receipt = refiner.receipts[proposals[1].fingerprint_sha256]
-    assert protected_receipt["legacy_v7_receipt_payload"]["schema_id"] != (
-        "tampered"
-    )
+    assert protected_receipt["legacy_v7_receipt_payload"]["schema_id"] != ("tampered")
     assert protected_receipt["receipt_sha256"] == receipt["receipt_sha256"]
 
     source = proposals[1]
@@ -1107,9 +1225,7 @@ def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
             rotation=rotation,
             translation=translation,
             problem_fingerprint_sha256=source.problem_fingerprint_sha256,
-            search_space_fingerprint_sha256=(
-                source.search_space_fingerprint_sha256
-            ),
+            search_space_fingerprint_sha256=(source.search_space_fingerprint_sha256),
             coordinate_fingerprint_sha256=coordinate_sha256,
         ),
     )
@@ -1126,14 +1242,13 @@ def test_interaction_aware_v8_selects_only_strict_clearance_improvement(
         torsion_config=outside_window,
     )
     float32_observed = float32_refiner.refine(float32_proposal, max_steps=20)
-    float32_receipt = float32_refiner.receipts[
-        float32_proposal.fingerprint_sha256
-    ]
+    float32_receipt = float32_refiner.receipts[float32_proposal.fingerprint_sha256]
     assert float32_observed.coordinates.dtype == torch.float32
     assert float32_receipt["v8_clearance_selected"] is True
-    assert float32_receipt[
-        "optimized_objective_recomputed_from_output_coordinates"
-    ] is True
+    assert (
+        float32_receipt["optimized_objective_recomputed_from_output_coordinates"]
+        is True
+    )
 
     retry_refiner = InteractionAwareTorsionClearanceEnsembleRefinerV8(
         authority,
@@ -1215,9 +1330,7 @@ def test_interaction_aware_v8_rejects_invalid_clearance_tolerance(
     tolerance: float,
 ) -> None:
     with pytest.raises(TorsionContactRefinementError, match="tolerance"):
-        InteractionAwareTorsionClearanceConfigV8(
-            clearance_tolerance_angstrom=tolerance
-        )
+        InteractionAwareTorsionClearanceConfigV8(clearance_tolerance_angstrom=tolerance)
 
 
 @pytest.mark.parametrize(

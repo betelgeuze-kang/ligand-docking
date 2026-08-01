@@ -58,11 +58,26 @@ GUIDED_PLACEMENT_POLICY_SCHEMA_ID = "betelgeuze.engine_v2_guided_placement_polic
 GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_receipt/1.3.0"
 )
+SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_policy/1.0.0"
+)
+SOURCE_PAIRED_TORSION_RESCUE_ALLOCATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_allocation/1.0.0"
+)
+SOURCE_PAIRED_TORSION_RESCUE_GUIDED_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_guided_placement_receipt/1.4.0"
+)
+SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_proposal_receipt/1.0.0"
+)
 GUIDED_PLACEMENT_SEARCH_RESULT_SCHEMA_ID = (
     "betelgeuze.engine_v2_guided_placement_search_result/1.0.0"
 )
 GUIDED_PLACEMENT_POLICY_ID = (
     "betelgeuze.engine_v2_interaction_guided_with_uniform_fallback/1.4.0"
+)
+SOURCE_PAIRED_TORSION_RESCUE_POLICY_ID = (
+    "betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue/1.0.0"
 )
 GUIDED_FEATURE_POLICY_ID = "betelgeuze.engine_v2_bounded_graph_guidance_features/1.0.0"
 GUIDED_MODES = (
@@ -76,6 +91,9 @@ MULTI_ANCHOR_MODE = "multi_anchor_hotspot"
 POCKET_CENTER_BASELINE_MODE = "pocket_center_baseline"
 UNIFORM_FALLBACK_MODE = "uniform_fallback"
 UNIFORM_V3_ENSEMBLE_MODE = "uniform_v3_rigid_ensemble"
+UNIFORM_TORSION_RESCUE_VARIANT_MODE = "uniform_torsion_rescue_variant"
+MAX_UNIFORM_TORSION_RESCUE_VARIANTS = 4
+SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT = 64
 FIXED_SOURCE_BOUND_CONFORMER_PROFILE_SCHEMA_ID = (
     "betelgeuze.engine_v2_fixed_source_bound_conformer_profile/1.0.0"
 )
@@ -883,6 +901,231 @@ class GuidedPlacementPolicy:
         return {**self._projection(), "fingerprint_sha256": self.fingerprint_sha256}
 
 
+@dataclass(frozen=True, slots=True)
+class SourcePairedTorsionRescuePolicy:
+    """Frozen development wrapper over the ordinary source-paired V3 batch."""
+
+    maximum_variant_count: int = MAX_UNIFORM_TORSION_RESCUE_VARIANTS
+    candidate_count: int = SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT
+    policy_id: str = SOURCE_PAIRED_TORSION_RESCUE_POLICY_ID
+    _fingerprint_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.policy_id != SOURCE_PAIRED_TORSION_RESCUE_POLICY_ID:
+            raise DockingAuthorityError(
+                "unsupported source-paired torsion-rescue policy"
+            )
+        if self.maximum_variant_count != MAX_UNIFORM_TORSION_RESCUE_VARIANTS:
+            raise DockingAuthorityError(
+                "source-paired torsion rescue requires the fixed cap of four"
+            )
+        if self.candidate_count != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT:
+            raise DockingAuthorityError(
+                "source-paired torsion rescue requires exactly 64 candidates"
+            )
+        object.__setattr__(self, "_fingerprint_sha256", _sha256(self._projection()))
+
+    @property
+    def base_guided_policy(self) -> GuidedPlacementPolicy:
+        return GuidedPlacementPolicy(uniform_v3_ensemble_enabled=True)
+
+    def _projection(self) -> dict[str, object]:
+        base_policy = self.base_guided_policy
+        return {
+            "schema_id": SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID,
+            "policy_id": self.policy_id,
+            "base_guided_policy_sha256": base_policy.fingerprint_sha256,
+            "candidate_count": self.candidate_count,
+            "maximum_variant_count": self.maximum_variant_count,
+            "source_pair_authority": "base_uniform_v3_ensemble_receipt",
+            "variant_target_selection": (
+                "rounded_even_spacing_across_ordered_v3_target_indices"
+            ),
+            "authority_rotor_required": True,
+            "proposal_objects_and_coordinates_unchanged": True,
+            "selected_parent_proposal_objects_retained": True,
+            "ordinary_v3_and_rescue_target_parent_unions_disjoint": True,
+            "candidate_denominator_changed": False,
+            "rmsd_posebusters_native_rank_or_score_used_for_allocation": False,
+            "development_only": True,
+            "stage0_eligible": False,
+            "fresh_execution_authorized": False,
+            "product_promotion_eligible": False,
+            "public_claim_eligible": False,
+            "scientifically_validated": False,
+            "claim_safe": False,
+        }
+
+    @property
+    def fingerprint_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._fingerprint_sha256:
+            raise DockingAuthorityError("source-paired torsion-rescue policy changed")
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "fingerprint_sha256": self.fingerprint_sha256}
+
+
+@dataclass(frozen=True, slots=True)
+class SourcePairedTorsionRescueAllocation:
+    """Authenticated ordered V3 and rescue child-to-parent allocation."""
+
+    authenticated_input_receipt_sha256: str
+    guidance_context_sha256: str
+    budget_sha256: str
+    rescue_policy_sha256: str
+    base_guided_policy_sha256: str
+    candidate_count: int
+    authority_rotor_count: int
+    v3_target_parent_pairs: tuple[tuple[int, int], ...]
+    rescue_target_parent_pairs: tuple[tuple[int, int], ...]
+    _allocation_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        for name in (
+            "authenticated_input_receipt_sha256",
+            "guidance_context_sha256",
+            "budget_sha256",
+            "rescue_policy_sha256",
+            "base_guided_policy_sha256",
+        ):
+            object.__setattr__(self, name, _digest(getattr(self, name), name=name))
+        if self.candidate_count != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT:
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue allocation requires 64 candidates"
+            )
+        if (
+            type(self.authority_rotor_count) is not int
+            or self.authority_rotor_count < 0
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue rotor count is invalid"
+            )
+
+        def normalize_pairs(
+            values: Sequence[Sequence[int]], *, name: str
+        ) -> tuple[tuple[int, int], ...]:
+            rows: list[tuple[int, int]] = []
+            for value in values:
+                if (
+                    not isinstance(value, (tuple, list))
+                    or len(value) != 2
+                    or any(type(index) is not int for index in value)
+                ):
+                    raise DockingAuthorityError(f"{name} rows are invalid")
+                target, parent = int(value[0]), int(value[1])
+                if (
+                    not 0 <= target < self.candidate_count
+                    or not 0 <= parent < self.candidate_count
+                    or target == parent
+                ):
+                    raise DockingAuthorityError(f"{name} indices are invalid")
+                rows.append((target, parent))
+            normalized = tuple(rows)
+            if tuple(sorted(normalized)) != normalized:
+                raise DockingAuthorityError(f"{name} rows must be target-sorted")
+            return normalized
+
+        v3_pairs = normalize_pairs(
+            self.v3_target_parent_pairs,
+            name="ordinary V3 target-parent",
+        )
+        rescue_pairs = normalize_pairs(
+            self.rescue_target_parent_pairs,
+            name="torsion-rescue target-parent",
+        )
+        if len(rescue_pairs) > MAX_UNIFORM_TORSION_RESCUE_VARIANTS:
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue allocation exceeds its hard cap"
+            )
+        if rescue_pairs and self.authority_rotor_count == 0:
+            raise DockingAuthorityError(
+                "torsion-rescue variants require an authority-proven rotor"
+            )
+        ordered_all_pairs = tuple(sorted((*v3_pairs, *rescue_pairs)))
+        expected_rescue_count = (
+            min(MAX_UNIFORM_TORSION_RESCUE_VARIANTS, len(ordered_all_pairs))
+            if self.authority_rotor_count
+            else 0
+        )
+        expected_rescue_targets = frozenset(
+            _evenly_spaced_uniform_sources(
+                tuple(target for target, _ in ordered_all_pairs),
+                expected_rescue_count,
+            )
+        )
+        expected_rescue_pairs = tuple(
+            pair for pair in ordered_all_pairs if pair[0] in expected_rescue_targets
+        )
+        expected_v3_pairs = tuple(
+            pair for pair in ordered_all_pairs if pair[0] not in expected_rescue_targets
+        )
+        if rescue_pairs != expected_rescue_pairs or v3_pairs != expected_v3_pairs:
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue allocation is not the fixed even split"
+            )
+        all_pairs = (*v3_pairs, *rescue_pairs)
+        targets = tuple(row[0] for row in all_pairs)
+        parents = tuple(row[1] for row in all_pairs)
+        v3_union = {index for row in v3_pairs for index in row}
+        rescue_union = {index for row in rescue_pairs for index in row}
+        if (
+            len(targets) != len(set(targets))
+            or len(parents) != len(set(parents))
+            or set(targets) & set(parents)
+            or v3_union & rescue_union
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue lanes overlap or reuse parents"
+            )
+        object.__setattr__(self, "v3_target_parent_pairs", v3_pairs)
+        object.__setattr__(self, "rescue_target_parent_pairs", rescue_pairs)
+        object.__setattr__(self, "_allocation_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        return {
+            "schema_id": SOURCE_PAIRED_TORSION_RESCUE_ALLOCATION_SCHEMA_ID,
+            "authenticated_input_receipt_sha256": (
+                self.authenticated_input_receipt_sha256
+            ),
+            "guidance_context_sha256": self.guidance_context_sha256,
+            "budget_sha256": self.budget_sha256,
+            "rescue_policy_sha256": self.rescue_policy_sha256,
+            "base_guided_policy_sha256": self.base_guided_policy_sha256,
+            "candidate_count": self.candidate_count,
+            "authority_rotor_count": self.authority_rotor_count,
+            "v3_target_parent_pairs": [
+                {"target_proposal_index": target, "parent_proposal_index": parent}
+                for target, parent in self.v3_target_parent_pairs
+            ],
+            "rescue_target_parent_pairs": [
+                {"target_proposal_index": target, "parent_proposal_index": parent}
+                for target, parent in self.rescue_target_parent_pairs
+            ],
+            "rescue_variant_count": len(self.rescue_target_parent_pairs),
+            "rescue_variant_cap": MAX_UNIFORM_TORSION_RESCUE_VARIANTS,
+            "selected_parent_proposal_objects_retained": True,
+            "candidate_denominator_changed": False,
+            "result_dependent_allocation": False,
+            "development_only": True,
+            "stage0_eligible": False,
+            "fresh_execution_authorized": False,
+            "claim_safe": False,
+        }
+
+    @property
+    def allocation_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._allocation_sha256:
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue allocation changed"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "allocation_sha256": self.allocation_sha256}
+
 def build_guided_placement_context(
     authenticated_problem: AuthenticatedDockingProblem,
     receptor_system: AllAtomSystem,
@@ -1102,6 +1345,70 @@ def _evenly_spaced_uniform_sources(
         )
     return selected
 
+
+def source_paired_torsion_rescue_allocation(
+    authenticated_problem: AuthenticatedDockingProblem,
+    context: GuidedPlacementContext,
+    budget: DockingBudget,
+    policy: SourcePairedTorsionRescuePolicy,
+) -> SourcePairedTorsionRescueAllocation:
+    """Split the ordinary V3 pairs into disjoint V3 and rescue lanes."""
+
+    if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
+        raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
+    if not isinstance(context, GuidedPlacementContext):
+        raise TypeError("context must be GuidedPlacementContext")
+    if not isinstance(budget, DockingBudget):
+        raise TypeError("budget must be DockingBudget")
+    if not isinstance(policy, SourcePairedTorsionRescuePolicy):
+        raise TypeError("policy must be SourcePairedTorsionRescuePolicy")
+    authenticated_problem.input_receipt_sha256
+    context.fingerprint_sha256
+    policy.fingerprint_sha256
+    if (
+        context.authority_input_receipt_sha256
+        != authenticated_problem.input_receipt_sha256
+    ):
+        raise DockingAuthorityError("torsion-rescue allocation context is cross-wired")
+    if budget.candidate_count != policy.candidate_count:
+        raise DockingAuthorityError(
+            "torsion-rescue allocation candidate denominator is invalid"
+        )
+    base_policy = policy.base_guided_policy
+    centered_count, guided_count, _ = _guided_allocation(
+        context,
+        budget,
+        base_policy,
+    )
+    target_indices = tuple(range(centered_count, centered_count + guided_count))
+    source_indices = tuple(range(centered_count + guided_count, budget.candidate_count))
+    selected_sources = _evenly_spaced_uniform_sources(
+        source_indices,
+        guided_count,
+    )
+    all_pairs = tuple(zip(target_indices, selected_sources, strict=True))
+    rotor_count = int(
+        torch.count_nonzero(authenticated_problem.search_space.rotatable_mask).item()
+    )
+    rescue_count = (
+        min(policy.maximum_variant_count, len(target_indices)) if rotor_count else 0
+    )
+    rescue_targets = frozenset(
+        _evenly_spaced_uniform_sources(target_indices, rescue_count)
+    )
+    rescue_pairs = tuple(pair for pair in all_pairs if pair[0] in rescue_targets)
+    v3_pairs = tuple(pair for pair in all_pairs if pair[0] not in rescue_targets)
+    return SourcePairedTorsionRescueAllocation(
+        authenticated_input_receipt_sha256=(authenticated_problem.input_receipt_sha256),
+        guidance_context_sha256=context.fingerprint_sha256,
+        budget_sha256=_budget_sha256(budget),
+        rescue_policy_sha256=policy.fingerprint_sha256,
+        base_guided_policy_sha256=base_policy.fingerprint_sha256,
+        candidate_count=budget.candidate_count,
+        authority_rotor_count=rotor_count,
+        v3_target_parent_pairs=v3_pairs,
+        rescue_target_parent_pairs=rescue_pairs,
+    )
 
 def _rotor_dihedral_angle(
     coordinates: torch.Tensor,
@@ -1904,6 +2211,10 @@ class GuidedPlacementReceipt:
     observed_anchor_distance_angstroms: tuple[float | None, ...]
     feature_counts: Mapping[str, int]
     ensemble_source_proposal_indices: tuple[int | None, ...] = ()
+    torsion_rescue_parent_proposal_indices: tuple[int | None, ...] = ()
+    source_paired_torsion_rescue_profile: bool = False
+    baseline_guided_receipt_sha256: str = ""
+    torsion_rescue_allocation_sha256: str = ""
     _receipt_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -1924,6 +2235,7 @@ class GuidedPlacementReceipt:
             POCKET_CENTER_BASELINE_MODE,
             UNIFORM_FALLBACK_MODE,
             UNIFORM_V3_ENSEMBLE_MODE,
+            UNIFORM_TORSION_RESCUE_VARIANT_MODE,
         }
         if (
             not fingerprints
@@ -1953,12 +2265,24 @@ class GuidedPlacementReceipt:
             if not self.ensemble_source_proposal_indices
             else tuple(self.ensemble_source_proposal_indices)
         )
+        rescue_parents = (
+            tuple(None for _ in range(row_count))
+            if not self.torsion_rescue_parent_proposal_indices
+            else tuple(self.torsion_rescue_parent_proposal_indices)
+        )
         if any(
             value is not None and type(value) is not int
             for value in ensemble_sources
         ):
             raise DockingAuthorityError(
                 "uniform V3 ensemble source indices must be exact integers"
+            )
+        if any(
+            value is not None and type(value) is not int
+            for value in rescue_parents
+        ):
+            raise DockingAuthorityError(
+                "torsion-rescue parent indices must be exact integers"
             )
         if any(
             len(rows) != row_count
@@ -1968,6 +2292,7 @@ class GuidedPlacementReceipt:
                 requested_distances,
                 observed_distances,
                 ensemble_sources,
+                rescue_parents,
             )
         ):
             raise DockingAuthorityError("guided anchor rows are incomplete")
@@ -1978,15 +2303,19 @@ class GuidedPlacementReceipt:
             requested,
             observed,
             ensemble_source,
-        ) in enumerate(zip(
-            modes,
-            ligand_anchors,
-            receptor_anchors,
-            requested_distances,
-            observed_distances,
-            ensemble_sources,
-            strict=True,
-        )):
+            rescue_parent,
+        ) in enumerate(
+            zip(
+                modes,
+                ligand_anchors,
+                receptor_anchors,
+                requested_distances,
+                observed_distances,
+                ensemble_sources,
+                rescue_parents,
+                strict=True,
+            )
+        ):
             if any(index < 0 for index in (*ligand_row, *receptor_row)):
                 raise DockingAuthorityError("guided anchor atom indices are invalid")
             if mode == MULTI_ANCHOR_MODE:
@@ -2008,6 +2337,7 @@ class GuidedPlacementReceipt:
                 POCKET_CENTER_BASELINE_MODE,
                 UNIFORM_FALLBACK_MODE,
                 UNIFORM_V3_ENSEMBLE_MODE,
+                UNIFORM_TORSION_RESCUE_VARIANT_MODE,
             }:
                 if (
                     ligand_row
@@ -2034,6 +2364,7 @@ class GuidedPlacementReceipt:
                     or not 0 <= ensemble_source < row_count
                     or ensemble_source == index
                     or modes[ensemble_source] != UNIFORM_FALLBACK_MODE
+                    or rescue_parent is not None
                 ):
                     raise DockingAuthorityError(
                         "uniform V3 ensemble source index is invalid"
@@ -2042,6 +2373,21 @@ class GuidedPlacementReceipt:
                 raise DockingAuthorityError(
                     "non-ensemble proposal cannot declare an ensemble source"
                 )
+            if mode == UNIFORM_TORSION_RESCUE_VARIANT_MODE:
+                if (
+                    rescue_parent is None
+                    or not 0 <= rescue_parent < row_count
+                    or rescue_parent == index
+                    or modes[rescue_parent] != UNIFORM_FALLBACK_MODE
+                    or ensemble_source is not None
+                ):
+                    raise DockingAuthorityError(
+                        "torsion-rescue parent proposal index is invalid"
+                    )
+            elif rescue_parent is not None:
+                raise DockingAuthorityError(
+                    "non-rescue proposal cannot declare a torsion-rescue parent"
+                )
         retained_sources = tuple(
             value for value in ensemble_sources if value is not None
         )
@@ -2049,11 +2395,72 @@ class GuidedPlacementReceipt:
             raise DockingAuthorityError(
                 "uniform V3 ensemble sources must be one-to-one"
             )
+        retained_rescue_parents = tuple(
+            value for value in rescue_parents if value is not None
+        )
+        v3_targets = frozenset(
+            index
+            for index, mode in enumerate(modes)
+            if mode == UNIFORM_V3_ENSEMBLE_MODE
+        )
+        rescue_targets = frozenset(
+            index
+            for index, mode in enumerate(modes)
+            if mode == UNIFORM_TORSION_RESCUE_VARIANT_MODE
+        )
+        if (
+            len(retained_rescue_parents) != len(set(retained_rescue_parents))
+            or (v3_targets | set(retained_sources))
+            & (rescue_targets | set(retained_rescue_parents))
+        ):
+            raise DockingAuthorityError(
+                "guided source-paired proposal lanes overlap or reuse parents"
+            )
+        rescue_profile = self.source_paired_torsion_rescue_profile
+        if type(rescue_profile) is not bool:
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue profile flag must be boolean"
+            )
+        baseline_receipt_sha256 = str(
+            self.baseline_guided_receipt_sha256 or ""
+        ).strip().lower()
+        allocation_sha256 = str(
+            self.torsion_rescue_allocation_sha256 or ""
+        ).strip().lower()
+        if rescue_profile:
+            if (
+                row_count != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT
+                or len(rescue_targets) > MAX_UNIFORM_TORSION_RESCUE_VARIANTS
+            ):
+                raise DockingAuthorityError(
+                    "source-paired torsion-rescue receipt violates its hard bounds"
+                )
+            baseline_receipt_sha256 = _digest(
+                baseline_receipt_sha256,
+                name="baseline_guided_receipt_sha256",
+            )
+            allocation_sha256 = _digest(
+                allocation_sha256,
+                name="torsion_rescue_allocation_sha256",
+            )
+        elif (
+            rescue_targets
+            or retained_rescue_parents
+            or baseline_receipt_sha256
+            or allocation_sha256
+        ):
+            raise DockingAuthorityError(
+                "torsion-rescue lineage requires the development profile"
+            )
         counts = {str(name): int(value) for name, value in self.feature_counts.items()}
         if any(value < 0 for value in counts.values()):
             raise DockingAuthorityError("guided feature counts are invalid")
         object.__setattr__(self, "proposal_fingerprint_sha256s", fingerprints)
         object.__setattr__(self, "proposal_modes", modes)
+        object.__setattr__(self, "torsion_rescue_parent_proposal_indices", rescue_parents)
+        object.__setattr__(self, "source_paired_torsion_rescue_profile", rescue_profile)
+        object.__setattr__(self, "baseline_guided_receipt_sha256", baseline_receipt_sha256)
+        object.__setattr__(self, "torsion_rescue_allocation_sha256", allocation_sha256)
         object.__setattr__(self, "ligand_anchor_atom_indices", ligand_anchors)
         object.__setattr__(self, "receptor_anchor_atom_indices", receptor_anchors)
         object.__setattr__(
@@ -2071,8 +2478,62 @@ class GuidedPlacementReceipt:
         object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
 
     def _projection(self) -> dict[str, object]:
-        return {
-            "schema_id": GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID,
+        rescue_profile = self.source_paired_torsion_rescue_profile
+        guidance_rows: list[dict[str, object]] = []
+        for index, (
+            mode,
+            ligand_atoms,
+            receptor_atoms,
+            requested,
+            observed,
+            ensemble_source,
+            rescue_parent,
+        ) in enumerate(
+            zip(
+                self.proposal_modes,
+                self.ligand_anchor_atom_indices,
+                self.receptor_anchor_atom_indices,
+                self.requested_anchor_distance_angstroms,
+                self.observed_anchor_distance_angstroms,
+                self.ensemble_source_proposal_indices,
+                self.torsion_rescue_parent_proposal_indices,
+                strict=True,
+            )
+        ):
+            row: dict[str, object] = {
+                "proposal_index": index,
+                "mode": mode,
+                "ligand_anchor_atom_indices": list(ligand_atoms),
+                "receptor_anchor_atom_indices": list(receptor_atoms),
+                "anchor_pairs": (
+                    [
+                        {"ligand_atom_index": ligand_index, "receptor_atom_index": receptor_index}
+                        for ligand_index, receptor_index in zip(ligand_atoms, receptor_atoms)
+                    ]
+                    if mode == MULTI_ANCHOR_MODE
+                    else []
+                ),
+                "anchor_pairing": "positionally_aligned" if mode == MULTI_ANCHOR_MODE else None,
+                "anchor_distance_aggregation": (
+                    "per_pair_arithmetic_mean" if mode == MULTI_ANCHOR_MODE else None
+                ),
+                "requested_anchor_distance_angstrom_binary64_hex": (
+                    None if requested is None else requested.hex()
+                ),
+                "observed_anchor_distance_angstrom_binary64_hex": (
+                    None if observed is None else observed.hex()
+                ),
+                "ensemble_source_proposal_index": ensemble_source,
+            }
+            if rescue_profile:
+                row["torsion_rescue_parent_proposal_index"] = rescue_parent
+            guidance_rows.append(row)
+        projection: dict[str, object] = {
+            "schema_id": (
+                SOURCE_PAIRED_TORSION_RESCUE_GUIDED_RECEIPT_SCHEMA_ID
+                if rescue_profile
+                else GUIDED_PLACEMENT_RECEIPT_SCHEMA_ID
+            ),
             "authenticated_input_receipt_sha256": self.authenticated_input_receipt_sha256,
             "guidance_context_sha256": self.guidance_context_sha256,
             "guided_policy_sha256": self.guided_policy_sha256,
@@ -2080,82 +2541,44 @@ class GuidedPlacementReceipt:
             "proposal_count": len(self.proposal_modes),
             "proposal_fingerprint_sha256s": list(self.proposal_fingerprint_sha256s),
             "proposal_modes": list(self.proposal_modes),
-            "proposal_guidance_rows": [
-                {
-                    "proposal_index": index,
-                    "mode": mode,
-                    "ligand_anchor_atom_indices": list(ligand_atoms),
-                    "receptor_anchor_atom_indices": list(receptor_atoms),
-                    "anchor_pairs": (
-                        [
-                            {
-                                "ligand_atom_index": ligand_index,
-                                "receptor_atom_index": receptor_index,
-                            }
-                            for ligand_index, receptor_index in zip(
-                                ligand_atoms, receptor_atoms
-                            )
-                        ]
-                        if mode == MULTI_ANCHOR_MODE
-                        else []
-                    ),
-                    "anchor_pairing": (
-                        "positionally_aligned"
-                        if mode == MULTI_ANCHOR_MODE
-                        else None
-                    ),
-                    "anchor_distance_aggregation": (
-                        "per_pair_arithmetic_mean"
-                        if mode == MULTI_ANCHOR_MODE
-                        else None
-                    ),
-                    "requested_anchor_distance_angstrom_binary64_hex": (
-                        None if requested is None else requested.hex()
-                    ),
-                    "observed_anchor_distance_angstrom_binary64_hex": (
-                        None if observed is None else observed.hex()
-                    ),
-                    "ensemble_source_proposal_index": ensemble_source,
-                }
-                for index, (
-                    mode,
-                    ligand_atoms,
-                    receptor_atoms,
-                    requested,
-                    observed,
-                    ensemble_source,
-                ) in enumerate(
-                    zip(
-                        self.proposal_modes,
-                        self.ligand_anchor_atom_indices,
-                        self.receptor_anchor_atom_indices,
-                        self.requested_anchor_distance_angstroms,
-                        self.observed_anchor_distance_angstroms,
-                        self.ensemble_source_proposal_indices,
-                        strict=True,
-                    )
-                )
-            ],
+            "proposal_guidance_rows": guidance_rows,
             "guided_proposal_count": sum(
                 mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
                 for mode in self.proposal_modes
             ),
             "pocket_center_baseline_count": sum(
-                mode == POCKET_CENTER_BASELINE_MODE
-                for mode in self.proposal_modes
+                mode == POCKET_CENTER_BASELINE_MODE for mode in self.proposal_modes
             ),
             "uniform_fallback_count": sum(
                 mode == UNIFORM_FALLBACK_MODE for mode in self.proposal_modes
             ),
             "uniform_v3_ensemble_count": sum(
-                mode == UNIFORM_V3_ENSEMBLE_MODE
-                for mode in self.proposal_modes
+                mode == UNIFORM_V3_ENSEMBLE_MODE for mode in self.proposal_modes
             ),
             "uniform_random_placement_retained_as_fallback": True,
             "feature_counts": dict(self.feature_counts),
             "scientifically_validated": False,
             "claim_safe": False,
         }
+        if rescue_profile:
+            projection.update(
+                {
+                    "source_paired_torsion_rescue_profile": True,
+                    "baseline_guided_receipt_sha256": self.baseline_guided_receipt_sha256,
+                    "torsion_rescue_allocation_sha256": self.torsion_rescue_allocation_sha256,
+                    "uniform_torsion_rescue_variant_count": sum(
+                        mode == UNIFORM_TORSION_RESCUE_VARIANT_MODE
+                        for mode in self.proposal_modes
+                    ),
+                    "uniform_torsion_rescue_variant_cap": MAX_UNIFORM_TORSION_RESCUE_VARIANTS,
+                    "proposal_objects_and_coordinates_unchanged": True,
+                    "selected_parent_proposal_objects_retained": True,
+                    "development_only": True,
+                    "stage0_eligible": False,
+                    "fresh_execution_authorized": False,
+                }
+            )
+        return projection
 
     @property
     def receipt_sha256(self) -> str:
@@ -2167,6 +2590,257 @@ class GuidedPlacementReceipt:
     def to_dict(self) -> dict[str, object]:
         return {**self._projection(), "receipt_sha256": self.receipt_sha256}
 
+
+@dataclass(frozen=True, slots=True)
+class SourcePairedTorsionRescueProposalReceipt:
+    """End-to-end evidence for a source-paired rescue proposal batch."""
+
+    authenticated_input_receipt_sha256: str
+    budget_sha256: str
+    source_ligand_system_sha256: str
+    source_ligand_topology_sha256: str
+    rescue_policy_sha256: str
+    allocation: SourcePairedTorsionRescueAllocation
+    baseline_guided_receipt: GuidedPlacementReceipt
+    guided_receipt: GuidedPlacementReceipt
+    candidate_ids: tuple[str, ...]
+    proposal_fingerprint_sha256s: tuple[str, ...]
+    proposal_coordinate_fingerprint_sha256s: tuple[str, ...]
+    proposal_torsion_metadata_sha256s: tuple[str, ...]
+    _receipt_sha256: str = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        for name in (
+            "authenticated_input_receipt_sha256",
+            "budget_sha256",
+            "source_ligand_system_sha256",
+            "source_ligand_topology_sha256",
+            "rescue_policy_sha256",
+        ):
+            object.__setattr__(
+                self,
+                name,
+                _digest(getattr(self, name), name=name),
+            )
+        if not isinstance(self.allocation, SourcePairedTorsionRescueAllocation):
+            raise TypeError("allocation must be SourcePairedTorsionRescueAllocation")
+        if not isinstance(self.baseline_guided_receipt, GuidedPlacementReceipt):
+            raise TypeError("baseline_guided_receipt must be GuidedPlacementReceipt")
+        if not isinstance(self.guided_receipt, GuidedPlacementReceipt):
+            raise TypeError("guided_receipt must be GuidedPlacementReceipt")
+        allocation = self.allocation
+        baseline = self.baseline_guided_receipt
+        guided = self.guided_receipt
+        allocation.allocation_sha256
+        baseline.receipt_sha256
+        guided.receipt_sha256
+
+        policy = SourcePairedTorsionRescuePolicy()
+        base_policy = policy.base_guided_policy
+        if (
+            self.rescue_policy_sha256 != policy.fingerprint_sha256
+            or allocation.rescue_policy_sha256 != policy.fingerprint_sha256
+            or allocation.base_guided_policy_sha256 != base_policy.fingerprint_sha256
+            or allocation.authenticated_input_receipt_sha256
+            != self.authenticated_input_receipt_sha256
+            or allocation.guidance_context_sha256 != baseline.guidance_context_sha256
+            or allocation.budget_sha256 != self.budget_sha256
+            or baseline.authenticated_input_receipt_sha256
+            != self.authenticated_input_receipt_sha256
+            or guided.authenticated_input_receipt_sha256
+            != self.authenticated_input_receipt_sha256
+            or baseline.budget_sha256 != self.budget_sha256
+            or guided.budget_sha256 != self.budget_sha256
+            or baseline.guided_policy_sha256 != base_policy.fingerprint_sha256
+            or guided.guided_policy_sha256 != policy.fingerprint_sha256
+            or guided.baseline_guided_receipt_sha256 != baseline.receipt_sha256
+            or guided.torsion_rescue_allocation_sha256 != allocation.allocation_sha256
+            or baseline.source_paired_torsion_rescue_profile
+            or not guided.source_paired_torsion_rescue_profile
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue proposal authority is cross-wired"
+            )
+
+        candidate_ids = tuple(str(value or "").strip() for value in self.candidate_ids)
+        if (
+            len(candidate_ids) != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT
+            or any(not value for value in candidate_ids)
+            or len(set(candidate_ids)) != len(candidate_ids)
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue candidate IDs are invalid"
+            )
+
+        def digest_rows(values: Sequence[str], *, name: str) -> tuple[str, ...]:
+            rows = tuple(_digest(value, name=name) for value in values)
+            if len(rows) != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT:
+                raise DockingAuthorityError(
+                    f"source-paired torsion-rescue {name} rows must contain 64 values"
+                )
+            return rows
+
+        fingerprints = digest_rows(
+            self.proposal_fingerprint_sha256s,
+            name="proposal fingerprint",
+        )
+        coordinate_fingerprints = digest_rows(
+            self.proposal_coordinate_fingerprint_sha256s,
+            name="coordinate fingerprint",
+        )
+        torsion_fingerprints = digest_rows(
+            self.proposal_torsion_metadata_sha256s,
+            name="torsion metadata fingerprint",
+        )
+        expected_pairs = tuple(
+            sorted(
+                (
+                    *allocation.v3_target_parent_pairs,
+                    *allocation.rescue_target_parent_pairs,
+                )
+            )
+        )
+        baseline_pairs = tuple(
+            (index, parent)
+            for index, (mode, parent) in enumerate(
+                zip(
+                    baseline.proposal_modes,
+                    baseline.ensemble_source_proposal_indices,
+                    strict=True,
+                )
+            )
+            if mode == UNIFORM_V3_ENSEMBLE_MODE and parent is not None
+        )
+        guided_v3_pairs = tuple(
+            (index, parent)
+            for index, (mode, parent) in enumerate(
+                zip(
+                    guided.proposal_modes,
+                    guided.ensemble_source_proposal_indices,
+                    strict=True,
+                )
+            )
+            if mode == UNIFORM_V3_ENSEMBLE_MODE and parent is not None
+        )
+        guided_rescue_pairs = tuple(
+            (index, parent)
+            for index, (mode, parent) in enumerate(
+                zip(
+                    guided.proposal_modes,
+                    guided.torsion_rescue_parent_proposal_indices,
+                    strict=True,
+                )
+            )
+            if mode == UNIFORM_TORSION_RESCUE_VARIANT_MODE and parent is not None
+        )
+        rescue_target_set = {
+            target for target, _ in allocation.rescue_target_parent_pairs
+        }
+        unchanged_row_evidence = all(
+            (
+                guided.proposal_modes[index]
+                == (
+                    UNIFORM_TORSION_RESCUE_VARIANT_MODE
+                    if index in rescue_target_set
+                    else baseline.proposal_modes[index]
+                )
+                and guided.ensemble_source_proposal_indices[index]
+                == (
+                    None
+                    if index in rescue_target_set
+                    else baseline.ensemble_source_proposal_indices[index]
+                )
+            )
+            for index in range(SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT)
+        )
+        if (
+            allocation.candidate_count != SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT
+            or baseline_pairs != expected_pairs
+            or guided_v3_pairs != allocation.v3_target_parent_pairs
+            or guided_rescue_pairs != allocation.rescue_target_parent_pairs
+            or not unchanged_row_evidence
+            or baseline.proposal_fingerprint_sha256s != fingerprints
+            or guided.proposal_fingerprint_sha256s != fingerprints
+            or baseline.guidance_context_sha256 != guided.guidance_context_sha256
+            or baseline.ligand_anchor_atom_indices != guided.ligand_anchor_atom_indices
+            or baseline.receptor_anchor_atom_indices
+            != guided.receptor_anchor_atom_indices
+            or baseline.requested_anchor_distance_angstroms
+            != guided.requested_anchor_distance_angstroms
+            or baseline.observed_anchor_distance_angstroms
+            != guided.observed_anchor_distance_angstroms
+            or dict(baseline.feature_counts) != dict(guided.feature_counts)
+        ):
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue proposal lineage is cross-wired"
+            )
+        object.__setattr__(self, "candidate_ids", candidate_ids)
+        object.__setattr__(self, "proposal_fingerprint_sha256s", fingerprints)
+        object.__setattr__(
+            self,
+            "proposal_coordinate_fingerprint_sha256s",
+            coordinate_fingerprints,
+        )
+        object.__setattr__(
+            self,
+            "proposal_torsion_metadata_sha256s",
+            torsion_fingerprints,
+        )
+        object.__setattr__(self, "_receipt_sha256", _sha256(self._projection()))
+
+    def _projection(self) -> dict[str, object]:
+        policy = SourcePairedTorsionRescuePolicy()
+        return {
+            "schema_id": SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_RECEIPT_SCHEMA_ID,
+            "authenticated_input_receipt_sha256": (
+                self.authenticated_input_receipt_sha256
+            ),
+            "budget_sha256": self.budget_sha256,
+            "source_ligand_system_sha256": self.source_ligand_system_sha256,
+            "source_ligand_topology_sha256": self.source_ligand_topology_sha256,
+            "rescue_policy_sha256": self.rescue_policy_sha256,
+            "rescue_policy": policy.to_dict(),
+            "allocation": self.allocation.to_dict(),
+            "baseline_guided_placement": self.baseline_guided_receipt.to_dict(),
+            "guided_placement": self.guided_receipt.to_dict(),
+            "candidate_count": SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT,
+            "candidate_slots": [
+                {
+                    "proposal_index": index,
+                    "candidate_id": self.candidate_ids[index],
+                    "proposal_fingerprint_sha256": (
+                        self.proposal_fingerprint_sha256s[index]
+                    ),
+                    "coordinate_fingerprint_sha256": (
+                        self.proposal_coordinate_fingerprint_sha256s[index]
+                    ),
+                    "torsion_metadata_sha256": (
+                        self.proposal_torsion_metadata_sha256s[index]
+                    ),
+                }
+                for index in range(SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT)
+            ],
+            "proposal_objects_and_coordinates_unchanged": True,
+            "selected_parent_proposal_objects_retained": True,
+            "result_dependent_allocation": False,
+            "development_only": True,
+            "stage0_eligible": False,
+            "fresh_execution_authorized": False,
+            "scientifically_validated": False,
+            "claim_safe": False,
+        }
+
+    @property
+    def receipt_sha256(self) -> str:
+        observed = _sha256(self._projection())
+        if observed != self._receipt_sha256:
+            raise DockingAuthorityError(
+                "source-paired torsion-rescue proposal receipt changed"
+            )
+        return observed
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._projection(), "receipt_sha256": self.receipt_sha256}
 
 @dataclass(frozen=True, slots=True)
 class FixedSourceBoundConformerLineageRow:
@@ -2631,6 +3305,153 @@ class FixedSourceBoundConformerProposalReceipt:
         return {**self._projection(), "receipt_sha256": self.receipt_sha256}
 
 
+def _generate_source_paired_torsion_rescue_docking_proposals(
+    authenticated_problem: AuthenticatedDockingProblem,
+    budget: DockingBudget,
+    context: GuidedPlacementContext,
+    *,
+    receptor_system: AllAtomSystem,
+    ligand_system: AllAtomSystem,
+    policy: SourcePairedTorsionRescuePolicy,
+) -> tuple[
+    tuple[DockingProposal, ...],
+    GuidedPlacementReceipt,
+    SourcePairedTorsionRescueProposalReceipt,
+]:
+    """Reclassify bounded existing V3 pairs without changing proposals."""
+
+    allocation = source_paired_torsion_rescue_allocation(
+        authenticated_problem,
+        context,
+        budget,
+        policy,
+    )
+    proposals, baseline_receipt = generate_guided_docking_proposals(
+        authenticated_problem,
+        budget,
+        context,
+        receptor_system=receptor_system,
+        ligand_system=ligand_system,
+        policy=policy.base_guided_policy,
+    )
+    baseline_pairs = tuple(
+        (proposal_index, source_index)
+        for proposal_index, (mode, source_index) in enumerate(
+            zip(
+                baseline_receipt.proposal_modes,
+                baseline_receipt.ensemble_source_proposal_indices,
+                strict=True,
+            )
+        )
+        if mode == UNIFORM_V3_ENSEMBLE_MODE and source_index is not None
+    )
+    expected_pairs = tuple(
+        sorted(
+            (
+                *allocation.v3_target_parent_pairs,
+                *allocation.rescue_target_parent_pairs,
+            )
+        )
+    )
+    if baseline_pairs != expected_pairs:
+        raise DockingAuthorityError(
+            "torsion-rescue allocation disagrees with the baseline V3 receipt"
+        )
+    modes = list(baseline_receipt.proposal_modes)
+    ensemble_sources = list(baseline_receipt.ensemble_source_proposal_indices)
+    rescue_parents: list[int | None] = [None] * len(proposals)
+    for target_index, parent_index in allocation.rescue_target_parent_pairs:
+        if (
+            modes[target_index] != UNIFORM_V3_ENSEMBLE_MODE
+            or ensemble_sources[target_index] != parent_index
+            or modes[parent_index] != UNIFORM_FALLBACK_MODE
+        ):
+            raise DockingAuthorityError(
+                "torsion-rescue target-parent lineage is cross-wired"
+            )
+        modes[target_index] = UNIFORM_TORSION_RESCUE_VARIANT_MODE
+        ensemble_sources[target_index] = None
+        rescue_parents[target_index] = parent_index
+    receipt = GuidedPlacementReceipt(
+        authenticated_input_receipt_sha256=(
+            baseline_receipt.authenticated_input_receipt_sha256
+        ),
+        guidance_context_sha256=baseline_receipt.guidance_context_sha256,
+        guided_policy_sha256=policy.fingerprint_sha256,
+        budget_sha256=baseline_receipt.budget_sha256,
+        proposal_fingerprint_sha256s=(baseline_receipt.proposal_fingerprint_sha256s),
+        proposal_modes=tuple(modes),
+        ligand_anchor_atom_indices=(baseline_receipt.ligand_anchor_atom_indices),
+        receptor_anchor_atom_indices=(baseline_receipt.receptor_anchor_atom_indices),
+        requested_anchor_distance_angstroms=(
+            baseline_receipt.requested_anchor_distance_angstroms
+        ),
+        observed_anchor_distance_angstroms=(
+            baseline_receipt.observed_anchor_distance_angstroms
+        ),
+        feature_counts=baseline_receipt.feature_counts,
+        ensemble_source_proposal_indices=tuple(ensemble_sources),
+        torsion_rescue_parent_proposal_indices=tuple(rescue_parents),
+        source_paired_torsion_rescue_profile=True,
+        baseline_guided_receipt_sha256=baseline_receipt.receipt_sha256,
+        torsion_rescue_allocation_sha256=allocation.allocation_sha256,
+    )
+    if receipt.proposal_fingerprint_sha256s != tuple(
+        proposal.fingerprint_sha256 for proposal in proposals
+    ):
+        raise DockingAuthorityError(
+            "torsion-rescue receipt changed the baseline proposal objects"
+        )
+    provenance = SourcePairedTorsionRescueProposalReceipt(
+        authenticated_input_receipt_sha256=(authenticated_problem.input_receipt_sha256),
+        budget_sha256=_budget_sha256(budget),
+        source_ligand_system_sha256=canonical_system_sha256(ligand_system),
+        source_ligand_topology_sha256=canonical_topology_sha256(ligand_system),
+        rescue_policy_sha256=policy.fingerprint_sha256,
+        allocation=allocation,
+        baseline_guided_receipt=baseline_receipt,
+        guided_receipt=receipt,
+        candidate_ids=tuple(proposal.candidate_id for proposal in proposals),
+        proposal_fingerprint_sha256s=tuple(
+            proposal.fingerprint_sha256 for proposal in proposals
+        ),
+        proposal_coordinate_fingerprint_sha256s=tuple(
+            proposal.coordinate_fingerprint_sha256 for proposal in proposals
+        ),
+        proposal_torsion_metadata_sha256s=tuple(
+            _torsion_metadata_sha256(proposal.torsion_angles) for proposal in proposals
+        ),
+    )
+    return proposals, receipt, provenance
+
+
+def generate_source_paired_torsion_rescue_docking_proposals(
+    authenticated_problem: AuthenticatedDockingProblem,
+    budget: DockingBudget,
+    context: GuidedPlacementContext,
+    *,
+    receptor_system: AllAtomSystem,
+    ligand_system: AllAtomSystem,
+    policy: SourcePairedTorsionRescuePolicy | None = None,
+) -> tuple[
+    tuple[DockingProposal, ...],
+    GuidedPlacementReceipt,
+    SourcePairedTorsionRescueProposalReceipt,
+]:
+    """Build the fixed rescue batch and its complete development evidence."""
+
+    selected_policy = policy or SourcePairedTorsionRescuePolicy()
+    if not isinstance(selected_policy, SourcePairedTorsionRescuePolicy):
+        raise TypeError("policy must be SourcePairedTorsionRescuePolicy")
+    return _generate_source_paired_torsion_rescue_docking_proposals(
+        authenticated_problem,
+        budget,
+        context,
+        receptor_system=receptor_system,
+        ligand_system=ligand_system,
+        policy=selected_policy,
+    )
+
 def generate_guided_docking_proposals(
     authenticated_problem: AuthenticatedDockingProblem,
     budget: DockingBudget,
@@ -2638,7 +3459,7 @@ def generate_guided_docking_proposals(
     *,
     receptor_system: AllAtomSystem,
     ligand_system: AllAtomSystem,
-    policy: GuidedPlacementPolicy | None = None,
+    policy: GuidedPlacementPolicy | SourcePairedTorsionRescuePolicy | None = None,
 ) -> tuple[tuple[DockingProposal, ...], GuidedPlacementReceipt]:
     if not isinstance(authenticated_problem, AuthenticatedDockingProblem):
         raise TypeError("authenticated_problem must be AuthenticatedDockingProblem")
@@ -2647,8 +3468,20 @@ def generate_guided_docking_proposals(
     if not isinstance(context, GuidedPlacementContext):
         raise TypeError("context must be GuidedPlacementContext")
     selected_policy = GuidedPlacementPolicy() if policy is None else policy
+    if isinstance(selected_policy, SourcePairedTorsionRescuePolicy):
+        proposals, receipt, _ = _generate_source_paired_torsion_rescue_docking_proposals(
+            authenticated_problem,
+            budget,
+            context,
+            receptor_system=receptor_system,
+            ligand_system=ligand_system,
+            policy=selected_policy,
+        )
+        return proposals, receipt
     if not isinstance(selected_policy, GuidedPlacementPolicy):
-        raise TypeError("policy must be GuidedPlacementPolicy")
+        raise TypeError(
+            "policy must be GuidedPlacementPolicy or SourcePairedTorsionRescuePolicy"
+        )
     authenticated_problem.input_receipt_sha256
     if (
         context.authority_input_receipt_sha256
@@ -3259,14 +4092,16 @@ def run_authenticated_guided_placement_search(
     receptor_system: AllAtomSystem,
     ligand_system: AllAtomSystem,
     refiner=None,
-    policy: GuidedPlacementPolicy | None = None,
+    policy: GuidedPlacementPolicy | SourcePairedTorsionRescuePolicy | None = None,
     diversity_rmsd_angstrom: float = 0.5,
     diversity_metric: str = "direct_rmsd",
     symmetry_permutations: Sequence[Sequence[int] | torch.Tensor] | None = None,
     precomputed_proposals: Sequence[DockingProposal] | None = None,
     precomputed_guided_receipt: GuidedPlacementReceipt | None = None,
     precomputed_provenance_receipt: (
-        FixedSourceBoundConformerProposalReceipt | None
+        FixedSourceBoundConformerProposalReceipt
+        | SourcePairedTorsionRescueProposalReceipt
+        | None
     ) = None,
 ) -> GuidedPlacementSearchResult:
     supplied_precomputed_values = (
@@ -3307,11 +4142,15 @@ def run_authenticated_guided_placement_search(
             )
         if not isinstance(
             precomputed_provenance_receipt,
-            FixedSourceBoundConformerProposalReceipt,
+            (
+                FixedSourceBoundConformerProposalReceipt,
+                SourcePairedTorsionRescueProposalReceipt,
+            ),
         ):
             raise TypeError(
                 "precomputed_provenance_receipt must be "
-                "FixedSourceBoundConformerProposalReceipt"
+                "FixedSourceBoundConformerProposalReceipt or "
+                "SourcePairedTorsionRescueProposalReceipt"
             )
         authenticated_problem.input_receipt_sha256
         context.fingerprint_sha256
@@ -3375,6 +4214,18 @@ def run_authenticated_guided_placement_search(
             raise DockingAuthorityError(
                 "precomputed guided proposal fingerprints are cross-wired"
             )
+        if isinstance(provenance, SourcePairedTorsionRescueProposalReceipt):
+            expected_allocation = source_paired_torsion_rescue_allocation(
+                authenticated_problem,
+                context,
+                budget,
+                SourcePairedTorsionRescuePolicy(),
+            )
+            if provenance.allocation.allocation_sha256 != expected_allocation.allocation_sha256:
+                raise DockingAuthorityError(
+                    "precomputed torsion-rescue allocation is not its "
+                    "authenticated deterministic derivation"
+                )
         if (
             provenance.authenticated_input_receipt_sha256
             != authenticated_problem.input_receipt_sha256
@@ -3452,21 +4303,34 @@ __all__ = [
     "MAX_GUIDED_FEATURE_ATOMS",
     "MAX_GUIDED_RECEPTOR_BONDS_SCANNED",
     "MAX_MULTI_ANCHOR_MATCHES_PER_LANE",
+    "MAX_UNIFORM_TORSION_RESCUE_VARIANTS",
     "MULTI_ANCHOR_MODE",
     "POCKET_CENTER_BASELINE_MODE",
+    "SOURCE_PAIRED_TORSION_RESCUE_ALLOCATION_SCHEMA_ID",
+    "SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT",
+    "SOURCE_PAIRED_TORSION_RESCUE_GUIDED_RECEIPT_SCHEMA_ID",
+    "SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_RECEIPT_SCHEMA_ID",
+    "SOURCE_PAIRED_TORSION_RESCUE_POLICY_ID",
+    "SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID",
     "UNIFORM_FALLBACK_MODE",
     "UNIFORM_V3_ENSEMBLE_MODE",
+    "UNIFORM_TORSION_RESCUE_VARIANT_MODE",
     "FixedSourceBoundConformerLineageRow",
     "FixedSourceBoundConformerProposalReceipt",
     "GuidedPlacementContext",
     "GuidedPlacementPolicy",
     "GuidedPlacementReceipt",
     "GuidedPlacementSearchResult",
+    "SourcePairedTorsionRescueAllocation",
+    "SourcePairedTorsionRescuePolicy",
+    "SourcePairedTorsionRescueProposalReceipt",
     "build_guided_placement_context",
     "fixed_source_bound_conformer_profile_document",
     "fixed_source_bound_conformer_proposal_indices",
     "generate_fixed_source_bound_conformer_docking_proposals",
     "generate_guided_docking_proposals",
+    "generate_source_paired_torsion_rescue_docking_proposals",
     "run_authenticated_guided_placement_search",
+    "source_paired_torsion_rescue_allocation",
     "uniform_v3_ensemble_proposal_indices",
 ]

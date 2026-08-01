@@ -427,9 +427,10 @@ def test_sealed_case_input_snapshots_pin_all_roles_with_linux_seals(
             )
             with pytest.raises(OSError):
                 runner.os.write(descriptor, b"mutation")
-        assert runner._first_molecule(
-            snapshots.execution_paths["native"]
-        ).GetNumAtoms() > 0
+        assert (
+            runner._first_molecule(snapshots.execution_paths["native"]).GetNumAtoms()
+            > 0
+        )
         with pytest.raises(
             runner.PublicRedockingRunnerError,
             match="cannot execute external engines",
@@ -1451,18 +1452,29 @@ def test_partial_summary_name_binds_exact_case_selection() -> None:
 
 
 @pytest.mark.parametrize(
-    ("development_v8_clearance_variant", "development_true_conformer_profile"),
-    ((False, False), (True, False), (False, True)),
+    (
+        "development_v8_clearance_variant",
+        "development_true_conformer_profile",
+        "development_source_paired_torsion_rescue",
+    ),
+    (
+        (False, False, False),
+        (True, False, False),
+        (False, True, False),
+        (False, False, True),
+    ),
 )
 def test_development_engine_v2_only_requires_exact_historical_slice(
     development_v8_clearance_variant: bool,
     development_true_conformer_profile: bool,
+    development_source_paired_torsion_rescue: bool,
 ) -> None:
     arguments = SimpleNamespace(
         development_engine_v2_only=True,
         development_v8_clearance_variant=development_v8_clearance_variant,
-        development_true_conformer_profile=(
-            development_true_conformer_profile
+        development_true_conformer_profile=(development_true_conformer_profile),
+        development_source_paired_torsion_rescue=(
+            development_source_paired_torsion_rescue
         ),
         gnina=None,
         stage0_policy=None,
@@ -1532,6 +1544,38 @@ def test_development_true_conformer_profile_is_exclusive_and_development_only() 
     ):
         runner._require_execution_lane_arguments(
             mixed_variants,
+            FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
+        )
+
+    rescue_outside_development = SimpleNamespace(
+        development_engine_v2_only=False,
+        development_v8_clearance_variant=False,
+        development_true_conformer_profile=False,
+        development_source_paired_torsion_rescue=True,
+        gnina=Path("gnina"),
+    )
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="requires the development Engine V2-only lane",
+    ):
+        runner._require_execution_lane_arguments(
+            rescue_outside_development,
+            FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
+        )
+
+    mixed_rescue = SimpleNamespace(
+        development_engine_v2_only=True,
+        development_v8_clearance_variant=True,
+        development_true_conformer_profile=False,
+        development_source_paired_torsion_rescue=True,
+        gnina=None,
+    )
+    with pytest.raises(
+        runner.PublicRedockingRunnerError,
+        match="mutually exclusive",
+    ):
+        runner._require_execution_lane_arguments(
+            mixed_rescue,
             FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11],
         )
 
@@ -1617,12 +1661,22 @@ def test_development_engine_v2_only_rejects_drift_before_output_creation(
 
 
 @pytest.mark.parametrize(
-    ("development_v8_clearance_variant", "development_true_conformer_profile"),
-    ((False, False), (True, False), (False, True)),
+    (
+        "development_v8_clearance_variant",
+        "development_true_conformer_profile",
+        "development_source_paired_torsion_rescue",
+    ),
+    (
+        (False, False, False),
+        (True, False, False),
+        (False, True, False),
+        (False, False, True),
+    ),
 )
 def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     development_v8_clearance_variant: bool,
     development_true_conformer_profile: bool,
+    development_source_paired_torsion_rescue: bool,
 ) -> None:
     case_ids = FROZEN_PUBLIC_REDOCKING_CASE_IDS[2:11]
     output_root = (Path.cwd() / ".betelgeuze" / "summary-fixture").resolve()
@@ -1630,8 +1684,9 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     expected_policy = runner._engine_v2_execution_policy(
         scorer_backend,
         development_v8_clearance_variant=development_v8_clearance_variant,
-        development_true_conformer_profile=(
-            development_true_conformer_profile
+        development_true_conformer_profile=(development_true_conformer_profile),
+        development_source_paired_torsion_rescue=(
+            development_source_paired_torsion_rescue
         ),
     )
     implementation_sha256 = "a" * 64
@@ -1643,6 +1698,7 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
     ]
     materialization_payloads = []
     row_payloads = []
+    row_objects = []
     execution_payloads = []
     true_conformer_case_receipts = []
     for index, case_id in enumerate(case_ids):
@@ -1684,37 +1740,52 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
                 output=output,
                 seed=runner.frozen_public_redocking_case_seed(case_id),
                 scorer_backend=scorer_backend,
-                development_v8_clearance_variant=(
-                    development_v8_clearance_variant
-                ),
-                development_true_conformer_profile=(
-                    development_true_conformer_profile
+                development_v8_clearance_variant=(development_v8_clearance_variant),
+                development_true_conformer_profile=(development_true_conformer_profile),
+                development_source_paired_torsion_rescue=(
+                    development_source_paired_torsion_rescue
                 ),
             )
         )
-        row = {
-            "case_id": case_id,
-            "engine_id": "engine_v2",
-            "status": "failure",
-            "failure_code": "engine_v2_case_failed",
-            **{
-                f"{role}_artifact_sha256": digest
-                for role, digest in inputs.items()
-            },
-            "execution_command": command,
-            "execution_policy": list(
-                runner._execution_policy_tokens(expected_policy)
-            ),
-        }
-        if development_true_conformer_profile:
-            row["engine_v2_diagnostics"] = {
-                "preparation_status": "failure",
-                "candidates": [],
-            }
+        diagnostics = None
+        if (
+            development_true_conformer_profile
+            or development_source_paired_torsion_rescue
+        ):
+            diagnostics = PublicRedockingEngineV2Diagnostics(
+                preparation_status="failure",
+                receptor_atom_count=0,
+                ligand_atom_count=0,
+                receptor_partial_charge_count=0,
+                ligand_partial_charge_count=0,
+                receptor_donor_count=0,
+                receptor_acceptor_count=0,
+                ligand_donor_count=0,
+                ligand_acceptor_count=0,
+                preparation_failure_code="docking_context_preparation_failed",
+                schema_id=(
+                    benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+                    if development_source_paired_torsion_rescue
+                    else benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID
+                ),
+            )
+        row_object = PublicRedockingCaseResult(
+            case_id=case_id,
+            engine_id="engine_v2",
+            status="failure",
+            runtime_seconds=0.0,
+            receptor_artifact_sha256=inputs["receptor"],
+            reference_artifact_sha256=inputs["reference"],
+            native_artifact_sha256=inputs["native"],
+            seed_artifact_sha256=inputs["seed"],
+            execution_command=tuple(command),
+            execution_policy=tuple(runner._execution_policy_tokens(expected_policy)),
+            failure_code="engine_v2_case_failed",
+            engine_v2_diagnostics=diagnostics,
+        )
+        row = row_object.to_dict()
         execution = {
-            "schema_id": (
-                benchmark_contract.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID
-            ),
+            "schema_id": (benchmark_contract.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID),
             "runner_id": runner.RUNNER_ID,
             "archive_sha256": benchmark_contract.PUBLIC_REDOCKING_ARCHIVE_SHA256,
             "source_ids_sha256": (
@@ -1736,28 +1807,20 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         ).hexdigest()
         if development_true_conformer_profile:
             case_projection = {
-                "schema_id": (
-                    runner.DEVELOPMENT_TRUE_CONFORMER_CASE_RECEIPT_SCHEMA_ID
-                ),
+                "schema_id": (runner.DEVELOPMENT_TRUE_CONFORMER_CASE_RECEIPT_SCHEMA_ID),
                 "runner_id": runner.RUNNER_ID,
                 "analysis_scope": "historical_contaminated_development_only",
-                "evidence_role": (
-                    "fixed_source_bound_true_conformer_case_execution"
-                ),
+                "evidence_role": ("fixed_source_bound_true_conformer_case_execution"),
                 "case_id": case_id,
                 "input_sha256s": inputs,
-                "engine_execution_receipt_sha256": execution[
-                    "receipt_sha256"
-                ],
+                "engine_execution_receipt_sha256": execution["receipt_sha256"],
                 "case_result_sha256": runner.hashlib.sha256(
                     runner._canonical_bytes(row)
                 ).hexdigest(),
                 "result_status": "failure",
                 "failure_code": "engine_v2_case_failed",
                 "proposal_evidence_status": "not_prepared",
-                "proposal_failure_stage": (
-                    "source_bound_conformer_preparation"
-                ),
+                "proposal_failure_stage": ("source_bound_conformer_preparation"),
                 "fixed_source_bound_conformer_profile": (
                     runner._DEVELOPMENT_TRUE_CONFORMER_PROFILE
                 ),
@@ -1787,15 +1850,13 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
             )
         materialization_payloads.append(materialization)
         row_payloads.append(row)
+        row_objects.append(row_object)
         execution_payloads.append(execution)
     materializations = [
         SimpleNamespace(to_dict=lambda payload=payload: payload)
         for payload in materialization_payloads
     ]
-    rows = [
-        SimpleNamespace(to_dict=lambda payload=payload: payload)
-        for payload in row_payloads
-    ]
+    rows = list(row_objects)
     executions = [
         SimpleNamespace(to_dict=lambda payload=payload: payload)
         for payload in execution_payloads
@@ -1812,18 +1873,18 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         evaluation_pipeline_sha256=evaluation_pipeline_sha256,
         execution_environment_sha256=execution_environment_sha256,
         development_v8_clearance_variant=development_v8_clearance_variant,
-        development_true_conformer_profile=(
-            development_true_conformer_profile
+        development_true_conformer_profile=(development_true_conformer_profile),
+        development_source_paired_torsion_rescue=(
+            development_source_paired_torsion_rescue
         ),
-        development_true_conformer_case_receipts=(
-            true_conformer_case_receipts
-        ),
+        development_true_conformer_case_receipts=(true_conformer_case_receipts),
     )
 
     claimed_sha256 = summary.pop("summary_sha256")
-    assert claimed_sha256 == runner.hashlib.sha256(
-        runner._canonical_bytes(summary)
-    ).hexdigest()
+    assert (
+        claimed_sha256
+        == runner.hashlib.sha256(runner._canonical_bytes(summary)).hexdigest()
+    )
     assert summary["case_ids"] == list(case_ids)
     assert summary["engine_ids"] == ["engine_v2"]
     assert summary["external_engines_executed"] is False
@@ -1836,6 +1897,10 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         summary.get("development_true_conformer_profile", False)
         is development_true_conformer_profile
     )
+    assert (
+        summary.get("development_source_paired_torsion_rescue", False)
+        is development_source_paired_torsion_rescue
+    )
     assert all(
         ("--development-v8-clearance-variant" in row["execution_command"])
         is development_v8_clearance_variant
@@ -1846,6 +1911,48 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
         is development_true_conformer_profile
         for row in summary["rows"]
     )
+    assert all(
+        ("--development-source-paired-torsion-rescue" in row["execution_command"])
+        is development_source_paired_torsion_rescue
+        for row in summary["rows"]
+    )
+    if development_source_paired_torsion_rescue:
+        incomplete_rows = list(rows)
+        incomplete_rows[0] = replace(
+            incomplete_rows[0],
+            engine_v2_diagnostics=None,
+        )
+        incomplete_execution_payloads = [
+            dict(payload) for payload in execution_payloads
+        ]
+        incomplete_execution_payloads[0]["result"] = incomplete_rows[0].to_dict()
+        incomplete_execution_projection = dict(incomplete_execution_payloads[0])
+        incomplete_execution_projection.pop("receipt_sha256")
+        incomplete_execution_payloads[0]["receipt_sha256"] = (
+            runner.hashlib.sha256(
+                runner._canonical_bytes(incomplete_execution_projection)
+            ).hexdigest()
+        )
+        incomplete_executions = [
+            SimpleNamespace(to_dict=lambda payload=payload: payload)
+            for payload in incomplete_execution_payloads
+        ]
+        with pytest.raises(
+            runner.PublicRedockingRunnerError,
+            match="diagnostics are invalid",
+        ):
+            runner._development_engine_v2_only_summary(
+                case_ids=case_ids,
+                profiles=profiles,
+                materializations=materializations,
+                rows=incomplete_rows,
+                executions=incomplete_executions,
+                scorer_backend=scorer_backend,
+                engine_source_sha256=implementation_sha256,
+                evaluation_pipeline_sha256=evaluation_pipeline_sha256,
+                execution_environment_sha256=execution_environment_sha256,
+                development_source_paired_torsion_rescue=True,
+            )
     if development_true_conformer_profile:
         tampered_case_receipts = [
             dict(receipt) for receipt in true_conformer_case_receipts
@@ -1871,9 +1978,7 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
                 evaluation_pipeline_sha256=evaluation_pipeline_sha256,
                 execution_environment_sha256=execution_environment_sha256,
                 development_true_conformer_profile=True,
-                development_true_conformer_case_receipts=(
-                    tampered_case_receipts
-                ),
+                development_true_conformer_case_receipts=(tampered_case_receipts),
             )
 
     tampered = dict(execution_payloads[0])
@@ -1898,15 +2003,12 @@ def test_development_engine_v2_only_summary_is_single_engine_and_nonclaimable(
             engine_source_sha256=implementation_sha256,
             evaluation_pipeline_sha256=evaluation_pipeline_sha256,
             execution_environment_sha256=execution_environment_sha256,
-            development_v8_clearance_variant=(
-                development_v8_clearance_variant
+            development_v8_clearance_variant=(development_v8_clearance_variant),
+            development_true_conformer_profile=(development_true_conformer_profile),
+            development_source_paired_torsion_rescue=(
+                development_source_paired_torsion_rescue
             ),
-            development_true_conformer_profile=(
-                development_true_conformer_profile
-            ),
-            development_true_conformer_case_receipts=(
-                true_conformer_case_receipts
-            ),
+            development_true_conformer_case_receipts=(true_conformer_case_receipts),
         )
 
 
@@ -2777,6 +2879,7 @@ def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
         ensemble_source_proposal_indices=(
             (None,) * 8 + tuple(range(36, 64)) + (None,) * 28
         ),
+        torsion_rescue_parent_proposal_indices=(None,) * 64,
     )
     fixed_development_receipt = SimpleNamespace(
         guided_receipt=fixed_guided_receipt,
@@ -2892,10 +2995,7 @@ def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
         assert kwargs["guided_policy"] is None
         assert kwargs["precomputed_proposals"] is fixed_proposals
         assert kwargs["precomputed_guided_receipt"] is fixed_guided_receipt
-        assert (
-            kwargs["precomputed_provenance_receipt"]
-            is fixed_development_receipt
-        )
+        assert kwargs["precomputed_provenance_receipt"] is fixed_development_receipt
         raise runner.DockingAuthorityError("fixture search failure")
 
     monkeypatch.setattr(
@@ -2920,14 +3020,10 @@ def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
     assert observed["context_ligand"] is charged_ligand
     assert observed["refiner_ligand"] is charged_ligand
     assert observed["refiner_indices"] == tuple(range(8, 36))
-    assert (
-        captured.value.development_proposal_receipt
-        is fixed_development_receipt
-    )
+    assert captured.value.development_proposal_receipt is fixed_development_receipt
     failure_diagnostics = captured.value.diagnostics.to_dict()
     assert [
-        candidate["proposal_mode"]
-        for candidate in failure_diagnostics["candidates"]
+        candidate["proposal_mode"] for candidate in failure_diagnostics["candidates"]
     ] == list(fixed_guided_receipt.proposal_modes)
     runner._validate_true_conformer_candidate_bindings(
         {
@@ -2938,9 +3034,7 @@ def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
             "candidate_slots": [
                 {
                     "proposal_index": index,
-                    "proposal_fingerprint_sha256": (
-                        proposal.fingerprint_sha256
-                    ),
+                    "proposal_fingerprint_sha256": (proposal.fingerprint_sha256),
                     "coordinate_fingerprint_sha256": (
                         proposal.coordinate_fingerprint_sha256
                     ),
@@ -2967,11 +3061,168 @@ def test_true_conformer_pose_path_uses_charged_seed_and_retains_search_receipt(
             seed=11,
             development_true_conformer_profile=True,
         )
-    assert (
-        post_receipt.value.development_proposal_receipt
-        is fixed_development_receipt
-    )
+    assert post_receipt.value.development_proposal_receipt is fixed_development_receipt
     assert post_receipt.value.development_proposal_failure_stage == ""
+
+
+def test_source_paired_torsion_rescue_pose_path_binds_precomputed_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = FROZEN_PUBLIC_REDOCKING_CASE_IDS[0]
+    paths = runner._case_paths(tmp_path / "inputs", case_id)
+    paths["directory"].mkdir(parents=True)
+    paths["receptor"].write_bytes(b"fixture receptor\n")
+    paths["seed"].write_bytes(b"fixture seed\n")
+    paths["native"].write_bytes(b"fixture native\n")
+
+    atoms = tuple(SimpleNamespace(partial_charge_e=0.0, element="C") for _ in range(2))
+    system = SimpleNamespace(
+        atom_count=2,
+        atoms=atoms,
+        coordinates=torch.zeros((1, 2, 3), dtype=torch.float64),
+    )
+    authority = object()
+    context = object()
+    allocation = SimpleNamespace(
+        v3_target_parent_pairs=((8, 36),),
+        rescue_target_parent_pairs=((9, 37),),
+    )
+    modes = ["uniform_fallback"] * 64
+    sources: list[int | None] = [None] * 64
+    rescue_parents: list[int | None] = [None] * 64
+    modes[8] = "uniform_v3_rigid_ensemble"
+    sources[8] = 36
+    modes[9] = "uniform_torsion_rescue_variant"
+    rescue_parents[9] = 37
+    guided_receipt = SimpleNamespace(
+        receipt_sha256="a" * 64,
+        proposal_modes=tuple(modes),
+        ensemble_source_proposal_indices=tuple(sources),
+        torsion_rescue_parent_proposal_indices=tuple(rescue_parents),
+    )
+    proposals = tuple(
+        SimpleNamespace(fingerprint_sha256=f"{index + 1:064x}") for index in range(64)
+    )
+
+    class FakeRescueReceipt:
+        receipt_sha256 = "b" * 64
+
+        def __init__(self) -> None:
+            self.allocation = allocation
+            self.guided_receipt = guided_receipt
+            self.proposal_fingerprint_sha256s = tuple(
+                proposal.fingerprint_sha256 for proposal in proposals
+            )
+
+        def to_dict(self) -> dict[str, object]:
+            return {"receipt_sha256": self.receipt_sha256}
+
+    monkeypatch.setattr(
+        runner,
+        "SourcePairedTorsionRescueProposalReceipt",
+        FakeRescueReceipt,
+    )
+    proposal_receipt = FakeRescueReceipt()
+    scorer = SimpleNamespace(
+        backend_receipt=SimpleNamespace(to_dict=_python_backend_receipt),
+        context=SimpleNamespace(
+            receptor_donors=(0,),
+            receptor_acceptors=(1,),
+            ligand_donors=(0,),
+            ligand_acceptors=(1,),
+        ),
+    )
+    observed: dict[str, object] = {}
+    monkeypatch.setattr(runner, "parse_pdb", lambda *args, **kwargs: system)
+    monkeypatch.setattr(runner, "parse_sdf_v2000", lambda *args, **kwargs: system)
+    monkeypatch.setattr(runner, "_assign_receptor_proxy_charges", lambda value: value)
+    monkeypatch.setattr(
+        runner,
+        "_assign_ligand_gasteiger_charges",
+        lambda value, path: value,
+    )
+    monkeypatch.setattr(
+        runner,
+        "build_element_aware_authenticated_known_pocket_docking_problem",
+        lambda *args, **kwargs: authority,
+    )
+    monkeypatch.setattr(runner, "ChemistryPoseScorerV1", lambda *args, **kwargs: scorer)
+    monkeypatch.setattr(
+        runner,
+        "build_guided_placement_context",
+        lambda *args, **kwargs: context,
+    )
+    monkeypatch.setattr(
+        runner,
+        "generate_source_paired_torsion_rescue_docking_proposals",
+        lambda *args, **kwargs: (proposals, guided_receipt, proposal_receipt),
+    )
+    monkeypatch.setattr(
+        runner,
+        "uniform_v3_ensemble_proposal_indices",
+        lambda *args, **kwargs: pytest.fail("ordinary allocation was used"),
+    )
+
+    def build_refiner(*args, **kwargs):
+        observed["allocation"] = kwargs["source_paired_torsion_rescue_allocation"]
+        observed["v3_indices"] = kwargs["v3_proposal_indices"]
+        return object()
+
+    monkeypatch.setattr(
+        runner,
+        "InteractionAwareTorsionContactEnsembleRefinerV7",
+        build_refiner,
+    )
+
+    def fail_search(*args, **kwargs):
+        observed["search_kwargs"] = kwargs
+        raise runner.DockingAuthorityError("fixture search failure")
+
+    monkeypatch.setattr(
+        runner,
+        "run_authenticated_scorer_v1_guided_search",
+        fail_search,
+    )
+
+    def diagnostics(**kwargs):
+        observed["diagnostics_kwargs"] = kwargs
+        return SimpleNamespace(to_dict=lambda: kwargs)
+
+    monkeypatch.setattr(
+        runner,
+        "PublicRedockingEngineV2Diagnostics",
+        diagnostics,
+    )
+
+    with pytest.raises(runner.EngineV2SearchCaseFailure) as captured:
+        runner._engine_v2_pose_coordinates(
+            case_id,
+            paths,
+            seed=11,
+            development_source_paired_torsion_rescue=True,
+        )
+
+    search_kwargs = observed["search_kwargs"]
+    assert search_kwargs["guided_policy"] is None
+    assert search_kwargs["precomputed_proposals"] is proposals
+    assert search_kwargs["precomputed_guided_receipt"] is guided_receipt
+    assert search_kwargs["precomputed_provenance_receipt"] is proposal_receipt
+    assert observed["allocation"] is allocation
+    assert observed["v3_indices"] == (8,)
+    diagnostic_kwargs = observed["diagnostics_kwargs"]
+    assert (
+        diagnostic_kwargs["source_paired_torsion_rescue_proposal_receipt"]
+        == proposal_receipt.to_dict()
+    )
+    assert tuple(
+        candidate.proposal_mode for candidate in diagnostic_kwargs["candidates"]
+    ) == tuple(modes)
+    assert tuple(
+        candidate.torsion_rescue_parent_proposal_index
+        for candidate in diagnostic_kwargs["candidates"]
+    ) == tuple(rescue_parents)
+    assert captured.value.development_proposal_receipt is proposal_receipt
 
 
 def test_true_conformer_receipt_binds_config_and_refinement_lineage() -> None:
@@ -2991,9 +3242,7 @@ def test_true_conformer_receipt_binds_config_and_refinement_lineage() -> None:
         },
     }
     with pytest.raises(runner.PublicRedockingRunnerError):
-        runner._validate_true_conformer_not_prepared_row(
-            disguised_search_failure
-        )
+        runner._validate_true_conformer_not_prepared_row(disguised_search_failure)
 
     source_sha256 = "1" * 64
     source_payload = {
@@ -3015,9 +3264,9 @@ def test_true_conformer_receipt_binds_config_and_refinement_lineage() -> None:
         expected_source_artifact_sha256=source_sha256,
     )
     wrong_config = json.loads(json.dumps(source_payload))
-    wrong_config["source_conformer_ensemble"]["derivation_evidence"][
-        "config"
-    ]["candidate_count"] = 31
+    wrong_config["source_conformer_ensemble"]["derivation_evidence"]["config"][
+        "candidate_count"
+    ] = 31
     with pytest.raises(runner.PublicRedockingRunnerError):
         runner._validate_true_conformer_proposal_source_binding(
             wrong_config,
@@ -3039,25 +3288,15 @@ def test_true_conformer_receipt_binds_config_and_refinement_lineage() -> None:
             "proposal_mode": (
                 "pocket_center_baseline"
                 if index < 8
-                else (
-                    "uniform_v3_rigid_ensemble"
-                    if index < 36
-                    else "uniform_fallback"
-                )
+                else ("uniform_v3_rigid_ensemble" if index < 36 else "uniform_fallback")
             ),
-            "ensemble_source_proposal_index": (
-                index + 28 if 8 <= index < 36 else None
-            ),
+            "ensemble_source_proposal_index": (index + 28 if 8 <= index < 36 else None),
         }
         for index in range(64)
     ]
     refinement_projection = {
-        "source_proposal_sha256": candidate_slots[0][
-            "proposal_fingerprint_sha256"
-        ],
-        "pre_coordinates_sha256": candidate_slots[0][
-            "coordinate_fingerprint_sha256"
-        ],
+        "source_proposal_sha256": candidate_slots[0]["proposal_fingerprint_sha256"],
+        "pre_coordinates_sha256": candidate_slots[0]["coordinate_fingerprint_sha256"],
         "post_coordinates_sha256": "f" * 64,
     }
     refinement_sha256 = runner._sha256_bytes(
@@ -3288,6 +3527,8 @@ def test_engine_v2_diagnostic_timer_covers_complete_candidate_ledger(
             guided_receipt=SimpleNamespace(
                 proposal_modes=("uniform_fallback",) * runner.ENGINE_V2_CANDIDATE_COUNT,
                 ensemble_source_proposal_indices=(None,)
+                * runner.ENGINE_V2_CANDIDATE_COUNT,
+                torsion_rescue_parent_proposal_indices=(None,)
                 * runner.ENGINE_V2_CANDIDATE_COUNT,
             ),
             authenticated_search_result=SimpleNamespace(search_result=search),

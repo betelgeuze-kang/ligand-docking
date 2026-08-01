@@ -21,6 +21,7 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     GUIDED_MODES,
     MULTI_ANCHOR_MODE,
     POCKET_CENTER_BASELINE_MODE,
+    UNIFORM_TORSION_RESCUE_VARIANT_MODE,
     UNIFORM_FALLBACK_MODE,
     UNIFORM_V3_ENSEMBLE_MODE,
     DockingAuthorityError,
@@ -29,14 +30,17 @@ from betelgeuze_engine_v2.docking import (  # noqa: E402
     DockingScope,
     GuidedPlacementPolicy,
     GuidedPlacementSearchResult,
+    SourcePairedTorsionRescuePolicy,
     PocketDefinition,
     PocketPlacementPolicy,
     ScoreDirection,
     build_authenticated_known_pocket_docking_problem,
     build_guided_placement_context,
     generate_guided_docking_proposals,
+    generate_source_paired_torsion_rescue_docking_proposals,
     generate_pocket_centered_docking_proposals,
     run_authenticated_guided_placement_search,
+    source_paired_torsion_rescue_allocation,
     uniform_v3_ensemble_proposal_indices,
 )
 from betelgeuze_engine_v2.docking.guided_placement import (  # noqa: E402
@@ -307,9 +311,7 @@ def test_guided_modes_are_deterministic_and_uniform_fallback_is_exact() -> None:
             UNIFORM_FALLBACK_MODE,
         }
     )
-    guided_count = sum(
-        mode in GUIDED_MODES for mode in receipt.proposal_modes
-    )
+    guided_count = sum(mode in GUIDED_MODES for mode in receipt.proposal_modes)
     assert guided_count == 4
     assert receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE) == 1
     assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 3
@@ -383,10 +385,13 @@ def test_repeated_interaction_cycles_add_bounded_multi_anchor_candidates() -> No
     assert len(multi_indices) == 6
     assert receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE) == 8
     assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 24
-    assert sum(
-        mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
-        for mode in receipt.proposal_modes
-    ) == 32
+    assert (
+        sum(
+            mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
+            for mode in receipt.proposal_modes
+        )
+        == 32
+    )
     assert receipt.receipt_sha256 == repeated_receipt.receipt_sha256
     assert tuple(row.fingerprint_sha256 for row in proposals) == tuple(
         row.fingerprint_sha256 for row in repeated
@@ -408,9 +413,7 @@ def test_repeated_interaction_cycles_add_bounded_multi_anchor_candidates() -> No
                 "ligand_atom_index": ligand_index,
                 "receptor_atom_index": receptor_index,
             }
-            for ligand_index, receptor_index in zip(
-                ligand_indices, receptor_indices
-            )
+            for ligand_index, receptor_index in zip(ligand_indices, receptor_indices)
         ]
         paired_observed = sum(
             float(
@@ -419,9 +422,7 @@ def test_repeated_interaction_cycles_add_bounded_multi_anchor_candidates() -> No
                     - receptor.coordinates[0, receptor_index]
                 ).item()
             )
-            for ligand_index, receptor_index in zip(
-                ligand_indices, receptor_indices
-            )
+            for ligand_index, receptor_index in zip(ligand_indices, receptor_indices)
         ) / len(ligand_indices)
         assert receipt.observed_anchor_distance_angstroms[index] == pytest.approx(
             paired_observed,
@@ -444,15 +445,13 @@ def test_centered_quota_consumes_guided_capacity_before_uniform_fallback() -> No
         policy=policy,
     )
     single_center_policy = replace(policy, centered_candidate_count=1)
-    single_center_proposals, single_center_receipt = (
-        generate_guided_docking_proposals(
-            authority,
-            budget,
-            context,
-            receptor_system=receptor,
-            ligand_system=ligand,
-            policy=single_center_policy,
-        )
+    single_center_proposals, single_center_receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        policy=single_center_policy,
     )
     baseline, _ = generate_pocket_centered_docking_proposals(
         authority,
@@ -463,10 +462,13 @@ def test_centered_quota_consumes_guided_capacity_before_uniform_fallback() -> No
     )
 
     assert receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE) == 8
-    assert sum(
-        mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
-        for mode in receipt.proposal_modes
-    ) == 12
+    assert (
+        sum(
+            mode not in {POCKET_CENTER_BASELINE_MODE, UNIFORM_FALLBACK_MODE}
+            for mode in receipt.proposal_modes
+        )
+        == 12
+    )
     assert receipt.proposal_modes.count(UNIFORM_FALLBACK_MODE) == 44
     assert receipt.proposal_modes[20:] == (UNIFORM_FALLBACK_MODE,) * 44
     assert tuple(row.fingerprint_sha256 for row in proposals[20:]) == tuple(
@@ -508,16 +510,18 @@ def test_uniform_v3_ensemble_preserves_v2_sources_and_binds_lineage() -> None:
         policy,
     )
     source_indices = tuple(
-        receipt.ensemble_source_proposal_indices[index]
-        for index in target_indices
+        receipt.ensemble_source_proposal_indices[index] for index in target_indices
     )
 
     assert target_indices == tuple(range(8, 20))
-    assert tuple(
-        index
-        for index, mode in enumerate(receipt.proposal_modes)
-        if mode == UNIFORM_V3_ENSEMBLE_MODE
-    ) == target_indices
+    assert (
+        tuple(
+            index
+            for index, mode in enumerate(receipt.proposal_modes)
+            if mode == UNIFORM_V3_ENSEMBLE_MODE
+        )
+        == target_indices
+    )
     assert all(source is not None for source in source_indices)
     assert len(set(source_indices)) == len(source_indices)
     assert source_indices[0] == 20
@@ -578,6 +582,140 @@ def test_uniform_v3_ensemble_preserves_v2_sources_and_binds_lineage() -> None:
             receipt,
             ensemble_source_proposal_indices=tuple(non_integer_sources),
         )
+
+
+def test_source_paired_torsion_rescue_reclassifies_without_changing_proposals() -> None:
+    base_authority, receptor, ligand = _authority()
+    atoms = list(ligand.atoms)
+    atoms[7] = replace(
+        atoms[7],
+        name="C8",
+        element="C",
+        atomic_number=6,
+    )
+    ligand = replace(
+        ligand,
+        system_id="guided-stage4-flexible-ligand",
+        atoms=tuple(atoms),
+    )
+    authority = build_authenticated_known_pocket_docking_problem(
+        receptor,
+        ligand,
+        base_authority.pocket,
+        receptor_margin_angstrom=4.0,
+    )
+    assert int(torch.count_nonzero(authority.search_space.rotatable_mask)) == 1
+    context = build_guided_placement_context(authority, receptor, ligand)
+    budget = replace(
+        _budget(),
+        candidate_count=64,
+        top_k=5,
+        max_torsions=1,
+    )
+    policy = SourcePairedTorsionRescuePolicy()
+    allocation = source_paired_torsion_rescue_allocation(
+        authority,
+        context,
+        budget,
+        policy,
+    )
+
+    baseline, baseline_receipt = generate_guided_docking_proposals(
+        authority,
+        budget,
+        context,
+        receptor_system=receptor,
+        ligand_system=ligand,
+        policy=policy.base_guided_policy,
+    )
+    proposals, receipt, provenance = (
+        generate_source_paired_torsion_rescue_docking_proposals(
+            authority,
+            budget,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            policy=policy,
+        )
+    )
+    repeated, repeated_receipt, repeated_provenance = (
+        generate_source_paired_torsion_rescue_docking_proposals(
+            authority,
+            budget,
+            context,
+            receptor_system=receptor,
+            ligand_system=ligand,
+            policy=policy,
+        )
+    )
+
+    rescue_pairs = allocation.rescue_target_parent_pairs
+    v3_pairs = allocation.v3_target_parent_pairs
+    assert len(rescue_pairs) == 4
+    assert tuple(row.fingerprint_sha256 for row in proposals) == tuple(
+        row.fingerprint_sha256 for row in baseline
+    )
+    assert tuple(row.fingerprint_sha256 for row in repeated) == tuple(
+        row.fingerprint_sha256 for row in baseline
+    )
+    assert receipt.receipt_sha256 == repeated_receipt.receipt_sha256
+    assert provenance.receipt_sha256 == repeated_provenance.receipt_sha256
+    assert provenance.allocation.allocation_sha256 == allocation.allocation_sha256
+    assert provenance.guided_receipt.receipt_sha256 == receipt.receipt_sha256
+    assert provenance.baseline_guided_receipt.receipt_sha256 == (
+        baseline_receipt.receipt_sha256
+    )
+    assert receipt.baseline_guided_receipt_sha256 == (baseline_receipt.receipt_sha256)
+    assert receipt.torsion_rescue_allocation_sha256 == (allocation.allocation_sha256)
+    assert tuple(
+        index
+        for index, mode in enumerate(receipt.proposal_modes)
+        if mode == UNIFORM_TORSION_RESCUE_VARIANT_MODE
+    ) == tuple(target for target, _ in rescue_pairs)
+    assert tuple(
+        index
+        for index, mode in enumerate(receipt.proposal_modes)
+        if mode == UNIFORM_V3_ENSEMBLE_MODE
+    ) == tuple(target for target, _ in v3_pairs)
+    for target, parent in rescue_pairs:
+        assert receipt.torsion_rescue_parent_proposal_indices[target] == parent
+        assert receipt.ensemble_source_proposal_indices[target] is None
+        assert receipt.proposal_modes[parent] == UNIFORM_FALLBACK_MODE
+        assert proposals[parent].fingerprint_sha256 == (
+            baseline[parent].fingerprint_sha256
+        )
+        assert proposals[target].fingerprint_sha256 == (
+            baseline[target].fingerprint_sha256
+        )
+        assert torch.equal(
+            proposals[parent].coordinates,
+            baseline[parent].coordinates,
+        )
+        assert torch.equal(
+            proposals[target].coordinates,
+            baseline[target].coordinates,
+        )
+
+    duplicate_parents = list(receipt.torsion_rescue_parent_proposal_indices)
+    duplicate_parents[rescue_pairs[1][0]] = rescue_pairs[0][1]
+    with pytest.raises(DockingAuthorityError, match="overlap or reuse parents"):
+        replace(
+            receipt,
+            torsion_rescue_parent_proposal_indices=tuple(duplicate_parents),
+        )
+
+    boolean_parents = list(receipt.torsion_rescue_parent_proposal_indices)
+    boolean_parents[rescue_pairs[0][0]] = True
+    with pytest.raises(DockingAuthorityError, match="exact integers"):
+        replace(
+            receipt,
+            torsion_rescue_parent_proposal_indices=tuple(boolean_parents),
+        )
+
+    tampered_candidate_ids = list(provenance.candidate_ids)
+    tampered_candidate_ids[0] = tampered_candidate_ids[1]
+    with pytest.raises(DockingAuthorityError, match="candidate IDs"):
+        replace(provenance, candidate_ids=tuple(tampered_candidate_ids))
 
 
 def test_precomputed_guided_batch_requires_complete_provenance_triplet() -> None:
@@ -1078,8 +1216,7 @@ def test_sampled_degenerate_shape_frame_falls_back_per_candidate(
             receipt.proposal_modes.count(POCKET_CENTER_BASELINE_MODE),
             len(receipt.proposal_modes),
         )
-        if index % len(GUIDED_MODES)
-        == GUIDED_MODES.index("shape_complementarity")
+        if index % len(GUIDED_MODES) == GUIDED_MODES.index("shape_complementarity")
     )
     assert receipt.proposal_modes[shape_index] == UNIFORM_FALLBACK_MODE
     assert proposals[shape_index].fingerprint_sha256 == (

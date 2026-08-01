@@ -36,6 +36,12 @@ from betelgeuze_engine_v2.benchmark import (
     require_public_redocking_contamination_registry,
     verify_public_redocking_source_identifiers,
 )
+from betelgeuze_engine_v2.docking import (
+    GuidedPlacementReceipt,
+    SourcePairedTorsionRescueAllocation,
+    SourcePairedTorsionRescuePolicy,
+    SourcePairedTorsionRescueProposalReceipt,
+)
 
 
 _EXCLUDED_SOURCE_IDS = (
@@ -128,6 +134,95 @@ def _zero_score_terms() -> dict[str, str]:
     }
 
 
+def _torsion_rescue_proposal_receipt() -> dict[str, object]:
+    policy = SourcePairedTorsionRescuePolicy()
+    authority_sha256 = "a" * 64
+    budget_sha256 = "b" * 64
+    all_pairs = ((5, 6), (7, 8), (9, 10), (11, 12), (13, 14))
+    rescue_pairs = ((5, 6), (7, 8), (11, 12), (13, 14))
+    v3_pairs = ((9, 10),)
+    allocation = SourcePairedTorsionRescueAllocation(
+        authenticated_input_receipt_sha256=authority_sha256,
+        guidance_context_sha256="c" * 64,
+        budget_sha256=budget_sha256,
+        rescue_policy_sha256=policy.fingerprint_sha256,
+        base_guided_policy_sha256=(policy.base_guided_policy.fingerprint_sha256),
+        candidate_count=64,
+        authority_rotor_count=1,
+        v3_target_parent_pairs=v3_pairs,
+        rescue_target_parent_pairs=rescue_pairs,
+    )
+    fingerprints = tuple(
+        hashlib.sha256(f"rescue-proposal:{index}".encode("ascii")).hexdigest()
+        for index in range(64)
+    )
+    baseline_modes = ["uniform_fallback"] * 64
+    baseline_sources: list[int | None] = [None] * 64
+    for target, parent in all_pairs:
+        baseline_modes[target] = "uniform_v3_rigid_ensemble"
+        baseline_sources[target] = parent
+    baseline = GuidedPlacementReceipt(
+        authenticated_input_receipt_sha256=authority_sha256,
+        guidance_context_sha256="c" * 64,
+        guided_policy_sha256=policy.base_guided_policy.fingerprint_sha256,
+        budget_sha256=budget_sha256,
+        proposal_fingerprint_sha256s=fingerprints,
+        proposal_modes=tuple(baseline_modes),
+        ligand_anchor_atom_indices=((),) * 64,
+        receptor_anchor_atom_indices=((),) * 64,
+        requested_anchor_distance_angstroms=(None,) * 64,
+        observed_anchor_distance_angstroms=(None,) * 64,
+        feature_counts={},
+        ensemble_source_proposal_indices=tuple(baseline_sources),
+    )
+    guided_modes = list(baseline_modes)
+    guided_sources = list(baseline_sources)
+    rescue_parents: list[int | None] = [None] * 64
+    for target, parent in rescue_pairs:
+        guided_modes[target] = "uniform_torsion_rescue_variant"
+        guided_sources[target] = None
+        rescue_parents[target] = parent
+    guided = GuidedPlacementReceipt(
+        authenticated_input_receipt_sha256=authority_sha256,
+        guidance_context_sha256="c" * 64,
+        guided_policy_sha256=policy.fingerprint_sha256,
+        budget_sha256=budget_sha256,
+        proposal_fingerprint_sha256s=fingerprints,
+        proposal_modes=tuple(guided_modes),
+        ligand_anchor_atom_indices=((),) * 64,
+        receptor_anchor_atom_indices=((),) * 64,
+        requested_anchor_distance_angstroms=(None,) * 64,
+        observed_anchor_distance_angstroms=(None,) * 64,
+        feature_counts={},
+        ensemble_source_proposal_indices=tuple(guided_sources),
+        torsion_rescue_parent_proposal_indices=tuple(rescue_parents),
+        source_paired_torsion_rescue_profile=True,
+        baseline_guided_receipt_sha256=baseline.receipt_sha256,
+        torsion_rescue_allocation_sha256=allocation.allocation_sha256,
+    )
+    receipt = SourcePairedTorsionRescueProposalReceipt(
+        authenticated_input_receipt_sha256=authority_sha256,
+        budget_sha256=budget_sha256,
+        source_ligand_system_sha256="d" * 64,
+        source_ligand_topology_sha256="e" * 64,
+        rescue_policy_sha256=policy.fingerprint_sha256,
+        allocation=allocation,
+        baseline_guided_receipt=baseline,
+        guided_receipt=guided,
+        candidate_ids=tuple(f"rescue-candidate-{index}" for index in range(64)),
+        proposal_fingerprint_sha256s=fingerprints,
+        proposal_coordinate_fingerprint_sha256s=tuple(
+            hashlib.sha256(f"rescue-coordinate:{index}".encode("ascii")).hexdigest()
+            for index in range(64)
+        ),
+        proposal_torsion_metadata_sha256s=tuple(
+            hashlib.sha256(f"rescue-torsion:{index}".encode("ascii")).hexdigest()
+            for index in range(64)
+        ),
+    )
+    return receipt.to_dict()
+
+
 def test_candidate_score_terms_accept_json_key_order_and_recanonicalize() -> None:
     score_terms = dict(reversed(tuple(_zero_score_terms().items())))
     candidate = PublicRedockingEngineV2CandidateDiagnostic(
@@ -176,6 +271,28 @@ def test_candidate_uniform_v3_ensemble_requires_exact_source_lineage() -> None:
         replace(candidate, ensemble_source_proposal_index=None)
     with pytest.raises(PublicRedockingBenchmarkError, match="non-ensemble"):
         replace(candidate, proposal_mode="uniform_fallback")
+
+
+def test_candidate_torsion_rescue_requires_distinct_schema_and_parent() -> None:
+    candidate = PublicRedockingEngineV2CandidateDiagnostic(
+        proposal_index=0,
+        status="failure",
+        proposal_mode="uniform_torsion_rescue_variant",
+        torsion_rescue_parent_proposal_index=1,
+        error_code="synthetic_candidate_failure",
+        schema_id=(
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+        ),
+    )
+
+    assert candidate.to_dict()["torsion_rescue_parent_proposal_index"] == 1
+    with pytest.raises(PublicRedockingBenchmarkError, match="parent index"):
+        replace(candidate, torsion_rescue_parent_proposal_index=0)
+    with pytest.raises(PublicRedockingBenchmarkError, match="parent index"):
+        replace(
+            candidate,
+            schema_id=benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+        )
 
 
 def _source_identifier_bytes() -> bytes:
@@ -1579,6 +1696,303 @@ def test_engine_v2_diagnostics_validate_uniform_v3_ensemble_lineage() -> None:
     )
     with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
         replace(diagnostics, candidates=tuple(invalid_source))
+
+
+def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
+    row = _success(
+        FROZEN_PUBLIC_REDOCKING_CASE_IDS[0],
+        "engine_v2",
+        top1=1.0,
+        top2=2.0,
+        top3=3.0,
+        runtime=1.0,
+    )
+    diagnostics = row.engine_v2_diagnostics
+    assert diagnostics is not None
+    candidate_schema = (
+        benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID
+    )
+    candidates = [
+        PublicRedockingEngineV2CandidateDiagnostic(
+            proposal_index=index,
+            status="failure",
+            proposal_mode="uniform_fallback",
+            error_code="synthetic_candidate_failure",
+            schema_id=candidate_schema,
+        )
+        for index in range(64)
+    ]
+    proposal_receipt = _torsion_rescue_proposal_receipt()
+    allocation_rows = proposal_receipt["allocation"]
+    for pair in allocation_rows["v3_target_parent_pairs"]:
+        target = pair["target_proposal_index"]
+        candidates[target] = replace(
+            candidates[target],
+            proposal_mode="uniform_v3_rigid_ensemble",
+            ensemble_source_proposal_index=pair["parent_proposal_index"],
+        )
+    for pair in allocation_rows["rescue_target_parent_pairs"]:
+        target = pair["target_proposal_index"]
+        candidates[target] = replace(
+            candidates[target],
+            proposal_mode="uniform_torsion_rescue_variant",
+            torsion_rescue_parent_proposal_index=pair["parent_proposal_index"],
+        )
+    validated = replace(
+        diagnostics,
+        schema_id=(
+            benchmark_contract.PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+        ),
+        candidates=tuple(candidates),
+        source_paired_torsion_rescue_proposal_receipt=proposal_receipt,
+    )
+    assert validated.candidates[5].torsion_rescue_parent_proposal_index == 6
+
+    tampered_evidence = validated.to_dict()[
+        "source_paired_torsion_rescue_proposal_receipt"
+    ]
+    tampered_evidence["allocation"]["result_dependent_allocation"] = True
+
+    def rehash(document: dict[str, object], field_name: str) -> None:
+        projection = dict(document)
+        projection.pop(field_name)
+        document[field_name] = hashlib.sha256(
+            json.dumps(
+                projection,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("ascii")
+        ).hexdigest()
+
+    rehash(tampered_evidence["allocation"], "allocation_sha256")
+    tampered_evidence["guided_placement"]["torsion_rescue_allocation_sha256"] = (
+        tampered_evidence["allocation"]["allocation_sha256"]
+    )
+    rehash(tampered_evidence["guided_placement"], "receipt_sha256")
+    rehash(tampered_evidence, "receipt_sha256")
+    with pytest.raises(PublicRedockingBenchmarkError, match="allocation lanes"):
+        replace(
+            validated,
+            source_paired_torsion_rescue_proposal_receipt=tampered_evidence,
+        )
+
+    truncated_evidence = validated.to_dict()[
+        "source_paired_torsion_rescue_proposal_receipt"
+    ]
+    truncated_evidence["allocation"]["v3_target_parent_pairs"] = []
+    rehash(truncated_evidence["allocation"], "allocation_sha256")
+    truncated_evidence["guided_placement"][
+        "torsion_rescue_allocation_sha256"
+    ] = truncated_evidence["allocation"]["allocation_sha256"]
+    rehash(truncated_evidence["guided_placement"], "receipt_sha256")
+    rehash(truncated_evidence, "receipt_sha256")
+    with pytest.raises(
+        PublicRedockingBenchmarkError,
+        match="exhaustive baseline partition",
+    ):
+        replace(
+            validated,
+            source_paired_torsion_rescue_proposal_receipt=truncated_evidence,
+        )
+
+    with pytest.raises(TypeError):
+        validated.source_paired_torsion_rescue_proposal_receipt["allocation"][
+            "authority_rotor_count"
+        ] = 2
+
+    serialized_evidence = validated.to_dict()[
+        "source_paired_torsion_rescue_proposal_receipt"
+    ]
+    allocation_evidence = serialized_evidence["allocation"]
+    source_coordinate_sha256 = serialized_evidence["candidate_slots"][0][
+        "coordinate_fingerprint_sha256"
+    ]
+    final_coordinate_sha256 = "2" * 64
+    initial_penalty = (1.0).hex()
+    final_penalty = (0.0).hex()
+    accepted_steps = 1
+    accepted_rotation_steps = 0
+    original_pose_valid = False
+    translation = ((0.0).hex(),) * 3
+    rotation = ((0.0).hex(),) * 3
+    refinement_payload: dict[str, object] = {
+        name: None
+        for name in (
+            benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
+            - {"receipt_sha256"}
+        )
+    }
+    refinement_payload.update({
+        "schema_id": (
+            "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+        ),
+        "legacy_v7_receipt_schema_id": (
+            "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
+        ),
+        "source_proposal_sha256": serialized_evidence["candidate_slots"][0][
+            "proposal_fingerprint_sha256"
+        ],
+        "pre_coordinates_sha256": source_coordinate_sha256,
+        "post_coordinates_sha256": final_coordinate_sha256,
+        "initial_penalty_binary64_hex": initial_penalty,
+        "final_penalty_binary64_hex": final_penalty,
+        "accepted_steps": accepted_steps,
+        "accepted_rotation_steps": accepted_rotation_steps,
+        "original_pose_valid": original_pose_valid,
+        "total_translation_binary64_hex": list(translation),
+        "total_rotation_vector_binary64_hex": list(rotation),
+        "config_sha256": "5" * 64,
+        "v3_proposal_indices": [
+            pair["target_proposal_index"]
+            for pair in allocation_evidence["v3_target_parent_pairs"]
+        ],
+        "proposal_torsion_eligibility_lane": "ineligible_source_or_other_lane",
+        "source_paired_parent_proposal_index": None,
+        "source_paired_torsion_rescue_pairs": allocation_evidence[
+            "rescue_target_parent_pairs"
+        ],
+        "source_paired_torsion_rescue_allocation_sha256": allocation_evidence[
+            "allocation_sha256"
+        ],
+        "source_paired_torsion_rescue_policy_sha256": serialized_evidence[
+            "rescue_policy_sha256"
+        ],
+        "source_paired_torsion_rescue_guidance_context_sha256": (
+            allocation_evidence["guidance_context_sha256"]
+        ),
+        "source_paired_torsion_rescue_budget_sha256": allocation_evidence[
+            "budget_sha256"
+        ],
+        "source_paired_torsion_rescue_profile": True,
+        "source_paired_torsion_rescue_variant_cap": 4,
+        "nested_v6_treated_proposal_as_v3_variant": False,
+        "rescue_target_excluded_from_nested_v3_indices": False,
+        "result_dependent_eligibility": False,
+        "development_only": True,
+        "stage0_eligible": False,
+        "fresh_execution_authorized": False,
+        "claim_safe": False,
+        "source_lane_retained": True,
+        "scientifically_validated": False,
+        "ranking_score_reused_as_physical_energy": False,
+        "posebusters_or_rmsd_used_for_selection": False,
+        "accepted_rotation_steps_include_torsion": True,
+        "generic_penalty_scope": (
+            "source_proposal_to_final_coordinates_v7_objective"
+        ),
+        "baseline_v6_penalty_scope": "post_v6_coordinates_v7_objective",
+    })
+    refinement_payload["receipt_sha256"] = hashlib.sha256(
+        json.dumps(
+            refinement_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    ).hexdigest()
+    successful_fallback = PublicRedockingEngineV2CandidateDiagnostic(
+        proposal_index=0,
+        status="success",
+        proposal_mode="uniform_fallback",
+        proposal_fingerprint_sha256="1" * 64,
+        coordinate_fingerprint_sha256=final_coordinate_sha256,
+        score=0.0,
+        rmsd_angstrom=0.0,
+        geometric_valid=True,
+        chemical_valid=True,
+        pose_artifact_sha256="3" * 64,
+        score_terms_receipt_sha256="4" * 64,
+        hbond_count=0,
+        selection_eligible=True,
+        refinement_receipt_sha256=refinement_payload["receipt_sha256"],
+        refinement_initial_penalty_binary64_hex=initial_penalty,
+        refinement_final_penalty_binary64_hex=final_penalty,
+        refinement_accepted_steps=accepted_steps,
+        refinement_accepted_rotation_steps=accepted_rotation_steps,
+        refinement_original_pose_valid=original_pose_valid,
+        refinement_total_translation_binary64_hex=translation,
+        refinement_total_rotation_vector_binary64_hex=rotation,
+        refinement_receipt_payload=refinement_payload,
+        score_term_binary64_hex=_zero_score_terms(),
+        schema_id=candidate_schema,
+    )
+    successful_rows = list(validated.candidates)
+    successful_rows[0] = successful_fallback
+    successful_diagnostics = replace(
+        validated,
+        candidates=tuple(successful_rows),
+    )
+    assert successful_diagnostics.candidates[0].status == "success"
+
+    receipt_substitutions = {
+        "pre_coordinates_sha256": "8" * 64,
+        "post_coordinates_sha256": "9" * 64,
+        "initial_penalty_binary64_hex": (2.0).hex(),
+        "final_penalty_binary64_hex": (0.5).hex(),
+        "accepted_steps": 2,
+        "accepted_rotation_steps": 1,
+        "original_pose_valid": True,
+        "total_translation_binary64_hex": [(1.0).hex(), (0.0).hex(), (0.0).hex()],
+        "total_rotation_vector_binary64_hex": [
+            (0.0).hex(),
+            (1.0).hex(),
+            (0.0).hex(),
+        ],
+    }
+    for field_name, substituted_value in receipt_substitutions.items():
+        substituted_payload = successful_fallback.to_dict()[
+            "refinement_receipt_payload"
+        ]
+        substituted_payload[field_name] = substituted_value
+        rehash(substituted_payload, "receipt_sha256")
+        substituted_candidate = replace(
+            successful_fallback,
+            refinement_receipt_sha256=substituted_payload["receipt_sha256"],
+            refinement_receipt_payload=substituted_payload,
+        )
+        substituted_rows = list(successful_diagnostics.candidates)
+        substituted_rows[0] = substituted_candidate
+        with pytest.raises(PublicRedockingBenchmarkError, match="refinement receipt"):
+            replace(successful_diagnostics, candidates=tuple(substituted_rows))
+
+    contradictory_payload = successful_fallback.to_dict()["refinement_receipt_payload"]
+    contradictory_payload["result_dependent_eligibility"] = True
+    rehash(contradictory_payload, "receipt_sha256")
+    contradictory_candidate = replace(
+        successful_fallback,
+        refinement_receipt_sha256=contradictory_payload["receipt_sha256"],
+        refinement_receipt_payload=contradictory_payload,
+    )
+    contradictory_rows = list(successful_diagnostics.candidates)
+    contradictory_rows[0] = contradictory_candidate
+    with pytest.raises(PublicRedockingBenchmarkError, match="refinement receipt"):
+        replace(successful_diagnostics, candidates=tuple(contradictory_rows))
+
+    duplicate_parent = list(candidates)
+    duplicate_parent[7] = replace(
+        duplicate_parent[7],
+        proposal_mode="uniform_torsion_rescue_variant",
+        torsion_rescue_parent_proposal_index=6,
+    )
+    with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
+        replace(
+            validated,
+            candidates=tuple(duplicate_parent),
+        )
+
+    non_fallback_parent = list(candidates)
+    non_fallback_parent[6] = replace(
+        non_fallback_parent[6],
+        proposal_mode="pocket_center_baseline",
+    )
+    with pytest.raises(PublicRedockingBenchmarkError, match="lineage"):
+        replace(
+            validated,
+            candidates=tuple(non_fallback_parent),
+        )
 
 
 def test_engine_v2_diagnostics_bind_complete_backend_receipt() -> None:

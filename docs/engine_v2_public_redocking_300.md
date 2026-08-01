@@ -535,6 +535,44 @@ recovered `6T88_MWQ`; proposal-oracle, Top-1, and Top-5 recovery all remained
 comparable but rejected for no recovery-breadth gain. See
 [`engine_v2_true_conformer_development_ab.md`](engine_v2_true_conformer_development_ab.md).
 
+The next bounded experiment reuses the ordinary source-paired V3 proposal
+objects while changing only which existing child rows may enter torsion rescue.
+Run it only on the same historical nine-case Engine-V2-only slice, in another
+new output root:
+
+```bash
+python3 tools/run_engine_v2_public_redocking_300.py \
+  --archive /path/to/posebusters_paper_data.zip \
+  --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
+  --output-root .betelgeuze/stage0-development/source-paired-torsion-rescue-nine \
+  --case-subset all \
+  --start-index 2 \
+  --limit 9 \
+  --development-engine-v2-only \
+  --development-source-paired-torsion-rescue
+```
+
+The allocator keeps exactly 64 candidates and all original proposal objects
+and coordinates. When the authenticated ligand authority contains a rotor, it
+selects at most four existing V3 target-parent pairs by rounded even spacing
+over ordered target indices. Selected children receive the distinct
+`uniform_torsion_rescue_variant` lineage; their retained
+`uniform_fallback` parents remain unchanged and cannot overlap the ordinary V3
+target-parent union. Allocation does not consume RMSD, PoseBusters, native
+coordinates, score, rank, case identity, or prior outcome data.
+
+One hashed provenance receipt binds the fixed policy, authenticated allocation,
+baseline and reclassified guided receipts, and all 64 candidate IDs, proposal
+fingerprints, coordinate fingerprints, and torsion-metadata hashes. The refiner
+derives both eligible child sets from that typed allocation and verifies its
+authority receipt, rotor count, policy, and denominator. Success and
+whole-search failure diagnostics retain the same proposal receipt and the full
+mode/source/parent ledger; source-paired refinement receipts are cross-checked
+against it. The flag is mutually exclusive with V8 and true-conformer
+development, is rejected outside the exact historical slice, and remains
+nonclaimable, non-promotable, and ineligible for Stage 0 or fresh-128 execution.
+No accuracy or performance improvement is asserted before a same-source A/B.
+
 Argument drift is rejected before output creation. The policy is verified
 again before report materialization, and its execution-profile SHA-256 must be
 present in every case receipt and the complete 384-row internal report ledger.

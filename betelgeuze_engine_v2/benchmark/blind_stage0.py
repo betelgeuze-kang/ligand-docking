@@ -33,6 +33,7 @@ from .public_redocking_benchmark import (
     PUBLIC_REDOCKING_ENGINE_V2_ALGORITHM_PROFILE_ID,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_REFINER_POLICY_ID,
     PUBLIC_REDOCKING_ENGINE_V2_REFINER_CONFIG_SHA256,
     PUBLIC_REDOCKING_ENGINE_V2_REFINEMENT_STEPS,
@@ -721,21 +722,40 @@ def _typed_development_result(value: object) -> PublicRedockingCaseResult:
             for field in fields(PublicRedockingEngineV2CandidateDiagnostic)
             if field.init
         )
-        candidates = tuple(
-            PublicRedockingEngineV2CandidateDiagnostic(
-                **{
-                    name: _mapping(raw_candidate)[name]
+        candidates_list: list[PublicRedockingEngineV2CandidateDiagnostic] = []
+        for raw_candidate in raw_candidates:
+            candidate_payload = _mapping(raw_candidate)
+            required_field_names = candidate_field_names
+            if (
+                candidate_payload.get("schema_id")
+                == PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID
+            ):
+                required_field_names = tuple(
+                    name
                     for name in candidate_field_names
-                }
+                    if name != "torsion_rescue_parent_proposal_index"
+                )
+            candidates_list.append(
+                PublicRedockingEngineV2CandidateDiagnostic(
+                    **{
+                        name: candidate_payload[name]
+                        for name in required_field_names
+                    }
+                )
             )
-            for raw_candidate in raw_candidates
-        )
+        candidates = tuple(candidates_list)
         if [candidate.to_dict() for candidate in candidates] != raw_candidates:
             raise ValueError("development_source_candidate_schema_invalid")
         diagnostic_kwargs = {
             field.name: raw_diagnostics[field.name]
             for field in fields(PublicRedockingEngineV2Diagnostics)
-            if field.init and field.name != "candidates"
+            if field.init
+            and field.name != "candidates"
+            and not (
+                raw_diagnostics.get("schema_id")
+                == PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID
+                and field.name == "source_paired_torsion_rescue_proposal_receipt"
+            )
         }
         typed_diagnostics = PublicRedockingEngineV2Diagnostics(
             **diagnostic_kwargs,
