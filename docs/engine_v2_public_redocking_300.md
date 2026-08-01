@@ -535,10 +535,10 @@ recovered `6T88_MWQ`; proposal-oracle, Top-1, and Top-5 recovery all remained
 comparable but rejected for no recovery-breadth gain. See
 [`engine_v2_true_conformer_development_ab.md`](engine_v2_true_conformer_development_ab.md).
 
-The next bounded experiment reuses the ordinary source-paired V3 proposal
-objects while changing only which existing child rows may enter torsion rescue.
-Run it only on the same historical nine-case Engine-V2-only slice, in another
-new output root:
+The completed bounded torsion-rescue experiment reused the ordinary
+source-paired V3 proposal objects while changing only which existing child rows
+could enter torsion rescue. It remains reproducible only on the same historical
+nine-case Engine-V2-only slice, in another new output root:
 
 ```bash
 python3 tools/run_engine_v2_public_redocking_300.py \
@@ -571,7 +571,14 @@ mode/source/parent ledger; source-paired refinement receipts are cross-checked
 against it. The flag is mutually exclusive with V8 and true-conformer
 development, is rejected outside the exact historical slice, and remains
 nonclaimable, non-promotable, and ineligible for Stage 0 or fresh-128 execution.
-No accuracy or performance improvement is asserted before a same-source A/B.
+The exact-main same-source A/B allocated 28 rescue candidates but selected no
+torsion variant; all 28 rescue outputs duplicated their retained parents.
+Native-like and PoseBusters-exact-valid counts stayed 4/512 and 7/512, and
+proposal-oracle, Top-1, and Top-5 recovery stayed 1/8. Selection-eligible
+candidates regressed 31 to 30 and native-like selection-eligible candidates
+regressed 3 to 2 in `6T88_MWQ`, so the lane was rejected. The 1.03% accounted
+runtime decrease is a single-run historical observation, not a speed claim. See
+[`engine_v2_source_paired_torsion_rescue_development_ab.md`](engine_v2_source_paired_torsion_rescue_development_ab.md).
 
 Argument drift is rejected before output creation. The policy is verified
 again before report materialization, and its execution-profile SHA-256 must be

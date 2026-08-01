@@ -156,11 +156,12 @@ with archive SHA-256
 ## Next bounded action
 
 Do not freeze or promote this true-conformer profile and do not change the
-scorer. Preserve V7 and continue only on historical contaminated development
-with the result-independent source-paired torsion-rescue lane documented in
-[`engine_v2_public_redocking_300.md`](engine_v2_public_redocking_300.md). It
-reclassifies at most four already generated V3 children, retains their parent
-objects, keeps the 64-candidate denominator fixed, and binds allocation through
-proposal, refinement, and failure diagnostics. Run a same-source historical
-A/B before recording any accuracy or performance conclusion. Fresh-128 data
-remains unopened.
+scorer. The subsequent result-independent source-paired torsion-rescue A/B also
+failed to broaden recovery: zero torsion variants were selected, all 28 rescue
+outputs duplicated their retained parents, and selection eligibility regressed
+in `6T88_MWQ`. Its closed result is documented in
+[`engine_v2_source_paired_torsion_rescue_development_ab.md`](engine_v2_source_paired_torsion_rescue_development_ab.md).
+Preserve V7 and continue only on historical contaminated development by
+building an uncovered-case failure atlas before defining another bounded,
+genuinely coordinate-changing proposal intervention. Fresh-128 data remains
+unopened.
