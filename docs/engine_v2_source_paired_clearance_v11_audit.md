@@ -2,10 +2,13 @@
 
 ## Decision
 
-The separately reviewed historical-development rerun is complete at exact
-`main` commit `6a749540339db5e53875841e463cfcbcdf7072b2`. It used only the
-fixed nine-case contaminated-development slice and did not access the frozen
-fresh-128 holdout.
+The separately reviewed historical-development rerun is complete. The
+operator-observed checkout or base was
+`6a749540339db5e53875841e463cfcbcdf7072b2`, but that SHA-1 is contextual and
+is not authenticated by the execution receipts. The receipts authenticate the
+implementation, evaluation-pipeline, execution-environment, and refiner-config
+SHA-256 closure instead. The rerun used only the fixed nine-case contaminated-
+development slice and did not access the frozen fresh-128 holdout.
 
 All 512 rescue-lane candidates carry the uniform source-paired V1.1 receipt.
 The 28 fixed rescue targets all recorded the baseline-V6 and optimized minimum
@@ -34,23 +37,25 @@ three to two native-like selection-eligible candidates.
 
 | Item | Identity |
 |---|---|
-| Exact source commit | `6a749540339db5e53875841e463cfcbcdf7072b2` |
+| Operator-observed checkout/base SHA-1 (not receipt-authenticated) | `6a749540339db5e53875841e463cfcbcdf7072b2` |
 | Input archive SHA-256 | `495a8f432ee5612c0dfa3cc582829f112bfca3c29dddc2db2c3a8dc7609e721c` |
 | Source-identifiers SHA-256 | `a69a7b6b9a5a52531933078ef983e6c069e3a987a1d7a733bd7d72cbe1793de6` |
 | Baseline summary self-hash | `400b2e07d1eee754af35ab99257249a5ef4f0e5c77bcd2e6ee15bd2c54459ad3` |
 | Rescue summary self-hash | `92e5e0500a59aa88ce0851178c7656e9d105e6d3e136470e3bc7f61b6f19e2c9` |
 | Baseline analysis self-hash | `c05a06e3d146d02cb22e20b1e200db572903455b35f574b6a36a64c8acb9ba33` |
 | Rescue analysis self-hash | `9e95970c9f51a9b9cd6a3e795d7a6af9b0cce27d554ceaa6e3553940577c72bc` |
-| Audit schema | `betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.0.0` |
-| Audit self-hash | `3f03fdc9fe34ac6dc086b4bf9a510e18f79a6d54656dbd6df74840049bfa1437` |
-| Verified archive SHA-256 | `e36a358c1f21ec40b01dfa1170a85de06220bae1e49c9a389f7c6c1fe650bf69` |
-| Member-manifest SHA-256 | `164d097d5b944c58b6475d79cd6b295a7c576baf5141a28faadebce31130dae7` |
-| Bundle-sidecar SHA-256 | `72e48e4f89901d6ae46e89b87a98df92c73ae5086fa80d2bcdad7f45f7d96856` |
+| Audit schema | `betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.1.0` |
+| Audit self-hash | `bd100f4c743946a5c68d5048c447fe43dbbcef9280101b90f8a0fcf1d788a334` |
+| Verified archive SHA-256 | `8f516d79e83c2aeecfecccc09789115305687b4adc77376d2af8c8197847f998` |
+| Member-manifest SHA-256 | `a32c1c50efbd23001b4f5183dab6eb2636a0e7444e7f4efcb2df9275e5e77a52` |
+| Bundle-sidecar SHA-256 | `5ded750327780731fa868f41bea8fd84b2741368f9ffbe1568f14ab1a7d515b3` |
 | Archive members | 59 mode-`0600` regular files |
 
 The compact external audit is
 `.betelgeuze/stage0-development/source-paired-clearance-v11-6a749540-audit.json`.
-It is mode `0600`, 14,608 bytes, and is mutable local diagnostic state rather
+The `6a749540` suffix is an operator label and does not authenticate the
+execution source. The audit is mode `0600`, 14,694 bytes, and is mutable local
+diagnostic state rather
 than committed scientific evidence. The deterministic packer and verifier are
 `tools/build_engine_v2_source_paired_clearance_v11_evidence.py`; the code pins
 all four reviewed archive/report identities and recomputes the audit from the
@@ -83,15 +88,17 @@ The baseline wall time was 976.16 seconds and the V1.1 rescue wall time was
 historical run and does not isolate telemetry overhead from the source-paired
 lane; it is not a speed or slowdown claim.
 
-The 59 retained members total 21,367,090 bytes and occupy a 21,452,800-byte tar
-stream. Deterministic Zstandard compression produced a 505,035-byte archive,
+The 59 retained members total 21,367,176 bytes and occupy a 21,452,800-byte tar
+stream. Deterministic Zstandard compression produced a 505,182-byte archive,
 a 97.64% reduction from expanded member bytes. The archive, member manifest,
 bundle sidecar, compact audit, and two compact score-term analyses are retained.
 After the pinned verifier succeeded, the expanded run roots, wall-time files,
 Python bytecode caches, and pytest cache were removed. This reclaimed
 27,392,262 apparent bytes in this worktree; the Stage 0 development directory
 fell from 21,947,908 to 595,257 apparent bytes. The pinned archive verified
-again after cleanup.
+again after cleanup. The provenance-hardening repack temporarily restored the
+same raw members from the authenticated archive, did not rerun MD, removed the
+expanded members again, and left the final directory at 595,490 apparent bytes.
 
 ## Reproduction
 
@@ -127,9 +134,10 @@ publishing, refuses existing outputs, and rolls back only outputs created by a
 failed publication attempt. `verify` checks the external audit against the
 archived copy, Zstandard stream, sorted manifest, bundle hashes, safe member
 names, regular file types, fixed modes and metadata, all raw execution/
-materialization cross-links, typed live V1.1 diagnostics, compact analyses,
+materialization cross-links, frozen archive-specific V1.1 result shapes,
+all five ranked SDF-record hashes for every successful case, compact analyses,
 historical outcome counts, telemetry denominators, and the recomputed audit
-self-hash.
+self-hash. It does not depend on the mutable live result parser.
 
 ## Next bounded action
 

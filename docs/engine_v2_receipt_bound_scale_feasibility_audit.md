@@ -103,7 +103,7 @@ variants. That rule is descriptive here and remains unfrozen.
 | Accepted receptor-pair normalization | Unavailable; count is absent from receipts |
 | Clash-atom normalization | Unavailable; count is absent from receipts |
 | Maximum local penetration | Unavailable; value is absent from receipts |
-| Absolute numeric geometric clearance | Unavailable in this pinned V1 archive; available in the separate exact-main V1.1 audit |
+| Absolute numeric geometric clearance | Unavailable in this pinned V1 archive; available in the separate historical-development V1.1 audit |
 | Scorer-v1 term normalization | Ineligible; ranking terms are a different objective contract |
 
 No V8 clearance receipt is cross-joined. It belongs to a separate rejected

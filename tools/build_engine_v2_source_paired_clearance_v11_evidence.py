@@ -17,27 +17,323 @@ import stat
 import subprocess
 import tarfile
 
-from betelgeuze_engine_v2.benchmark.blind_stage0 import _typed_development_result
-from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
-    PUBLIC_REDOCKING_ARCHIVE_SHA256,
-    PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID,
-    PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
-    PUBLIC_REDOCKING_RUNNER_ID,
-    PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
-    PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
-    _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_SCHEMA_ID,
-)
 import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.0.0"
-EXPECTED_SOURCE_COMMIT_SHA1 = "6a749540339db5e53875841e463cfcbcdf7072b2"
-EXPECTED_CASE_IDS = failure_atlas.EXPECTED_CASE_IDS
-EXPECTED_CASE_IDS_SHA256 = failure_atlas.EXPECTED_CASE_IDS_SHA256
-EXPECTED_UNCOVERED_CASE_IDS = failure_atlas.EXPECTED_UNCOVERED_CASE_IDS
-EXPECTED_PREPARATION_FAILURE_CASE_ID = failure_atlas.EXPECTED_PREPARATION_FAILURE_CASE_ID
+SCHEMA_ID = "betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.1.0"
+OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1 = (
+    "6a749540339db5e53875841e463cfcbcdf7072b2"
+)
+EXPECTED_CASE_IDS = (
+    "5SD5_HWI",
+    "5SIS_JSM",
+    "6M2B_EZO",
+    "6M73_FNR",
+    "6T88_MWQ",
+    "6TW5_9M2",
+    "6TW7_NZB",
+    "6VTA_AKN",
+    "6WTN_RXT",
+)
+EXPECTED_CASE_IDS_SHA256 = (
+    "cd2c24c9c7d937865f40352375e8a17c6b83b0b0fab8c134218d2c29537493c1"
+)
+EXPECTED_UNCOVERED_CASE_IDS = (
+    "5SD5_HWI",
+    "5SIS_JSM",
+    "6M2B_EZO",
+    "6TW5_9M2",
+    "6TW7_NZB",
+    "6VTA_AKN",
+    "6WTN_RXT",
+)
+EXPECTED_PREPARATION_FAILURE_CASE_ID = "6M73_FNR"
 EXPECTED_RECEIPT_SCHEMA_ID = (
-    _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_SCHEMA_ID
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
+)
+PUBLIC_REDOCKING_ARCHIVE_SHA256 = (
+    "495a8f432ee5612c0dfa3cc582829f112bfca3c29dddc2db2c3a8dc7609e721c"
+)
+PUBLIC_REDOCKING_SOURCE_IDS_SHA256 = (
+    "a69a7b6b9a5a52531933078ef983e6c069e3a987a1d7a733bd7d72cbe1793de6"
+)
+PUBLIC_REDOCKING_RUNNER_ID = "betelgeuze.engine_v2_public_redocking_300_runner/2.13.0"
+PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_case_execution/1.1.0"
+)
+PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_case_materialization/1.0.0"
+)
+PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE = (
+    "uniform_torsion_rescue_variant"
+)
+EXPECTED_BASE_PROPOSAL_MODES = frozenset(
+    {
+        "donor_acceptor_hotspot",
+        "charge_anchor",
+        "hydrophobic_patch",
+        "aromatic_plane",
+        "shape_complementarity",
+        "multi_anchor_hotspot",
+        "pocket_center_baseline",
+        "uniform_fallback",
+        "uniform_v3_rigid_ensemble",
+    }
+)
+EXPECTED_POSEBUSTERS_CHEMICAL_CHECK_IDS = (
+    "sanitization",
+    "inchi_convertible",
+    "all_atoms_connected",
+    "molecular_formula",
+    "molecular_bonds",
+    "double_bond_stereochemistry",
+    "tetrahedral_chirality",
+    "bond_lengths",
+    "bond_angles",
+    "internal_steric_clash",
+    "aromatic_ring_flatness",
+    "double_bond_flatness",
+    "internal_energy",
+)
+EXPECTED_POSEBUSTERS_GEOMETRIC_CHECK_IDS = (
+    "protein-ligand_maximum_distance",
+    "minimum_distance_to_protein",
+    "minimum_distance_to_organic_cofactors",
+    "minimum_distance_to_inorganic_cofactors",
+    "minimum_distance_to_waters",
+    "volume_overlap_with_protein",
+    "volume_overlap_with_organic_cofactors",
+    "volume_overlap_with_inorganic_cofactors",
+    "volume_overlap_with_waters",
+)
+EXPECTED_SCORER_TERM_NAMES = (
+    "typed_vdw",
+    "electrostatics",
+    "directional_hbond",
+    "hydrophobic_contact",
+    "desolvation_proxy",
+    "torsion_energy",
+    "ligand_strain",
+    "weak_pocket_prior",
+    "total_score",
+)
+EXPECTED_BASELINE_SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_execution_summary/1.0.0"
+)
+EXPECTED_RESCUE_SUMMARY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_historical_development_source_paired_"
+    "torsion_rescue_summary/1.0.0"
+)
+EXPECTED_ANALYSIS_SCHEMA_ID = (
+    "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
+)
+EXPECTED_BASELINE_DIAGNOSTIC_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.5.0"
+)
+EXPECTED_RESCUE_DIAGNOSTIC_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_diagnostics/1.6.0"
+)
+EXPECTED_BASELINE_CANDIDATE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.6.0"
+)
+EXPECTED_RESCUE_CANDIDATE_SCHEMA_ID = (
+    "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.7.0"
+)
+EXPECTED_CANDIDATE_COUNT = 64
+
+EXPECTED_RESULT_FIELDS = frozenset(
+    {
+        "case_id",
+        "engine_id",
+        "status",
+        "runtime_seconds",
+        "receptor_artifact_sha256",
+        "reference_artifact_sha256",
+        "native_artifact_sha256",
+        "seed_artifact_sha256",
+        "execution_command",
+        "execution_policy",
+        "rmsd_angstroms",
+        "geometric_valid",
+        "chemical_valid",
+        "pose_artifact_sha256s",
+        "failure_code",
+        "engine_v2_diagnostics",
+    }
+)
+EXPECTED_BASELINE_DIAGNOSTIC_FIELDS = frozenset(
+    {
+        "schema_id",
+        "preparation_status",
+        "preparation_failure_code",
+        "candidate_budget",
+        "candidate_success_count",
+        "candidate_failure_count",
+        "candidates",
+        "proposal_oracle_rmsd_angstrom",
+        "diagnostic_evaluation_seconds",
+        "diagnostic_evaluation_excluded_from_runtime",
+        "receptor_atom_count",
+        "ligand_atom_count",
+        "receptor_partial_charge_count",
+        "ligand_partial_charge_count",
+        "charge_coverage_complete",
+        "hbond_feature_covered",
+        "receptor_ion_proxy_count",
+        "receptor_ion_proxy_used",
+        "receptor_ion_coordination_modeled",
+        "ligand_metal_support",
+        "scorer_backend_receipt",
+        "receptor_donor_count",
+        "receptor_acceptor_count",
+        "ligand_donor_count",
+        "ligand_acceptor_count",
+    }
+)
+EXPECTED_RESCUE_DIAGNOSTIC_FIELDS = frozenset(
+    {
+        *EXPECTED_BASELINE_DIAGNOSTIC_FIELDS,
+        "source_paired_torsion_rescue_proposal_receipt",
+    }
+)
+EXPECTED_BASELINE_CANDIDATE_FIELDS = frozenset(
+    {
+        "schema_id",
+        "proposal_index",
+        "proposal_mode",
+        "status",
+        "error_code",
+        "score",
+        "rmsd_angstrom",
+        "geometric_valid",
+        "chemical_valid",
+        "selection_eligible",
+        "posebusters_failed_check_ids",
+        "proposal_fingerprint_sha256",
+        "coordinate_fingerprint_sha256",
+        "pose_artifact_sha256",
+        "score_terms_receipt_sha256",
+        "score_term_binary64_hex",
+        "hbond_count",
+        "ensemble_source_proposal_index",
+        "refinement_original_pose_valid",
+        "refinement_accepted_steps",
+        "refinement_accepted_rotation_steps",
+        "refinement_initial_penalty_binary64_hex",
+        "refinement_final_penalty_binary64_hex",
+        "refinement_total_translation_binary64_hex",
+        "refinement_total_rotation_vector_binary64_hex",
+        "refinement_receipt_sha256",
+        "refinement_receipt_payload",
+    }
+)
+EXPECTED_RESCUE_CANDIDATE_FIELDS = frozenset(
+    {
+        *EXPECTED_BASELINE_CANDIDATE_FIELDS,
+        "torsion_rescue_parent_proposal_index",
+    }
+)
+EXPECTED_V11_RECEIPT_KEYSET_SHA256 = (
+    "bb7be9e06493448ff1f2b603b7365090fa01a068115d143c005bac38863ae68e"
+)
+EXPECTED_V11_RECEIPT_FIELDS = frozenset(
+    {
+        "schema_id",
+        "source_proposal_sha256",
+        "config_sha256",
+        "lane",
+        "selection_reason",
+        "baseline_v6_receipt_sha256",
+        "baseline_v6_receipt_payload",
+        "baseline_v6_max_steps",
+        "v3_proposal_indices",
+        "rotatable_child_atom_indices",
+        "torsion_step_budget",
+        "selection_window_reachable_from_baseline_v6_receptor_penalty",
+        "torsion_evaluation_skip_reason",
+        "evaluation_stopped_after_selection_window_became_unreachable",
+        "torsion_evaluated",
+        "torsion_variant_available",
+        "torsion_selected",
+        "evaluated_torsion_steps",
+        "evaluated_torsion_moves",
+        "evaluated_total_torsion_path_radians_binary64_hex",
+        "accepted_torsion_steps",
+        "accepted_torsion_moves",
+        "objective_evaluation_count",
+        "fixed_objective_evaluation_count",
+        "torsion_trial_objective_evaluation_count",
+        "initial_receptor_penalty_binary64_hex",
+        "baseline_v6_receptor_penalty_binary64_hex",
+        "optimized_receptor_penalty_binary64_hex",
+        "final_receptor_penalty_binary64_hex",
+        "initial_internal_penalty_binary64_hex",
+        "baseline_v6_internal_penalty_binary64_hex",
+        "optimized_internal_penalty_binary64_hex",
+        "final_internal_penalty_binary64_hex",
+        "initial_combined_penalty_binary64_hex",
+        "baseline_v6_combined_penalty_binary64_hex",
+        "optimized_combined_penalty_binary64_hex",
+        "final_combined_penalty_binary64_hex",
+        "initial_penalty_binary64_hex",
+        "final_penalty_binary64_hex",
+        "generic_penalty_scope",
+        "baseline_v6_penalty_scope",
+        "minimum_selected_final_receptor_penalty_binary64_hex",
+        "maximum_selected_final_receptor_penalty_binary64_hex",
+        "total_torsion_path_radians_binary64_hex",
+        "accepted_steps",
+        "accepted_translation_steps",
+        "accepted_rigid_rotation_steps",
+        "accepted_rotation_steps",
+        "accepted_rotation_steps_include_torsion",
+        "line_search_evaluation_count",
+        "fallback_direction_step_count",
+        "original_pose_valid",
+        "total_translation_binary64_hex",
+        "total_rotation_vector_binary64_hex",
+        "pre_coordinates_sha256",
+        "baseline_coordinates_sha256",
+        "post_coordinates_sha256",
+        "ranking_score_reused_as_physical_energy",
+        "posebusters_or_rmsd_used_for_selection",
+        "source_lane_retained",
+        "scientifically_validated",
+        "legacy_v7_receipt_schema_id",
+        "source_paired_torsion_rescue_profile",
+        "source_paired_torsion_rescue_pairs",
+        "source_paired_torsion_rescue_allocation_sha256",
+        "source_paired_torsion_rescue_policy_sha256",
+        "source_paired_torsion_rescue_guidance_context_sha256",
+        "source_paired_torsion_rescue_budget_sha256",
+        "source_paired_torsion_rescue_variant_cap",
+        "proposal_torsion_eligibility_lane",
+        "source_paired_parent_proposal_index",
+        "nested_v6_treated_proposal_as_v3_variant",
+        "rescue_target_excluded_from_nested_v3_indices",
+        "result_dependent_eligibility",
+        "development_only",
+        "stage0_eligible",
+        "fresh_execution_authorized",
+        "claim_safe",
+        "clearance_measurement_evaluated",
+        "clearance_measurement_unavailable_reason",
+        "clearance_radii_policy_sha256",
+        "clearance_ligand_atom_count",
+        "clearance_receptor_atom_count",
+        "clearance_full_cartesian_pair_count",
+        "clearance_pair_count_bound",
+        "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex",
+        "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex",
+        "optimized_coordinates_sha256",
+        "receipt_sha256",
+    }
+)
+EXPECTED_BASELINE_V7_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
+)
+EXPECTED_BASELINE_V7_RECEIPT_KEYSET_SHA256 = (
+    "557bb91b72ce3047c7a366e4731a05c9787ae451c4b6b030747babf766191603"
 )
 
 BASELINE_RUN_ROOT = (
@@ -85,16 +381,16 @@ BUNDLE_PATH = (
 )
 
 EXPECTED_EVIDENCE_ARCHIVE_SHA256 = (
-    "e36a358c1f21ec40b01dfa1170a85de06220bae1e49c9a389f7c6c1fe650bf69"
+    "8f516d79e83c2aeecfecccc09789115305687b4adc77376d2af8c8197847f998"
 )
 EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256 = (
-    "164d097d5b944c58b6475d79cd6b295a7c576baf5141a28faadebce31130dae7"
+    "a32c1c50efbd23001b4f5183dab6eb2636a0e7444e7f4efcb2df9275e5e77a52"
 )
 EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 = (
-    "72e48e4f89901d6ae46e89b87a98df92c73ae5086fa80d2bcdad7f45f7d96856"
+    "5ded750327780731fa868f41bea8fd84b2741368f9ffbe1568f14ab1a7d515b3"
 )
 EXPECTED_REPORT_SHA256 = (
-    "3f03fdc9fe34ac6dc086b4bf9a510e18f79a6d54656dbd6df74840049bfa1437"
+    "bd100f4c743946a5c68d5048c447fe43dbbcef9280101b90f8a0fcf1d788a334"
 )
 EXPECTED_EVIDENCE_MEMBER_COUNT = 59
 
@@ -184,6 +480,379 @@ def _binary64(value: object, *, name: str) -> float:
     return number
 
 
+def _finite_number(
+    value: object,
+    *,
+    name: str,
+    minimum: float | None = None,
+) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be numeric")
+    number = float(value)
+    if not math.isfinite(number) or (minimum is not None and number < minimum):
+        raise ValueError(f"{name} is outside the frozen numeric contract")
+    return number
+
+
+def _historical_v11_candidate(
+    value: object,
+    *,
+    lane: str,
+    case_id: str,
+) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{lane} {case_id} candidate must be an object")
+    candidate = dict(value)
+    expected_fields = (
+        EXPECTED_BASELINE_CANDIDATE_FIELDS
+        if lane == "baseline"
+        else EXPECTED_RESCUE_CANDIDATE_FIELDS
+    )
+    expected_schema = (
+        EXPECTED_BASELINE_CANDIDATE_SCHEMA_ID
+        if lane == "baseline"
+        else EXPECTED_RESCUE_CANDIDATE_SCHEMA_ID
+    )
+    proposal_index = candidate.get("proposal_index")
+    proposal_mode = candidate.get("proposal_mode")
+    ensemble_source = candidate.get("ensemble_source_proposal_index")
+    rescue_parent = candidate.get("torsion_rescue_parent_proposal_index")
+    failed_checks = candidate.get("posebusters_failed_check_ids")
+    allowed_proposal_modes = set(EXPECTED_BASE_PROPOSAL_MODES)
+    if lane == "rescue":
+        allowed_proposal_modes.add(PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
+    if (
+        set(candidate) != expected_fields
+        or candidate.get("schema_id") != expected_schema
+        or candidate.get("status") != "success"
+        or candidate.get("error_code") != ""
+        or type(proposal_index) is not int
+        or not 0 <= proposal_index < EXPECTED_CANDIDATE_COUNT
+        or proposal_mode not in allowed_proposal_modes
+        or any(
+            type(candidate.get(field)) is not bool
+            for field in (
+                "geometric_valid",
+                "chemical_valid",
+                "selection_eligible",
+                "refinement_original_pose_valid",
+            )
+        )
+        or type(candidate.get("hbond_count")) is not int
+        or int(candidate["hbond_count"]) < 0
+        or not isinstance(failed_checks, list)
+        or any(not isinstance(check_id, str) or not check_id for check_id in failed_checks)
+    ):
+        raise ValueError(f"{lane} {case_id} candidate shape is invalid")
+    if proposal_mode == "uniform_v3_rigid_ensemble":
+        if (
+            type(ensemble_source) is not int
+            or not 0 <= ensemble_source < EXPECTED_CANDIDATE_COUNT
+            or ensemble_source == proposal_index
+            or rescue_parent is not None
+        ):
+            raise ValueError(f"{lane} {case_id} ensemble lineage is invalid")
+    elif ensemble_source is not None:
+        raise ValueError(f"{lane} {case_id} non-ensemble lineage is invalid")
+    if proposal_mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE:
+        if (
+            lane != "rescue"
+            or type(rescue_parent) is not int
+            or not 0 <= rescue_parent < EXPECTED_CANDIDATE_COUNT
+            or rescue_parent == proposal_index
+            or ensemble_source is not None
+        ):
+            raise ValueError(f"{lane} {case_id} rescue lineage is invalid")
+    elif rescue_parent is not None:
+        raise ValueError(f"{lane} {case_id} non-rescue parent is invalid")
+    allowed_checks = (
+        *EXPECTED_POSEBUSTERS_CHEMICAL_CHECK_IDS,
+        *EXPECTED_POSEBUSTERS_GEOMETRIC_CHECK_IDS,
+    )
+    failed_check_tuple = tuple(failed_checks)
+    if (
+        failed_check_tuple
+        != tuple(check for check in allowed_checks if check in set(failed_check_tuple))
+        or len(failed_check_tuple) != len(set(failed_check_tuple))
+        or candidate.get("geometric_valid")
+        is not (
+            not bool(
+                set(failed_check_tuple)
+                & set(EXPECTED_POSEBUSTERS_GEOMETRIC_CHECK_IDS)
+            )
+        )
+        or candidate.get("chemical_valid")
+        is not (
+            not bool(
+                set(failed_check_tuple)
+                & set(EXPECTED_POSEBUSTERS_CHEMICAL_CHECK_IDS)
+            )
+        )
+    ):
+        raise ValueError(f"{lane} {case_id} PoseBusters projection is invalid")
+    _finite_number(candidate.get("score"), name="candidate score")
+    _finite_number(
+        candidate.get("rmsd_angstrom"),
+        name="candidate RMSD",
+        minimum=0.0,
+    )
+    for field in (
+        "proposal_fingerprint_sha256",
+        "coordinate_fingerprint_sha256",
+        "pose_artifact_sha256",
+        "score_terms_receipt_sha256",
+        "refinement_receipt_sha256",
+    ):
+        if not _is_sha256(candidate.get(field)):
+            raise ValueError(f"{lane} {case_id} candidate {field} is invalid")
+    score_terms = candidate.get("score_term_binary64_hex")
+    if not isinstance(score_terms, Mapping) or set(score_terms) != set(
+        EXPECTED_SCORER_TERM_NAMES
+    ):
+        raise ValueError(f"{lane} {case_id} candidate score terms are invalid")
+    decoded_terms: dict[str, float] = {}
+    for term, encoded in score_terms.items():
+        if not isinstance(term, str) or not term:
+            raise ValueError("candidate score term name is invalid")
+        decoded_terms[term] = _binary64(
+            encoded,
+            name=f"candidate score term {term}",
+        )
+    if not math.isclose(
+        decoded_terms["total_score"],
+        sum(decoded_terms[name] for name in EXPECTED_SCORER_TERM_NAMES[:-1]),
+        rel_tol=0.0,
+        abs_tol=1.0e-12,
+    ):
+        raise ValueError(f"{lane} {case_id} candidate score terms are inconsistent")
+    initial_penalty = _binary64(
+        candidate.get("refinement_initial_penalty_binary64_hex"),
+        name="candidate refinement initial penalty",
+    )
+    final_penalty = _binary64(
+        candidate.get("refinement_final_penalty_binary64_hex"),
+        name="candidate refinement final penalty",
+    )
+    accepted_steps = candidate.get("refinement_accepted_steps")
+    accepted_rotation_steps = candidate.get("refinement_accepted_rotation_steps")
+    if (
+        initial_penalty < 0.0
+        or final_penalty < 0.0
+        or type(accepted_steps) is not int
+        or accepted_steps < 0
+        or type(accepted_rotation_steps) is not int
+        or not 0 <= accepted_rotation_steps <= accepted_steps
+    ):
+        raise ValueError(f"{lane} {case_id} refinement diagnostics are invalid")
+    failure_atlas._vector_summary(
+        candidate.get("refinement_total_translation_binary64_hex"),
+        name="candidate refinement translation",
+    )
+    failure_atlas._vector_summary(
+        candidate.get("refinement_total_rotation_vector_binary64_hex"),
+        name="candidate refinement rotation",
+    )
+    payload = candidate.get("refinement_receipt_payload")
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{lane} {case_id} refinement payload is invalid")
+    if proposal_mode in {
+        "uniform_v3_rigid_ensemble",
+        PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
+    } and not payload:
+        raise ValueError(f"{lane} {case_id} source-paired payload is missing")
+    if lane == "baseline":
+        if payload:
+            if (
+                _sha256_payload(sorted(payload))
+                != EXPECTED_BASELINE_V7_RECEIPT_KEYSET_SHA256
+                or payload.get("schema_id")
+                != EXPECTED_BASELINE_V7_RECEIPT_SCHEMA_ID
+                or payload.get("receipt_sha256")
+                != candidate.get("refinement_receipt_sha256")
+            ):
+                raise ValueError(
+                    f"{lane} {case_id} baseline V7 receipt contract is invalid"
+                )
+            receipt_projection = dict(payload)
+            receipt_sha256 = receipt_projection.pop("receipt_sha256", None)
+            if not _is_sha256(receipt_sha256) or receipt_sha256 != _sha256_payload(
+                receipt_projection
+            ):
+                raise ValueError(
+                    f"{lane} {case_id} baseline V7 receipt self-hash is invalid"
+                )
+    else:
+        if (
+            set(payload) != EXPECTED_V11_RECEIPT_FIELDS
+            or _sha256_payload(sorted(payload))
+            != EXPECTED_V11_RECEIPT_KEYSET_SHA256
+            or payload.get("schema_id") != EXPECTED_RECEIPT_SCHEMA_ID
+            or payload.get("receipt_sha256")
+            != candidate.get("refinement_receipt_sha256")
+            or any(
+                payload.get(field) is not False
+                for field in (
+                    "claim_safe",
+                    "fresh_execution_authorized",
+                    "scientifically_validated",
+                    "stage0_eligible",
+                )
+            )
+            or payload.get("development_only") is not True
+        ):
+            raise ValueError(f"{lane} {case_id} V1.1 receipt contract is invalid")
+        receipt_projection = dict(payload)
+        receipt_sha256 = receipt_projection.pop("receipt_sha256", None)
+        if not _is_sha256(receipt_sha256) or receipt_sha256 != _sha256_payload(
+            receipt_projection
+        ):
+            raise ValueError(f"{lane} {case_id} V1.1 receipt self-hash is invalid")
+    return candidate
+
+
+def _historical_v11_result(
+    value: object,
+    *,
+    lane: str,
+    case_id: str,
+) -> dict[str, object]:
+    if not isinstance(value, Mapping) or set(value) != EXPECTED_RESULT_FIELDS:
+        raise ValueError(f"{lane} {case_id} result shape is invalid")
+    result = dict(value)
+    if (
+        result.get("case_id") != case_id
+        or result.get("engine_id") != "engine_v2"
+        or result.get("status") not in {"success", "failure"}
+        or not isinstance(result.get("failure_code"), str)
+    ):
+        raise ValueError(f"{lane} {case_id} result identity is invalid")
+    _finite_number(
+        result.get("runtime_seconds"),
+        name=f"{lane} runtime",
+        minimum=0.0,
+    )
+    for field in (
+        "receptor_artifact_sha256",
+        "reference_artifact_sha256",
+        "native_artifact_sha256",
+        "seed_artifact_sha256",
+    ):
+        if not _is_sha256(result.get(field)):
+            raise ValueError(f"{lane} {case_id} input artifact identity is invalid")
+    command = result.get("execution_command")
+    policy = result.get("execution_policy")
+    if (
+        not isinstance(command, list)
+        or not command
+        or any(not isinstance(token, str) or not token for token in command)
+        or not isinstance(policy, list)
+        or not policy
+        or policy != sorted(policy)
+        or any(not isinstance(token, str) or "=" not in token for token in policy)
+    ):
+        raise ValueError(f"{lane} {case_id} execution contract is invalid")
+    diagnostics = result.get("engine_v2_diagnostics")
+    expected_diagnostic_fields = (
+        EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
+        if lane == "baseline"
+        else EXPECTED_RESCUE_DIAGNOSTIC_FIELDS
+    )
+    expected_diagnostic_schema = (
+        EXPECTED_BASELINE_DIAGNOSTIC_SCHEMA_ID
+        if lane == "baseline"
+        else EXPECTED_RESCUE_DIAGNOSTIC_SCHEMA_ID
+    )
+    if (
+        not isinstance(diagnostics, Mapping)
+        or set(diagnostics) != expected_diagnostic_fields
+        or diagnostics.get("schema_id") != expected_diagnostic_schema
+        or diagnostics.get("candidate_budget") != EXPECTED_CANDIDATE_COUNT
+    ):
+        raise ValueError(f"{lane} {case_id} diagnostic shape is invalid")
+    raw_candidates = diagnostics.get("candidates")
+    if not isinstance(raw_candidates, list):
+        raise ValueError(f"{lane} {case_id} candidate collection is invalid")
+    if diagnostics.get("preparation_status") == "failure":
+        if (
+            case_id != EXPECTED_PREPARATION_FAILURE_CASE_ID
+            or result.get("status") != "failure"
+            or result.get("failure_code") != "engine_v2_case_failed"
+            or raw_candidates
+            or diagnostics.get("candidate_success_count") != 0
+            or diagnostics.get("candidate_failure_count") != 0
+        ):
+            raise ValueError(f"{lane} preparation failure is invalid")
+        failure_atlas._validate_ranked_result_projection(
+            result,
+            (),
+            lane=lane,
+            case_id=case_id,
+        )
+        return result
+    if (
+        diagnostics.get("preparation_status") != "success"
+        or result.get("status") != "success"
+        or result.get("failure_code") != ""
+        or diagnostics.get("candidate_success_count") != EXPECTED_CANDIDATE_COUNT
+        or diagnostics.get("candidate_failure_count") != 0
+        or len(raw_candidates) != EXPECTED_CANDIDATE_COUNT
+    ):
+        raise ValueError(f"{lane} {case_id} successful denominator is invalid")
+    candidates = tuple(
+        _historical_v11_candidate(candidate, lane=lane, case_id=case_id)
+        for candidate in raw_candidates
+    )
+    if {
+        int(candidate["proposal_index"]) for candidate in candidates
+    } != set(range(EXPECTED_CANDIDATE_COUNT)):
+        raise ValueError(f"{lane} {case_id} candidate indices are invalid")
+    failure_atlas._validate_ranked_result_projection(
+        result,
+        candidates,
+        lane=lane,
+        case_id=case_id,
+    )
+    return result
+
+
+def _split_historical_sdf_records(source: bytes) -> tuple[bytes, ...]:
+    if not source or b"\r" in source:
+        raise ValueError("historical SDF is empty or uses CRLF")
+    records: list[bytes] = []
+    current = bytearray()
+    for line in source.splitlines(keepends=True):
+        current.extend(line)
+        if line == b"$$$$\n":
+            records.append(bytes(current))
+            current.clear()
+    if current or not records or b"".join(records) != source:
+        raise ValueError("historical SDF records are incomplete")
+    return tuple(records)
+
+
+def _validate_pose_member(
+    members: Mapping[str, bytes],
+    path: str,
+    expected_hashes: object,
+    *,
+    lane: str,
+    case_id: str,
+) -> None:
+    raw = members.get(_safe_member_name(path))
+    if raw is None or len(raw) > MAX_MEMBER_BYTES:
+        raise ValueError(f"{lane} {case_id} pose member is missing or oversized")
+    records = _split_historical_sdf_records(raw)
+    if (
+        not isinstance(expected_hashes, list)
+        or len(records) != 5
+        or tuple(_sha256_bytes(record) for record in records)
+        != tuple(expected_hashes)
+    ):
+        raise ValueError(
+            f"{lane} {case_id} pose artifact hashes contradict retained SDF"
+        )
+
+
 def _member_object(
     members: Mapping[str, bytes],
     member: str,
@@ -261,7 +930,7 @@ def _analysis(
     )
     source = payload.get("source_receipts_sha256")
     if (
-        payload.get("schema_id") != failure_atlas.ANALYSIS_SCHEMA_ID
+        payload.get("schema_id") != EXPECTED_ANALYSIS_SCHEMA_ID
         or payload.get("analysis_scope") != "historical_contaminated_development_only"
         or payload.get("contains_fresh_internal_blind_holdout") is not False
         or payload.get("claimable") is not False
@@ -384,9 +1053,9 @@ def _load_lane(
     walltime_path: str,
 ) -> dict[str, object]:
     expected_schema = (
-        failure_atlas.SUMMARY_SCHEMA_ID
+        EXPECTED_BASELINE_SUMMARY_SCHEMA_ID
         if lane == "baseline"
-        else failure_atlas.RESCUE_SUMMARY_SCHEMA_ID
+        else EXPECTED_RESCUE_SUMMARY_SCHEMA_ID
     )
     summary, summary_raw = _member_object(
         members,
@@ -465,8 +1134,11 @@ def _load_lane(
         ):
             if receipt.get(field) != engine_identity.get(field):
                 raise ValueError(f"{lane} execution receipt engine identity drifted")
-        typed = _typed_development_result(result)
-        typed_payload = typed.to_dict()
+        typed_payload = _historical_v11_result(
+            result,
+            lane=lane,
+            case_id=case_id,
+        )
         if (
             typed_payload != dict(result)
             or receipt.get("command") != typed_payload.get("execution_command")
@@ -511,8 +1183,16 @@ def _load_lane(
         receipt_payloads[case_id] = receipt
         receipt_hashes[case_id] = _sha256_bytes(receipt_raw)
         materializations[case_id] = materialization
-        if typed.status == "success":
-            expected_members.add(f"{run_root}/poses/engine_v2/{case_id}.sdf")
+        if typed_payload["status"] == "success":
+            pose_path = f"{run_root}/poses/engine_v2/{case_id}.sdf"
+            _validate_pose_member(
+                members,
+                pose_path,
+                typed_payload["pose_artifact_sha256s"],
+                lane=lane,
+                case_id=case_id,
+            )
+            expected_members.add(pose_path)
 
     rows = summary.get("rows")
     embedded_receipts = summary.get("execution_receipts")
@@ -628,6 +1308,23 @@ def _clearance_summary(
         )
         if not isinstance(candidates, list):
             raise ValueError(f"{case_id} rescue candidates are invalid")
+        diagnostic_ligand_count = (
+            diagnostics.get("ligand_atom_count")
+            if isinstance(diagnostics, Mapping)
+            else None
+        )
+        diagnostic_receptor_count = (
+            diagnostics.get("receptor_atom_count")
+            if isinstance(diagnostics, Mapping)
+            else None
+        )
+        if candidates and (
+            type(diagnostic_ligand_count) is not int
+            or diagnostic_ligand_count < 1
+            or type(diagnostic_receptor_count) is not int
+            or diagnostic_receptor_count < 1
+        ):
+            raise ValueError(f"{case_id} diagnostic atom counts are invalid")
         for candidate in candidates:
             if not isinstance(candidate, Mapping):
                 raise ValueError(f"{case_id} rescue candidate is invalid")
@@ -658,6 +1355,11 @@ def _clearance_summary(
                     )
                     != ""
                     or payload.get("optimized_coordinates_sha256") != ""
+                    or payload.get("clearance_ligand_atom_count") != 0
+                    or payload.get("clearance_receptor_atom_count") != 0
+                    or payload.get("clearance_full_cartesian_pair_count") != 0
+                    or payload.get("clearance_pair_count_bound")
+                    != EXPECTED_CLEARANCE_PAIR_COUNT_BOUND
                 ):
                     raise ValueError("non-target clearance telemetry is not empty")
                 non_target_count += 1
@@ -685,9 +1387,9 @@ def _clearance_summary(
                 or payload.get("clearance_radii_policy_sha256")
                 != EXPECTED_CLEARANCE_RADII_POLICY_SHA256
                 or type(ligand_count) is not int
-                or ligand_count < 1
+                or ligand_count != diagnostic_ligand_count
                 or type(receptor_count) is not int
-                or receptor_count < 1
+                or not 0 < receptor_count <= diagnostic_receptor_count
                 or type(pair_count) is not int
                 or pair_count != ligand_count * receptor_count
                 or pair_bound != EXPECTED_CLEARANCE_PAIR_COUNT_BOUND
@@ -770,6 +1472,94 @@ def _clearance_summary(
     }
 
 
+def _v11_rescue_allocation(
+    diagnostics: Mapping[str, object],
+    candidates: Sequence[Mapping[str, object]],
+) -> tuple[int, list[dict[str, int]]]:
+    proposal = diagnostics.get("source_paired_torsion_rescue_proposal_receipt")
+    if not isinstance(proposal, Mapping):
+        raise ValueError("source-paired proposal receipt is missing")
+    proposal_projection = dict(proposal)
+    proposal_sha256 = proposal_projection.pop("receipt_sha256", None)
+    if not _is_sha256(proposal_sha256) or proposal_sha256 != _sha256_payload(
+        proposal_projection
+    ):
+        raise ValueError("source-paired proposal receipt self-hash is invalid")
+    allocation = proposal.get("allocation")
+    if not isinstance(allocation, Mapping):
+        raise ValueError("source-paired allocation is missing")
+    allocation_projection = dict(allocation)
+    allocation_sha256 = allocation_projection.pop("allocation_sha256", None)
+    if not _is_sha256(allocation_sha256) or allocation_sha256 != _sha256_payload(
+        allocation_projection
+    ):
+        raise ValueError("source-paired allocation self-hash is invalid")
+    rotor_count = allocation.get("authority_rotor_count")
+    raw_pairs = allocation.get("rescue_target_parent_pairs")
+    if (
+        type(rotor_count) is not int
+        or rotor_count < 0
+        or not isinstance(raw_pairs, list)
+    ):
+        raise ValueError("source-paired allocation values are invalid")
+    pairs: list[dict[str, int]] = []
+    for row in raw_pairs:
+        if not isinstance(row, Mapping) or set(row) != {
+            "target_proposal_index",
+            "parent_proposal_index",
+        }:
+            raise ValueError("source-paired pair row is invalid")
+        target = row["target_proposal_index"]
+        parent = row["parent_proposal_index"]
+        if (
+            type(target) is not int
+            or type(parent) is not int
+            or not 0 <= target < EXPECTED_CANDIDATE_COUNT
+            or not 0 <= parent < EXPECTED_CANDIDATE_COUNT
+        ):
+            raise ValueError("source-paired pair indices are invalid")
+        pairs.append(
+            {
+                "target_proposal_index": target,
+                "parent_proposal_index": parent,
+            }
+        )
+    candidate_by_index = {
+        int(candidate["proposal_index"]): candidate for candidate in candidates
+    }
+    rescue_targets = {
+        int(candidate["proposal_index"])
+        for candidate in candidates
+        if candidate.get("proposal_mode")
+        == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+    }
+    pair_targets = [row["target_proposal_index"] for row in pairs]
+    if rescue_targets != set(pair_targets) or len(pair_targets) != len(
+        set(pair_targets)
+    ):
+        raise ValueError("rescue candidate modes contradict the allocation")
+    for row in pairs:
+        target = row["target_proposal_index"]
+        parent = row["parent_proposal_index"]
+        candidate = candidate_by_index[target]
+        parent_candidate = candidate_by_index[parent]
+        payload = candidate.get("refinement_receipt_payload")
+        if (
+            target == parent
+            or parent in rescue_targets
+            or candidate.get("torsion_rescue_parent_proposal_index") != parent
+            or parent_candidate.get("proposal_mode")
+            == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+            or not isinstance(payload, Mapping)
+            or payload.get("source_paired_parent_proposal_index") != parent
+            or payload.get("source_paired_torsion_rescue_pairs") != pairs
+            or payload.get("source_paired_torsion_rescue_allocation_sha256")
+            != allocation_sha256
+        ):
+            raise ValueError("rescue allocation parent binding is invalid")
+    return rotor_count, pairs
+
+
 def _lane_comparison(
     baseline: Mapping[str, object],
     rescue: Mapping[str, object],
@@ -840,7 +1630,7 @@ def _lane_comparison(
         allocation_pairs: list[dict[str, int]] = []
         if rescue_candidates:
             assert isinstance(rescue_diagnostics, Mapping)
-            _, allocation_pairs = failure_atlas._rescue_allocation(
+            _, allocation_pairs = _v11_rescue_allocation(
                 rescue_diagnostics,
                 rescue_candidates,
             )
@@ -931,7 +1721,10 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
         "schema_id": SCHEMA_ID,
         "analysis_scope": "historical_contaminated_development_only",
         "evidence_role": "source_paired_clearance_v11_receipt_audit",
-        "source_commit_sha1": EXPECTED_SOURCE_COMMIT_SHA1,
+        "operator_observed_checkout_or_base_sha1": (
+            OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1
+        ),
+        "operator_observed_checkout_or_base_receipt_authenticated": False,
         "runner_id": PUBLIC_REDOCKING_RUNNER_ID,
         "input_archive_sha256": PUBLIC_REDOCKING_ARCHIVE_SHA256,
         "source_identifiers_sha256": PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
@@ -1254,7 +2047,12 @@ def _verify_bundle_bytes(
     )
     if (
         report.get("schema_id") != SCHEMA_ID
-        or report.get("source_commit_sha1") != EXPECTED_SOURCE_COMMIT_SHA1
+        or report.get("operator_observed_checkout_or_base_sha1")
+        != OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1
+        or report.get(
+            "operator_observed_checkout_or_base_receipt_authenticated"
+        )
+        is not False
         or report.get("report_sha256") != expected_report_sha256
     ):
         raise ValueError("V1.1 clearance audit identity is invalid")
@@ -1274,6 +2072,60 @@ def _verify_bundle_bytes(
         "expanded_member_size_bytes": sum(len(value) for value in restored.values()),
     }
     return report, identity
+
+
+def _unlink_owned_name(
+    parent_descriptor: int,
+    name: str,
+    device: int,
+    inode: int,
+) -> bool:
+    try:
+        metadata = os.stat(
+            name,
+            dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return True
+    except OSError:
+        return False
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or metadata.st_dev != device
+        or metadata.st_ino != inode
+    ):
+        return False
+    try:
+        os.unlink(name, dir_fd=parent_descriptor)
+        os.fsync(parent_descriptor)
+    except OSError:
+        return False
+    return True
+
+
+def _unlink_owned_output(
+    repo_root: Path,
+    relative_path: Path,
+    device: int,
+    inode: int,
+) -> bool:
+    try:
+        parent_descriptor = failure_atlas._owned_output_directory_descriptor(
+            repo_root,
+            relative_path.parent,
+        )
+    except (OSError, ValueError):
+        return False
+    try:
+        return _unlink_owned_name(
+            parent_descriptor,
+            relative_path.name,
+            device,
+            inode,
+        )
+    finally:
+        os.close(parent_descriptor)
 
 
 def _write_exclusive_owned(
@@ -1340,39 +2192,19 @@ def _write_exclusive_owned(
             descriptor = -1
         rollback_failed = False
         if final_link_created and inode_identity is not None:
-            try:
-                final_metadata = os.stat(
-                    relative_path.name,
-                    dir_fd=parent_descriptor,
-                    follow_symlinks=False,
-                )
-                if (
-                    final_metadata.st_dev,
-                    final_metadata.st_ino,
-                ) == inode_identity:
-                    os.unlink(relative_path.name, dir_fd=parent_descriptor)
-                    os.fsync(parent_descriptor)
-            except FileNotFoundError:
-                pass
-            except OSError:
-                rollback_failed = True
+            rollback_failed = not _unlink_owned_name(
+                parent_descriptor,
+                relative_path.name,
+                *inode_identity,
+            )
         if temporary_created and inode_identity is not None:
-            try:
-                temporary_metadata = os.stat(
-                    temporary_name,
-                    dir_fd=parent_descriptor,
-                    follow_symlinks=False,
-                )
-                if (
-                    temporary_metadata.st_dev,
-                    temporary_metadata.st_ino,
-                ) == inode_identity:
-                    os.unlink(temporary_name, dir_fd=parent_descriptor)
-                    temporary_created = False
-                    os.fsync(parent_descriptor)
-            except FileNotFoundError:
+            if _unlink_owned_name(
+                parent_descriptor,
+                temporary_name,
+                *inode_identity,
+            ):
                 temporary_created = False
-            except OSError:
+            else:
                 rollback_failed = True
         if rollback_failed:
             raise RuntimeError(
@@ -1434,19 +2266,22 @@ def pack_evidence(repo_root: Path) -> dict[str, object]:
             (MEMBERS_PATH, members_raw),
             (BUNDLE_PATH, bundle_raw),
         ):
-            output = repo_root / relative
-            device, inode = _write_exclusive_owned(repo_root, Path(relative), raw)
-            created.append((output, device, inode))
+            relative_path = Path(relative)
+            device, inode = _write_exclusive_owned(repo_root, relative_path, raw)
+            created.append((relative_path, device, inode))
     except BaseException as exc:
         rollback_failed = False
-        for output, device, inode in reversed(created):
+        for relative_path, device, inode in reversed(created):
             try:
-                metadata = output.lstat()
-                if metadata.st_dev == device and metadata.st_ino == inode:
-                    output.unlink()
-            except FileNotFoundError:
-                pass
-            except OSError:
+                removed = _unlink_owned_output(
+                    repo_root,
+                    relative_path,
+                    device,
+                    inode,
+                )
+            except Exception:
+                removed = False
+            if not removed:
                 rollback_failed = True
         if rollback_failed:
             raise RuntimeError("evidence publication failed and rollback was incomplete") from exc
