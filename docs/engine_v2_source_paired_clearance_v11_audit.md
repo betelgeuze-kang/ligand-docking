@@ -226,7 +226,8 @@ bundle hashes, safe member
 names, regular file types, fixed modes and metadata, all raw execution/
 materialization cross-links, the complete pinned command and policy for every
 lane/case, frozen archive-specific V1.1 result shapes, candidate-to-post and
-unselected-post-to-baseline coordinate bindings, ranked SDF-member byte identity
+unselected-post-to-baseline coordinate bindings, unique V3 ensemble sources
+bound to `uniform_fallback` parents, ranked SDF-member byte identity
 through the reviewed manifest without interpreting the score-selected records,
 legacy compact-analysis raw identities and their explicit semantic
 unavailability, non-score-ranked historical outcome

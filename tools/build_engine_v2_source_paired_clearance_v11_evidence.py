@@ -1569,6 +1569,16 @@ def _historical_v11_result(
         candidates,
         key=lambda candidate: int(candidate["proposal_index"]),
     )
+    ensemble_sources = tuple(
+        int(candidate["ensemble_source_proposal_index"])
+        for candidate in ordered_candidates
+        if candidate.get("ensemble_source_proposal_index") is not None
+    )
+    if len(ensemble_sources) != len(set(ensemble_sources)) or any(
+        ordered_candidates[source_index].get("proposal_mode") != "uniform_fallback"
+        for source_index in ensemble_sources
+    ):
+        raise ValueError(f"{lane} {case_id} V3 ensemble source lineage is invalid")
     if lane == "rescue":
         ordered_proposal_fingerprints = [
             str(candidate["proposal_fingerprint_sha256"])

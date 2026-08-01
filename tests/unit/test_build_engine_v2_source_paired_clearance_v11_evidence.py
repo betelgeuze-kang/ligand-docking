@@ -2274,6 +2274,36 @@ def test_superseding_result_projection_never_consumes_legacy_score_fields(
     )
 
 
+@pytest.mark.parametrize("drift", ("duplicate_source", "non_fallback_source"))
+def test_superseding_result_rejects_invalid_v3_ensemble_source_lineage(
+    drift: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _successful_frozen_result("rescue")
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane="rescue",
+        case_id="5SD5_HWI",
+        result=result,
+    )
+    candidates = result["engine_v2_diagnostics"]["candidates"]
+    candidates[10]["proposal_mode"] = "uniform_v3_rigid_ensemble"
+    candidates[10]["ensemble_source_proposal_index"] = 0
+    if drift == "duplicate_source":
+        candidates[11]["proposal_mode"] = "uniform_v3_rigid_ensemble"
+        candidates[11]["ensemble_source_proposal_index"] = 0
+    else:
+        candidates[0]["proposal_mode"] = "charge_anchor"
+
+    with pytest.raises(ValueError, match="V3 ensemble source lineage"):
+        evidence._historical_v11_result(
+            result,
+            lane="rescue",
+            case_id="5SD5_HWI",
+            verify_legacy_score_projection=False,
+        )
+
+
 @pytest.mark.parametrize("case_id", ("5SD5_HWI", "5SIS_JSM"))
 def test_frozen_rescue_accepts_distinct_pinned_case_composite_configs(
     case_id: str,
