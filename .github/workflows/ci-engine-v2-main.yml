@@ -15,6 +15,7 @@ on:
       - "tools/build_engine_v2_sbom.py"
       - "tools/check_engine_v2_architecture.py"
       - "tools/build_engine_v2_source_paired_failure_atlas.py"
+      - "tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py"
       - "tools/run_engine_v2_public_redocking_300.py"
       - "tools/verify_engine_v2_public_redocking_stage0.py"
       - "tools/classify_engine_v2_stage0_full_suite.py"
@@ -26,6 +27,7 @@ on:
       - "tests/unit/test_reconcile_engine_v2_stage0_full_suites.py"
       - "tests/unit/test_audit_engine_v2_ci_authority.py"
       - "tests/unit/test_build_engine_v2_source_paired_failure_atlas.py"
+      - "tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py"
       - "docs/engine_v2_*.md"
       - "docs/independent_engine_v2_commercial_roadmap.ko.md"
       - "docs/roadmaps/engine-v2-scientific-evidence-roadmap.md"
@@ -106,6 +108,7 @@ jobs:
             tools/analyze_engine_v2_score_terms.py
             tools/build_engine_v2_stage0_development_gate_ledger.py
             tools/build_engine_v2_source_paired_failure_atlas.py
+            tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py
             tools/run_engine_v2_public_redocking_300.py
             tools/verify_engine_v2_public_redocking_stage0.py
             tools/classify_engine_v2_stage0_full_suite.py
@@ -118,6 +121,7 @@ jobs:
             tests/unit/test_engine_v2_blind_stage0.py
             tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py
             tests/unit/test_build_engine_v2_source_paired_failure_atlas.py
+            tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py
             tests/unit/test_classify_engine_v2_stage0_full_suite.py
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py
             tests/unit/test_audit_engine_v2_ci_authority.py
@@ -246,6 +250,7 @@ jobs:
             tools/check_engine_v2_architecture.py \
             tools/build_engine_v2_stage0_development_gate_ledger.py \
             tools/build_engine_v2_source_paired_failure_atlas.py \
+            tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py \
             tools/run_engine_v2_public_redocking_300.py \
             tools/verify_engine_v2_public_redocking_stage0.py \
             tools/classify_engine_v2_stage0_full_suite.py \
@@ -332,6 +337,7 @@ jobs:
             tests/unit/test_engine_v2_blind_stage0.py \
             tests/unit/test_build_engine_v2_stage0_development_gate_ledger.py \
             tests/unit/test_build_engine_v2_source_paired_failure_atlas.py \
+            tests/unit/test_build_engine_v2_receipt_bound_scale_feasibility_audit.py \
             tests/unit/test_classify_engine_v2_stage0_full_suite.py \
             tests/unit/test_reconcile_engine_v2_stage0_full_suites.py \
             tests/unit/test_audit_engine_v2_ci_authority.py \

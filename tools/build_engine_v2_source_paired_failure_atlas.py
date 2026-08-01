@@ -289,31 +289,58 @@ def _reject_symlink_ancestry(path: Path, *, name: str) -> None:
             raise ValueError(f"{name} ancestry cannot be inspected") from exc
 
 
-def _artifact_file(repo_root: Path, path: Path, *, name: str) -> tuple[Path, str]:
+def _lexical_repository_artifact(
+    repo_root: Path,
+    path: Path,
+    *,
+    name: str,
+) -> tuple[Path, Path]:
     _prohibited_path(path, name=name)
-    _reject_symlink_ancestry(repo_root, name="repository root")
-    root = repo_root.resolve(strict=True)
-    candidate = path if path.is_absolute() else root / path
+    _prohibited_path(repo_root, name="repository root")
+    if any(component in {"", ".", ".."} for component in path.parts):
+        raise ValueError(f"{name} must be an existing repository artifact")
+    root = Path(os.path.abspath(repo_root))
+    candidate = Path(os.path.abspath(path if path.is_absolute() else root / path))
     try:
-        lexical_relative = candidate.relative_to(root)
-        if not lexical_relative.parts or any(
-            part in {"", ".", ".."} for part in lexical_relative.parts
-        ):
-            raise ValueError
-        _reject_symlink_ancestry(candidate, name=name)
-        resolved = candidate.resolve(strict=True)
-        relative = resolved.relative_to(root)
-    except (OSError, ValueError) as exc:
+        relative = candidate.relative_to(root)
+    except ValueError as exc:
         raise ValueError(f"{name} must be an existing repository artifact") from exc
-    _prohibited_path(resolved, name=name)
     if (
-        not resolved.is_file()
-        or not relative.parts
+        len(relative.parts) < 2
         or relative.parts[0] != ".betelgeuze"
-        or stat.S_IMODE(resolved.stat().st_mode) != 0o600
+        or any(component in {"", ".", ".."} for component in relative.parts)
     ):
-        raise ValueError(f"{name} must be a mode-0600 .betelgeuze file")
-    return resolved, relative.as_posix()
+        raise ValueError(f"{name} must be an existing repository artifact")
+    _prohibited_path(relative, name=name)
+    return root, relative
+
+
+def _open_absolute_directory_no_symlinks(path: Path, *, name: str) -> int:
+    if not path.is_absolute():
+        raise ValueError(f"{name} must be absolute")
+    descriptor = -1
+    try:
+        descriptor = os.open(path.anchor, _directory_flags())
+        for component in path.parts[1:]:
+            next_descriptor = os.open(
+                component,
+                _directory_flags(),
+                dir_fd=descriptor,
+            )
+            os.close(descriptor)
+            descriptor = next_descriptor
+        status = os.fstat(descriptor)
+        if not stat.S_ISDIR(status.st_mode) or (
+            hasattr(os, "geteuid") and status.st_uid != os.geteuid()
+        ):
+            raise ValueError(f"{name} must be an owned directory")
+        return descriptor
+    except (OSError, ValueError) as exc:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if isinstance(exc, ValueError):
+            raise
+        raise ValueError(f"{name} cannot be opened safely") from exc
 
 
 def _safe_member_name(value: str) -> str:
@@ -374,23 +401,63 @@ def _bundle_rows(raw: bytes) -> tuple[tuple[str, str], ...]:
     return tuple(rows)
 
 
-def _bounded_file_bytes(path: Path, *, maximum: int, name: str) -> bytes:
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+def _bounded_repository_artifact_bytes(
+    repo_root: Path,
+    path: Path,
+    *,
+    maximum: int,
+    name: str,
+) -> tuple[bytes, str]:
+    root, relative = _lexical_repository_artifact(repo_root, path, name=name)
+    directory_descriptor = _open_absolute_directory_no_symlinks(
+        root,
+        name="repository root",
+    )
+    file_descriptor = -1
     try:
-        descriptor = os.open(path, flags)
-    except OSError as exc:
-        raise ValueError(f"{name} cannot be opened safely") from exc
-    try:
-        status = os.fstat(descriptor)
-        if not stat.S_ISREG(status.st_mode) or status.st_size > maximum:
+        for component in relative.parts[:-1]:
+            try:
+                next_descriptor = os.open(
+                    component,
+                    _directory_flags(),
+                    dir_fd=directory_descriptor,
+                )
+            except OSError as exc:
+                raise ValueError(f"{name} cannot be opened safely") from exc
+            status = os.fstat(next_descriptor)
+            if not stat.S_ISDIR(status.st_mode) or (
+                hasattr(os, "geteuid") and status.st_uid != os.geteuid()
+            ):
+                os.close(next_descriptor)
+                raise ValueError(f"{name} parent must be an owned directory")
+            os.close(directory_descriptor)
+            directory_descriptor = next_descriptor
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            file_descriptor = os.open(
+                relative.name,
+                flags,
+                dir_fd=directory_descriptor,
+            )
+        except OSError as exc:
+            raise ValueError(f"{name} cannot be opened safely") from exc
+        status = os.fstat(file_descriptor)
+        if (
+            not stat.S_ISREG(status.st_mode)
+            or stat.S_IMODE(status.st_mode) != 0o600
+            or (hasattr(os, "geteuid") and status.st_uid != os.geteuid())
+            or status.st_size > maximum
+        ):
             raise ValueError(f"{name} exceeds its bounded regular-file contract")
-        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+        with os.fdopen(file_descriptor, "rb", closefd=False) as handle:
             payload = handle.read(maximum + 1)
         if len(payload) > maximum:
             raise ValueError(f"{name} exceeds its bounded regular-file contract")
-        return payload
+        return payload, relative.as_posix()
     finally:
-        os.close(descriptor)
+        if file_descriptor >= 0:
+            os.close(file_descriptor)
+        os.close(directory_descriptor)
 
 
 def _bounded_zstd_decompress(archive_raw: bytes) -> bytes:
@@ -425,6 +492,7 @@ def _bounded_zstd_decompress(archive_raw: bytes) -> bytes:
 
 def _verified_archive_members(
     *,
+    repo_root: Path,
     archive_path: Path,
     members_path: Path,
     bundle_path: Path,
@@ -445,17 +513,20 @@ def _verified_archive_members(
         or expected_bundle_sha256 != EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256
     ):
         raise ValueError("archive bundle does not match the pinned evidence identity")
-    archive_raw = _bounded_file_bytes(
+    archive_raw, archive_relative = _bounded_repository_artifact_bytes(
+        repo_root,
         archive_path,
         maximum=MAX_ARCHIVE_BYTES,
         name="archive",
     )
-    members_raw = _bounded_file_bytes(
+    members_raw, members_relative = _bounded_repository_artifact_bytes(
+        repo_root,
         members_path,
         maximum=MAX_MEMBER_MANIFEST_BYTES,
         name="member manifest",
     )
-    bundle_raw = _bounded_file_bytes(
+    bundle_raw, bundle_relative = _bounded_repository_artifact_bytes(
+        repo_root,
         bundle_path,
         maximum=MAX_BUNDLE_CHECKSUM_BYTES,
         name="bundle checksum",
@@ -467,8 +538,8 @@ def _verified_archive_members(
     ):
         raise ValueError("archive bundle does not match the reviewed identities")
     expected_bundle = (
-        (expected_archive_sha256, archive_path.name),
-        (expected_members_sha256, members_path.name),
+        (expected_archive_sha256, Path(archive_relative).name),
+        (expected_members_sha256, Path(members_relative).name),
     )
     if _bundle_rows(bundle_raw) != expected_bundle:
         raise ValueError("bundle checksum cross-links are invalid")
@@ -513,10 +584,13 @@ def _verified_archive_members(
     if observed != manifest:
         raise ValueError("archive member set does not match its manifest")
     return retained, {
+        "archive_path": archive_relative,
         "archive_sha256": expected_archive_sha256,
         "archive_size_bytes": len(archive_raw),
         "tar_size_bytes": len(tar_raw),
+        "member_manifest_path": members_relative,
         "member_manifest_sha256": expected_members_sha256,
+        "bundle_checksum_path": bundle_relative,
         "bundle_checksum_sha256": expected_bundle_sha256,
         "member_count": len(observed),
         "all_members_regular_mode_0600": True,
@@ -1913,19 +1987,11 @@ def build_authenticated_failure_atlas(
     expected_bundle_sha256: str,
     expected_report_sha256: str,
 ) -> dict[str, object]:
-    archive_file, archive_relative = _artifact_file(
-        repo_root, archive_path, name="archive"
-    )
-    members_file, members_relative = _artifact_file(
-        repo_root, members_path, name="member manifest"
-    )
-    bundle_file, bundle_relative = _artifact_file(
-        repo_root, bundle_path, name="bundle checksum"
-    )
     members, archive_identity = _verified_archive_members(
-        archive_path=archive_file,
-        members_path=members_file,
-        bundle_path=bundle_file,
+        repo_root=repo_root,
+        archive_path=archive_path,
+        members_path=members_path,
+        bundle_path=bundle_path,
         expected_archive_sha256=expected_archive_sha256,
         expected_members_sha256=expected_members_sha256,
         expected_bundle_sha256=expected_bundle_sha256,
@@ -1981,9 +2047,6 @@ def build_authenticated_failure_atlas(
     )
     evidence_binding: dict[str, object] = {
         **archive_identity,
-        "archive_path": archive_relative,
-        "member_manifest_path": members_relative,
-        "bundle_checksum_path": bundle_relative,
         "ab_report_member": safe_report_member,
         "ab_report_file_sha256": _sha256_bytes(ab_raw),
         "ab_report_self_sha256": ab_report["report_sha256"],
