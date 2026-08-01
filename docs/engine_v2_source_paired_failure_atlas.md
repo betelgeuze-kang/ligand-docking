@@ -132,6 +132,15 @@ only an objective proxy. Those categories remain
 `unresolved_requires_coordinate_replay` or the more specific unresolved status
 recorded per case; they must not be promoted to causal conclusions.
 
+The source-paired refinement receipt V1.1 now instruments the minimum numeric
+vdW surface gap for baseline and optimized states on future runs, after
+selection and without changing coordinates. The atlas remains bound to the
+historical V1 archive, so it does not import or infer those values. A separate
+reviewed historical-development rerun and newly pinned archive are required
+before this taxonomy can consume numeric clearance evidence. The V1 parser is
+confined to that pinned-archive path; current live diagnostics require uniform
+V1.1 receipts.
+
 ## Next bounded action
 
 Do not widen the torsion lane, relax `[2.0,4.0)`, or calibrate the scorer from
@@ -141,7 +150,9 @@ is complete. It finds 7/22 inside the same numeric interval after heavy-atom
 normalization, while exact receptor/internal lexicographic ordering marks all
 22 improved. The former is uncalibrated and the latter is non-discriminating;
 neither is selected automatically. Accepted-pair, clash-atom,
-maximum-penetration, and absolute-clearance alternatives remain unavailable.
+maximum-penetration, and absolute-clearance alternatives remain unavailable in
+the pinned archive. Forward-only V1.1 clearance telemetry is instrumentation,
+not a rule or result.
 
 One bounded selection rule must be predeclared before a historical-development
 A/B. Any later proposal intervention must remain

@@ -7,7 +7,7 @@ inputs, launch Engine V2 or external binaries, or claim docking accuracy.
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 import hashlib
 import json
 import math
@@ -76,6 +76,9 @@ _SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256 = (
 )
 _SOURCE_PAIRED_TORSION_RESCUE_BASE_GUIDED_POLICY_SHA256 = (
     "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f"
+)
+_SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256 = (
+    "acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e"
 )
 PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "donor_acceptor_hotspot",
@@ -227,6 +230,7 @@ _CASE_ARTIFACT_ROLES = (
 )
 _VERIFIED_ARCHIVE_AUTHORITY = object()
 _VERIFIED_EXECUTION_AUTHORITY = object()
+_VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY = object()
 _SCORER_TERM_NAMES = (
     "typed_vdw",
     "electrostatics",
@@ -238,7 +242,13 @@ _SCORER_TERM_NAMES = (
     "weak_pocket_prior",
     "total_score",
 )
-_SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS = frozenset(
+_SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_V1_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+)
+_SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
+)
+_SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_V1_FIELDS = frozenset(
     {
         "schema_id",
         "source_proposal_sha256",
@@ -321,6 +331,20 @@ _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS = frozenset(
         "receipt_sha256",
     }
 )
+_SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_TELEMETRY_FIELDS = frozenset(
+    {
+        "clearance_measurement_evaluated",
+        "clearance_measurement_unavailable_reason",
+        "clearance_radii_policy_sha256",
+        "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex",
+        "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex",
+        "optimized_coordinates_sha256",
+    }
+)
+_SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS = (
+    _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_V1_FIELDS
+    | _SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_TELEMETRY_FIELDS
+)
 
 
 class PublicRedockingBenchmarkError(ValueError):
@@ -384,6 +408,123 @@ def _finite(
         suffix = "" if minimum is None else f" >= {minimum}"
         raise PublicRedockingBenchmarkError(f"{name} must be finite{suffix}")
     return result
+
+
+def _canonical_binary64_hex(value: object, *, name: str) -> float:
+    if type(value) is not str:
+        raise PublicRedockingBenchmarkError(
+            f"{name} must be canonical finite binary64 hex"
+        )
+    try:
+        result = float.fromhex(value)
+    except (ValueError, OverflowError) as exc:
+        raise PublicRedockingBenchmarkError(
+            f"{name} must be canonical finite binary64 hex"
+        ) from exc
+    if not math.isfinite(result) or result.hex() != value:
+        raise PublicRedockingBenchmarkError(
+            f"{name} must be canonical finite binary64 hex"
+        )
+    return result
+
+
+def _validate_source_paired_clearance_telemetry(
+    refinement: Mapping[str, object],
+    *,
+    proposal_mode: str,
+) -> None:
+    measurement_target = bool(
+        proposal_mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+    )
+    evaluated = refinement.get("clearance_measurement_evaluated")
+    unavailable_reason = refinement.get("clearance_measurement_unavailable_reason")
+    if type(evaluated) is not bool or type(unavailable_reason) is not str:
+        raise PublicRedockingBenchmarkError(
+            "source-paired clearance measurement scope is invalid"
+        )
+    if not measurement_target and (
+        evaluated or unavailable_reason != "not_source_paired_rescue_target"
+    ):
+        raise PublicRedockingBenchmarkError(
+            "source-paired clearance measurement scope is invalid"
+        )
+    if measurement_target and evaluated and unavailable_reason != "none":
+        raise PublicRedockingBenchmarkError(
+            "available source-paired clearance telemetry has a skip reason"
+        )
+    if (
+        measurement_target
+        and not evaluated
+        and (unavailable_reason != "full_cartesian_pair_count_exceeds_fixed_bound")
+    ):
+        raise PublicRedockingBenchmarkError(
+            "unavailable source-paired clearance telemetry reason is invalid"
+        )
+    value_fields = (
+        "clearance_radii_policy_sha256",
+        "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex",
+        "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex",
+        "optimized_coordinates_sha256",
+    )
+    if not evaluated:
+        if any(refinement.get(field) != "" for field in value_fields):
+            raise PublicRedockingBenchmarkError(
+                "unmeasured source-paired clearance telemetry must be empty"
+            )
+        return
+    radii_policy_sha256 = _digest(
+        refinement.get("clearance_radii_policy_sha256"),
+        name="clearance radii policy SHA-256",
+    )
+    if radii_policy_sha256 != _SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256:
+        raise PublicRedockingBenchmarkError(
+            "source-paired clearance radii policy is not frozen"
+        )
+    _canonical_binary64_hex(
+        refinement.get("baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"),
+        name="baseline V6 minimum vdW surface gap",
+    )
+    _canonical_binary64_hex(
+        refinement.get("optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"),
+        name="optimized minimum vdW surface gap",
+    )
+    optimized_coordinates_sha256 = _digest(
+        refinement.get("optimized_coordinates_sha256"),
+        name="optimized coordinates SHA-256",
+    )
+    baseline_coordinates_sha256 = _digest(
+        refinement.get("baseline_coordinates_sha256"),
+        name="baseline coordinates SHA-256",
+    )
+    post_coordinates_sha256 = _digest(
+        refinement.get("post_coordinates_sha256"),
+        name="post coordinates SHA-256",
+    )
+    variant_available = refinement.get("torsion_variant_available")
+    variant_selected = refinement.get("torsion_selected")
+    if type(variant_available) is not bool or type(variant_selected) is not bool:
+        raise PublicRedockingBenchmarkError(
+            "source-paired torsion availability flags must be boolean"
+        )
+    if variant_selected and not variant_available:
+        raise PublicRedockingBenchmarkError(
+            "selected source-paired torsion state must be available"
+        )
+    if not variant_available and (
+        optimized_coordinates_sha256 != baseline_coordinates_sha256
+    ):
+        raise PublicRedockingBenchmarkError(
+            "unavailable source-paired optimized coordinates must equal baseline"
+        )
+    if variant_selected:
+        if optimized_coordinates_sha256 != post_coordinates_sha256:
+            raise PublicRedockingBenchmarkError(
+                "selected source-paired optimized coordinates are cross-wired"
+            )
+    elif post_coordinates_sha256 != baseline_coordinates_sha256:
+        raise PublicRedockingBenchmarkError(
+            "retained source-paired coordinates must equal baseline"
+        )
 
 
 def _execution_policy_mapping(tokens: Sequence[str]) -> dict[str, object]:
@@ -3660,8 +3801,24 @@ class PublicRedockingEngineV2Diagnostics:
     candidate_budget: int = PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT
     schema_id: str = PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID
     source_paired_torsion_rescue_proposal_receipt: Mapping[str, object] | None = None
+    _legacy_source_paired_receipt_authority: InitVar[object | None] = None
 
-    def __post_init__(self) -> None:
+    def __post_init__(
+        self,
+        _legacy_source_paired_receipt_authority: object | None,
+    ) -> None:
+        if (
+            _legacy_source_paired_receipt_authority is not None
+            and _legacy_source_paired_receipt_authority
+            is not _VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY
+        ):
+            raise PublicRedockingBenchmarkError(
+                "legacy source-paired receipt authority is invalid"
+            )
+        allow_legacy_source_paired_receipts = bool(
+            _legacy_source_paired_receipt_authority
+            is _VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY
+        )
         if self.schema_id not in {
             PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
             PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
@@ -3829,6 +3986,7 @@ class PublicRedockingEngineV2Diagnostics:
                     for pair in allocation_evidence["v3_target_parent_pairs"]
                 )
                 refinement_config_sha256: str | None = None
+                refinement_schema_ids: set[str] = set()
                 candidate_slots = evidence["candidate_slots"]
                 for row, guided_row, slot in zip(
                     candidates,
@@ -3869,11 +4027,33 @@ class PublicRedockingEngineV2Diagnostics:
                             else "ineligible_source_or_other_lane"
                         )
                     )
+                    refinement_schema_id = refinement.get("schema_id")
                     if (
-                        set(refinement)
-                        != _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
-                        or refinement.get("schema_id")
-                        != "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+                        refinement_schema_id
+                        == _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_V1_SCHEMA_ID
+                        and allow_legacy_source_paired_receipts
+                    ):
+                        expected_refinement_fields = (
+                            _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_V1_FIELDS
+                        )
+                    elif (
+                        refinement_schema_id
+                        == _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_SCHEMA_ID
+                    ):
+                        expected_refinement_fields = (
+                            _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
+                        )
+                        _validate_source_paired_clearance_telemetry(
+                            refinement,
+                            proposal_mode=row.proposal_mode,
+                        )
+                    else:
+                        expected_refinement_fields = frozenset()
+                    if isinstance(refinement_schema_id, str):
+                        refinement_schema_ids.add(refinement_schema_id)
+                    if (
+                        set(refinement) != expected_refinement_fields
+                        or not expected_refinement_fields
                         or refinement.get("legacy_v7_receipt_schema_id")
                         != "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
                         or refinement.get("source_proposal_sha256")
@@ -3920,9 +4100,7 @@ class PublicRedockingEngineV2Diagnostics:
                         != allocation_evidence["budget_sha256"]
                         or refinement.get("source_paired_torsion_rescue_profile")
                         is not True
-                        or refinement.get(
-                            "source_paired_torsion_rescue_variant_cap"
-                        )
+                        or refinement.get("source_paired_torsion_rescue_variant_cap")
                         != 4
                         or refinement.get("nested_v6_treated_proposal_as_v3_variant")
                         is not (row.proposal_mode == "uniform_v3_rigid_ensemble")
@@ -3940,15 +4118,11 @@ class PublicRedockingEngineV2Diagnostics:
                         or refinement.get("claim_safe") is not False
                         or refinement.get("source_lane_retained") is not True
                         or refinement.get("scientifically_validated") is not False
-                        or refinement.get(
-                            "ranking_score_reused_as_physical_energy"
-                        )
+                        or refinement.get("ranking_score_reused_as_physical_energy")
                         is not False
                         or refinement.get("posebusters_or_rmsd_used_for_selection")
                         is not False
-                        or refinement.get(
-                            "accepted_rotation_steps_include_torsion"
-                        )
+                        or refinement.get("accepted_rotation_steps_include_torsion")
                         is not True
                         or refinement.get("generic_penalty_scope")
                         != "source_proposal_to_final_coordinates_v7_objective"
@@ -3958,6 +4132,10 @@ class PublicRedockingEngineV2Diagnostics:
                         raise PublicRedockingBenchmarkError(
                             "refinement receipt contradicts torsion-rescue proposal evidence"
                         )
+                if len(refinement_schema_ids) > 1:
+                    raise PublicRedockingBenchmarkError(
+                        "source-paired refinement receipt version changed within a case"
+                    )
         object.__setattr__(self, "preparation_status", status)
         object.__setattr__(self, "preparation_failure_code", failure_code)
         object.__setattr__(

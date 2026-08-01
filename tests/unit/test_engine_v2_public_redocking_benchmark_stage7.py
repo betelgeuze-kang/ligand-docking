@@ -1783,9 +1783,9 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
     ]
     truncated_evidence["allocation"]["v3_target_parent_pairs"] = []
     rehash(truncated_evidence["allocation"], "allocation_sha256")
-    truncated_evidence["guided_placement"][
-        "torsion_rescue_allocation_sha256"
-    ] = truncated_evidence["allocation"]["allocation_sha256"]
+    truncated_evidence["guided_placement"]["torsion_rescue_allocation_sha256"] = (
+        truncated_evidence["allocation"]["allocation_sha256"]
+    )
     rehash(truncated_evidence["guided_placement"], "receipt_sha256")
     rehash(truncated_evidence, "receipt_sha256")
     with pytest.raises(
@@ -1824,66 +1824,76 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
             - {"receipt_sha256"}
         )
     }
-    refinement_payload.update({
-        "schema_id": (
-            "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
-        ),
-        "legacy_v7_receipt_schema_id": (
-            "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
-        ),
-        "source_proposal_sha256": serialized_evidence["candidate_slots"][0][
-            "proposal_fingerprint_sha256"
-        ],
-        "pre_coordinates_sha256": source_coordinate_sha256,
-        "post_coordinates_sha256": final_coordinate_sha256,
-        "initial_penalty_binary64_hex": initial_penalty,
-        "final_penalty_binary64_hex": final_penalty,
-        "accepted_steps": accepted_steps,
-        "accepted_rotation_steps": accepted_rotation_steps,
-        "original_pose_valid": original_pose_valid,
-        "total_translation_binary64_hex": list(translation),
-        "total_rotation_vector_binary64_hex": list(rotation),
-        "config_sha256": "5" * 64,
-        "v3_proposal_indices": [
-            pair["target_proposal_index"]
-            for pair in allocation_evidence["v3_target_parent_pairs"]
-        ],
-        "proposal_torsion_eligibility_lane": "ineligible_source_or_other_lane",
-        "source_paired_parent_proposal_index": None,
-        "source_paired_torsion_rescue_pairs": allocation_evidence[
-            "rescue_target_parent_pairs"
-        ],
-        "source_paired_torsion_rescue_allocation_sha256": allocation_evidence[
-            "allocation_sha256"
-        ],
-        "source_paired_torsion_rescue_policy_sha256": serialized_evidence[
-            "rescue_policy_sha256"
-        ],
-        "source_paired_torsion_rescue_guidance_context_sha256": (
-            allocation_evidence["guidance_context_sha256"]
-        ),
-        "source_paired_torsion_rescue_budget_sha256": allocation_evidence[
-            "budget_sha256"
-        ],
-        "source_paired_torsion_rescue_profile": True,
-        "source_paired_torsion_rescue_variant_cap": 4,
-        "nested_v6_treated_proposal_as_v3_variant": False,
-        "rescue_target_excluded_from_nested_v3_indices": False,
-        "result_dependent_eligibility": False,
-        "development_only": True,
-        "stage0_eligible": False,
-        "fresh_execution_authorized": False,
-        "claim_safe": False,
-        "source_lane_retained": True,
-        "scientifically_validated": False,
-        "ranking_score_reused_as_physical_energy": False,
-        "posebusters_or_rmsd_used_for_selection": False,
-        "accepted_rotation_steps_include_torsion": True,
-        "generic_penalty_scope": (
-            "source_proposal_to_final_coordinates_v7_objective"
-        ),
-        "baseline_v6_penalty_scope": "post_v6_coordinates_v7_objective",
-    })
+    refinement_payload.update(
+        {
+            "schema_id": (
+                "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
+            ),
+            "legacy_v7_receipt_schema_id": (
+                "betelgeuze.engine_v2_interaction_aware_torsion_contact_receipt/7.0.0"
+            ),
+            "source_proposal_sha256": serialized_evidence["candidate_slots"][0][
+                "proposal_fingerprint_sha256"
+            ],
+            "pre_coordinates_sha256": source_coordinate_sha256,
+            "post_coordinates_sha256": final_coordinate_sha256,
+            "initial_penalty_binary64_hex": initial_penalty,
+            "final_penalty_binary64_hex": final_penalty,
+            "accepted_steps": accepted_steps,
+            "accepted_rotation_steps": accepted_rotation_steps,
+            "original_pose_valid": original_pose_valid,
+            "total_translation_binary64_hex": list(translation),
+            "total_rotation_vector_binary64_hex": list(rotation),
+            "config_sha256": "5" * 64,
+            "v3_proposal_indices": [
+                pair["target_proposal_index"]
+                for pair in allocation_evidence["v3_target_parent_pairs"]
+            ],
+            "proposal_torsion_eligibility_lane": "ineligible_source_or_other_lane",
+            "source_paired_parent_proposal_index": None,
+            "source_paired_torsion_rescue_pairs": allocation_evidence[
+                "rescue_target_parent_pairs"
+            ],
+            "source_paired_torsion_rescue_allocation_sha256": allocation_evidence[
+                "allocation_sha256"
+            ],
+            "source_paired_torsion_rescue_policy_sha256": serialized_evidence[
+                "rescue_policy_sha256"
+            ],
+            "source_paired_torsion_rescue_guidance_context_sha256": (
+                allocation_evidence["guidance_context_sha256"]
+            ),
+            "source_paired_torsion_rescue_budget_sha256": allocation_evidence[
+                "budget_sha256"
+            ],
+            "source_paired_torsion_rescue_profile": True,
+            "source_paired_torsion_rescue_variant_cap": 4,
+            "nested_v6_treated_proposal_as_v3_variant": False,
+            "rescue_target_excluded_from_nested_v3_indices": False,
+            "result_dependent_eligibility": False,
+            "clearance_measurement_evaluated": False,
+            "clearance_measurement_unavailable_reason": (
+                "not_source_paired_rescue_target"
+            ),
+            "clearance_radii_policy_sha256": "",
+            "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": "",
+            "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": "",
+            "optimized_coordinates_sha256": "",
+            "development_only": True,
+            "stage0_eligible": False,
+            "fresh_execution_authorized": False,
+            "claim_safe": False,
+            "source_lane_retained": True,
+            "scientifically_validated": False,
+            "ranking_score_reused_as_physical_energy": False,
+            "posebusters_or_rmsd_used_for_selection": False,
+            "accepted_rotation_steps_include_torsion": True,
+            "generic_penalty_scope": (
+                "source_proposal_to_final_coordinates_v7_objective"
+            ),
+            "baseline_v6_penalty_scope": "post_v6_coordinates_v7_objective",
+        }
+    )
     refinement_payload["receipt_sha256"] = hashlib.sha256(
         json.dumps(
             refinement_payload,
@@ -1931,24 +1941,38 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
     rescue_target = rescue_pair["target_proposal_index"]
     rescue_parent = rescue_pair["parent_proposal_index"]
     rescue_final_coordinate_sha256 = "6" * 64
+    rescue_baseline_coordinate_sha256 = "a" * 64
     rescue_refinement_payload = successful_fallback.to_dict()[
         "refinement_receipt_payload"
     ]
-    rescue_refinement_payload.update({
-        "source_proposal_sha256": serialized_evidence["candidate_slots"][
-            rescue_target
-        ]["proposal_fingerprint_sha256"],
-        "pre_coordinates_sha256": serialized_evidence["candidate_slots"][
-            rescue_target
-        ]["coordinate_fingerprint_sha256"],
-        "post_coordinates_sha256": rescue_final_coordinate_sha256,
-        "proposal_torsion_eligibility_lane": (
-            "source_paired_torsion_rescue_variant"
-        ),
-        "source_paired_parent_proposal_index": rescue_parent,
-        "nested_v6_treated_proposal_as_v3_variant": False,
-        "rescue_target_excluded_from_nested_v3_indices": True,
-    })
+    rescue_refinement_payload.update(
+        {
+            "source_proposal_sha256": serialized_evidence["candidate_slots"][
+                rescue_target
+            ]["proposal_fingerprint_sha256"],
+            "pre_coordinates_sha256": serialized_evidence["candidate_slots"][
+                rescue_target
+            ]["coordinate_fingerprint_sha256"],
+            "post_coordinates_sha256": rescue_final_coordinate_sha256,
+            "proposal_torsion_eligibility_lane": (
+                "source_paired_torsion_rescue_variant"
+            ),
+            "source_paired_parent_proposal_index": rescue_parent,
+            "nested_v6_treated_proposal_as_v3_variant": False,
+            "rescue_target_excluded_from_nested_v3_indices": True,
+            "torsion_variant_available": True,
+            "torsion_selected": True,
+            "baseline_coordinates_sha256": rescue_baseline_coordinate_sha256,
+            "clearance_measurement_evaluated": True,
+            "clearance_measurement_unavailable_reason": "none",
+            "clearance_radii_policy_sha256": (
+                benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
+            ),
+            "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": ((-1.0).hex()),
+            "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": ((-0.5).hex()),
+            "optimized_coordinates_sha256": rescue_final_coordinate_sha256,
+        }
+    )
     rehash(rescue_refinement_payload, "receipt_sha256")
     successful_rescue = replace(
         successful_fallback,
@@ -1969,6 +1993,52 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
         candidates=tuple(successful_rows),
     )
     assert successful_diagnostics.candidates[rescue_target].status == "success"
+
+    legacy_rescue_payload = successful_rescue.to_dict()["refinement_receipt_payload"]
+    legacy_rescue_payload["schema_id"] = (
+        "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+    )
+    for (
+        field_name
+    ) in benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_TELEMETRY_FIELDS:
+        legacy_rescue_payload.pop(field_name)
+    rehash(legacy_rescue_payload, "receipt_sha256")
+    legacy_rescue = replace(
+        successful_rescue,
+        refinement_receipt_sha256=legacy_rescue_payload["receipt_sha256"],
+        refinement_receipt_payload=legacy_rescue_payload,
+    )
+    legacy_rows = list(successful_diagnostics.candidates)
+    legacy_rows[rescue_target] = legacy_rescue
+    with pytest.raises(PublicRedockingBenchmarkError, match="refinement receipt"):
+        replace(
+            successful_diagnostics,
+            candidates=tuple(legacy_rows),
+        )
+
+    telemetry_substitutions = {
+        "clearance_measurement_evaluated": False,
+        "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": "nan",
+        "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": "0x1p+0",
+        "optimized_coordinates_sha256": "c" * 64,
+        "clearance_radii_policy_sha256": "d" * 64,
+    }
+    for field_name, substituted_value in telemetry_substitutions.items():
+        substituted_payload = successful_rescue.to_dict()["refinement_receipt_payload"]
+        substituted_payload[field_name] = substituted_value
+        rehash(substituted_payload, "receipt_sha256")
+        substituted_candidate = replace(
+            successful_rescue,
+            refinement_receipt_sha256=substituted_payload["receipt_sha256"],
+            refinement_receipt_payload=substituted_payload,
+        )
+        substituted_rows = list(successful_diagnostics.candidates)
+        substituted_rows[rescue_target] = substituted_candidate
+        with pytest.raises(
+            PublicRedockingBenchmarkError,
+            match="clearance|source-paired|surface gap",
+        ):
+            replace(successful_diagnostics, candidates=tuple(substituted_rows))
 
     receipt_substitutions = {
         "pre_coordinates_sha256": "8" * 64,

@@ -185,6 +185,17 @@ The canonical capability state is:
   bounds are not calibrated for the normalized objective. Exact lexicographic
   receptor/internal ordering marks all 22 improved and is non-discriminating;
   it also permits internal-penalty increases. No rule or policy was selected.
+- Source-paired refinement receipt V1.1 adds forward-only minimum-vdW-surface-
+  gap telemetry for the fixed rescue targets. It measures baseline V6 and
+  optimized states after V7 selection, binds the radii policy and coordinate
+  fingerprints, and enforces a one-million-pair call bound. Pair-bound skips
+  are recorded as unavailable telemetry while retaining the V7 result. It
+  changes no allocation, candidate, coordinate, objective, or selection policy.
+  Live cases require one uniform V1.1 receipt version and the frozen default
+  vdW-policy fingerprint; V1 remains confined to the exact pinned-archive
+  verifier. The pinned V1 historical archive remains clearance-unavailable
+  until a separate reviewed historical-development rerun produces and pins
+  V1.1 evidence.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate

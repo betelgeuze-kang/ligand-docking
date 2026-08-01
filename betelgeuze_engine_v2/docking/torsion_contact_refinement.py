@@ -55,11 +55,15 @@ INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_refiner"
 )
 INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_VERSION = "1.0.0"
-INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID = (
+INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_V1_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
+)
+INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
 )
 MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS = 4
 SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT = 64
+MAX_RECEPTOR_CLEARANCE_PAIR_COUNT = 1_000_000
 INTERACTION_AWARE_TORSION_CLEARANCE_CONFIG_V8_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_torsion_clearance_config/8.0.0"
 )
@@ -556,6 +560,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             dict(normalized_rescue_pairs)
         )
         self._source_paired_torsion_rescue_index_set = frozenset(rescue_targets)
+        self._radii_policy_sha256 = selected_policy.fingerprint_sha256
         self._torsion_eligible_proposal_index_set = (
             self._v3_proposal_index_set | self._source_paired_torsion_rescue_index_set
         )
@@ -648,7 +653,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             "schema_id": INTERACTION_AWARE_TORSION_CONTACT_CONFIG_V7_SCHEMA_ID,
             "baseline_v6_config_sha256": self._v6.config_fingerprint_sha256,
             "torsion_config_sha256": selected_config.fingerprint_sha256,
-            "radii_policy_sha256": selected_policy.fingerprint_sha256,
+            "radii_policy_sha256": self._radii_policy_sha256,
             "authority_input_receipt_sha256": authority.input_receipt_sha256,
             "search_space_fingerprint_sha256": (self._search_space.fingerprint_sha256),
             "rotatable_child_atom_indices": list(rotor_indices),
@@ -1110,13 +1115,15 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         optimized_combined = current_combined
         evaluated_moves = accepted_moves
         evaluated_total_torsion_path = total_torsion_path
+        optimized_state_coordinates = optimized_coordinates.to(
+            dtype=proposal.coordinates.dtype
+        )
+        optimized_state_torsion_angles = optimized_torsion_angles.to(
+            dtype=proposal.torsion_angles.dtype
+        )
         self._optimized_states[proposal.fingerprint_sha256] = _TorsionOptimizedState(
-            coordinates=optimized_coordinates.to(
-                dtype=proposal.coordinates.dtype
-            ).clone(),
-            torsion_angles=optimized_torsion_angles.to(
-                dtype=proposal.torsion_angles.dtype
-            ).clone(),
+            coordinates=optimized_state_coordinates.clone(),
+            torsion_angles=optimized_state_torsion_angles.clone(),
         )
         torsion_selected = bool(
             torsion_variant_available
@@ -1125,12 +1132,8 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             < self._config.maximum_selected_final_receptor_penalty
         )
         if torsion_selected:
-            final_coordinates = optimized_coordinates.to(
-                dtype=proposal.coordinates.dtype
-            )
-            final_torsion_angles = optimized_torsion_angles.to(
-                dtype=proposal.torsion_angles.dtype
-            )
+            final_coordinates = optimized_state_coordinates
+            final_torsion_angles = optimized_state_torsion_angles
             final_receptor = optimized_receptor
             final_internal = optimized_internal
             final_combined = optimized_combined
@@ -1150,6 +1153,49 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             selection_reason = "v6_retained_outside_final_receptor_penalty_window"
         else:
             selection_reason = "v6_baseline_retained_no_torsion_objective_reduction"
+        clearance_measurement_target = bool(
+            self._source_paired_torsion_rescue_profile and proposal_is_torsion_rescue
+        )
+        clearance_measurement_evaluated = False
+        clearance_measurement_unavailable_reason = "not_source_paired_rescue_target"
+        clearance_radii_policy_sha256 = ""
+        baseline_v6_minimum_vdw_surface_gap = ""
+        optimized_minimum_vdw_surface_gap = ""
+        optimized_coordinates_sha256 = ""
+        if clearance_measurement_target and (
+            len(self._ligand_radii) * len(self._receptor_radii)
+            > MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
+        ):
+            clearance_measurement_unavailable_reason = (
+                "full_cartesian_pair_count_exceeds_fixed_bound"
+            )
+        elif clearance_measurement_target:
+            clearance_measurement_evaluated = True
+            clearance_measurement_unavailable_reason = "none"
+            baseline_clearance = _receptor_clearance_statistics(
+                baseline.coordinates,
+                receptor_coordinates=self._receptor_coordinates,
+                ligand_radii=self._ligand_radii,
+                receptor_radii=self._receptor_radii,
+                receptor_atom_indices=tuple(self._authority.receptor_atom_indices),
+            )
+            optimized_clearance = _receptor_clearance_statistics(
+                optimized_state_coordinates,
+                receptor_coordinates=self._receptor_coordinates,
+                ligand_radii=self._ligand_radii,
+                receptor_radii=self._receptor_radii,
+                receptor_atom_indices=tuple(self._authority.receptor_atom_indices),
+            )
+            clearance_radii_policy_sha256 = self._radii_policy_sha256
+            baseline_v6_minimum_vdw_surface_gap = (
+                baseline_clearance.minimum_vdw_surface_gap_angstrom.hex()
+            )
+            optimized_minimum_vdw_surface_gap = (
+                optimized_clearance.minimum_vdw_surface_gap_angstrom.hex()
+            )
+            optimized_coordinates_sha256 = coordinate_fingerprint(
+                optimized_state_coordinates
+            )
         receipt: dict[str, object] = {
             "schema_id": (
                 INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID
@@ -1309,6 +1355,20 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                         proposal_is_torsion_rescue
                     ),
                     "result_dependent_eligibility": False,
+                    "clearance_measurement_evaluated": (
+                        clearance_measurement_evaluated
+                    ),
+                    "clearance_measurement_unavailable_reason": (
+                        clearance_measurement_unavailable_reason
+                    ),
+                    "clearance_radii_policy_sha256": (clearance_radii_policy_sha256),
+                    "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": (
+                        baseline_v6_minimum_vdw_surface_gap
+                    ),
+                    "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": (
+                        optimized_minimum_vdw_surface_gap
+                    ),
+                    "optimized_coordinates_sha256": optimized_coordinates_sha256,
                     "development_only": True,
                     "stage0_eligible": False,
                     "fresh_execution_authorized": False,
@@ -1767,6 +1827,7 @@ class InteractionAwareTorsionClearanceEnsembleRefinerV8:
 
 __all__ = [
     "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_CONFIG_SCHEMA_ID",
+    "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_V1_SCHEMA_ID",
     "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID",
     "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_ID",
     "INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_REFINER_VERSION",
@@ -1779,6 +1840,7 @@ __all__ = [
     "INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_ID",
     "INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION",
     "MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS",
+    "MAX_RECEPTOR_CLEARANCE_PAIR_COUNT",
     "InteractionAwareTorsionClearanceConfigV8",
     "InteractionAwareTorsionClearanceEnsembleRefinerV8",
     "InteractionAwareTorsionContactConfigV7",
