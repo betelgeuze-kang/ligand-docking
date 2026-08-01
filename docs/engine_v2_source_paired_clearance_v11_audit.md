@@ -104,13 +104,25 @@ The final 1.2 identity-hardening repack reclaimed 21,344,459 temporary bytes;
 both the feature worktree and persistent store retain only the compact audit,
 archive, two checksum sidecars, and two compact score-term analyses.
 
-## Reproduction
+## Historical command record and pinned verification
 
-Both executions require the exact pinned PoseBusters archive and identifier
-file. Use separate, previously absent mode-`0700` output roots.
+The commands below record how the historical executions were made; they do not
+reproduce the byte identity of the retained archive. A fresh execution produces
+new runtime and wall-time values and is therefore a new, unpinned comparison.
+Both lanes require the exact pinned PoseBusters archive and identifier file and
+separate, previously absent mode-`0700` output roots. GNU `time` writes the
+five-field wall-time member required by the historical pack contract. Each
+wall-time path must also be previously absent.
 
 ```bash
-python3 tools/run_engine_v2_public_redocking_300.py \
+set -euo pipefail
+baseline_walltime=.betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-nine.walltime.txt
+test ! -e "$baseline_walltime"
+umask 077
+/usr/bin/time \
+  --format='elapsed_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M\nexit_status=%x' \
+  --output="$baseline_walltime" \
+  python3 -m tools.run_engine_v2_public_redocking_300 \
   --archive /path/to/posebusters_paper_data.zip \
   --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
   --output-root .betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-nine \
@@ -122,21 +134,29 @@ python3 tools/run_engine_v2_public_redocking_300.py \
   --limit 9 \
   --development-engine-v2-only \
   --engine-v2-scorer-backend python_reference
+test "$(stat -c '%a' "$baseline_walltime")" = 600
 ```
 
-The rescue command is identical except for a new output root and the addition
-of `--development-source-paired-torsion-rescue`. Build the two compact analyses
-with `tools/analyze_engine_v2_score_terms.py`, then pack and verify:
+The rescue command is identical except that both `--output` and `--output-root`
+use `v7-clearance-v11-6a749540-rescue-nine`, and the runner receives
+`--development-source-paired-torsion-rescue`. Apply the same pre-absence and
+post-mode checks to the rescue wall-time path. Build a new comparison's compact
+analyses with `python3 -m tools.analyze_engine_v2_score_terms`; do not feed fresh
+outputs to the immutable historical `pack` action.
+
+Validate the retained pinned evidence from the repository root with:
 
 ```bash
-python3 tools/build_engine_v2_source_paired_clearance_v11_evidence.py pack
-python3 tools/build_engine_v2_source_paired_clearance_v11_evidence.py verify
+python3 -m tools.build_engine_v2_source_paired_clearance_v11_evidence verify
 ```
 
-`pack` is exclusive-create, requires the reviewed four-hash identity before
-publishing, refuses existing outputs, and rolls back only outputs created by a
-failed publication attempt. `verify` checks the external audit against the
-archived copy, Zstandard stream, sorted manifest, bundle hashes, safe member
+`pack` is a maintenance-only, exact-original-member restoration operation. It
+requires the 58 byte-identical historical source members restored from the
+already authenticated archive, requires the reviewed four-hash identity before
+publishing, refuses existing outputs, intentionally rejects fresh reruns, and
+rolls back only outputs created by a failed publication attempt. `verify` checks
+the external audit against the archived copy, Zstandard stream, sorted manifest,
+bundle hashes, safe member
 names, regular file types, fixed modes and metadata, all raw execution/
 materialization cross-links, the complete pinned command and policy for every
 lane/case, frozen archive-specific V1.1 result shapes, candidate-to-post and

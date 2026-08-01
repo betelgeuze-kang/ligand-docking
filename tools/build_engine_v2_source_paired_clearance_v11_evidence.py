@@ -15,10 +15,14 @@ from pathlib import Path, PurePosixPath
 import secrets
 import stat
 import subprocess
+import sys
 import tarfile
 
-import tools.analyze_engine_v2_score_terms as score_term_analysis
-import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import tools.analyze_engine_v2_score_terms as score_term_analysis  # noqa: E402
+import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas  # noqa: E402
 
 
 SCHEMA_ID = "betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.2.0"
@@ -49,6 +53,7 @@ EXPECTED_UNCOVERED_CASE_IDS = (
     "6WTN_RXT",
 )
 EXPECTED_PREPARATION_FAILURE_CASE_ID = "6M73_FNR"
+EXPECTED_PREPARATION_FAILURE_CODE = "unsupported_large_ring_system"
 EXPECTED_RECEIPT_SCHEMA_ID = (
     "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
 )
@@ -917,6 +922,8 @@ def _historical_v11_result(
             case_id != EXPECTED_PREPARATION_FAILURE_CASE_ID
             or result.get("status") != "failure"
             or result.get("failure_code") != "engine_v2_case_failed"
+            or diagnostics.get("preparation_failure_code")
+            != EXPECTED_PREPARATION_FAILURE_CODE
             or raw_candidates
             or diagnostics.get("candidate_success_count") != 0
             or diagnostics.get("candidate_failure_count") != 0

@@ -815,6 +815,17 @@ def test_frozen_result_parser_is_live_schema_independent(
         case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
     ) == result
 
+    failure_reason_drift = deepcopy(result)
+    failure_reason_drift["engine_v2_diagnostics"][
+        "preparation_failure_code"
+    ] = "different_failure_reason"
+    with pytest.raises(ValueError, match="preparation failure"):
+        evidence._historical_v11_result(
+            failure_reason_drift,
+            lane="baseline",
+            case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
+        )
+
     drifted = {**result, "future_live_field": "must-not-be-accepted"}
     with pytest.raises(ValueError, match="result shape"):
         evidence._historical_v11_result(
