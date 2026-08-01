@@ -151,9 +151,7 @@ def _canonical_bytes(value: object) -> bytes:
 
 
 def _execution_policy_tokens(value: object) -> list[str]:
-    if not isinstance(value, Mapping) or any(
-        not isinstance(key, str) for key in value
-    ):
+    if not isinstance(value, Mapping) or any(not isinstance(key, str) for key in value):
         raise ValueError("execution policy is invalid")
     try:
         return [
@@ -476,7 +474,9 @@ def _verified_archive_members(
         raise ValueError("bundle checksum cross-links are invalid")
     manifest = _member_manifest(members_raw)
     if len(manifest) != EXPECTED_EVIDENCE_MEMBER_COUNT:
-        raise ValueError("archive member manifest count is not the pinned 59-member set")
+        raise ValueError(
+            "archive member manifest count is not the pinned 59-member set"
+        )
     tar_raw = _bounded_zstd_decompress(archive_raw)
     retained: dict[str, bytes] = {}
     observed: dict[str, str] = {}
@@ -794,9 +794,7 @@ def _validate_ranked_result_projection(
     pose_hashes = result.get("pose_artifact_sha256s")
     projections = (rmsds, geometric, chemical, pose_hashes)
     if any(not isinstance(value, list) for value in projections):
-        raise ValueError(
-            f"{lane} {case_id} ranked result projection is invalid"
-        )
+        raise ValueError(f"{lane} {case_id} ranked result projection is invalid")
     assert isinstance(rmsds, list)
     assert isinstance(geometric, list)
     assert isinstance(chemical, list)

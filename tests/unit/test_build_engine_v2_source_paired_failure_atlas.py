@@ -12,6 +12,9 @@ from types import SimpleNamespace
 import pytest
 
 from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
+    PublicRedockingCaseResult,
+    PublicRedockingEngineV2CandidateDiagnostic,
+    PublicRedockingEngineV2Diagnostics,
     PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
     PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_CANDIDATE_SCHEMA_ID,
@@ -121,6 +124,102 @@ def _execution_policy_tokens() -> list[str]:
         f"{key}={json.dumps(value, allow_nan=False, separators=(',', ':'))}"
         for key, value in sorted(_EXECUTION_POLICY.items())
     ]
+
+
+def _strict_backend_receipt() -> dict[str, object]:
+    return _seal(
+        {
+            "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
+            "backend": "python_reference",
+            "backend_version": "1.0.0",
+            "implementation_source_sha256": "e" * 64,
+            "options_fingerprint_sha256": "f" * 64,
+            "extension_sha256": "",
+            "cargo_lock_sha256": "",
+            "rustc_version": "",
+            "target_triple": "",
+            "build_flags": [],
+            "implicit_fallback_allowed": False,
+        }
+    )
+
+
+def _zero_score_terms() -> dict[str, str]:
+    return {
+        name: (0.0).hex()
+        for name in (
+            "typed_vdw",
+            "electrostatics",
+            "directional_hbond",
+            "hydrophobic_contact",
+            "desolvation_proxy",
+            "torsion_energy",
+            "ligand_strain",
+            "weak_pocket_prior",
+            "total_score",
+        )
+    }
+
+
+def _strict_valid_result(case_id: str) -> dict[str, object]:
+    candidates = tuple(
+        (
+            PublicRedockingEngineV2CandidateDiagnostic(
+                proposal_index=index,
+                status="success",
+                proposal_mode="uniform_fallback",
+                proposal_fingerprint_sha256=f"{index + 1:064x}",
+                coordinate_fingerprint_sha256=f"{index + 193:064x}",
+                score=float(index),
+                rmsd_angstrom=float(index + 1),
+                geometric_valid=True,
+                chemical_valid=True,
+                pose_artifact_sha256=f"{index + 65:064x}",
+                score_terms_receipt_sha256=f"{index + 129:064x}",
+                hbond_count=1,
+                selection_eligible=True,
+                score_term_binary64_hex=_zero_score_terms(),
+            )
+            if index < 5
+            else PublicRedockingEngineV2CandidateDiagnostic(
+                proposal_index=index,
+                status="failure",
+                error_code="synthetic_candidate_failure",
+            )
+        )
+        for index in range(64)
+    )
+    diagnostics = PublicRedockingEngineV2Diagnostics(
+        preparation_status="success",
+        scorer_backend_receipt=_strict_backend_receipt(),
+        receptor_atom_count=1,
+        ligand_atom_count=1,
+        receptor_partial_charge_count=1,
+        ligand_partial_charge_count=1,
+        receptor_donor_count=1,
+        receptor_acceptor_count=1,
+        ligand_donor_count=1,
+        ligand_acceptor_count=1,
+        candidates=candidates,
+    )
+    inputs = _case_inputs(case_id)
+    return PublicRedockingCaseResult(
+        case_id=case_id,
+        engine_id="engine_v2",
+        status="success",
+        runtime_seconds=0.0,
+        receptor_artifact_sha256=inputs["receptor"],
+        reference_artifact_sha256=inputs["reference"],
+        native_artifact_sha256=inputs["native"],
+        seed_artifact_sha256=inputs["seed"],
+        execution_command=_execution_command(case_id),
+        execution_policy=_execution_policy_tokens(),
+        rmsd_angstroms=tuple(float(index + 1) for index in range(5)),
+        geometric_valid=(True,) * 5,
+        chemical_valid=(True,) * 5,
+        pose_artifact_sha256s=tuple(f"{index + 65:064x}" for index in range(5)),
+        engine_v2_diagnostics=diagnostics,
+    ).to_dict()
 
 
 def _pairs(case_id: str) -> list[dict[str, int]]:
@@ -571,15 +670,26 @@ def _tar_bytes(members: dict[str, bytes]) -> bytes:
 def _synthetic_bundle(
     *,
     analysis_drift_lane: str | None = None,
+    execution_drift: str | None = None,
     input_drift_lane: str | None = None,
+    result_input_drift_lane: str | None = None,
     result_projection_drift_lane: str | None = None,
     rescue_drift: str | None = None,
 ) -> dict[str, object]:
     baseline = _results("baseline")
     rescue = _results("rescue")
     report = _ab_report(baseline, rescue)
+    if result_input_drift_lane is not None:
+        input_drift_results = (
+            baseline if result_input_drift_lane == "baseline" else rescue
+        )
+        input_drift_results[atlas_builder.EXPECTED_CASE_IDS[0]][
+            "receptor_artifact_sha256"
+        ] = "8" * 64
     if result_projection_drift_lane is not None:
-        lane_results = baseline if result_projection_drift_lane == "baseline" else rescue
+        lane_results = (
+            baseline if result_projection_drift_lane == "baseline" else rescue
+        )
         first_result = lane_results[atlas_builder.EXPECTED_CASE_IDS[0]]
         rmsds = list(first_result["rmsd_angstroms"])
         rmsds[0] = float(rmsds[0]) + 0.125
@@ -644,6 +754,23 @@ def _synthetic_bundle(
                 inputs = dict(receipt["input_sha256s"])
                 inputs["receptor"] = "9" * 64
                 receipt["input_sha256s"] = inputs
+                _seal(receipt)
+            if (
+                execution_drift == f"{lane}_command"
+                and case_id == atlas_builder.EXPECTED_CASE_IDS[0]
+            ):
+                receipt.pop("receipt_sha256")
+                receipt["command"] = ["resealed-but-cross-wired"]
+                _seal(receipt)
+            if (
+                execution_drift == f"{lane}_policy"
+                and case_id == atlas_builder.EXPECTED_CASE_IDS[0]
+            ):
+                receipt.pop("receipt_sha256")
+                receipt["execution_policy"] = {
+                    **_EXECUTION_POLICY,
+                    "scorer_thread_count": 2,
+                }
                 _seal(receipt)
             receipt_path = f"{run_root}/receipts/engine_v2/{case_id}.json"
             materialization_path = (
@@ -810,6 +937,31 @@ def test_authenticated_archive_builds_exact_source_paired_atlas(
     assert b"score_term_binary64_hex" not in _canonical_bytes(report)
 
 
+def test_schema_and_reviewed_archive_identities_are_pinned() -> None:
+    assert atlas_builder.SCHEMA_ID == (
+        "betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0"
+    )
+    assert atlas_builder.EXPECTED_EVIDENCE_ARCHIVE_SHA256 == (
+        "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc"
+    )
+    assert atlas_builder.EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256 == (
+        "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21"
+    )
+    assert atlas_builder.EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 == (
+        "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9"
+    )
+
+
+def test_production_result_binding_rejects_nested_candidate_drift() -> None:
+    result = _strict_valid_result(atlas_builder.EXPECTED_CASE_IDS[0])
+    assert atlas_builder._typed_development_result(result).to_dict() == result
+    tampered = json.loads(json.dumps(result))
+    tampered["engine_v2_diagnostics"]["candidates"][0]["hbond_count"] = -1
+
+    with pytest.raises(ValueError, match="development_source_result_schema_invalid"):
+        atlas_builder._typed_development_result(tampered)
+
+
 @pytest.mark.parametrize("lane", ("baseline", "rescue"))
 def test_authenticated_archive_rejects_analysis_receipt_drift(
     lane: str,
@@ -903,6 +1055,36 @@ def test_authenticated_archive_rejects_materialization_input_drift(
     _mock_zstd(monkeypatch, bundle)
 
     with pytest.raises(ValueError, match="materialization is cross-wired"):
+        atlas_builder.build_authenticated_failure_atlas(
+            **_write_bundle(tmp_path, bundle)
+        )
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_authenticated_archive_rejects_result_input_drift(
+    lane: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _synthetic_bundle(result_input_drift_lane=lane)
+    _mock_zstd(monkeypatch, bundle)
+
+    with pytest.raises(ValueError, match="materialization is cross-wired"):
+        atlas_builder.build_authenticated_failure_atlas(
+            **_write_bundle(tmp_path, bundle)
+        )
+
+
+@pytest.mark.parametrize("drift", ("baseline_command", "baseline_policy"))
+def test_authenticated_archive_rejects_execution_binding_drift(
+    drift: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _synthetic_bundle(execution_drift=drift)
+    _mock_zstd(monkeypatch, bundle)
+
+    with pytest.raises(ValueError, match="typed result is cross-wired"):
         atlas_builder.build_authenticated_failure_atlas(
             **_write_bundle(tmp_path, bundle)
         )
