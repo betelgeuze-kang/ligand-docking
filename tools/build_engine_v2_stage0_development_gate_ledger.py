@@ -172,7 +172,7 @@ def _threshold_source_case_ids(
     *,
     case_count: int,
     expected_case_ids_sha256: object,
-) -> tuple[str, ...]:
+) -> tuple[str, ...] | None:
     if (
         not isinstance(source_reports, Mapping)
         or not source_reports
@@ -187,6 +187,8 @@ def _threshold_source_case_ids(
         - set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS)
     )
     observed_pairs: set[tuple[str, str]] = set()
+    observed_digests: set[str] = set()
+    aggregate_source_count = 0
     for raw_path, digest in source_reports.items():
         if (
             not isinstance(raw_path, str)
@@ -199,11 +201,18 @@ def _threshold_source_case_ids(
         path = PurePosixPath(raw_path)
         if (
             not path.is_absolute()
-            or len(path.parts) < 4
             or any(part in {"", ".", ".."} for part in path.parts)
-            or path.parts[-3] != "receipts"
-            or path.parts[-2] not in _THRESHOLD_SOURCE_ENGINES
             or path.suffix != ".json"
+        ):
+            raise ValueError("threshold evidence source report path is invalid")
+        if digest in observed_digests:
+            raise ValueError("threshold evidence source report digest is reused")
+        observed_digests.add(digest)
+        if len(path.parts) < 4 or path.parts[-3] != "receipts":
+            aggregate_source_count += 1
+            continue
+        if (
+            path.parts[-2] not in _THRESHOLD_SOURCE_ENGINES
             or path.stem not in allowed_case_ids
         ):
             raise ValueError("threshold evidence source report path is invalid")
@@ -211,6 +220,10 @@ def _threshold_source_case_ids(
         if pair in observed_pairs:
             raise ValueError("threshold evidence source report pair is duplicated")
         observed_pairs.add(pair)
+    if aggregate_source_count:
+        if observed_pairs:
+            raise ValueError("threshold evidence source report modes are mixed")
+        return None
     case_ids = tuple(sorted({case_id for _, case_id in observed_pairs}))
     expected_pairs = {
         (engine, case_id)

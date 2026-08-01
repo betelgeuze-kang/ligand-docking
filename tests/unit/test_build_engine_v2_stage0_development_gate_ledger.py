@@ -478,6 +478,24 @@ def test_threshold_source_report_identity_reconciles_exact_case_set() -> None:
     ) == tuple(sorted(_CASE_IDS))
 
 
+def test_threshold_source_report_identity_accepts_aggregate_report_source() -> None:
+    threshold = _threshold_evidence()
+    threshold["source_reports_sha256"] = {
+        "/historical-fixture/development.json": _digest(
+            "threshold-source", "aggregate-report"
+        )
+    }
+
+    assert (
+        ledger_builder._threshold_source_case_ids(
+            threshold["source_reports_sha256"],
+            case_count=threshold["case_count"],
+            expected_case_ids_sha256=threshold["case_ids_sha256"],
+        )
+        is None
+    )
+
+
 def test_tracked_threshold_source_report_identity_matches_documented_cohort() -> None:
     threshold_path = (
         Path(__file__).resolve().parents[2]
@@ -489,6 +507,7 @@ def test_tracked_threshold_source_report_identity_matches_documented_cohort() ->
         case_count=threshold["case_count"],
         expected_case_ids_sha256=threshold["case_ids_sha256"],
     )
+    assert case_ids is not None
     source_paired_ab_case_ids = {
         "5SD5_HWI",
         "5SIS_JSM",
@@ -513,7 +532,15 @@ def test_tracked_threshold_source_report_identity_matches_documented_cohort() ->
 
 @pytest.mark.parametrize(
     "drift",
-    ("missing_pair", "duplicate_pair", "count", "digest", "smoke_case"),
+    (
+        "missing_pair",
+        "duplicate_pair",
+        "reused_digest",
+        "mixed_mode",
+        "count",
+        "digest",
+        "smoke_case",
+    ),
 )
 def test_threshold_source_report_identity_rejects_drift(drift: str) -> None:
     threshold = _threshold_evidence()
@@ -526,6 +553,13 @@ def test_threshold_source_report_identity_rejects_drift(drift: str) -> None:
         case_id = _CASE_IDS[0]
         source_reports[f"/duplicate/receipts/engine_v2/{case_id}.json"] = _digest(
             "duplicate", case_id
+        )
+    elif drift == "reused_digest":
+        first_path, second_path = tuple(source_reports)[:2]
+        source_reports[second_path] = source_reports[first_path]
+    elif drift == "mixed_mode":
+        source_reports["/historical-fixture/development.json"] = _digest(
+            "threshold-source", "aggregate-report"
         )
     elif drift == "count":
         case_count += 1

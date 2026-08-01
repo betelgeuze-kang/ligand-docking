@@ -114,7 +114,11 @@ The canonical capability state is:
   source map only: its receipt payloads are not committed, and it neither
   defines nor authorizes a 15-case failure atlas. The narrative count 15 is
   only `29 scored - 14 with any exact-valid candidate`; it is not an exact
-  proposal-oracle-uncovered roster.
+  proposal-oracle-uncovered roster. Aggregate-report derivation remains a
+  separate supported source mode: it requires absolute JSON paths and unique
+  file digests but cannot reconstruct case IDs from filenames. Receipt and
+  aggregate modes cannot be mixed, so adding a report cannot bypass an
+  incomplete receipt cohort.
 - The Stage 0 source-freeze contract names one V7 algorithm profile and binds
   runner `2.13.0`, candidate schema `1.6.0`, the complete binary64 V7 config,
   its `5e8b61d2...75337` fingerprint, and the result-independent `[2.0,4.0)`
