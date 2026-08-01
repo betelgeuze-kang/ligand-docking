@@ -80,6 +80,7 @@ _SOURCE_PAIRED_TORSION_RESCUE_BASE_GUIDED_POLICY_SHA256 = (
 _SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256 = (
     "acd011160586307d92ee2ff26a62183aaac5dbd9d12093ac13f018f3787c3f8e"
 )
+_SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_PAIR_COUNT_BOUND = 1_000_000
 PUBLIC_REDOCKING_PROPOSAL_MODES = (
     "donor_acceptor_hotspot",
     "charge_anchor",
@@ -336,6 +337,10 @@ _SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_TELEMETRY_FIELDS = frozenset(
         "clearance_measurement_evaluated",
         "clearance_measurement_unavailable_reason",
         "clearance_radii_policy_sha256",
+        "clearance_ligand_atom_count",
+        "clearance_receptor_atom_count",
+        "clearance_full_cartesian_pair_count",
+        "clearance_pair_count_bound",
         "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex",
         "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex",
         "optimized_coordinates_sha256",
@@ -432,6 +437,8 @@ def _validate_source_paired_clearance_telemetry(
     refinement: Mapping[str, object],
     *,
     proposal_mode: str,
+    ligand_atom_count: int,
+    receptor_atom_count: int,
 ) -> None:
     measurement_target = bool(
         proposal_mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
@@ -441,6 +448,46 @@ def _validate_source_paired_clearance_telemetry(
     if type(evaluated) is not bool or type(unavailable_reason) is not str:
         raise PublicRedockingBenchmarkError(
             "source-paired clearance measurement scope is invalid"
+        )
+    observed_ligand_atom_count = refinement.get("clearance_ligand_atom_count")
+    observed_receptor_atom_count = refinement.get("clearance_receptor_atom_count")
+    full_cartesian_pair_count = refinement.get("clearance_full_cartesian_pair_count")
+    pair_count_bound = refinement.get("clearance_pair_count_bound")
+    if (
+        any(
+            type(value) is not int
+            for value in (
+                observed_ligand_atom_count,
+                observed_receptor_atom_count,
+                full_cartesian_pair_count,
+                pair_count_bound,
+            )
+        )
+        or pair_count_bound != _SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_PAIR_COUNT_BOUND
+    ):
+        raise PublicRedockingBenchmarkError(
+            "source-paired clearance pair-count contract is invalid"
+        )
+    if measurement_target:
+        if (
+            observed_ligand_atom_count != ligand_atom_count
+            or not 0 < observed_receptor_atom_count <= receptor_atom_count
+            or full_cartesian_pair_count
+            != observed_ligand_atom_count * observed_receptor_atom_count
+        ):
+            raise PublicRedockingBenchmarkError(
+                "source-paired clearance pair count is cross-wired"
+            )
+    elif any(
+        value != 0
+        for value in (
+            observed_ligand_atom_count,
+            observed_receptor_atom_count,
+            full_cartesian_pair_count,
+        )
+    ):
+        raise PublicRedockingBenchmarkError(
+            "non-target source-paired clearance pair count must be zero"
         )
     if not measurement_target and (
         evaluated or unavailable_reason != "not_source_paired_rescue_target"
@@ -459,6 +506,22 @@ def _validate_source_paired_clearance_telemetry(
     ):
         raise PublicRedockingBenchmarkError(
             "unavailable source-paired clearance telemetry reason is invalid"
+        )
+    if (
+        measurement_target
+        and evaluated
+        and full_cartesian_pair_count > pair_count_bound
+    ):
+        raise PublicRedockingBenchmarkError(
+            "evaluated source-paired clearance telemetry exceeds its pair bound"
+        )
+    if (
+        measurement_target
+        and not evaluated
+        and full_cartesian_pair_count <= pair_count_bound
+    ):
+        raise PublicRedockingBenchmarkError(
+            "source-paired clearance pair bound does not justify unavailable telemetry"
         )
     value_fields = (
         "clearance_radii_policy_sha256",
@@ -4046,6 +4109,8 @@ class PublicRedockingEngineV2Diagnostics:
                         _validate_source_paired_clearance_telemetry(
                             refinement,
                             proposal_mode=row.proposal_mode,
+                            ligand_atom_count=self.ligand_atom_count,
+                            receptor_atom_count=self.receptor_atom_count,
                         )
                     else:
                         expected_refinement_fields = frozenset()

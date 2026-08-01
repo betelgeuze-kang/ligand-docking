@@ -189,8 +189,10 @@ The canonical capability state is:
   gap telemetry for the fixed rescue targets. It measures baseline V6 and
   optimized states after V7 selection, binds the radii policy and coordinate
   fingerprints, and enforces a one-million-pair call bound. Pair-bound skips
-  are recorded as unavailable telemetry while retaining the V7 result. It
-  changes no allocation, candidate, coordinate, objective, or selection policy.
+  record the bound atom counts and exact Cartesian product as unavailable
+  telemetry while retaining the V7 result; a skip is valid only when that
+  product exceeds the bound. It changes no allocation, candidate, coordinate,
+  objective, or selection policy.
   Live cases require one uniform V1.1 receipt version and the frozen default
   vdW-policy fingerprint; V1 remains confined to the exact pinned-archive
   verifier. The pinned V1 historical archive remains clearance-unavailable

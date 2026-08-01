@@ -122,7 +122,10 @@ million ligand-receptor pairs per call, and cannot alter allocation, objective,
 coordinates, or `[2.0,4.0)` selection. A larger full Cartesian pair count keeps
 the V7 result and emits empty telemetry with the authenticated
 `full_cartesian_pair_count_exceeds_fixed_bound` reason instead of failing the
-candidate.
+candidate. V1.1 also records the ligand count, pocket-local receptor count,
+their exact Cartesian product, and the fixed bound. Live validation accepts the
+unavailable state only when those counts are internally consistent and the
+product actually exceeds the bound.
 
 That extension does not retroactively make clearance available in this audit:
 the pinned archive contains V1 receipts. A separate reviewed historical-

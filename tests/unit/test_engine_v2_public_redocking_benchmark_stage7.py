@@ -1876,6 +1876,12 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
                 "not_source_paired_rescue_target"
             ),
             "clearance_radii_policy_sha256": "",
+            "clearance_ligand_atom_count": 0,
+            "clearance_receptor_atom_count": 0,
+            "clearance_full_cartesian_pair_count": 0,
+            "clearance_pair_count_bound": (
+                benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_PAIR_COUNT_BOUND
+            ),
             "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": "",
             "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": "",
             "optimized_coordinates_sha256": "",
@@ -1968,6 +1974,12 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
             "clearance_radii_policy_sha256": (
                 benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
             ),
+            "clearance_ligand_atom_count": validated.ligand_atom_count,
+            "clearance_receptor_atom_count": 1,
+            "clearance_full_cartesian_pair_count": validated.ligand_atom_count,
+            "clearance_pair_count_bound": (
+                benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_CLEARANCE_PAIR_COUNT_BOUND
+            ),
             "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": ((-1.0).hex()),
             "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": ((-0.5).hex()),
             "optimized_coordinates_sha256": rescue_final_coordinate_sha256,
@@ -2039,6 +2051,33 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
             match="clearance|source-paired|surface gap",
         ):
             replace(successful_diagnostics, candidates=tuple(substituted_rows))
+
+    unjustified_skip_payload = successful_rescue.to_dict()["refinement_receipt_payload"]
+    unjustified_skip_payload.update(
+        {
+            "clearance_measurement_evaluated": False,
+            "clearance_measurement_unavailable_reason": (
+                "full_cartesian_pair_count_exceeds_fixed_bound"
+            ),
+            "clearance_radii_policy_sha256": "",
+            "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": "",
+            "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": "",
+            "optimized_coordinates_sha256": "",
+        }
+    )
+    rehash(unjustified_skip_payload, "receipt_sha256")
+    unjustified_skip_candidate = replace(
+        successful_rescue,
+        refinement_receipt_sha256=unjustified_skip_payload["receipt_sha256"],
+        refinement_receipt_payload=unjustified_skip_payload,
+    )
+    unjustified_skip_rows = list(successful_diagnostics.candidates)
+    unjustified_skip_rows[rescue_target] = unjustified_skip_candidate
+    with pytest.raises(PublicRedockingBenchmarkError, match="pair bound"):
+        replace(
+            successful_diagnostics,
+            candidates=tuple(unjustified_skip_rows),
+        )
 
     receipt_substitutions = {
         "pre_coordinates_sha256": "8" * 64,

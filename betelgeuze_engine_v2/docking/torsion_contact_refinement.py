@@ -64,6 +64,9 @@ INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID = (
 MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS = 4
 SOURCE_PAIRED_TORSION_RESCUE_CANDIDATE_COUNT = 64
 MAX_RECEPTOR_CLEARANCE_PAIR_COUNT = 1_000_000
+SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256 = (
+    VdwContactPolicy().fingerprint_sha256
+)
 INTERACTION_AWARE_TORSION_CLEARANCE_CONFIG_V8_SCHEMA_ID = (
     "betelgeuze.engine_v2_interaction_aware_torsion_clearance_config/8.0.0"
 )
@@ -533,6 +536,15 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             )
         selected_config = torsion_config or InteractionAwareTorsionContactConfigV7()
         selected_policy = radii_policy or VdwContactPolicy()
+        selected_policy_sha256 = selected_policy.fingerprint_sha256
+        if (
+            source_paired_torsion_rescue_profile
+            and selected_policy_sha256
+            != SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
+        ):
+            raise TorsionContactRefinementError(
+                "source-paired torsion rescue requires the frozen vdW policy"
+            )
         self._v6 = InteractionAwareRigidHybridClearanceEnsembleRefinerV6(
             authority,
             receptor_system,
@@ -560,7 +572,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             dict(normalized_rescue_pairs)
         )
         self._source_paired_torsion_rescue_index_set = frozenset(rescue_targets)
-        self._radii_policy_sha256 = selected_policy.fingerprint_sha256
+        self._radii_policy_sha256 = selected_policy_sha256
         self._torsion_eligible_proposal_index_set = (
             self._v3_proposal_index_set | self._source_paired_torsion_rescue_index_set
         )
@@ -1162,9 +1174,17 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         baseline_v6_minimum_vdw_surface_gap = ""
         optimized_minimum_vdw_surface_gap = ""
         optimized_coordinates_sha256 = ""
+        clearance_ligand_atom_count = 0
+        clearance_receptor_atom_count = 0
+        clearance_full_cartesian_pair_count = 0
+        if clearance_measurement_target:
+            clearance_ligand_atom_count = len(self._ligand_radii)
+            clearance_receptor_atom_count = len(self._receptor_radii)
+            clearance_full_cartesian_pair_count = (
+                clearance_ligand_atom_count * clearance_receptor_atom_count
+            )
         if clearance_measurement_target and (
-            len(self._ligand_radii) * len(self._receptor_radii)
-            > MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
+            clearance_full_cartesian_pair_count > MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
         ):
             clearance_measurement_unavailable_reason = (
                 "full_cartesian_pair_count_exceeds_fixed_bound"
@@ -1362,6 +1382,12 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                         clearance_measurement_unavailable_reason
                     ),
                     "clearance_radii_policy_sha256": (clearance_radii_policy_sha256),
+                    "clearance_ligand_atom_count": clearance_ligand_atom_count,
+                    "clearance_receptor_atom_count": clearance_receptor_atom_count,
+                    "clearance_full_cartesian_pair_count": (
+                        clearance_full_cartesian_pair_count
+                    ),
+                    "clearance_pair_count_bound": (MAX_RECEPTOR_CLEARANCE_PAIR_COUNT),
                     "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex": (
                         baseline_v6_minimum_vdw_surface_gap
                     ),
@@ -1841,6 +1867,7 @@ __all__ = [
     "INTERACTION_AWARE_TORSION_CONTACT_REFINER_V7_VERSION",
     "MAX_SOURCE_PAIRED_TORSION_RESCUE_VARIANTS",
     "MAX_RECEPTOR_CLEARANCE_PAIR_COUNT",
+    "SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256",
     "InteractionAwareTorsionClearanceConfigV8",
     "InteractionAwareTorsionClearanceEnsembleRefinerV8",
     "InteractionAwareTorsionContactConfigV7",

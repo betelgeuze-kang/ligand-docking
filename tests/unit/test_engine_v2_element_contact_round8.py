@@ -976,6 +976,12 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source(
         "not_source_paired_rescue_target"
     )
     assert parent_receipt["clearance_radii_policy_sha256"] == ""
+    assert parent_receipt["clearance_ligand_atom_count"] == 0
+    assert parent_receipt["clearance_receptor_atom_count"] == 0
+    assert parent_receipt["clearance_full_cartesian_pair_count"] == 0
+    assert parent_receipt["clearance_pair_count_bound"] == (
+        torsion_contact_refinement.MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
+    )
     assert (
         parent_receipt["baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"]
         == ""
@@ -1006,6 +1012,19 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source(
     )
     assert rescue_receipt["clearance_radii_policy_sha256"] == (
         benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
+    )
+    assert rescue_receipt["clearance_radii_policy_sha256"] == (
+        torsion_contact_refinement.SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
+    )
+    assert rescue_receipt["clearance_ligand_atom_count"] == ligand.atom_count
+    assert rescue_receipt["clearance_receptor_atom_count"] == len(
+        authority.receptor_atom_indices
+    )
+    assert rescue_receipt["clearance_full_cartesian_pair_count"] == (
+        ligand.atom_count * len(authority.receptor_atom_indices)
+    )
+    assert rescue_receipt["clearance_pair_count_bound"] == (
+        torsion_contact_refinement.MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
     )
     baseline_state = rescue_refiner._baseline_state_for_experimental_v8(
         proposals[1].fingerprint_sha256
@@ -1105,6 +1124,14 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source(
         "full_cartesian_pair_count_exceeds_fixed_bound"
     )
     assert unavailable_receipt["clearance_radii_policy_sha256"] == ""
+    assert unavailable_receipt["clearance_ligand_atom_count"] == ligand.atom_count
+    assert unavailable_receipt["clearance_receptor_atom_count"] == len(
+        authority.receptor_atom_indices
+    )
+    assert unavailable_receipt["clearance_full_cartesian_pair_count"] == (
+        ligand.atom_count * len(authority.receptor_atom_indices)
+    )
+    assert unavailable_receipt["clearance_pair_count_bound"] == 0
     assert (
         unavailable_receipt["baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"]
         == ""
@@ -1117,6 +1144,28 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source(
     assert set(unavailable_receipt) == (
         benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
     )
+    with pytest.raises(TorsionContactRefinementError, match="frozen vdW policy"):
+        InteractionAwareTorsionContactEnsembleRefinerV7(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="7" * 64,
+            v3_proposal_indices=(),
+            source_paired_torsion_rescue_profile=True,
+            source_paired_torsion_rescue_allocation=rescue_allocation,
+            v2_config=v2_config,
+            v3_config=v3_config,
+            clearance_config=clearance_config,
+            torsion_config=InteractionAwareTorsionContactConfigV7(
+                maximum_torsion_steps=3,
+                minimum_selected_final_receptor_penalty=0.0,
+                maximum_selected_final_receptor_penalty=100.0,
+            ),
+            radii_policy=replace(
+                VdwContactPolicy(),
+                cell_size_angstrom=4.0,
+            ),
+        )
     rescue_payload = dict(rescue_receipt)
     rescue_sha256 = rescue_payload.pop("receipt_sha256")
     assert (
