@@ -37,7 +37,8 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     PUBLIC_REDOCKING_RUNNER_ID,
     PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
     PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
-    _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS,
+    _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_V1_FIELDS as _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS,
+    _VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY,
     frozen_public_redocking_case_seed,
 )
 
@@ -1816,7 +1817,12 @@ def _load_receipt_set(
         if result.get("case_id") != case_id:
             raise ValueError(f"{lane} execution receipt case identity is invalid")
         try:
-            typed_result = _typed_development_result(result)
+            typed_result = _typed_development_result(
+                result,
+                _legacy_source_paired_receipt_authority=(
+                    _VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY
+                ),
+            )
         except ValueError as exc:
             raise ValueError(
                 f"{lane} execution receipt strict result binding is invalid"

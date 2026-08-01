@@ -710,7 +710,11 @@ def _resolve_repo_file(repo_root: Path, relative_path: object) -> Path | None:
     return candidate
 
 
-def _typed_development_result(value: object) -> PublicRedockingCaseResult:
+def _typed_development_result(
+    value: object,
+    *,
+    _legacy_source_paired_receipt_authority: object | None = None,
+) -> PublicRedockingCaseResult:
     raw_result = _mapping(value)
     raw_diagnostics = _mapping(raw_result.get("engine_v2_diagnostics"))
     raw_candidates = raw_diagnostics.get("candidates")
@@ -760,6 +764,9 @@ def _typed_development_result(value: object) -> PublicRedockingCaseResult:
         typed_diagnostics = PublicRedockingEngineV2Diagnostics(
             **diagnostic_kwargs,
             candidates=candidates,
+            _legacy_source_paired_receipt_authority=(
+                _legacy_source_paired_receipt_authority
+            ),
         )
         if typed_diagnostics.to_dict() != dict(raw_diagnostics):
             raise ValueError("development_source_diagnostic_schema_invalid")

@@ -10,6 +10,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 import betelgeuze_engine_v2.benchmark.public_redocking_benchmark as benchmark_contract  # noqa: E402
+import betelgeuze_engine_v2.docking.torsion_contact_refinement as torsion_contact_refinement  # noqa: E402
 
 from betelgeuze_engine_v2 import (  # noqa: E402
     AllAtomSystem,
@@ -606,7 +607,9 @@ def test_interaction_aware_v6_records_receipt_bound_hybrid_selection() -> None:
     assert variant_receipt["source_lane_retained"] is True
 
 
-def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() -> None:
+def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     receptor = replace(
         _receptor(),
         coordinates=torch.tensor(
@@ -705,10 +708,7 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert variant_receipt["schema_id"] == source_receipt["schema_id"]
     for active_v7_receipt in (source_receipt, variant_receipt):
         assert "source_paired_torsion_rescue_profile" not in active_v7_receipt
-        assert (
-            "source_paired_torsion_rescue_allocation_sha256"
-            not in active_v7_receipt
-        )
+        assert "source_paired_torsion_rescue_allocation_sha256" not in active_v7_receipt
         assert "proposal_torsion_eligibility_lane" not in active_v7_receipt
 
     assert torch.equal(observed_source.coordinates, expected_source.coordinates)
@@ -961,14 +961,37 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
             maximum_selected_final_receptor_penalty=100.0,
         ),
     )
-    rescue_refiner.refine(proposals[0], max_steps=20)
-    rescue_refiner.refine(proposals[1], max_steps=20)
+    rescue_parent = rescue_refiner.refine(proposals[0], max_steps=20)
+    rescue_variant = rescue_refiner.refine(proposals[1], max_steps=20)
     parent_receipt = rescue_refiner.receipts[proposals[0].fingerprint_sha256]
     rescue_receipt = rescue_refiner.receipts[proposals[1].fingerprint_sha256]
 
     assert parent_receipt["torsion_evaluated"] is False
+    assert parent_receipt["schema_id"].endswith("/1.1.0")
     assert parent_receipt["proposal_torsion_eligibility_lane"] == (
         "ineligible_source_or_other_lane"
+    )
+    assert parent_receipt["clearance_measurement_evaluated"] is False
+    assert parent_receipt["clearance_measurement_unavailable_reason"] == (
+        "not_source_paired_rescue_target"
+    )
+    assert parent_receipt["clearance_radii_policy_sha256"] == ""
+    assert parent_receipt["clearance_ligand_atom_count"] == 0
+    assert parent_receipt["clearance_receptor_atom_count"] == 0
+    assert parent_receipt["clearance_full_cartesian_pair_count"] == 0
+    assert parent_receipt["clearance_pair_count_bound"] == (
+        torsion_contact_refinement.MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
+    )
+    assert (
+        parent_receipt["baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"]
+        == ""
+    )
+    assert (
+        parent_receipt["optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"] == ""
+    )
+    assert parent_receipt["optimized_coordinates_sha256"] == ""
+    assert parent_receipt["post_coordinates_sha256"] == coordinate_fingerprint(
+        rescue_parent.coordinates
     )
     assert rescue_receipt["torsion_evaluated"] is True
     assert rescue_receipt["proposal_torsion_eligibility_lane"] == (
@@ -980,6 +1003,81 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
     assert rescue_receipt["source_paired_torsion_rescue_pairs"] == [
         {"target_proposal_index": 1, "parent_proposal_index": 0}
     ]
+    assert rescue_receipt["schema_id"].endswith("/1.1.0")
+    assert rescue_receipt["clearance_measurement_evaluated"] is True
+    assert rescue_receipt["clearance_measurement_unavailable_reason"] == "none"
+    assert (
+        rescue_receipt["clearance_radii_policy_sha256"]
+        == VdwContactPolicy().fingerprint_sha256
+    )
+    assert rescue_receipt["clearance_radii_policy_sha256"] == (
+        benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
+    )
+    assert rescue_receipt["clearance_radii_policy_sha256"] == (
+        torsion_contact_refinement.SOURCE_PAIRED_TORSION_RESCUE_VDW_CONTACT_POLICY_SHA256
+    )
+    assert rescue_receipt["clearance_ligand_atom_count"] == ligand.atom_count
+    assert rescue_receipt["clearance_receptor_atom_count"] == len(
+        authority.receptor_atom_indices
+    )
+    assert rescue_receipt["clearance_full_cartesian_pair_count"] == (
+        ligand.atom_count * len(authority.receptor_atom_indices)
+    )
+    assert rescue_receipt["clearance_pair_count_bound"] == (
+        torsion_contact_refinement.MAX_RECEPTOR_CLEARANCE_PAIR_COUNT
+    )
+    baseline_state = rescue_refiner._baseline_state_for_experimental_v8(
+        proposals[1].fingerprint_sha256
+    )
+    optimized_state = rescue_refiner._optimized_state_for_experimental_v8(
+        proposals[1].fingerprint_sha256
+    )
+    receptor_coordinates = receptor.coordinates[
+        authority.receptor_model_index,
+        list(authority.receptor_atom_indices),
+    ].to(dtype=torch.float64)
+    ligand_radii = torch.tensor(
+        [VdwContactPolicy().radius(atom.element) for atom in ligand.atoms],
+        dtype=torch.float64,
+    )
+    receptor_radii = torch.tensor(
+        [
+            VdwContactPolicy().radius(receptor.atoms[index].element)
+            for index in authority.receptor_atom_indices
+        ],
+        dtype=torch.float64,
+    )
+
+    def expected_minimum_gap(coordinates: torch.Tensor) -> float:
+        distances = torch.cdist(
+            coordinates.to(dtype=torch.float64),
+            receptor_coordinates,
+        )
+        return float(
+            torch.min(
+                distances - ligand_radii[:, None] - receptor_radii[None, :]
+            ).item()
+        )
+
+    assert float.fromhex(
+        rescue_receipt["baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"]
+    ) == pytest.approx(
+        expected_minimum_gap(baseline_state.coordinates),
+        abs=1.0e-15,
+    )
+    assert float.fromhex(
+        rescue_receipt["optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"]
+    ) == pytest.approx(
+        expected_minimum_gap(optimized_state.coordinates),
+        abs=1.0e-15,
+    )
+    assert rescue_receipt["optimized_coordinates_sha256"] == coordinate_fingerprint(
+        optimized_state.coordinates
+    )
+    if rescue_receipt["torsion_selected"]:
+        assert rescue_receipt["optimized_coordinates_sha256"] == (
+            coordinate_fingerprint(rescue_variant.coordinates)
+        )
     assert set(rescue_receipt) == (
         benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
     )
@@ -987,6 +1085,87 @@ def test_interaction_aware_v7_uses_only_authority_rotor_and_retains_v6_source() 
         rescue_receipt["source_paired_torsion_rescue_allocation_sha256"]
         == rescue_allocation.allocation_sha256
     )
+    with monkeypatch.context() as pair_bound:
+        pair_bound.setattr(
+            torsion_contact_refinement,
+            "MAX_RECEPTOR_CLEARANCE_PAIR_COUNT",
+            0,
+        )
+        unavailable_refiner = InteractionAwareTorsionContactEnsembleRefinerV7(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="7" * 64,
+            v3_proposal_indices=(),
+            source_paired_torsion_rescue_profile=True,
+            source_paired_torsion_rescue_allocation=rescue_allocation,
+            v2_config=v2_config,
+            v3_config=v3_config,
+            clearance_config=clearance_config,
+            torsion_config=InteractionAwareTorsionContactConfigV7(
+                maximum_torsion_steps=3,
+                minimum_selected_final_receptor_penalty=0.0,
+                maximum_selected_final_receptor_penalty=100.0,
+            ),
+        )
+        unavailable_refiner.refine(proposals[0], max_steps=20)
+        unavailable_variant = unavailable_refiner.refine(
+            proposals[1],
+            max_steps=20,
+        )
+        unavailable_receipt = unavailable_refiner.receipts[
+            proposals[1].fingerprint_sha256
+        ]
+    assert torch.equal(unavailable_variant.coordinates, rescue_variant.coordinates)
+    assert unavailable_receipt["torsion_selected"] is rescue_receipt["torsion_selected"]
+    assert unavailable_receipt["selection_reason"] == rescue_receipt["selection_reason"]
+    assert unavailable_receipt["clearance_measurement_evaluated"] is False
+    assert unavailable_receipt["clearance_measurement_unavailable_reason"] == (
+        "full_cartesian_pair_count_exceeds_fixed_bound"
+    )
+    assert unavailable_receipt["clearance_radii_policy_sha256"] == ""
+    assert unavailable_receipt["clearance_ligand_atom_count"] == ligand.atom_count
+    assert unavailable_receipt["clearance_receptor_atom_count"] == len(
+        authority.receptor_atom_indices
+    )
+    assert unavailable_receipt["clearance_full_cartesian_pair_count"] == (
+        ligand.atom_count * len(authority.receptor_atom_indices)
+    )
+    assert unavailable_receipt["clearance_pair_count_bound"] == 0
+    assert (
+        unavailable_receipt["baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"]
+        == ""
+    )
+    assert (
+        unavailable_receipt["optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"]
+        == ""
+    )
+    assert unavailable_receipt["optimized_coordinates_sha256"] == ""
+    assert set(unavailable_receipt) == (
+        benchmark_contract._SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS
+    )
+    with pytest.raises(TorsionContactRefinementError, match="frozen vdW policy"):
+        InteractionAwareTorsionContactEnsembleRefinerV7(
+            authority,
+            receptor,
+            ligand,
+            implementation_source_sha256="7" * 64,
+            v3_proposal_indices=(),
+            source_paired_torsion_rescue_profile=True,
+            source_paired_torsion_rescue_allocation=rescue_allocation,
+            v2_config=v2_config,
+            v3_config=v3_config,
+            clearance_config=clearance_config,
+            torsion_config=InteractionAwareTorsionContactConfigV7(
+                maximum_torsion_steps=3,
+                minimum_selected_final_receptor_penalty=0.0,
+                maximum_selected_final_receptor_penalty=100.0,
+            ),
+            radii_policy=replace(
+                VdwContactPolicy(),
+                cell_size_angstrom=4.0,
+            ),
+        )
     rescue_payload = dict(rescue_receipt)
     rescue_sha256 = rescue_payload.pop("receipt_sha256")
     assert (
