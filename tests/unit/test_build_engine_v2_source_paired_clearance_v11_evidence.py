@@ -1369,12 +1369,37 @@ def _pin_fixture_execution_contract(
             }
         ),
     )
-    if lane == "rescue":
-        candidates = result["engine_v2_diagnostics"]["candidates"]
+    candidates = result["engine_v2_diagnostics"]["candidates"]
+    if candidates:
         ordered_candidates = sorted(
             candidates,
             key=lambda candidate: candidate["proposal_index"],
         )
+        monkeypatch.setitem(
+            evidence.EXPECTED_CANDIDATE_SCORE_TERM_PROJECTION_SET_SHA256_BY_LANE_CASE[
+                lane
+            ],
+            case_id,
+            evidence._sha256_payload(
+                [
+                    {
+                        "proposal_index": candidate["proposal_index"],
+                        "proposal_fingerprint_sha256": candidate[
+                            "proposal_fingerprint_sha256"
+                        ],
+                        "score_terms_receipt_sha256": candidate[
+                            "score_terms_receipt_sha256"
+                        ],
+                        "score_term_binary64_hex": candidate[
+                            "score_term_binary64_hex"
+                        ],
+                        "hbond_count": candidate["hbond_count"],
+                    }
+                    for candidate in ordered_candidates
+                ]
+            ),
+        )
+    if lane == "rescue" and candidates:
         monkeypatch.setitem(
             evidence.EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE,
             case_id,
@@ -1393,6 +1418,183 @@ def _pin_fixture_execution_contract(
             evidence.EXPECTED_RESCUE_CANDIDATE_RECEIPT_SET_SHA256_BY_CASE,
             case_id,
             evidence._sha256_payload(ordered_receipt_sha256s),
+        )
+
+
+def test_frozen_summary_input_binding_and_external_boundary_are_exact() -> None:
+    for lane in ("baseline", "rescue"):
+        assert evidence._frozen_summary_input_binding(
+            deepcopy(evidence.EXPECTED_SUMMARY_INPUT_BINDING),
+            lane=lane,
+        ) == evidence.EXPECTED_SUMMARY_INPUT_BINDING
+        summary = {
+            field: False
+            for field in evidence.EXPECTED_SUMMARY_FALSE_BOUNDARY_FIELDS
+        }
+        evidence._frozen_summary_boundary_flags(summary, lane=lane)
+
+        binding_drifts: list[dict[str, object]] = []
+        for field, value in evidence.EXPECTED_SUMMARY_INPUT_BINDING.items():
+            drifted = deepcopy(evidence.EXPECTED_SUMMARY_INPUT_BINDING)
+            drifted[field] = (
+                "different-mode"
+                if isinstance(value, str)
+                else (not value)
+            )
+            binding_drifts.append(drifted)
+            if isinstance(value, bool):
+                typed_drift = deepcopy(evidence.EXPECTED_SUMMARY_INPUT_BINDING)
+                typed_drift[field] = int(value)
+                binding_drifts.append(typed_drift)
+        missing = deepcopy(evidence.EXPECTED_SUMMARY_INPUT_BINDING)
+        missing.pop("mode")
+        binding_drifts.append(missing)
+        binding_drifts.append(
+            {**evidence.EXPECTED_SUMMARY_INPUT_BINDING, "future_field": False}
+        )
+        for drifted in binding_drifts:
+            with pytest.raises(ValueError, match="input binding"):
+                evidence._frozen_summary_input_binding(drifted, lane=lane)
+
+        for field in evidence.EXPECTED_SUMMARY_FALSE_BOUNDARY_FIELDS:
+            for value in (True, 0):
+                drifted_summary = dict(summary)
+                drifted_summary[field] = value
+                with pytest.raises(ValueError, match="external boundary"):
+                    evidence._frozen_summary_boundary_flags(
+                        drifted_summary,
+                        lane=lane,
+                    )
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_frozen_summary_lane_identity_has_exact_complete_shape(lane: str) -> None:
+    expected_fields = (
+        evidence.EXPECTED_BASELINE_SUMMARY_FIELDS
+        if lane == "baseline"
+        else evidence.EXPECTED_RESCUE_SUMMARY_FIELDS
+    )
+    summary = {field: None for field in expected_fields}
+    summary.update(
+        {
+            "engine_ids": ["engine_v2"],
+            "case_count": len(evidence.EXPECTED_CASE_IDS),
+            "case_ids": list(evidence.EXPECTED_CASE_IDS),
+            "case_ids_sha256": evidence.EXPECTED_CASE_IDS_SHA256,
+            "evidence_role": (
+                "current_source_engine_v2_execution_only"
+                if lane == "baseline"
+                else "development_source_paired_torsion_rescue_execution_only"
+            ),
+            "engine_identity": deepcopy(
+                evidence.EXPECTED_BASELINE_ENGINE_IDENTITY
+                if lane == "baseline"
+                else evidence.EXPECTED_RESCUE_ENGINE_IDENTITY
+            ),
+        }
+    )
+    if lane == "rescue":
+        summary["development_source_paired_torsion_rescue"] = True
+        summary["source_paired_torsion_rescue_policy"] = deepcopy(
+            evidence.EXPECTED_SUMMARY_RESCUE_POLICY
+        )
+    evidence._frozen_summary_lane_identity(summary, lane=lane)
+
+    drifts: list[dict[str, object]] = []
+    for field, value in (
+        ("engine_ids", ["engine_v1"]),
+        ("evidence_role", "different-role"),
+        ("case_count", float(len(evidence.EXPECTED_CASE_IDS))),
+        ("case_ids", dict.fromkeys(evidence.EXPECTED_CASE_IDS)),
+    ):
+        drifted = deepcopy(summary)
+        drifted[field] = value
+        drifts.append(drifted)
+    engine_drift = deepcopy(summary)
+    engine_drift["engine_identity"]["stage0_eligible"] = 0
+    drifts.append(engine_drift)
+    missing = deepcopy(summary)
+    missing.pop("profiles")
+    drifts.append(missing)
+    drifts.append({**deepcopy(summary), "future_field": None})
+    if lane == "baseline":
+        drifts.append(
+            {
+                **deepcopy(summary),
+                "source_paired_torsion_rescue_policy": deepcopy(
+                    evidence.EXPECTED_SUMMARY_RESCUE_POLICY
+                ),
+            }
+        )
+    else:
+        policy_drift = deepcopy(summary)
+        policy_drift["source_paired_torsion_rescue_policy"][
+            "result_dependent_allocation"
+        ] = True
+        drifts.append(policy_drift)
+        rescue_flag_drift = deepcopy(summary)
+        rescue_flag_drift["development_source_paired_torsion_rescue"] = 1
+        drifts.append(rescue_flag_drift)
+    for drifted in drifts:
+        with pytest.raises(ValueError):
+            evidence._frozen_summary_lane_identity(drifted, lane=lane)
+
+
+def test_frozen_profiles_pin_every_retained_profile_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    profiles = [
+        {
+            "case_id": case_id,
+            "heavy_atom_count": index + 1,
+            "rotor_count": index,
+            "ring_count": index % 3,
+            "ligand_artifact_sha256": f"{index + 1:064x}",
+            "profile_method_id": "fixture-profile/1.0.0",
+            "ring_profile_method_id": "fixture-ring/1.0.0",
+            "size_subgroup": "fixture-size",
+            "rotor_subgroup": "fixture-rotor",
+            "ring_subgroup": "fixture-ring",
+        }
+        for index, case_id in enumerate(evidence.EXPECTED_CASE_IDS)
+    ]
+    monkeypatch.setattr(
+        evidence,
+        "EXPECTED_PROFILE_SET_SHA256",
+        evidence._sha256_payload(profiles),
+    )
+    for lane in ("baseline", "rescue"):
+        assert evidence._frozen_profiles(deepcopy(profiles), lane=lane) == tuple(
+            profiles
+        )
+        for profile in profiles:
+            evidence._bind_frozen_profile_to_result(
+                profile,
+                {"native_artifact_sha256": profile["ligand_artifact_sha256"]},
+                lane=lane,
+                case_id=profile["case_id"],
+            )
+
+    for field in evidence.EXPECTED_PROFILE_FIELDS:
+        drifted = deepcopy(profiles)
+        original = drifted[0][field]
+        drifted[0][field] = original + 1 if isinstance(original, int) else f"{original}-x"
+        with pytest.raises(ValueError):
+            evidence._frozen_profiles(drifted, lane="rescue")
+    missing = deepcopy(profiles)
+    missing[0].pop("ring_subgroup")
+    with pytest.raises(ValueError, match="profile projection"):
+        evidence._frozen_profiles(missing, lane="baseline")
+    extra = deepcopy(profiles)
+    extra[0]["future_field"] = None
+    with pytest.raises(ValueError, match="profile projection"):
+        evidence._frozen_profiles(extra, lane="rescue")
+    with pytest.raises(ValueError, match="profile native input"):
+        evidence._bind_frozen_profile_to_result(
+            profiles[0],
+            {"native_artifact_sha256": "f" * 64},
+            lane="rescue",
+            case_id=profiles[0]["case_id"],
         )
 
 
@@ -1781,11 +1983,28 @@ def _successful_frozen_result(
             "candidates": candidates,
             "ligand_atom_count": 20,
             "receptor_atom_count": 100,
+            "ligand_partial_charge_count": 20,
+            "receptor_partial_charge_count": 100,
+            "receptor_donor_count": 0,
+            "receptor_acceptor_count": 2,
+            "ligand_donor_count": 1,
+            "ligand_acceptor_count": 1,
+            "receptor_ion_proxy_count": 0,
+            "diagnostic_evaluation_seconds": 0.5,
+            "diagnostic_evaluation_excluded_from_runtime": True,
+            "charge_coverage_complete": True,
+            "hbond_feature_covered": True,
+            "receptor_ion_proxy_used": False,
+            "receptor_ion_coordination_modeled": False,
+            "ligand_metal_support": False,
+            "proposal_oracle_rmsd_angstrom": 10.0,
             "scorer_backend_receipt": deepcopy(
                 evidence.EXPECTED_SCORER_BACKEND_RECEIPT
             ),
         }
     )
+    if lane == "rescue":
+        diagnostics["source_paired_torsion_rescue_proposal_receipt"] = {}
     ranked = candidates[:5]
     result = {field: None for field in evidence.EXPECTED_RESULT_FIELDS}
     result.update(
@@ -1840,6 +2059,120 @@ def test_frozen_result_parser_accepts_successful_baseline_and_rescue(
                 case_id="5SD5_HWI",
             )
             == result
+        )
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_successful_diagnostics_require_frozen_typed_and_derived_contract(
+    lane: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _successful_frozen_result(lane)
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane=lane,
+        case_id="5SD5_HWI",
+        result=result,
+    )
+    diagnostics = result["engine_v2_diagnostics"]
+    drifts: list[tuple[str, object]] = [
+        ("candidate_success_count", False),
+        ("candidate_failure_count", 0.0),
+        ("receptor_atom_count", 0),
+        ("ligand_atom_count", 0),
+        ("receptor_partial_charge_count", 99),
+        ("ligand_partial_charge_count", 19),
+        ("receptor_donor_count", -1),
+        ("receptor_acceptor_count", 2.0),
+        ("receptor_ion_proxy_count", 101),
+        ("diagnostic_evaluation_seconds", 0),
+        ("diagnostic_evaluation_seconds", -1.0),
+        ("diagnostic_evaluation_seconds", float("nan")),
+        ("diagnostic_evaluation_seconds", float("inf")),
+        ("diagnostic_evaluation_excluded_from_runtime", False),
+        ("diagnostic_evaluation_excluded_from_runtime", 1),
+        ("charge_coverage_complete", False),
+        ("charge_coverage_complete", 1),
+        ("hbond_feature_covered", False),
+        ("hbond_feature_covered", 1),
+        ("receptor_ion_proxy_used", True),
+        ("receptor_ion_proxy_used", 0),
+        ("receptor_ion_coordination_modeled", True),
+        ("receptor_ion_coordination_modeled", 0),
+        ("ligand_metal_support", True),
+        ("ligand_metal_support", 0),
+        ("proposal_oracle_rmsd_angstrom", None),
+        ("proposal_oracle_rmsd_angstrom", 10),
+        ("proposal_oracle_rmsd_angstrom", 11.0),
+    ]
+    if lane == "rescue":
+        drifts.append(("source_paired_torsion_rescue_proposal_receipt", None))
+    for field, value in drifts:
+        drifted = deepcopy(result)
+        drifted["engine_v2_diagnostics"][field] = value
+        with pytest.raises(ValueError):
+            evidence._historical_v11_result(
+                drifted,
+                lane=lane,
+                case_id="5SD5_HWI",
+            )
+
+    positive_ion = deepcopy(result)
+    positive_ion["engine_v2_diagnostics"]["receptor_ion_proxy_count"] = 1
+    positive_ion["engine_v2_diagnostics"]["receptor_ion_proxy_used"] = True
+    assert evidence._historical_v11_result(
+        positive_ion,
+        lane=lane,
+        case_id="5SD5_HWI",
+    ) == positive_ion
+
+    no_hbond_coverage = deepcopy(result)
+    no_hbond_diagnostics = no_hbond_coverage["engine_v2_diagnostics"]
+    no_hbond_diagnostics["receptor_acceptor_count"] = 0
+    no_hbond_diagnostics["ligand_donor_count"] = 0
+    no_hbond_diagnostics["ligand_acceptor_count"] = 0
+    no_hbond_diagnostics["hbond_feature_covered"] = False
+    assert evidence._historical_v11_result(
+        no_hbond_coverage,
+        lane=lane,
+        case_id="5SD5_HWI",
+    ) == no_hbond_coverage
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_successful_results_pin_retained_score_term_receipt_projection(
+    lane: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _successful_frozen_result(lane)
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane=lane,
+        case_id="5SD5_HWI",
+        result=result,
+    )
+
+    receipt_drift = deepcopy(result)
+    receipt_drift["engine_v2_diagnostics"]["candidates"][0][
+        "score_terms_receipt_sha256"
+    ] = "f" * 64
+    with pytest.raises(ValueError, match="retained score-term projection"):
+        evidence._historical_v11_result(
+            receipt_drift,
+            lane=lane,
+            case_id="5SD5_HWI",
+        )
+
+    terms_drift = deepcopy(result)
+    candidate = terms_drift["engine_v2_diagnostics"]["candidates"][0]
+    candidate["score"] = 1.0
+    candidate["score_term_binary64_hex"]["weak_pocket_prior"] = (1.0).hex()
+    candidate["score_term_binary64_hex"]["total_score"] = (1.0).hex()
+    with pytest.raises(ValueError, match="retained score-term projection"):
+        evidence._historical_v11_result(
+            terms_drift,
+            lane=lane,
+            case_id="5SD5_HWI",
         )
 
 

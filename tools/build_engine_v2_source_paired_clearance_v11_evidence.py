@@ -257,6 +257,28 @@ EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE = {
     "6VTA_AKN": "308b8b9463a666163180f6b67ab07f8b3950f9b7122b4ac4201b5be0d774ac07",
     "6WTN_RXT": "df6bf6c4fbd475dca26e32b66d8c6562bccc1be73c247387f443fc0a4f51e112",
 }
+EXPECTED_CANDIDATE_SCORE_TERM_PROJECTION_SET_SHA256_BY_LANE_CASE = {
+    "baseline": {
+        "5SD5_HWI": "d5cb2fa10df230fdddab17fc19ed10eeffb9631bb5e85c1647e0eddfade53899",
+        "5SIS_JSM": "bac31d3db6a447dafd657494c757ad89d8c260ed9e0bd7e9d65636b11a4aff3a",
+        "6M2B_EZO": "23c8c301d2b79ddabce561db658ab1a5141a52b40cbe701d2f79bd3a89ea7c9a",
+        "6T88_MWQ": "1afd29b8da3b541ddfe84b37b52e417ac2792ae2beaf3c7068e5ef127d550d09",
+        "6TW5_9M2": "35719baa933233124373b0538ec06c42fe25a2d76a87e78d35464426e830be4f",
+        "6TW7_NZB": "be8f197c4879ae48571b6a3c72521538a6c8990fb2f96e5d3cf1d6371d273c5a",
+        "6VTA_AKN": "98d113ac769e2353a004d93f6b95bb5b6f1c8029322308b788a18cfcb29b4925",
+        "6WTN_RXT": "894b179adfa684c8fe5bf2fc6fb6aebc8003de694220ba24da04297626321079",
+    },
+    "rescue": {
+        "5SD5_HWI": "58e058badb2789667fb3d7e7df3142cc1e9964ca0e32d11f80d5706b82e1e057",
+        "5SIS_JSM": "b6169337744135b79df0a449a67d9e16489e41e58704b1b8218d652368eea3a8",
+        "6M2B_EZO": "855968b252fca3ab0dd56c50cdfbe6e6f4e7ec8c1f377f824c75e8dcc6584aff",
+        "6T88_MWQ": "257cdb6ba1070e79a85c7f62efa0667bf604f0029b2f3e524a4db92ea7e19df8",
+        "6TW5_9M2": "258d43d0a603f756feeeef5cd170c27c238c743ef41f08e1cc86589010b29b56",
+        "6TW7_NZB": "1b534a8df42ca9ef2d8d149e0304a28e7e9ebfdcbfc2625cd7a104c7225ed42e",
+        "6VTA_AKN": "3883e87c533281fc49bc7cd6d0aa6dfccd05803a83d0aade14972ec3fbd7a567",
+        "6WTN_RXT": "c3e4f710457fb274c4308d61c38f7b20ee5aa9ebf055f3e3ea32d35fc6fe4edd",
+    },
+}
 EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE = {
     "baseline": {
         "5SD5_HWI": "f6cbd306fd98e23333a6a00558258f433ed8cec96cfd4d1270324161fa6cf7a2",
@@ -340,6 +362,139 @@ EXPECTED_RESCUE_DIAGNOSTIC_FIELDS = frozenset(
         "source_paired_torsion_rescue_proposal_receipt",
     }
 )
+EXPECTED_SUMMARY_INPUT_BINDING = {
+    "mode": "sealed_linux_memfd_snapshot/1.0.0",
+    "immutable_execution_bytes": True,
+    "source_identity_verified_before_and_after": True,
+    "continuous_source_monitoring": False,
+    "external_aliases_created": False,
+}
+EXPECTED_BASELINE_SUMMARY_FIELDS = frozenset(
+    {
+        "analysis_scope",
+        "benchmark_validated",
+        "case_count",
+        "case_ids",
+        "case_ids_sha256",
+        "claim_safe",
+        "contains_engineering_smoke",
+        "contains_fresh_internal_blind_holdout",
+        "development_v8_clearance_variant",
+        "engine_identity",
+        "engine_ids",
+        "evidence_role",
+        "execution_receipts",
+        "external_engines_executed",
+        "fresh_execution_authorized",
+        "input_binding",
+        "materializations",
+        "paired_baseline_metrics_present",
+        "primary_claim_eligible",
+        "product_promotion_eligible",
+        "product_qualified",
+        "profiles",
+        "public_claim_eligible",
+        "rows",
+        "runner_id",
+        "schema_id",
+        "scientifically_validated",
+        "summary_sha256",
+    }
+)
+EXPECTED_RESCUE_SUMMARY_FIELDS = frozenset(
+    {
+        *EXPECTED_BASELINE_SUMMARY_FIELDS,
+        "development_source_paired_torsion_rescue",
+        "source_paired_torsion_rescue_policy",
+    }
+)
+EXPECTED_BASELINE_ENGINE_IDENTITY = {
+    "engine_id": "engine_v2",
+    "evaluation_pipeline_sha256": (
+        "40530119249b792728a70cb5ba65cc9c60cf834e1a744d6987dae75046459922"
+    ),
+    "execution_environment_sha256": (
+        "e6f96f53ec1d0ce83f665f170b27d0727e98455153720c741122584d0cfadb79"
+    ),
+    "implementation_sha256": (
+        "26e0dcdc80c9b62381b7c4442933b87a69172abbbe4e50ad9dd86784691074aa"
+    ),
+    "interaction_refiner": "interaction_aware_torsion_contact_v7_ensemble",
+    "interaction_refiner_config_sha256": (
+        EXPECTED_INTERACTION_REFINER_CONFIG_SHA256
+    ),
+    "scorer_backend": EXPECTED_SCORER_BACKEND,
+    "stage0_eligible": False,
+}
+EXPECTED_RESCUE_ENGINE_IDENTITY = {
+    **EXPECTED_BASELINE_ENGINE_IDENTITY,
+    "candidate_schema_id": EXPECTED_RESCUE_CANDIDATE_SCHEMA_ID,
+    "diagnostic_schema_id": EXPECTED_RESCUE_DIAGNOSTIC_SCHEMA_ID,
+    "interaction_refiner": (
+        "betelgeuze.engine_v2_source_paired_torsion_rescue_refiner/1.0.0"
+    ),
+    "proposal_profile_id": EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID,
+    "proposal_profile_sha256": EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256,
+}
+EXPECTED_SUMMARY_RESCUE_POLICY = {
+    "authority_rotor_required": True,
+    "base_guided_policy_sha256": (
+        EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
+    ),
+    "candidate_count": EXPECTED_CANDIDATE_COUNT,
+    "candidate_denominator_changed": False,
+    "claim_safe": False,
+    "development_only": True,
+    "fingerprint_sha256": EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256,
+    "fresh_execution_authorized": False,
+    "maximum_variant_count": EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP,
+    "ordinary_v3_and_rescue_target_parent_unions_disjoint": True,
+    "policy_id": EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID,
+    "product_promotion_eligible": False,
+    "proposal_objects_and_coordinates_unchanged": True,
+    "public_claim_eligible": False,
+    "rmsd_posebusters_native_rank_or_score_used_for_allocation": False,
+    "schema_id": EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID,
+    "scientifically_validated": False,
+    "selected_parent_proposal_objects_retained": True,
+    "source_pair_authority": "base_uniform_v3_ensemble_receipt",
+    "stage0_eligible": False,
+    "variant_target_selection": (
+        "rounded_even_spacing_across_ordered_v3_target_indices"
+    ),
+}
+EXPECTED_SUMMARY_FALSE_BOUNDARY_FIELDS = (
+    "benchmark_validated",
+    "claim_safe",
+    "contains_engineering_smoke",
+    "contains_fresh_internal_blind_holdout",
+    "development_v8_clearance_variant",
+    "external_engines_executed",
+    "fresh_execution_authorized",
+    "paired_baseline_metrics_present",
+    "primary_claim_eligible",
+    "product_promotion_eligible",
+    "product_qualified",
+    "public_claim_eligible",
+    "scientifically_validated",
+)
+EXPECTED_PROFILE_FIELDS = frozenset(
+    {
+        "case_id",
+        "heavy_atom_count",
+        "rotor_count",
+        "ring_count",
+        "ligand_artifact_sha256",
+        "profile_method_id",
+        "ring_profile_method_id",
+        "size_subgroup",
+        "rotor_subgroup",
+        "ring_subgroup",
+    }
+)
+EXPECTED_PROFILE_SET_SHA256 = (
+    "541059fe40cf54a2b7d75efda1c6f6fa0a790d1c7b38187a72e2bfb55fe7f33a"
+)
 EXPECTED_PREPARATION_FAILURE_ZERO_INT_DIAGNOSTIC_FIELDS = (
     "candidate_success_count",
     "candidate_failure_count",
@@ -363,6 +518,17 @@ EXPECTED_PREPARATION_FAILURE_FALSE_DIAGNOSTIC_FIELDS = (
 EXPECTED_PREPARATION_FAILURE_NULL_DIAGNOSTIC_FIELDS = (
     "proposal_oracle_rmsd_angstrom",
     "scorer_backend_receipt",
+)
+EXPECTED_PREPARATION_COUNT_DIAGNOSTIC_FIELDS = (
+    "receptor_atom_count",
+    "ligand_atom_count",
+    "receptor_partial_charge_count",
+    "ligand_partial_charge_count",
+    "receptor_donor_count",
+    "receptor_acceptor_count",
+    "ligand_donor_count",
+    "ligand_acceptor_count",
+    "receptor_ion_proxy_count",
 )
 EXPECTED_BASELINE_CANDIDATE_FIELDS = frozenset(
     {
@@ -1175,10 +1341,52 @@ def _historical_v11_result(
         diagnostics.get("preparation_status") != "success"
         or result.get("status") != "success"
         or result.get("failure_code") != ""
+        or type(diagnostics.get("candidate_success_count")) is not int
         or diagnostics.get("candidate_success_count") != EXPECTED_CANDIDATE_COUNT
+        or type(diagnostics.get("candidate_failure_count")) is not int
         or diagnostics.get("candidate_failure_count") != 0
         or len(raw_candidates) != EXPECTED_CANDIDATE_COUNT
         or diagnostics.get("scorer_backend_receipt") != EXPECTED_SCORER_BACKEND_RECEIPT
+        or any(
+            type(diagnostics.get(field)) is not int
+            or diagnostics.get(field) < 0
+            for field in EXPECTED_PREPARATION_COUNT_DIAGNOSTIC_FIELDS
+        )
+        or diagnostics.get("receptor_atom_count") < 1
+        or diagnostics.get("ligand_atom_count") < 1
+        or diagnostics.get("receptor_partial_charge_count")
+        != diagnostics.get("receptor_atom_count")
+        or diagnostics.get("ligand_partial_charge_count")
+        != diagnostics.get("ligand_atom_count")
+        or diagnostics.get("receptor_ion_proxy_count")
+        > diagnostics.get("receptor_atom_count")
+        or type(diagnostics.get("diagnostic_evaluation_seconds")) is not float
+        or not math.isfinite(diagnostics.get("diagnostic_evaluation_seconds"))
+        or diagnostics.get("diagnostic_evaluation_seconds") < 0.0
+        or diagnostics.get("diagnostic_evaluation_excluded_from_runtime") is not True
+        or diagnostics.get("charge_coverage_complete") is not True
+        or diagnostics.get("hbond_feature_covered")
+        is not (
+            (
+                diagnostics.get("ligand_donor_count") > 0
+                and diagnostics.get("receptor_acceptor_count") > 0
+            )
+            or (
+                diagnostics.get("ligand_acceptor_count") > 0
+                and diagnostics.get("receptor_donor_count") > 0
+            )
+        )
+        or diagnostics.get("receptor_ion_proxy_used")
+        is not (diagnostics.get("receptor_ion_proxy_count") > 0)
+        or diagnostics.get("receptor_ion_coordination_modeled") is not False
+        or diagnostics.get("ligand_metal_support") is not False
+        or (
+            lane == "rescue"
+            and not isinstance(
+                diagnostics.get("source_paired_torsion_rescue_proposal_receipt"),
+                Mapping,
+            )
+        )
     ):
         raise ValueError(f"{lane} {case_id} successful denominator is invalid")
     candidates = tuple(
@@ -1194,11 +1402,21 @@ def _historical_v11_result(
     ]
     if len(proposal_fingerprints) != len(set(proposal_fingerprints)):
         raise ValueError(f"{lane} {case_id} proposal fingerprints are duplicated")
+    proposal_oracle_rmsd = diagnostics.get("proposal_oracle_rmsd_angstrom")
+    expected_proposal_oracle_rmsd = min(
+        float(candidate["rmsd_angstrom"]) for candidate in candidates
+    )
+    if (
+        type(proposal_oracle_rmsd) is not float
+        or not math.isfinite(proposal_oracle_rmsd)
+        or proposal_oracle_rmsd.hex() != expected_proposal_oracle_rmsd.hex()
+    ):
+        raise ValueError(f"{lane} {case_id} proposal oracle RMSD is invalid")
+    ordered_candidates = sorted(
+        candidates,
+        key=lambda candidate: int(candidate["proposal_index"]),
+    )
     if lane == "rescue":
-        ordered_candidates = sorted(
-            candidates,
-            key=lambda candidate: int(candidate["proposal_index"]),
-        )
         ordered_proposal_fingerprints = [
             str(candidate["proposal_fingerprint_sha256"])
             for candidate in ordered_candidates
@@ -1222,6 +1440,34 @@ def _historical_v11_result(
             raise ValueError(
                 f"{lane} {case_id} candidate receipt set is not the pinned cohort"
             )
+    # The historical summaries retain the score-term receipt ID and only the
+    # candidate-facing term projection, not the opaque complete ScorerV1Terms
+    # receipt. Pin their complete retained co-projection without claiming that
+    # the omitted receipt internals were reconstructed after the fact.
+    retained_score_term_projections = [
+        {
+            "proposal_index": int(candidate["proposal_index"]),
+            "proposal_fingerprint_sha256": str(
+                candidate["proposal_fingerprint_sha256"]
+            ),
+            "score_terms_receipt_sha256": str(
+                candidate["score_terms_receipt_sha256"]
+            ),
+            "score_term_binary64_hex": dict(candidate["score_term_binary64_hex"]),
+            "hbond_count": int(candidate["hbond_count"]),
+        }
+        for candidate in ordered_candidates
+    ]
+    if _sha256_payload(retained_score_term_projections) != (
+        EXPECTED_CANDIDATE_SCORE_TERM_PROJECTION_SET_SHA256_BY_LANE_CASE.get(
+            lane,
+            {},
+        ).get(case_id)
+    ):
+        raise ValueError(
+            f"{lane} {case_id} retained score-term projection is not the "
+            "pinned cohort"
+        )
     failure_atlas._validate_ranked_result_projection(
         result,
         candidates,
@@ -1484,6 +1730,99 @@ def _metric_summary(results: Mapping[str, Mapping[str, object]]) -> dict[str, in
     return {key: int(totals[key]) for key in EXPECTED_BASELINE_METRICS}
 
 
+def _frozen_summary_input_binding(value: object, *, lane: str) -> dict[str, object]:
+    if (
+        not isinstance(value, Mapping)
+        or set(value) != set(EXPECTED_SUMMARY_INPUT_BINDING)
+        or value.get("mode") != EXPECTED_SUMMARY_INPUT_BINDING["mode"]
+        or any(
+            value.get(field) is not expected
+            for field, expected in EXPECTED_SUMMARY_INPUT_BINDING.items()
+            if field != "mode"
+        )
+    ):
+        raise ValueError(f"{lane} summary input binding is invalid")
+    return dict(value)
+
+
+def _frozen_summary_lane_identity(value: object, *, lane: str) -> None:
+    expected_fields = (
+        EXPECTED_BASELINE_SUMMARY_FIELDS
+        if lane == "baseline"
+        else EXPECTED_RESCUE_SUMMARY_FIELDS
+    )
+    expected_role = (
+        "current_source_engine_v2_execution_only"
+        if lane == "baseline"
+        else "development_source_paired_torsion_rescue_execution_only"
+    )
+    expected_engine_identity = (
+        EXPECTED_BASELINE_ENGINE_IDENTITY
+        if lane == "baseline"
+        else EXPECTED_RESCUE_ENGINE_IDENTITY
+    )
+    if (
+        not isinstance(value, Mapping)
+        or set(value) != expected_fields
+        or value.get("engine_ids") != ["engine_v2"]
+        or value.get("evidence_role") != expected_role
+        or type(value.get("case_count")) is not int
+        or value.get("case_count") != len(EXPECTED_CASE_IDS)
+        or type(value.get("case_ids")) is not list
+        or value.get("case_ids") != list(EXPECTED_CASE_IDS)
+        or value.get("case_ids_sha256") != EXPECTED_CASE_IDS_SHA256
+        or _canonical_bytes(value.get("engine_identity"))
+        != _canonical_bytes(expected_engine_identity)
+    ):
+        raise ValueError(f"{lane} summary lane identity is invalid")
+    if lane == "rescue":
+        policy = value.get("source_paired_torsion_rescue_policy")
+        if (
+            value.get("development_source_paired_torsion_rescue") is not True
+            or _canonical_bytes(policy)
+            != _canonical_bytes(EXPECTED_SUMMARY_RESCUE_POLICY)
+        ):
+            raise ValueError(f"{lane} summary rescue policy is invalid")
+
+
+def _frozen_summary_boundary_flags(value: object, *, lane: str) -> None:
+    if not isinstance(value, Mapping) or any(
+        value.get(field) is not False
+        for field in EXPECTED_SUMMARY_FALSE_BOUNDARY_FIELDS
+    ):
+        raise ValueError(f"{lane} summary external boundary is invalid")
+
+
+def _frozen_profiles(value: object, *, lane: str) -> tuple[dict[str, object], ...]:
+    if not isinstance(value, list) or len(value) != len(EXPECTED_CASE_IDS):
+        raise ValueError(f"{lane} summary profiles are invalid")
+    profiles: list[dict[str, object]] = []
+    for index, profile in enumerate(value):
+        if (
+            not isinstance(profile, Mapping)
+            or set(profile) != EXPECTED_PROFILE_FIELDS
+            or profile.get("case_id") != EXPECTED_CASE_IDS[index]
+        ):
+            raise ValueError(f"{lane} summary profile projection is invalid")
+        profiles.append(dict(profile))
+    if _sha256_payload(profiles) != EXPECTED_PROFILE_SET_SHA256:
+        raise ValueError(f"{lane} summary profiles are not the pinned cohort")
+    return tuple(profiles)
+
+
+def _bind_frozen_profile_to_result(
+    profile: Mapping[str, object],
+    result: Mapping[str, object],
+    *,
+    lane: str,
+    case_id: str,
+) -> None:
+    if profile.get("ligand_artifact_sha256") != result.get(
+        "native_artifact_sha256"
+    ):
+        raise ValueError(f"{lane} {case_id} profile native input is cross-wired")
+
+
 def _load_lane(
     members: Mapping[str, bytes],
     *,
@@ -1505,18 +1844,9 @@ def _load_lane(
         hash_field="summary_sha256",
     )
     engine_identity = summary.get("engine_identity")
-    false_fields = (
-        "benchmark_validated",
-        "claim_safe",
-        "contains_engineering_smoke",
-        "contains_fresh_internal_blind_holdout",
-        "fresh_execution_authorized",
-        "primary_claim_eligible",
-        "product_promotion_eligible",
-        "product_qualified",
-        "public_claim_eligible",
-        "scientifically_validated",
-    )
+    _frozen_summary_lane_identity(summary, lane=lane)
+    _frozen_summary_input_binding(summary.get("input_binding"), lane=lane)
+    _frozen_summary_boundary_flags(summary, lane=lane)
     if (
         summary.get("schema_id") != expected_schema
         or summary.get("analysis_scope") != "historical_contaminated_development_only"
@@ -1524,7 +1854,6 @@ def _load_lane(
         or summary.get("case_count") != len(EXPECTED_CASE_IDS)
         or tuple(summary.get("case_ids", ())) != EXPECTED_CASE_IDS
         or summary.get("case_ids_sha256") != EXPECTED_CASE_IDS_SHA256
-        or any(summary.get(field) is not False for field in false_fields)
         or not isinstance(engine_identity, Mapping)
         or engine_identity.get("scorer_backend") != EXPECTED_SCORER_BACKEND
         or (
@@ -1652,18 +1981,24 @@ def _load_lane(
     assert isinstance(embedded_receipts, list)
     assert isinstance(embedded_materializations, list)
     assert isinstance(profiles, list)
+    frozen_profiles = _frozen_profiles(profiles, lane=lane)
     if any(
         len(value) != len(EXPECTED_CASE_IDS)
         for value in (rows, embedded_receipts, embedded_materializations, profiles)
     ):
         raise ValueError(f"{lane} summary collection denominator drifted")
     for index, case_id in enumerate(EXPECTED_CASE_IDS):
-        profile = profiles[index]
+        profile = frozen_profiles[index]
+        _bind_frozen_profile_to_result(
+            profile,
+            results[case_id],
+            lane=lane,
+            case_id=case_id,
+        )
         if (
             rows[index] != results[case_id]
             or embedded_receipts[index] != receipt_payloads[case_id]
             or embedded_materializations[index] != materializations[case_id]
-            or not isinstance(profile, Mapping)
             or profile.get("case_id") != case_id
         ):
             raise ValueError(f"{lane} summary collection is cross-wired")
