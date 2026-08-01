@@ -903,7 +903,7 @@ def _mock_zstd(
     monkeypatch.setattr(
         atlas_builder,
         "_typed_development_result",
-        lambda value: SimpleNamespace(
+        lambda value, **_kwargs: SimpleNamespace(
             case_id=value["case_id"],
             engine_id=value["engine_id"],
             to_dict=lambda value=dict(value): value,
@@ -1048,12 +1048,25 @@ def test_cause_taxonomy_observed_and_unresolved_branches() -> None:
 
 def test_production_result_binding_rejects_nested_candidate_drift() -> None:
     result = _strict_valid_result(atlas_builder.EXPECTED_CASE_IDS[0])
-    assert atlas_builder._typed_development_result(result).to_dict() == result
+    assert (
+        atlas_builder._typed_development_result(
+            result,
+            _legacy_source_paired_receipt_authority=(
+                atlas_builder._VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY
+            ),
+        ).to_dict()
+        == result
+    )
     tampered = json.loads(json.dumps(result))
     tampered["engine_v2_diagnostics"]["candidates"][0]["hbond_count"] = -1
 
     with pytest.raises(ValueError, match="development_source_result_schema_invalid"):
-        atlas_builder._typed_development_result(tampered)
+        atlas_builder._typed_development_result(
+            tampered,
+            _legacy_source_paired_receipt_authority=(
+                atlas_builder._VERIFIED_LEGACY_SOURCE_PAIRED_RECEIPT_AUTHORITY
+            ),
+        )
 
 
 @pytest.mark.parametrize("lane", ("baseline", "rescue"))
@@ -1206,7 +1219,7 @@ def test_authenticated_archive_rejects_strict_result_binding_failure(
     bundle = _synthetic_bundle()
     _mock_zstd(monkeypatch, bundle)
 
-    def reject_result(_value: object) -> object:
+    def reject_result(_value: object, **_kwargs: object) -> object:
         raise ValueError("synthetic strict rejection")
 
     monkeypatch.setattr(atlas_builder, "_typed_development_result", reject_result)

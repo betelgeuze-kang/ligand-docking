@@ -103,11 +103,38 @@ variants. That rule is descriptive here and remains unfrozen.
 | Accepted receptor-pair normalization | Unavailable; count is absent from receipts |
 | Clash-atom normalization | Unavailable; count is absent from receipts |
 | Maximum local penetration | Unavailable; value is absent from receipts |
-| Absolute numeric geometric clearance | Unavailable; PoseBusters evidence is categorical |
+| Absolute numeric geometric clearance | Unavailable in the pinned V1 archive; V1.1 instruments future source-paired receipts only |
 | Scorer-v1 term normalization | Ineligible; ranking terms are a different objective contract |
 
 No V8 clearance receipt is cross-joined. It belongs to a separate rejected
 source/policy lane and cannot be mixed with this source-paired V7 archive.
+
+The source-paired receipt contract now has a forward-only V1.1 telemetry
+extension. For each of the at most four fixed rescue targets it records the
+minimum ligand-receptor vdW surface gap for the baseline V6 and otherwise
+unmaterialized optimized coordinates, the coordinate fingerprints, and the
+radii-policy hash. The policy hash must equal the frozen default vdW-contact
+policy fingerprint. The value is the minimum of
+`distance - ligand_radius - receptor_radius` in angstrom, encoded as canonical
+finite binary64 hex. Negative values remain valid penetration measurements.
+The measurement runs only after V7 has fixed its selection, is bounded to one
+million ligand-receptor pairs per call, and cannot alter allocation, objective,
+coordinates, or `[2.0,4.0)` selection. A larger full Cartesian pair count keeps
+the V7 result and emits empty telemetry with the authenticated
+`full_cartesian_pair_count_exceeds_fixed_bound` reason instead of failing the
+candidate. V1.1 also records the ligand count, pocket-local receptor count,
+their exact Cartesian product, and the fixed bound. Live validation accepts the
+unavailable state only when those counts are internally consistent and the
+product actually exceeds the bound.
+
+That extension does not retroactively make clearance available in this audit:
+the pinned archive contains V1 receipts. A separate reviewed historical-
+development rerun and newly pinned archive are required before clearance can be
+compared here.
+
+Live source-paired diagnostics require one uniform V1.1 receipt version per
+case. Legacy V1 is accepted only by the exact pinned-archive verification path;
+removing V1.1 telemetry fields cannot downgrade a live candidate.
 
 ## Reproduction
 
@@ -126,11 +153,14 @@ python3 tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py \
 
 ## Next bounded action
 
-The audit narrows the choice but does not make it. A later task may predeclare
-one result-independent rule for one historical-development A/B. That rule must
-state its numeric tolerance and decide explicitly whether internal penalty may
-increase when receptor penalty decreases. It must remain source-retaining,
-hard-capped, and genuinely coordinate-changing.
+The audit narrows the choice but does not make it. The next admissible evidence
+step is a separately reviewed historical-development rerun that emits V1.1
+telemetry and pins a new authenticated archive. Only after that receipt set is
+audited may a later task predeclare one result-independent rule for one
+historical-development A/B. That rule must state its numeric tolerance and
+decide explicitly whether internal penalty may increase when receptor penalty
+decreases. It must remain source-retaining, hard-capped, and genuinely
+coordinate-changing.
 
 Do not fit a normalized threshold from these seven cases, reuse `[2.0,4.0)` as
 if it were calibrated after normalization, correlate alternatives with RMSD or
