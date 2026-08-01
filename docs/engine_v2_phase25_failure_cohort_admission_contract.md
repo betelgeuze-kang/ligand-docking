@@ -42,30 +42,46 @@ satisfies every requirement below:
 
 1. **Exact scope identity.** It records an ordered historical-development input
    roster, an ordered uncovered roster, both counts, and canonical SHA-256
-   digests. Both rosters are disjoint from engineering-smoke and fresh-holdout
-   identities.
+   digests. Every input ID is a member of the pinned 300-case contaminated-
+   development registry whose case-ID digest is
+   `110c9ccc37255c39df3dae5b0213e4cf158cccfaf30071cb5ec9eb8e269ef349`
+   and whose registry self-hash is
+   `89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31`;
+   an updated registry requires separate review. Both rosters are disjoint from
+   engineering-smoke and fresh-holdout identities.
 2. **Execution identity.** It binds the exact source commit, algorithm profile,
    runner, candidate, diagnostic, result, refinement-receipt, scorer, pocket,
-   charge, and proposal policies used for every case.
+   charge, and proposal policies used for every case. Every execution receipt
+   also authenticates the implementation, evaluation-pipeline, and execution-
+   environment SHA-256 identities.
 3. **Failure-complete receipts.** Every input case has authenticated result and
-   diagnostic receipts, input and materialization identities, and the complete
-   fixed candidate-slot denominator. Missing, duplicated, cross-wired, or
-   mixed-version rows fail closed.
+   diagnostic receipts plus input and materialization identities. Every
+   preparation-success case retains the complete fixed candidate-slot
+   denominator; a preparation-failure case instead retains its typed failure
+   and an empty candidate list. Missing, duplicated, cross-wired, or mixed-
+   version rows fail closed.
 4. **Archive identity.** The archive file, member manifest, bundle checksum,
    member count, and every member digest are pinned and verified before any
    payload is classified.
 5. **Deterministic uncovered derivation.** Proposal-oracle recovery is
-   recomputed from the authenticated candidate diagnostics with the frozen
-   `<= 2.0` angstrom criterion. The uncovered roster is derived from that
-   result, not from exact-valid-pose counts, threshold membership, narrative
-   arithmetic, or filenames.
+   recomputed from the authenticated candidate diagnostics of one named
+   classification lane and exact algorithm profile that were fixed before
+   result inspection, using the frozen `<= 2.0` angstrom criterion. If a bundle
+   carries other lanes, it records their results but cannot switch the
+   classification lane post hoc. The uncovered roster is derived from the
+   authoritative-lane result, not from exact-valid-pose counts, threshold
+   membership, narrative arithmetic, or filenames.
 6. **Taxonomy reconciliation.** Every admitted uncovered case has all ten
    category keys, one allowed status per category, deterministic zero-inclusive
    roll-ups, and a self-hash. Evidence-unsupported categories remain
    `unresolved`; absence of evidence is not converted into a causal label.
 7. **Claim boundary.** The bundle declares historical contaminated development
-   only, no fresh execution, no runtime or selection-policy authority, no
-   promotion eligibility, and no public or scientific validation claim.
+   only and authorizes no new execution, including no fresh-holdout execution.
+   Historical execution receipts retain their truthful cache-free
+   `fresh_execution` fact; the separate governance field remains
+   `fresh_execution_authorized: false`. The bundle grants no runtime or
+   selection-policy authority, promotion eligibility, or public or scientific
+   validation claim.
 
 Receipt hashes without their authenticated payloads cannot satisfy items 3–6.
 An aggregate count without an ordered roster cannot satisfy item 1. Failure of
