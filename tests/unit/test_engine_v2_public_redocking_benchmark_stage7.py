@@ -1927,6 +1927,49 @@ def test_engine_v2_diagnostics_validate_torsion_rescue_lineage() -> None:
     )
     assert successful_diagnostics.candidates[0].status == "success"
 
+    rescue_pair = allocation_evidence["rescue_target_parent_pairs"][0]
+    rescue_target = rescue_pair["target_proposal_index"]
+    rescue_parent = rescue_pair["parent_proposal_index"]
+    rescue_final_coordinate_sha256 = "6" * 64
+    rescue_refinement_payload = successful_fallback.to_dict()[
+        "refinement_receipt_payload"
+    ]
+    rescue_refinement_payload.update({
+        "source_proposal_sha256": serialized_evidence["candidate_slots"][
+            rescue_target
+        ]["proposal_fingerprint_sha256"],
+        "pre_coordinates_sha256": serialized_evidence["candidate_slots"][
+            rescue_target
+        ]["coordinate_fingerprint_sha256"],
+        "post_coordinates_sha256": rescue_final_coordinate_sha256,
+        "proposal_torsion_eligibility_lane": (
+            "source_paired_torsion_rescue_variant"
+        ),
+        "source_paired_parent_proposal_index": rescue_parent,
+        "nested_v6_treated_proposal_as_v3_variant": False,
+        "rescue_target_excluded_from_nested_v3_indices": True,
+    })
+    rehash(rescue_refinement_payload, "receipt_sha256")
+    successful_rescue = replace(
+        successful_fallback,
+        proposal_index=rescue_target,
+        proposal_mode="uniform_torsion_rescue_variant",
+        torsion_rescue_parent_proposal_index=rescue_parent,
+        proposal_fingerprint_sha256="7" * 64,
+        coordinate_fingerprint_sha256=rescue_final_coordinate_sha256,
+        pose_artifact_sha256="8" * 64,
+        score_terms_receipt_sha256="9" * 64,
+        refinement_receipt_sha256=rescue_refinement_payload["receipt_sha256"],
+        refinement_receipt_payload=rescue_refinement_payload,
+    )
+    successful_rows = list(successful_diagnostics.candidates)
+    successful_rows[rescue_target] = successful_rescue
+    successful_diagnostics = replace(
+        successful_diagnostics,
+        candidates=tuple(successful_rows),
+    )
+    assert successful_diagnostics.candidates[rescue_target].status == "success"
+
     receipt_substitutions = {
         "pre_coordinates_sha256": "8" * 64,
         "post_coordinates_sha256": "9" * 64,

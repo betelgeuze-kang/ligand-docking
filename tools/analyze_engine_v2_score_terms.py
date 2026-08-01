@@ -16,7 +16,10 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     FROZEN_PUBLIC_REDOCKING_CASE_IDS,
     FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS,
+    PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
+    PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
     PUBLIC_REDOCKING_PROPOSAL_MODES,
+    PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
 )
 
 
@@ -197,6 +200,45 @@ def _calibration_recovery(
     )
 
 
+def _empty_proposal_mode_accumulator() -> dict[str, object]:
+    return {
+        "candidate_count": 0,
+        "native_like_candidate_count": 0,
+        "valid_candidate_count": 0,
+        "duplicate_candidate_count": 0,
+        "execution_failure_count": 0,
+        "oracle_contribution_case_count": 0,
+        "best_oracle_case_count": 0,
+        "scores": [],
+        "failed_check_counts": Counter(),
+        "refinement_attempt_count": 0,
+        "refinement_penalty_reduced_count": 0,
+        "refinement_translated_count": 0,
+        "refinement_rotated_count": 0,
+    }
+
+
+def _proposal_mode_accumulator(
+    mode_rows: dict[str, dict[str, object]],
+    mode: str,
+    *,
+    rescue_diagnostic: bool,
+) -> dict[str, object]:
+    if (
+        mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+        and not rescue_diagnostic
+    ):
+        raise ValueError("candidate proposal mode is missing or unsupported")
+    accumulator = mode_rows.get(mode)
+    if accumulator is not None:
+        return accumulator
+    if mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE:
+        accumulator = _empty_proposal_mode_accumulator()
+        mode_rows[mode] = accumulator
+        return accumulator
+    raise ValueError("candidate proposal mode is missing or unsupported")
+
+
 def analyze_results(
     results: Sequence[Mapping[str, object]],
     *,
@@ -226,21 +268,7 @@ def analyze_results(
         for name in TERM_NAMES
     }
     mode_rows: dict[str, dict[str, object]] = {
-        mode: {
-            "candidate_count": 0,
-            "native_like_candidate_count": 0,
-            "valid_candidate_count": 0,
-            "duplicate_candidate_count": 0,
-            "execution_failure_count": 0,
-            "oracle_contribution_case_count": 0,
-            "best_oracle_case_count": 0,
-            "scores": [],
-            "failed_check_counts": Counter(),
-            "refinement_attempt_count": 0,
-            "refinement_penalty_reduced_count": 0,
-            "refinement_translated_count": 0,
-            "refinement_rotated_count": 0,
-        }
+        mode: _empty_proposal_mode_accumulator()
         for mode in PUBLIC_REDOCKING_PROPOSAL_MODES
     }
     failed_check_counts: Counter[str] = Counter()
@@ -248,12 +276,29 @@ def analyze_results(
     refinement_penalty_reduced_count = 0
     refinement_translated_count = 0
     refinement_rotated_count = 0
+    diagnostic_schema_id: str | None = None
     for result in results:
         if result.get("engine_id") != "engine_v2":
             raise ValueError("score-term analysis requires Engine V2 results")
         diagnostics = result.get("engine_v2_diagnostics")
         if not isinstance(diagnostics, Mapping):
             raise ValueError("Engine V2 diagnostics are missing")
+        result_diagnostic_schema_id = diagnostics.get("schema_id")
+        if result_diagnostic_schema_id not in {
+            PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
+            PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
+        }:
+            raise ValueError("Engine V2 diagnostics schema is unsupported")
+        if diagnostic_schema_id is None:
+            diagnostic_schema_id = result_diagnostic_schema_id
+        elif diagnostic_schema_id != result_diagnostic_schema_id:
+            raise ValueError(
+                "score-term analysis requires one consistent diagnostics schema"
+            )
+        rescue_diagnostic = (
+            result_diagnostic_schema_id
+            == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
+        )
         if result.get("status") != "success":
             if diagnostics.get("preparation_status") == "failure":
                 failure_code = str(diagnostics.get("preparation_failure_code", ""))
@@ -300,10 +345,13 @@ def analyze_results(
                 continue
             mode = str(candidate.get("proposal_mode", ""))
             if mode:
-                if mode not in mode_rows:
-                    raise ValueError("failed candidate proposal mode is unsupported")
-                mode_rows[mode]["execution_failure_count"] = (
-                    int(mode_rows[mode]["execution_failure_count"]) + 1
+                accumulator = _proposal_mode_accumulator(
+                    mode_rows,
+                    mode,
+                    rescue_diagnostic=rescue_diagnostic,
+                )
+                accumulator["execution_failure_count"] = (
+                    int(accumulator["execution_failure_count"]) + 1
                 )
         candidates = [
             candidate
@@ -326,14 +374,16 @@ def analyze_results(
         )
         for candidate in candidates:
             mode = str(candidate.get("proposal_mode", ""))
-            if mode not in mode_rows:
-                raise ValueError("candidate proposal mode is missing or unsupported")
+            accumulator = _proposal_mode_accumulator(
+                mode_rows,
+                mode,
+                rescue_diagnostic=rescue_diagnostic,
+            )
             coordinate_sha256 = str(
                 candidate.get("coordinate_fingerprint_sha256", "")
             )
             if len(coordinate_sha256) != 64:
                 raise ValueError("candidate coordinate fingerprint is missing")
-            accumulator = mode_rows[mode]
             accumulator["candidate_count"] = int(accumulator["candidate_count"]) + 1
             rmsd = float(candidate["rmsd_angstrom"])
             if rmsd <= 2.0:
