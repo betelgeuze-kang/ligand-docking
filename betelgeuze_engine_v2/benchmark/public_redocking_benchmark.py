@@ -3860,7 +3860,7 @@ class PublicRedockingEngineV2Diagnostics:
                             "source-paired refinement config identity changed within a case"
                         )
                     expected_lane = (
-                        PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+                        "source_paired_torsion_rescue_variant"
                         if row.proposal_mode
                         == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
                         else (
