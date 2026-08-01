@@ -44,17 +44,18 @@ three to two native-like selection-eligible candidates.
 | Rescue summary self-hash | `92e5e0500a59aa88ce0851178c7656e9d105e6d3e136470e3bc7f61b6f19e2c9` |
 | Baseline analysis self-hash | `c05a06e3d146d02cb22e20b1e200db572903455b35f574b6a36a64c8acb9ba33` |
 | Rescue analysis self-hash | `9e95970c9f51a9b9cd6a3e795d7a6af9b0cce27d554ceaa6e3553940577c72bc` |
-| Audit schema | `betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.1.0` |
-| Audit self-hash | `bd100f4c743946a5c68d5048c447fe43dbbcef9280101b90f8a0fcf1d788a334` |
-| Verified archive SHA-256 | `8f516d79e83c2aeecfecccc09789115305687b4adc77376d2af8c8197847f998` |
-| Member-manifest SHA-256 | `a32c1c50efbd23001b4f5183dab6eb2636a0e7444e7f4efcb2df9275e5e77a52` |
-| Bundle-sidecar SHA-256 | `5ded750327780731fa868f41bea8fd84b2741368f9ffbe1568f14ab1a7d515b3` |
+| Shared scorer backend | `python_reference` |
+| Audit schema | `betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.2.0` |
+| Audit self-hash | `8d9e9eef5907e51fbf2f25385c7cb1468dbd099c5636715ddea78274ef22fae3` |
+| Verified archive SHA-256 | `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98` |
+| Member-manifest SHA-256 | `7ae57e3bec8ecf96b754e2038dd2eef023058c4ea1adae2fbf4933bf556cf6bd` |
+| Bundle-sidecar SHA-256 | `37d9478c78076eef908e3a86c712f49820078ab14289fb1ee26a1f8c4fc37ea5` |
 | Archive members | 59 mode-`0600` regular files |
 
 The compact external audit is
 `.betelgeuze/stage0-development/source-paired-clearance-v11-6a749540-audit.json`.
 The `6a749540` suffix is an operator label and does not authenticate the
-execution source. The audit is mode `0600`, 14,694 bytes, and is mutable local
+execution source. The audit is mode `0600`, 14,730 bytes, and is mutable local
 diagnostic state rather
 than committed scientific evidence. The deterministic packer and verifier are
 `tools/build_engine_v2_source_paired_clearance_v11_evidence.py`; the code pins
@@ -88,8 +89,8 @@ The baseline wall time was 976.16 seconds and the V1.1 rescue wall time was
 historical run and does not isolate telemetry overhead from the source-paired
 lane; it is not a speed or slowdown claim.
 
-The 59 retained members total 21,367,176 bytes and occupy a 21,452,800-byte tar
-stream. Deterministic Zstandard compression produced a 505,182-byte archive,
+The 59 retained members total 21,367,212 bytes and occupy a 21,452,800-byte tar
+stream. Deterministic Zstandard compression produced a 505,161-byte archive,
 a 97.64% reduction from expanded member bytes. The archive, member manifest,
 bundle sidecar, compact audit, and two compact score-term analyses are retained.
 After the pinned verifier succeeded, the expanded run roots, wall-time files,
@@ -98,7 +99,10 @@ Python bytecode caches, and pytest cache were removed. This reclaimed
 fell from 21,947,908 to 595,257 apparent bytes. The pinned archive verified
 again after cleanup. The provenance-hardening repack temporarily restored the
 same raw members from the authenticated archive, did not rerun MD, removed the
-expanded members again, and left the final directory at 595,490 apparent bytes.
+expanded members again, and left the final directory at 595,505 apparent bytes.
+The final 1.2 identity-hardening repack reclaimed 21,344,459 temporary bytes;
+both the feature worktree and persistent store retain only the compact audit,
+archive, two checksum sidecars, and two compact score-term analyses.
 
 ## Reproduction
 
@@ -136,8 +140,10 @@ archived copy, Zstandard stream, sorted manifest, bundle hashes, safe member
 names, regular file types, fixed modes and metadata, all raw execution/
 materialization cross-links, frozen archive-specific V1.1 result shapes,
 all five ranked SDF-record hashes for every successful case, compact analyses,
-historical outcome counts, telemetry denominators, and the recomputed audit
-self-hash. It does not depend on the mutable live result parser.
+historical outcome counts, telemetry denominators, the frozen result-independent
+allocation policy, unavailable-variant baseline equality, scalar/term score
+identity, the shared Python scorer backend, and the recomputed audit self-hash.
+It does not depend on the mutable live result parser.
 
 ## Next bounded action
 

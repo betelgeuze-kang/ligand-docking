@@ -220,8 +220,8 @@ The canonical capability state is:
   and regresses for one; all gaps remain negative. Historical validity and
   recovery counts, zero torsion selections, and the 31-to-30 eligibility
   regression are unchanged. The new 59-member mode-0600 archive compresses
-  21,367,176 expanded bytes to 505,182 bytes and is pinned to
-  `8f516d79e83c2aeecfecccc09789115305687b4adc77376d2af8c8197847f998`.
+  21,367,212 expanded bytes to 505,161 bytes and is pinned to
+  `7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98`.
   This is descriptive telemetry only and selects no rule.
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between

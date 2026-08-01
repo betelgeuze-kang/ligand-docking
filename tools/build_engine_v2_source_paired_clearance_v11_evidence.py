@@ -20,7 +20,7 @@ import tarfile
 import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_source_paired_clearance_v11_audit/1.2.0"
 OPERATOR_OBSERVED_CHECKOUT_OR_BASE_SHA1 = (
     "6a749540339db5e53875841e463cfcbcdf7072b2"
 )
@@ -140,6 +140,57 @@ EXPECTED_RESCUE_CANDIDATE_SCHEMA_ID = (
     "betelgeuze.engine_v2_public_redocking_engine_v2_candidate/1.7.0"
 )
 EXPECTED_CANDIDATE_COUNT = 64
+EXPECTED_SCORER_BACKEND = "python_reference"
+EXPECTED_SCORER_BACKEND_RECEIPT = {
+    "backend": EXPECTED_SCORER_BACKEND,
+    "backend_version": "1.0.0",
+    "build_flags": [],
+    "cargo_lock_sha256": "",
+    "extension_sha256": "",
+    "implementation_source_sha256": (
+        "80e758ac66e0b9825ce3372eac6a4adc6f2dc6fe4b1f08cf95402dcfbf2cee39"
+    ),
+    "implicit_fallback_allowed": False,
+    "options_fingerprint_sha256": (
+        "3e1279f7426288224a1377e9021cc07c3a62115a3ac38534a70871fb8911415f"
+    ),
+    "receipt_sha256": (
+        "4070816b9d99437002a617300c16162b944d0a62c4e5eb48670053cd84203d00"
+    ),
+    "rustc_version": "",
+    "schema_id": "betelgeuze.engine_v2_scorer_v1_backend_receipt/1.0.0",
+    "target_triple": "",
+}
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID = (
+    "betelgeuze.engine_v2_historical_development_source_paired_torsion_rescue/"
+    "1.0.0"
+)
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256 = (
+    "1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6"
+)
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256 = (
+    "2974e9ba80479cccc97dce1b51567e8e7309e7f89c983401c9a8966a3d08633f"
+)
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP = 4
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_proposal_receipt/1.0.0"
+)
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_policy/1.0.0"
+)
+EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_ALLOCATION_SCHEMA_ID = (
+    "betelgeuze.engine_v2_source_paired_torsion_rescue_allocation/1.0.0"
+)
+EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE = {
+    "5SD5_HWI": "44fdb41049d49b6ea5198f39e94772ad62065b1ba47e3c0191e00e535aa10f64",
+    "5SIS_JSM": "3d7e00d50fa48006ab8a00fe2e3c00338e6f53ca18716e2252264fffd4c95b73",
+    "6M2B_EZO": "95d90c25450dfc6556fd7dadd2e0f2580d4e29460528f3cf961c85a4635bc69c",
+    "6T88_MWQ": "1064d7956267037db21afa6d20fed086d4b92792a3d9a732755d8fc1dd7bdee3",
+    "6TW5_9M2": "2dbf76b8e7db925215e16123476b8a1c14420febf2826898588fea6d63e5187f",
+    "6TW7_NZB": "11fbd284284313dec2a141f6209e08c2019fac505e67277742b48f973f306851",
+    "6VTA_AKN": "7d21c9f638c77f1a95e6455b8a489ceb23f3935d4dfe42d8de9c5bd5a73d281b",
+    "6WTN_RXT": "1ecb7dcad4a3ff6fa7402f78bf23c1b31d57549e789274fe2be7655fecf9fa38",
+}
 
 EXPECTED_RESULT_FIELDS = frozenset(
     {
@@ -381,16 +432,16 @@ BUNDLE_PATH = (
 )
 
 EXPECTED_EVIDENCE_ARCHIVE_SHA256 = (
-    "8f516d79e83c2aeecfecccc09789115305687b4adc77376d2af8c8197847f998"
+    "7a2561f646f3cf5434de6c79ed797073ac1b7e034e4fcd2291755a58128f5e98"
 )
 EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256 = (
-    "a32c1c50efbd23001b4f5183dab6eb2636a0e7444e7f4efcb2df9275e5e77a52"
+    "7ae57e3bec8ecf96b754e2038dd2eef023058c4ea1adae2fbf4933bf556cf6bd"
 )
 EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 = (
-    "5ded750327780731fa868f41bea8fd84b2741368f9ffbe1568f14ab1a7d515b3"
+    "37d9478c78076eef908e3a86c712f49820078ab14289fb1ee26a1f8c4fc37ea5"
 )
 EXPECTED_REPORT_SHA256 = (
-    "bd100f4c743946a5c68d5048c447fe43dbbcef9280101b90f8a0fcf1d788a334"
+    "8d9e9eef5907e51fbf2f25385c7cb1468dbd099c5636715ddea78274ef22fae3"
 )
 EXPECTED_EVIDENCE_MEMBER_COUNT = 59
 
@@ -494,6 +545,30 @@ def _finite_number(
     return number
 
 
+def _execution_policy_mapping(value: object) -> dict[str, object]:
+    if not isinstance(value, list):
+        raise ValueError("execution policy tokens are invalid")
+    mapping: dict[str, object] = {}
+    for token in value:
+        if not isinstance(token, str):
+            raise ValueError("execution policy token is invalid")
+        key, separator, encoded = token.partition("=")
+        if not key or separator != "=" or key in mapping:
+            raise ValueError("execution policy token is invalid")
+        try:
+            decoded = json.loads(encoded)
+        except json.JSONDecodeError as exc:
+            raise ValueError("execution policy value is invalid") from exc
+        if encoded != json.dumps(
+            decoded,
+            allow_nan=False,
+            separators=(",", ":"),
+        ):
+            raise ValueError("execution policy value is not canonical")
+        mapping[key] = decoded
+    return mapping
+
+
 def _historical_v11_candidate(
     value: object,
     *,
@@ -590,7 +665,7 @@ def _historical_v11_candidate(
         )
     ):
         raise ValueError(f"{lane} {case_id} PoseBusters projection is invalid")
-    _finite_number(candidate.get("score"), name="candidate score")
+    candidate_score = _finite_number(candidate.get("score"), name="candidate score")
     _finite_number(
         candidate.get("rmsd_angstrom"),
         name="candidate RMSD",
@@ -617,6 +692,10 @@ def _historical_v11_candidate(
         decoded_terms[term] = _binary64(
             encoded,
             name=f"candidate score term {term}",
+        )
+    if candidate_score.hex() != decoded_terms["total_score"].hex():
+        raise ValueError(
+            f"{lane} {case_id} candidate score contradicts retained total"
         )
     if not math.isclose(
         decoded_terms["total_score"],
@@ -699,6 +778,12 @@ def _historical_v11_candidate(
                 )
             )
             or payload.get("development_only") is not True
+            or payload.get("source_paired_torsion_rescue_profile") is not True
+            or payload.get("source_paired_torsion_rescue_policy_sha256")
+            != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+            or payload.get("source_paired_torsion_rescue_variant_cap")
+            != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+            or payload.get("result_dependent_eligibility") is not False
         ):
             raise ValueError(f"{lane} {case_id} V1.1 receipt contract is invalid")
         receipt_projection = dict(payload)
@@ -751,6 +836,11 @@ def _historical_v11_result(
         or any(not isinstance(token, str) or "=" not in token for token in policy)
     ):
         raise ValueError(f"{lane} {case_id} execution contract is invalid")
+    if (
+        _execution_policy_mapping(policy).get("scorer_backend")
+        != EXPECTED_SCORER_BACKEND
+    ):
+        raise ValueError(f"{lane} {case_id} execution scorer backend is invalid")
     diagnostics = result.get("engine_v2_diagnostics")
     expected_diagnostic_fields = (
         EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
@@ -780,6 +870,7 @@ def _historical_v11_result(
             or raw_candidates
             or diagnostics.get("candidate_success_count") != 0
             or diagnostics.get("candidate_failure_count") != 0
+            or diagnostics.get("scorer_backend_receipt") is not None
         ):
             raise ValueError(f"{lane} preparation failure is invalid")
         failure_atlas._validate_ranked_result_projection(
@@ -796,6 +887,8 @@ def _historical_v11_result(
         or diagnostics.get("candidate_success_count") != EXPECTED_CANDIDATE_COUNT
         or diagnostics.get("candidate_failure_count") != 0
         or len(raw_candidates) != EXPECTED_CANDIDATE_COUNT
+        or diagnostics.get("scorer_backend_receipt")
+        != EXPECTED_SCORER_BACKEND_RECEIPT
     ):
         raise ValueError(f"{lane} {case_id} successful denominator is invalid")
     candidates = tuple(
@@ -1086,9 +1179,19 @@ def _load_lane(
         or summary.get("case_ids_sha256") != EXPECTED_CASE_IDS_SHA256
         or any(summary.get(field) is not False for field in false_fields)
         or not isinstance(engine_identity, Mapping)
+        or engine_identity.get("scorer_backend") != EXPECTED_SCORER_BACKEND
         or (
             lane == "rescue"
             and summary.get("development_source_paired_torsion_rescue") is not True
+        )
+        or (
+            lane == "rescue"
+            and (
+                engine_identity.get("proposal_profile_id")
+                != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID
+                or engine_identity.get("proposal_profile_sha256")
+                != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+            )
         )
         or (
             lane == "baseline"
@@ -1364,12 +1467,15 @@ def _clearance_summary(
                     raise ValueError("non-target clearance telemetry is not empty")
                 non_target_count += 1
                 continue
+            variant_available = payload.get("torsion_variant_available")
+            if type(variant_available) is not bool:
+                raise ValueError("target torsion availability must be boolean")
             torsion_counts["allocated_candidate_count"] += 1
             torsion_counts["torsion_evaluated_candidate_count"] += (
                 payload.get("torsion_evaluated") is True
             )
             torsion_counts["torsion_variant_available_candidate_count"] += (
-                payload.get("torsion_variant_available") is True
+                variant_available is True
             )
             torsion_counts["torsion_selected_candidate_count"] += (
                 payload.get("torsion_selected") is True
@@ -1397,6 +1503,26 @@ def _clearance_summary(
                 or not _is_sha256(payload.get("optimized_coordinates_sha256"))
             ):
                 raise ValueError("target clearance telemetry identity is invalid")
+            if variant_available is False:
+                baseline_coordinates_sha256 = payload.get(
+                    "baseline_coordinates_sha256"
+                )
+                if (
+                    not _is_sha256(baseline_coordinates_sha256)
+                    or payload.get("optimized_coordinates_sha256")
+                    != baseline_coordinates_sha256
+                    or payload.get("post_coordinates_sha256")
+                    != baseline_coordinates_sha256
+                    or payload.get(
+                        "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"
+                    )
+                    != payload.get(
+                        "baseline_v6_minimum_vdw_surface_gap_angstrom_binary64_hex"
+                    )
+                ):
+                    raise ValueError(
+                        "unavailable torsion clearance must equal its baseline"
+                    )
             row = {
                 "case_id": case_id,
                 "proposal_index": int(candidate["proposal_index"]),
@@ -1475,6 +1601,8 @@ def _clearance_summary(
 def _v11_rescue_allocation(
     diagnostics: Mapping[str, object],
     candidates: Sequence[Mapping[str, object]],
+    *,
+    case_id: str,
 ) -> tuple[int, list[dict[str, int]]]:
     proposal = diagnostics.get("source_paired_torsion_rescue_proposal_receipt")
     if not isinstance(proposal, Mapping):
@@ -1485,6 +1613,34 @@ def _v11_rescue_allocation(
         proposal_projection
     ):
         raise ValueError("source-paired proposal receipt self-hash is invalid")
+    policy = proposal.get("rescue_policy")
+    if not isinstance(policy, Mapping):
+        raise ValueError("source-paired rescue policy is missing")
+    policy_projection = dict(policy)
+    policy_sha256 = policy_projection.pop("fingerprint_sha256", None)
+    if (
+        policy_sha256 != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+        or _sha256_payload(policy_projection) != policy_sha256
+        or policy.get("schema_id")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID
+        or policy.get("policy_id")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID
+        or policy.get("base_guided_policy_sha256")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
+        or policy.get("candidate_count") != EXPECTED_CANDIDATE_COUNT
+        or policy.get("maximum_variant_count")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+        or policy.get("source_pair_authority")
+        != "base_uniform_v3_ensemble_receipt"
+        or policy.get("variant_target_selection")
+        != "rounded_even_spacing_across_ordered_v3_target_indices"
+        or policy.get("authority_rotor_required") is not True
+        or policy.get("ordinary_v3_and_rescue_target_parent_unions_disjoint")
+        is not True
+        or policy.get("rmsd_posebusters_native_rank_or_score_used_for_allocation")
+        is not False
+    ):
+        raise ValueError("source-paired rescue policy is not frozen")
     allocation = proposal.get("allocation")
     if not isinstance(allocation, Mapping):
         raise ValueError("source-paired allocation is missing")
@@ -1494,36 +1650,122 @@ def _v11_rescue_allocation(
         allocation_projection
     ):
         raise ValueError("source-paired allocation self-hash is invalid")
+    if allocation_sha256 != EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE.get(case_id):
+        raise ValueError("source-paired allocation is not the pinned case allocation")
+    if (
+        proposal.get("schema_id")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_SCHEMA_ID
+        or proposal.get("rescue_policy_sha256") != policy_sha256
+        or proposal.get("candidate_count") != EXPECTED_CANDIDATE_COUNT
+        or proposal.get("result_dependent_allocation") is not False
+        or allocation.get("schema_id")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_ALLOCATION_SCHEMA_ID
+        or allocation.get("rescue_policy_sha256") != policy_sha256
+        or allocation.get("base_guided_policy_sha256")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
+        or allocation.get("candidate_count") != EXPECTED_CANDIDATE_COUNT
+        or allocation.get("rescue_variant_cap")
+        != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+        or allocation.get("result_dependent_allocation") is not False
+        or allocation.get("candidate_denominator_changed") is not False
+    ):
+        raise ValueError("source-paired allocation policy identity is invalid")
     rotor_count = allocation.get("authority_rotor_count")
+    raw_v3_pairs = allocation.get("v3_target_parent_pairs")
     raw_pairs = allocation.get("rescue_target_parent_pairs")
     if (
         type(rotor_count) is not int
         or rotor_count < 0
+        or not isinstance(raw_v3_pairs, list)
         or not isinstance(raw_pairs, list)
     ):
         raise ValueError("source-paired allocation values are invalid")
-    pairs: list[dict[str, int]] = []
-    for row in raw_pairs:
-        if not isinstance(row, Mapping) or set(row) != {
-            "target_proposal_index",
-            "parent_proposal_index",
-        }:
-            raise ValueError("source-paired pair row is invalid")
-        target = row["target_proposal_index"]
-        parent = row["parent_proposal_index"]
-        if (
-            type(target) is not int
-            or type(parent) is not int
-            or not 0 <= target < EXPECTED_CANDIDATE_COUNT
-            or not 0 <= parent < EXPECTED_CANDIDATE_COUNT
+
+    def normalized_pairs(rows: Sequence[object]) -> list[dict[str, int]]:
+        normalized: list[dict[str, int]] = []
+        for row in rows:
+            if not isinstance(row, Mapping) or set(row) != {
+                "target_proposal_index",
+                "parent_proposal_index",
+            }:
+                raise ValueError("source-paired pair row is invalid")
+            target = row["target_proposal_index"]
+            parent = row["parent_proposal_index"]
+            if (
+                type(target) is not int
+                or type(parent) is not int
+                or not 0 <= target < EXPECTED_CANDIDATE_COUNT
+                or not 0 <= parent < EXPECTED_CANDIDATE_COUNT
+                or target == parent
+            ):
+                raise ValueError("source-paired pair indices are invalid")
+            normalized.append(
+                {
+                    "target_proposal_index": target,
+                    "parent_proposal_index": parent,
+                }
+            )
+        if normalized != sorted(
+            normalized,
+            key=lambda row: (
+                row["target_proposal_index"],
+                row["parent_proposal_index"],
+            ),
         ):
-            raise ValueError("source-paired pair indices are invalid")
-        pairs.append(
-            {
-                "target_proposal_index": target,
-                "parent_proposal_index": parent,
-            }
-        )
+            raise ValueError("source-paired allocation pairs are not ordered")
+        return normalized
+
+    v3_pairs = normalized_pairs(raw_v3_pairs)
+    pairs = normalized_pairs(raw_pairs)
+    ordered_pairs = sorted(
+        (*v3_pairs, *pairs),
+        key=lambda row: (
+            row["target_proposal_index"],
+            row["parent_proposal_index"],
+        ),
+    )
+    rescue_count = (
+        min(EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP, len(ordered_pairs))
+        if rotor_count
+        else 0
+    )
+    if rescue_count == 0:
+        expected_targets: set[int] = set()
+    elif rescue_count == 1:
+        expected_targets = {ordered_pairs[0]["target_proposal_index"]}
+    else:
+        target_indices = [row["target_proposal_index"] for row in ordered_pairs]
+        expected_targets = {
+            target_indices[
+                round(
+                    index
+                    * (len(target_indices) - 1)
+                    / (rescue_count - 1)
+                )
+            ]
+            for index in range(rescue_count)
+        }
+    expected_pairs = [
+        row for row in ordered_pairs if row["target_proposal_index"] in expected_targets
+    ]
+    expected_v3_pairs = [
+        row
+        for row in ordered_pairs
+        if row["target_proposal_index"] not in expected_targets
+    ]
+    all_targets = [row["target_proposal_index"] for row in ordered_pairs]
+    all_parents = [row["parent_proposal_index"] for row in ordered_pairs]
+    if (
+        pairs != expected_pairs
+        or v3_pairs != expected_v3_pairs
+        or len(all_targets) != len(set(all_targets))
+        or len(all_parents) != len(set(all_parents))
+        or set(all_targets) & set(all_parents)
+        or allocation.get("rescue_variant_count") != len(pairs)
+        or len(pairs) > EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+        or (pairs and rotor_count == 0)
+    ):
+        raise ValueError("source-paired allocation is not result-independent")
     candidate_by_index = {
         int(candidate["proposal_index"]): candidate for candidate in candidates
     }
@@ -1633,6 +1875,7 @@ def _lane_comparison(
             _, allocation_pairs = _v11_rescue_allocation(
                 rescue_diagnostics,
                 rescue_candidates,
+                case_id=case_id,
             )
         expected_changed = sorted(
             row["target_proposal_index"] for row in allocation_pairs
@@ -1644,11 +1887,34 @@ def _lane_comparison(
         for pair in allocation_pairs:
             target = pair["target_proposal_index"]
             parent = pair["parent_proposal_index"]
+            target_candidate = rescue_by_index[target]
+            parent_candidate = rescue_by_index[parent]
+            payload = target_candidate.get("refinement_receipt_payload")
             if (
-                rescue_by_index[target].get("coordinate_fingerprint_sha256")
-                == rescue_by_index[parent].get("coordinate_fingerprint_sha256")
+                target_candidate.get("coordinate_fingerprint_sha256")
+                == parent_candidate.get("coordinate_fingerprint_sha256")
             ):
                 parent_duplicate_count += 1
+            if (
+                isinstance(payload, Mapping)
+                and payload.get("torsion_variant_available") is False
+            ):
+                baseline_parent_coordinate = baseline_by_index[parent].get(
+                    "coordinate_fingerprint_sha256"
+                )
+                if any(
+                    coordinate != baseline_parent_coordinate
+                    for coordinate in (
+                        parent_candidate.get("coordinate_fingerprint_sha256"),
+                        target_candidate.get("coordinate_fingerprint_sha256"),
+                        payload.get("baseline_coordinates_sha256"),
+                        payload.get("post_coordinates_sha256"),
+                        payload.get("optimized_coordinates_sha256"),
+                    )
+                ):
+                    raise ValueError(
+                        "unavailable torsion coordinates contradict baseline parent"
+                    )
     changed_count = sum(len(indices) for indices in coordinate_changes.values())
     if changed_count != 28 or parent_duplicate_count != 28:
         raise ValueError("source-paired coordinate lineage drifted")
@@ -1672,6 +1938,32 @@ def _lane_comparison(
     }
 
 
+def _shared_engine_identity(
+    baseline_identity: Mapping[str, object],
+    rescue_identity: Mapping[str, object],
+) -> dict[str, object]:
+    shared_hash_fields = (
+        "implementation_sha256",
+        "evaluation_pipeline_sha256",
+        "execution_environment_sha256",
+        "interaction_refiner_config_sha256",
+    )
+    shared_identity: dict[str, object] = {
+        field: baseline_identity.get(field) for field in shared_hash_fields
+    }
+    shared_identity["scorer_backend"] = baseline_identity.get("scorer_backend")
+    if any(
+        not _is_sha256(value) or rescue_identity.get(field) != value
+        for field, value in shared_identity.items()
+        if field != "scorer_backend"
+    ) or (
+        shared_identity["scorer_backend"] != EXPECTED_SCORER_BACKEND
+        or rescue_identity.get("scorer_backend") != EXPECTED_SCORER_BACKEND
+    ):
+        raise ValueError("lane engine identity is not comparable")
+    return shared_identity
+
+
 def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
     baseline = _load_lane(
         members,
@@ -1693,20 +1985,7 @@ def _build_report(members: Mapping[str, bytes]) -> dict[str, object]:
     rescue_identity = rescue["engine_identity"]
     assert isinstance(baseline_identity, Mapping)
     assert isinstance(rescue_identity, Mapping)
-    shared_identity_fields = (
-        "implementation_sha256",
-        "evaluation_pipeline_sha256",
-        "execution_environment_sha256",
-        "interaction_refiner_config_sha256",
-    )
-    shared_identity = {
-        field: baseline_identity.get(field) for field in shared_identity_fields
-    }
-    if any(
-        not _is_sha256(value) or rescue_identity.get(field) != value
-        for field, value in shared_identity.items()
-    ):
-        raise ValueError("lane engine identity is not comparable")
+    shared_identity = _shared_engine_identity(baseline_identity, rescue_identity)
     baseline_walltime = baseline["walltime"]
     rescue_walltime = rescue["walltime"]
     assert isinstance(baseline_walltime, Mapping)

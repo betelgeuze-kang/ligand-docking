@@ -42,6 +42,14 @@ def _target(
     variant_available: bool = True,
     optimized_gap: float = -1.5,
 ) -> dict[str, object]:
+    baseline_coordinates_sha256 = f"{index + 1000:064x}"
+    optimized_coordinates_sha256 = (
+        f"{index + 1:064x}"
+        if variant_available
+        else baseline_coordinates_sha256
+    )
+    if not variant_available:
+        optimized_gap = -2.0
     return {
         "proposal_index": index,
         "proposal_mode": "uniform_torsion_rescue_variant",
@@ -50,6 +58,8 @@ def _target(
             "torsion_evaluated": torsion_evaluated,
             "torsion_variant_available": variant_available,
             "torsion_selected": False,
+            "baseline_coordinates_sha256": baseline_coordinates_sha256,
+            "post_coordinates_sha256": baseline_coordinates_sha256,
             "clearance_measurement_evaluated": True,
             "clearance_measurement_unavailable_reason": "none",
             "clearance_radii_policy_sha256": (
@@ -67,7 +77,7 @@ def _target(
             "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex": (
                 optimized_gap.hex()
             ),
-            "optimized_coordinates_sha256": f"{index + 1:064x}",
+            "optimized_coordinates_sha256": optimized_coordinates_sha256,
         },
     }
 
@@ -109,7 +119,7 @@ def _results() -> dict[str, dict[str, object]]:
                         _target(
                             index,
                             torsion_evaluated=target_ordinal != 0,
-                            variant_available=target_ordinal not in {0, 1},
+                            variant_available=target_ordinal not in {10, 11},
                             optimized_gap=optimized_gap,
                         )
                     )
@@ -177,11 +187,15 @@ def test_clearance_summary_requires_uniform_v11_and_exact_denominators() -> None
         "non_target_value",
         "diagnostic_ligand_count",
         "non_target_count",
+        "unavailable_coordinates",
+        "unavailable_gap",
+        "unavailable_non_bool",
     ),
 )
 def test_clearance_summary_rejects_resealed_drift(drift: str) -> None:
     results = deepcopy(_results())
     first = results["5SD5_HWI"]["engine_v2_diagnostics"]["candidates"][0]
+    unavailable = results["6T88_MWQ"]["engine_v2_diagnostics"]["candidates"][2]
     non_target = results["6M2B_EZO"]["engine_v2_diagnostics"]["candidates"][0]
     if drift == "schema":
         first["refinement_receipt_payload"]["schema_id"] = (
@@ -197,6 +211,18 @@ def test_clearance_summary_rejects_resealed_drift(drift: str) -> None:
         ] = "a" * 64
     elif drift == "diagnostic_ligand_count":
         results["5SD5_HWI"]["engine_v2_diagnostics"]["ligand_atom_count"] = 21
+    elif drift == "unavailable_coordinates":
+        unavailable["refinement_receipt_payload"][
+            "optimized_coordinates_sha256"
+        ] = "f" * 64
+    elif drift == "unavailable_gap":
+        unavailable["refinement_receipt_payload"][
+            "optimized_minimum_vdw_surface_gap_angstrom_binary64_hex"
+        ] = (-1.5).hex()
+    elif drift == "unavailable_non_bool":
+        unavailable["refinement_receipt_payload"][
+            "torsion_variant_available"
+        ] = 0
     else:
         non_target["refinement_receipt_payload"][
             "clearance_ligand_atom_count"
@@ -361,6 +387,15 @@ def test_lane_comparison_binds_changed_indices_to_exact_rescue_targets(
 ) -> None:
     monkeypatch.setattr(evidence, "EXPECTED_CASE_IDS", ("fixture",))
     baseline, rescue = _lane_fixture()
+    proposal = rescue["results"]["fixture"]["engine_v2_diagnostics"][
+        "source_paired_torsion_rescue_proposal_receipt"
+    ]
+    pairs = proposal["allocation"]["rescue_target_parent_pairs"]
+    monkeypatch.setattr(
+        evidence,
+        "_v11_rescue_allocation",
+        lambda diagnostics, candidates, *, case_id: (28, pairs),
+    )
 
     comparison = evidence._lane_comparison(baseline, rescue)
 
@@ -380,6 +415,234 @@ def test_lane_comparison_binds_changed_indices_to_exact_rescue_targets(
 
     with pytest.raises(ValueError, match="contradict the allocation"):
         evidence._lane_comparison(baseline, rescue)
+
+
+def test_lane_comparison_binds_unavailable_variant_to_baseline_parent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(evidence, "EXPECTED_CASE_IDS", ("fixture",))
+    baseline, rescue = _lane_fixture()
+    proposal = rescue["results"]["fixture"]["engine_v2_diagnostics"][
+        "source_paired_torsion_rescue_proposal_receipt"
+    ]
+    pairs = proposal["allocation"]["rescue_target_parent_pairs"]
+    monkeypatch.setattr(
+        evidence,
+        "_v11_rescue_allocation",
+        lambda diagnostics, candidates, *, case_id: (28, pairs),
+    )
+    baseline_candidates = baseline["results"]["fixture"]["engine_v2_diagnostics"][
+        "candidates"
+    ]
+    rescue_candidates = rescue["results"]["fixture"]["engine_v2_diagnostics"][
+        "candidates"
+    ]
+    parent_coordinate = baseline_candidates[0]["coordinate_fingerprint_sha256"]
+    payload = rescue_candidates[28]["refinement_receipt_payload"]
+    payload.update(
+        {
+            "torsion_variant_available": False,
+            "baseline_coordinates_sha256": parent_coordinate,
+            "post_coordinates_sha256": parent_coordinate,
+            "optimized_coordinates_sha256": parent_coordinate,
+        }
+    )
+
+    evidence._lane_comparison(baseline, rescue)
+
+    payload.update(
+        {
+            "baseline_coordinates_sha256": "self-consistent-drift",
+            "post_coordinates_sha256": "self-consistent-drift",
+            "optimized_coordinates_sha256": "self-consistent-drift",
+        }
+    )
+    with pytest.raises(ValueError, match="baseline parent"):
+        evidence._lane_comparison(baseline, rescue)
+
+
+def _frozen_rescue_policy() -> dict[str, object]:
+    projection: dict[str, object] = {
+        "schema_id": evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SCHEMA_ID,
+        "policy_id": evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROFILE_ID,
+        "base_guided_policy_sha256": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
+        ),
+        "candidate_count": evidence.EXPECTED_CANDIDATE_COUNT,
+        "maximum_variant_count": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+        ),
+        "source_pair_authority": "base_uniform_v3_ensemble_receipt",
+        "variant_target_selection": (
+            "rounded_even_spacing_across_ordered_v3_target_indices"
+        ),
+        "authority_rotor_required": True,
+        "proposal_objects_and_coordinates_unchanged": True,
+        "selected_parent_proposal_objects_retained": True,
+        "ordinary_v3_and_rescue_target_parent_unions_disjoint": True,
+        "candidate_denominator_changed": False,
+        "rmsd_posebusters_native_rank_or_score_used_for_allocation": False,
+        "development_only": True,
+        "stage0_eligible": False,
+        "fresh_execution_authorized": False,
+        "product_promotion_eligible": False,
+        "public_claim_eligible": False,
+        "scientifically_validated": False,
+        "claim_safe": False,
+    }
+    assert evidence._sha256_payload(projection) == (
+        evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+    )
+    return {
+        **projection,
+        "fingerprint_sha256": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+        ),
+    }
+
+
+def _allocation_fixture() -> tuple[dict[str, object], list[dict[str, object]]]:
+    all_pairs = [
+        {"target_proposal_index": 8 + index, "parent_proposal_index": 24 + index}
+        for index in range(16)
+    ]
+    rescue_targets = {8, 13, 18, 23}
+    rescue_pairs = [
+        row for row in all_pairs if row["target_proposal_index"] in rescue_targets
+    ]
+    allocation: dict[str, object] = {
+        "schema_id": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_ALLOCATION_SCHEMA_ID
+        ),
+        "rescue_policy_sha256": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+        ),
+        "base_guided_policy_sha256": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_BASE_POLICY_SHA256
+        ),
+        "candidate_count": evidence.EXPECTED_CANDIDATE_COUNT,
+        "authority_rotor_count": 4,
+        "v3_target_parent_pairs": [
+            row
+            for row in all_pairs
+            if row["target_proposal_index"] not in rescue_targets
+        ],
+        "rescue_target_parent_pairs": rescue_pairs,
+        "rescue_variant_count": 4,
+        "rescue_variant_cap": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+        ),
+        "candidate_denominator_changed": False,
+        "result_dependent_allocation": False,
+    }
+    allocation["allocation_sha256"] = evidence._sha256_payload(allocation)
+    proposal: dict[str, object] = {
+        "schema_id": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_SCHEMA_ID
+        ),
+        "rescue_policy": _frozen_rescue_policy(),
+        "rescue_policy_sha256": (
+            evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+        ),
+        "candidate_count": evidence.EXPECTED_CANDIDATE_COUNT,
+        "result_dependent_allocation": False,
+        "allocation": allocation,
+    }
+    proposal["receipt_sha256"] = evidence._sha256_payload(proposal)
+    candidates: list[dict[str, object]] = []
+    parent_by_target = {
+        row["target_proposal_index"]: row["parent_proposal_index"]
+        for row in rescue_pairs
+    }
+    for index in range(evidence.EXPECTED_CANDIDATE_COUNT):
+        parent = parent_by_target.get(index)
+        candidate: dict[str, object] = {
+            "proposal_index": index,
+            "proposal_mode": (
+                evidence.PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
+                if parent is not None
+                else "uniform_fallback"
+            ),
+        }
+        if parent is not None:
+            candidate.update(
+                {
+                    "torsion_rescue_parent_proposal_index": parent,
+                    "refinement_receipt_payload": {
+                        "source_paired_parent_proposal_index": parent,
+                        "source_paired_torsion_rescue_pairs": rescue_pairs,
+                        "source_paired_torsion_rescue_allocation_sha256": allocation[
+                            "allocation_sha256"
+                        ],
+                    },
+                }
+            )
+        candidates.append(candidate)
+    return {"source_paired_torsion_rescue_proposal_receipt": proposal}, candidates
+
+
+@pytest.mark.parametrize("drift", ("policy_profile", "variant_cap", "result_dependent"))
+def test_rescue_allocation_requires_frozen_result_independent_policy(
+    drift: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    diagnostics, candidates = _allocation_fixture()
+    proposal = diagnostics["source_paired_torsion_rescue_proposal_receipt"]
+    allocation = proposal["allocation"]
+    monkeypatch.setitem(
+        evidence.EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE,
+        "fixture",
+        allocation["allocation_sha256"],
+    )
+    rotor_count, pairs = evidence._v11_rescue_allocation(
+        diagnostics,
+        candidates,
+        case_id="fixture",
+    )
+    assert rotor_count == 4
+    assert [row["target_proposal_index"] for row in pairs] == [8, 13, 18, 23]
+
+    if drift == "policy_profile":
+        proposal["rescue_policy"]["policy_id"] = "result-dependent-profile"
+        projection = dict(proposal["rescue_policy"])
+        projection.pop("fingerprint_sha256")
+        changed_policy_sha256 = evidence._sha256_payload(projection)
+        proposal["rescue_policy"]["fingerprint_sha256"] = changed_policy_sha256
+        proposal["rescue_policy_sha256"] = changed_policy_sha256
+        allocation["rescue_policy_sha256"] = changed_policy_sha256
+    elif drift == "variant_cap":
+        allocation["rescue_variant_cap"] = 5
+    else:
+        proposal["result_dependent_allocation"] = True
+        allocation["result_dependent_allocation"] = True
+    allocation.pop("allocation_sha256")
+    allocation["allocation_sha256"] = evidence._sha256_payload(allocation)
+    proposal.pop("receipt_sha256")
+    proposal["receipt_sha256"] = evidence._sha256_payload(proposal)
+
+    with pytest.raises(ValueError):
+        evidence._v11_rescue_allocation(
+            diagnostics,
+            candidates,
+            case_id="fixture",
+        )
+
+
+def test_shared_engine_identity_requires_python_reference_in_both_lanes() -> None:
+    identity = {
+        "implementation_sha256": "a" * 64,
+        "evaluation_pipeline_sha256": "b" * 64,
+        "execution_environment_sha256": "c" * 64,
+        "interaction_refiner_config_sha256": "d" * 64,
+        "scorer_backend": evidence.EXPECTED_SCORER_BACKEND,
+    }
+    assert evidence._shared_engine_identity(identity, identity)["scorer_backend"] == (
+        evidence.EXPECTED_SCORER_BACKEND
+    )
+
+    drifted = {**identity, "scorer_backend": "rust_cpu_required"}
+    with pytest.raises(ValueError, match="engine identity"):
+        evidence._shared_engine_identity(identity, drifted)
 
 
 def _synthetic_bundle(
@@ -449,7 +712,9 @@ def test_frozen_result_parser_is_live_schema_independent() -> None:
             "native_artifact_sha256": "c" * 64,
             "seed_artifact_sha256": "d" * 64,
             "execution_command": ["historical-runner"],
-            "execution_policy": ["mode=historical"],
+            "execution_policy": [
+                f'scorer_backend="{evidence.EXPECTED_SCORER_BACKEND}"'
+            ],
             "rmsd_angstroms": [],
             "geometric_valid": [],
             "chemical_valid": [],
@@ -511,6 +776,14 @@ def _successful_frozen_result(lane: str) -> dict[str, object]:
                     "fresh_execution_authorized": False,
                     "scientifically_validated": False,
                     "stage0_eligible": False,
+                    "source_paired_torsion_rescue_profile": True,
+                    "source_paired_torsion_rescue_policy_sha256": (
+                        evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
+                    ),
+                    "source_paired_torsion_rescue_variant_cap": (
+                        evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
+                    ),
+                    "result_dependent_eligibility": False,
                     "clearance_measurement_evaluated": False,
                     "clearance_measurement_unavailable_reason": (
                         "not_source_paired_rescue_target"
@@ -598,6 +871,9 @@ def _successful_frozen_result(lane: str) -> dict[str, object]:
             "candidates": candidates,
             "ligand_atom_count": 20,
             "receptor_atom_count": 100,
+            "scorer_backend_receipt": deepcopy(
+                evidence.EXPECTED_SCORER_BACKEND_RECEIPT
+            ),
         }
     )
     ranked = candidates[:5]
@@ -613,7 +889,9 @@ def _successful_frozen_result(lane: str) -> dict[str, object]:
             "native_artifact_sha256": "c" * 64,
             "seed_artifact_sha256": "d" * 64,
             "execution_command": ["historical-runner"],
-            "execution_policy": ["mode=historical"],
+            "execution_policy": [
+                f'scorer_backend="{evidence.EXPECTED_SCORER_BACKEND}"'
+            ],
             "rmsd_angstroms": [candidate["rmsd_angstrom"] for candidate in ranked],
             "geometric_valid": [True] * 5,
             "chemical_valid": [True] * 5,
@@ -644,6 +922,13 @@ def test_frozen_result_parser_accepts_successful_baseline_and_rescue() -> None:
         "ensemble_lineage",
         "posebusters_flags",
         "score_terms",
+        "score_scalar",
+        "rescue_profile",
+        "rescue_policy",
+        "rescue_variant_cap",
+        "result_dependent_eligibility",
+        "scorer_backend_receipt",
+        "execution_scorer_backend",
         "v1_schema",
         "v11_keyset",
     ),
@@ -662,6 +947,26 @@ def test_successful_frozen_rescue_rejects_resealed_contract_drift(
         candidate["geometric_valid"] = False
     elif drift == "score_terms":
         candidate["score_term_binary64_hex"]["total_score"] = (999.0).hex()
+    elif drift == "score_scalar":
+        candidate["score"] = 0.5
+    elif drift == "rescue_profile":
+        payload["source_paired_torsion_rescue_profile"] = False
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
+    elif drift == "rescue_policy":
+        payload["source_paired_torsion_rescue_policy_sha256"] = "f" * 64
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
+    elif drift == "rescue_variant_cap":
+        payload["source_paired_torsion_rescue_variant_cap"] = 5
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
+    elif drift == "result_dependent_eligibility":
+        payload["result_dependent_eligibility"] = True
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
+    elif drift == "scorer_backend_receipt":
+        result["engine_v2_diagnostics"]["scorer_backend_receipt"][
+            "backend"
+        ] = "rust_cpu_required"
+    elif drift == "execution_scorer_backend":
+        result["execution_policy"] = ['scorer_backend="rust_cpu_required"']
     elif drift == "v1_schema":
         payload["schema_id"] = (
             "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"
