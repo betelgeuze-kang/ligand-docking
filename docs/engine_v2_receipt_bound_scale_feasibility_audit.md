@@ -153,17 +153,16 @@ python3 tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py \
   --output .betelgeuze/stage0-development/receipt-bound-scale-feasibility-audit-754bebb9-v2.json
 ```
 
-## Next bounded action
+## Completed bounded follow-up
 
-The audit narrows the choice but does not make it. The V1.1 rerun now provides
-the missing absolute-clearance inventory: among the 24 fixed uncovered rescue
-targets, 10 gaps improve, 13 are equal, and one regresses. The next admissible
-task is therefore to predeclare one result-independent rule for one historical-
-development A/B. That rule must state its numeric tolerances, forbid an
-internal-penalty increase unless explicitly justified before execution, require
-strict gap improvement, retain the raw minimum-distance guard, and remain
-source-retaining, four-variant-capped, and genuinely coordinate-changing.
+The audit did not choose from its observed outcomes. The separate
+[source-paired clearance-selection policy](engine_v2_source_paired_clearance_selection_policy.md)
+now predeclares one result-independent shadow rule with fixed V7 objective
+tolerances, strict gap improvement, exact raw-distance nonregression, changed-
+coordinate proof, source retention, and the four-variant cap. It is not
+activated and therefore does not reinterpret this immutable V1 archive or the
+later V1.1 result partition.
 
 Do not fit a normalized threshold from these seven cases, reuse `[2.0,4.0)` as
-if it were calibrated after normalization, correlate alternatives with RMSD or
+if calibrated after normalization, correlate alternatives with RMSD or
 PoseBusters outcomes, relax current gates, or open the frozen holdout.
