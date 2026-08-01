@@ -801,9 +801,9 @@ def _allocation_fixture() -> tuple[dict[str, object], list[dict[str, object]]]:
         v3_parent = v3_parent_by_target.get(index)
         candidate: dict[str, object] = {
             "proposal_index": index,
-            "proposal_fingerprint_sha256": candidate_slots[index][
-                "proposal_fingerprint_sha256"
-            ],
+            # Candidate rows identify the final refined proposal. Proposal slots
+            # and payload source hashes identify its pre-refinement source.
+            "proposal_fingerprint_sha256": f"{index + 1000:064x}",
             "proposal_mode": proposal_modes[index],
             "ensemble_source_proposal_index": v3_parent,
             "torsion_rescue_parent_proposal_index": rescue_parent,
@@ -814,6 +814,7 @@ def _allocation_fixture() -> tuple[dict[str, object], list[dict[str, object]]]:
                 "pre_coordinates_sha256": candidate_slots[index][
                     "coordinate_fingerprint_sha256"
                 ],
+                "rotatable_child_atom_indices": [1, 3, 5, 7],
                 "source_paired_parent_proposal_index": rescue_parent,
                 "source_paired_torsion_rescue_pairs": rescue_pairs,
                 "source_paired_torsion_rescue_allocation_sha256": allocation[
@@ -860,6 +861,9 @@ def test_rescue_allocation_requires_frozen_result_independent_policy(
         evidence.EXPECTED_RESCUE_PROPOSAL_SHA256_BY_CASE,
         "fixture",
         proposal["receipt_sha256"],
+    )
+    assert candidates[0]["proposal_fingerprint_sha256"] != (
+        proposal["candidate_slots"][0]["proposal_fingerprint_sha256"]
     )
     rotor_count, pairs = evidence._v11_rescue_allocation(
         diagnostics,
@@ -924,6 +928,60 @@ def test_rescue_allocation_binds_receipts_to_candidate_slots(
 
     candidates[0]["refinement_receipt_payload"][field] = "f" * 64
     with pytest.raises(ValueError, match="proposal slot"):
+        evidence._v11_rescue_allocation(
+            diagnostics,
+            candidates,
+            case_id="fixture",
+        )
+
+
+@pytest.mark.parametrize(
+    "drift",
+    (
+        "allocation_count",
+        "non_target_mismatch",
+        "duplicate",
+        "unsorted",
+        "boolean",
+        "negative",
+    ),
+)
+def test_rescue_allocation_binds_rotor_authority_to_every_candidate_receipt(
+    drift: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    diagnostics, candidates = _allocation_fixture()
+    proposal = diagnostics["source_paired_torsion_rescue_proposal_receipt"]
+    allocation = proposal["allocation"]
+    if drift == "allocation_count":
+        allocation["authority_rotor_count"] = 3
+    else:
+        replacement = {
+            "non_target_mismatch": [1, 3, 5, 9],
+            "duplicate": [1, 3, 3, 7],
+            "unsorted": [3, 1, 5, 7],
+            "boolean": [1, 3, True, 7],
+            "negative": [-1, 3, 5, 7],
+        }[drift]
+        candidates[0]["refinement_receipt_payload"][
+            "rotatable_child_atom_indices"
+        ] = replacement
+    allocation.pop("allocation_sha256")
+    allocation["allocation_sha256"] = evidence._sha256_payload(allocation)
+    proposal.pop("receipt_sha256")
+    proposal["receipt_sha256"] = evidence._sha256_payload(proposal)
+    monkeypatch.setitem(
+        evidence.EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE,
+        "fixture",
+        allocation["allocation_sha256"],
+    )
+    monkeypatch.setitem(
+        evidence.EXPECTED_RESCUE_PROPOSAL_SHA256_BY_CASE,
+        "fixture",
+        proposal["receipt_sha256"],
+    )
+
+    with pytest.raises(ValueError, match="rotor authority"):
         evidence._v11_rescue_allocation(
             diagnostics,
             candidates,
@@ -1313,12 +1371,23 @@ def _pin_fixture_execution_contract(
     )
     if lane == "rescue":
         candidates = result["engine_v2_diagnostics"]["candidates"]
+        ordered_candidates = sorted(
+            candidates,
+            key=lambda candidate: candidate["proposal_index"],
+        )
+        monkeypatch.setitem(
+            evidence.EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE,
+            case_id,
+            evidence._sha256_payload(
+                [
+                    candidate["proposal_fingerprint_sha256"]
+                    for candidate in ordered_candidates
+                ]
+            ),
+        )
         ordered_receipt_sha256s = [
             candidate["refinement_receipt_sha256"]
-            for candidate in sorted(
-                candidates,
-                key=lambda candidate: candidate["proposal_index"],
-            )
+            for candidate in ordered_candidates
         ]
         monkeypatch.setitem(
             evidence.EXPECTED_RESCUE_CANDIDATE_RECEIPT_SET_SHA256_BY_CASE,
@@ -1327,21 +1396,43 @@ def _pin_fixture_execution_contract(
         )
 
 
-def test_frozen_result_parser_is_live_schema_independent(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    diagnostics = {
-        field: None for field in evidence.EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
-    }
+def _preparation_failure_frozen_result(lane: str) -> dict[str, object]:
+    diagnostic_fields = (
+        evidence.EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
+        if lane == "baseline"
+        else evidence.EXPECTED_RESCUE_DIAGNOSTIC_FIELDS
+    )
+    diagnostic_schema = (
+        evidence.EXPECTED_BASELINE_DIAGNOSTIC_SCHEMA_ID
+        if lane == "baseline"
+        else evidence.EXPECTED_RESCUE_DIAGNOSTIC_SCHEMA_ID
+    )
+    diagnostics = {field: None for field in diagnostic_fields}
     diagnostics.update(
         {
-            "schema_id": evidence.EXPECTED_BASELINE_DIAGNOSTIC_SCHEMA_ID,
+            "schema_id": diagnostic_schema,
             "preparation_status": "failure",
-            "preparation_failure_code": "unsupported_large_ring_system",
+            "preparation_failure_code": evidence.EXPECTED_PREPARATION_FAILURE_CODE,
             "candidate_budget": evidence.EXPECTED_CANDIDATE_COUNT,
-            "candidate_success_count": 0,
-            "candidate_failure_count": 0,
             "candidates": [],
+            "diagnostic_evaluation_seconds": 0.0,
+            "diagnostic_evaluation_excluded_from_runtime": True,
+        }
+    )
+    diagnostics.update(
+        {
+            field: 0
+            for field in (
+                evidence.EXPECTED_PREPARATION_FAILURE_ZERO_INT_DIAGNOSTIC_FIELDS
+            )
+        }
+    )
+    diagnostics.update(
+        {
+            field: False
+            for field in (
+                evidence.EXPECTED_PREPARATION_FAILURE_FALSE_DIAGNOSTIC_FIELDS
+            )
         }
     )
     result = {field: None for field in evidence.EXPECTED_RESULT_FIELDS}
@@ -1367,9 +1458,18 @@ def test_frozen_result_parser_is_live_schema_independent(
             "engine_v2_diagnostics": diagnostics,
         }
     )
+    return result
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_frozen_result_parser_is_live_schema_independent(
+    lane: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _preparation_failure_frozen_result(lane)
     _pin_fixture_execution_contract(
         monkeypatch,
-        lane="baseline",
+        lane=lane,
         case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
         result=result,
     )
@@ -1377,7 +1477,7 @@ def test_frozen_result_parser_is_live_schema_independent(
     assert (
         evidence._historical_v11_result(
             result,
-            lane="baseline",
+            lane=lane,
             case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
         )
         == result
@@ -1390,7 +1490,7 @@ def test_frozen_result_parser_is_live_schema_independent(
     with pytest.raises(ValueError, match="preparation failure"):
         evidence._historical_v11_result(
             failure_reason_drift,
-            lane="baseline",
+            lane=lane,
             case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
         )
 
@@ -1398,9 +1498,61 @@ def test_frozen_result_parser_is_live_schema_independent(
     with pytest.raises(ValueError, match="result shape"):
         evidence._historical_v11_result(
             drifted,
-            lane="baseline",
+            lane=lane,
             case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
         )
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_preparation_failure_diagnostics_require_exact_frozen_values(
+    lane: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _preparation_failure_frozen_result(lane)
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane=lane,
+        case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
+        result=result,
+    )
+
+    drifts: list[tuple[str, object]] = [
+        *[
+            (field, 1)
+            for field in (
+                evidence.EXPECTED_PREPARATION_FAILURE_ZERO_INT_DIAGNOSTIC_FIELDS
+            )
+        ],
+        ("candidate_success_count", False),
+        ("receptor_atom_count", 0.0),
+        *[
+            (field, True)
+            for field in (
+                evidence.EXPECTED_PREPARATION_FAILURE_FALSE_DIAGNOSTIC_FIELDS
+            )
+        ],
+        ("receptor_ion_proxy_used", 0),
+        ("diagnostic_evaluation_excluded_from_runtime", False),
+        ("diagnostic_evaluation_excluded_from_runtime", 1),
+        ("diagnostic_evaluation_seconds", 1.0),
+        ("diagnostic_evaluation_seconds", 0),
+        ("diagnostic_evaluation_seconds", -0.0),
+        ("candidate_budget", float(evidence.EXPECTED_CANDIDATE_COUNT)),
+        ("proposal_oracle_rmsd_angstrom", 0.0),
+        ("scorer_backend_receipt", {}),
+    ]
+    if lane == "rescue":
+        drifts.append(("source_paired_torsion_rescue_proposal_receipt", {}))
+
+    for field, value in drifts:
+        drifted = deepcopy(result)
+        drifted["engine_v2_diagnostics"][field] = value
+        with pytest.raises(ValueError):
+            evidence._historical_v11_result(
+                drifted,
+                lane=lane,
+                case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
+            )
 
 
 def _seal_receipt(payload: dict[str, object]) -> str:
@@ -1532,7 +1684,7 @@ def _successful_frozen_result(
                         "source_proposal_to_final_coordinates_v7_objective"
                     ),
                     "baseline_v6_penalty_scope": ("post_v6_coordinates_v7_objective"),
-                    "source_proposal_sha256": candidate["proposal_fingerprint_sha256"],
+                    "source_proposal_sha256": f"{index + 500:064x}",
                     "pre_coordinates_sha256": candidate[
                         "coordinate_fingerprint_sha256"
                     ],
@@ -1668,6 +1820,13 @@ def test_frozen_result_parser_accepts_successful_baseline_and_rescue(
 ) -> None:
     for lane in ("baseline", "rescue"):
         result = _successful_frozen_result(lane)
+        if lane == "rescue":
+            first_candidate = result["engine_v2_diagnostics"]["candidates"][0]
+            assert first_candidate["proposal_fingerprint_sha256"] != (
+                first_candidate["refinement_receipt_payload"][
+                    "source_proposal_sha256"
+                ]
+            )
         _pin_fixture_execution_contract(
             monkeypatch,
             lane=lane,
@@ -1863,6 +2022,28 @@ def test_frozen_rescue_pins_complete_candidate_receipt_set(
     candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
 
     with pytest.raises(ValueError, match="candidate receipt set"):
+        evidence._historical_v11_result(
+            result,
+            lane="rescue",
+            case_id="5SD5_HWI",
+        )
+
+
+def test_frozen_rescue_pins_final_candidate_proposal_fingerprint_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _successful_frozen_result("rescue")
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane="rescue",
+        case_id="5SD5_HWI",
+        result=result,
+    )
+    result["engine_v2_diagnostics"]["candidates"][0][
+        "proposal_fingerprint_sha256"
+    ] = "f" * 64
+
+    with pytest.raises(ValueError, match="candidate proposal fingerprint set"):
         evidence._historical_v11_result(
             result,
             lane="rescue",

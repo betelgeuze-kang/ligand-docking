@@ -247,6 +247,16 @@ EXPECTED_RESCUE_CANDIDATE_RECEIPT_SET_SHA256_BY_CASE = {
     "6VTA_AKN": "5cf355f7348e218096516276fbd3f6f57715fbaa27e7261321db770196066bb3",
     "6WTN_RXT": "6b15a5f5abdcc66fc8c623e01b7b0f163937994007fe390783d0a5b85e000d29",
 }
+EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE = {
+    "5SD5_HWI": "1edd348d5d99e04e26874ef8c69f76d3c00e5d48e2cfa9886d6848696cc7604f",
+    "5SIS_JSM": "74e1bc4618cf48515166011ced34edb42f3b158d68949fdca5009d4cf6baf6fa",
+    "6M2B_EZO": "ca33130b12f29b8b7b75d1e2107f4b0dbdaf07308e4c991110428862c9d5b5ed",
+    "6T88_MWQ": "228182491bda6f10d718125ad2356ee5c07c44614c1c3432231883427b7e4976",
+    "6TW5_9M2": "73b4a276b4917f3ab2d58168b6be9652d98f239279f92d680d1b8207a94984a6",
+    "6TW7_NZB": "f163c9196c00f1ab3236e9c5b5eb8d225baa57d1b1123ca64dfad7522b7a4160",
+    "6VTA_AKN": "308b8b9463a666163180f6b67ab07f8b3950f9b7122b4ac4201b5be0d774ac07",
+    "6WTN_RXT": "df6bf6c4fbd475dca26e32b66d8c6562bccc1be73c247387f443fc0a4f51e112",
+}
 EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE = {
     "baseline": {
         "5SD5_HWI": "f6cbd306fd98e23333a6a00558258f433ed8cec96cfd4d1270324161fa6cf7a2",
@@ -329,6 +339,30 @@ EXPECTED_RESCUE_DIAGNOSTIC_FIELDS = frozenset(
         *EXPECTED_BASELINE_DIAGNOSTIC_FIELDS,
         "source_paired_torsion_rescue_proposal_receipt",
     }
+)
+EXPECTED_PREPARATION_FAILURE_ZERO_INT_DIAGNOSTIC_FIELDS = (
+    "candidate_success_count",
+    "candidate_failure_count",
+    "receptor_atom_count",
+    "ligand_atom_count",
+    "receptor_partial_charge_count",
+    "ligand_partial_charge_count",
+    "receptor_ion_proxy_count",
+    "receptor_donor_count",
+    "receptor_acceptor_count",
+    "ligand_donor_count",
+    "ligand_acceptor_count",
+)
+EXPECTED_PREPARATION_FAILURE_FALSE_DIAGNOSTIC_FIELDS = (
+    "charge_coverage_complete",
+    "hbond_feature_covered",
+    "receptor_ion_proxy_used",
+    "receptor_ion_coordination_modeled",
+    "ligand_metal_support",
+)
+EXPECTED_PREPARATION_FAILURE_NULL_DIAGNOSTIC_FIELDS = (
+    "proposal_oracle_rmsd_angstrom",
+    "scorer_backend_receipt",
 )
 EXPECTED_BASELINE_CANDIDATE_FIELDS = frozenset(
     {
@@ -1088,6 +1122,7 @@ def _historical_v11_result(
         not isinstance(diagnostics, Mapping)
         or set(diagnostics) != expected_diagnostic_fields
         or diagnostics.get("schema_id") != expected_diagnostic_schema
+        or type(diagnostics.get("candidate_budget")) is not int
         or diagnostics.get("candidate_budget") != EXPECTED_CANDIDATE_COUNT
     ):
         raise ValueError(f"{lane} {case_id} diagnostic shape is invalid")
@@ -1102,9 +1137,31 @@ def _historical_v11_result(
             or diagnostics.get("preparation_failure_code")
             != EXPECTED_PREPARATION_FAILURE_CODE
             or raw_candidates
-            or diagnostics.get("candidate_success_count") != 0
-            or diagnostics.get("candidate_failure_count") != 0
-            or diagnostics.get("scorer_backend_receipt") is not None
+            or any(
+                type(diagnostics.get(field)) is not int
+                or diagnostics.get(field) != 0
+                for field in EXPECTED_PREPARATION_FAILURE_ZERO_INT_DIAGNOSTIC_FIELDS
+            )
+            or type(diagnostics.get("diagnostic_evaluation_seconds")) is not float
+            or diagnostics.get("diagnostic_evaluation_seconds").hex()
+            != (0.0).hex()
+            or diagnostics.get("diagnostic_evaluation_excluded_from_runtime")
+            is not True
+            or any(
+                diagnostics.get(field) is not False
+                for field in EXPECTED_PREPARATION_FAILURE_FALSE_DIAGNOSTIC_FIELDS
+            )
+            or any(
+                diagnostics.get(field) is not None
+                for field in EXPECTED_PREPARATION_FAILURE_NULL_DIAGNOSTIC_FIELDS
+            )
+            or (
+                lane == "rescue"
+                and diagnostics.get(
+                    "source_paired_torsion_rescue_proposal_receipt"
+                )
+                is not None
+            )
         ):
             raise ValueError(f"{lane} preparation failure is invalid")
         failure_atlas._validate_ranked_result_projection(
@@ -1138,12 +1195,26 @@ def _historical_v11_result(
     if len(proposal_fingerprints) != len(set(proposal_fingerprints)):
         raise ValueError(f"{lane} {case_id} proposal fingerprints are duplicated")
     if lane == "rescue":
+        ordered_candidates = sorted(
+            candidates,
+            key=lambda candidate: int(candidate["proposal_index"]),
+        )
+        ordered_proposal_fingerprints = [
+            str(candidate["proposal_fingerprint_sha256"])
+            for candidate in ordered_candidates
+        ]
+        if _sha256_payload(ordered_proposal_fingerprints) != (
+            EXPECTED_RESCUE_CANDIDATE_PROPOSAL_FINGERPRINT_SET_SHA256_BY_CASE.get(
+                case_id
+            )
+        ):
+            raise ValueError(
+                f"{lane} {case_id} candidate proposal fingerprint set is not "
+                "the pinned cohort"
+            )
         ordered_receipt_sha256s = [
             str(candidate["refinement_receipt_sha256"])
-            for candidate in sorted(
-                candidates,
-                key=lambda candidate: int(candidate["proposal_index"]),
-            )
+            for candidate in ordered_candidates
         ]
         if _sha256_payload(ordered_receipt_sha256s) != (
             EXPECTED_RESCUE_CANDIDATE_RECEIPT_SET_SHA256_BY_CASE.get(case_id)
@@ -2196,9 +2267,15 @@ def _v11_rescue_allocation(
     }
     if set(candidate_by_index) != set(range(EXPECTED_CANDIDATE_COUNT)):
         raise ValueError("source-paired candidates contradict the slot denominator")
+    canonical_rotatable_child_atom_indices: tuple[int, ...] | None = None
     for index, candidate in candidate_by_index.items():
         slot = slots[index]
         payload = candidate.get("refinement_receipt_payload")
+        rotatable_child_atom_indices = (
+            payload.get("rotatable_child_atom_indices")
+            if isinstance(payload, Mapping)
+            else None
+        )
         if (
             not isinstance(payload, Mapping)
             or payload.get("source_proposal_sha256")
@@ -2207,6 +2284,32 @@ def _v11_rescue_allocation(
             != slot.get("coordinate_fingerprint_sha256")
         ):
             raise ValueError("source-paired receipt contradicts its proposal slot")
+        if (
+            not isinstance(rotatable_child_atom_indices, list)
+            or any(
+                type(atom_index) is not int or atom_index < 0
+                for atom_index in rotatable_child_atom_indices
+            )
+            or rotatable_child_atom_indices
+            != sorted(set(rotatable_child_atom_indices))
+        ):
+            raise ValueError("source-paired rotor authority list is invalid")
+        observed_rotatable_child_atom_indices = tuple(rotatable_child_atom_indices)
+        if canonical_rotatable_child_atom_indices is None:
+            canonical_rotatable_child_atom_indices = (
+                observed_rotatable_child_atom_indices
+            )
+        elif (
+            observed_rotatable_child_atom_indices
+            != canonical_rotatable_child_atom_indices
+        ):
+            raise ValueError("source-paired rotor authority lists disagree")
+    if (
+        canonical_rotatable_child_atom_indices is None
+        or len(canonical_rotatable_child_atom_indices) != rotor_count
+        or bool(canonical_rotatable_child_atom_indices) is not bool(rotor_count)
+    ):
+        raise ValueError("source-paired rotor authority count is inconsistent")
     rescue_targets = {
         int(candidate["proposal_index"])
         for candidate in candidates
