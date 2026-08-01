@@ -290,6 +290,20 @@ def _report(results: tuple[PublicRedockingCaseResult, ...]) -> dict[str, object]
     return payload
 
 
+def _threshold_source_reports(
+    case_ids: tuple[str, ...] = _CASE_IDS,
+) -> dict[str, str]:
+    return {
+        f"/historical-fixture/{case_id}/receipts/{engine}/{case_id}.json": _digest(
+            "threshold-source",
+            engine,
+            case_id,
+        )
+        for case_id in case_ids
+        for engine in ledger_builder._THRESHOLD_SOURCE_ENGINES
+    }
+
+
 def _threshold_evidence() -> dict[str, object]:
     thresholds = {
         "preparation_input_unsupported_rate": 0.20,
@@ -313,7 +327,7 @@ def _threshold_evidence() -> dict[str, object]:
         "sample_size_justification": "fixed eight-case unit fixture",
         "metric_denominator_policy": dict(STAGE0_DEVELOPMENT_GATE_DENOMINATORS),
         "preparation_success_case_count": 8,
-        "source_reports_sha256": {"fixture.json": "a" * 64},
+        "source_reports_sha256": _threshold_source_reports(),
         "oracle_success_case_count": 4,
         "metrics": {
             metric: {
@@ -452,6 +466,126 @@ def test_gate_ledger_rejects_resealed_threshold_scope_or_schema_drift(mutation) 
 
     with pytest.raises(ValueError, match="threshold"):
         _build(threshold=threshold)
+
+
+def test_threshold_source_report_identity_reconciles_exact_case_set() -> None:
+    threshold = _threshold_evidence()
+
+    assert ledger_builder._threshold_source_case_ids(
+        threshold["source_reports_sha256"],
+        case_count=threshold["case_count"],
+        expected_case_ids_sha256=threshold["case_ids_sha256"],
+    ) == tuple(sorted(_CASE_IDS))
+
+
+def test_threshold_source_report_identity_accepts_aggregate_report_source() -> None:
+    threshold = _threshold_evidence()
+    threshold["source_reports_sha256"] = {
+        "/historical-fixture/development.json": _digest(
+            "threshold-source", "aggregate-report"
+        )
+    }
+
+    assert (
+        ledger_builder._threshold_source_case_ids(
+            threshold["source_reports_sha256"],
+            case_count=threshold["case_count"],
+            expected_case_ids_sha256=threshold["case_ids_sha256"],
+        )
+        is None
+    )
+
+
+def test_tracked_threshold_source_report_identity_matches_documented_cohort() -> None:
+    threshold_path = (
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_public_redocking_stage0_threshold_evidence.json"
+    )
+    threshold = json.loads(threshold_path.read_text(encoding="utf-8"))
+    case_ids = ledger_builder._threshold_source_case_ids(
+        threshold["source_reports_sha256"],
+        case_count=threshold["case_count"],
+        expected_case_ids_sha256=threshold["case_ids_sha256"],
+    )
+    assert case_ids is not None
+    source_paired_ab_case_ids = {
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6M73_FNR",
+        "6T88_MWQ",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT",
+    }
+
+    assert len(threshold["source_reports_sha256"]) == 36
+    assert len(case_ids) == 12
+    assert set(case_ids) & source_paired_ab_case_ids == source_paired_ab_case_ids
+    assert set(case_ids) - source_paired_ab_case_ids == {
+        "7A9E_R4W",
+        "7MWU_ZPM",
+        "7OSO_0V1",
+    }
+
+
+@pytest.mark.parametrize(
+    "drift",
+    (
+        "missing_pair",
+        "duplicate_pair",
+        "reused_digest",
+        "mixed_mode",
+        "count",
+        "digest",
+        "smoke_case",
+    ),
+)
+def test_threshold_source_report_identity_rejects_drift(drift: str) -> None:
+    threshold = _threshold_evidence()
+    source_reports = dict(threshold["source_reports_sha256"])
+    case_count = int(threshold["case_count"])
+    case_ids_sha256 = str(threshold["case_ids_sha256"])
+    if drift == "missing_pair":
+        source_reports.pop(next(iter(source_reports)))
+    elif drift == "duplicate_pair":
+        case_id = _CASE_IDS[0]
+        source_reports[f"/duplicate/receipts/engine_v2/{case_id}.json"] = _digest(
+            "duplicate", case_id
+        )
+    elif drift == "reused_digest":
+        first_path, second_path = tuple(source_reports)[:2]
+        source_reports[second_path] = source_reports[first_path]
+    elif drift == "mixed_mode":
+        source_reports["/historical-fixture/development.json"] = _digest(
+            "threshold-source", "aggregate-report"
+        )
+    elif drift == "count":
+        case_count += 1
+    elif drift == "digest":
+        case_ids_sha256 = "0" * 64
+    else:
+        original_case_id = _CASE_IDS[0]
+        smoke_case_id = ledger_builder.PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS[0]
+        for engine in ledger_builder._THRESHOLD_SOURCE_ENGINES:
+            original_path = (
+                f"/historical-fixture/{original_case_id}/receipts/"
+                f"{engine}/{original_case_id}.json"
+            )
+            source_reports.pop(original_path)
+            source_reports[
+                f"/historical-fixture/{smoke_case_id}/receipts/"
+                f"{engine}/{smoke_case_id}.json"
+            ] = _digest("threshold-source", engine, smoke_case_id)
+        case_ids_sha256 = _sha256(sorted({*_CASE_IDS[1:], smoke_case_id}))
+
+    with pytest.raises(ValueError, match="threshold evidence source report"):
+        ledger_builder._threshold_source_case_ids(
+            source_reports,
+            case_count=case_count,
+            expected_case_ids_sha256=case_ids_sha256,
+        )
 
 
 def test_gate_ledger_fails_closed_when_oracle_denominator_is_empty() -> None:
