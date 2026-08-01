@@ -17,7 +17,9 @@ import stat
 import statistics
 import subprocess
 import tarfile
+import tempfile
 
+from betelgeuze_engine_v2.benchmark.blind_stage0 import _typed_development_result
 from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS,
     PUBLIC_REDOCKING_ARCHIVE_SHA256,
@@ -36,10 +38,11 @@ from betelgeuze_engine_v2.benchmark.public_redocking_benchmark import (
     PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
     PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE,
     _SOURCE_PAIRED_TORSION_RESCUE_REFINEMENT_RECEIPT_FIELDS,
+    frozen_public_redocking_case_seed,
 )
 
 
-SCHEMA_ID = "betelgeuze.engine_v2_source_paired_failure_atlas/1.1.0"
+SCHEMA_ID = "betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0"
 AB_SCHEMA_ID = "betelgeuze.engine_v2_source_paired_torsion_rescue_development_ab/1.1.0"
 ANALYSIS_SCHEMA_ID = "betelgeuze.engine_v2_scorer_v1_development_analysis/1.2.0"
 SUMMARY_SCHEMA_ID = (
@@ -55,6 +58,18 @@ SOURCE_PAIRED_RESCUE_RECEIPT_SCHEMA_ID = (
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 MAX_TAR_BYTES = 128 * 1024 * 1024
 MAX_MEMBER_BYTES = 32 * 1024 * 1024
+MAX_MEMBER_MANIFEST_BYTES = 256 * 1024
+MAX_BUNDLE_CHECKSUM_BYTES = 4 * 1024
+EXPECTED_EVIDENCE_ARCHIVE_SHA256 = (
+    "8bef33eba296989b795a11fd05a7e119124b066d91bec28a8b910d38a083fbcc"
+)
+EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256 = (
+    "7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21"
+)
+EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256 = (
+    "6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9"
+)
+EXPECTED_EVIDENCE_MEMBER_COUNT = 59
 EXPECTED_SOURCE_COMMIT_SHA256 = "754bebb9ddc2fbffdaca5d4143ff515c3b38c032"
 EXPECTED_CASE_IDS = (
     "5SD5_HWI",
@@ -111,6 +126,18 @@ _EXECUTION_FIELDS = frozenset(
         "receipt_sha256",
     }
 )
+_MATERIALIZATION_FIELDS = frozenset(
+    {
+        "schema_id",
+        "case_id",
+        "frozen_case_seed",
+        "source_archive_sha256",
+        "archive_members",
+        "artifact_sha256s",
+        "hash_verified_archive",
+        "receipt_sha256",
+    }
+)
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -121,6 +148,20 @@ def _canonical_bytes(value: object) -> bytes:
         ensure_ascii=True,
         allow_nan=False,
     ).encode("ascii")
+
+
+def _execution_policy_tokens(value: object) -> list[str]:
+    if not isinstance(value, Mapping) or any(
+        not isinstance(key, str) for key in value
+    ):
+        raise ValueError("execution policy is invalid")
+    try:
+        return [
+            f"{key}={json.dumps(item, allow_nan=False, separators=(',', ':'))}"
+            for key, item in sorted(value.items())
+        ]
+    except (TypeError, ValueError) as exc:
+        raise ValueError("execution policy is invalid") from exc
 
 
 def _sha256_payload(value: object) -> str:
@@ -335,25 +376,50 @@ def _bundle_rows(raw: bytes) -> tuple[tuple[str, str], ...]:
     return tuple(rows)
 
 
-def _bounded_zstd_decompress(archive_path: Path) -> bytes:
+def _bounded_file_bytes(path: Path, *, maximum: int, name: str) -> bytes:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
-        process = subprocess.Popen(
-            ("zstd", "-dc", "--", str(archive_path)),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-        )
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError(f"{name} cannot be opened safely") from exc
+    try:
+        status = os.fstat(descriptor)
+        if not stat.S_ISREG(status.st_mode) or status.st_size > maximum:
+            raise ValueError(f"{name} exceeds its bounded regular-file contract")
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            payload = handle.read(maximum + 1)
+        if len(payload) > maximum:
+            raise ValueError(f"{name} exceeds its bounded regular-file contract")
+        return payload
+    finally:
+        os.close(descriptor)
+
+
+def _bounded_zstd_decompress(archive_raw: bytes) -> bytes:
+    if len(archive_raw) > MAX_ARCHIVE_BYTES:
+        raise ValueError("archive exceeds the bounded compressed size")
+    try:
+        with tempfile.TemporaryFile() as verified_archive:
+            verified_archive.write(archive_raw)
+            verified_archive.seek(0)
+            process = subprocess.Popen(
+                ("zstd", "-dc"),
+                stdin=verified_archive,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            if process.stdout is None:
+                process.kill()
+                process.wait()
+                raise ValueError("zstd decompressor stdout is unavailable")
+            payload = process.stdout.read(MAX_TAR_BYTES + 1)
+            if len(payload) > MAX_TAR_BYTES:
+                process.kill()
+                process.wait()
+                raise ValueError("archive exceeds the bounded tar size")
+            returncode = process.wait()
     except OSError as exc:
         raise ValueError("zstd decompressor is unavailable") from exc
-    if process.stdout is None:
-        process.kill()
-        process.wait()
-        raise ValueError("zstd decompressor stdout is unavailable")
-    payload = process.stdout.read(MAX_TAR_BYTES + 1)
-    if len(payload) > MAX_TAR_BYTES:
-        process.kill()
-        process.wait()
-        raise ValueError("archive exceeds the bounded tar size")
-    returncode = process.wait()
     if returncode != 0:
         raise ValueError("archive failed Zstandard decompression")
     return payload
@@ -375,12 +441,27 @@ def _verified_archive_members(
     ):
         if not _is_sha256(digest):
             raise ValueError(f"{name} is invalid")
-    archive_size = archive_path.stat().st_size
-    if archive_size > MAX_ARCHIVE_BYTES:
-        raise ValueError("archive exceeds the bounded compressed size")
-    archive_raw = archive_path.read_bytes()
-    members_raw = members_path.read_bytes()
-    bundle_raw = bundle_path.read_bytes()
+    if (
+        expected_archive_sha256 != EXPECTED_EVIDENCE_ARCHIVE_SHA256
+        or expected_members_sha256 != EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256
+        or expected_bundle_sha256 != EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256
+    ):
+        raise ValueError("archive bundle does not match the pinned evidence identity")
+    archive_raw = _bounded_file_bytes(
+        archive_path,
+        maximum=MAX_ARCHIVE_BYTES,
+        name="archive",
+    )
+    members_raw = _bounded_file_bytes(
+        members_path,
+        maximum=MAX_MEMBER_MANIFEST_BYTES,
+        name="member manifest",
+    )
+    bundle_raw = _bounded_file_bytes(
+        bundle_path,
+        maximum=MAX_BUNDLE_CHECKSUM_BYTES,
+        name="bundle checksum",
+    )
     if (
         _sha256_bytes(archive_raw) != expected_archive_sha256
         or _sha256_bytes(members_raw) != expected_members_sha256
@@ -394,7 +475,9 @@ def _verified_archive_members(
     if _bundle_rows(bundle_raw) != expected_bundle:
         raise ValueError("bundle checksum cross-links are invalid")
     manifest = _member_manifest(members_raw)
-    tar_raw = _bounded_zstd_decompress(archive_path)
+    if len(manifest) != EXPECTED_EVIDENCE_MEMBER_COUNT:
+        raise ValueError("archive member manifest count is not the pinned 59-member set")
+    tar_raw = _bounded_zstd_decompress(archive_raw)
     retained: dict[str, bytes] = {}
     observed: dict[str, str] = {}
     try:
@@ -647,6 +730,12 @@ def _case_candidates(
             or raw_candidates
         ):
             raise ValueError(f"{lane} preparation failure is invalid")
+        _validate_ranked_result_projection(
+            result,
+            (),
+            lane=lane,
+            case_id=case_id,
+        )
         return dict(diagnostics), ()
     if (
         preparation_status != "success"
@@ -669,6 +758,12 @@ def _case_candidates(
         int(candidate["proposal_index"]) for candidate in candidates
     } != set(range(PUBLIC_REDOCKING_ENGINE_V2_CANDIDATE_COUNT)):
         raise ValueError(f"{lane} {case_id} candidate indices are invalid")
+    _validate_ranked_result_projection(
+        result,
+        candidates,
+        lane=lane,
+        case_id=case_id,
+    )
     return dict(diagnostics), candidates
 
 
@@ -684,6 +779,53 @@ def _ranked(
             ),
         )
     )
+
+
+def _validate_ranked_result_projection(
+    result: Mapping[str, object],
+    candidates: Sequence[Mapping[str, object]],
+    *,
+    lane: str,
+    case_id: str,
+) -> None:
+    rmsds = result.get("rmsd_angstroms")
+    geometric = result.get("geometric_valid")
+    chemical = result.get("chemical_valid")
+    pose_hashes = result.get("pose_artifact_sha256s")
+    projections = (rmsds, geometric, chemical, pose_hashes)
+    if any(not isinstance(value, list) for value in projections):
+        raise ValueError(
+            f"{lane} {case_id} ranked result projection is invalid"
+        )
+    assert isinstance(rmsds, list)
+    assert isinstance(geometric, list)
+    assert isinstance(chemical, list)
+    assert isinstance(pose_hashes, list)
+    if result.get("status") == "failure":
+        if any(projections):
+            raise ValueError(
+                f"{lane} {case_id} ranked result contradicts candidate diagnostics"
+            )
+        return
+    if any(len(value) != 5 for value in projections):
+        raise ValueError(f"{lane} {case_id} ranked result projection is invalid")
+    for index, candidate in enumerate(_ranked(candidates)[:5]):
+        rmsd = rmsds[index]
+        if (
+            isinstance(rmsd, bool)
+            or not isinstance(rmsd, (int, float))
+            or not math.isfinite(float(rmsd))
+            or float(rmsd).hex() != float(candidate["rmsd_angstrom"]).hex()
+            or type(geometric[index]) is not bool
+            or geometric[index] is not candidate.get("geometric_valid")
+            or type(chemical[index]) is not bool
+            or chemical[index] is not candidate.get("chemical_valid")
+            or not _is_sha256(pose_hashes[index])
+            or pose_hashes[index] != candidate.get("pose_artifact_sha256")
+        ):
+            raise ValueError(
+                f"{lane} {case_id} ranked result contradicts candidate diagnostics"
+            )
 
 
 def _posebusters_exact_valid(candidate: Mapping[str, object]) -> bool:
@@ -1523,7 +1665,26 @@ def _load_receipt_set(
             raise ValueError(f"{lane} execution receipt identity is invalid")
         if result.get("case_id") != case_id:
             raise ValueError(f"{lane} execution receipt case identity is invalid")
-        results[case_id] = dict(result)
+        try:
+            typed_result = _typed_development_result(result)
+        except ValueError as exc:
+            raise ValueError(
+                f"{lane} execution receipt strict result binding is invalid"
+            ) from exc
+        typed_payload = typed_result.to_dict()
+        try:
+            policy_tokens = _execution_policy_tokens(payload.get("execution_policy"))
+        except ValueError as exc:
+            raise ValueError(f"{lane} execution receipt policy is invalid") from exc
+        if (
+            typed_result.case_id != case_id
+            or typed_result.engine_id != "engine_v2"
+            or typed_payload != dict(result)
+            or payload.get("command") != typed_payload.get("execution_command")
+            or policy_tokens != typed_payload.get("execution_policy")
+        ):
+            raise ValueError(f"{lane} execution receipt typed result is cross-wired")
+        results[case_id] = typed_payload
         hashes[case_id] = _sha256_bytes(raw)
         payloads[case_id] = payload
     return results, hashes, payloads
@@ -1556,6 +1717,40 @@ def _load_bound_analysis(
     ):
         raise ValueError(f"{lane} analysis binding is invalid")
     return payload, file_hash
+
+
+def _materialization_inputs(
+    materialization: Mapping[str, object],
+    *,
+    case_id: str,
+) -> dict[str, str]:
+    artifact_filenames = (
+        "protein.pdb",
+        "ligands.sdf",
+        "ligand.sdf",
+        "ligand_start_conf.sdf",
+    )
+    expected_members = {
+        filename: f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+        for filename in artifact_filenames
+    }
+    artifacts = materialization.get("artifact_sha256s")
+    if (
+        set(materialization) != _MATERIALIZATION_FIELDS
+        or materialization.get("frozen_case_seed")
+        != frozen_public_redocking_case_seed(case_id)
+        or materialization.get("archive_members") != expected_members
+        or not isinstance(artifacts, Mapping)
+        or set(artifacts) != set(artifact_filenames)
+        or any(not _is_sha256(artifacts.get(name)) for name in artifact_filenames)
+    ):
+        raise ValueError("materialization input identity is invalid")
+    return {
+        "receptor": str(artifacts["protein.pdb"]),
+        "reference": str(artifacts["ligands.sdf"]),
+        "native": str(artifacts["ligand.sdf"]),
+        "seed": str(artifacts["ligand_start_conf.sdf"]),
+    }
 
 
 def _validate_lane_summary(
@@ -1663,6 +1858,8 @@ def _validate_lane_summary(
             field="receipt_sha256",
             name=f"{lane} materialization {case_id}",
         )
+        expected_inputs = _materialization_inputs(standalone, case_id=case_id)
+        result = receipt.get("result")
         if (
             standalone != materialization
             or standalone_raw != _canonical_bytes(materialization) + b"\n"
@@ -1672,6 +1869,15 @@ def _validate_lane_summary(
             or standalone.get("hash_verified_archive") is not True
             or receipt.get("materialization_receipt_sha256")
             != standalone.get("receipt_sha256")
+            or receipt.get("input_sha256s") != expected_inputs
+            or not isinstance(result, Mapping)
+            or {
+                "receptor": result.get("receptor_artifact_sha256"),
+                "reference": result.get("reference_artifact_sha256"),
+                "native": result.get("native_artifact_sha256"),
+                "seed": result.get("seed_artifact_sha256"),
+            }
+            != expected_inputs
         ):
             raise ValueError(f"{lane} materialization is cross-wired")
     return summary_file_sha256, summary_self_sha256

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import stat
 import tarfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -81,6 +82,45 @@ def _seal(
 ) -> dict[str, object]:
     payload[field] = _sha256(payload)
     return payload
+
+
+_EXECUTION_POLICY = {
+    "scorer_backend": "python_reference",
+    "scorer_thread_count": 1,
+}
+
+
+def _case_artifacts(case_id: str) -> dict[str, str]:
+    return {
+        filename: _digest(case_id, filename)
+        for filename in (
+            "protein.pdb",
+            "ligands.sdf",
+            "ligand.sdf",
+            "ligand_start_conf.sdf",
+        )
+    }
+
+
+def _case_inputs(case_id: str) -> dict[str, str]:
+    artifacts = _case_artifacts(case_id)
+    return {
+        "receptor": artifacts["protein.pdb"],
+        "reference": artifacts["ligands.sdf"],
+        "native": artifacts["ligand.sdf"],
+        "seed": artifacts["ligand_start_conf.sdf"],
+    }
+
+
+def _execution_command(case_id: str) -> list[str]:
+    return ["synthetic-historical-only", "--case-id", case_id]
+
+
+def _execution_policy_tokens() -> list[str]:
+    return [
+        f"{key}={json.dumps(value, allow_nan=False, separators=(',', ':'))}"
+        for key, value in sorted(_EXECUTION_POLICY.items())
+    ]
 
 
 def _pairs(case_id: str) -> list[dict[str, int]]:
@@ -223,6 +263,18 @@ def _result(case_id: str, *, lane: str) -> dict[str, object]:
         if lane == "baseline"
         else PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
     )
+    inputs = _case_inputs(case_id)
+    common: dict[str, object] = {
+        "case_id": case_id,
+        "engine_id": "engine_v2",
+        "runtime_seconds": 0.0,
+        "receptor_artifact_sha256": inputs["receptor"],
+        "reference_artifact_sha256": inputs["reference"],
+        "native_artifact_sha256": inputs["native"],
+        "seed_artifact_sha256": inputs["seed"],
+        "execution_command": _execution_command(case_id),
+        "execution_policy": _execution_policy_tokens(),
+    }
     if case_id == atlas_builder.EXPECTED_PREPARATION_FAILURE_CASE_ID:
         diagnostics: dict[str, object] = {
             "schema_id": schema_id,
@@ -231,10 +283,13 @@ def _result(case_id: str, *, lane: str) -> dict[str, object]:
             "candidates": [],
         }
         return {
-            "case_id": case_id,
-            "engine_id": "engine_v2",
+            **common,
             "status": "failure",
             "failure_code": "engine_v2_input_unsupported",
+            "rmsd_angstroms": [],
+            "geometric_valid": [],
+            "chemical_valid": [],
+            "pose_artifact_sha256s": [],
             "engine_v2_diagnostics": diagnostics,
         }
     candidates = [_candidate(case_id, index, lane=lane) for index in range(64)]
@@ -254,11 +309,17 @@ def _result(case_id: str, *, lane: str) -> dict[str, object]:
                 "rescue_target_parent_pairs": _pairs(case_id),
             }
         }
+    ranked = atlas_builder._ranked(candidates)[:5]
     return {
-        "case_id": case_id,
-        "engine_id": "engine_v2",
+        **common,
         "status": "success",
         "failure_code": "",
+        "rmsd_angstroms": [candidate["rmsd_angstrom"] for candidate in ranked],
+        "geometric_valid": [candidate["geometric_valid"] for candidate in ranked],
+        "chemical_valid": [candidate["chemical_valid"] for candidate in ranked],
+        "pose_artifact_sha256s": [
+            candidate["pose_artifact_sha256"] for candidate in ranked
+        ],
         "engine_v2_diagnostics": diagnostics,
     }
 
@@ -383,15 +444,21 @@ def _ab_report(
 
 
 def _materialization(case_id: str) -> dict[str, object]:
+    artifacts = _case_artifacts(case_id)
     return _seal(
         {
             "schema_id": atlas_builder.PUBLIC_REDOCKING_MATERIALIZATION_SCHEMA_ID,
             "case_id": case_id,
             "source_archive_sha256": atlas_builder.PUBLIC_REDOCKING_ARCHIVE_SHA256,
             "hash_verified_archive": True,
-            "archive_members": [],
-            "artifact_sha256s": {},
-            "frozen_case_seed": 1,
+            "archive_members": {
+                filename: f"posebusters_benchmark_set/{case_id}/{case_id}_{filename}"
+                for filename in artifacts
+            },
+            "artifact_sha256s": artifacts,
+            "frozen_case_seed": atlas_builder.frozen_public_redocking_case_seed(
+                case_id
+            ),
         }
     )
 
@@ -402,15 +469,16 @@ def _execution_receipt(
     engine_identity: dict[str, object],
     materialization_sha256: str,
 ) -> dict[str, object]:
+    case_id = str(result["case_id"])
     return _seal(
         {
             "schema_id": atlas_builder.PUBLIC_REDOCKING_CASE_EXECUTION_SCHEMA_ID,
             "runner_id": atlas_builder.PUBLIC_REDOCKING_RUNNER_ID,
             "archive_sha256": atlas_builder.PUBLIC_REDOCKING_ARCHIVE_SHA256,
             "source_ids_sha256": atlas_builder.PUBLIC_REDOCKING_SOURCE_IDS_SHA256,
-            "command": ["synthetic-historical-only"],
-            "execution_policy": {},
-            "input_sha256s": {},
+            "command": _execution_command(case_id),
+            "execution_policy": _EXECUTION_POLICY,
+            "input_sha256s": _case_inputs(case_id),
             "materialization_receipt_sha256": materialization_sha256,
             "implementation_sha256": engine_identity["implementation_sha256"],
             "evaluation_pipeline_sha256": engine_identity["evaluation_pipeline_sha256"],
@@ -503,11 +571,19 @@ def _tar_bytes(members: dict[str, bytes]) -> bytes:
 def _synthetic_bundle(
     *,
     analysis_drift_lane: str | None = None,
+    input_drift_lane: str | None = None,
+    result_projection_drift_lane: str | None = None,
     rescue_drift: str | None = None,
 ) -> dict[str, object]:
     baseline = _results("baseline")
     rescue = _results("rescue")
     report = _ab_report(baseline, rescue)
+    if result_projection_drift_lane is not None:
+        lane_results = baseline if result_projection_drift_lane == "baseline" else rescue
+        first_result = lane_results[atlas_builder.EXPECTED_CASE_IDS[0]]
+        rmsds = list(first_result["rmsd_angstroms"])
+        rmsds[0] = float(rmsds[0]) + 0.125
+        first_result["rmsd_angstroms"] = rmsds
     if rescue_drift in {
         "selected_true",
         "selected_nonbool",
@@ -560,6 +636,15 @@ def _synthetic_bundle(
                 engine_identity=engine_identity,
                 materialization_sha256=str(materialization["receipt_sha256"]),
             )
+            if (
+                input_drift_lane == lane
+                and case_id == atlas_builder.EXPECTED_CASE_IDS[0]
+            ):
+                receipt.pop("receipt_sha256")
+                inputs = dict(receipt["input_sha256s"])
+                inputs["receptor"] = "9" * 64
+                receipt["input_sha256s"] = inputs
+                _seal(receipt)
             receipt_path = f"{run_root}/receipts/engine_v2/{case_id}.json"
             materialization_path = (
                 f"{run_root}/receipts/materializations/{case_id}.json"
@@ -655,11 +740,47 @@ def _write_bundle(repo_root: Path, bundle: dict[str, object]) -> dict[str, objec
     }
 
 
-def _mock_zstd(monkeypatch: pytest.MonkeyPatch, tar_raw: bytes) -> None:
+def _mock_zstd(
+    monkeypatch: pytest.MonkeyPatch,
+    bundle: dict[str, object],
+) -> None:
+    tar_raw = bundle["tar_raw"]
+    manifest_raw = bundle["members_raw"]
+    assert isinstance(tar_raw, bytes)
+    assert isinstance(manifest_raw, bytes)
+    monkeypatch.setattr(
+        atlas_builder,
+        "EXPECTED_EVIDENCE_ARCHIVE_SHA256",
+        bundle["archive_sha256"],
+    )
+    monkeypatch.setattr(
+        atlas_builder,
+        "EXPECTED_EVIDENCE_MEMBER_MANIFEST_SHA256",
+        bundle["members_sha256"],
+    )
+    monkeypatch.setattr(
+        atlas_builder,
+        "EXPECTED_EVIDENCE_BUNDLE_CHECKSUM_SHA256",
+        bundle["bundle_sha256"],
+    )
+    monkeypatch.setattr(
+        atlas_builder,
+        "EXPECTED_EVIDENCE_MEMBER_COUNT",
+        len(manifest_raw.splitlines()),
+    )
     monkeypatch.setattr(
         atlas_builder,
         "_bounded_zstd_decompress",
-        lambda _path: tar_raw,
+        lambda _raw: tar_raw,
+    )
+    monkeypatch.setattr(
+        atlas_builder,
+        "_typed_development_result",
+        lambda value: SimpleNamespace(
+            case_id=value["case_id"],
+            engine_id=value["engine_id"],
+            to_dict=lambda value=dict(value): value,
+        ),
     )
 
 
@@ -668,7 +789,7 @@ def test_authenticated_archive_builds_exact_source_paired_atlas(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bundle = _synthetic_bundle()
-    _mock_zstd(monkeypatch, bundle["tar_raw"])
+    _mock_zstd(monkeypatch, bundle)
     report = atlas_builder.build_authenticated_failure_atlas(
         **_write_bundle(tmp_path, bundle)
     )
@@ -696,7 +817,7 @@ def test_authenticated_archive_rejects_analysis_receipt_drift(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bundle = _synthetic_bundle(analysis_drift_lane=lane)
-    _mock_zstd(monkeypatch, bundle["tar_raw"])
+    _mock_zstd(monkeypatch, bundle)
 
     with pytest.raises(ValueError, match="receipts contradict the analysis"):
         atlas_builder.build_authenticated_failure_atlas(
@@ -722,7 +843,7 @@ def test_authenticated_archive_rejects_resealed_rescue_semantic_drift(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bundle = _synthetic_bundle(rescue_drift=drift)
-    _mock_zstd(monkeypatch, bundle["tar_raw"])
+    _mock_zstd(monkeypatch, bundle)
 
     with pytest.raises(ValueError, match=message):
         atlas_builder.build_authenticated_failure_atlas(
@@ -737,7 +858,7 @@ def test_authenticated_archive_rejects_chain_tamper(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bundle = _synthetic_bundle()
-    _mock_zstd(monkeypatch, bundle["tar_raw"])
+    _mock_zstd(monkeypatch, bundle)
     arguments = _write_bundle(tmp_path, bundle)
     if layer == "archive":
         arguments["archive_path"].write_bytes(b"tampered")
@@ -772,6 +893,76 @@ def test_authenticated_archive_rejects_chain_tamper(
         atlas_builder.build_authenticated_failure_atlas(**arguments)
 
 
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_authenticated_archive_rejects_materialization_input_drift(
+    lane: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _synthetic_bundle(input_drift_lane=lane)
+    _mock_zstd(monkeypatch, bundle)
+
+    with pytest.raises(ValueError, match="materialization is cross-wired"):
+        atlas_builder.build_authenticated_failure_atlas(
+            **_write_bundle(tmp_path, bundle)
+        )
+
+
+@pytest.mark.parametrize("lane", ("baseline", "rescue"))
+def test_authenticated_archive_rejects_ranked_result_projection_drift(
+    lane: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _synthetic_bundle(result_projection_drift_lane=lane)
+    _mock_zstd(monkeypatch, bundle)
+
+    with pytest.raises(ValueError, match="ranked result contradicts"):
+        atlas_builder.build_authenticated_failure_atlas(
+            **_write_bundle(tmp_path, bundle)
+        )
+
+
+def test_authenticated_archive_rejects_strict_result_binding_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _synthetic_bundle()
+    _mock_zstd(monkeypatch, bundle)
+
+    def reject_result(_value: object) -> object:
+        raise ValueError("synthetic strict rejection")
+
+    monkeypatch.setattr(atlas_builder, "_typed_development_result", reject_result)
+    with pytest.raises(ValueError, match="strict result binding"):
+        atlas_builder.build_authenticated_failure_atlas(
+            **_write_bundle(tmp_path, bundle)
+        )
+
+
+@pytest.mark.parametrize(
+    ("path_key", "bound_name"),
+    (
+        ("members_path", "MAX_MEMBER_MANIFEST_BYTES"),
+        ("bundle_path", "MAX_BUNDLE_CHECKSUM_BYTES"),
+    ),
+)
+def test_authenticated_archive_bounds_sidecars(
+    path_key: str,
+    bound_name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bundle = _synthetic_bundle()
+    _mock_zstd(monkeypatch, bundle)
+    arguments = _write_bundle(tmp_path, bundle)
+    payload_size = arguments[path_key].stat().st_size
+    monkeypatch.setattr(atlas_builder, bound_name, payload_size - 1)
+
+    with pytest.raises(ValueError, match="bounded regular-file contract"):
+        atlas_builder.build_authenticated_failure_atlas(**arguments)
+
+
 def test_pure_draft_cannot_emit_authoritative_atlas() -> None:
     baseline = _results("baseline")
     rescue = _results("rescue")
@@ -787,7 +978,6 @@ def test_pure_draft_cannot_emit_authoritative_atlas() -> None:
 
 
 def test_bounded_zstd_decompress_stops_oversize_stream(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class FakeProcess:
@@ -810,7 +1000,7 @@ def test_bounded_zstd_decompress_stops_oversize_stream(
     )
 
     with pytest.raises(ValueError, match="bounded tar size"):
-        atlas_builder._bounded_zstd_decompress(tmp_path / "archive.tar.zst")
+        atlas_builder._bounded_zstd_decompress(b"verified compressed bytes")
     assert process.killed is True
 
 
