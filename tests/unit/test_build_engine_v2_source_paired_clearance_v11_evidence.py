@@ -253,6 +253,12 @@ def test_walltime_receipt_is_strict_and_binary64_encoded() -> None:
     assert parsed["maximum_rss_kb"] == 1024
     assert parsed["exit_status"] == 0
 
+    valid = members[path]
+    members[path] = valid + b"elapsed_seconds=99.0\n"
+    with pytest.raises(ValueError, match="wall-time fields"):
+        evidence._walltime(members, path, lane="fixture")
+
+    members[path] = valid
     members[path] = members[path].replace(b"exit_status=0", b"exit_status=1")
     with pytest.raises(ValueError, match="wall-time values"):
         evidence._walltime(members, path, lane="fixture")
@@ -594,6 +600,16 @@ def _allocation_fixture() -> tuple[dict[str, object], list[dict[str, object]]]:
         "result_dependent_allocation": False,
     }
     allocation["allocation_sha256"] = evidence._sha256_payload(allocation)
+    candidate_slots = [
+        {
+            "proposal_index": index,
+            "candidate_id": f"fixture-{index}",
+            "proposal_fingerprint_sha256": f"{index + 1:064x}",
+            "coordinate_fingerprint_sha256": f"{index + 65:064x}",
+            "torsion_metadata_sha256": f"{index + 129:064x}",
+        }
+        for index in range(evidence.EXPECTED_CANDIDATE_COUNT)
+    ]
     proposal: dict[str, object] = {
         "schema_id": (
             evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_PROPOSAL_SCHEMA_ID
@@ -603,6 +619,7 @@ def _allocation_fixture() -> tuple[dict[str, object], list[dict[str, object]]]:
             evidence.EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_POLICY_SHA256
         ),
         "candidate_count": evidence.EXPECTED_CANDIDATE_COUNT,
+        "candidate_slots": candidate_slots,
         "result_dependent_allocation": False,
         "allocation": allocation,
     }
@@ -616,25 +633,34 @@ def _allocation_fixture() -> tuple[dict[str, object], list[dict[str, object]]]:
         parent = parent_by_target.get(index)
         candidate: dict[str, object] = {
             "proposal_index": index,
+            "proposal_fingerprint_sha256": candidate_slots[index][
+                "proposal_fingerprint_sha256"
+            ],
             "proposal_mode": (
                 evidence.PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
                 if parent is not None
                 else "uniform_fallback"
             ),
+            "refinement_receipt_payload": {
+                "source_proposal_sha256": candidate_slots[index][
+                    "proposal_fingerprint_sha256"
+                ],
+                "pre_coordinates_sha256": candidate_slots[index][
+                    "coordinate_fingerprint_sha256"
+                ],
+            },
         }
         if parent is not None:
-            candidate.update(
+            candidate["refinement_receipt_payload"].update(
                 {
-                    "torsion_rescue_parent_proposal_index": parent,
-                    "refinement_receipt_payload": {
-                        "source_paired_parent_proposal_index": parent,
-                        "source_paired_torsion_rescue_pairs": rescue_pairs,
-                        "source_paired_torsion_rescue_allocation_sha256": allocation[
-                            "allocation_sha256"
-                        ],
-                    },
+                    "source_paired_parent_proposal_index": parent,
+                    "source_paired_torsion_rescue_pairs": rescue_pairs,
+                    "source_paired_torsion_rescue_allocation_sha256": allocation[
+                        "allocation_sha256"
+                    ],
                 }
             )
+            candidate["torsion_rescue_parent_proposal_index"] = parent
         candidates.append(candidate)
     return {"source_paired_torsion_rescue_proposal_receipt": proposal}, candidates
 
@@ -679,6 +705,37 @@ def test_rescue_allocation_requires_frozen_result_independent_policy(
     proposal["receipt_sha256"] = evidence._sha256_payload(proposal)
 
     with pytest.raises(ValueError):
+        evidence._v11_rescue_allocation(
+            diagnostics,
+            candidates,
+            case_id="fixture",
+        )
+
+
+@pytest.mark.parametrize(
+    "field",
+    ("source_proposal_sha256", "pre_coordinates_sha256"),
+)
+def test_rescue_allocation_binds_receipts_to_candidate_slots(
+    field: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    diagnostics, candidates = _allocation_fixture()
+    proposal = diagnostics["source_paired_torsion_rescue_proposal_receipt"]
+    allocation = proposal["allocation"]
+    monkeypatch.setitem(
+        evidence.EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE,
+        "fixture",
+        allocation["allocation_sha256"],
+    )
+    evidence._v11_rescue_allocation(
+        diagnostics,
+        candidates,
+        case_id="fixture",
+    )
+
+    candidates[0]["refinement_receipt_payload"][field] = "f" * 64
+    with pytest.raises(ValueError, match="proposal slot"):
         evidence._v11_rescue_allocation(
             diagnostics,
             candidates,

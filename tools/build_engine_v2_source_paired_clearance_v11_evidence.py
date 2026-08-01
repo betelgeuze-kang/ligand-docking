@@ -1033,17 +1033,24 @@ def _walltime(members: Mapping[str, bytes], path: str, *, lane: str) -> dict[str
         raise ValueError(f"{lane} wall-time receipt is missing or oversized")
     try:
         lines = raw.decode("ascii").splitlines()
-        values = dict(line.split("=", 1) for line in lines)
+        pairs = [line.split("=", 1) for line in lines]
     except (UnicodeDecodeError, ValueError) as exc:
         raise ValueError(f"{lane} wall-time receipt is invalid") from exc
-    if set(values) != {
+    expected_fields = (
         "elapsed_seconds",
         "user_seconds",
         "system_seconds",
         "max_rss_kb",
         "exit_status",
-    }:
+    )
+    if (
+        len(lines) != len(expected_fields)
+        or any(len(pair) != 2 or not pair[0] or not pair[1] for pair in pairs)
+        or tuple(pair[0] for pair in pairs) != expected_fields
+        or raw != ("\n".join(lines) + "\n").encode("ascii")
+    ):
         raise ValueError(f"{lane} wall-time fields are invalid")
+    values = dict(pairs)
     elapsed = float(values["elapsed_seconds"])
     user = float(values["user_seconds"])
     system = float(values["system_seconds"])
@@ -1859,9 +1866,49 @@ def _v11_rescue_allocation(
         or (pairs and rotor_count == 0)
     ):
         raise ValueError("source-paired allocation is not result-independent")
+    raw_slots = proposal.get("candidate_slots")
+    expected_slot_fields = {
+        "proposal_index",
+        "candidate_id",
+        "proposal_fingerprint_sha256",
+        "coordinate_fingerprint_sha256",
+        "torsion_metadata_sha256",
+    }
+    if not isinstance(raw_slots, list) or len(raw_slots) != EXPECTED_CANDIDATE_COUNT:
+        raise ValueError("source-paired candidate slots are incomplete")
+    slots: list[Mapping[str, object]] = []
+    candidate_ids: set[str] = set()
+    for index, slot in enumerate(raw_slots):
+        if (
+            not isinstance(slot, Mapping)
+            or set(slot) != expected_slot_fields
+            or slot.get("proposal_index") != index
+            or not isinstance(slot.get("candidate_id"), str)
+            or not str(slot["candidate_id"]).strip()
+            or not _is_sha256(slot.get("proposal_fingerprint_sha256"))
+            or not _is_sha256(slot.get("coordinate_fingerprint_sha256"))
+            or not _is_sha256(slot.get("torsion_metadata_sha256"))
+            or str(slot["candidate_id"]) in candidate_ids
+        ):
+            raise ValueError("source-paired candidate slot is invalid")
+        candidate_ids.add(str(slot["candidate_id"]))
+        slots.append(slot)
     candidate_by_index = {
         int(candidate["proposal_index"]): candidate for candidate in candidates
     }
+    if set(candidate_by_index) != set(range(EXPECTED_CANDIDATE_COUNT)):
+        raise ValueError("source-paired candidates contradict the slot denominator")
+    for index, candidate in candidate_by_index.items():
+        slot = slots[index]
+        payload = candidate.get("refinement_receipt_payload")
+        if (
+            not isinstance(payload, Mapping)
+            or payload.get("source_proposal_sha256")
+            != slot.get("proposal_fingerprint_sha256")
+            or payload.get("pre_coordinates_sha256")
+            != slot.get("coordinate_fingerprint_sha256")
+        ):
+            raise ValueError("source-paired receipt contradicts its proposal slot")
     rescue_targets = {
         int(candidate["proposal_index"])
         for candidate in candidates

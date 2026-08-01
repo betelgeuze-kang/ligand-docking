@@ -116,7 +116,9 @@ wall-time path must also be previously absent.
 
 ```bash
 set -euo pipefail
-baseline_walltime=.betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-nine.walltime.txt
+baseline_root=.betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-nine
+baseline_walltime="${baseline_root}.walltime.txt"
+test ! -e "$baseline_root"
 test ! -e "$baseline_walltime"
 umask 077
 /usr/bin/time \
@@ -125,7 +127,7 @@ umask 077
   python3 -m tools.run_engine_v2_public_redocking_300 \
   --archive /path/to/posebusters_paper_data.zip \
   --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
-  --output-root .betelgeuze/stage0-development/v7-clearance-v11-6a749540-baseline-nine \
+  --output-root "$baseline_root" \
   --seed 2026072700 \
   --timeout-seconds 300 \
   --bootstrap-samples 2000 \
@@ -137,12 +139,35 @@ umask 077
 test "$(stat -c '%a' "$baseline_walltime")" = 600
 ```
 
-The rescue command is identical except that both `--output` and `--output-root`
-use `v7-clearance-v11-6a749540-rescue-nine`, and the runner receives
-`--development-source-paired-torsion-rescue`. Apply the same pre-absence and
-post-mode checks to the rescue wall-time path. Build a new comparison's compact
-analyses with `python3 -m tools.analyze_engine_v2_score_terms`; do not feed fresh
-outputs to the immutable historical `pack` action.
+Run the rescue lane from the same fail-fast shell with its own absent paths:
+
+```bash
+rescue_root=.betelgeuze/stage0-development/v7-clearance-v11-6a749540-rescue-nine
+rescue_walltime="${rescue_root}.walltime.txt"
+test ! -e "$rescue_root"
+test ! -e "$rescue_walltime"
+/usr/bin/time \
+  --format='elapsed_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M\nexit_status=%x' \
+  --output="$rescue_walltime" \
+  python3 -m tools.run_engine_v2_public_redocking_300 \
+  --archive /path/to/posebusters_paper_data.zip \
+  --source-identifiers /path/to/posebusters_pdb_ccd_ids.txt \
+  --output-root "$rescue_root" \
+  --seed 2026072700 \
+  --timeout-seconds 300 \
+  --bootstrap-samples 2000 \
+  --case-subset all \
+  --start-index 2 \
+  --limit 9 \
+  --development-engine-v2-only \
+  --development-source-paired-torsion-rescue \
+  --engine-v2-scorer-backend python_reference
+test "$(stat -c '%a' "$rescue_walltime")" = 600
+```
+
+Build a new comparison's compact analyses with
+`python3 -m tools.analyze_engine_v2_score_terms`; do not feed fresh outputs to
+the immutable historical `pack` action.
 
 Validate the retained pinned evidence from the repository root with:
 
