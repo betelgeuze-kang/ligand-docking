@@ -17,6 +17,9 @@ remains the active refiner, and fresh-128 remains unopened.
 
 This is a seven-case bounded slice of the broader historical failure-taxonomy
 work, not a claim that every historical uncovered case has been classified.
+The artifact now carries an exact ten-category key contract, a per-category
+allowed-status vocabulary, and roll-up counts that reconcile to all seven
+cases. This freezes representation, not causal interpretation.
 
 ## Evidence identity
 
@@ -28,13 +31,13 @@ work, not a claim that every historical uncovered case has been classified.
 | Archive bundle-checksum SHA-256 | `6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9` |
 | Corrected A/B report file SHA-256 | `8e85942c882be73d6d7bdccca6854d2a7c6d9246d4b69a0d9d1eac24a999db00` |
 | Corrected A/B report self-hash | `fb94287855b8843cea7a28bb271018e2444688ff89381ea5a7a6483dd3c49133` |
-| Atlas schema | `betelgeuze.engine_v2_source_paired_failure_atlas/2.0.0` |
-| Atlas self-hash | `6b659616074fee3b00ab89b999ba9459fbe80391ffce12e1510e740b49dcf06b` |
-| Atlas file SHA-256 | `8dac00ebba0da5fcba4f30cd6eeb72f3518e0c8ea7bb6cf2dd1352e3fc45b9ca` |
+| Atlas schema | `betelgeuze.engine_v2_source_paired_failure_atlas/2.1.0` |
+| Atlas self-hash | `58528986f293d96a8a4a3971ecc7abab436c7f27e768589cf0c22d8bc970c1d7` |
+| Atlas file SHA-256 | `0c9cf8c8355076634f08efbddd3953f0b88fcaef1cfd54593a9b09e77522d403` |
 
 The compact atlas is local mutable state at
-`.betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9-v2.json`.
-It is mode `0600` and 49,092 bytes. It is not a committed benchmark result or
+`.betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9-v3.json`.
+It is mode `0600` and 50,820 bytes. It is not a committed benchmark result or
 scientific claim.
 
 ## Construction and safety boundary
@@ -65,7 +68,7 @@ python3 tools/build_engine_v2_source_paired_failure_atlas.py \
   --expected-members-sha256 7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21 \
   --expected-bundle-sha256 6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9 \
   --expected-report-sha256 fb94287855b8843cea7a28bb271018e2444688ff89381ea5a7a6483dd3c49133 \
-  --output .betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9-v2.json
+  --output .betelgeuze/stage0-development/source-paired-failure-atlas-754bebb9-v3.json
 ```
 
 No fresh-holdout, engineering-smoke, or external/public-result data was opened
@@ -115,6 +118,22 @@ atlas therefore does not reinterpret baseline-to-rescue coordinate differences
 as new conformers.
 
 ## Cause taxonomy and limitations
+
+The schema fixes these ten keys and reports every allowed status, including
+zero counts. Each category therefore sums to the exact seven-case cohort.
+
+| Category | Observed status counts |
+|---|---|
+| Good conformer absence | unresolved/no independent conformer axis: 7 |
+| Wrong global orientation | unresolved/receipt motion scale only: 7 |
+| Pocket boundary | unresolved/no numeric boundary metric: 7 |
+| Receptor minimum distance | observed Top-1 failure: 5; not observed at Top-1: 2 |
+| Volume overlap | observed Top-1 failure: 1; not observed at Top-1: 6 |
+| Ligand internal clash | observed Top-1 failure: 0; not observed at Top-1: 7 |
+| Internal energy | observed Top-1 failure: 1; not observed at Top-1: 6 |
+| Torsion freedom | no authority rotor: 1; unresolved bounded rescue: 6 |
+| Ring conformer | unresolved/profile not in receipts: 7 |
+| Unsupported chemistry | not observed/preparation succeeded: 7 |
 
 Observed evidence supports these narrow labels:
 

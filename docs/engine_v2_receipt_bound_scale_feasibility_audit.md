@@ -29,17 +29,21 @@ change, threshold relaxation, V7 replacement, or new execution is authorized.
 | Member-manifest SHA-256 | `7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21` |
 | Bundle-checksum SHA-256 | `6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9` |
 | Corrected A/B report self-hash | `fb94287855b8843cea7a28bb271018e2444688ff89381ea5a7a6483dd3c49133` |
-| Authenticated failure-atlas self-hash | `6b659616074fee3b00ab89b999ba9459fbe80391ffce12e1510e740b49dcf06b` |
+| Authenticated failure-atlas self-hash | `58528986f293d96a8a4a3971ecc7abab436c7f27e768589cf0c22d8bc970c1d7` |
 | Frozen heavy-atom profile manifest SHA-256 | `57e9e27bd3d8a0752b81c0ce326c4f198bcf41b0529fb75dde3afe12fd67453b` |
 | Heavy-atom profile binding SHA-256 | `507d5532cfe658aa2befb5b470f9c8d334a0dd917975f944473f6e67e06ed48b` |
 | Audit schema | `betelgeuze.engine_v2_receipt_bound_scale_feasibility_audit/1.0.0` |
-| Audit self-hash | `c2c2f4110ed96e09c83f5c69da099c7f3273efd6b043adf598cd03fc791db12e` |
-| Audit file SHA-256 | `7a53b6ab82231521108173e27b8107144d3a84ee906d88469afb11d59671238d` |
+| Audit self-hash | `181d99ccfc73caff969542e349ed3bd91839518a846a02592814a3136bec1c63` |
+| Audit file SHA-256 | `af5a61a18795a3bed65310ad8d6a02cce540fc94d0fb3cf22f58e7af7ba11905` |
 
 The compact local artifact is
-`.betelgeuze/stage0-development/receipt-bound-scale-feasibility-audit-754bebb9.json`.
+`.betelgeuze/stage0-development/receipt-bound-scale-feasibility-audit-754bebb9-v2.json`.
 It is mode `0600` and 18,737 bytes. It is mutable diagnostic state, not a
 committed benchmark result or scientific claim.
+
+This identity refresh changes only the authenticated upstream failure-atlas
+schema/self-hash after its taxonomy contract was made explicit. All scale
+counts, distributions, conclusions, and policy boundaries are unchanged.
 
 ## Scope and outcome boundary
 
@@ -141,7 +145,7 @@ python3 tools/build_engine_v2_receipt_bound_scale_feasibility_audit.py \
   --expected-members-sha256 7f7f5273362a9457b022bc9b2b95c75625cdd259b1b1685aeb4b57d41d985e21 \
   --expected-bundle-sha256 6ee04e23e01a73bb643bb4d1fde240e06fd2916ea085e3652c11e2428bd432a9 \
   --expected-report-sha256 fb94287855b8843cea7a28bb271018e2444688ff89381ea5a7a6483dd3c49133 \
-  --output .betelgeuze/stage0-development/receipt-bound-scale-feasibility-audit-754bebb9.json
+  --output .betelgeuze/stage0-development/receipt-bound-scale-feasibility-audit-754bebb9-v2.json
 ```
 
 ## Next bounded action
