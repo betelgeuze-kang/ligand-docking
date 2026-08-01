@@ -161,7 +161,11 @@ failed to broaden recovery: zero torsion variants were selected, all 28 rescue
 outputs duplicated their retained parents, and selection eligibility regressed
 in `6T88_MWQ`. Its closed result is documented in
 [`engine_v2_source_paired_torsion_rescue_development_ab.md`](engine_v2_source_paired_torsion_rescue_development_ab.md).
-Preserve V7 and continue only on historical contaminated development by
-building an uncovered-case failure atlas before defining another bounded,
-genuinely coordinate-changing proposal intervention. Fresh-128 data remains
-unopened.
+Preserve V7. The subsequent
+[seven-case failure atlas](engine_v2_source_paired_failure_atlas.md) is complete:
+all 22 available uncovered-case torsion variants remained at or above the
+absolute window maximum and zero were selected, without resolving conformer or
+native-relative orientation causes. Continue only on historical contaminated
+development with the receipt-bound scale-feasibility audit before defining
+another bounded, genuinely coordinate-changing proposal intervention.
+Fresh-128 data remains unopened.
