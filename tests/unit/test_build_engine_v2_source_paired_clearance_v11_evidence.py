@@ -190,6 +190,7 @@ def test_clearance_summary_requires_uniform_v11_and_exact_denominators() -> None
         "unavailable_coordinates",
         "unavailable_gap",
         "unavailable_non_bool",
+        "available_post_coordinates",
     ),
 )
 def test_clearance_summary_rejects_resealed_drift(drift: str) -> None:
@@ -223,6 +224,8 @@ def test_clearance_summary_rejects_resealed_drift(drift: str) -> None:
         unavailable["refinement_receipt_payload"][
             "torsion_variant_available"
         ] = 0
+    elif drift == "available_post_coordinates":
+        first["refinement_receipt_payload"]["post_coordinates_sha256"] = "e" * 64
     else:
         non_target["refinement_receipt_payload"][
             "clearance_ligand_atom_count"
@@ -253,6 +256,52 @@ def test_walltime_receipt_is_strict_and_binary64_encoded() -> None:
     members[path] = members[path].replace(b"exit_status=0", b"exit_status=1")
     with pytest.raises(ValueError, match="wall-time values"):
         evidence._walltime(members, path, lane="fixture")
+
+
+def test_compact_analysis_is_fully_recomputed_from_restored_results(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case_id = "5SD5_HWI"
+    monkeypatch.setattr(evidence, "EXPECTED_CASE_IDS", (case_id,))
+    path = "analysis.json"
+    run_root = "run"
+    source_path = f"{run_root}/receipts/engine_v2/{case_id}.json"
+    result = _successful_frozen_result("baseline")
+    source_receipts = {source_path: "a" * 64}
+    payload = evidence.score_term_analysis.analyze_validated_results(
+        [result],
+        source_receipts_sha256=source_receipts,
+        allowed_proposal_modes=tuple(sorted(evidence.EXPECTED_BASE_PROPOSAL_MODES)),
+    )
+    members = {path: evidence._canonical_bytes(payload) + b"\n"}
+
+    observed = evidence._analysis(
+        members,
+        path,
+        lane="fixture",
+        run_root=run_root,
+        receipt_hashes={case_id: "a" * 64},
+        results={case_id: result},
+    )
+    assert observed["report_sha256"] == payload["report_sha256"]
+
+    tampered = deepcopy(payload)
+    tampered["term_summary"]["typed_vdw"][
+        "removed_top1_changed_case_count"
+    ] += 1
+    tampered["report_sha256"] = evidence._sha256_payload(
+        {key: value for key, value in tampered.items() if key != "report_sha256"}
+    )
+    members[path] = evidence._canonical_bytes(tampered) + b"\n"
+    with pytest.raises(ValueError, match="candidate terms"):
+        evidence._analysis(
+            members,
+            path,
+            lane="fixture",
+            run_root=run_root,
+            receipt_hashes={case_id: "a" * 64},
+            results={case_id: result},
+        )
 
 
 def test_deterministic_tar_uses_sorted_fixed_metadata() -> None:
@@ -300,6 +349,15 @@ def test_reviewed_evidence_identities_are_pinned() -> None:
         evidence.EXPECTED_REPORT_SHA256,
     ):
         assert evidence._is_sha256(value)
+    assert set(evidence.EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE) == {
+        "baseline",
+        "rescue",
+    }
+    assert all(
+        set(pins) == set(evidence.EXPECTED_CASE_IDS)
+        and all(evidence._is_sha256(value) for value in pins.values())
+        for pins in evidence.EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE.values()
+    )
     assert evidence.EXPECTED_EVIDENCE_MEMBER_COUNT == 59
     assert evidence.REPORT_PATH.endswith("6a749540-audit.json")
 
@@ -685,7 +743,28 @@ def _write_mode_0600(path: Path, payload: bytes) -> None:
     path.chmod(0o600)
 
 
-def test_frozen_result_parser_is_live_schema_independent() -> None:
+def _pin_fixture_execution_contract(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    lane: str,
+    case_id: str,
+    result: dict[str, object],
+) -> None:
+    monkeypatch.setitem(
+        evidence.EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE[lane],
+        case_id,
+        evidence._sha256_payload(
+            {
+                "execution_command": result["execution_command"],
+                "execution_policy": result["execution_policy"],
+            }
+        ),
+    )
+
+
+def test_frozen_result_parser_is_live_schema_independent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     diagnostics = {
         field: None for field in evidence.EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
     }
@@ -722,6 +801,12 @@ def test_frozen_result_parser_is_live_schema_independent() -> None:
             "failure_code": "engine_v2_case_failed",
             "engine_v2_diagnostics": diagnostics,
         }
+    )
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane="baseline",
+        case_id=evidence.EXPECTED_PREPARATION_FAILURE_CASE_ID,
+        result=result,
     )
 
     assert evidence._historical_v11_result(
@@ -848,6 +933,14 @@ def _successful_frozen_result(lane: str) -> dict[str, object]:
         )
         if lane == "rescue":
             candidate["torsion_rescue_parent_proposal_index"] = None
+            payload["torsion_selected"] = False
+            payload["baseline_coordinates_sha256"] = candidate[
+                "coordinate_fingerprint_sha256"
+            ]
+            payload["post_coordinates_sha256"] = candidate[
+                "coordinate_fingerprint_sha256"
+            ]
+            candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
         candidates.append(candidate)
     diagnostic_fields = (
         evidence.EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
@@ -905,9 +998,17 @@ def _successful_frozen_result(lane: str) -> dict[str, object]:
     return result
 
 
-def test_frozen_result_parser_accepts_successful_baseline_and_rescue() -> None:
+def test_frozen_result_parser_accepts_successful_baseline_and_rescue(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     for lane in ("baseline", "rescue"):
         result = _successful_frozen_result(lane)
+        _pin_fixture_execution_contract(
+            monkeypatch,
+            lane=lane,
+            case_id="5SD5_HWI",
+            result=result,
+        )
         assert evidence._historical_v11_result(
             result,
             lane=lane,
@@ -929,14 +1030,25 @@ def test_frozen_result_parser_accepts_successful_baseline_and_rescue() -> None:
         "result_dependent_eligibility",
         "scorer_backend_receipt",
         "execution_scorer_backend",
+        "execution_command",
+        "execution_policy",
+        "post_coordinates",
+        "unselected_baseline_coordinates",
         "v1_schema",
         "v11_keyset",
     ),
 )
 def test_successful_frozen_rescue_rejects_resealed_contract_drift(
     drift: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     result = _successful_frozen_result("rescue")
+    _pin_fixture_execution_contract(
+        monkeypatch,
+        lane="rescue",
+        case_id="5SD5_HWI",
+        result=result,
+    )
     candidate = result["engine_v2_diagnostics"]["candidates"][0]
     payload = candidate["refinement_receipt_payload"]
     if drift == "proposal_mode":
@@ -967,6 +1079,16 @@ def test_successful_frozen_rescue_rejects_resealed_contract_drift(
         ] = "rust_cpu_required"
     elif drift == "execution_scorer_backend":
         result["execution_policy"] = ['scorer_backend="rust_cpu_required"']
+    elif drift == "execution_command":
+        result["execution_command"].append("--different-seed")
+    elif drift == "execution_policy":
+        result["execution_policy"].append("timeout_seconds=301")
+    elif drift == "post_coordinates":
+        payload["post_coordinates_sha256"] = "f" * 64
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
+    elif drift == "unselected_baseline_coordinates":
+        payload["baseline_coordinates_sha256"] = "e" * 64
+        candidate["refinement_receipt_sha256"] = _seal_receipt(payload)
     elif drift == "v1_schema":
         payload["schema_id"] = (
             "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.0.0"

@@ -138,8 +138,11 @@ publishing, refuses existing outputs, and rolls back only outputs created by a
 failed publication attempt. `verify` checks the external audit against the
 archived copy, Zstandard stream, sorted manifest, bundle hashes, safe member
 names, regular file types, fixed modes and metadata, all raw execution/
-materialization cross-links, frozen archive-specific V1.1 result shapes,
-all five ranked SDF-record hashes for every successful case, compact analyses,
+materialization cross-links, the complete pinned command and policy for every
+lane/case, frozen archive-specific V1.1 result shapes, candidate-to-post and
+unselected-post-to-baseline coordinate bindings, all five ranked SDF-record
+hashes for every successful case, complete compact score-term analyses
+recomputed from the restored candidate terms,
 historical outcome counts, telemetry denominators, the frozen result-independent
 allocation policy, unavailable-variant baseline equality, scalar/term score
 identity, the shared Python scorer backend, and the recomputed audit self-hash.

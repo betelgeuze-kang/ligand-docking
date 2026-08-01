@@ -223,7 +223,16 @@ def _proposal_mode_accumulator(
     mode: str,
     *,
     rescue_diagnostic: bool,
+    frozen_allowed_modes: frozenset[str] | None = None,
 ) -> dict[str, object]:
+    if frozen_allowed_modes is not None:
+        if mode not in frozen_allowed_modes:
+            raise ValueError("candidate proposal mode is missing or unsupported")
+        accumulator = mode_rows.get(mode)
+        if accumulator is None:
+            accumulator = _empty_proposal_mode_accumulator()
+            mode_rows[mode] = accumulator
+        return accumulator
     if (
         mode == PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE
         and not rescue_diagnostic
@@ -239,22 +248,36 @@ def _proposal_mode_accumulator(
     raise ValueError("candidate proposal mode is missing or unsupported")
 
 
-def analyze_results(
+def _analyze_results(
     results: Sequence[Mapping[str, object]],
     *,
     source_receipts_sha256: Mapping[str, str],
+    frozen_allowed_proposal_modes: Sequence[str] | None,
 ) -> dict[str, object]:
     case_ids = tuple(str(result.get("case_id", "")) for result in results)
     if len(set(case_ids)) != len(case_ids):
         raise ValueError("development result cases are duplicated")
-    historical = set(FROZEN_PUBLIC_REDOCKING_CASE_IDS)
-    forbidden = set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS) | set(
-        PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
-    )
-    if not case_ids or any(case_id not in historical for case_id in case_ids):
-        raise ValueError("score-term analysis requires historical development cases")
-    if set(case_ids) & forbidden:
-        raise ValueError("score-term analysis rejects smoke and fresh holdout cases")
+    frozen_allowed_modes: frozenset[str] | None = None
+    if frozen_allowed_proposal_modes is None:
+        historical = set(FROZEN_PUBLIC_REDOCKING_CASE_IDS)
+        forbidden = set(FROZEN_PUBLIC_REDOCKING_FRESH_HOLDOUT_CASE_IDS) | set(
+            PUBLIC_REDOCKING_ENGINEERING_SMOKE_CASE_IDS
+        )
+        if not case_ids or any(case_id not in historical for case_id in case_ids):
+            raise ValueError("score-term analysis requires historical development cases")
+        if set(case_ids) & forbidden:
+            raise ValueError("score-term analysis rejects smoke and fresh holdout cases")
+        initial_proposal_modes = PUBLIC_REDOCKING_PROPOSAL_MODES
+    else:
+        frozen_allowed_modes = frozenset(frozen_allowed_proposal_modes)
+        if (
+            not case_ids
+            or not frozen_allowed_modes
+            or len(frozen_allowed_modes) != len(tuple(frozen_allowed_proposal_modes))
+            or any(not isinstance(mode, str) or not mode for mode in frozen_allowed_modes)
+        ):
+            raise ValueError("frozen proposal modes are invalid")
+        initial_proposal_modes = tuple(frozen_allowed_proposal_modes)
 
     cases: list[dict[str, object]] = []
     calibration_cases: list[tuple[str, list[dict[str, object]]]] = []
@@ -269,7 +292,7 @@ def analyze_results(
     }
     mode_rows: dict[str, dict[str, object]] = {
         mode: _empty_proposal_mode_accumulator()
-        for mode in PUBLIC_REDOCKING_PROPOSAL_MODES
+        for mode in initial_proposal_modes
     }
     failed_check_counts: Counter[str] = Counter()
     refinement_attempt_count = 0
@@ -284,21 +307,24 @@ def analyze_results(
         if not isinstance(diagnostics, Mapping):
             raise ValueError("Engine V2 diagnostics are missing")
         result_diagnostic_schema_id = diagnostics.get("schema_id")
-        if result_diagnostic_schema_id not in {
-            PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
-            PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
-        }:
-            raise ValueError("Engine V2 diagnostics schema is unsupported")
-        if diagnostic_schema_id is None:
-            diagnostic_schema_id = result_diagnostic_schema_id
-        elif diagnostic_schema_id != result_diagnostic_schema_id:
-            raise ValueError(
-                "score-term analysis requires one consistent diagnostics schema"
+        if frozen_allowed_modes is None:
+            if result_diagnostic_schema_id not in {
+                PUBLIC_REDOCKING_ENGINE_V2_DIAGNOSTIC_SCHEMA_ID,
+                PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID,
+            }:
+                raise ValueError("Engine V2 diagnostics schema is unsupported")
+            if diagnostic_schema_id is None:
+                diagnostic_schema_id = result_diagnostic_schema_id
+            elif diagnostic_schema_id != result_diagnostic_schema_id:
+                raise ValueError(
+                    "score-term analysis requires one consistent diagnostics schema"
+                )
+            rescue_diagnostic = (
+                result_diagnostic_schema_id
+                == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
             )
-        rescue_diagnostic = (
-            result_diagnostic_schema_id
-            == PUBLIC_REDOCKING_ENGINE_V2_TORSION_RESCUE_DIAGNOSTIC_SCHEMA_ID
-        )
+        else:
+            rescue_diagnostic = False
         if result.get("status") != "success":
             if diagnostics.get("preparation_status") == "failure":
                 failure_code = str(diagnostics.get("preparation_failure_code", ""))
@@ -349,6 +375,7 @@ def analyze_results(
                     mode_rows,
                     mode,
                     rescue_diagnostic=rescue_diagnostic,
+                    frozen_allowed_modes=frozen_allowed_modes,
                 )
                 accumulator["execution_failure_count"] = (
                     int(accumulator["execution_failure_count"]) + 1
@@ -378,6 +405,7 @@ def analyze_results(
                 mode_rows,
                 mode,
                 rescue_diagnostic=rescue_diagnostic,
+                frozen_allowed_modes=frozen_allowed_modes,
             )
             coordinate_sha256 = str(
                 candidate.get("coordinate_fingerprint_sha256", "")
@@ -726,6 +754,33 @@ def analyze_results(
     }
     report["report_sha256"] = _sha256(report)
     return report
+
+
+def analyze_validated_results(
+    results: Sequence[Mapping[str, object]],
+    *,
+    source_receipts_sha256: Mapping[str, str],
+    allowed_proposal_modes: Sequence[str],
+) -> dict[str, object]:
+    """Aggregate already validated receipt results without live schema routing."""
+
+    return _analyze_results(
+        results,
+        source_receipts_sha256=source_receipts_sha256,
+        frozen_allowed_proposal_modes=allowed_proposal_modes,
+    )
+
+
+def analyze_results(
+    results: Sequence[Mapping[str, object]],
+    *,
+    source_receipts_sha256: Mapping[str, str],
+) -> dict[str, object]:
+    return _analyze_results(
+        results,
+        source_receipts_sha256=source_receipts_sha256,
+        frozen_allowed_proposal_modes=None,
+    )
 
 
 def _receipt_paths(paths: Sequence[Path]) -> tuple[Path, ...]:

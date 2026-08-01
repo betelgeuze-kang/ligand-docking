@@ -17,6 +17,7 @@ import stat
 import subprocess
 import tarfile
 
+import tools.analyze_engine_v2_score_terms as score_term_analysis
 import tools.build_engine_v2_source_paired_failure_atlas as failure_atlas
 
 
@@ -191,6 +192,33 @@ EXPECTED_RESCUE_ALLOCATION_SHA256_BY_CASE = {
     "6VTA_AKN": "7d21c9f638c77f1a95e6455b8a489ceb23f3935d4dfe42d8de9c5bd5a73d281b",
     "6WTN_RXT": "1ecb7dcad4a3ff6fa7402f78bf23c1b31d57549e789274fe2be7655fecf9fa38",
 }
+EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE = {
+    "baseline": {
+        "5SD5_HWI": "f6cbd306fd98e23333a6a00558258f433ed8cec96cfd4d1270324161fa6cf7a2",
+        "5SIS_JSM": "689c977a03565e4648656f671fda1b28115d3f27193728f0a19e6003697a3a54",
+        "6M2B_EZO": "176cf10b769b77df446ccd864f6ee3dfce748d1320fd2b35b699bd381491cace",
+        "6M73_FNR": "61ecaab601c224aa747c8addfcec0822ee548d0a38ffa57aa6151dcfee468d89",
+        "6T88_MWQ": "537f6460cabbc14e941174abb26a96ed6818568a769152a66cdc2152eb7c0259",
+        "6TW5_9M2": "cfffac146b491f22ce67bbe30638aceabc1d5af2db2471292897ce2c72c26c06",
+        "6TW7_NZB": "1742661a74ff876473374c6ebdbdac7d6276f9c20cb4a7ff17d4245a4493e62f",
+        "6VTA_AKN": "1a9a4c8baf7289bb7170a482fe2ad6e1c6d9c2da1368221a2f737c0691e1ba97",
+        "6WTN_RXT": "a703be53e26e9d6f9ac9f519f5850a7896634656f8b14fb1c41a35da7ef6be71",
+    },
+    "rescue": {
+        "5SD5_HWI": "0685b9a77131058c7e7a36d3093158253c59056ede9335e60b63d5325c9f7853",
+        "5SIS_JSM": "c08e4813887d028c4b0ccf05295629067ee9a2cd49fd334a65d9b24d65f0f9a9",
+        "6M2B_EZO": "5bbe9323e234159688e83d1b3194cba04a0afdb95d598e6f2d1ee6392ffbbd6f",
+        "6M73_FNR": "2890438c62d83850124300f038f4ae4c29fadd685e417cf447a929b30c06ca9f",
+        "6T88_MWQ": "896016eaa81462cab1d5e18bb5855af7fde1bdf596d86f2be207fb99a6e95dc7",
+        "6TW5_9M2": "18e6ec50df0fc8d2523423dee5efcf4d5a87e1ac31c307b0470c86e631bb78be",
+        "6TW7_NZB": "51aa91fa096b53f42595659273733dd4e399313dd6d80c3d70b7c24049a26b4c",
+        "6VTA_AKN": "de8018021fcd7abebae856e33187cb1fbfe87a532b99840b8ac90e615e52b9b9",
+        "6WTN_RXT": "3717f3bb6551798c9a376e4885b09d1d614e67e25870ec13e3bcfebd619fe225",
+    },
+}
+EXPECTED_SCORE_TERM_ANALYZER_SOURCE_SHA256 = (
+    "10e586424ee0a456749ea7441ba0b5ef3ba8146491afd2b0c4ac741382045e78"
+)
 
 EXPECTED_RESULT_FIELDS = frozenset(
     {
@@ -784,6 +812,17 @@ def _historical_v11_candidate(
             or payload.get("source_paired_torsion_rescue_variant_cap")
             != EXPECTED_SOURCE_PAIRED_TORSION_RESCUE_VARIANT_CAP
             or payload.get("result_dependent_eligibility") is not False
+            or payload.get("post_coordinates_sha256")
+            != candidate.get("coordinate_fingerprint_sha256")
+            or type(payload.get("torsion_selected")) is not bool
+            or (
+                payload.get("torsion_selected") is False
+                and (
+                    not _is_sha256(payload.get("baseline_coordinates_sha256"))
+                    or payload.get("post_coordinates_sha256")
+                    != payload.get("baseline_coordinates_sha256")
+                )
+            )
         ):
             raise ValueError(f"{lane} {case_id} V1.1 receipt contract is invalid")
         receipt_projection = dict(payload)
@@ -841,6 +880,17 @@ def _historical_v11_result(
         != EXPECTED_SCORER_BACKEND
     ):
         raise ValueError(f"{lane} {case_id} execution scorer backend is invalid")
+    execution_contract_sha256 = _sha256_payload(
+        {
+            "execution_command": command,
+            "execution_policy": policy,
+        }
+    )
+    if execution_contract_sha256 != EXPECTED_EXECUTION_CONTRACT_SHA256_BY_LANE_CASE.get(
+        lane,
+        {},
+    ).get(case_id):
+        raise ValueError(f"{lane} {case_id} execution contract is not pinned")
     diagnostics = result.get("engine_v2_diagnostics")
     expected_diagnostic_fields = (
         EXPECTED_BASELINE_DIAGNOSTIC_FIELDS
@@ -1013,7 +1063,9 @@ def _analysis(
     path: str,
     *,
     lane: str,
+    run_root: str,
     receipt_hashes: Mapping[str, str],
+    results: Mapping[str, Mapping[str, object]],
 ) -> dict[str, object]:
     payload, raw = _member_object(
         members,
@@ -1031,14 +1083,29 @@ def _analysis(
         or not isinstance(source, Mapping)
     ):
         raise ValueError(f"{lane} analysis identity or boundary is invalid")
-    observed: dict[str, str] = {}
-    for source_path, digest in source.items():
-        case_id = Path(str(source_path)).stem
-        if case_id in observed or not _is_sha256(digest):
-            raise ValueError(f"{lane} analysis receipt binding is invalid")
-        observed[case_id] = str(digest)
-    if observed != dict(receipt_hashes):
+    expected_source = {
+        f"{run_root}/receipts/engine_v2/{case_id}.json": receipt_hashes[case_id]
+        for case_id in EXPECTED_CASE_IDS
+    }
+    if dict(source) != expected_source:
         raise ValueError(f"{lane} analysis contradicts restored receipts")
+    analyzer_path = Path(score_term_analysis.__file__)
+    try:
+        analyzer_raw = analyzer_path.read_bytes()
+    except OSError as exc:
+        raise ValueError("frozen score-term analyzer source is unavailable") from exc
+    if _sha256_bytes(analyzer_raw) != EXPECTED_SCORE_TERM_ANALYZER_SOURCE_SHA256:
+        raise ValueError("frozen score-term analyzer implementation drifted")
+    allowed_proposal_modes = set(EXPECTED_BASE_PROPOSAL_MODES)
+    if lane == "rescue":
+        allowed_proposal_modes.add(PUBLIC_REDOCKING_TORSION_RESCUE_PROPOSAL_MODE)
+    recomputed = score_term_analysis.analyze_validated_results(
+        [results[case_id] for case_id in EXPECTED_CASE_IDS],
+        source_receipts_sha256=expected_source,
+        allowed_proposal_modes=tuple(sorted(allowed_proposal_modes)),
+    )
+    if payload != recomputed:
+        raise ValueError(f"{lane} analysis contradicts restored candidate terms")
     return {
         "path": path,
         "file_sha256": _sha256_bytes(raw),
@@ -1341,7 +1408,9 @@ def _load_lane(
         members,
         analysis_path,
         lane=lane,
+        run_root=run_root,
         receipt_hashes=receipt_hashes,
+        results=results,
     )
     if (
         analysis["case_count"] != metrics["case_count"]
@@ -1467,18 +1536,27 @@ def _clearance_summary(
                     raise ValueError("non-target clearance telemetry is not empty")
                 non_target_count += 1
                 continue
+            torsion_evaluated = payload.get("torsion_evaluated")
             variant_available = payload.get("torsion_variant_available")
-            if type(variant_available) is not bool:
-                raise ValueError("target torsion availability must be boolean")
+            torsion_selected = payload.get("torsion_selected")
+            if any(
+                type(value) is not bool
+                for value in (
+                    torsion_evaluated,
+                    variant_available,
+                    torsion_selected,
+                )
+            ):
+                raise ValueError("target torsion state flags must be boolean")
             torsion_counts["allocated_candidate_count"] += 1
             torsion_counts["torsion_evaluated_candidate_count"] += (
-                payload.get("torsion_evaluated") is True
+                torsion_evaluated is True
             )
             torsion_counts["torsion_variant_available_candidate_count"] += (
                 variant_available is True
             )
             torsion_counts["torsion_selected_candidate_count"] += (
-                payload.get("torsion_selected") is True
+                torsion_selected is True
             )
             torsion_counts["clearance_evaluated_candidate_count"] += (
                 evaluated is True
@@ -1503,6 +1581,14 @@ def _clearance_summary(
                 or not _is_sha256(payload.get("optimized_coordinates_sha256"))
             ):
                 raise ValueError("target clearance telemetry identity is invalid")
+            if torsion_selected is False and (
+                not _is_sha256(payload.get("baseline_coordinates_sha256"))
+                or payload.get("post_coordinates_sha256")
+                != payload.get("baseline_coordinates_sha256")
+            ):
+                raise ValueError(
+                    "unselected torsion coordinates must retain the baseline"
+                )
             if variant_available is False:
                 baseline_coordinates_sha256 = payload.get(
                     "baseline_coordinates_sha256"
