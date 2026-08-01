@@ -101,8 +101,14 @@ as if it were the frozen active policy. The verifier and ledger allowlist remain
 unchanged.
 
 Do not relax the V8 clearance guard or the validity threshold. This narrow
-selection-only intervention is closed as insufficient. The next proposal-quality
-slice should add genuinely different low-energy conformers or a separately
-bounded proposal variant while retaining source poses and the 64-candidate
-denominator. Scorer calibration remains premature because proposal-oracle
-coverage is still only 1/8 in this fixed slice.
+selection-only intervention is closed as insufficient. The subsequent
+true-conformer and source-paired torsion-rescue experiments also failed to
+broaden recovery; the latter selected zero torsion variants, duplicated parent
+coordinates for all 28 rescue outputs, and regressed selection eligibility.
+Current work should first build the seven-case uncovered
+failure atlas described in
+[`engine_v2_source_paired_torsion_rescue_development_ab.md`](engine_v2_source_paired_torsion_rescue_development_ab.md),
+then define at most one result-independent, bounded, genuinely
+coordinate-changing proposal intervention. Scorer calibration remains
+premature because proposal-oracle coverage is still only 1/8 in this fixed
+slice.

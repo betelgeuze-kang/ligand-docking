@@ -131,7 +131,7 @@ The canonical capability state is:
   PoseBusters failure counts, and proposal/refiner lineage digests. It does not
   duplicate candidate payloads, cannot authorize runtime or fresh execution,
   and labels unproven conformer/orientation causes
-  `unresolved_requires_coordinate_replay`. The exact current-source nine-case
+  `unresolved_requires_coordinate_replay`. The earlier exact-source nine-case
   V7 receipt bundle at `58b6f5f7e0fc7f2f19c64dee139befc142e05006`
   produced a self-hashed analysis and authenticated ledger; five of seven gates
   pass, while proposal-oracle recovery and invalid Top-1 remain blocked.
@@ -156,6 +156,19 @@ The canonical capability state is:
   60%. The profile is comparable but rejected for no recovery-breadth gain.
   The evidence, archive identities, and cleanup record are in
   [the true-conformer development A/B](engine_v2_true_conformer_development_ab.md).
+- The exact-main source-paired torsion-rescue A/B at
+  `754bebb9ddc2fbffdaca5d4143ff515c3b38c032` preserved the 9-case/8-scored-case
+  cohort and 512-candidate denominator. All 28 allocated rescue candidates
+  retained their parent coordinates, yielding 28 baseline-to-rescue coordinate
+  changes but no new rescue-vs-parent state; `torsion_selected` was 0/28.
+  PoseBusters exact validity stayed 7/512, native-like candidates stayed 4/512,
+  and proposal-oracle, Top-1, and Top-5 recovery all stayed 1/8; selection
+  eligibility nevertheless regressed 31 to 30 and native-like selection
+  eligibility regressed 3 to 2 in `6T88_MWQ`. The 1.03% accounted-runtime
+  decrease is a single-run observation, not a speed claim. The lane is rejected
+  and closed; its evidence identities, descriptive runtime, verified archive,
+  and cleanup record are in
+  [the source-paired torsion-rescue development A/B](engine_v2_source_paired_torsion_rescue_development_ab.md).
 - Solo self-review pass records now have a fail-closed generator that requires
   one clean commit/evidence identity and enforces at least 24 hours between
   pass 1 and pass 2 without claiming reviewer independence. A separate
@@ -229,10 +242,17 @@ The canonical capability state is:
    Top-1 and Top-5 recovery, so proposal coverage—not scorer calibration—is the
    immediate bottleneck. The report contains no fresh-holdout result.
 3. **Refinement/validity diagnosis:** only 7/512 candidates across three cases
-   are exactly valid. The result-independent V8 clearance guard improved several
+   are PoseBusters-exact-valid. The result-independent V8 clearance guard improved several
    individual protein-contact checks without creating a valid candidate or
-   reducing invalid Top-1. Further work must generate genuinely different valid
-   proposals in the five uncovered scored cases rather than relabel, filter,
+   reducing invalid Top-1. The later source-paired torsion-rescue lane allocated
+   28 candidates, selected zero torsion variants, and retained parent coordinates
+   for all of them. It gained no recovery or PoseBusters exact validity and
+   regressed selection eligibility 31 to 30 and native-like selection
+   eligibility 3 to 2 in `6T88_MWQ`. Seven of eight scored cases remain
+   proposal-oracle-uncovered: five
+   have an invalid Top-1 and two have a valid but nonnative Top-1. Build a
+   failure atlas for those seven cases before defining another bounded,
+   genuinely coordinate-changing proposal intervention; do not relabel, filter,
    abstain, or relax thresholds around the current pool.
 4. **Full-suite self-review:** a solo operational evidence builder dispositions the 49
    conservative `actual_regression` rows as pre-existing unresolved behavior
