@@ -478,6 +478,39 @@ def test_threshold_source_report_identity_reconciles_exact_case_set() -> None:
     ) == tuple(sorted(_CASE_IDS))
 
 
+def test_tracked_threshold_source_report_identity_matches_documented_cohort() -> None:
+    threshold_path = (
+        Path(__file__).resolve().parents[2]
+        / "config/engine_v2_public_redocking_stage0_threshold_evidence.json"
+    )
+    threshold = json.loads(threshold_path.read_text(encoding="utf-8"))
+    case_ids = ledger_builder._threshold_source_case_ids(
+        threshold["source_reports_sha256"],
+        case_count=threshold["case_count"],
+        expected_case_ids_sha256=threshold["case_ids_sha256"],
+    )
+    source_paired_ab_case_ids = {
+        "5SD5_HWI",
+        "5SIS_JSM",
+        "6M2B_EZO",
+        "6M73_FNR",
+        "6T88_MWQ",
+        "6TW5_9M2",
+        "6TW7_NZB",
+        "6VTA_AKN",
+        "6WTN_RXT",
+    }
+
+    assert len(threshold["source_reports_sha256"]) == 36
+    assert len(case_ids) == 12
+    assert set(case_ids) & source_paired_ab_case_ids == source_paired_ab_case_ids
+    assert set(case_ids) - source_paired_ab_case_ids == {
+        "7A9E_R4W",
+        "7MWU_ZPM",
+        "7OSO_0V1",
+    }
+
+
 @pytest.mark.parametrize(
     "drift",
     ("missing_pair", "duplicate_pair", "count", "digest", "smoke_case"),
