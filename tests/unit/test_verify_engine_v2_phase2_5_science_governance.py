@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import subprocess
 
 import pytest
 
@@ -112,8 +113,11 @@ def test_phase2_case_level_guardrails_and_no_go_precedence_are_frozen() -> None:
     policy = _policy()
     phase2 = policy["phase2_historical_one_shot_ab"]
     guardrails = phase2["go_decision"]["all_guardrails_required"]
-    recovery_regression = phase2["no_go_decision"]["triggers"][3]
-    penetration = phase2["no_go_decision"]["triggers"][4]
+    no_go = phase2["no_go_decision"]
+    no_recovery = no_go["triggers"][0]
+    no_validity_gain = no_go["triggers"][1]
+    recovery_regression = no_go["triggers"][5]
+    penetration = no_go["triggers"][6]
 
     assert guardrails[0]["baseline_case_ids_must_equal"] == ["6M73_FNR"]
     assert guardrails[0]["experimental_case_ids_must_equal"] == ["6M73_FNR"]
@@ -121,6 +125,18 @@ def test_phase2_case_level_guardrails_and_no_go_precedence_are_frozen() -> None:
     assert guardrails[1]["operator"] == "baseline_subset_of_experimental"
     assert guardrails[2]["baseline_case_ids"] == ["6T88_MWQ"]
     assert guardrails[2]["operator"] == "baseline_subset_of_experimental"
+    assert no_recovery == {
+        "id": "no_case_level_recovery",
+        "metric": "incremental_case_recovery_count",
+        "operator": "lte",
+        "value": 0,
+    }
+    assert no_validity_gain == {
+        "id": "no_aggregate_posebusters_validity_improvement",
+        "metric": "aggregate_posebusters_valid_case_count_delta",
+        "operator": "lte",
+        "value": 0,
+    }
     assert recovery_regression["any_conditions"][0]["baseline_case_ids"] == ["6T88_MWQ"]
     assert recovery_regression["any_conditions"][1]["baseline_case_ids"] == ["6T88_MWQ"]
     assert penetration["evaluation_scope"] == (
@@ -133,10 +149,32 @@ def test_phase2_case_level_guardrails_and_no_go_precedence_are_frozen() -> None:
         "source_proposal_fingerprint_sha256",
     ]
     assert phase2["go_decision"]["no_go_trigger_precedence"] is True
-    assert (
-        phase2["no_go_decision"]["any_trigger_closes_local_torsion_clearance_epic"]
-        is True
-    )
+    assert no_go["any_trigger_closes_local_torsion_clearance_epic"] is True
+    assert no_go["closed_tracks"] == [
+        "v8_absolute_clearance",
+        "true_conformer_same_orientation",
+        "source_paired_torsion",
+        "clearance_rescue",
+    ]
+
+
+def test_phase2_go_is_not_stage0_admission() -> None:
+    boundary = _policy()["phase2_historical_one_shot_ab"]["stage0_boundary"]
+
+    assert boundary["phase2_go_grants_stage0_admission"] is False
+    assert boundary["phase2_go_thresholds"] == {
+        "denominator": 8,
+        "invalid_top1_maximum_case_count": 4,
+        "proposal_oracle_recovery_minimum_case_count": 2,
+    }
+    assert boundary["stage0_candidate_requirements"] == {
+        "denominator": 8,
+        "invalid_top1_maximum_case_count": 1,
+        "proposal_oracle_recovery_minimum_case_count": 3,
+        "status": "necessary_not_sufficient",
+    }
+    assert boundary["stage0_promotion_authorized"] is False
+    assert boundary["stage0_threshold_freeze_authorized"] is False
 
 
 def test_phase2_requires_the_complete_activation_v2_authority() -> None:
@@ -165,6 +203,15 @@ def test_phase2_requires_the_complete_activation_v2_authority() -> None:
     assert evidence["scorer_authority_bound_to_authenticated_input_required"] is True
     assert evidence["authenticated_rmsd_receipts_required"] is True
     assert evidence["non_target_and_retained_target_evidence_equality_required"] is True
+    assert evidence["activation_artifact_dependency"] == {
+        "artifact_present_in_this_branch": False,
+        "artifact_verified": False,
+        "delivery_state": "separate_branch_unmerged",
+        "execution_blocked_until_merged_and_verified": True,
+        "policy_path": "config/engine_v2_source_paired_clearance_activation.json",
+        "source_branch": "codex/source-paired-clearance-activation-v1",
+        "verifier_path": "tools/verify_engine_v2_source_paired_clearance_activation.py",
+    }
 
 
 @pytest.mark.parametrize(
@@ -174,8 +221,13 @@ def test_phase2_requires_the_complete_activation_v2_authority() -> None:
         ("top1_recovery_identity", "Phase 2 Go decision drifted"),
         ("top5_recovery_identity", "Phase 2 No-Go decision drifted"),
         ("penetration_identity_join", "Phase 2 No-Go decision drifted"),
+        ("no_recovery_trigger", "Phase 2 No-Go decision drifted"),
+        ("no_validity_trigger", "Phase 2 No-Go decision drifted"),
+        ("closed_tracks", "Phase 2 No-Go decision drifted"),
         ("no_go_precedence", "Phase 2 Go decision drifted"),
+        ("stage0_oracle_boundary", "Phase 2 versus Stage 0 boundary drifted"),
         ("activation_policy_identity", "Phase 2 evidence requirements drifted"),
+        ("activation_dependency_status", "Phase 2 evidence requirements drifted"),
         ("activation_receipt_schema", "Phase 2 evidence requirements drifted"),
         ("activation_snapshot_schema", "Phase 2 evidence requirements drifted"),
         ("activation_all_targets", "Phase 2 evidence requirements drifted"),
@@ -204,13 +256,27 @@ def test_resealed_phase2_case_level_semantic_drift_is_rejected(
     elif mutation == "top1_recovery_identity":
         guardrails[1]["baseline_case_ids"] = ["5SD5_HWI"]
     elif mutation == "top5_recovery_identity":
-        triggers[3]["any_conditions"][1]["baseline_case_ids"] = ["5SD5_HWI"]
+        triggers[5]["any_conditions"][1]["baseline_case_ids"] = ["5SD5_HWI"]
     elif mutation == "penetration_identity_join":
-        triggers[4]["all_conditions"][1]["identity_join"] = ["case_id"]
+        triggers[6]["all_conditions"][1]["identity_join"] = ["case_id"]
+    elif mutation == "no_recovery_trigger":
+        triggers[0]["operator"] = "gte"
+    elif mutation == "no_validity_trigger":
+        triggers[1]["metric"] = "unbound_validity_metric"
+    elif mutation == "closed_tracks":
+        phase2["no_go_decision"]["closed_tracks"] = ["clearance_rescue"]
     elif mutation == "no_go_precedence":
         phase2["go_decision"]["no_go_trigger_precedence"] = False
+    elif mutation == "stage0_oracle_boundary":
+        phase2["stage0_boundary"]["stage0_candidate_requirements"][
+            "proposal_oracle_recovery_minimum_case_count"
+        ] = 2
     elif mutation == "activation_policy_identity":
         phase2["evidence_requirements"]["activation_policy_sha256"] = "0" * 64
+    elif mutation == "activation_dependency_status":
+        phase2["evidence_requirements"]["activation_artifact_dependency"][
+            "artifact_verified"
+        ] = True
     elif mutation == "activation_receipt_schema":
         phase2["evidence_requirements"]["activation_receipt_schema_id"] = (
             "betelgeuze.engine_v2_source_paired_clearance_selection_activation_"
@@ -218,7 +284,8 @@ def test_resealed_phase2_case_level_semantic_drift_is_rejected(
         )
     elif mutation == "activation_snapshot_schema":
         phase2["evidence_requirements"]["activation_snapshot_schema_id"] = (
-            "betelgeuze.engine_v2_source_paired_torsion_rescue_activation_snapshot/1.1.0"
+            "betelgeuze.engine_v2_source_paired_torsion_rescue_activation_"
+            "snapshot/1.1.0"
         )
     elif mutation == "activation_all_targets":
         phase2["evidence_requirements"]["all_allocated_targets_required"] = False
@@ -316,6 +383,62 @@ def test_duplicate_json_key_is_rejected(tmp_path: Path) -> None:
         verify_phase2_5_science_governance(duplicate, REPO_ROOT)
 
 
+@pytest.mark.parametrize(
+    "relative_path",
+    (
+        "config/engine_v2_source_paired_clearance_activation.json",
+        "tools/verify_engine_v2_source_paired_clearance_activation.py",
+    ),
+)
+def test_unmerged_activation_dependency_presence_requires_policy_rebind(
+    tmp_path: Path, relative_path: str
+) -> None:
+    repo = _copy_reference_repo(tmp_path)
+    dependency_path = repo / relative_path
+    dependency_path.parent.mkdir(parents=True, exist_ok=True)
+    dependency_path.write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match="activation dependency is present but remains declared unverified",
+    ):
+        verify_phase2_5_science_governance(POLICY_PATH, repo)
+
+
+def test_unmerged_activation_dependency_symlink_requires_policy_rebind(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_reference_repo(tmp_path)
+    dependency_path = repo / "config/engine_v2_source_paired_clearance_activation.json"
+    dependency_path.symlink_to(repo / "config/not-yet-present.json")
+
+    with pytest.raises(
+        ValueError,
+        match="activation dependency is present but remains declared unverified",
+    ):
+        verify_phase2_5_science_governance(POLICY_PATH, repo)
+
+
+def test_unmerged_tracked_activation_dependency_requires_policy_rebind_when_sparse(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_reference_repo(tmp_path)
+    dependency_path = repo / "config/engine_v2_source_paired_clearance_activation.json"
+    dependency_path.write_text("{}\n", encoding="utf-8")
+    subprocess.run(("git", "init", "--quiet", str(repo)), check=True)
+    subprocess.run(
+        ("git", "-C", str(repo), "add", str(dependency_path.relative_to(repo))),
+        check=True,
+    )
+    dependency_path.unlink()
+
+    with pytest.raises(
+        ValueError,
+        match="activation dependency is present but remains declared unverified",
+    ):
+        verify_phase2_5_science_governance(POLICY_PATH, repo)
+
+
 def test_d0_source_authority_drift_is_rejected(tmp_path: Path) -> None:
     repo = _copy_reference_repo(tmp_path)
     d0_source = repo / "tools/build_engine_v2_source_paired_failure_atlas.py"
@@ -357,16 +480,163 @@ def test_resealed_fresh_manifest_drift_is_rejected(tmp_path: Path) -> None:
         verify_phase2_5_science_governance(POLICY_PATH, repo)
 
 
-def test_phase3_quota_and_phase5_entry_gate_are_exact() -> None:
+def test_phase3_fresh_and_phase5_contracts_are_exact() -> None:
     policy = _policy()
-    quotas = policy["phase3_global_orientation_track"]["proposed_profile"][
-        "lane_quotas"
-    ]
+    phase3 = policy["phase3_global_orientation_track"]
+    quotas = phase3["proposed_profile"]["lane_quotas"]
+    fresh = policy["phase4_corpus_authority"]["fresh_128"]
+    phase5 = policy["phase5_scorer_v2_gate"]
     entry = policy["phase5_scorer_v2_gate"]["entry_conditions"]
 
     assert list(quotas.values()) == [8, 8, 12, 8, 4, 8, 16]
     assert sum(quotas.values()) == 64
+    assert phase3["proposed_profile"]["profile_frozen"] is False
+    assert phase3["proposed_profile"]["selection_authorized"] is False
+    assert (
+        phase3["deterministic_orientation_requirements"]["low_discrepancy_so3_required"]
+        is True
+    )
+    assert (
+        phase3["deterministic_orientation_requirements"]["random_haar_only_allowed"]
+        is False
+    )
+    assert phase3["geometric_prefilter"]["metrics"] == [
+        "raw_minimum_distance",
+        "minimum_vdw_surface_gap",
+        "penetrating_heavy_atom_count",
+        "rough_overlap_volume",
+        "pocket_escape_distance",
+    ]
+    assert phase3["required_evaluation_metrics"] == [
+        "lane_unique_pose_rate",
+        "orientation_duplicate_rate",
+        "severe_penetration_rate",
+        "exact_valid_contribution",
+        "oracle_contribution",
+        "incremental_case_recovery",
+        "conformer_orientation_interaction",
+        "candidate_entropy",
+    ]
+    assert phase3["single_anchor_requirements"]["anchor_lanes"] == [
+        "ligand_donor_to_receptor_acceptor",
+        "ligand_acceptor_to_receptor_donor",
+        "positive_to_negative",
+        "aromatic_plane_orientation",
+        "shape_principal_axis",
+    ]
+    assert fresh["expected_engine_rows"] == 128 * 3 == 384
+    assert fresh["expected_engine_v2_candidate_slots"] == 128 * 64 == 8192
+    assert fresh["failed_case_only_rerun_allowed"] is False
+    assert fresh["post_result_threshold_change_allowed"] is False
+    assert fresh["post_result_scorer_change_allowed"] is False
+    assert fresh["post_result_allocation_change_allowed"] is False
     assert entry["minimum_oracle_case_count"] == 20
     assert entry["admissible_oracle_case_count_verified"] is False
     assert entry["valid_case_coverage_definition"] is None
     assert entry["proposal_profile_frozen"] is False
+    assert entry["target_family_held_out_split_definition"] is None
+    assert entry["target_family_held_out_split_feasible"] is False
+    assert "target_family_held_out_validation" in phase5["planned_work"]
+    assert "score_gap_abstention" in phase5["planned_work"]
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "match"),
+    (
+        (
+            (
+                "phase3_global_orientation_track",
+                "deterministic_orientation_requirements",
+                "random_haar_only_allowed",
+            ),
+            True,
+            "Phase 3 deterministic orientation requirements drifted",
+        ),
+        (
+            ("phase3_global_orientation_track", "geometric_prefilter", "metrics"),
+            ["minimum_vdw_surface_gap"],
+            "Phase 3 geometric prefilter drifted",
+        ),
+        (
+            ("phase3_global_orientation_track", "required_evaluation_metrics"),
+            ["candidate_entropy"],
+            "Phase 3 required evaluation metrics drifted",
+        ),
+        (
+            ("phase3_global_orientation_track", "unexpected"),
+            True,
+            "Phase 3 authority fields drifted",
+        ),
+        (
+            ("phase3_global_orientation_track", "proposed_profile", "profile_frozen"),
+            True,
+            "Phase 3 proposed profile drifted",
+        ),
+        (
+            (
+                "phase3_global_orientation_track",
+                "single_anchor_requirements",
+                "steric_precheck_required",
+            ),
+            False,
+            "Phase 3 single-anchor requirements drifted",
+        ),
+        (
+            ("phase4_corpus_authority", "fresh_128", "expected_engine_rows"),
+            383,
+            "Fresh-128 engine rows must be 384",
+        ),
+        (
+            ("phase4_corpus_authority", "fresh_128", "manifest_sha256"),
+            "0" * 64,
+            "Fresh-128 manifest identity drifted",
+        ),
+        (
+            (
+                "phase4_corpus_authority",
+                "fresh_128",
+                "failed_case_only_rerun_allowed",
+            ),
+            True,
+            "Fresh-128 failed_case_only_rerun_allowed must be False",
+        ),
+        (
+            (
+                "phase5_scorer_v2_gate",
+                "entry_conditions",
+                "target_family_held_out_split_feasible",
+            ),
+            True,
+            "Scorer v2 entry conditions drifted",
+        ),
+        (
+            ("phase5_scorer_v2_gate", "planned_work"),
+            ["abstention"],
+            "Scorer v2 planned work drifted",
+        ),
+        (
+            ("phase5_scorer_v2_gate", "unexpected"),
+            True,
+            "Scorer v2 authority fields drifted",
+        ),
+    ),
+)
+def test_resealed_phase3_fresh_and_phase5_semantic_drift_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    path: tuple[str, ...],
+    value: object,
+    match: str,
+) -> None:
+    policy = _policy()
+    target = policy
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+
+    _verify_resealed_semantic_failure(
+        tmp_path,
+        monkeypatch,
+        policy,
+        match=match,
+    )

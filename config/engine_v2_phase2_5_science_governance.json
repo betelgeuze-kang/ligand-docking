@@ -61,25 +61,34 @@
       "source_proposal_control_required": true
     },
     "evidence_requirements": {
-        "activated_state_independent_rederivation_required": true,
-        "activation_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0",
-        "activation_policy_self_hash_verification_required": true,
-        "activation_policy_sha256": "988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c",
-        "activation_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_selection_activation_receipt/2.0.0",
-        "activation_snapshot_schema_id": "betelgeuze.engine_v2_source_paired_torsion_rescue_activation_snapshot/1.2.0",
-        "all_allocated_targets_required": true,
-        "authenticated_geometry_independent_clearance_rederivation_required": true,
-        "authenticated_rmsd_receipts_required": true,
-        "authenticated_torsion_move_replay_required": true,
+      "activation_artifact_dependency": {
+        "artifact_present_in_this_branch": false,
+        "artifact_verified": false,
+        "delivery_state": "separate_branch_unmerged",
+        "execution_blocked_until_merged_and_verified": true,
+        "policy_path": "config/engine_v2_source_paired_clearance_activation.json",
+        "source_branch": "codex/source-paired-clearance-activation-v1",
+        "verifier_path": "tools/verify_engine_v2_source_paired_clearance_activation.py"
+      },
+      "activated_state_independent_rederivation_required": true,
+      "activation_policy_schema_id": "betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0",
+      "activation_policy_self_hash_verification_required": true,
+      "activation_policy_sha256": "988d0bb47bfa6ff934887e1e12b5a512b55aaf40033a04963d141c4ffefe212c",
+      "activation_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_selection_activation_receipt/2.0.0",
+      "activation_snapshot_schema_id": "betelgeuze.engine_v2_source_paired_torsion_rescue_activation_snapshot/1.2.0",
+      "all_allocated_targets_required": true,
+      "authenticated_geometry_independent_clearance_rederivation_required": true,
+      "authenticated_rmsd_receipts_required": true,
+      "authenticated_torsion_move_replay_required": true,
       "case_source_frozen_archive_member_authority_required": true,
       "case_source_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_case_source_receipt/1.0.0",
       "complete_internal_validity_context_and_pose_binding_required": true,
       "complete_posebusters_validity_required": true,
       "complete_scorer_v1_terms_receipts_required": true,
-        "current_v7_candidate_full_64_slot_lineage_required": true,
-        "current_v7_lineage_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_current_v7_lineage/1.0.0",
-        "exact_rank_recomputation_required": true,
-        "exact_snapshot_runtime_type_required": true,
+      "current_v7_candidate_full_64_slot_lineage_required": true,
+      "current_v7_lineage_receipt_schema_id": "betelgeuze.engine_v2_source_paired_clearance_current_v7_lineage/1.0.0",
+      "exact_rank_recomputation_required": true,
+      "exact_snapshot_runtime_type_required": true,
       "exact_source_v11_receipt_required": true,
       "historical_case_source_authority_sha256": "4c083af473c369bf35fc34fdf4fe797ddbb2ef60b5474a78d6354415e3aa06bc",
       "historical_v11_archive_score_rank_evidence_admissible": false,
@@ -177,8 +186,26 @@
     },
     "no_go_decision": {
       "any_trigger_closes_local_torsion_clearance_epic": true,
+      "closed_tracks": [
+        "v8_absolute_clearance",
+        "true_conformer_same_orientation",
+        "source_paired_torsion",
+        "clearance_rescue"
+      ],
       "terminal_decision_id": "no_go_close_local_torsion_clearance_epic",
       "triggers": [
+        {
+          "id": "no_case_level_recovery",
+          "metric": "incremental_case_recovery_count",
+          "operator": "lte",
+          "value": 0
+        },
+        {
+          "id": "no_aggregate_posebusters_validity_improvement",
+          "metric": "aggregate_posebusters_valid_case_count_delta",
+          "operator": "lte",
+          "value": 0
+        },
         {
           "all_conditions": [
             "shadow_eligible_candidate_count_gt_0",
@@ -242,6 +269,22 @@
         }
       ]
     },
+    "stage0_boundary": {
+      "phase2_go_grants_stage0_admission": false,
+      "phase2_go_thresholds": {
+        "denominator": 8,
+        "invalid_top1_maximum_case_count": 4,
+        "proposal_oracle_recovery_minimum_case_count": 2
+      },
+      "stage0_candidate_requirements": {
+        "denominator": 8,
+        "invalid_top1_maximum_case_count": 1,
+        "proposal_oracle_recovery_minimum_case_count": 3,
+        "status": "necessary_not_sufficient"
+      },
+      "stage0_promotion_authorized": false,
+      "stage0_threshold_freeze_authorized": false
+    },
     "status": "blocked_preexecution"
   },
   "phase3_global_orientation_track": {
@@ -267,15 +310,26 @@
       "candidate_deletion_allowed": false,
       "failure_reason_required": true,
       "metrics": [
+        "raw_minimum_distance",
         "minimum_vdw_surface_gap",
-        "pocket_escape",
-        "volume_overlap_estimate",
-        "heavy_atom_penetration_count"
+        "penetrating_heavy_atom_count",
+        "rough_overlap_volume",
+        "pocket_escape_distance"
       ],
       "rejected_slot_representation": "typed_geometric_rejection_row_in_original_proposal_index",
       "slot_denominator_preserved": true,
       "thresholds_frozen": false
     },
+    "required_evaluation_metrics": [
+      "lane_unique_pose_rate",
+      "orientation_duplicate_rate",
+      "severe_penetration_rate",
+      "exact_valid_contribution",
+      "oracle_contribution",
+      "incremental_case_recovery",
+      "conformer_orientation_interaction",
+      "candidate_entropy"
+    ],
     "multi_anchor": {
       "historical_candidate_count": 84,
       "historical_native_like_and_valid_count": 0,
@@ -356,13 +410,27 @@
       "registry_sha256": "89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31"
     },
     "fresh_128": {
+      "aggregate_replacement_with_partial_reruns_allowed": false,
       "case_count": 128,
       "case_ids_sha256": "ecc91c660896245f62ad8b583cfa4f45e50038cf513c384f6bdb56d406278248",
       "development_set_transfer_allowed": false,
+      "engine_count": 3,
+      "engine_ids": [
+        "engine_v2",
+        "vina",
+        "gnina"
+      ],
+      "engine_v2_candidate_slots_per_case": 64,
+      "expected_engine_rows": 384,
+      "expected_engine_v2_candidate_slots": 8192,
       "exactly_once_required": true,
       "execution_authorized": false,
+      "failed_case_only_rerun_allowed": false,
       "manifest_path": "config/engine_v2_fresh_redocking_holdout_manifest.json",
       "manifest_sha256": "459303a54cb1e8ebaf2bfa4320ad2287536d0e20a916fe5d2bac60edbdffdfba",
+      "post_result_allocation_change_allowed": false,
+      "post_result_scorer_change_allowed": false,
+      "post_result_threshold_change_allowed": false,
       "post_result_tuning_allowed": false,
       "purpose": "exactly_once_internal_provisional_blind_evidence",
       "result_values_inspected": false,
@@ -375,6 +443,9 @@
       "admissible_oracle_case_count_verified": false,
       "minimum_oracle_case_count": 20,
       "proposal_profile_frozen": false,
+      "target_family_held_out_split_definition": null,
+      "target_family_held_out_split_definition_frozen": false,
+      "target_family_held_out_split_feasible": false,
       "valid_case_coverage_definition": null,
       "valid_case_coverage_definition_frozen": false,
       "valid_case_coverage_sufficient": false
@@ -385,10 +456,10 @@
       "contact_count_normalization",
       "charge_bias_analysis",
       "pairwise_native_like_ranking",
-      "target_held_out_validation",
+      "target_family_held_out_validation",
       "top1_top5_objective_separation",
       "uncertainty_calibration",
-      "abstention"
+      "score_gap_abstention"
     ],
     "scorer_v1_deterministic_reference_retained": true,
     "scorer_v1_replacement_authorized": false,
@@ -397,6 +468,6 @@
     "status": "blocked_entry_conditions_unsatisfied"
   },
   "policy_id": "engine_v2_phase2_5_science_governance",
-  "policy_sha256": "686533aeec0c3af0f2d22701a7990ae030b0706797b9b7fff194de1c6e06e1e3",
-  "schema_id": "betelgeuze.engine_v2_phase2_5_science_governance/1.0.0"
+  "policy_sha256": "650e027cf2bfe7c97b80fef4987db9dd59f09f304a428785afaf16b62a92b779",
+  "schema_id": "betelgeuze.engine_v2_phase2_5_science_governance/1.1.0"
 }

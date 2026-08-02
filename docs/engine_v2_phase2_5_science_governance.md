@@ -4,8 +4,8 @@
 
 The machine authority is
 `config/engine_v2_phase2_5_science_governance.json`, schema
-`betelgeuze.engine_v2_phase2_5_science_governance/1.0.0`, policy SHA-256
-`686533aeec0c3af0f2d22701a7990ae030b0706797b9b7fff194de1c6e06e1e3`.
+`betelgeuze.engine_v2_phase2_5_science_governance/1.1.0`, policy SHA-256
+`650e027cf2bfe7c97b80fef4987db9dd59f09f304a428785afaf16b62a92b779`.
 It is based on `e782fb2dadd83ce4b9e41fc1af5b970fe63e28ca`.
 
 This contract records governance only. It did not run the protected historical
@@ -40,6 +40,14 @@ scientific evidence against that lineage. Snapshot acceptance additionally
 requires exact runtime type, authenticated receptor-geometry clearance
 recomputation, and authenticated torsion-move replay.
 
+That activation artifact is owned by the separate
+`codex/source-paired-clearance-activation-v1` branch. Its policy and verifier
+are deliberately absent from this branch, so the dependency is recorded as
+unverified and execution remains blocked. The governance verifier checks that
+this declaration matches the filesystem. Once the dependency lands, this
+policy must be rebound and reverified rather than silently treating file
+presence as activation authority.
+
 The experiment has a lifetime budget of one attempt and zero completed
 attempts. Execution remains blocked because an external append-only/WORM
 authority with atomic single consumption and an authenticated receipt is not
@@ -61,13 +69,23 @@ cannot hide regression of `6T88_MWQ`. The remaining guardrails require exactly
 512 rows per arm, preserved source control, fully verified score-term
 semantics, and result-independent allocation.
 
-Any frozen No-Go trigger takes precedence and closes the local
-torsion/clearance epic: shadow eligibility without a new case recovery, no
-increase in exact-valid cases, no decrease in invalid Top-1, an existing
-case-level recovery regression, or a selected replacement remaining
-penetrating without a PoseBusters-validity change for that same case, proposal
-index, and source-proposal identity. A validity improvement in another case
-cannot mask that last trigger.
+Any frozen No-Go trigger takes precedence. Unconditionally, no positive
+incremental case-level recovery or no positive aggregate
+PoseBusters-valid-case improvement is a No-Go. The existing triggers also
+remain: shadow eligibility without a new
+case recovery, no increase in exact-valid cases, no decrease in invalid Top-1,
+an existing case-level recovery regression, or a selected replacement
+remaining penetrating without a PoseBusters-validity change for that same
+case, proposal index, and source-proposal identity. A validity improvement in
+another case cannot mask that last trigger. The terminal decision closes V8
+absolute clearance, true-conformer same-orientation, source-paired torsion,
+and clearance-rescue work.
+
+Phase 2 Go is not Stage 0 admission. The A/B can satisfy its proposal-oracle
+gain at `2/8` or invalid Top-1 gain at `4/8`; the Stage 0 candidate still needs
+at least `3/8` proposal-oracle cases and at most `1/8` invalid Top-1 cases.
+Those Stage 0 counts are necessary, not sufficient. This policy neither
+freezes the complete Stage 0 thresholds nor grants Stage 0 promotion.
 
 ## Phase 3: conditional global orientation
 
@@ -93,11 +111,17 @@ had zero candidates that were both native-like and valid.
 
 A future pre-scorer geometric gate must retain every rejected slot as a typed
 row at its original proposal index, including a failure reason. Candidate
-deletion is prohibited. Minimum van der Waals surface gap, pocket escape,
-volume-overlap estimate, and heavy-atom penetration count are required, but
-their thresholds are not frozen; this independently blocks implementation.
-Single-anchor lanes also require target distance, direction vector, local
-surface normal, and a steric precheck.
+deletion is prohibited. Raw minimum distance, minimum van der Waals surface
+gap, penetrating heavy-atom count, rough overlap volume, and pocket-escape
+distance are required, but their thresholds are not frozen; this independently
+blocks implementation. Single-anchor lanes also require target distance,
+direction vector, local surface normal, and a steric precheck.
+
+Every future profile evaluation must report lane-level unique-pose rate,
+orientation-duplicate rate, severe-penetration rate, exact-valid contribution,
+oracle contribution, incremental case recovery, conformer-by-orientation
+interaction, and candidate entropy. These are required measurements, not
+post-result lane-selection discretion.
 
 ## Phase 4: corpus roles
 
@@ -114,20 +138,27 @@ contamination registry self-hash
 `89a58e6fbadd7e249df20bdf8db36f317e3e2e2dd6f32c32879d1a989dd28f31`.
 Fresh-128 is bound to manifest self-hash
 `459303a54cb1e8ebaf2bfa4320ad2287536d0e20a916fe5d2bac60edbdffdfba`.
+Its complete execution shape is 128 cases by three engines, or 384 engine
+rows, and 128 by 64 Engine V2 candidate slots, or 8,192 slots. Post-result
+threshold, scorer, or proposal-allocation changes, failed-case-only reruns,
+partial-rerun aggregate replacement, and development-set transfer are all
+prohibited.
 
 ## Phase 5: Scorer v2 entry gate
 
 Scorer v2 work remains unauthorized. Entry requires at least 20 admissible
 oracle cases, a frozen definition and successful finding of sufficient
-valid-case coverage, and a frozen proposal profile. The admissible oracle
-count is presently unverified, the coverage definition is missing, and the
+valid-case coverage, a frozen proposal profile, and a feasible frozen
+target/family-held-out split. The admissible oracle count is presently
+unverified, the coverage and held-out definitions are missing, and the
 proposal profile is not frozen.
 
 Once admitted, the bounded work is the Scorer v1 eight-term ablation, ligand
 size and contact-count normalization, charge-bias analysis, pairwise
-native-like ranking, target-held-out validation, separate Top-1 and Top-5
-objectives, uncertainty calibration, and abstention. Scorer v1 remains the
-deterministic reference and cannot be replaced under this contract.
+native-like ranking, target/family-held-out validation, separate Top-1 and
+Top-5 objectives, uncertainty calibration, and score-gap abstention. Scorer v1
+remains the deterministic reference and cannot be replaced under this
+contract.
 
 Verify the authority and all referenced corpus identities with:
 

@@ -8,12 +8,13 @@ import ast
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 from typing import Any
 
 
-POLICY_SCHEMA_ID = "betelgeuze.engine_v2_phase2_5_science_governance/1.0.0"
+POLICY_SCHEMA_ID = "betelgeuze.engine_v2_phase2_5_science_governance/1.1.0"
 EXPECTED_POLICY_SHA256 = (
-    "686533aeec0c3af0f2d22701a7990ae030b0706797b9b7fff194de1c6e06e1e3"
+    "650e027cf2bfe7c97b80fef4987db9dd59f09f304a428785afaf16b62a92b779"
 )
 EXPECTED_BASE_COMMIT_SHA1 = "e782fb2dadd83ce4b9e41fc1af5b970fe63e28ca"
 EXPECTED_D0_CASE_IDS = (
@@ -112,8 +113,26 @@ EXPECTED_PHASE2_GO_DECISION = {
 }
 EXPECTED_PHASE2_NO_GO_DECISION = {
     "any_trigger_closes_local_torsion_clearance_epic": True,
+    "closed_tracks": [
+        "v8_absolute_clearance",
+        "true_conformer_same_orientation",
+        "source_paired_torsion",
+        "clearance_rescue",
+    ],
     "terminal_decision_id": "no_go_close_local_torsion_clearance_epic",
     "triggers": [
+        {
+            "id": "no_case_level_recovery",
+            "metric": "incremental_case_recovery_count",
+            "operator": "lte",
+            "value": 0,
+        },
+        {
+            "id": "no_aggregate_posebusters_validity_improvement",
+            "metric": "aggregate_posebusters_valid_case_count_delta",
+            "operator": "lte",
+            "value": 0,
+        },
         {
             "all_conditions": [
                 "shadow_eligible_candidate_count_gt_0",
@@ -172,6 +191,86 @@ EXPECTED_PHASE2_NO_GO_DECISION = {
             "id": "selected_state_remains_penetrating_without_validity_change",
         },
     ],
+}
+EXPECTED_PHASE2_STAGE0_BOUNDARY = {
+    "phase2_go_grants_stage0_admission": False,
+    "phase2_go_thresholds": {
+        "denominator": 8,
+        "invalid_top1_maximum_case_count": 4,
+        "proposal_oracle_recovery_minimum_case_count": 2,
+    },
+    "stage0_candidate_requirements": {
+        "denominator": 8,
+        "invalid_top1_maximum_case_count": 1,
+        "proposal_oracle_recovery_minimum_case_count": 3,
+        "status": "necessary_not_sufficient",
+    },
+    "stage0_promotion_authorized": False,
+    "stage0_threshold_freeze_authorized": False,
+}
+EXPECTED_PHASE3_ORIENTATION_REQUIREMENTS = {
+    "canonical_quaternion_sign_required": True,
+    "duplicate_orientation_removal_required": True,
+    "index_stable_quaternion_required": True,
+    "low_discrepancy_so3_required": True,
+    "random_haar_only_allowed": False,
+    "result_independent_required": True,
+    "rotation_space_uniformity_required": True,
+    "source_dependent_seed_required": True,
+}
+EXPECTED_PHASE3_GEOMETRIC_PREFILTER = {
+    "before_scorer_required": True,
+    "candidate_deletion_allowed": False,
+    "failure_reason_required": True,
+    "metrics": [
+        "raw_minimum_distance",
+        "minimum_vdw_surface_gap",
+        "penetrating_heavy_atom_count",
+        "rough_overlap_volume",
+        "pocket_escape_distance",
+    ],
+    "rejected_slot_representation": (
+        "typed_geometric_rejection_row_in_original_proposal_index"
+    ),
+    "slot_denominator_preserved": True,
+    "thresholds_frozen": False,
+}
+EXPECTED_PHASE3_EVALUATION_METRICS = [
+    "lane_unique_pose_rate",
+    "orientation_duplicate_rate",
+    "severe_penetration_rate",
+    "exact_valid_contribution",
+    "oracle_contribution",
+    "incremental_case_recovery",
+    "conformer_orientation_interaction",
+    "candidate_entropy",
+]
+EXPECTED_PHASE3_PROFILE = {
+    "candidate_slots": 64,
+    "lane_quotas": {
+        "charge_aromatic_shape_single_anchor": 8,
+        "donor_acceptor_single_anchor": 8,
+        "independent_orientation_variants": 12,
+        "pocket_centered_controls": 8,
+        "retained_paired_controls": 4,
+        "true_conformer_independent_orientation": 8,
+        "uniform_source_controls": 16,
+    },
+    "profile_frozen": False,
+    "selection_authorized": False,
+}
+EXPECTED_PHASE3_SINGLE_ANCHOR = {
+    "anchor_lanes": [
+        "ligand_donor_to_receptor_acceptor",
+        "ligand_acceptor_to_receptor_donor",
+        "positive_to_negative",
+        "aromatic_plane_orientation",
+        "shape_principal_axis",
+    ],
+    "direction_vector_required": True,
+    "local_surface_normal_required": True,
+    "steric_precheck_required": True,
+    "target_distance_required": True,
 }
 
 
@@ -270,13 +369,78 @@ def _literal_assignment(path: Path, name: str) -> object:
     raise ValueError(f"D0 authority constant {name} is absent")
 
 
-def _resolve_reference(repo_root: Path, value: object, *, name: str) -> Path:
+def _resolve_repo_path(repo_root: Path, value: object, *, name: str) -> Path:
     _require(isinstance(value, str) and bool(value), f"{name} must be a path")
     root = repo_root.resolve()
     path = (root / str(value)).resolve()
     _require(path.is_relative_to(root), f"{name} escapes the repository")
+    return path
+
+
+def _resolve_reference(repo_root: Path, value: object, *, name: str) -> Path:
+    path = _resolve_repo_path(repo_root, value, name=name)
     _require(path.is_file(), f"{name} does not exist")
     return path
+
+
+def _git_tracks_path(repo_root: Path, relative_path: str) -> bool:
+    try:
+        result = subprocess.run(
+            (
+                "git",
+                "-C",
+                str(repo_root),
+                "ls-files",
+                "--error-unmatch",
+                "--",
+                relative_path,
+            ),
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _verify_activation_dependency(policy: dict[str, Any], repo_root: Path) -> None:
+    phase2 = policy["phase2_historical_one_shot_ab"]
+    dependency = phase2["evidence_requirements"]["activation_artifact_dependency"]
+    expected = {
+        "artifact_present_in_this_branch": False,
+        "artifact_verified": False,
+        "delivery_state": "separate_branch_unmerged",
+        "execution_blocked_until_merged_and_verified": True,
+        "policy_path": "config/engine_v2_source_paired_clearance_activation.json",
+        "source_branch": "codex/source-paired-clearance-activation-v1",
+        "verifier_path": "tools/verify_engine_v2_source_paired_clearance_activation.py",
+    }
+    _require_exact_payload(
+        dependency,
+        expected,
+        name="Phase 2 activation artifact dependency",
+    )
+    for field in ("policy_path", "verifier_path"):
+        declared_path = repo_root / dependency[field]
+        _resolve_repo_path(
+            repo_root,
+            dependency[field],
+            name=f"Phase 2 activation dependency {field}",
+        )
+        _require(
+            not declared_path.exists()
+            and not declared_path.is_symlink()
+            and not _git_tracks_path(repo_root, dependency[field]),
+            "Phase 2 activation dependency is present but remains declared "
+            "unverified; rebind the policy before acceptance",
+        )
+    _require_bool(
+        phase2["lifetime_execution"]["execution_authorized"],
+        name="Phase 2 execution while activation dependency is absent",
+        expected=False,
+    )
 
 
 def _verify_d0_authority(policy: dict[str, Any], repo_root: Path) -> None:
@@ -351,6 +515,50 @@ def _verify_d2_registry(policy: dict[str, Any], repo_root: Path) -> None:
 
 def _verify_fresh_manifest(policy: dict[str, Any], repo_root: Path) -> None:
     fresh = policy["phase4_corpus_authority"]["fresh_128"]
+    _require(
+        set(fresh)
+        == {
+            "aggregate_replacement_with_partial_reruns_allowed",
+            "case_count",
+            "case_ids_sha256",
+            "development_set_transfer_allowed",
+            "engine_count",
+            "engine_ids",
+            "engine_v2_candidate_slots_per_case",
+            "exactly_once_required",
+            "execution_authorized",
+            "expected_engine_rows",
+            "expected_engine_v2_candidate_slots",
+            "failed_case_only_rerun_allowed",
+            "manifest_path",
+            "manifest_sha256",
+            "post_result_allocation_change_allowed",
+            "post_result_scorer_change_allowed",
+            "post_result_threshold_change_allowed",
+            "post_result_tuning_allowed",
+            "purpose",
+            "result_values_inspected",
+            "stage0_admission_required_before_execution",
+        },
+        "Fresh-128 authority fields drifted",
+    )
+    _require(
+        fresh["manifest_path"]
+        == "config/engine_v2_fresh_redocking_holdout_manifest.json",
+        "Fresh-128 manifest path drifted",
+    )
+    _require(
+        fresh["manifest_sha256"] == EXPECTED_FRESH_MANIFEST_SHA256,
+        "Fresh-128 manifest identity drifted",
+    )
+    _require(
+        fresh["case_ids_sha256"] == EXPECTED_FRESH_CASE_IDS_SHA256,
+        "Fresh-128 case-ID identity drifted",
+    )
+    _require(
+        fresh["purpose"] == "exactly_once_internal_provisional_blind_evidence",
+        "Fresh-128 purpose drifted",
+    )
     manifest_path = _resolve_reference(
         repo_root, fresh["manifest_path"], name="Fresh-128 manifest"
     )
@@ -387,6 +595,37 @@ def _verify_fresh_manifest(policy: dict[str, Any], repo_root: Path) -> None:
         name="Fresh-128 pre-freeze result inspection",
         expected=False,
     )
+    _require_int(fresh["case_count"], name="Fresh-128 case_count", expected=128)
+    _require_int(fresh["engine_count"], name="Fresh-128 engine_count", expected=3)
+    _require_exact_payload(
+        fresh["engine_ids"],
+        ["engine_v2", "vina", "gnina"],
+        name="Fresh-128 engine IDs",
+    )
+    _require_int(
+        fresh["expected_engine_rows"],
+        name="Fresh-128 engine rows",
+        expected=384,
+    )
+    _require(
+        fresh["expected_engine_rows"] == fresh["case_count"] * fresh["engine_count"],
+        "Fresh-128 engine-row arithmetic drifted",
+    )
+    _require_int(
+        fresh["engine_v2_candidate_slots_per_case"],
+        name="Fresh-128 Engine V2 slots per case",
+        expected=64,
+    )
+    _require_int(
+        fresh["expected_engine_v2_candidate_slots"],
+        name="Fresh-128 Engine V2 candidate slots",
+        expected=8192,
+    )
+    _require(
+        fresh["expected_engine_v2_candidate_slots"]
+        == fresh["case_count"] * fresh["engine_v2_candidate_slots_per_case"],
+        "Fresh-128 Engine V2 slot arithmetic drifted",
+    )
     for field in (
         "exactly_once_required",
         "stage0_admission_required_before_execution",
@@ -395,14 +634,34 @@ def _verify_fresh_manifest(policy: dict[str, Any], repo_root: Path) -> None:
     for field in (
         "execution_authorized",
         "post_result_tuning_allowed",
+        "post_result_threshold_change_allowed",
+        "post_result_scorer_change_allowed",
+        "post_result_allocation_change_allowed",
         "development_set_transfer_allowed",
         "result_values_inspected",
+        "failed_case_only_rerun_allowed",
+        "aggregate_replacement_with_partial_reruns_allowed",
     ):
         _require_bool(fresh[field], name=f"Fresh-128 {field}", expected=False)
 
 
 def _verify_phase2(policy: dict[str, Any]) -> None:
     phase2 = policy["phase2_historical_one_shot_ab"]
+    _require(
+        set(phase2)
+        == {
+            "candidate_denominator",
+            "cohort",
+            "comparison",
+            "evidence_requirements",
+            "go_decision",
+            "lifetime_execution",
+            "no_go_decision",
+            "stage0_boundary",
+            "status",
+        },
+        "Phase 2 authority fields drifted",
+    )
     cohort = phase2["cohort"]
     candidate = phase2["candidate_denominator"]
     execution = phase2["lifetime_execution"]
@@ -463,6 +722,19 @@ def _verify_phase2(policy: dict[str, Any]) -> None:
     _require_exact_payload(
         phase2["evidence_requirements"],
         {
+            "activation_artifact_dependency": {
+                "artifact_present_in_this_branch": False,
+                "artifact_verified": False,
+                "delivery_state": "separate_branch_unmerged",
+                "execution_blocked_until_merged_and_verified": True,
+                "policy_path": (
+                    "config/engine_v2_source_paired_clearance_activation.json"
+                ),
+                "source_branch": "codex/source-paired-clearance-activation-v1",
+                "verifier_path": (
+                    "tools/verify_engine_v2_source_paired_clearance_activation.py"
+                ),
+            },
             "activated_state_independent_rederivation_required": True,
             "activation_policy_schema_id": (
                 "betelgeuze.engine_v2_source_paired_clearance_activation_policy/1.2.0"
@@ -554,53 +826,80 @@ def _verify_phase2(policy: dict[str, Any]) -> None:
         name="Phase 2 any-trigger terminal precedence",
         expected=True,
     )
+    _require_exact_payload(
+        phase2["stage0_boundary"],
+        EXPECTED_PHASE2_STAGE0_BOUNDARY,
+        name="Phase 2 versus Stage 0 boundary",
+    )
     _require(phase2["status"] == "blocked_preexecution", "Phase 2 status drifted")
 
 
 def _verify_phase3_to_phase5(policy: dict[str, Any]) -> None:
     phase3 = policy["phase3_global_orientation_track"]
-    activation = phase3["activation"]
     _require(
-        activation["required_phase2_terminal_decision_id"]
-        == "no_go_close_local_torsion_clearance_epic",
-        "Phase 3 activation condition drifted",
-    )
-    for field in (
-        "phase2_terminal_decision_present",
-        "implementation_authorized",
-        "execution_authorized",
-    ):
-        _require_bool(activation[field], name=f"Phase 3 {field}", expected=False)
-    quotas = phase3["proposed_profile"]["lane_quotas"]
-    _require(
-        quotas
+        set(phase3)
         == {
-            "pocket_centered_controls": 8,
-            "uniform_source_controls": 16,
-            "independent_orientation_variants": 12,
-            "true_conformer_independent_orientation": 8,
-            "donor_acceptor_single_anchor": 8,
-            "charge_aromatic_shape_single_anchor": 8,
-            "retained_paired_controls": 4,
+            "activation",
+            "deterministic_orientation_requirements",
+            "geometric_prefilter",
+            "multi_anchor",
+            "proposed_profile",
+            "required_evaluation_metrics",
+            "single_anchor_requirements",
         },
-        "Phase 3 lane quotas drifted",
+        "Phase 3 authority fields drifted",
     )
+    activation = phase3["activation"]
+    _require_exact_payload(
+        activation,
+        {
+            "execution_authorized": False,
+            "implementation_authorized": False,
+            "phase2_terminal_decision_present": False,
+            "required_phase2_terminal_decision_id": (
+                "no_go_close_local_torsion_clearance_epic"
+            ),
+            "status": "blocked_pending_phase2_no_go",
+        },
+        name="Phase 3 activation",
+    )
+    _require_exact_payload(
+        phase3["deterministic_orientation_requirements"],
+        EXPECTED_PHASE3_ORIENTATION_REQUIREMENTS,
+        name="Phase 3 deterministic orientation requirements",
+    )
+    _require_exact_payload(
+        phase3["geometric_prefilter"],
+        EXPECTED_PHASE3_GEOMETRIC_PREFILTER,
+        name="Phase 3 geometric prefilter",
+    )
+    _require_exact_payload(
+        phase3["required_evaluation_metrics"],
+        EXPECTED_PHASE3_EVALUATION_METRICS,
+        name="Phase 3 required evaluation metrics",
+    )
+    _require_exact_payload(
+        phase3["multi_anchor"],
+        {
+            "historical_candidate_count": 84,
+            "historical_native_like_and_valid_count": 0,
+            "included_in_profile": False,
+            "promotion_authorized": False,
+        },
+        name="Phase 3 multi-anchor exclusion",
+    )
+    _require_exact_payload(
+        phase3["proposed_profile"],
+        EXPECTED_PHASE3_PROFILE,
+        name="Phase 3 proposed profile",
+    )
+    _require_exact_payload(
+        phase3["single_anchor_requirements"],
+        EXPECTED_PHASE3_SINGLE_ANCHOR,
+        name="Phase 3 single-anchor requirements",
+    )
+    quotas = phase3["proposed_profile"]["lane_quotas"]
     _require(sum(quotas.values()) == 64, "Phase 3 lane quotas do not sum to 64")
-    _require_bool(
-        phase3["multi_anchor"]["included_in_profile"],
-        name="Phase 3 multi-anchor inclusion",
-        expected=False,
-    )
-    _require_bool(
-        phase3["geometric_prefilter"]["slot_denominator_preserved"],
-        name="Phase 3 prefilter denominator preservation",
-        expected=True,
-    )
-    _require_bool(
-        phase3["geometric_prefilter"]["candidate_deletion_allowed"],
-        name="Phase 3 candidate deletion",
-        expected=False,
-    )
 
     d1 = policy["phase4_corpus_authority"]["d1_fixed_decision_32"]
     _require_int(d1["case_count"], name="D1 case count", expected=32)
@@ -615,7 +914,36 @@ def _verify_phase3_to_phase5(policy: dict[str, Any]) -> None:
     )
 
     phase5 = policy["phase5_scorer_v2_gate"]
+    _require(
+        set(phase5)
+        == {
+            "entry_conditions",
+            "planned_work",
+            "scorer_v1_deterministic_reference_retained",
+            "scorer_v1_replacement_authorized",
+            "scorer_v2_implementation_authorized",
+            "scorer_v2_training_authorized",
+            "status",
+        },
+        "Scorer v2 authority fields drifted",
+    )
     entry = phase5["entry_conditions"]
+    _require_exact_payload(
+        entry,
+        {
+            "admissible_oracle_case_count": None,
+            "admissible_oracle_case_count_verified": False,
+            "minimum_oracle_case_count": 20,
+            "proposal_profile_frozen": False,
+            "target_family_held_out_split_definition": None,
+            "target_family_held_out_split_definition_frozen": False,
+            "target_family_held_out_split_feasible": False,
+            "valid_case_coverage_definition": None,
+            "valid_case_coverage_definition_frozen": False,
+            "valid_case_coverage_sufficient": False,
+        },
+        name="Scorer v2 entry conditions",
+    )
     _require_int(
         entry["minimum_oracle_case_count"], name="Scorer v2 oracle gate", expected=20
     )
@@ -627,9 +955,15 @@ def _verify_phase3_to_phase5(policy: dict[str, Any]) -> None:
         entry["valid_case_coverage_definition"] is None,
         "Scorer v2 coverage definition must be missing",
     )
+    _require(
+        entry["target_family_held_out_split_definition"] is None,
+        "Scorer v2 target/family held-out split definition must be missing",
+    )
     for field in (
         "admissible_oracle_case_count_verified",
         "proposal_profile_frozen",
+        "target_family_held_out_split_definition_frozen",
+        "target_family_held_out_split_feasible",
         "valid_case_coverage_definition_frozen",
         "valid_case_coverage_sufficient",
     ):
@@ -644,6 +978,25 @@ def _verify_phase3_to_phase5(policy: dict[str, Any]) -> None:
         phase5["scorer_v1_deterministic_reference_retained"],
         name="Scorer v1 retention",
         expected=True,
+    )
+    _require_exact_payload(
+        phase5["planned_work"],
+        [
+            "scorer_v1_eight_term_ablation",
+            "ligand_size_normalization",
+            "contact_count_normalization",
+            "charge_bias_analysis",
+            "pairwise_native_like_ranking",
+            "target_family_held_out_validation",
+            "top1_top5_objective_separation",
+            "uncertainty_calibration",
+            "score_gap_abstention",
+        ],
+        name="Scorer v2 planned work",
+    )
+    _require(
+        phase5["status"] == "blocked_entry_conditions_unsatisfied",
+        "Scorer v2 status drifted",
     )
 
 
@@ -678,6 +1031,7 @@ def verify_phase2_5_science_governance(policy_path: Path, repo_root: Path) -> st
     for field, value in boundary.items():
         _require_bool(value, name=f"authority boundary {field}", expected=False)
     _verify_phase2(policy)
+    _verify_activation_dependency(policy, repo_root)
     _verify_phase3_to_phase5(policy)
     _verify_d0_authority(policy, repo_root)
     _verify_d2_registry(policy, repo_root)
