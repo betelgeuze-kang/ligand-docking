@@ -14,10 +14,14 @@ from betelgeuze_engine_v2.docking import (
     TorsionContactRefinementError,
 )
 from betelgeuze_engine_v2.docking.source_paired_clearance_selection import (
-    SourcePairedTorsionRescueClearanceSelectionEvidenceV1,
     SourcePairedTorsionRescueClearanceSelectionPolicyV1,
+    SourcePairedTorsionRescueClearanceSelectionProbeInputsV1,
     evaluate_source_paired_torsion_rescue_clearance_selection_v1,
 )
+
+
+class _StringSubclass(str):
+    pass
 
 
 def _allocation() -> SourcePairedTorsionRescueAllocation:
@@ -35,16 +39,12 @@ def _allocation() -> SourcePairedTorsionRescueAllocation:
     )
 
 
-def _evidence(
+def _probe_inputs(
     **updates: object,
-) -> SourcePairedTorsionRescueClearanceSelectionEvidenceV1:
+) -> SourcePairedTorsionRescueClearanceSelectionProbeInputsV1:
     values: dict[str, object] = {
         "allocation": _allocation(),
         "proposal_index": 1,
-        "nested_refinement_receipt_schema_id": (
-            "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
-        ),
-        "nested_refinement_receipt_sha256": "4" * 64,
         "generic_v7_config_sha256": (
             "5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337"
         ),
@@ -86,7 +86,7 @@ def _evidence(
         values["optimized_combined_objective"] = float(
             values["optimized_receptor_objective"]
         ) + float(values["optimized_internal_objective"])
-    return SourcePairedTorsionRescueClearanceSelectionEvidenceV1(**values)
+    return SourcePairedTorsionRescueClearanceSelectionProbeInputsV1(**values)
 
 
 def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() -> None:
@@ -130,6 +130,10 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["clearance_metric_integrity_rule"] == (
         "each_surface_gap_strictly_lt_corresponding_raw_distance"
     )
+    assert payload["minimum_vdw_radius_sum_angstrom_binary64_hex"] == (2.4).hex()
+    assert payload["clearance_metric_rounding_rule"] == (
+        "gap_lte_nextafter_raw_minus_minimum_radius_sum_toward_positive_infinity"
+    )
     assert payload["selection_activation"] == "not_wired_shadow_only"
     assert payload["shadow_input_authority"] == ("caller_supplied_contract_probe_only")
     assert payload["activation_evidence_admissible"] is False
@@ -141,7 +145,7 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["product_promotion_eligible"] is False
     assert payload["claim_safe"] is False
     assert policy.fingerprint_sha256 == (
-        "9d084632c98eb312fed40e59ba7c10f338c4e99dbbba61282a40bb35f19305d0"
+        "f4bd88910948bd3afad8c1cca6234e9e072ec2b0c4979f04aee7c2931e710b48"
     )
     assert InteractionAwareTorsionContactConfigV7().to_dict() == active_v7_before
 
@@ -157,10 +161,20 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
         SourcePairedTorsionRescueClearanceSelectionPolicyV1(
             clearance_pair_count_bound=1_000_000.0  # type: ignore[arg-type]
         )
+    with pytest.raises(TorsionContactRefinementError, match="policy schema"):
+        SourcePairedTorsionRescueClearanceSelectionPolicyV1(
+            schema_id=_StringSubclass(policy.schema_id)
+        )
+    with pytest.raises(TorsionContactRefinementError, match="unsupported.*policy"):
+        SourcePairedTorsionRescueClearanceSelectionPolicyV1(
+            policy_id=_StringSubclass(policy.policy_id)
+        )
 
 
 def test_source_paired_clearance_selection_requires_every_guard() -> None:
-    decision = evaluate_source_paired_torsion_rescue_clearance_selection_v1(_evidence())
+    decision = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
+        _probe_inputs()
+    )
     payload = decision.to_dict()
 
     assert decision.shadow_selection_eligible is True
@@ -168,7 +182,7 @@ def test_source_paired_clearance_selection_requires_every_guard() -> None:
     assert payload["selection_applied"] is False
     assert payload["returned_coordinates_authority"] == "unchanged_active_v7"
     assert payload["source_lane_retained"] is True
-    assert len(decision.evidence_sha256) == 64
+    assert len(decision.probe_inputs_sha256) == 64
     assert (
         hashlib.sha256(
             json.dumps(
@@ -187,7 +201,18 @@ def test_source_paired_clearance_selection_requires_every_guard() -> None:
     )
 
     cases = (
-        ({"torsion_variant_available": False}, "torsion_variant_unavailable"),
+        (
+            {
+                "torsion_variant_available": False,
+                "optimized_coordinates_sha256": "a" * 64,
+                "optimized_receptor_objective": 5.0,
+                "optimized_internal_objective": 2.0,
+                "optimized_combined_objective": 7.0,
+                "optimized_minimum_vdw_surface_gap_angstrom": -1.0,
+                "optimized_raw_minimum_distance_angstrom": 2.0,
+            },
+            "torsion_variant_unavailable",
+        ),
         (
             {
                 "optimized_receptor_objective": 3.0,
@@ -226,37 +251,28 @@ def test_source_paired_clearance_selection_requires_every_guard() -> None:
     )
     for updates, expected_blocker in cases:
         rejected = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-            _evidence(**updates)
+            _probe_inputs(**updates)
         )
         assert rejected.shadow_selection_eligible is False
         assert expected_blocker in rejected.blocker_ids
         assert rejected.to_dict()["selection_applied"] is False
 
-    with pytest.raises(TorsionContactRefinementError, match="blocker IDs"):
-        replace(decision, blocker_ids=("fabricated_blocker",))
-    with pytest.raises(TorsionContactRefinementError, match="target and parent"):
-        replace(decision, parent_proposal_index=None)
-    with pytest.raises(TorsionContactRefinementError, match="coordinate-change"):
-        replace(
-            decision,
-            changed_coordinates_guard_passed=False,
-            blocker_ids=("optimized_coordinates_unchanged",),
-            shadow_selection_eligible=False,
-        )
+    with pytest.raises(TypeError):
+        replace(decision, probe_inputs_sha256="0" * 64)
 
 
 def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
     tolerance = 1.0e-18
 
     receptor_edge = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             baseline_receptor_objective=0.0,
             optimized_receptor_objective=tolerance,
         )
     )
     assert receptor_edge.receptor_objective_guard_passed is True
     receptor_over = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             baseline_receptor_objective=0.0,
             optimized_receptor_objective=math.nextafter(tolerance, math.inf),
         )
@@ -264,14 +280,14 @@ def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
     assert receptor_over.receptor_objective_guard_passed is False
 
     internal_edge = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             baseline_internal_objective=0.0,
             optimized_internal_objective=tolerance,
         )
     )
     assert internal_edge.internal_objective_guard_passed is True
     internal_over = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             baseline_internal_objective=0.0,
             optimized_internal_objective=math.nextafter(tolerance, math.inf),
         )
@@ -279,7 +295,7 @@ def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
     assert internal_over.internal_objective_guard_passed is False
 
     combined_edge = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             baseline_receptor_objective=tolerance,
             baseline_internal_objective=tolerance,
             baseline_combined_objective=2.0 * tolerance,
@@ -290,7 +306,7 @@ def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
     )
     assert combined_edge.combined_objective_guard_passed is False
     combined_below = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             baseline_receptor_objective=tolerance,
             baseline_internal_objective=tolerance,
             baseline_combined_objective=2.0 * tolerance,
@@ -302,30 +318,40 @@ def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
     assert combined_below.combined_objective_guard_passed is True
 
     gap_equal = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(optimized_minimum_vdw_surface_gap_angstrom=-1.0)
+        _probe_inputs(optimized_minimum_vdw_surface_gap_angstrom=-1.0)
     )
     assert gap_equal.minimum_vdw_surface_gap_guard_passed is False
     gap_above = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             optimized_minimum_vdw_surface_gap_angstrom=math.nextafter(-1.0, math.inf)
         )
     )
     assert gap_above.minimum_vdw_surface_gap_guard_passed is True
 
     distance_equal = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(optimized_raw_minimum_distance_angstrom=2.0)
+        _probe_inputs(optimized_raw_minimum_distance_angstrom=2.0)
     )
     assert distance_equal.raw_minimum_distance_guard_passed is True
     distance_below = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
-        _evidence(
+        _probe_inputs(
             optimized_raw_minimum_distance_angstrom=math.nextafter(2.0, -math.inf)
         )
     )
     assert distance_below.raw_minimum_distance_guard_passed is False
 
+    raw_distance = 4.0
+    rounding_aware_maximum_gap = math.nextafter(raw_distance - 2.4, math.inf)
+    rounding_edge = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
+        _probe_inputs(
+            optimized_minimum_vdw_surface_gap_angstrom=(rounding_aware_maximum_gap),
+            optimized_raw_minimum_distance_angstrom=raw_distance,
+        )
+    )
+    assert rounding_edge.shadow_selection_eligible is True
+
 
 def test_source_paired_clearance_selection_unavailability_fails_closed() -> None:
-    unavailable = _evidence(
+    unavailable = _probe_inputs(
         clearance_measurement_evaluated=False,
         clearance_measurement_unavailable_reason=(
             "full_cartesian_pair_count_exceeds_fixed_bound"
@@ -361,10 +387,6 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
         ({"torsion_variant_available": 1}, "must be boolean"),
         ({"optimized_combined_objective": math.nan}, "finite float"),
         ({"optimized_coordinates_sha256": "A" * 64}, "canonical SHA-256"),
-        (
-            {"nested_refinement_receipt_schema_id": "unsupported/1.0.0"},
-            "requires a V1.1 receipt",
-        ),
         ({"generic_v7_config_sha256": "0" * 64}, "V7 identity drifted"),
         ({"vdw_contact_policy_sha256": "0" * 64}, "VDW identity drifted"),
         ({"clearance_ligand_atom_count": 10.0}, "nonnegative integers"),
@@ -376,6 +398,10 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
                     base_guided_policy_sha256="0" * 64,
                 )
             },
+            "allocation drifted",
+        ),
+        (
+            {"allocation": replace(_allocation(), candidate_count=64.0)},
             "allocation drifted",
         ),
         (
@@ -416,6 +442,50 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
         ),
         (
             {
+                "baseline_minimum_vdw_surface_gap_angstrom": 1.7,
+                "baseline_raw_minimum_distance_angstrom": 4.0,
+            },
+            "minimum radius separation",
+        ),
+        (
+            {
+                "optimized_minimum_vdw_surface_gap_angstrom": 1.7,
+                "optimized_raw_minimum_distance_angstrom": 4.0,
+            },
+            "minimum radius separation",
+        ),
+        (
+            {
+                "optimized_minimum_vdw_surface_gap_angstrom": math.nextafter(
+                    math.nextafter(4.0 - 2.4, math.inf),
+                    math.inf,
+                ),
+                "optimized_raw_minimum_distance_angstrom": 4.0,
+            },
+            "minimum radius separation",
+        ),
+        (
+            {"torsion_variant_available": False},
+            "complete baseline state",
+        ),
+        (
+            {
+                "torsion_variant_available": False,
+                "optimized_coordinates_sha256": "a" * 64,
+                "optimized_receptor_objective": 5.0,
+                "optimized_internal_objective": 2.0,
+                "optimized_combined_objective": 7.0,
+                "optimized_minimum_vdw_surface_gap_angstrom": -0.9,
+                "optimized_raw_minimum_distance_angstrom": 2.0,
+            },
+            "complete baseline state",
+        ),
+        (
+            {"clearance_measurement_unavailable_reason": _StringSubclass("none")},
+            "exact string",
+        ),
+        (
+            {
                 "torsion_variant_available": False,
                 "legacy_v7_selected": True,
             },
@@ -427,9 +497,9 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
         ),
     ),
 )
-def test_source_paired_clearance_selection_rejects_noncanonical_evidence(
+def test_source_paired_clearance_selection_rejects_noncanonical_probe_inputs(
     updates: dict[str, object],
     message: str,
 ) -> None:
     with pytest.raises(TorsionContactRefinementError, match=message):
-        _evidence(**updates)
+        _probe_inputs(**updates)
