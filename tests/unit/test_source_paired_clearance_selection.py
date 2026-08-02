@@ -45,6 +45,9 @@ def _probe_inputs(
     values: dict[str, object] = {
         "allocation": _allocation(),
         "proposal_index": 1,
+        "source_refinement_receipt_schema_id": (
+            "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
+        ),
         "generic_v7_config_sha256": (
             "5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337"
         ),
@@ -131,8 +134,12 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
         "each_surface_gap_strictly_lt_corresponding_raw_distance"
     )
     assert payload["minimum_vdw_radius_sum_angstrom_binary64_hex"] == (2.4).hex()
+    assert payload["maximum_vdw_radius_sum_angstrom_binary64_hex"] == (4.62).hex()
     assert payload["clearance_metric_rounding_rule"] == (
         "gap_lte_nextafter_raw_minus_minimum_radius_sum_toward_positive_infinity"
+    )
+    assert payload["clearance_metric_lower_rounding_rule"] == (
+        "gap_gte_nextafter_raw_minus_maximum_radius_sum_toward_negative_infinity"
     )
     assert payload["selection_activation"] == "not_wired_shadow_only"
     assert payload["shadow_input_authority"] == ("caller_supplied_contract_probe_only")
@@ -145,7 +152,7 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["product_promotion_eligible"] is False
     assert payload["claim_safe"] is False
     assert policy.fingerprint_sha256 == (
-        "f4bd88910948bd3afad8c1cca6234e9e072ec2b0c4979f04aee7c2931e710b48"
+        "e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad"
     )
     assert InteractionAwareTorsionContactConfigV7().to_dict() == active_v7_before
 
@@ -349,6 +356,15 @@ def test_source_paired_clearance_selection_boundaries_are_exact() -> None:
     )
     assert rounding_edge.shadow_selection_eligible is True
 
+    rounding_aware_minimum_gap = math.nextafter(raw_distance - 4.62, -math.inf)
+    lower_rounding_edge = evaluate_source_paired_torsion_rescue_clearance_selection_v1(
+        _probe_inputs(
+            optimized_minimum_vdw_surface_gap_angstrom=(rounding_aware_minimum_gap),
+            optimized_raw_minimum_distance_angstrom=raw_distance,
+        )
+    )
+    assert lower_rounding_edge.shadow_selection_eligible is True
+
 
 def test_source_paired_clearance_selection_unavailability_fails_closed() -> None:
     unavailable = _probe_inputs(
@@ -387,6 +403,18 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
         ({"torsion_variant_available": 1}, "must be boolean"),
         ({"optimized_combined_objective": math.nan}, "finite float"),
         ({"optimized_coordinates_sha256": "A" * 64}, "canonical SHA-256"),
+        (
+            {"source_refinement_receipt_schema_id": "unsupported/1.0.0"},
+            "V1.1 source receipt schema",
+        ),
+        (
+            {
+                "source_refinement_receipt_schema_id": _StringSubclass(
+                    "betelgeuze.engine_v2_source_paired_torsion_rescue_receipt/1.1.0"
+                )
+            },
+            "V1.1 source receipt schema",
+        ),
         ({"generic_v7_config_sha256": "0" * 64}, "V7 identity drifted"),
         ({"vdw_contact_policy_sha256": "0" * 64}, "VDW identity drifted"),
         ({"clearance_ligand_atom_count": 10.0}, "nonnegative integers"),
@@ -463,6 +491,30 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
                 "optimized_raw_minimum_distance_angstrom": 4.0,
             },
             "minimum radius separation",
+        ),
+        (
+            {
+                "baseline_minimum_vdw_surface_gap_angstrom": -0.7,
+                "baseline_raw_minimum_distance_angstrom": 4.0,
+            },
+            "maximum radius separation",
+        ),
+        (
+            {
+                "optimized_minimum_vdw_surface_gap_angstrom": -0.7,
+                "optimized_raw_minimum_distance_angstrom": 4.0,
+            },
+            "maximum radius separation",
+        ),
+        (
+            {
+                "optimized_minimum_vdw_surface_gap_angstrom": math.nextafter(
+                    math.nextafter(4.0 - 4.62, -math.inf),
+                    -math.inf,
+                ),
+                "optimized_raw_minimum_distance_angstrom": 4.0,
+            },
+            "maximum radius separation",
         ),
         (
             {"torsion_variant_available": False},

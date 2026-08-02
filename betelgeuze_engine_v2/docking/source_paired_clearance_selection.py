@@ -47,6 +47,7 @@ _FROZEN_OBJECTIVE_TOLERANCE = float.fromhex("0x1.2725dd1d243acp-60")
 _FROZEN_V7_MINIMUM_SELECTED_RECEPTOR_OBJECTIVE = 2.0
 _FROZEN_V7_MAXIMUM_SELECTED_RECEPTOR_OBJECTIVE = 4.0
 _FROZEN_MINIMUM_VDW_RADIUS_SUM_ANGSTROM = 2.4
+_FROZEN_MAXIMUM_VDW_RADIUS_SUM_ANGSTROM = 4.62
 _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256 = (
     "1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6"
 )
@@ -60,7 +61,7 @@ _FROZEN_CANDIDATE_COUNT = 64
 _FROZEN_MAXIMUM_VARIANT_COUNT = 4
 _FROZEN_CLEARANCE_PAIR_COUNT_BOUND = 1_000_000
 _FROZEN_POLICY_SHA256 = (
-    "f4bd88910948bd3afad8c1cca6234e9e072ec2b0c4979f04aee7c2931e710b48"
+    "e5936f33d5aec54aae67f519e5cf6dffcc61181237270adb3e367a5f65cb29ad"
 )
 _DECISION_GUARD_NAMES = (
     "target_scope_guard_passed",
@@ -109,6 +110,8 @@ def _require_frozen_dependencies() -> None:
         or MAX_RECEPTOR_CLEARANCE_PAIR_COUNT != _FROZEN_CLEARANCE_PAIR_COUNT_BOUND
         or min(vdw_policy.radii_angstrom.values()) * 2.0
         != _FROZEN_MINIMUM_VDW_RADIUS_SUM_ANGSTROM
+        or max(vdw_policy.radii_angstrom.values()) * 2.0
+        != _FROZEN_MAXIMUM_VDW_RADIUS_SUM_ANGSTROM
     ):
         raise TorsionContactRefinementError(
             "source-paired clearance-selection frozen dependency drift"
@@ -266,9 +269,16 @@ class SourcePairedTorsionRescueClearanceSelectionPolicyV1:
             "minimum_vdw_radius_sum_angstrom_binary64_hex": (
                 _FROZEN_MINIMUM_VDW_RADIUS_SUM_ANGSTROM.hex()
             ),
+            "maximum_vdw_radius_sum_angstrom_binary64_hex": (
+                _FROZEN_MAXIMUM_VDW_RADIUS_SUM_ANGSTROM.hex()
+            ),
             "clearance_metric_rounding_rule": (
                 "gap_lte_nextafter_raw_minus_minimum_radius_sum_toward_"
                 "positive_infinity"
+            ),
+            "clearance_metric_lower_rounding_rule": (
+                "gap_gte_nextafter_raw_minus_maximum_radius_sum_toward_"
+                "negative_infinity"
             ),
             "coordinate_comparator": "optimized_sha256_not_equal_baseline_sha256",
             "legacy_v7_selection_action": "retain_legacy_v7",
@@ -310,6 +320,7 @@ class SourcePairedTorsionRescueClearanceSelectionProbeInputsV1:
 
     allocation: SourcePairedTorsionRescueAllocation
     proposal_index: int
+    source_refinement_receipt_schema_id: str
     generic_v7_config_sha256: str
     vdw_contact_policy_sha256: str
     baseline_coordinates_sha256: str
@@ -356,6 +367,14 @@ class SourcePairedTorsionRescueClearanceSelectionProbeInputsV1:
         ):
             raise TorsionContactRefinementError(
                 "source-paired clearance-selection proposal index is invalid"
+            )
+        if (
+            type(self.source_refinement_receipt_schema_id) is not str
+            or self.source_refinement_receipt_schema_id
+            != INTERACTION_AWARE_SOURCE_PAIRED_TORSION_RESCUE_RECEIPT_SCHEMA_ID
+        ):
+            raise TorsionContactRefinementError(
+                "clearance-selection probes require the V1.1 source receipt schema"
             )
         for name in (
             "generic_v7_config_sha256",
@@ -497,6 +516,18 @@ class SourcePairedTorsionRescueClearanceSelectionProbeInputsV1:
                 raise TorsionContactRefinementError(
                     "VDW surface gaps lack the frozen minimum radius separation"
                 )
+            if self.baseline_minimum_vdw_surface_gap_angstrom < math.nextafter(
+                self.baseline_raw_minimum_distance_angstrom
+                - _FROZEN_MAXIMUM_VDW_RADIUS_SUM_ANGSTROM,
+                -math.inf,
+            ) or self.optimized_minimum_vdw_surface_gap_angstrom < math.nextafter(
+                self.optimized_raw_minimum_distance_angstrom
+                - _FROZEN_MAXIMUM_VDW_RADIUS_SUM_ANGSTROM,
+                -math.inf,
+            ):
+                raise TorsionContactRefinementError(
+                    "VDW surface gaps exceed the frozen maximum radius separation"
+                )
         elif is_target:
             if (
                 self.clearance_measurement_evaluated
@@ -541,6 +572,9 @@ class SourcePairedTorsionRescueClearanceSelectionProbeInputsV1:
         return {
             "allocation_sha256": self.allocation.allocation_sha256,
             "proposal_index": self.proposal_index,
+            "source_refinement_receipt_schema_id": (
+                self.source_refinement_receipt_schema_id
+            ),
             "generic_v7_config_sha256": self.generic_v7_config_sha256,
             "vdw_contact_policy_sha256": self.vdw_contact_policy_sha256,
             "baseline_coordinates_sha256": self.baseline_coordinates_sha256,
