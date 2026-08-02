@@ -345,8 +345,10 @@ class SourcePairedTorsionRescueClearanceSelectionProbeInputsV1:
     _fingerprint_sha256: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.allocation, SourcePairedTorsionRescueAllocation):
-            raise TypeError("allocation must be SourcePairedTorsionRescueAllocation")
+        if type(self.allocation) is not SourcePairedTorsionRescueAllocation:
+            raise TypeError(
+                "allocation must be the exact SourcePairedTorsionRescueAllocation type"
+            )
         if (
             type(self.allocation.candidate_count) is not int
             or self.allocation.candidate_count != _FROZEN_CANDIDATE_COUNT

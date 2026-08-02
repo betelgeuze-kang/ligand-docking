@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 import hashlib
 import inspect
 import json
@@ -534,6 +534,27 @@ def test_snapshot_subclass_is_rejected_before_projection_dispatch() -> None:
             SnapshotSubclass(),
             current_v7,
         )
+
+
+def test_nested_allocation_subclass_is_rejected_before_projection_dispatch() -> None:
+    _proposals, _current_v7, _snapshot, proposal_receipt = _fixture(
+        permissive_selection_window=False
+    )
+
+    class AllocationSubclass(SourcePairedTorsionRescueAllocation):
+        def to_dict(self) -> dict[str, object]:
+            raise AssertionError("subclass projection must not be dispatched")
+
+    malicious_allocation = object.__new__(AllocationSubclass)
+    with pytest.raises(TypeError, match="exact SourcePairedTorsionRescueAllocation"):
+        replace(proposal_receipt, allocation=malicious_allocation)
+
+    object.__setattr__(proposal_receipt, "allocation", malicious_allocation)
+    with pytest.raises(
+        guided_module.DockingAuthorityError,
+        match="nested receipt type changed",
+    ):
+        proposal_receipt.to_dict()
 
 
 def test_state_returns_integrity_checked_clones() -> None:

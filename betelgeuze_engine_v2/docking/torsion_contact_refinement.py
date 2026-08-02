@@ -672,9 +672,8 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
                 "source-paired torsion-rescue profile flag must be boolean"
             )
         if source_paired_torsion_rescue_profile:
-            if not isinstance(
-                source_paired_torsion_rescue_allocation,
-                SourcePairedTorsionRescueAllocation,
+            if type(source_paired_torsion_rescue_allocation) is not (
+                SourcePairedTorsionRescueAllocation
             ):
                 raise TorsionContactRefinementError(
                     "source-paired torsion rescue requires typed allocation evidence"
@@ -988,12 +987,17 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
             raise TorsionContactRefinementError(
                 "source-paired activation snapshot projection is invalid"
             )
-        if not isinstance(
-            proposal_receipt,
-            SourcePairedTorsionRescueProposalReceipt,
+        if type(proposal_receipt) is not SourcePairedTorsionRescueProposalReceipt:
+            raise TypeError(
+                "proposal_receipt must be the exact "
+                "SourcePairedTorsionRescueProposalReceipt type"
+            )
+        if type(proposal_receipt.allocation) is not (
+            SourcePairedTorsionRescueAllocation
         ):
             raise TypeError(
-                "proposal_receipt must be SourcePairedTorsionRescueProposalReceipt"
+                "proposal_receipt allocation must be the exact "
+                "SourcePairedTorsionRescueAllocation type"
             )
         proposal_receipt_sha256 = proposal_receipt.receipt_sha256
         proposal_payload = proposal_receipt.to_dict()
@@ -1070,7 +1074,7 @@ class InteractionAwareTorsionContactEnsembleRefinerV7:
         optimized_combined_objective: float,
     ) -> dict[str, object]:
         allocation = self._source_paired_torsion_rescue_allocation
-        if not isinstance(allocation, SourcePairedTorsionRescueAllocation):
+        if type(allocation) is not SourcePairedTorsionRescueAllocation:
             raise TorsionContactRefinementError(
                 "activation snapshot allocation evidence is unavailable"
             )
