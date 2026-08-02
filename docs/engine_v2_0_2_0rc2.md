@@ -42,6 +42,10 @@ Execution:    CPU reference
 - installed
   `betelgeuze-engine-v2-openmm-force-double-rattle-trajectory` claim-closed
   OpenMM-force/stdlib-double-RATTLE development CLI smoke checks;
+- installed `betelgeuze-engine-v2-public-ranking-custody` public-key-only,
+  label-blind registration/release/admission CLI smoke checks;
+- installed `betelgeuze-engine-v2-public-ranking-fit-validation` custody-gated
+  PDBbind-fit/CASF-validation selection CLI smoke checks;
 - installed `betelgeuze-engine-v2-posebusters-intake` extraction-free local
   archive-intake smoke checks (the public archive remains caller-provided);
 - installed `betelgeuze-engine-v2-posebusters-corpus-audit` failure-inclusive
@@ -156,22 +160,38 @@ No production receipt, fit, selected model, metric, review, or claim exists
 without genuine upstream corpus inputs.
 The installable
 `betelgeuze-engine-v2-public-ranking-fit-validation` command adds the next
-claim-closed boundary. A canonical manifest workflow-locally preregisters every
-deterministic fit candidate and CASF bootstrap configuration. Candidates fit
-only the embedded PDBbind rows; CASF contributes only failure-inclusive all-case/
-all-pose, target-family, bootstrap-interval validation and selection by
-PR-AUC, Top-1, Top-5, then candidate ID. Every candidate and primary metric
-must complete or no model is selected. Selection-policy SHA-256 is
+claim-closed boundary. A canonical manifest defines every deterministic fit
+candidate and CASF bootstrap configuration. The separate installed
+`betelgeuze-engine-v2-public-ranking-custody` command commits that manifest,
+training/CASF identities, leakage audit, source, policies, distinct roles,
+validity window, and nonce without exposing validation rows, labels, class
+counts, or metrics. A registrar must sign before a distinct preregistered
+validation custodian signs the exact later release. The workflow accepts only
+out-of-band public keys and detached signatures, requires an explicit six-array
+revocation/supersession state, and derives a mode-0600 no-overwrite execution
+admission only after exact trust, source, role, time, canonical-byte, and
+signature verification. Custody-policy SHA-256 is
+`c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`.
+
+The fit/validation command now requires and re-verifies that admission before
+candidate work. Candidates fit only the embedded PDBbind rows; CASF contributes
+only failure-inclusive all-case/all-pose, target-family, bootstrap-interval
+validation and selection by PR-AUC, Top-1, Top-5, then candidate ID. Every
+candidate and primary metric must complete or no model is selected.
+Selection-policy SHA-256 is
 `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
-The mode-0600 receipt and verifier exact-bind/reexecute ancestry, source,
-Python/Torch runtime, configs, models, and reports; a PoseBusters test score
-partition is forbidden. Genuine licensed inputs remain absent, so no
-production receipt, test result, confidence calibration, independent review,
-scientific validation, or docking claim exists. Two builds were byte-identical
-at wheel SHA-256
-`d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`;
-the installed CLI/import boundary passed outside-checkout verification.
-The receipt has no independent timestamp/signature custody for the manifest.
+The mode-0600 receipt and verifier exact-bind/recheck custody and reexecute
+ancestry, source, Python/Torch runtime, configs, models, and reports; a
+PoseBusters test score partition is forbidden. Two deterministic builds were
+byte-identical at wheel SHA-256
+`cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+(1,725,542 bytes), and both installed CLI/import surfaces passed outside-
+checkout verification. Genuine licensed inputs,
+external signatures, trust anchors, and custody-state evidence remain absent,
+so no production registration, release, admission, selection receipt, test
+result, confidence calibration, independent review, scientific validation, or
+docking claim exists. A valid signature proves the declared key/identity
+chain, not human independence or dataset quality.
 The PoseBusters intake command can establish the exact archive, selection, and
 308-case artifact identities without extraction, but it performs no preparation,
 pose generation, scoring, benchmark execution, or independent review and does

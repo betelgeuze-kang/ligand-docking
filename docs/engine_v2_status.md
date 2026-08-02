@@ -211,25 +211,38 @@ The current `main` branch contains:
   No production receipt, fit, selected model, metric, review, or claim exists
   while genuine upstream corpus inputs are absent;
 - an installable fit/validation selection boundary gated by that verified
-  training view. It requires a canonical, workflow-local preregistered
-  candidate manifest,
-  fits every candidate only on the embedded PDBbind success rows, evaluates
-  CASF with failure-inclusive all-case/all-pose and target-family metrics plus
-  case-bootstrap intervals, and selects deterministically by average-precision
-  PR-AUC, Top-1, Top-5, then candidate ID. The frozen selection-policy SHA-256
-  is `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
+  training view and a new independently signable custody boundary. The
+  `betelgeuze-engine-v2-public-ranking-custody` CLI creates a label-blind
+  registration commitment over the exact candidate manifest, training/CASF
+  inputs, leakage audit, source, policy, four distinct declared roles, time
+  window, and nonce. A registrar must sign first and a distinct validation
+  custodian must sign the exact later release. Public-key anchors, an explicit
+  six-array revocation/supersession snapshot, canonical bytes, role/time
+  ordering, and both Ed25519 signatures must verify before a mode-0600
+  execution admission is emitted. Its policy SHA-256 is
+  `c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`.
+  The fit/validation command requires and re-verifies that exact admission
+  before fitting every candidate only on the embedded PDBbind success rows,
+  then evaluates CASF with failure-inclusive all-case/all-pose and
+  target-family metrics plus case-bootstrap intervals and selects
+  deterministically by average-precision PR-AUC, Top-1, Top-5, then candidate
+  ID. The frozen selection-policy SHA-256 is
+  `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
   Every candidate and primary metric must complete; otherwise every result row
-  is retained and no model is selected. The file verifier reexecutes the full
-  ancestry, fit, and validation path and exact-compares a mode-0600 receipt
-  bound to source, Python/Torch runtime, inputs, configs, models, and reports.
-  The API accepts no PoseBusters test score partition. Two builds were byte-
-  identical at wheel SHA-256
-  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`,
-  and the installed CLI/import boundary passed outside-checkout verification.
-  The receipt has no independent timestamp/signature custody for that
-  manifest. Genuine licensed inputs remain absent, so no production receipt,
-  test result, confidence calibration, independent rerun/review, scientific
-  validation, or product claim exists;
+  is retained and no model is selected. The file verifier re-verifies current
+  custody, reexecutes the full ancestry, fit, and validation path, and
+  exact-compares a mode-0600 receipt bound to the admission, source,
+  Python/Torch runtime, inputs, configs, models, and reports. Both installed
+  CLIs accept no secret key, and the API accepts no PoseBusters test score
+  partition. Two deterministic builds were byte-identical at wheel SHA-256
+  `cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+  (1,725,542 bytes), with installed custody/selection CLI and import checks
+  outside the checkout. Genuine licensed inputs, external signatures, trust
+  anchors, and custody-state evidence remain absent, so no production registration,
+  release, admission, selection receipt, test result, confidence calibration,
+  independent rerun/review, scientific validation, or product claim exists.
+  The signature chain proves declared identities, not human independence or
+  dataset quality;
 - an installable extraction-free PoseBusters archive intake. It pins the exact
   published Zenodo ZIP and journal 308-ID selection, audits all ZIP paths,
   compression, sizes, counts, metadata, and symlink/encryption boundaries, then

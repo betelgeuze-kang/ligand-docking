@@ -262,6 +262,7 @@ jobs:
           "$venv/bin/betelgeuze-engine-v2-public-ranking-calibration-partition-intake" --help | grep -q "PDBbind fit and CASF validation score partitions"
           "$venv/bin/betelgeuze-engine-v2-public-ranking-calibration-training-view" --help | grep -q "success-only PDBbind training view"
           "$venv/bin/betelgeuze-engine-v2-public-ranking-fit-validation" --help | grep -q "PoseBusters test score partition"
+          "$venv/bin/betelgeuze-engine-v2-public-ranking-custody" --help | grep -q "public-key-only, label-blind"
           "$venv/bin/betelgeuze-engine-v2-posebusters-pose-scaffold-identity" --help | grep -q "generated-coordinate identity"
           "$venv/bin/betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic" --help | grep -q "prepared ligand Gasteiger charge and atom-type diagnostics"
           "$venv/bin/betelgeuze-engine-v2-posebusters-openbabel-compare" --help | grep -q "independent Open Babel charge"

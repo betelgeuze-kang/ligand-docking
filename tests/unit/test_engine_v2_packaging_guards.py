@@ -138,6 +138,10 @@ def test_independent_package_metadata_matches_version_taxonomy() -> None:
         in text
     )
     assert (
+        'betelgeuze-engine-v2-public-ranking-custody = "betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_custody:main"'
+        in text
+    )
+    assert (
         'betelgeuze-engine-v2-posebusters-pose-scaffold-identity = "betelgeuze_engine_v2.benchmark.public_posebusters_pose_scaffold_identity:main"'
         in text
     )

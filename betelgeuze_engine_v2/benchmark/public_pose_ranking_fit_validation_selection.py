@@ -3,8 +3,11 @@
 The workflow reverifies the public-corpus, partition-intake, and success-only
 training-view ancestry before fitting every preregistered candidate. Candidate
 models consume only the embedded PDBbind fit rows. CASF labels are used only
-for failure-inclusive validation evaluation and deterministic model selection.
-A PoseBusters test score partition is not accepted by this API.
+after an independently signed, label-blind candidate registration and a later,
+separately signed validation release verify against current out-of-band public
+keys and revocation/supersession state. They support failure-inclusive
+validation evaluation and deterministic model selection. A PoseBusters test
+score partition is not accepted by this API.
 
 The result remains claim-closed: it is a fit/validation workflow, not a test
 benchmark, independent rerun, scientifically validated scorer, or product
@@ -97,7 +100,6 @@ PUBLIC_POSE_RANKING_FIT_VALIDATION_SELECTION_POLICY_SHA256 = (
 
 PUBLIC_POSE_RANKING_FIT_VALIDATION_SCIENTIFIC_BLOCKERS = (
     "validation_selection_is_not_posebusters_test_evaluation",
-    "candidate_manifest_independent_preregistration_custody_is_not_established",
     "selected_model_is_not_independently_reproduced",
     "pose_ranking_confidence_calibration_is_not_fitted",
     "scientific_acceptance_thresholds_are_not_independently_reviewed",
@@ -623,10 +625,14 @@ def _source_identity() -> dict[str, object]:
         "betelgeuze_engine_v2/benchmark/"
         "public_pose_ranking_fit_validation_selection.py",
         "betelgeuze_engine_v2/benchmark/"
+        "public_pose_ranking_fit_validation_custody.py",
+        "betelgeuze_engine_v2/benchmark/"
         "public_pose_ranking_calibration_training_view.py",
         "betelgeuze_engine_v2/benchmark/"
         "public_pose_ranking_calibration_partition_intake.py",
         "betelgeuze_engine_v2/docking/calibration.py",
+        "betelgeuze_engine_v2/physics/"
+        "reference_minimization_validation_ed25519.py",
     )
     rows = [
         {"path": relative, **_hash_regular_file(root / relative)}
@@ -825,6 +831,77 @@ def _selected_row(
     return sorted(rows, key=key)[0]
 
 
+def _verified_custody_admission(
+    *,
+    custody_admission: Mapping[str, object],
+    training_view_receipt: PublicPoseRankingCalibrationTrainingViewReceipt,
+    training_view_receipt_source_file_sha256: str,
+    training_view_receipt_source_file_size_bytes: int,
+    validation_partition: PoseRankingCalibrationPartition,
+    manifest: PublicPoseRankingFitValidationManifest,
+    manifest_source_file_sha256: str,
+    manifest_source_file_size_bytes: int,
+    trusted_registrar_keys: Mapping[str, object],
+    trusted_custodian_keys: Mapping[str, object],
+    custody_checked_at_utc: str,
+    revoked_registrar_key_ids: Sequence[str],
+    revoked_registration_receipt_sha256s: Sequence[str],
+    superseded_registration_receipt_sha256s: Sequence[str],
+    revoked_custodian_key_ids: Sequence[str],
+    revoked_release_receipt_sha256s: Sequence[str],
+    superseded_release_receipt_sha256s: Sequence[str],
+) -> dict[str, object]:
+    from .public_pose_ranking_fit_validation_custody import (
+        PublicPoseRankingFitValidationCustodyError,
+        require_public_pose_ranking_fit_validation_custody_admission,
+        validate_public_pose_ranking_fit_validation_custody_admission_structure,
+    )
+
+    try:
+        structured = (
+            validate_public_pose_ranking_fit_validation_custody_admission_structure(
+                custody_admission
+            )
+        )
+        return require_public_pose_ranking_fit_validation_custody_admission(
+            structured,
+            signed_registration=structured["signed_registration"],
+            signed_release=structured["signed_release"],
+            training_view_receipt=training_view_receipt,
+            training_view_receipt_source_file_sha256=(
+                training_view_receipt_source_file_sha256
+            ),
+            training_view_receipt_source_file_size_bytes=(
+                training_view_receipt_source_file_size_bytes
+            ),
+            validation_partition=validation_partition,
+            manifest=manifest,
+            manifest_source_file_sha256=manifest_source_file_sha256,
+            manifest_source_file_size_bytes=manifest_source_file_size_bytes,
+            trusted_registrar_keys=trusted_registrar_keys,
+            trusted_custodian_keys=trusted_custodian_keys,
+            checked_at_utc=custody_checked_at_utc,
+            revoked_registrar_key_ids=revoked_registrar_key_ids,
+            revoked_registration_receipt_sha256s=(
+                revoked_registration_receipt_sha256s
+            ),
+            superseded_registration_receipt_sha256s=(
+                superseded_registration_receipt_sha256s
+            ),
+            revoked_custodian_key_ids=revoked_custodian_key_ids,
+            revoked_release_receipt_sha256s=(
+                revoked_release_receipt_sha256s
+            ),
+            superseded_release_receipt_sha256s=(
+                superseded_release_receipt_sha256s
+            ),
+        )
+    except PublicPoseRankingFitValidationCustodyError as exc:
+        raise PublicPoseRankingFitValidationSelectionError(
+            "current independent preregistration custody admission is required"
+        ) from exc
+
+
 def materialize_public_pose_ranking_fit_validation_selection(
     *,
     training_view_receipt: PublicPoseRankingCalibrationTrainingViewReceipt,
@@ -834,8 +911,18 @@ def materialize_public_pose_ranking_fit_validation_selection(
     manifest: PublicPoseRankingFitValidationManifest,
     manifest_source_file_sha256: str,
     manifest_source_file_size_bytes: int,
+    custody_admission: Mapping[str, object],
+    trusted_registrar_keys: Mapping[str, object],
+    trusted_custodian_keys: Mapping[str, object],
+    custody_checked_at_utc: str,
+    revoked_registrar_key_ids: Sequence[str],
+    revoked_registration_receipt_sha256s: Sequence[str],
+    superseded_registration_receipt_sha256s: Sequence[str],
+    revoked_custodian_key_ids: Sequence[str],
+    revoked_release_receipt_sha256s: Sequence[str],
+    superseded_release_receipt_sha256s: Sequence[str],
 ) -> dict[str, object]:
-    """Fit all preregistered candidates and select only on bound CASF labels."""
+    """Verify independent custody before fitting and CASF-only selection."""
 
     if not isinstance(
         training_view_receipt,
@@ -898,6 +985,31 @@ def materialize_public_pose_ranking_fit_validation_selection(
         minimum=1,
         maximum=PUBLIC_POSE_RANKING_FIT_VALIDATION_MAX_MANIFEST_BYTES,
     )
+    verified_custody = _verified_custody_admission(
+        custody_admission=custody_admission,
+        training_view_receipt=training_view_receipt,
+        training_view_receipt_source_file_sha256=training_file_sha256,
+        training_view_receipt_source_file_size_bytes=training_file_size,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        manifest_source_file_sha256=manifest_file_sha256,
+        manifest_source_file_size_bytes=manifest_file_size,
+        trusted_registrar_keys=trusted_registrar_keys,
+        trusted_custodian_keys=trusted_custodian_keys,
+        custody_checked_at_utc=custody_checked_at_utc,
+        revoked_registrar_key_ids=revoked_registrar_key_ids,
+        revoked_registration_receipt_sha256s=(
+            revoked_registration_receipt_sha256s
+        ),
+        superseded_registration_receipt_sha256s=(
+            superseded_registration_receipt_sha256s
+        ),
+        revoked_custodian_key_ids=revoked_custodian_key_ids,
+        revoked_release_receipt_sha256s=revoked_release_receipt_sha256s,
+        superseded_release_receipt_sha256s=(
+            superseded_release_receipt_sha256s
+        ),
+    )
     rows = tuple(
         _candidate_result(
             training_view=training_view_receipt,
@@ -948,6 +1060,18 @@ def materialize_public_pose_ranking_fit_validation_selection(
         "selection_policy_sha256": (
             PUBLIC_POSE_RANKING_FIT_VALIDATION_SELECTION_POLICY_SHA256
         ),
+        "custody_admission": verified_custody,
+        "custody_admission_sha256": (
+            verified_custody["custody_admission_sha256"]
+        ),
+        "registration_receipt_sha256": (
+            verified_custody["registration_receipt_sha256"]
+        ),
+        "validation_release_receipt_sha256": (
+            verified_custody["release_receipt_sha256"]
+        ),
+        "independent_preregistration_custody_verified": True,
+        "validation_labels_released_after_registration": True,
         "source_identity": source_identity,
         "runtime_identity": runtime_identity,
         "candidate_results": list(rows),
@@ -1258,6 +1382,12 @@ def _validate_receipt_digest(value: object) -> dict[str, object]:
         "candidate_manifest_sha256",
         "selection_policy",
         "selection_policy_sha256",
+        "custody_admission",
+        "custody_admission_sha256",
+        "registration_receipt_sha256",
+        "validation_release_receipt_sha256",
+        "independent_preregistration_custody_verified",
+        "validation_labels_released_after_registration",
         "source_identity",
         "runtime_identity",
         "candidate_results",
@@ -1306,6 +1436,10 @@ def _validate_receipt_digest(value: object) -> dict[str, object]:
         or receipt["posebusters_test_score_partition_loaded"] is not False
         or receipt["posebusters_test_labels_used"] is not False
         or receipt["posebusters_test_benchmark_executed"] is not False
+        or receipt["independent_preregistration_custody_verified"]
+        is not True
+        or receipt["validation_labels_released_after_registration"]
+        is not True
         or receipt["scientifically_validated"] is not False
         or receipt["production_eligible"] is not False
         or receipt["claim_safe"] is not False
@@ -1316,6 +1450,21 @@ def _validate_receipt_digest(value: object) -> dict[str, object]:
     manifest = PublicPoseRankingFitValidationManifest.from_dict(
         receipt["candidate_manifest"]
     )
+    from .public_pose_ranking_fit_validation_custody import (
+        PublicPoseRankingFitValidationCustodyError,
+        validate_public_pose_ranking_fit_validation_custody_admission_structure,
+    )
+
+    try:
+        custody_admission = (
+            validate_public_pose_ranking_fit_validation_custody_admission_structure(
+                receipt["custody_admission"]
+            )
+        )
+    except PublicPoseRankingFitValidationCustodyError as exc:
+        raise PublicPoseRankingFitValidationSelectionError(
+            "fit/validation receipt custody admission is invalid"
+        ) from exc
     if (
         manifest.manifest_sha256
         != receipt["candidate_manifest_sha256"]
@@ -1325,9 +1474,38 @@ def _validate_receipt_digest(value: object) -> dict[str, object]:
         )
         or receipt["selection_policy_sha256"]
         != PUBLIC_POSE_RANKING_FIT_VALIDATION_SELECTION_POLICY_SHA256
+        or receipt["custody_admission_sha256"]
+        != custody_admission["custody_admission_sha256"]
+        or receipt["registration_receipt_sha256"]
+        != custody_admission["registration_receipt_sha256"]
+        or receipt["validation_release_receipt_sha256"]
+        != custody_admission["release_receipt_sha256"]
+        or receipt["training_view_receipt_source_file_sha256"]
+        != custody_admission["training_view_receipt_source_file_sha256"]
+        or receipt["training_view_receipt_sha256"]
+        != custody_admission["training_view_receipt_sha256"]
+        or receipt["training_partition_sha256"]
+        != custody_admission["training_partition_sha256"]
+        or receipt["training_partition_identity_sha256"]
+        != custody_admission["training_partition_identity_sha256"]
+        or receipt["validation_partition_sha256"]
+        != custody_admission["validation_partition_sha256"]
+        or receipt["validation_partition_identity_sha256"]
+        != custody_admission["validation_partition_identity_sha256"]
+        or receipt["fit_validation_leakage_audit_sha256"]
+        != custody_admission["fit_validation_leakage_audit_sha256"]
+        or receipt["candidate_manifest_source_file_sha256"]
+        != custody_admission["candidate_manifest_source_file_sha256"]
+        or receipt["candidate_manifest_sha256"]
+        != custody_admission["candidate_manifest_sha256"]
+        or [
+            candidate.config.fingerprint_sha256
+            for candidate in manifest.candidates
+        ]
+        != custody_admission["candidate_config_sha256s"]
     ):
         raise PublicPoseRankingFitValidationSelectionError(
-            "fit/validation receipt manifest or policy mismatch"
+            "fit/validation receipt manifest, policy, or custody mismatch"
         )
     digest_fields = (
         "training_view_receipt_source_file_sha256",
@@ -1340,6 +1518,9 @@ def _validate_receipt_digest(value: object) -> dict[str, object]:
         "candidate_manifest_source_file_sha256",
         "candidate_manifest_sha256",
         "selection_policy_sha256",
+        "custody_admission_sha256",
+        "registration_receipt_sha256",
+        "validation_release_receipt_sha256",
     )
     if any(
         _digest(receipt[name], name=name) != receipt[name]
@@ -1719,6 +1900,16 @@ def require_public_pose_ranking_fit_validation_selection(
     manifest: PublicPoseRankingFitValidationManifest,
     manifest_source_file_sha256: str,
     manifest_source_file_size_bytes: int,
+    custody_admission: Mapping[str, object],
+    trusted_registrar_keys: Mapping[str, object],
+    trusted_custodian_keys: Mapping[str, object],
+    custody_checked_at_utc: str,
+    revoked_registrar_key_ids: Sequence[str],
+    revoked_registration_receipt_sha256s: Sequence[str],
+    superseded_registration_receipt_sha256s: Sequence[str],
+    revoked_custodian_key_ids: Sequence[str],
+    revoked_release_receipt_sha256s: Sequence[str],
+    superseded_release_receipt_sha256s: Sequence[str],
 ) -> dict[str, object]:
     """Digest-check and exactly reproduce one fit/validation receipt."""
 
@@ -1735,6 +1926,24 @@ def require_public_pose_ranking_fit_validation_selection(
         manifest=manifest,
         manifest_source_file_sha256=manifest_source_file_sha256,
         manifest_source_file_size_bytes=manifest_source_file_size_bytes,
+        custody_admission=custody_admission,
+        trusted_registrar_keys=trusted_registrar_keys,
+        trusted_custodian_keys=trusted_custodian_keys,
+        custody_checked_at_utc=custody_checked_at_utc,
+        revoked_registrar_key_ids=revoked_registrar_key_ids,
+        revoked_registration_receipt_sha256s=(
+            revoked_registration_receipt_sha256s
+        ),
+        superseded_registration_receipt_sha256s=(
+            superseded_registration_receipt_sha256s
+        ),
+        revoked_custodian_key_ids=revoked_custodian_key_ids,
+        revoked_release_receipt_sha256s=(
+            revoked_release_receipt_sha256s
+        ),
+        superseded_release_receipt_sha256s=(
+            superseded_release_receipt_sha256s
+        ),
     )
     if observed != expected:
         raise PublicPoseRankingFitValidationSelectionError(
@@ -1914,7 +2123,7 @@ def _validation_partition_from_arguments(
         ) from exc
 
 
-def materialize_public_pose_ranking_fit_validation_selection_from_files(
+def load_public_pose_ranking_fit_validation_bound_inputs_from_files(
     *,
     training_view_receipt_path: str | os.PathLike[str],
     expected_training_view_receipt_file_sha256: str,
@@ -1924,7 +2133,7 @@ def materialize_public_pose_ranking_fit_validation_selection_from_files(
     expected_candidate_manifest_file_sha256: str,
     expected_candidate_manifest_sha256: str,
 ) -> dict[str, object]:
-    """Reverify all ancestry and execute the frozen fit/validation workflow."""
+    """Reverify and load the exact fit/validation inputs without executing."""
 
     arguments = _load_ancestry_arguments(ancestry_arguments_path)
     try:
@@ -1969,14 +2178,93 @@ def materialize_public_pose_ranking_fit_validation_selection_from_files(
             expected_manifest_sha256=expected_candidate_manifest_sha256,
         )
     )
+    return {
+        "training_view_receipt": training_view,
+        "training_view_receipt_source_file_sha256": training_file_sha256,
+        "training_view_receipt_source_file_size_bytes": len(training_data),
+        "validation_partition": validation,
+        "manifest": manifest,
+        "manifest_source_file_sha256": manifest_file_sha256,
+        "manifest_source_file_size_bytes": manifest_size,
+    }
+
+
+def materialize_public_pose_ranking_fit_validation_selection_from_files(
+    *,
+    training_view_receipt_path: str | os.PathLike[str],
+    expected_training_view_receipt_file_sha256: str,
+    expected_training_view_receipt_sha256: str,
+    ancestry_arguments_path: str | os.PathLike[str],
+    candidate_manifest_path: str | os.PathLike[str],
+    expected_candidate_manifest_file_sha256: str,
+    expected_candidate_manifest_sha256: str,
+    custody_admission_path: str | os.PathLike[str],
+    expected_custody_admission_file_sha256: str,
+    expected_custody_admission_sha256: str,
+    trusted_registrar_keys: Mapping[str, object],
+    trusted_custodian_keys: Mapping[str, object],
+    custody_checked_at_utc: str,
+    revoked_registrar_key_ids: Sequence[str],
+    revoked_registration_receipt_sha256s: Sequence[str],
+    superseded_registration_receipt_sha256s: Sequence[str],
+    revoked_custodian_key_ids: Sequence[str],
+    revoked_release_receipt_sha256s: Sequence[str],
+    superseded_release_receipt_sha256s: Sequence[str],
+) -> dict[str, object]:
+    """Require current custody, then execute the frozen fit/validation workflow."""
+
+    bound = load_public_pose_ranking_fit_validation_bound_inputs_from_files(
+        training_view_receipt_path=training_view_receipt_path,
+        expected_training_view_receipt_file_sha256=(
+            expected_training_view_receipt_file_sha256
+        ),
+        expected_training_view_receipt_sha256=(
+            expected_training_view_receipt_sha256
+        ),
+        ancestry_arguments_path=ancestry_arguments_path,
+        candidate_manifest_path=candidate_manifest_path,
+        expected_candidate_manifest_file_sha256=(
+            expected_candidate_manifest_file_sha256
+        ),
+        expected_candidate_manifest_sha256=(
+            expected_candidate_manifest_sha256
+        ),
+    )
+    from .public_pose_ranking_fit_validation_custody import (
+        PublicPoseRankingFitValidationCustodyError,
+        read_public_pose_ranking_custody_admission,
+    )
+
+    try:
+        admission = read_public_pose_ranking_custody_admission(
+            custody_admission_path,
+            expected_file_sha256=expected_custody_admission_file_sha256,
+            expected_admission_sha256=expected_custody_admission_sha256,
+        )
+    except PublicPoseRankingFitValidationCustodyError as exc:
+        raise PublicPoseRankingFitValidationSelectionError(
+            "custody admission file verification failed"
+        ) from exc
     return materialize_public_pose_ranking_fit_validation_selection(
-        training_view_receipt=training_view,
-        training_view_receipt_source_file_sha256=training_file_sha256,
-        training_view_receipt_source_file_size_bytes=len(training_data),
-        validation_partition=validation,
-        manifest=manifest,
-        manifest_source_file_sha256=manifest_file_sha256,
-        manifest_source_file_size_bytes=manifest_size,
+        **bound,
+        custody_admission=admission,
+        trusted_registrar_keys=trusted_registrar_keys,
+        trusted_custodian_keys=trusted_custodian_keys,
+        custody_checked_at_utc=custody_checked_at_utc,
+        revoked_registrar_key_ids=revoked_registrar_key_ids,
+        revoked_registration_receipt_sha256s=(
+            revoked_registration_receipt_sha256s
+        ),
+        superseded_registration_receipt_sha256s=(
+            superseded_registration_receipt_sha256s
+        ),
+        revoked_custodian_key_ids=revoked_custodian_key_ids,
+        revoked_release_receipt_sha256s=(
+            revoked_release_receipt_sha256s
+        ),
+        superseded_release_receipt_sha256s=(
+            superseded_release_receipt_sha256s
+        ),
     )
 
 
@@ -2004,9 +2292,10 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="betelgeuze-engine-v2-public-ranking-fit-validation",
         description=(
-            "Fit preregistered PDBbind candidates and select only on bound "
-            "CASF validation labels without loading a PoseBusters test "
-            "score partition."
+            "Verify independent preregistration custody, fit PDBbind "
+            "candidates, and select only on the later-released bound CASF "
+            "validation labels without loading a PoseBusters test score "
+            "partition."
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -2031,6 +2320,42 @@ def _parser() -> argparse.ArgumentParser:
             "--expected-candidate-manifest-sha256",
             required=True,
         )
+        subparser.add_argument("--custody-admission", required=True)
+        subparser.add_argument(
+            "--expected-custody-admission-file-sha256",
+            required=True,
+        )
+        subparser.add_argument(
+            "--expected-custody-admission-sha256",
+            required=True,
+        )
+        subparser.add_argument("--custody-checked-at-utc", required=True)
+        subparser.add_argument("--registrar-key-id", required=True)
+        subparser.add_argument(
+            "--registrar-identity-sha256",
+            required=True,
+        )
+        subparser.add_argument(
+            "--registrar-public-key-hex",
+            required=True,
+        )
+        subparser.add_argument("--custodian-key-id", required=True)
+        subparser.add_argument(
+            "--custodian-identity-sha256",
+            required=True,
+        )
+        subparser.add_argument(
+            "--custodian-public-key-hex",
+            required=True,
+        )
+        subparser.add_argument(
+            "--custody-state-json",
+            required=True,
+            help=(
+                "JSON object containing all six current revoked/superseded "
+                "key and receipt arrays; use explicit empty arrays when none"
+            ),
+        )
     subparsers.choices["materialize"].add_argument("--output", required=True)
     subparsers.choices["verify"].add_argument("--receipt", required=True)
     return parser
@@ -2038,6 +2363,19 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    from .public_pose_ranking_fit_validation_custody import (
+        public_pose_ranking_custody_verification_context,
+    )
+
+    custody_context = public_pose_ranking_custody_verification_context(
+        registrar_key_id=args.registrar_key_id,
+        registrar_identity_sha256=args.registrar_identity_sha256,
+        registrar_public_key_hex=args.registrar_public_key_hex,
+        custodian_key_id=args.custodian_key_id,
+        custodian_identity_sha256=args.custodian_identity_sha256,
+        custodian_public_key_hex=args.custodian_public_key_hex,
+        custody_state_json=args.custody_state_json,
+    )
     common = {
         "training_view_receipt_path": args.training_view_receipt,
         "expected_training_view_receipt_file_sha256": (
@@ -2054,6 +2392,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         "expected_candidate_manifest_sha256": (
             args.expected_candidate_manifest_sha256
         ),
+        "custody_admission_path": args.custody_admission,
+        "expected_custody_admission_file_sha256": (
+            args.expected_custody_admission_file_sha256
+        ),
+        "expected_custody_admission_sha256": (
+            args.expected_custody_admission_sha256
+        ),
+        "custody_checked_at_utc": args.custody_checked_at_utc,
+        **custody_context,
     }
     if args.command == "materialize":
         receipt = (
@@ -2085,6 +2432,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "selected_candidate_id"
                 ],
                 "validation_labels_used_for_fit": False,
+                "independent_preregistration_custody_verified": True,
+                "validation_labels_released_after_registration": True,
                 "posebusters_test_score_partition_loaded": False,
                 "scientifically_validated": False,
                 "claim_safe": False,
@@ -2112,6 +2461,7 @@ __all__ = [
     "PublicPoseRankingFitValidationCandidate",
     "PublicPoseRankingFitValidationManifest",
     "PublicPoseRankingFitValidationSelectionError",
+    "load_public_pose_ranking_fit_validation_bound_inputs_from_files",
     "load_public_pose_ranking_fit_validation_manifest",
     "materialize_public_pose_ranking_fit_validation_selection",
     "materialize_public_pose_ranking_fit_validation_selection_from_files",

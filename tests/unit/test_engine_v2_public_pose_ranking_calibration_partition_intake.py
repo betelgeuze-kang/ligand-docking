@@ -9,6 +9,9 @@ from pathlib import Path
 import pytest
 
 from betelgeuze_engine_v2.benchmark import (
+    public_pose_ranking_fit_validation_custody as fit_validation_custody,
+)
+from betelgeuze_engine_v2.benchmark import (
     public_pose_ranking_fit_validation_selection as fit_validation_selection,
 )
 from betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_partition_intake import (
@@ -62,6 +65,10 @@ from betelgeuze_engine_v2.docking.calibration import (
     PoseRankingCalibrationPartition,
     PoseRankingCalibrationRow,
     PoseRankingEvaluationConfig,
+)
+from betelgeuze_engine_v2.physics.reference_minimization_validation_ed25519 import (
+    ed25519_public_key_bytes,
+    sign_ed25519,
 )
 
 
@@ -1037,6 +1044,162 @@ def _fit_validation_manifest(
     )
 
 
+def _sign_fit_validation_registration_for_test(
+    *,
+    signing_key: bytes,
+    **payload_arguments: object,
+) -> dict[str, object]:
+    request = (
+        fit_validation_custody.build_public_pose_ranking_preregistration_signing_request(
+            **payload_arguments
+        )
+    )
+    return (
+        fit_validation_custody.attach_public_pose_ranking_preregistration_signature(
+            request,
+            signature_hex=sign_ed25519(
+                fit_validation_custody.public_pose_ranking_preregistration_signing_bytes(
+                    request
+                ),
+                signing_key,
+            ),
+            verification_key=ed25519_public_key_bytes(signing_key),
+        )
+    )
+
+
+def _sign_fit_validation_release_for_test(
+    request: object,
+    *,
+    signing_key: bytes,
+) -> dict[str, object]:
+    return (
+        fit_validation_custody.attach_public_pose_ranking_validation_release_signature(
+            request,
+            signature_hex=sign_ed25519(
+                fit_validation_custody.public_pose_ranking_validation_release_signing_bytes(
+                    request
+                ),
+                signing_key,
+            ),
+            verification_key=ed25519_public_key_bytes(signing_key),
+        )
+    )
+
+
+def _fit_validation_custody_arguments(
+    *,
+    training_view,
+    validation_partition: PoseRankingCalibrationPartition,
+    manifest: PublicPoseRankingFitValidationManifest,
+    training_view_source_file_sha256: str,
+    training_view_source_file_size_bytes: int,
+    manifest_source_file_sha256: str,
+    manifest_source_file_size_bytes: int,
+) -> dict[str, object]:
+    registrar_key = bytes(range(32))
+    custodian_key = bytes(range(1, 33))
+    registrar_identity = _sha("selection-test-registrar")
+    custodian_identity = _sha("selection-test-validation-custodian")
+    bound = {
+        "training_view_receipt": training_view,
+        "training_view_receipt_source_file_sha256": (
+            training_view_source_file_sha256
+        ),
+        "training_view_receipt_source_file_size_bytes": (
+            training_view_source_file_size_bytes
+        ),
+        "validation_partition": validation_partition,
+        "manifest": manifest,
+        "manifest_source_file_sha256": manifest_source_file_sha256,
+        "manifest_source_file_size_bytes": manifest_source_file_size_bytes,
+    }
+    signed_registration = (
+        _sign_fit_validation_registration_for_test(
+            signing_key=registrar_key,
+            **bound,
+            registrar_identity_sha256=registrar_identity,
+            registrar_key_id="selection-test-registrar-v1",
+            training_operator_identity_sha256=_sha(
+                "selection-test-training-operator"
+            ),
+            validation_custodian_identity_sha256=custodian_identity,
+            validation_custodian_key_id="selection-test-custodian-v1",
+            evaluation_operator_identity_sha256=_sha(
+                "selection-test-evaluation-operator"
+            ),
+            registered_at_utc="2026-07-24T10:00:00Z",
+            expires_at_utc="2026-08-01T10:00:00Z",
+            registration_nonce_sha256=_sha(
+                "selection-test-registration-nonce"
+            ),
+        )
+    )
+    registrar_trust = {
+        "selection-test-registrar-v1": (
+            fit_validation_custody.PublicPoseRankingCustodyTrustAnchor(
+                identity_sha256=registrar_identity,
+                verification_key=ed25519_public_key_bytes(registrar_key),
+            )
+        )
+    }
+    release_request = (
+        fit_validation_custody.build_public_pose_ranking_validation_release_signing_request(
+            signed_registration,
+            **bound,
+            trusted_registrar_keys=registrar_trust,
+            revoked_registrar_key_ids=(),
+            revoked_registration_receipt_sha256s=(),
+            superseded_registration_receipt_sha256s=(),
+            custodian_identity_sha256=custodian_identity,
+            custodian_key_id="selection-test-custodian-v1",
+            released_at_utc="2026-07-24T11:00:00Z",
+            release_nonce_sha256=_sha("selection-test-release-nonce"),
+        )
+    )
+    signed_release = (
+        _sign_fit_validation_release_for_test(
+            release_request,
+            signing_key=custodian_key,
+        )
+    )
+    custodian_trust = {
+        "selection-test-custodian-v1": (
+            fit_validation_custody.PublicPoseRankingCustodyTrustAnchor(
+                identity_sha256=custodian_identity,
+                verification_key=ed25519_public_key_bytes(custodian_key),
+            )
+        )
+    }
+    checked_at_utc = "2026-07-24T12:00:00Z"
+    state = {
+        "revoked_registrar_key_ids": (),
+        "revoked_registration_receipt_sha256s": (),
+        "superseded_registration_receipt_sha256s": (),
+        "revoked_custodian_key_ids": (),
+        "revoked_release_receipt_sha256s": (),
+        "superseded_release_receipt_sha256s": (),
+    }
+    admission = (
+        fit_validation_custody.materialize_public_pose_ranking_fit_validation_custody_admission(
+            signed_registration=signed_registration,
+            signed_release=signed_release,
+            **bound,
+            trusted_registrar_keys=registrar_trust,
+            trusted_custodian_keys=custodian_trust,
+            checked_at_utc=checked_at_utc,
+            **state,
+        )
+    )
+    return {
+        "custody_admission": admission,
+        "trusted_registrar_keys": registrar_trust,
+        "trusted_custodian_keys": custodian_trust,
+        "custody_checked_at_utc": checked_at_utc,
+        **state,
+    }
+
+
 def _fit_validation_fixture(
     *,
     include_failing_candidate: bool = False,
@@ -1057,16 +1220,26 @@ def _fit_validation_fixture(
     manifest = _fit_validation_manifest(
         include_failing_candidate=include_failing_candidate,
     )
+    training_source_sha256 = _sha("training-view-receipt:file")
+    manifest_source_sha256 = _sha("candidate-manifest:file")
+    custody_arguments = _fit_validation_custody_arguments(
+        training_view=training_view,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        training_view_source_file_sha256=training_source_sha256,
+        training_view_source_file_size_bytes=32768,
+        manifest_source_file_sha256=manifest_source_sha256,
+        manifest_source_file_size_bytes=4096,
+    )
     receipt = materialize_public_pose_ranking_fit_validation_selection(
         training_view_receipt=training_view,
-        training_view_receipt_source_file_sha256=_sha(
-            "training-view-receipt:file"
-        ),
+        training_view_receipt_source_file_sha256=training_source_sha256,
         training_view_receipt_source_file_size_bytes=32768,
         validation_partition=validation_partition,
         manifest=manifest,
-        manifest_source_file_sha256=_sha("candidate-manifest:file"),
+        manifest_source_file_sha256=manifest_source_sha256,
         manifest_source_file_size_bytes=4096,
+        **custody_arguments,
     )
     return training_view, validation_partition, manifest, receipt
 
@@ -1100,6 +1273,14 @@ def test_fit_validation_selects_only_after_all_preregistered_candidates_complete
     assert receipt["validation_rows_evaluated"] == 3
     assert receipt["validation_labels_used_for_fit"] is False
     assert receipt["validation_labels_used_for_selection"] is True
+    assert receipt["independent_preregistration_custody_verified"] is True
+    assert receipt["validation_labels_released_after_registration"] is True
+    assert receipt["custody_admission"][
+        "admitted_for_fit_validation_execution"
+    ] is True
+    assert receipt["custody_admission_sha256"] == receipt[
+        "custody_admission"
+    ]["custody_admission_sha256"]
     assert receipt["posebusters_test_score_partition_loaded"] is False
     assert receipt["posebusters_test_labels_used"] is False
     assert receipt["posebusters_test_benchmark_executed"] is False
@@ -1108,6 +1289,11 @@ def test_fit_validation_selects_only_after_all_preregistered_candidates_complete
     assert receipt["claim_safe"] is False
     assert receipt["scientific_blockers"] == list(
         PUBLIC_POSE_RANKING_FIT_VALIDATION_SCIENTIFIC_BLOCKERS
+    )
+    assert (
+        "candidate_manifest_independent_preregistration_"
+        "custody_is_not_established"
+        not in receipt["scientific_blockers"]
     )
     assert (
         receipt["selection_policy_sha256"]
@@ -1134,6 +1320,17 @@ def test_fit_validation_selects_only_after_all_preregistered_candidates_complete
         assert metrics["all_pose_denominator"] == 3
         assert metrics["failed_pose_count"] == 1
 
+    custody_arguments = _fit_validation_custody_arguments(
+        training_view=training_view,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        training_view_source_file_sha256=_sha(
+            "training-view-receipt:file"
+        ),
+        training_view_source_file_size_bytes=32768,
+        manifest_source_file_sha256=_sha("candidate-manifest:file"),
+        manifest_source_file_size_bytes=4096,
+    )
     assert require_public_pose_ranking_fit_validation_selection(
         receipt,
         training_view_receipt=training_view,
@@ -1145,7 +1342,70 @@ def test_fit_validation_selects_only_after_all_preregistered_candidates_complete
         manifest=manifest,
         manifest_source_file_sha256=_sha("candidate-manifest:file"),
         manifest_source_file_size_bytes=4096,
+        **custody_arguments,
     ) == receipt
+
+
+def test_fit_validation_rejects_revoked_custody_before_candidate_work(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fit, validation, test = _manifests()
+    fit_partition, validation_partition = _partitions(
+        fit,
+        validation,
+        fit_failure=True,
+    )
+    training_view = _training_view(
+        fit,
+        validation,
+        test,
+        fit_partition,
+        validation_partition,
+    )
+    manifest = _fit_validation_manifest()
+    training_source_sha256 = _sha("revoked-training-view:file")
+    manifest_source_sha256 = _sha("revoked-candidate-manifest:file")
+    custody_arguments = _fit_validation_custody_arguments(
+        training_view=training_view,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        training_view_source_file_sha256=training_source_sha256,
+        training_view_source_file_size_bytes=32768,
+        manifest_source_file_sha256=manifest_source_sha256,
+        manifest_source_file_size_bytes=4096,
+    )
+    custody_arguments["revoked_registrar_key_ids"] = (
+        "selection-test-registrar-v1",
+    )
+    candidate_work_called = False
+
+    def reject_candidate_work(**_arguments):
+        nonlocal candidate_work_called
+        candidate_work_called = True
+        raise AssertionError("candidate work ran before custody admission")
+
+    monkeypatch.setattr(
+        fit_validation_selection,
+        "_candidate_result",
+        reject_candidate_work,
+    )
+    with pytest.raises(
+        PublicPoseRankingFitValidationSelectionError,
+        match="custody admission is required",
+    ):
+        materialize_public_pose_ranking_fit_validation_selection(
+            training_view_receipt=training_view,
+            training_view_receipt_source_file_sha256=(
+                training_source_sha256
+            ),
+            training_view_receipt_source_file_size_bytes=32768,
+            validation_partition=validation_partition,
+            manifest=manifest,
+            manifest_source_file_sha256=manifest_source_sha256,
+            manifest_source_file_size_bytes=4096,
+            **custody_arguments,
+        )
+    assert candidate_work_called is False
 
 
 def test_fit_validation_candidate_failure_retains_row_and_blocks_selection() -> None:
@@ -1200,18 +1460,28 @@ def test_fit_validation_unavailable_primary_metric_blocks_every_candidate() -> N
         one_class_validation,
     )
     manifest = _fit_validation_manifest()
+    training_source_sha256 = _sha("one-class-training-view:file")
+    manifest_source_sha256 = _sha(
+        "one-class-candidate-manifest:file"
+    )
+    custody_arguments = _fit_validation_custody_arguments(
+        training_view=training_view,
+        validation_partition=one_class_validation,
+        manifest=manifest,
+        training_view_source_file_sha256=training_source_sha256,
+        training_view_source_file_size_bytes=32768,
+        manifest_source_file_sha256=manifest_source_sha256,
+        manifest_source_file_size_bytes=4096,
+    )
     receipt = materialize_public_pose_ranking_fit_validation_selection(
         training_view_receipt=training_view,
-        training_view_receipt_source_file_sha256=_sha(
-            "one-class-training-view:file"
-        ),
+        training_view_receipt_source_file_sha256=training_source_sha256,
         training_view_receipt_source_file_size_bytes=32768,
         validation_partition=one_class_validation,
         manifest=manifest,
-        manifest_source_file_sha256=_sha(
-            "one-class-candidate-manifest:file"
-        ),
+        manifest_source_file_sha256=manifest_source_sha256,
         manifest_source_file_size_bytes=4096,
+        **custody_arguments,
     )
 
     assert receipt["completed_candidate_count"] == 0
@@ -1346,6 +1616,17 @@ def test_fit_validation_receipt_is_private_no_overwrite_and_exactly_replayed(
         if key != "receipt_sha256"
     }
     forged["receipt_sha256"] = _canonical_object_sha256(projection)
+    custody_arguments = _fit_validation_custody_arguments(
+        training_view=training_view,
+        validation_partition=validation_partition,
+        manifest=manifest,
+        training_view_source_file_sha256=_sha(
+            "training-view-receipt:file"
+        ),
+        training_view_source_file_size_bytes=32768,
+        manifest_source_file_sha256=_sha("candidate-manifest:file"),
+        manifest_source_file_size_bytes=4096,
+    )
     with pytest.raises(
         PublicPoseRankingFitValidationSelectionError,
         match="selection summary",
@@ -1363,6 +1644,7 @@ def test_fit_validation_receipt_is_private_no_overwrite_and_exactly_replayed(
                 "candidate-manifest:file"
             ),
             manifest_source_file_size_bytes=4096,
+            **custody_arguments,
         )
 
     metric_forgery = json.loads(json.dumps(receipt))

@@ -134,6 +134,10 @@ def test_release_candidate_versions_and_typed_package_metadata_match() -> None:
             "betelgeuze_engine_v2.benchmark."
             "public_pose_ranking_fit_validation_selection:main"
         ),
+        "betelgeuze-engine-v2-public-ranking-custody": (
+            "betelgeuze_engine_v2.benchmark."
+            "public_pose_ranking_fit_validation_custody:main"
+        ),
         "betelgeuze-engine-v2-posebusters-pose-scaffold-identity": (
             "betelgeuze_engine_v2.benchmark."
             "public_posebusters_pose_scaffold_identity:main"
@@ -285,6 +289,7 @@ def test_release_workflow_splits_pinned_static_and_matrix_jobs() -> None:
         "betelgeuze-engine-v2-public-ranking-fit-validation"
         in workflow
     )
+    assert "betelgeuze-engine-v2-public-ranking-custody" in workflow
     assert "betelgeuze-engine-v2-posebusters-pose-scaffold-identity" in workflow
     assert "betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic" in workflow
     assert "betelgeuze-engine-v2-posebusters-openbabel-compare" in workflow

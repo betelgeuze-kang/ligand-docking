@@ -261,8 +261,7 @@ scientific claim from a package version.
 - A new installable
   `betelgeuze-engine-v2-public-ranking-fit-validation` command preregisters
   every deterministic fit candidate and the CASF bootstrap configuration in a
-  workflow-local canonical manifest, fits only the verified PDBbind training
-  view, and
+  canonical manifest, fits only the verified PDBbind training view, and
   evaluates CASF with failure-inclusive all-case/all-pose, target-family, and
   confidence-interval evidence. The deterministic selection rule is
   average-precision PR-AUC, Top-1, Top-5, then candidate ID; its policy
@@ -272,14 +271,30 @@ scientific claim from a package version.
   row and blocks selection. The mode-0600 no-overwrite receipt exact-binds
   ancestry, source, Python/Torch runtime, configs, models, reports, and
   selection, while verification reexecutes the full workflow. PoseBusters test
-  score partitions are forbidden. Two builds were byte-identical at wheel
-  SHA-256
-  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`
-  (1,708,814 bytes), and the installed CLI/import boundary was verified outside
-  the checkout. No genuine licensed inputs or production receipt are present,
-  no independent timestamp/signature custody proves external preregistration,
-  and no test, confidence-calibration, independent-review, scientific-
-  validation, chemistry, or product claim is opened.
+  score partitions are forbidden.
+- A new installable `betelgeuze-engine-v2-public-ranking-custody` command now
+  makes that candidate manifest independently registrable before CASF labels
+  are released. The label-blind request exposes only exact manifest,
+  training/CASF, leakage, source, policy, role, time-window, and nonce
+  commitments. A registrar signature must verify before a distinct
+  preregistered validation custodian can sign the later exact release. Current
+  public-key anchors, all six explicit key/receipt revocation and supersession
+  arrays, role/time separation, canonical bytes, and both Ed25519 signatures
+  are required to derive a mode-0600 no-overwrite admission. The
+  fit/validation command now requires and exact-reconstructs that admission
+  before any candidate fit or CASF evaluation. Neither installed CLI accepts a
+  secret key. Custody-policy SHA-256 is
+  `c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`.
+  Two deterministic builds were byte-identical at wheel SHA-256
+  `cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+  (1,725,542 bytes), and the installed custody/selection CLI and import
+  surfaces were verified outside the checkout.
+  Genuine licensed inputs, external signatures, trust anchors, and custody
+  state are not bundled, so no production registration, release, admission,
+  selection receipt, test, confidence-calibration, independent-review,
+  scientific-validation, chemistry, or product claim is opened. Signatures
+  establish declared key identities, not human independence or dataset
+  quality.
 - An installable `betelgeuze-engine-v2-posebusters-intake` command now verifies
   the exact published PoseBusters Zenodo archive and journal 308-ID selection
   from caller-provided local files. It uses bounded no-follow regular-file

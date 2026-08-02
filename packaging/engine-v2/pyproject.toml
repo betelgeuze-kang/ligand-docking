@@ -50,6 +50,7 @@ betelgeuze-engine-v2-public-ranking-corpus-intake = "betelgeuze_engine_v2.benchm
 betelgeuze-engine-v2-public-ranking-calibration-partition-intake = "betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_partition_intake:main"
 betelgeuze-engine-v2-public-ranking-calibration-training-view = "betelgeuze_engine_v2.benchmark.public_pose_ranking_calibration_training_view:main"
 betelgeuze-engine-v2-public-ranking-fit-validation = "betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_selection:main"
+betelgeuze-engine-v2-public-ranking-custody = "betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_custody:main"
 betelgeuze-engine-v2-posebusters-pose-scaffold-identity = "betelgeuze_engine_v2.benchmark.public_posebusters_pose_scaffold_identity:main"
 betelgeuze-engine-v2-posebusters-prepared-ligand-diagnostic = "betelgeuze_engine_v2.benchmark.public_posebusters_prepared_ligand_diagnostic:main"
 betelgeuze-engine-v2-posebusters-openbabel-compare = "betelgeuze_engine_v2.benchmark.public_posebusters_openbabel_charge_type_comparison:main"

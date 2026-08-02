@@ -463,15 +463,42 @@ exists.
 provides the next claim-closed file boundary. The installed
 `betelgeuze-engine-v2-public-ranking-fit-validation` command exposes
 `materialize` and `verify` modes. A canonical
-`PublicPoseRankingFitValidationManifest` workflow-locally preregisters one to
-32 unique, canonically ordered candidate IDs and exact
+`PublicPoseRankingFitValidationManifest` defines one to 32 unique,
+canonically ordered candidate IDs and exact
 `PoseRankingCalibrationConfig` objects, one `PoseRankingEvaluationConfig`, and
 the frozen selection policy.
 Its policy SHA-256 is
 `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
 
-Materialization first reexecutes the corpus, partition-intake, and training-view
-ancestry. Every candidate then fits only the embedded PDBbind success rows.
+`betelgeuze_engine_v2.benchmark.public_pose_ranking_fit_validation_custody`
+and the installed `betelgeuze-engine-v2-public-ranking-custody` command make
+that manifest independently registrable without exposing CASF observations.
+`build-registration-request` commits the exact manifest file/payload, training
+view, PDBbind/CASF partition and file identities, leakage audit, source,
+selection/custody policies, four distinct declared role identities, two
+distinct key IDs, validity window, and registration nonce. Its output contains
+CASF commitments but no validation row, label, class count, metric, report, or
+selected model. A detached Ed25519 signature from the out-of-band registrar key
+must verify. Only later may a distinct preregistered validation custodian sign
+the exact validation release with a distinct nonce. The custody-policy SHA-256
+is `c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`.
+
+The custody CLI has build, detached-signature attachment, verification,
+admission, and admission-verification commands. It accepts signatures and
+public keys only, never a secret key. Every trust-bearing command requires an
+explicit JSON snapshot containing all six registrar/custodian key,
+registration/release receipt revocation, and supersession arrays; no implicit
+empty state exists. Exact trust anchors, role separation, time ordering,
+expiry, current revocation/supersession state, canonical bytes, source
+identity, input commitments, and both signatures must pass before a canonical
+mode-0600, no-overwrite custody admission is emitted.
+
+Fit/validation materialization first reexecutes the corpus, partition-intake,
+and training-view ancestry, then exact-reconstructs that admission against the
+same inputs and current out-of-band public state. Missing, non-0600, expired,
+revoked, superseded, cross-wired, tampered, or source-stale custody fails before
+candidate fitting or CASF evaluation. Every candidate then fits only the
+embedded PDBbind success rows.
 The bound CASF partition is evaluated only after fitting; every report retains
 all-case/all-pose denominators, failure rows, target-family metrics, and
 case-bootstrap confidence intervals. Selection maximizes pose-level
@@ -480,21 +507,25 @@ candidate ID as the final tie break. If any preregistered fit/evaluation fails
 or any primary PR-AUC is unavailable, every candidate row and disposition is
 retained and `selection_complete=false`.
 
-The receipt binds the training-view file/payload, validation partition and
-leakage audit, candidate manifest, source files, Python/Torch binary runtime,
-each model/report, selection summary, and its own digest. Writes are canonical,
-mode 0600, and no-overwrite; verification reexecutes every fit and validation
-and exact-compares the full receipt. An ancestry-argument tree containing a
-PoseBusters test score partition is rejected, and the CLI has no such argument.
-Two builds were byte-identical at wheel SHA-256
-`d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`
-(1,708,814 bytes), and the installed entry point/import was verified outside
-the checkout. This boundary is fit/validation model selection only. Genuine
-licensed PDBbind/CASF inputs are not present, so no production receipt exists;
-the receipt does not establish independent timestamp/signature custody for the
-candidate manifest. It does not execute the PoseBusters test, fit confidence
-calibration, establish independent reproduction/review, validate supported
-chemistry, or authorize a scientific or product docking claim.
+The receipt embeds and binds the custody admission, training-view file/payload,
+validation partition and leakage audit, candidate manifest, source files,
+Python/Torch binary runtime, each model/report, selection summary, and its own
+digest. Writes are canonical, mode 0600, and no-overwrite; verification
+rechecks current custody, reexecutes every fit and validation, and exact-compares
+the full receipt. An ancestry-argument tree containing a PoseBusters test score
+partition is rejected, and the CLI has no such argument. This boundary is
+fit/validation model selection only. Two deterministic builds were
+byte-identical at wheel SHA-256
+`cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+(1,725,542 bytes), and the installed custody/selection entry points and import
+surface were verified outside the checkout. Genuine licensed PDBbind/CASF inputs,
+external signatures, trust anchors, and custody-state evidence are not
+present, so no production registration, release, admission, or selection
+receipt exists. A valid signature establishes the declared key/identity chain,
+not real-world human independence or dataset quality. The workflow does not
+execute the PoseBusters test, fit confidence calibration, establish
+independent reproduction/review, validate supported chemistry, or authorize a
+scientific or product docking claim.
 
 `betelgeuze_engine_v2.benchmark.public_posebusters_intake` is the bounded local
 archive boundary for the published PoseBusters set. The installed

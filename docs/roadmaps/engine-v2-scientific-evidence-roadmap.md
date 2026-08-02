@@ -258,23 +258,35 @@ claim status without revalidating the dependency and freshness chain.
   readiness—not a production fit, selected model, metric, review, external
   rerun, or claim. No production receipt currently exists.
 - Preserve the installable fit/validation selection boundary gated by that
-  verified training view. Workflow-locally preregister every candidate fit
-  configuration and the CASF bootstrap configuration before label evaluation;
-  fit only embedded PDBbind rows; retain CASF all-case/all-pose, target-family,
-  confidence-interval, and failure evidence; and select only by the frozen
-  PR-AUC→Top-1→Top-5→candidate-ID rule. Selection-policy SHA-256 is
+  verified training view and the independently signable custody boundary.
+  Before label release, commit every candidate fit configuration, CASF
+  bootstrap configuration, exact training/CASF input, leakage audit, source,
+  policy, four distinct declared roles, validity window, and nonce in a
+  label-blind registration request. Require a current trusted registrar
+  signature, then a distinct custodian signature over the exact later release,
+  plus explicit key/receipt revocation and supersession state. Custody-policy
+  SHA-256 is
+  `c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`.
+  Fit/validation execution must reject missing, stale, expired, revoked,
+  superseded, cross-wired, source-changed, or non-0600 admissions before
+  candidate work. Then fit only embedded PDBbind rows; retain CASF
+  all-case/all-pose, target-family, confidence-interval, and failure evidence;
+  and select only by the frozen PR-AUC→Top-1→Top-5→candidate-ID rule.
+  Selection-policy SHA-256 is
   `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
   Require all preregistered candidates and primary metrics to complete or
   retain every row and select nothing. Keep the exact ancestry/source/runtime/
   model/report replay verifier and forbid a PoseBusters test score partition.
-  Two builds are byte-identical at wheel SHA-256
-  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`,
-  with installed CLI/import verification outside the checkout.
-  Without external timestamp/signature custody it does not prove independent
-  preregistration. This opens no test, confidence-calibration, independent-
-  rerun/review, scientific-validation, chemistry-applicability, or product
-  claim. No production receipt exists until genuine licensed PDBbind/CASF
-  inputs pass the upstream gates.
+  Installed CLIs must accept detached signatures and public keys only, never a
+  secret key. Two deterministic builds are byte-identical at wheel SHA-256
+  `cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+  (1,725,542 bytes), with installed custody/selection CLI and import checks
+  outside the checkout. Signatures establish the declared identity chain, not
+  human independence or dataset quality. This opens no test, confidence-calibration,
+  independent-rerun/review, scientific-validation, chemistry-applicability, or
+  product claim. No production registration, release, admission, or selection
+  receipt exists until genuine licensed PDBbind/CASF inputs, external
+  signatures, trust anchors, and current custody state pass the upstream gates.
 - Preserve the PoseBusters pose-ranking intake boundary that binds the exact
   Vina/GNINA/Smina execution/evaluation receipts and RCSB/Pfam annotations as
   test-only data. It must retain all 924 engine/case rows, all 1,031 evaluated

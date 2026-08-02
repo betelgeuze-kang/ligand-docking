@@ -490,26 +490,39 @@ Implemented and GitHub-hosted CPU tested:
   No production receipt exists while genuine upstream corpus inputs are absent;
   no production fit, selected model, metric, review, or claim is implied;
 - an installable PDBbind-fit/CASF-validation model-selection boundary above
-  that verified training view. A canonical workflow-local preregistration
-  manifest freezes every deterministic fit configuration and the CASF
-  bootstrap configuration before this execution evaluates labels. Every
-  candidate fits only the embedded PDBbind
+  that verified training view. The
+  `betelgeuze-engine-v2-public-ranking-custody` command creates a label-blind
+  canonical registration request that commits every deterministic fit
+  configuration, the CASF partition/file identities, leakage audit, source,
+  policy, roles, validity window, and nonce without exposing CASF rows, labels,
+  class counts, or metrics. An out-of-band registrar signs it first; a distinct
+  validation custodian later signs the exact release. Trust anchors,
+  revocation/supersession state, role/time ordering, canonical bytes, and both
+  detached Ed25519 signatures must verify before a mode-0600 execution
+  admission is derived. The fit/validation command now requires that admission
+  and accepts only public keys plus an explicit current state snapshot. Every
+  candidate then fits only the embedded PDBbind
   rows; CASF is used only for failure-inclusive all-case/all-pose,
   target-family, confidence-interval evaluation and deterministic selection by
   average-precision PR-AUC, then Top-1, Top-5, and candidate ID. All candidates
   and primary metrics must complete or no model is selected. The frozen
   selection-policy SHA-256 is
   `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`.
+  The custody-policy SHA-256 is
+  `c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`.
   The command accepts no PoseBusters test score partition and binds source,
-  Python/Torch runtime, input, config, model, report, and receipt identities in
-  a mode-0600 no-overwrite artifact. Two builds were byte-identical at wheel
-  SHA-256
-  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`,
-  and the installed CLI/import boundary was verified outside the checkout.
-  The receipt does not prove independently timestamped/signed preregistration.
-  Genuine licensed inputs remain absent, so no production fit/validation
-  receipt, test result, calibrated confidence, independent rerun/review,
-  scientific validation, or docking claim exists;
+  custody chain, Python/Torch runtime, input, config, model, report, and receipt
+  identities in mode-0600 no-overwrite artifacts. No private-key input exists
+  in either installed CLI. Two deterministic builds were byte-identical at
+  wheel SHA-256
+  `cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+  (1,725,542 bytes), and both installed CLI/import surfaces were verified
+  outside the checkout. Genuine licensed inputs, external signatures, trust
+  anchors, and current custody state remain absent, so no production
+  registration, release, admission, fit/validation receipt, test result,
+  calibrated confidence, independent rerun/review, scientific validation, or
+  docking claim exists. A verified signature proves the declared key/identity
+  chain, not human independence or dataset quality;
 - an installable, extraction-free PoseBusters 308 archive intake. The command
   requires the exact published Zenodo ZIP and journal 308-ID bytes as local
   regular files, checks their frozen hashes and sizes, audits all 2,570 ZIP

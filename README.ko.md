@@ -360,19 +360,31 @@ v2_at_s0_production_evidence_bundle_contract
   검증하고, calibration-partition intake는 PDBbind/CASF score partition의 모든
   성공·실패와 leakage 분모를 보존하며, training-view는 PDBbind 성공행만 그대로
   fit 입력으로 쓰되 제외된 실패행을 disposition으로 남긴다. 그 위의
-  `betelgeuze-engine-v2-public-ranking-fit-validation`은 이 실행의 validation 관측
-  전에 모든 후보와 bootstrap 설정을 workflow-local canonical manifest로 동결한다.
-  각 후보는 PDBbind에만
+  `betelgeuze-engine-v2-public-ranking-custody`는 모든 후보·CASF partition/file
+  identity·leakage audit·source·policy·역할·유효기간·nonce를 CASF row·label·
+  class count·metric 없이 canonical registration request에 결속한다. 독립 registrar가
+  먼저 서명하고 별도 validation custodian이 나중에 exact release를 서명해야 하며,
+  out-of-band 공개키·철회/대체 상태·역할/시간 순서·canonical byte·두 Ed25519
+  signature가 모두 검증돼야 mode-0600 execution admission이 생성된다.
+  `betelgeuze-engine-v2-public-ranking-fit-validation`은 이 admission과 명시적
+  current-state snapshot을 필수로 요구하고 private-key 입력을 받지 않는다. 각 후보는
+  그 뒤 PDBbind에만
   fit되고 CASF는 failure-inclusive all-case/all-pose·target-family·confidence
   interval 평가와 PR-AUC→Top-1→Top-5→candidate-ID 선택에만 쓰인다. 후보나 primary
   metric 하나라도 미완료면 선택하지 않는다. selection-policy SHA-256은
-  `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`이며
-  PoseBusters test score partition은 API에 존재하지 않는다. 두 build는 wheel SHA-256
-  `d338d81d14d08ca7c07f74629ac2b98f94d389f651e44e2b143fb487bfcf4bd3`로
-  byte-identical했고 설치형 CLI/import를 checkout 밖에서 검증했다. genuine
-  licensed PDBbind/CASF 입력이 없어 production receipt·test 결과·calibrated
-  confidence·독립 재현/review·과학/도킹 claim은 모두 열리지 않는다. 외부 timestamp/
-  signature custody가 없으므로 독립적으로 사전 등록됐다는 claim도 열리지 않음
+  `1905b14e37da44293483b9b31a06b2653849b2e986dc75b9e4ad53aa0bc4b9d9`,
+  custody-policy SHA-256은
+  `c773fbe3f353bea02ece23dd1b9592443fc0cc60fd17913c438b15abd70219a4`이며
+  PoseBusters test score partition은 API에 존재하지 않는다. 두 deterministic
+  build는 wheel SHA-256
+  `cb439bb1377543e395bd439351650a271331fdc1693383a538a2c5f4f5867525`
+  (1,725,542 bytes)로 byte-identical했고 설치된 두 CLI/import surface를 checkout
+  밖에서 검증했다. genuine licensed
+  PDBbind/CASF 입력·외부 signature·trust anchor·current custody state가 없어
+  production registration/release/admission/selection receipt·test 결과·calibrated
+  confidence·독립 재현/review·과학/도킹 claim은 모두 열리지 않는다. 서명 검증은
+  선언된 key/identity chain만 증명하며 실제 사람의 독립성이나 dataset 품질을
+  증명하지 않음
 - 설치 가능한 extraction-free PoseBusters 308 archive intake. caller가 제공한 공식
   Zenodo ZIP과 논문판 308-ID 파일의 exact hash·size를 요구하고, 2,570개 ZIP entry와
   428개 case directory를 hard bound 안에서 검사한다. path traversal·중복·암호화·
