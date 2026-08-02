@@ -262,7 +262,7 @@ as a pure, non-activated shadow contract. It uses the existing `1e-18` V7
 objective tolerance, exact strict surface-gap improvement, exact raw minimum-
 distance nonregression, coordinate-hash inequality, the authenticated 64-
 candidate allocation, and its four-variant cap. Its policy SHA-256 is
-`ca843cd77ff5e0f426af51338d219325d29d950c911f0b537b85e1d64c941ee7`.
+`3e5c8464abb78695e9683b6d791712528f275a39e06c9f363fefeadd22e75252`.
 
 This completion does not select the 10 observed improvements, fit a gap
 threshold, relax `[2.0,4.0)`, change scoring, promote V7, or open fresh-128.

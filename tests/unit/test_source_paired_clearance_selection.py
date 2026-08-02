@@ -60,12 +60,12 @@ def _evidence(
         "clearance_ligand_atom_count": 10,
         "clearance_receptor_atom_count": 10,
         "clearance_full_cartesian_pair_count": 100,
-        "baseline_receptor_objective": 4.0,
-        "optimized_receptor_objective": 3.0,
+        "baseline_receptor_objective": 5.0,
+        "optimized_receptor_objective": 4.5,
         "baseline_internal_objective": 2.0,
         "optimized_internal_objective": 1.5,
-        "baseline_combined_objective": 6.0,
-        "optimized_combined_objective": 4.5,
+        "baseline_combined_objective": 7.0,
+        "optimized_combined_objective": 6.0,
         "baseline_minimum_vdw_surface_gap_angstrom": -1.0,
         "optimized_minimum_vdw_surface_gap_angstrom": -0.9,
         "baseline_raw_minimum_distance_angstrom": 2.0,
@@ -112,6 +112,17 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["receptor_objective_tolerance_binary64_hex"] == (1.0e-18).hex()
     assert payload["internal_objective_tolerance_binary64_hex"] == (1.0e-18).hex()
     assert payload["combined_objective_tolerance_binary64_hex"] == (1.0e-18).hex()
+    assert (
+        payload["legacy_v7_minimum_selected_receptor_objective_binary64_hex"]
+        == (2.0).hex()
+    )
+    assert (
+        payload["legacy_v7_maximum_selected_receptor_objective_binary64_hex"]
+        == (4.0).hex()
+    )
+    assert payload["legacy_v7_selection_flag_rule"] == (
+        "variant_available_and_minimum_lte_optimized_lt_maximum"
+    )
     assert payload["minimum_vdw_surface_gap_comparator"] == (
         "optimized_strictly_gt_baseline"
     )
@@ -127,7 +138,7 @@ def test_source_paired_clearance_selection_policy_is_frozen_and_shadow_only() ->
     assert payload["product_promotion_eligible"] is False
     assert payload["claim_safe"] is False
     assert policy.fingerprint_sha256 == (
-        "ca843cd77ff5e0f426af51338d219325d29d950c911f0b537b85e1d64c941ee7"
+        "3e5c8464abb78695e9683b6d791712528f275a39e06c9f363fefeadd22e75252"
     )
     assert InteractionAwareTorsionContactConfigV7().to_dict() == active_v7_before
 
@@ -174,13 +185,19 @@ def test_source_paired_clearance_selection_requires_every_guard() -> None:
 
     cases = (
         ({"torsion_variant_available": False}, "torsion_variant_unavailable"),
-        ({"legacy_v7_selected": True}, "legacy_v7_already_selected"),
+        (
+            {
+                "optimized_receptor_objective": 3.0,
+                "legacy_v7_selected": True,
+            },
+            "legacy_v7_already_selected",
+        ),
         (
             {"optimized_coordinates_sha256": "a" * 64},
             "optimized_coordinates_unchanged",
         ),
         (
-            {"optimized_receptor_objective": 5.0},
+            {"optimized_receptor_objective": 6.0},
             "receptor_objective_regressed",
         ),
         (
@@ -189,9 +206,9 @@ def test_source_paired_clearance_selection_requires_every_guard() -> None:
         ),
         (
             {
-                "optimized_receptor_objective": 4.0,
+                "optimized_receptor_objective": 5.0,
                 "optimized_internal_objective": 2.0,
-                "optimized_combined_objective": 6.0,
+                "optimized_combined_objective": 7.0,
             },
             "combined_objective_not_strictly_improved",
         ),
@@ -379,6 +396,17 @@ def test_source_paired_clearance_selection_unavailability_fails_closed() -> None
                 "optimized_raw_minimum_distance_angstrom": 2.0,
             },
             "surface gaps cannot exceed",
+        ),
+        (
+            {
+                "torsion_variant_available": False,
+                "legacy_v7_selected": True,
+            },
+            "legacy V7 selection flag contradicts",
+        ),
+        (
+            {"optimized_receptor_objective": 3.0},
+            "legacy V7 selection flag contradicts",
         ),
     ),
 )

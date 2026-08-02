@@ -43,6 +43,8 @@ _FROZEN_V7_CONFIG_SHA256 = (
     "5e8b61d242abfe52e04df6de7f56a137b7736150e95d3e6b526e4269eb275337"
 )
 _FROZEN_OBJECTIVE_TOLERANCE = float.fromhex("0x1.2725dd1d243acp-60")
+_FROZEN_V7_MINIMUM_SELECTED_RECEPTOR_OBJECTIVE = 2.0
+_FROZEN_V7_MAXIMUM_SELECTED_RECEPTOR_OBJECTIVE = 4.0
 _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256 = (
     "1930119181619f603f563e3e2aabc8b7ae1347b58e2fcf0a657a7b234f8bb8a6"
 )
@@ -56,7 +58,7 @@ _FROZEN_CANDIDATE_COUNT = 64
 _FROZEN_MAXIMUM_VARIANT_COUNT = 4
 _FROZEN_CLEARANCE_PAIR_COUNT_BOUND = 1_000_000
 _FROZEN_POLICY_SHA256 = (
-    "ca843cd77ff5e0f426af51338d219325d29d950c911f0b537b85e1d64c941ee7"
+    "3e5c8464abb78695e9683b6d791712528f275a39e06c9f363fefeadd22e75252"
 )
 _DECISION_GUARD_NAMES = (
     "target_scope_guard_passed",
@@ -90,6 +92,10 @@ def _require_frozen_dependencies() -> None:
     if (
         v7_config.fingerprint_sha256 != _FROZEN_V7_CONFIG_SHA256
         or v7_config.penalty_tolerance != _FROZEN_OBJECTIVE_TOLERANCE
+        or v7_config.minimum_selected_final_receptor_penalty
+        != _FROZEN_V7_MINIMUM_SELECTED_RECEPTOR_OBJECTIVE
+        or v7_config.maximum_selected_final_receptor_penalty
+        != _FROZEN_V7_MAXIMUM_SELECTED_RECEPTOR_OBJECTIVE
         or rescue_policy.fingerprint_sha256 != _FROZEN_RESCUE_ALLOCATION_POLICY_SHA256
         or rescue_policy.base_guided_policy.fingerprint_sha256
         != _FROZEN_BASE_GUIDED_POLICY_SHA256
@@ -232,6 +238,15 @@ class SourcePairedTorsionRescueClearanceSelectionPolicyV1:
             ),
             "combined_objective_tolerance_binary64_hex": (
                 self.combined_objective_tolerance.hex()
+            ),
+            "legacy_v7_minimum_selected_receptor_objective_binary64_hex": (
+                _FROZEN_V7_MINIMUM_SELECTED_RECEPTOR_OBJECTIVE.hex()
+            ),
+            "legacy_v7_maximum_selected_receptor_objective_binary64_hex": (
+                _FROZEN_V7_MAXIMUM_SELECTED_RECEPTOR_OBJECTIVE.hex()
+            ),
+            "legacy_v7_selection_flag_rule": (
+                "variant_available_and_minimum_lte_optimized_lt_maximum"
             ),
             "receptor_objective_comparator": ("optimized_lte_baseline_plus_tolerance"),
             "internal_objective_comparator": ("optimized_lte_baseline_plus_tolerance"),
@@ -387,6 +402,16 @@ class SourcePairedTorsionRescueClearanceSelectionEvidenceV1:
         ):
             raise TorsionContactRefinementError(
                 "combined objectives must match receptor plus internal components"
+            )
+        expected_legacy_v7_selected = bool(
+            self.torsion_variant_available
+            and _FROZEN_V7_MINIMUM_SELECTED_RECEPTOR_OBJECTIVE
+            <= self.optimized_receptor_objective
+            < _FROZEN_V7_MAXIMUM_SELECTED_RECEPTOR_OBJECTIVE
+        )
+        if self.legacy_v7_selected is not expected_legacy_v7_selected:
+            raise TorsionContactRefinementError(
+                "legacy V7 selection flag contradicts variant availability or window"
             )
 
         target_indices = {
