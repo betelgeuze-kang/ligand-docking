@@ -69,6 +69,7 @@ OFFXML_SEMANTIC_PARSER_PARAMETER_HANDLERS = (
     "ProperTorsions",
     "ImproperTorsions",
     "vdW",
+    "LibraryCharges",
 )
 
 # Reviewed unit strings.  A value carrying any other unit fails closed.
